@@ -171,7 +171,12 @@ Debate agents return:
 
 ## Boundaries
 
-- Treat Public Equity Investing and Investment Banking as Codex skills run by subagents, not Python libraries.
+- Public-equity-investing and investment-banking methodology is **bundled as local skills**
+  (`skills/public-equity-investing`, `skills/investment-banking`); use them as the research method on
+  BOTH editions. On Codex you may additionally use the curated remote `@public-equity-investing` /
+  `@investment-banking` workflows; on Claude Code (or when the remote workflows are unavailable) the
+  bundled local skills ARE the method, driven by `WebSearch` + `WebFetch`. Treat them as agent
+  playbooks run by subagents, not Python libraries.
 - Keep non-public information out of scope unless the user provides the document directly.
 - Use structured market data for exact prices, financial statements, and indicators when available; use Codex web search as an evidence and interpretation layer.
 - Every material claim should map back to an evidence packet with sources and confidence.
