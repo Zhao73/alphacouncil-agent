@@ -188,23 +188,20 @@ npm run check
 ## ⭐ Star 趋势
 
 <div align="center">
+
 <a href="https://star-history.com/#Zhao73/alphacouncil-agent&Date">
   <img src="https://api.star-history.com/svg?repos=Zhao73/alphacouncil-agent&type=Date" width="640" alt="Star History Chart" />
 </a>
-
-<br/>
-
-如果 AlphaCouncil 帮你省了时间,点个 ⭐ 是最大的支持。
-
-<a href="#readme-top">↑ 回到顶部</a>
 
 <br/><br/>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
-  <img src="assets/logo.png" alt="AlphaCouncil" width="130" />
+  <img src="assets/logo.png" alt="AlphaCouncil" width="120" />
 </picture>
 
-</div>
+如果 AlphaCouncil 帮你省了时间,点个 ⭐ 是最大的支持。
 
-<img src="assets/banner-footer.png" alt="" width="100%" />
+<a href="#readme-top">↑ 回到顶部</a>
+
+</div>

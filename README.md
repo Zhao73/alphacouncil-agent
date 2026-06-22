@@ -240,23 +240,20 @@ No API keys, brokerage credentials, private filings or generated run artifacts s
 ## ⭐ Star History
 
 <div align="center">
+
 <a href="https://star-history.com/#Zhao73/alphacouncil-agent&Date">
   <img src="https://api.star-history.com/svg?repos=Zhao73/alphacouncil-agent&type=Date" width="640" alt="Star History Chart" />
 </a>
-
-<br/>
-
-If AlphaCouncil saved you time, consider leaving a ⭐ — it genuinely helps.
-
-<a href="#readme-top">↑ Back to top</a>
 
 <br/><br/>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
-  <img src="assets/logo.png" alt="AlphaCouncil" width="130" />
+  <img src="assets/logo.png" alt="AlphaCouncil" width="120" />
 </picture>
 
-</div>
+If AlphaCouncil saved you time, consider leaving a ⭐ — it genuinely helps.
 
-<img src="assets/banner-footer.png" alt="" width="100%" />
+<a href="#readme-top">↑ Back to top</a>
+
+</div>
