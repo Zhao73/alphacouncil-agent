@@ -61,6 +61,59 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
 4. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
 5. Do not describe MCP `codex exec` workers as visible chat subagents. They are background workers with `status.json`, `events.jsonl`, and `all_agents.md`.
 
+## Claude Code Parallel Path
+
+Use this path when running under Claude Code with the Task tool available. It reuses the exact same MCP run envelope and recording tools as the Visible-First and Headless workflows above; only the executor and the gating change. If the Task tool is NOT available, fall back to the Visible-First Workflow (or Headless MCP), and say so plainly per the fail-closed visibility rule.
+
+Detect capability first: if you can emit `Task` subagent calls in one turn, prefer this path over the sequential fallback. Otherwise do not claim a parallel council ran.
+
+### Model policy (cost-aware)
+
+Opus on every subagent is expensive. Default to a tiered policy, and let the user override at launch:
+
+- **Evidence analysts (Stage 1) and verifiers (Stage 2b)** → a fast, cheaper model (**Sonnet 4.6**, or **Haiku** for pure fetch/extract). These are bounded source-gathering jobs.
+- **Bull/bear debate (Stage 3) and `portfolio_manager` verdict (Stage 4)** → the strongest model (**Opus 4.8**), because these carry the reasoning.
+
+Default is "evidence on Sonnet, debate/verdict on Opus 4.8". Ask once at launch only to offer overrides ("all Opus" for max depth, "all Sonnet" for max thrift); otherwise use the default tiering. Set the model per `Task` subagent (`model:` option). If the host cannot set per-subagent models, say so and proceed on the host default.
+
+### Language
+
+Detect the user's language from their request and propagate it to EVERY subagent: each `Task` prompt, the evidence/debate/verdict content the subagents produce, and all workflow progress text shown in the main thread must be in that language (Chinese in -> Chinese throughout; Japanese in -> Japanese throughout). Keep JSON field names and role keys in English; translate values and prose. This matches the Preflight language rule.
+
+
+### Stage 0 — Plan (envelope only)
+Call `plan_visible_run` with `symbol`, `prompt` (original user request), `as_of`, and inferred `language`. It returns `run_id`, the 11 evidence agent specs, the 3 debate agent specs, and artifact paths. This is planning only (SKILL step 7); do not treat it as execution.
+
+### Stage 1 — Evidence fan-out (one turn, isolated context)
+In a SINGLE assistant turn, emit 11 `Task` (subagent_type: general-purpose) calls, one per evidence role: `market_data`, `earnings_deep_dive`, `forward_expectations`, `sell_side_revisions`, `earnings_call_transcript`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `management_industry_voices`, `insider_sec`, `ib_event_analysis`. Each subagent:
+- May use ONLY `WebSearch` + `WebFetch`. It must NOT call `@alphacouncil-agent`, `collect_evidence`, `analyze_symbol`, or `read_run` (leaf-worker rule, Boundaries).
+- Runs a query ladder: a primary-locator search (use `allowed_domains` such as `sec.gov` and the company IR/exchange domain), a dated recency search, and one mandatory disconfirming search (e.g. `<ticker> guidance cut`, `downgrade`, `accounting concern`).
+- WebFetches the actual primary doc where one exists (insider_sec -> EDGAR full-text + Form 4; earnings_deep_dive / earnings_call_transcript -> 8-K Ex-99.1 / IR transcript; ib_event_analysis -> 8-K / 424B / deal release; market_data -> exchange/quote page) and quotes exact figures with real dates.
+- Returns exactly one JSON evidence packet matching the Agent Output Contract, with a real `url` and `published_at` on every source and every paywalled/missing/stale item routed into `open_questions`.
+
+### Stage 2 — Collect + barrier
+As each Task returns, call `record_visible_packet(run_id, task, packet, thread_id=<subagent id>)`. The server upserts by `task`, rescopes sources to `<task>:S1`, rewrites `source_manifest.json` + `all_agents.md`, and flips the run phase toward `visible_debate`. HARD GATE: do not start debate until all 11 packets are recorded (assert each `task` is completed or explicitly degraded; poll `status.json` if needed). Proceeding with k<11 violates the barrier.
+
+### Stage 2b — Adversarial verify + repair (loop-until-dry, max 2 rounds)
+Build a claim ledger from the merged packets (only non-low / thesis-bearing claims are "material"). For each material claim, fan out up to 3 verifier `Task` subagents in one turn, each with fresh context and seeing only the bare claim + ticker:
+- source_fidelity: `WebFetch` the exact cited URL; return supported | partial | contradicted | source_unreachable | source_does_not_mention.
+- rederivation: find the fact fresh from OTHER sources; return agree | disagree | cannot_confirm with a new source.
+- refuter: search for disconfirming / newer evidence respecting `as_of` (newer truth that supersedes is a data gap, not a contradiction).
+Compute per-claim survived-confidence: keep `high` only if source_fidelity != contradicted AND >=2/3 verifiers confirm; force DISPUTED on any contradiction; force UNVERIFIABLE if >=2 cannot_confirm/unreachable. Re-dispatch ONLY analysts with remaining `missing_claim_source_ids`, parse failures, or DISPUTED claims, with a stricter prompt; re-`record_visible_packet` (idempotent). Cap at 2 rounds; log residual gaps for the PM to report honestly. Verifiers also obey the leaf-worker rule.
+
+### Stage 3 — Debate pipeline (3 rounds, parallel per round)
+Run the documented rounds, each as a parallel fan-out of `bull_researcher` + `bear_researcher` fed the verified evidence:
+- Round 1: bull writes the long case; bear writes the short case (parallel).
+- Round 2: cross-feed each side the other's round-1 packet for rebuttal (parallel; main thread reads `bull_researcher.json` / `bear_researcher.json` and pastes into the next prompts).
+- Round 3: each side asks three questions; the other answers (parallel).
+Persist each round via `record_visible_decision(run_id, role, packet)` so `all_agents.md` accumulates the full trace. DISPUTED/UNVERIFIABLE claims may appear in a thesis only with an explicit caveat.
+
+### Stage 4 — Verdict + synthesize
+Run one `portfolio_manager` `Task` fed the verified evidence plus all three debate rounds. Record it via `record_visible_decision(run_id, 'portfolio_manager', packet)`, which writes `decision.json` + `final_report.md` and marks the run complete. Then return the complete report inline (SKILL step 5) in the user's language, including the Analyst Work Log, Bull/Bear Debate record, the verification ledger (per material claim: self-confidence, verifier tally, source-fidelity, survived-confidence), all mandated sections, data gaps, short/medium/long-term views, and the `<task>:<source_id>` source table. Link artifacts only in an appendix.
+
+Honest limits: Task fan-out is best-effort, not a guaranteed workflow engine; enforce the barrier by polling artifacts, not by assuming. WebSearch/WebFetch is the only evidence channel (no financial API), so some numeric claims stay "narratively corroborated, not vendor-verified". This is the same auditable contract as the other paths — a stronger runner, not a different audit story.
+
+
 ## Agent Output Contract
 
 Evidence agents return:

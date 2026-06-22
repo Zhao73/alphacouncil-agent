@@ -161,6 +161,23 @@ Key files:
 - `mcp/server.mjs` - JSON-RPC MCP server and workflow implementation.
 - `scripts/selfcheck.mjs` - minimal regression check.
 
+## 🆚 Codex vs Claude Code edition
+
+Both editions share the same workflow, JSON packet contract, audit artifacts, the no-API-keys / live-web evidence model, and the same disclaimer. The Claude Code edition changes only *how* the council is run.
+
+| | Codex edition | Claude Code edition |
+|---|---|---|
+| Council execution | `codex exec` workers, concurrency-capped | All 11 analysts as parallel `Task` subagents, one fan-out |
+| Per-analyst context | Separate process | Separate subagent, full isolated context window |
+| Evidence | `codex exec --search` | `WebSearch` + `WebFetch` in each analyst's own context |
+| Evidence → debate | Sequential | Hard barrier on the run's phase machine |
+| Debate depth | Single-pass bull → bear → PM | 3 rounds (case / rebuttal / Q&A), bull + bear in parallel *(edition design)* |
+| Claim verification | Source IDs flagged, not acted on | Per-claim adversarial verify: re-fetch the cited URL + re-derive + refute *(edition design)* |
+| Model & cost | One model | **Pick per role** — evidence on Sonnet, debate/verdict on Opus 4.8 (or all-Opus / all-Sonnet) |
+| Language | User's language | User's language across every subagent + the live workflow |
+
+**Honest scope:** same model family, same prompts, same audit contract — the win is context isolation, always-on parallel fan-out, a deterministic barrier, and enforced citation verification, *not* a smarter model. The 3-round debate and verification stage are the Claude Code edition's design; the current shared code does single-pass. Live-web staleness and paywalls limit both editions equally.
+
 ## Data Contract
 
 Evidence agents return JSON packets:

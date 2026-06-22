@@ -155,6 +155,23 @@ flowchart TD
 - `mcp/server.mjs` —— JSON-RPC MCP server 与工作流实现
 - `scripts/selfcheck.mjs` —— 最小回归自检
 
+## 🆚 Codex 版 vs Claude Code 版
+
+两个版本共享同一套工作流、JSON 包契约、审计产物、无需 API key 的联网取证模式和同样的免责声明。Claude Code 版只改变「**怎么跑**」这个委员会。
+
+| | Codex 版 | Claude Code 版 |
+|---|---|---|
+| 委员会执行 | `codex exec` worker,有并发上限 | 11 个分析师作为并行 `Task` 子代理,一次性展开 |
+| 每个分析师上下文 | 独立进程 | 独立子代理,各自完整独立上下文窗口 |
+| 取证 | `codex exec --search` | 每个分析师在自己上下文里用 `WebSearch` + `WebFetch` |
+| 证据 → 辩论 | 串行 | 基于运行相位机的硬性 barrier 门控 |
+| 辩论深度 | 单轮 bull → bear → PM | 3 轮(立论/反驳/问答),每轮多空并行 *(本版设计)* |
+| claim 验证 | 仅标记缺失 source,不处理 | 逐条对抗式验证:重抓引用 URL + 独立复核 + 反驳 *(本版设计)* |
+| 模型与成本 | 单一模型 | **按角色选** —— 取证用 Sonnet,辩论/裁决用 Opus 4.8(也可全 Opus / 全 Sonnet) |
+| 语言 | 用户语言 | 每个子代理 + 实时 workflow 全程用户语言 |
+
+**诚实边界:** 同模型家族、同提示词、同审计契约 —— 优势在于上下文隔离、始终并行展开、确定性 barrier、强制引用验证,**不是**更聪明的模型。3 轮辩论和验证阶段是 Claude Code 版的设计;当前共享代码还是单轮。联网数据的时效性与付费墙对两版限制相同。
+
 ## 数据契约
 
 证据子代理返回 JSON 包:
