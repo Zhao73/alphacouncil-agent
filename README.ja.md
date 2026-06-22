@@ -4,7 +4,7 @@
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d4d4d,50:1a7a6a,100:c9a227&height=190&section=header&text=AlphaCouncil%20Agent&fontSize=46&fontColor=ffffff&fontAlignY=36&desc=Multi-agent%20investment%20committee&descSize=17&descAlignY=58&animation=fadeIn" width="100%" />
 
-<img src="assets/logo.png" alt="AlphaCouncil Agent" width="104" />
+<img src="assets/logo.png" alt="AlphaCouncil Agent" width="300" />
 
 ### ターミナルの中の、マルチエージェント投資委員会
 
