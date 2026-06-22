@@ -107,6 +107,15 @@ function isChineseLanguage(language) {
   return /中文|chinese|zh/i.test(String(language || ""));
 }
 
+function withDisclaimer(markdown, language) {
+  const text = typeof markdown === "string" ? markdown : "";
+  if (/##\s*(Disclaimer|免责声明)/i.test(text)) return text;
+  const note = isChineseLanguage(language)
+    ? "\n\n---\n\n## 免责声明\n\n本报告由 AI 自动生成,**仅供教育与研究**,**不构成投资建议**,不构成任何证券买卖推荐或要约。AI 分析可能不完整、过时或错误。投资决策前请自行核实并咨询持牌专业人士。作者不对任何损失承担责任。"
+    : "\n\n---\n\n## Disclaimer\n\nThis report is AI-generated for **educational and research purposes only**. It is **not investment advice**, not a recommendation to buy or sell any security, and not a solicitation. AI analysis can be incomplete, outdated, or wrong. Do your own research and consult a licensed professional before any investment decision. The authors accept no liability for any loss.";
+  return `${text}${note}`;
+}
+
 function runPath(id) {
   if (typeof id !== "string" || !/^[A-Z0-9.^=+\-_]{1,80}$/.test(id)) {
     throw new Error("run_id is invalid.");
@@ -570,7 +579,7 @@ function recordVisibleDecision(args) {
   writeJson(join(dir, file), packet);
   if (role === "portfolio_manager") {
     writeJson(join(dir, "decision.json"), packet);
-    writeFileSync(join(dir, "final_report.md"), `${packet.report_markdown || packet.summary}\n`);
+    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(packet.report_markdown || packet.summary, run.language)}\n`);
     run.status = "complete";
     run.phase = "complete";
     run.completed_at = new Date().toISOString();
@@ -1144,7 +1153,7 @@ async function synthesizeDecision(run, args) {
     writeJson(join(dir, "bear_researcher.json"), bear);
     writeJson(join(dir, "manager_synthesis.json"), fallback);
     writeJson(join(dir, "decision.json"), fallback);
-    writeFileSync(join(dir, "final_report.md"), `${fallback.report_markdown}\n`);
+    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(fallback.report_markdown, run.language)}\n`);
     run.completed_at = new Date().toISOString();
     run.phase = "complete";
     run.status = "complete";
@@ -1201,7 +1210,7 @@ async function synthesizeDecision(run, args) {
     : managerFallback(run, args.prompt || "");
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
-  writeFileSync(join(dir, "final_report.md"), `${manager.report_markdown || manager.summary}\n`);
+  writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(manager.report_markdown || manager.summary, run.language)}\n`);
   updateAgent(run, "portfolio_manager", managerResult.ok && manager.verdict !== "PARSE_FAILED" ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "manager_synthesis.json"),

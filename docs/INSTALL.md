@@ -104,3 +104,12 @@ headless path still needs Codex CLI as above.
 - Codex 安装:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `/plugins` 安装 → `/reload-plugins`;或 clone 到 `~/.codex/plugins/` 走本地 marketplace。
 - Claude Code 安装:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
 - 没有 Codex CLI 时:用 visible 工作流,让 Claude 子代理产出证据并用 `record_visible_*` 录入,无需 codex。
+
+---
+
+## 日本語クイックガイド
+
+- 前提:Node ≥ 18。headless でリサーチを実走させるには、認証済みの Codex CLI が必要(worker は `codex exec`)。
+- Codex でのインストール:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `/plugins` でインストール → `/reload-plugins`。または `~/.codex/plugins/` に clone してローカル marketplace 経由でも可。
+- Claude Code でのインストール:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
+- Codex CLI が無い場合:visible ワークフローを使用。Claude のサブエージェントに根拠を生成させ、`record_visible_*` で記録する(codex 不要)。
