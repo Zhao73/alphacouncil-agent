@@ -1,19 +1,35 @@
+<a name="readme-top"></a>
+
 <div align="center">
 
-<img src="assets/logo.png" alt="AlphaCouncil Agent" width="120" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d4d4d,50:1a7a6a,100:c9a227&height=190&section=header&text=AlphaCouncil%20Agent&fontSize=46&fontColor=ffffff&fontAlignY=36&desc=A%20multi-agent%20investment%20committee%20in%20your%20terminal&descSize=17&descAlignY=58&animation=fadeIn" width="100%" />
 
-# AlphaCouncil Agent
+<img src="assets/logo.png" alt="AlphaCouncil Agent" width="104" />
 
-**A multi-agent investment committee for your terminal.**
-
-Spawn a council of analyst agents → gather sourced evidence → run a bull/bear debate → get a portfolio-manager verdict: **Buy · Overweight · Hold · Underweight · Sell**.
+<p>
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=700&color=1A7A6A&center=true&vCenter=true&width=620&lines=Spawn+a+council+of+analyst+agents;Gather+sourced+evidence%2C+hide+nothing;Run+a+bull+vs+bear+debate;Get+a+PM+verdict%3A+Buy+%C2%B7+Hold+%C2%B7+Sell" alt="tagline" />
+</p>
 
 **English** · [中文](README.zh-CN.md) · [日本語](README.ja.md)
 
-[![check](https://github.com/Zhao73/alphacouncil-agent/actions/workflows/check.yml/badge.svg)](https://github.com/Zhao73/alphacouncil-agent/actions/workflows/check.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
-![works with](https://img.shields.io/badge/works%20with-Codex%20%26%20Claude%20Code-black)
+<p>
+  <img src="https://img.shields.io/github/actions/workflow/status/Zhao73/alphacouncil-agent/check.yml?style=for-the-badge&label=build&logo=githubactions&logoColor=white&color=1a7a6a" alt="build" />
+  <img src="https://img.shields.io/badge/License-MIT-c9a227?style=for-the-badge" alt="MIT" />
+  <img src="https://img.shields.io/badge/Node-%3E%3D18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="node" />
+  <img src="https://img.shields.io/github/stars/Zhao73/alphacouncil-agent?style=for-the-badge&logo=github&color=0d4d4d" alt="stars" />
+</p>
+<p>
+  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="codex" />
+  <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="claude code" />
+  <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="mcp" />
+</p>
+
+<p>
+  <a href="#-usage"><b>Usage</b></a> ·
+  <a href="docs/INSTALL.md"><b>Install</b></a> ·
+  <a href="#-architecture"><b>Architecture</b></a> ·
+  <a href="#-disclaimer"><b>Disclaimer</b></a>
+</p>
 
 </div>
 
@@ -21,9 +37,19 @@ Spawn a council of analyst agents → gather sourced evidence → run a bull/bea
 
 AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity research workflows. It coordinates multiple analyst agents, gathers sourced evidence, runs bull/bear debate, and produces a portfolio-manager style final report.
 
+### ✨ Why AlphaCouncil
+
+| | |
+|---|---|
+| 🏛️ **A council, not one opinion** | 11 specialist analyst agents (market data, earnings, valuation, quant, insider/SEC, IB events…) run in parallel. |
+| 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio-manager agent that issues an actual rating. |
+| 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. Missing data is listed in a "data gaps" section — never hidden. |
+| ⏱️ **Multi-horizon verdict** | Buy/Hold/Sell plus separate 1-4 week, 3-6 month, and 12-month views. |
+| 🔑 **No API key** | Rides your existing Codex / Claude Code subscription. MIT licensed. |
+
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## ⚠️ Disclaimer
+## 📜 Disclaimer
 
 This software is for **educational and research purposes only**. It is **not
 investment advice**, not a recommendation to buy or sell any security, and not a
@@ -50,7 +76,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 /reload-plugins
 ```
 
-## Usage
+## 🚀 Usage
 
 Just talk to it. Mention the agent and a ticker or a question:
 
@@ -95,17 +121,29 @@ Default stock-analysis runs are full runs, not lite summaries:
 
 The final report must be readable directly in chat. It includes analyst work logs, data/news/filing summaries, bull/bear debate, portfolio-manager verdict, short/medium/long-term view, data gaps, confidence and source table.
 
-## Architecture
+## 🧩 Architecture
 
-```text
-@alphacouncil-agent request
-  -> skill instructions in skills/alphacouncil-agent/SKILL.md
-  -> visible Codex subagents when host multi-agent tools are available
-  -> MCP server for saved/headless artifact runs
-  -> evidence packets
-  -> source_manifest.json
-  -> bull/bear debate
-  -> manager_synthesis.json + final_report.md
+```mermaid
+flowchart TD
+    U["@alphacouncil-agent<br/>ticker / question"] --> SK["SKILL.md<br/>runtime instructions"]
+    SK --> AG{{"Analyst Council"}}
+    AG --> A1["📈 Market Data"]
+    AG --> A2["💰 Earnings"]
+    AG --> A3["⚖️ Valuation"]
+    AG --> A4["🧮 Quant Factors"]
+    AG --> A5["🏛️ Insider / SEC"]
+    AG --> A6["🤝 IB Events"]
+    A1 --> EV[("Evidence Base<br/>sourced packets")]
+    A2 --> EV
+    A3 --> EV
+    A4 --> EV
+    A5 --> EV
+    A6 --> EV
+    EV --> BULL["🐂 Bull Researcher"]
+    EV --> BEAR["🐻 Bear Researcher"]
+    BULL --> PM{{"Portfolio Manager"}}
+    BEAR --> PM
+    PM --> R[["final_report.md<br/>Buy · Hold · Sell"]]
 ```
 
 Key files:
@@ -200,3 +238,20 @@ package.json
 This is an independent Codex plugin implementation. It uses a multi-agent investment-committee workflow: analyst teams, evidence sharing, bull/bear debate and portfolio-manager synthesis.
 
 No API keys, brokerage credentials, private filings or generated run artifacts should be committed.
+
+## ⭐ Star History
+
+<div align="center">
+<a href="https://star-history.com/#Zhao73/alphacouncil-agent&Date">
+  <img src="https://api.star-history.com/svg?repos=Zhao73/alphacouncil-agent&type=Date" width="640" alt="Star History Chart" />
+</a>
+
+<br/>
+
+If AlphaCouncil saved you time, consider leaving a ⭐ — it genuinely helps.
+
+<a href="#readme-top">↑ Back to top</a>
+
+</div>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:c9a227,50:1a7a6a,100:0d4d4d&height=110&section=footer" width="100%" />

@@ -1,19 +1,35 @@
+<a name="readme-top"></a>
+
 <div align="center">
 
-<img src="assets/logo.png" alt="AlphaCouncil Agent" width="120" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d4d4d,50:1a7a6a,100:c9a227&height=190&section=header&text=AlphaCouncil%20Agent&fontSize=46&fontColor=ffffff&fontAlignY=36&desc=Multi-agent%20investment%20committee&descSize=17&descAlignY=58&animation=fadeIn" width="100%" />
 
-# AlphaCouncil Agent
+<img src="assets/logo.png" alt="AlphaCouncil Agent" width="104" />
 
-**ターミナルの中の、マルチエージェント投資委員会。**
+### ターミナルの中の、マルチエージェント投資委員会
 
-アナリスト・エージェントの評議会を招集 → 出典付きの根拠を収集 → 強気/弱気のディベート → ポートフォリオマネージャーの判定:**買い · オーバーウェイト · 中立 · アンダーウェイト · 売り**。
+アナリスト評議会を招集 → 出典付きの根拠を収集 → 強気/弱気ディベート → PM が判定:**買い · オーバーウェイト · 中立 · アンダーウェイト · 売り**
 
 [English](README.md) · [中文](README.zh-CN.md) · **日本語**
 
-[![check](https://github.com/Zhao73/alphacouncil-agent/actions/workflows/check.yml/badge.svg)](https://github.com/Zhao73/alphacouncil-agent/actions/workflows/check.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
-![works with](https://img.shields.io/badge/works%20with-Codex%20%26%20Claude%20Code-black)
+<p>
+  <img src="https://img.shields.io/github/actions/workflow/status/Zhao73/alphacouncil-agent/check.yml?style=for-the-badge&label=build&logo=githubactions&logoColor=white&color=1a7a6a" alt="build" />
+  <img src="https://img.shields.io/badge/License-MIT-c9a227?style=for-the-badge" alt="MIT" />
+  <img src="https://img.shields.io/badge/Node-%3E%3D18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="node" />
+  <img src="https://img.shields.io/github/stars/Zhao73/alphacouncil-agent?style=for-the-badge&logo=github&color=0d4d4d" alt="stars" />
+</p>
+<p>
+  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="codex" />
+  <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="claude code" />
+  <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="mcp" />
+</p>
+
+<p>
+  <a href="#-使い方"><b>使い方</b></a> ·
+  <a href="docs/INSTALL.md"><b>インストール</b></a> ·
+  <a href="#-アーキテクチャ"><b>アーキテクチャ</b></a> ·
+  <a href="#-免責事項"><b>免責事項</b></a>
+</p>
 
 </div>
 
@@ -21,9 +37,19 @@
 
 AlphaCouncil Agent は、**上場株式のリサーチ**向けの Codex / Claude Code プラグインです。複数のアナリスト・サブエージェントを統括し、出典付きの根拠を集め、強気/弱気のディベートを行い、ポートフォリオマネージャー視点の最終レポートを生成します。
 
+### ✨ AlphaCouncil を使う理由
+
+| | |
+|---|---|
+| 🏛️ **一人の意見ではなく、委員会** | 11 の専門アナリストエージェント(株価・決算・バリュエーション・クオンツ・インサイダー/SEC・IB イベント…)が並列で稼働。 |
+| 🐂🐻 **設計からして対立的** | 構造化された強気 vs 弱気のディベートを、PM エージェントが裁定し実際のレーティングを提示。 |
+| 🔍 **監査可能、幻覚なし** | すべての主張が source ID に紐づく。欠落データは「データ欠落」セクションに明示し、決して隠さない。 |
+| ⏱️ **マルチ期間の判定** | 買い/中立/売りに加え、1〜4週・3〜6か月・12か月の見通しを個別に提示。 |
+| 🔑 **API キー不要** | 既存の Codex / Claude Code サブスクを利用。MIT ライセンス。 |
+
 このリポジトリはアップロード用のソースコピーです。実行成果物はリポジトリの外、`~/.alphacouncil-agent/runs/<run_id>/` に書き出されます。
 
-## ⚠️ 免責事項
+## 📜 免責事項
 
 本ソフトウェアは**教育・研究目的のみ**を対象としており、**投資助言ではありません**。いかなる証券の売買の推奨・勧誘でもありません。AI が生成する分析は不完全・古い・誤っている可能性があります。投資判断の前に、必ずご自身で調査し、有資格の専門家にご相談ください。作者はいかなる損失についても責任を負いません。
 
@@ -44,7 +70,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 /reload-plugins
 ```
 
-## 使い方
+## 🚀 使い方
 
 エージェントにそのまま話しかけるだけ。@ でエージェントを呼び、ティッカーや質問を添えます:
 
@@ -89,17 +115,29 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 最終レポートはチャット上でそのまま読み切れることが要件で、アナリスト作業ログ、データ/ニュース/書類の要約、強気/弱気ディベート、PM の結論、短期/中期/長期の見解、データの欠落、確信度、出典テーブルを含みます。
 
-## アーキテクチャ
+## 🧩 アーキテクチャ
 
-```text
-@alphacouncil-agent リクエスト
-  -> skills/alphacouncil-agent/SKILL.md のスキル指示
-  -> ホストにマルチエージェント機能がある場合、可視の Codex サブエージェントを起動
-  -> 保存型 / headless 成果物ラン向けの MCP server
-  -> 根拠パケット(evidence packets)
-  -> source_manifest.json
-  -> 強気/弱気ディベート
-  -> manager_synthesis.json + final_report.md
+```mermaid
+flowchart TD
+    U["@alphacouncil-agent<br/>ティッカー / 質問"] --> SK["SKILL.md<br/>実行時の指示"]
+    SK --> AG{{"アナリスト委員会"}}
+    AG --> A1["📈 株価データ"]
+    AG --> A2["💰 決算"]
+    AG --> A3["⚖️ バリュエーション"]
+    AG --> A4["🧮 クオンツ因子"]
+    AG --> A5["🏛️ インサイダー / SEC"]
+    AG --> A6["🤝 IB イベント"]
+    A1 --> EV[("根拠ベース<br/>出典付きパケット")]
+    A2 --> EV
+    A3 --> EV
+    A4 --> EV
+    A5 --> EV
+    A6 --> EV
+    EV --> BULL["🐂 ブル・リサーチャー"]
+    EV --> BEAR["🐻 ベア・リサーチャー"]
+    BULL --> PM{{"ポートフォリオマネージャー"}}
+    BEAR --> PM
+    PM --> R[["final_report.md<br/>買い · 中立 · 売り"]]
 ```
 
 主要ファイル:
@@ -148,3 +186,20 @@ npm run check
 これは独立したプラグイン実装で、マルチエージェントの投資委員会ワークフロー(アナリストチーム、根拠の共有、強気/弱気ディベート、ポートフォリオマネージャーによる統合)を採用しています。
 
 API キー、証券口座の認証情報、非公開書類、生成された実行成果物は決してコミットしないでください。
+
+## ⭐ Star 推移
+
+<div align="center">
+<a href="https://star-history.com/#Zhao73/alphacouncil-agent&Date">
+  <img src="https://api.star-history.com/svg?repos=Zhao73/alphacouncil-agent&type=Date" width="640" alt="Star History Chart" />
+</a>
+
+<br/>
+
+AlphaCouncil が役に立ったら、⭐ をいただけると励みになります。
+
+<a href="#readme-top">↑ トップに戻る</a>
+
+</div>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:c9a227,50:1a7a6a,100:0d4d4d&height=110&section=footer" width="100%" />

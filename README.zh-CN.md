@@ -1,19 +1,35 @@
+<a name="readme-top"></a>
+
 <div align="center">
 
-<img src="assets/logo.png" alt="AlphaCouncil Agent" width="120" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d4d4d,50:1a7a6a,100:c9a227&height=190&section=header&text=AlphaCouncil%20Agent&fontSize=46&fontColor=ffffff&fontAlignY=36&desc=Multi-agent%20investment%20committee&descSize=17&descAlignY=58&animation=fadeIn" width="100%" />
 
-# AlphaCouncil Agent
+<img src="assets/logo.png" alt="AlphaCouncil Agent" width="104" />
 
-**装进终端里的多智能体投资委员会。**
+### 装进终端里的多智能体投资委员会
 
-召集一组分析师代理 → 收集带来源的证据 → 进行多空辩论 → 给出投资组合经理结论:**买入 · 增持 · 持有 · 减持 · 卖出**。
+召集一组分析师代理 → 收集带来源的证据 → 多空辩论 → 投资组合经理拍板:**买入 · 增持 · 持有 · 减持 · 卖出**
 
 [English](README.md) · **中文** · [日本語](README.ja.md)
 
-[![check](https://github.com/Zhao73/alphacouncil-agent/actions/workflows/check.yml/badge.svg)](https://github.com/Zhao73/alphacouncil-agent/actions/workflows/check.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![node](https://img.shields.io/badge/node-%3E%3D18-brightgreen)
-![works with](https://img.shields.io/badge/works%20with-Codex%20%26%20Claude%20Code-black)
+<p>
+  <img src="https://img.shields.io/github/actions/workflow/status/Zhao73/alphacouncil-agent/check.yml?style=for-the-badge&label=build&logo=githubactions&logoColor=white&color=1a7a6a" alt="build" />
+  <img src="https://img.shields.io/badge/License-MIT-c9a227?style=for-the-badge" alt="MIT" />
+  <img src="https://img.shields.io/badge/Node-%3E%3D18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="node" />
+  <img src="https://img.shields.io/github/stars/Zhao73/alphacouncil-agent?style=for-the-badge&logo=github&color=0d4d4d" alt="stars" />
+</p>
+<p>
+  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="codex" />
+  <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="claude code" />
+  <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="mcp" />
+</p>
+
+<p>
+  <a href="#-用法"><b>用法</b></a> ·
+  <a href="docs/INSTALL.md"><b>安装</b></a> ·
+  <a href="#-架构"><b>架构</b></a> ·
+  <a href="#-免责声明"><b>免责声明</b></a>
+</p>
 
 </div>
 
@@ -21,9 +37,19 @@
 
 AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 插件。它会协调多个分析师子代理、收集带来源的证据、进行多空辩论,并产出投资组合经理风格的最终报告。
 
+### ✨ 为什么用 AlphaCouncil
+
+| | |
+|---|---|
+| 🏛️ **是委员会,不是一家之言** | 11 个专项分析师代理(行情、财报、估值、量化、内部人/SEC、投行事件……)并行工作。 |
+| 🐂🐻 **天生对抗式** | 结构化的多头 vs 空头辩论,由投资组合经理代理裁决并给出实际评级。 |
+| 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
+| ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
+| 🔑 **无需 API key** | 复用你现有的 Codex / Claude Code 订阅。MIT 开源。 |
+
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
-## ⚠️ 免责声明
+## 📜 免责声明
 
 本软件**仅供教育与研究**,**不构成投资建议**,不构成任何证券买卖推荐或要约。AI 生成的分析可能不完整、过时或错误。投资决策前请自行核实并咨询持牌专业人士。作者不对任何损失承担责任。
 
@@ -44,7 +70,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 /reload-plugins
 ```
 
-## 用法
+## 🚀 用法
 
 直接对它说话,@ 一下代理,带上代码或问题:
 
@@ -89,17 +115,29 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 最终报告要求能直接在聊天里读完,包含分析师工作记录、数据/新闻/文件摘要、多空辩论、PM 结论、短/中/长期判断、数据缺口、置信度与来源表。
 
-## 架构
+## 🧩 架构
 
-```text
-@alphacouncil-agent 请求
-  -> skills/alphacouncil-agent/SKILL.md 中的技能指令
-  -> 宿主有多代理工具时,启动可见的 Codex 子代理
-  -> MCP server 用于保存式/headless 的产物运行
-  -> 证据包
-  -> source_manifest.json
-  -> 多空辩论
-  -> manager_synthesis.json + final_report.md
+```mermaid
+flowchart TD
+    U["@alphacouncil-agent<br/>代码 / 问题"] --> SK["SKILL.md<br/>运行时指令"]
+    SK --> AG{{"分析师委员会"}}
+    AG --> A1["📈 行情数据"]
+    AG --> A2["💰 财报"]
+    AG --> A3["⚖️ 估值"]
+    AG --> A4["🧮 量化因子"]
+    AG --> A5["🏛️ 内部人 / SEC"]
+    AG --> A6["🤝 投行事件"]
+    A1 --> EV[("证据库<br/>带来源的包")]
+    A2 --> EV
+    A3 --> EV
+    A4 --> EV
+    A5 --> EV
+    A6 --> EV
+    EV --> BULL["🐂 多头研究员"]
+    EV --> BEAR["🐻 空头研究员"]
+    BULL --> PM{{"投资组合经理"}}
+    BEAR --> PM
+    PM --> R[["final_report.md<br/>买入 · 持有 · 卖出"]]
 ```
 
 关键文件:
@@ -148,3 +186,20 @@ npm run check
 这是一个独立的插件实现,采用多代理投资委员会工作流:分析师团队、证据共享、多空辩论、投资组合经理综合。
 
 请勿提交任何 API key、券商凭证、非公开文件或生成的运行产物。
+
+## ⭐ Star 趋势
+
+<div align="center">
+<a href="https://star-history.com/#Zhao73/alphacouncil-agent&Date">
+  <img src="https://api.star-history.com/svg?repos=Zhao73/alphacouncil-agent&type=Date" width="640" alt="Star History Chart" />
+</a>
+
+<br/>
+
+如果 AlphaCouncil 帮你省了时间,点个 ⭐ 是最大的支持。
+
+<a href="#readme-top">↑ 回到顶部</a>
+
+</div>
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:c9a227,50:1a7a6a,100:0d4d4d&height=110&section=footer" width="100%" />
