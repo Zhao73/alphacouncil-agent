@@ -30,28 +30,38 @@ npm run check       # runs the self-check (no Codex auth required)
 
 ## Install in Codex
 
-> Note: OpenAI's public Plugin Directory self-publishing is still rolling out.
-> Until then, use one of these:
+This repo already ships the manifests Codex expects, at the official paths:
+`.agents/plugins/marketplace.json` (repo marketplace), `.codex-plugin/plugin.json`
+(plugin manifest), and `.mcp.json` (MCP server) — so the one-command install below
+works out of the box. (`.claude-plugin/marketplace.json` is kept for legacy compat.)
 
-**A. Add this GitHub repo as a marketplace (newer Codex versions):**
+### A. One command — recommended ✅
 
 ```text
 codex plugin marketplace add Zhao73/alphacouncil-agent
-codex
-/plugins            # switch to the "AlphaCouncil" marketplace → Install
+```
+
+Then **fully quit and restart the Codex desktop app** (plugins load at session
+start — see [Troubleshooting](#troubleshooting-the-plugin-doesnt-show-up--alphacouncil-agent-isnt-found)),
+open a new session, and:
+
+```text
+/plugins            # switch to the "AlphaCouncil" marketplace → Install alphacouncil-agent
 /reload-plugins
 ```
 
-**B. Local / personal marketplace (works on any Codex version):**
+### B. Local clone — advanced / offline only
 
 ```bash
 git clone https://github.com/Zhao73/alphacouncil-agent.git \
   ~/.codex/plugins/alphacouncil-agent
 ```
 
-Then add an entry to `~/.agents/plugins/marketplace.json` whose `source.path`
-points at that folder (see `.agents/plugins/marketplace.json` in this repo for
-the shape), restart Codex, and install from `/plugins`.
+Then add an entry to `~/.agents/plugins/marketplace.json` whose `source.path` is the
+**absolute** path to that clone (copy the shape from `.agents/plugins/marketplace.json`
+in this repo; on Windows use `C:\\Users\\you\\.codex\\plugins\\alphacouncil-agent`, not
+`./`), restart Codex, and install from `/plugins`. **Prefer A** unless you're doing
+offline/local development — it avoids hand-editing paths.
 
 **Use it:**
 
