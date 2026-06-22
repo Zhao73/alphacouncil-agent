@@ -171,12 +171,13 @@ Both editions share the same workflow, JSON packet contract, audit artifacts, th
 | Per-analyst context | Separate process | Separate subagent, full isolated context window |
 | Evidence | `codex exec --search` | `WebSearch` + `WebFetch` in each analyst's own context |
 | Evidence → debate | Sequential | Hard barrier on the run's phase machine |
-| Debate depth | Single-pass bull → bear → PM | 3 rounds (case / rebuttal / Q&A), bull + bear in parallel *(edition design)* |
-| Claim verification | Source IDs flagged, not acted on | Per-claim adversarial verify: re-fetch the cited URL + re-derive + refute *(edition design)* |
+| Debate depth | 3 rounds (case / rebuttal / Q&A), server-run | 3 rounds, bull + bear in parallel per round |
+| Claim verification | Missing-source gate (run flagged, report banner) | + per-claim adversarial verify: re-fetch cited URL, re-derive, refute *(host-driven)* |
+| Full-run enforcement | Incomplete runs marked `incomplete` (server gate) | Same gate, plus a hard barrier before debate |
 | Model & cost | One model | **Pick per role** — evidence on Sonnet, debate/verdict on Opus 4.8 (or all-Opus / all-Sonnet) |
 | Language | User's language | User's language across every subagent + the live workflow |
 
-**Honest scope:** same model family, same prompts, same audit contract — the win is context isolation, always-on parallel fan-out, a deterministic barrier, and enforced citation verification, *not* a smarter model. The 3-round debate and verification stage are the Claude Code edition's design; the current shared code does single-pass. Live-web staleness and paywalls limit both editions equally.
+**Honest scope:** same model family, same prompts, same audit contract — the win is context isolation, always-on parallel fan-out, and a deterministic barrier, *not* a smarter model. As of **v0.2.0** the shared server runs the 3-round debate and enforces both the missing-source and full-run completeness gates in **both** editions; the Claude Code edition adds parallel per-round execution and host-driven per-claim verification. Live-web staleness and paywalls limit both editions equally.
 
 ## Data Contract
 
