@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Host-visible or background public-equity research workflow with shared evidence packets.",
   "author": {
     "name": "Zhao73"

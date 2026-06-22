@@ -8,7 +8,7 @@ import readline from "node:readline";
 const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(os.homedir(), ".alphacouncil-agent");
 const RUNS_DIR = join(DATA_DIR, "runs");
 const SERVER_NAME = "alphacouncil-agent";
-const VERSION = "0.3.1";
+const VERSION = "0.3.2";
 const CODEX_CMD = process.env.ALPHACOUNCIL_AGENT_CODEX_CMD || "codex";
 const DEFAULT_TASKS = [
   "market_data",

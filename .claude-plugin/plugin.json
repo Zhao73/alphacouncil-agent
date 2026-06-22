@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Multi-agent public-equity research workflow for Claude Code: spawns analyst workers, gathers sourced JSON evidence packets, runs bull/bear debate, and produces a portfolio-manager Buy/Overweight/Hold/Underweight/Sell decision with a full report.",
   "author": {
     "name": "Zhao73"

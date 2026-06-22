@@ -371,11 +371,14 @@ visible.stdout.on("data", (chunk) => {
 function sendVisible(message) {
   visible.stdin.write(`${JSON.stringify(message)}\n`);
 }
+const selftestSuffix = `${process.pid}-${Date.now()}`;
+const visibleRunId = `SELFTEST-VISIBLE-${selftestSuffix}`;
+const incompleteRunId = `SELFTEST-INCOMPLETE-${selftestSuffix}`;
 sendVisible({
   jsonrpc: "2.0",
   id: 10,
   method: "tools/call",
-  params: { name: "plan_visible_run", arguments: { symbol: "NOK", run_id: "SELFTEST-VISIBLE", tasks: ["market_data"] } },
+  params: { name: "plan_visible_run", arguments: { symbol: "NOK", run_id: visibleRunId, tasks: ["market_data"] } },
 });
 sendVisible({
   jsonrpc: "2.0",
@@ -384,7 +387,7 @@ sendVisible({
   params: {
     name: "record_visible_packet",
     arguments: {
-      run_id: "SELFTEST-VISIBLE",
+      run_id: visibleRunId,
       task: "market_data",
       thread_id: "thread-visible-market",
       thread_title: "AlphaCouncil Agent NOK market_data",
@@ -399,7 +402,7 @@ sendVisible({
   params: {
     name: "record_visible_decision",
     arguments: {
-      run_id: "SELFTEST-VISIBLE",
+      run_id: visibleRunId,
       role: "bull_researcher",
       thread_id: "thread-visible-bull",
       thread_title: "AlphaCouncil Agent NOK bull_researcher",
@@ -414,7 +417,7 @@ sendVisible({
   params: {
     name: "record_visible_decision",
     arguments: {
-      run_id: "SELFTEST-VISIBLE",
+      run_id: visibleRunId,
       role: "bear_researcher",
       thread_id: "thread-visible-bear",
       thread_title: "AlphaCouncil Agent NOK bear_researcher",
@@ -429,7 +432,7 @@ sendVisible({
   params: {
     name: "record_visible_decision",
     arguments: {
-      run_id: "SELFTEST-VISIBLE",
+      run_id: visibleRunId,
       role: "portfolio_manager",
       thread_id: "thread-visible-pm",
       thread_title: "AlphaCouncil Agent NOK portfolio_manager",
@@ -444,7 +447,7 @@ sendVisible({
   params: {
     name: "record_visible_packet",
     arguments: {
-      run_id: "SELFTEST-VISIBLE",
+      run_id: visibleRunId,
       task: "market_data",
       thread_id: "thread-visible-market",
       thread_title: "AlphaCouncil Agent NOK market_data",
@@ -459,7 +462,7 @@ sendVisible({
   params: {
     name: "record_visible_packet",
     arguments: {
-      run_id: "SELFTEST-VISIBLE",
+      run_id: visibleRunId,
       task: "market_data",
       thread_id: "thread-visible-market",
       thread_title: "AlphaCouncil Agent NOK market_data",
@@ -472,7 +475,7 @@ sendVisible({
   jsonrpc: "2.0",
   id: 20,
   method: "tools/call",
-  params: { name: "plan_visible_run", arguments: { symbol: "NOK", run_id: "SELFTEST-INCOMPLETE", tasks: ["market_data", "valuation_long_short"] } },
+  params: { name: "plan_visible_run", arguments: { symbol: "NOK", run_id: incompleteRunId, tasks: ["market_data", "valuation_long_short"] } },
 });
 sendVisible({
   jsonrpc: "2.0",
@@ -481,7 +484,7 @@ sendVisible({
   params: {
     name: "record_visible_packet",
     arguments: {
-      run_id: "SELFTEST-INCOMPLETE",
+      run_id: incompleteRunId,
       task: "market_data",
       thread_id: "thread-incomplete-market",
       thread_title: "AlphaCouncil Agent NOK market_data",
@@ -496,7 +499,7 @@ sendVisible({
   params: {
     name: "record_visible_decision",
     arguments: {
-      run_id: "SELFTEST-INCOMPLETE",
+      run_id: incompleteRunId,
       role: "portfolio_manager",
       thread_id: "thread-incomplete-pm",
       thread_title: "AlphaCouncil Agent NOK portfolio_manager",
@@ -517,11 +520,11 @@ if (!visibleResponses.some((item) => item.id === 13 && item.result?.structuredCo
 if (!visibleResponses.some((item) => item.id === 14 && item.result?.structuredContent?.status === "complete")) {
   throw new Error("replayed visible packet update downgraded a complete run.");
 }
-const visibleTrace = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "all_agents.md"), "utf8");
+const visibleTrace = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", visibleRunId, "all_agents.md"), "utf8");
 if (!visibleTrace.includes("Visible thread ID: thread-visible-market") || !visibleTrace.includes("Visible thread ID: thread-visible-pm")) {
   throw new Error("visible thread ids were not written to all_agents.md.");
 }
-const visibleStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "status.json"), "utf8"));
+const visibleStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", visibleRunId, "status.json"), "utf8"));
 if (visibleStatus.status !== "complete" || visibleStatus.phase !== "complete") {
   throw new Error("late visible packet update did not preserve complete status.");
 }
@@ -531,12 +534,12 @@ if (visibleStatus.report_quality !== "passed") {
 if (visibleStatus.verification !== "passed") {
   throw new Error("clean visible run must surface verification=passed.");
 }
-const visiblePacket = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "market_data.json"), "utf8"));
+const visiblePacket = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", visibleRunId, "market_data.json"), "utf8"));
 if (visiblePacket.raw_text !== "original visible agent output") {
   throw new Error("replayed visible packet nested or rewrote raw_text.");
 }
 for (const file of ["user_response.md", "artifact_index.md", "report_quality.json", "market_data.md", "portfolio_manager.md"]) {
-  if (!existsSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", file))) {
+  if (!existsSync(join(os.homedir(), ".alphacouncil-agent", "runs", visibleRunId, file))) {
     throw new Error(`visible run did not write ${file}.`);
   }
 }
@@ -546,21 +549,21 @@ const incompletePm = visibleResponses.find((item) => item.id === 22);
 if (incompletePm?.result?.structuredContent?.run?.status !== "incomplete" || incompletePm?.result?.structuredContent?.run?.phase !== "incomplete") {
   throw new Error("incomplete visible run must report status/phase incomplete.");
 }
-const incompleteStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-INCOMPLETE", "status.json"), "utf8"));
+const incompleteStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", incompleteRunId, "status.json"), "utf8"));
 if (incompleteStatus.status !== "incomplete" || incompleteStatus.phase !== "incomplete" || incompleteStatus.completeness !== "incomplete") {
   throw new Error("incomplete run status.json did not record incomplete status/phase/completeness.");
 }
 if (incompleteStatus.missing_evidence_count !== 1 || incompleteStatus.missing_debate_count !== 2) {
   throw new Error("incomplete run must report 1 missing evidence task and 2 missing debate roles.");
 }
-const incompleteReport = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-INCOMPLETE", "final_report.md"), "utf8");
+const incompleteReport = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", incompleteRunId, "final_report.md"), "utf8");
 if (!incompleteReport.includes("Incomplete Council Run")) {
   throw new Error("incomplete run final_report.md must carry the INCOMPLETE banner.");
 }
 if (!incompleteReport.includes("PM body")) {
   throw new Error("incomplete run final_report.md must preserve the recorded report body (no data deletion).");
 }
-const incompleteEvents = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-INCOMPLETE", "events.jsonl"), "utf8");
+const incompleteEvents = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", incompleteRunId, "events.jsonl"), "utf8");
 if (!incompleteEvents.includes("\"incomplete\"")) {
   throw new Error("incomplete run events.jsonl must record an incomplete event.");
 }
