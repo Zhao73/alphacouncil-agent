@@ -20,8 +20,8 @@
       "Read"
     ],
     "brandColor": "#0F766E",
-    "composerIcon": "./assets/logo.png",
-    "logo": "./assets/logo.png",
+    "composerIcon": "./assets/logo-icon.png",
+    "logo": "./assets/logo-icon.png",
     "defaultPrompt": [
       "@alphacouncil-agent analyze NVDA as a long/short pitch.",
       "@alphacouncil-agent collect evidence for AAPL earnings.",
