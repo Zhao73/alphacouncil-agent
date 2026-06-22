@@ -61,7 +61,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 ## 安装
 
-完整的 Codex 与 Claude Code 安装说明见 **[docs/INSTALL.md](docs/INSTALL.md)**。
+完整的 Codex 与 Claude Code 安装说明见 **[docs/INSTALL.md](docs/INSTALL.md)**。**Windows 用户**见 [Windows 小节](docs/INSTALL.md#windows)。
 
 **前置条件:** Node.js ≥ 18。headless 真跑研究还需要**已安装并登录的 Codex CLI**(每个分析师 worker 都以 `codex exec` 运行);没有 codex 时,改用安装文档里的 visible 工作流。
 

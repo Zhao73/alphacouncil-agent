@@ -65,7 +65,7 @@ investment decision. The authors accept no liability for any loss.
 
 ## Install
 
-See **[docs/INSTALL.md](docs/INSTALL.md)** for full Codex and Claude Code setup.
+See **[docs/INSTALL.md](docs/INSTALL.md)** for full Codex and Claude Code setup. **Windows users:** see the [Windows section](docs/INSTALL.md#windows).
 
 **Prerequisites:** Node.js >= 18. The headless research path also needs an
 installed, authenticated **Codex CLI** (each analyst worker runs as `codex

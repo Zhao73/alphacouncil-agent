@@ -61,7 +61,7 @@ AlphaCouncil Agent は、**上場株式のリサーチ**向けの Codex / Claude
 
 ## インストール
 
-Codex と Claude Code の完全なセットアップ手順は **[docs/INSTALL.md](docs/INSTALL.md)** を参照してください。
+Codex と Claude Code の完全なセットアップ手順は **[docs/INSTALL.md](docs/INSTALL.md)** を参照してください。**Windows ユーザー**は [Windows セクション](docs/INSTALL.md#windows) を参照。
 
 **前提条件:** Node.js ≥ 18。headless でリサーチを実走させるには、**インストール済みかつ認証済みの Codex CLI** も必要です(各アナリスト worker は `codex exec` として起動します)。Codex が無い場合は、インストールガイドの **visible ワークフロー**を使ってください。
 

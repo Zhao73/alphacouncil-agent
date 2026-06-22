@@ -100,18 +100,65 @@ headless path still needs Codex CLI as above.
 
 ## Windows
 
-- **The Claude Code visible path works natively on Windows.** It never spawns the
-  `codex` binary — your Claude Code subagents do the research and record packets via
-  `record_visible_*`. This is the recommended path on Windows.
-- **The headless Codex path** (`analyze_symbol` / `collect_evidence`, which run
-  `codex exec`) is **not reliable on native Windows**: the npm-installed `codex` is a
-  `.cmd`/shell shim that Node's `spawn` cannot launch directly, and routing the large
-  analyst prompts through a shell would corrupt special characters. Use either:
-  - **WSL** (Windows Subsystem for Linux) — run Codex + the plugin inside WSL, where it
-    behaves exactly like Linux; or
-  - the **Claude Code visible path** above (no `codex` binary required).
-- Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil-agent\`
-  (via `os.homedir()`), paths use `path.join`, and the MCP wiring is plain `node`.
+### Prerequisites (Windows)
+
+- **Node.js ≥ 18** — install from [nodejs.org](https://nodejs.org), or in PowerShell:
+  `winget install OpenJS.NodeJS.LTS`. Verify with `node --version`.
+- (Headless path only) the Codex CLI plus **WSL** — see the runtime caveat below.
+
+### Install in Codex desktop (Windows)
+
+The in-app commands are identical to macOS/Linux — they run **inside Codex**, not in your
+shell, so the OS does not matter:
+
+```text
+codex plugin marketplace add Zhao73/alphacouncil-agent
+# then open Codex → /plugins → switch to the "AlphaCouncil" marketplace → Install → /reload-plugins
+```
+
+Local / personal marketplace (Windows paths). In PowerShell:
+
+```powershell
+git clone https://github.com/Zhao73/alphacouncil-agent.git "$env:USERPROFILE\.codex\plugins\alphacouncil-agent"
+```
+
+Then add an entry to `%USERPROFILE%\.agents\plugins\marketplace.json` whose `source.path`
+points at that folder (copy the shape from `.agents/plugins/marketplace.json` in this repo).
+In JSON, escape Windows backslashes, e.g.:
+
+```json
+{ "source": { "path": "C:\\Users\\you\\.codex\\plugins\\alphacouncil-agent" } }
+```
+
+Restart Codex and install from `/plugins`.
+
+### Install in Claude Code (Windows)
+
+Identical to other platforms (the commands run inside Claude Code):
+
+```text
+/plugin marketplace add Zhao73/alphacouncil-agent
+/plugin install alphacouncil-agent@alphacouncil
+/reload-plugins
+```
+
+The Claude Code **visible path works natively on Windows** — it never spawns the `codex`
+binary; your Claude Code subagents do the research and record packets via
+`record_visible_*`. **This is the recommended Windows path.**
+
+### Runtime caveat (Windows)
+
+The **headless Codex path** (`analyze_symbol` / `collect_evidence`, which launch `codex exec`
+workers) is **not reliable on native Windows**: the npm-installed `codex` is a `.cmd`/shell
+shim that Node's `spawn` cannot launch directly, and routing the large analyst prompts through
+a shell would corrupt special characters. For full headless research on Windows, use either:
+
+- **WSL** (Windows Subsystem for Linux) — run Codex + the plugin inside WSL, where it behaves
+  exactly like Linux; or
+- the **Claude Code visible path** above (no `codex` binary required).
+
+Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil-agent\`
+(via `os.homedir()`), paths use `path.join`, and the MCP wiring is plain `node`.
 
 ---
 
