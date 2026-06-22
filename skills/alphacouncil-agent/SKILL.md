@@ -7,6 +7,15 @@ description: Use AlphaCouncil Agent for listed-equity research workflows that ne
 
 Use this plugin when the user invokes `@alphacouncil-agent` or asks for a multi-agent public-equity research workflow.
 
+## Mandatory Council Contract (MUST READ FIRST)
+
+You MUST run the full multi-agent council before giving any final answer. This is not optional and cannot be shortcut.
+
+- You MUST run ALL 11 evidence roles (`market_data`, `earnings_deep_dive`, `forward_expectations`, `sell_side_revisions`, `earnings_call_transcript`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `management_industry_voices`, `insider_sec`, `ib_event_analysis`), THEN `bull_researcher`, THEN `bear_researcher`, THEN `portfolio_manager` — in that order.
+- You MUST NOT answer single-pass from your own model knowledge. You MUST NOT skip analysts, and you MUST NOT call `plan_visible_run` and then immediately record a `portfolio_manager` decision without first recording every planned evidence packet and both debate researchers.
+- A run is "complete" ONLY when every planned evidence task is recorded/completed AND `bull_researcher` and `bear_researcher` and `portfolio_manager` are all recorded. Anything less is INCOMPLETE.
+- The MCP server enforces this. If you record the `portfolio_manager` decision while any planned evidence packet or either debate researcher is missing, the server marks the run `status=incomplete` (NOT `complete`) and prepends a visible INCOMPLETE banner to `final_report.md`. Do not present an incomplete run as a finished investment decision.
+
 ## Preflight Interaction
 
 Do not ask startup option questions by default. For underspecified requests such as `@alphacouncil-agent 帮我看看 NOK`, infer:

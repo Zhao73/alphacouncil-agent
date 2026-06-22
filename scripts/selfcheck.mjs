@@ -67,6 +67,50 @@ if (!__test__.withVerificationBanner("BODY", gappedGate, "English").includes("So
   throw new Error("withVerificationBanner must surface the gate when needs_verification.");
 }
 
+// Completeness gate: a run with all tasks + bull/bear completed is complete.
+const completeRun = {
+  tasks: ["market_data"],
+  task_status: { market_data: { task: "market_data", status: "completed" } },
+  agent_status: {
+    bull_researcher: { role: "bull_researcher", status: "completed" },
+    bear_researcher: { role: "bear_researcher", status: "completed" },
+    portfolio_manager: { role: "portfolio_manager", status: "pending" },
+  },
+  packets: [],
+};
+const completeComp = __test__.completenessStatus(completeRun);
+if (completeComp.completeness !== "complete" || completeComp.missing_evidence_count !== 0 || completeComp.missing_debate_count !== 0) {
+  throw new Error("completenessStatus must mark a fully-recorded run complete.");
+}
+// Completeness gate: a pending evidence task flips to incomplete.
+const pendingEvidenceComp = __test__.completenessStatus({
+  ...completeRun,
+  task_status: { market_data: { task: "market_data", status: "pending" } },
+});
+if (pendingEvidenceComp.completeness !== "incomplete" || pendingEvidenceComp.missing_evidence_count !== 1) {
+  throw new Error("completenessStatus must flag a pending evidence task.");
+}
+// Completeness gate: a missing debate researcher flips to incomplete.
+const missingBearComp = __test__.completenessStatus({
+  ...completeRun,
+  agent_status: {
+    bull_researcher: { role: "bull_researcher", status: "completed" },
+    bear_researcher: { role: "bear_researcher", status: "pending" },
+    portfolio_manager: { role: "portfolio_manager", status: "pending" },
+  },
+});
+if (missingBearComp.completeness !== "incomplete" || !missingBearComp.missing_debate.includes("bear_researcher")) {
+  throw new Error("completenessStatus must flag a missing debate researcher.");
+}
+// withCompletenessBanner: identity on complete, banner on incomplete.
+if (__test__.withCompletenessBanner("BODY", completeComp, "English") !== "BODY") {
+  throw new Error("withCompletenessBanner must be identity when complete.");
+}
+const incompleteBanner = __test__.withCompletenessBanner("BODY", missingBearComp, "English");
+if (!incompleteBanner.includes("Incomplete Council Run") || !incompleteBanner.includes("BODY")) {
+  throw new Error("withCompletenessBanner must prepend an INCOMPLETE banner and preserve the body.");
+}
+
 // normalizeDebate optional contract fields default to empty arrays.
 const debateDefaults = __test__.normalizeDebate({}, "bull_researcher", { symbol: "NVDA", as_of: "2026-06-22" }, "");
 if (!Array.isArray(debateDefaults.debate_rounds) || debateDefaults.debate_rounds.length !== 0
@@ -215,6 +259,36 @@ sendVisible({
 });
 sendVisible({
   jsonrpc: "2.0",
+  id: "11a",
+  method: "tools/call",
+  params: {
+    name: "record_visible_decision",
+    arguments: {
+      run_id: "SELFTEST-VISIBLE",
+      role: "bull_researcher",
+      thread_id: "thread-visible-bull",
+      thread_title: "AlphaCouncil Agent NOK bull_researcher",
+      packet: { verdict: "BULL_OK", rating: "Buy", winner: "bull", summary: "visible bull", confidence: "medium" },
+    },
+  },
+});
+sendVisible({
+  jsonrpc: "2.0",
+  id: "11b",
+  method: "tools/call",
+  params: {
+    name: "record_visible_decision",
+    arguments: {
+      run_id: "SELFTEST-VISIBLE",
+      role: "bear_researcher",
+      thread_id: "thread-visible-bear",
+      thread_title: "AlphaCouncil Agent NOK bear_researcher",
+      packet: { verdict: "BEAR_OK", rating: "Sell", winner: "bear", summary: "visible bear", confidence: "medium" },
+    },
+  },
+});
+sendVisible({
+  jsonrpc: "2.0",
   id: 12,
   method: "tools/call",
   params: {
@@ -258,6 +332,43 @@ sendVisible({
     },
   },
 });
+// Intentionally-incomplete visible run: plan 2 evidence tasks, record only 1, skip bull/bear, then PM.
+sendVisible({
+  jsonrpc: "2.0",
+  id: 20,
+  method: "tools/call",
+  params: { name: "plan_visible_run", arguments: { symbol: "NOK", run_id: "SELFTEST-INCOMPLETE", tasks: ["market_data", "valuation_long_short"] } },
+});
+sendVisible({
+  jsonrpc: "2.0",
+  id: 21,
+  method: "tools/call",
+  params: {
+    name: "record_visible_packet",
+    arguments: {
+      run_id: "SELFTEST-INCOMPLETE",
+      task: "market_data",
+      thread_id: "thread-incomplete-market",
+      thread_title: "AlphaCouncil Agent NOK market_data",
+      packet: { summary: "only evidence packet", claims: [], metrics: {}, sources: [], open_questions: [], confidence: "medium" },
+    },
+  },
+});
+sendVisible({
+  jsonrpc: "2.0",
+  id: 22,
+  method: "tools/call",
+  params: {
+    name: "record_visible_decision",
+    arguments: {
+      run_id: "SELFTEST-INCOMPLETE",
+      role: "portfolio_manager",
+      thread_id: "thread-incomplete-pm",
+      thread_title: "AlphaCouncil Agent NOK portfolio_manager",
+      packet: { verdict: "SHORTCUT", rating: "Hold", winner: "balanced", summary: "shortcut decision", confidence: "low", report_markdown: "# PM body" },
+    },
+  },
+});
 await new Promise((resolve) => setTimeout(resolve, 800));
 visible.kill("SIGTERM");
 await once(visible, "close");
@@ -285,6 +396,30 @@ if (visibleStatus.verification !== "passed") {
 const visiblePacket = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "market_data.json"), "utf8"));
 if (visiblePacket.raw_text !== "original visible agent output") {
   throw new Error("replayed visible packet nested or rewrote raw_text.");
+}
+
+// Incomplete visible run: PM recorded with missing evidence + missing bull/bear must be flagged.
+const incompletePm = visibleResponses.find((item) => item.id === 22);
+if (incompletePm?.result?.structuredContent?.run?.status !== "incomplete" || incompletePm?.result?.structuredContent?.run?.phase !== "incomplete") {
+  throw new Error("incomplete visible run must report status/phase incomplete.");
+}
+const incompleteStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-INCOMPLETE", "status.json"), "utf8"));
+if (incompleteStatus.status !== "incomplete" || incompleteStatus.phase !== "incomplete" || incompleteStatus.completeness !== "incomplete") {
+  throw new Error("incomplete run status.json did not record incomplete status/phase/completeness.");
+}
+if (incompleteStatus.missing_evidence_count !== 1 || incompleteStatus.missing_debate_count !== 2) {
+  throw new Error("incomplete run must report 1 missing evidence task and 2 missing debate roles.");
+}
+const incompleteReport = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-INCOMPLETE", "final_report.md"), "utf8");
+if (!incompleteReport.includes("Incomplete Council Run")) {
+  throw new Error("incomplete run final_report.md must carry the INCOMPLETE banner.");
+}
+if (!incompleteReport.includes("PM body")) {
+  throw new Error("incomplete run final_report.md must preserve the recorded report body (no data deletion).");
+}
+const incompleteEvents = readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-INCOMPLETE", "events.jsonl"), "utf8");
+if (!incompleteEvents.includes("\"incomplete\"")) {
+  throw new Error("incomplete run events.jsonl must record an incomplete event.");
 }
 
 console.log("selfcheck passed");

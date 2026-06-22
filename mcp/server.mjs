@@ -165,6 +165,7 @@ function agentState(run, role) {
 
 function statusSnapshot(run) {
   const gate = verificationStatus(run);
+  const completeness = completenessStatus(run);
   return {
     run_id: run.run_id,
     symbol: run.symbol,
@@ -177,6 +178,9 @@ function statusSnapshot(run) {
     phase: run.phase,
     verification: gate.verification,
     missing_source_count: gate.missing_claim_source_ids.length,
+    completeness: completeness.completeness,
+    missing_evidence_count: completeness.missing_evidence_count,
+    missing_debate_count: completeness.missing_debate_count,
     started_at: run.started_at,
     updated_at: run.updated_at,
     completed_at: run.completed_at,
@@ -241,6 +245,34 @@ function verificationStatus(run) {
     verification: missing.length ? "needs_verification" : "passed",
     missing_claim_source_ids: missing,
   };
+}
+
+function completenessStatus(run) {
+  const tasks = Array.isArray(run.tasks) ? run.tasks : [];
+  const missing_evidence = tasks.filter((task) => taskState(run, task).status !== "completed");
+  const debateResearchers = ["bull_researcher", "bear_researcher"];
+  const missing_debate = debateResearchers.filter((role) => agentState(run, role).status !== "completed");
+  const complete = missing_evidence.length === 0 && missing_debate.length === 0;
+  return {
+    completeness: complete ? "complete" : "incomplete",
+    missing_evidence,
+    missing_debate,
+    missing_evidence_count: missing_evidence.length,
+    missing_debate_count: missing_debate.length,
+  };
+}
+
+function withCompletenessBanner(markdown, completeness, language) {
+  const text = typeof markdown === "string" ? markdown : "";
+  if (!completeness || completeness.completeness !== "incomplete") return text;
+  const ev = completeness.missing_evidence || [];
+  const db = completeness.missing_debate || [];
+  const evLine = ev.length ? ev.map((task) => `- ${task}`).join("\n") : "- (none)";
+  const dbLine = db.length ? db.map((role) => `- ${role}`).join("\n") : "- (none)";
+  const banner = isChineseLanguage(language)
+    ? `> [!WARNING]\n## 流程未完成 / Incomplete Council Run\n\n**状态:incomplete。** 本次运行未跑完完整委员会流程,结论不可信。\n\n未完成的证据角色:\n${evLine}\n\n未完成的辩论角色:\n${dbLine}\n`
+    : `> [!WARNING]\n## Incomplete Council Run / 流程未完成\n\n**Status: incomplete.** This run did NOT execute the full council workflow; the conclusion is unreliable.\n\nMissing evidence roles:\n${evLine}\n\nMissing debate roles:\n${dbLine}\n`;
+  return `${banner}\n\n---\n\n${text}`;
 }
 
 function updateTask(run, task, status, patch = {}) {
@@ -559,7 +591,10 @@ function existingDebate(dir) {
 
 function visibleStatusAfterPacket(run) {
   if (agentState(run, "portfolio_manager").status === "completed") {
-    const finished = verificationStatus(run).verification === "needs_verification" ? "needs_verification" : "complete";
+    let finished;
+    if (completenessStatus(run).completeness === "incomplete") finished = "incomplete";
+    else if (verificationStatus(run).verification === "needs_verification") finished = "needs_verification";
+    else finished = "complete";
     return { status: finished, phase: finished, completed_at: run.completed_at || new Date().toISOString() };
   }
   if (DEBATE_ROLES.some((role) => agentState(run, role).status === "completed")) {
@@ -630,9 +665,17 @@ function recordVisibleDecision(args) {
   writeJson(join(dir, file), packet);
   if (role === "portfolio_manager") {
     const gate = verificationStatus(run);
+    const completeness = completenessStatus(run);
     writeJson(join(dir, "decision.json"), packet);
-    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withVerificationBanner(packet.report_markdown || packet.summary, gate, run.language), run.language)}\n`);
-    if (gate.verification === "needs_verification") {
+    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withCompletenessBanner(withVerificationBanner(packet.report_markdown || packet.summary, gate, run.language), completeness, run.language), run.language)}\n`);
+    if (completeness.completeness === "incomplete") {
+      run.status = "incomplete";
+      run.phase = "incomplete";
+      appendEvent(run, "incomplete", {
+        missing_evidence: completeness.missing_evidence,
+        missing_debate: completeness.missing_debate,
+      });
+    } else if (gate.verification === "needs_verification") {
       run.status = "needs_verification";
       run.phase = "needs_verification";
       appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
@@ -1254,10 +1297,22 @@ async function synthesizeDecision(run, args) {
     writeJson(join(dir, "bear_researcher.json"), bear);
     writeJson(join(dir, "manager_synthesis.json"), fallback);
     writeJson(join(dir, "decision.json"), fallback);
-    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(fallback.report_markdown, run.language)}\n`);
+    const dryGate = verificationStatus(run);
+    const dryCompleteness = completenessStatus(run);
+    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withCompletenessBanner(fallback.report_markdown, dryCompleteness, run.language), run.language)}\n`);
     run.completed_at = new Date().toISOString();
-    run.phase = "complete";
-    run.status = "complete";
+    if (dryCompleteness.completeness === "incomplete") {
+      run.phase = "incomplete";
+      run.status = "incomplete";
+      appendEvent(run, "incomplete", { missing_evidence: dryCompleteness.missing_evidence, missing_debate: dryCompleteness.missing_debate });
+    } else if (dryGate.verification === "needs_verification") {
+      run.phase = "needs_verification";
+      run.status = "needs_verification";
+      appendEvent(run, "needs_verification", { missing: dryGate.missing_claim_source_ids.length });
+    } else {
+      run.phase = "complete";
+      run.status = "complete";
+    }
     writeStatus(run);
     appendEvent(run, "run_complete", { decision: fallback.rating, winner: fallback.winner });
     writeAllAgentsMarkdown(run, { bull, bear, manager: fallback });
@@ -1312,14 +1367,19 @@ async function synthesizeDecision(run, args) {
   const gate = verificationStatus(run);
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
-  writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withVerificationBanner(manager.report_markdown || manager.summary, gate, run.language), run.language)}\n`);
   updateAgent(run, "portfolio_manager", managerResult.ok && manager.verdict !== "PARSE_FAILED" ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "manager_synthesis.json"),
     error: managerResult.ok ? undefined : (managerResult.timedOut ? "timeout" : `exit code ${managerResult.code}`),
   });
+  const completeness = completenessStatus(run);
+  writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withCompletenessBanner(withVerificationBanner(manager.report_markdown || manager.summary, gate, run.language), completeness, run.language), run.language)}\n`);
   run.completed_at = new Date().toISOString();
-  if (gate.verification === "needs_verification") {
+  if (completeness.completeness === "incomplete") {
+    run.phase = "incomplete";
+    run.status = "incomplete";
+    appendEvent(run, "incomplete", { missing_evidence: completeness.missing_evidence, missing_debate: completeness.missing_debate });
+  } else if (gate.verification === "needs_verification") {
     run.phase = "needs_verification";
     run.status = "needs_verification";
     appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
@@ -1355,7 +1415,7 @@ function tools() {
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
   return [
-    tool("plan_visible_run", "Create a visible-host-thread AlphaCouncil Agent run plan. Does not execute; the host must create visible agents/threads.", {
+    tool("plan_visible_run", "MANDATORY first step (not optional): create the visible-host-thread AlphaCouncil Agent run envelope and prompts. Does NOT execute. You MUST then run every planned evidence agent and record each via record_visible_packet, then record bull_researcher and bear_researcher, before recording the portfolio_manager decision.", {
       type: "object",
       properties: {
         symbol: common.symbol,
@@ -1367,7 +1427,7 @@ function tools() {
       },
       required: ["symbol"],
     }),
-    tool("record_visible_packet", "Record one completed visible evidence agent packet into a planned visible run.", {
+    tool("record_visible_packet", "MANDATORY sequential step (not optional): record one completed visible evidence agent packet into a planned visible run. Every planned evidence task MUST be recorded before the portfolio_manager decision; a run missing any planned packet will be marked incomplete.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
@@ -1378,7 +1438,7 @@ function tools() {
       },
       required: ["run_id", "task", "packet"],
     }),
-    tool("record_visible_decision", "Record one completed visible bull/bear/portfolio-manager packet into a planned visible run.", {
+    tool("record_visible_decision", "Record one completed visible bull_researcher / bear_researcher / portfolio_manager packet. Record bull_researcher and bear_researcher before portfolio_manager. For role=portfolio_manager, ALL planned evidence packets AND both debate researchers (bull_researcher and bear_researcher) MUST already be recorded; otherwise the run is marked status=incomplete (NOT complete) and final_report.md gets a visible INCOMPLETE banner. This is the LAST step.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
@@ -1531,4 +1591,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   startStdioServer();
 }
 
-export const __test__ = { taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage };
+export const __test__ = { taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, completenessStatus, withCompletenessBanner, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage };
