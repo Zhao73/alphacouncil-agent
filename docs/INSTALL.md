@@ -98,6 +98,33 @@ headless path still needs Codex CLI as above.
 
 ---
 
+## Troubleshooting: the plugin doesn't show up / `@alphacouncil-agent` isn't found
+
+Codex loads its tool list **at session start**. Installing or enabling a plugin
+mid-session does **not** hot-add it to the current conversation — even if the files
+are installed, `config.toml` marks it enabled, and the self-check passes.
+
+Do this in order:
+
+1. **Fully quit and restart the Codex desktop app** (not just a new tab) and open a **new session**.
+2. Type `/plugins` and confirm **AlphaCouncil** is listed; enable `alphacouncil-agent`.
+3. Type `/reload-plugins`.
+4. Trigger it with the **exact lowercase id**: `@alphacouncil-agent ...`. The display
+   name `@AlphaCouncil Agent` (spaces + capitals) may not trigger — prefer the id.
+
+If `/plugins` **still** doesn't list it after a full restart, your Codex build didn't
+pick up the local marketplace. Use the official GitHub marketplace command instead (run
+in a normal terminal), then restart Codex:
+
+```text
+codex plugin marketplace add Zhao73/alphacouncil-agent
+```
+
+> Local-clone install (Option B): the `source.path` in your
+> `~/.agents/plugins/marketplace.json` must be the **absolute** path to the clone
+> (e.g. `C:\\Users\\you\\.codex\\plugins\\alphacouncil-agent`), **not** `./`. When in
+> doubt, use the GitHub marketplace command above — it avoids hand-editing paths.
+
 ## Windows
 
 ### Prerequisites (Windows)
