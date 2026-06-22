@@ -15,7 +15,7 @@ Do not ask startup option questions by default. For underspecified requests such
 - goal: entry/actionability judgment
 - horizon: include short-term 1-4 weeks, medium-term 3-6 months, and long-term 12 months in the final report
 
-Ask only when the user explicitly requests option selection before launch. Always pass the original user request in `prompt`, and pass the inferred language as `language` to AlphaCouncil Agent MCP tools.
+Ask only when the user explicitly requests option selection before launch. Use the inferred language for visible main-thread preflight/progress updates, visible agent prompts, evidence packets, debate packets, and final synthesis unless the user explicitly requests another language. Always pass the original user request in `prompt`, and pass the inferred language as `language` to AlphaCouncil Agent MCP tools.
 
 ## Visible-First Workflow
 
