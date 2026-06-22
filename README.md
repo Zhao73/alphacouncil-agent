@@ -2,9 +2,7 @@
 
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d4d4d,50:1a7a6a,100:c9a227&height=190&section=header&text=AlphaCouncil%20Agent&fontSize=46&fontColor=ffffff&fontAlignY=36&desc=A%20multi-agent%20investment%20committee%20in%20your%20terminal&descSize=17&descAlignY=58&animation=fadeIn" width="100%" />
-
-<img src="assets/logo.png" alt="AlphaCouncil Agent" width="300" />
+<img src="assets/banner.png" alt="AlphaCouncil Agent" width="100%" />
 
 <p>
   <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=20&duration=2800&pause=700&color=1A7A6A&center=true&vCenter=true&width=620&lines=Spawn+a+council+of+analyst+agents;Gather+sourced+evidence%2C+hide+nothing;Run+a+bull+vs+bear+debate;Get+a+PM+verdict%3A+Buy+%C2%B7+Hold+%C2%B7+Sell" alt="tagline" />
@@ -252,6 +250,13 @@ If AlphaCouncil saved you time, consider leaving a ⭐ — it genuinely helps.
 
 <a href="#readme-top">↑ Back to top</a>
 
+<br/><br/>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
+  <img src="assets/logo.png" alt="AlphaCouncil" width="130" />
+</picture>
+
 </div>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:c9a227,50:1a7a6a,100:0d4d4d&height=110&section=footer" width="100%" />
+<img src="assets/banner-footer.png" alt="" width="100%" />

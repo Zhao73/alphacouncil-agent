@@ -2,9 +2,7 @@
 
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d4d4d,50:1a7a6a,100:c9a227&height=190&section=header&text=AlphaCouncil%20Agent&fontSize=46&fontColor=ffffff&fontAlignY=36&desc=Multi-agent%20investment%20committee&descSize=17&descAlignY=58&animation=fadeIn" width="100%" />
-
-<img src="assets/logo.png" alt="AlphaCouncil Agent" width="300" />
+<img src="assets/banner.png" alt="AlphaCouncil Agent" width="100%" />
 
 ### ターミナルの中の、マルチエージェント投資委員会
 
@@ -200,6 +198,13 @@ AlphaCouncil が役に立ったら、⭐ をいただけると励みになりま
 
 <a href="#readme-top">↑ トップに戻る</a>
 
+<br/><br/>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
+  <img src="assets/logo.png" alt="AlphaCouncil" width="130" />
+</picture>
+
 </div>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:c9a227,50:1a7a6a,100:0d4d4d&height=110&section=footer" width="100%" />
+<img src="assets/banner-footer.png" alt="" width="100%" />
