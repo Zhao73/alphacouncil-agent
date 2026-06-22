@@ -98,6 +98,23 @@ headless path still needs Codex CLI as above.
 
 ---
 
+## Windows
+
+- **The Claude Code visible path works natively on Windows.** It never spawns the
+  `codex` binary — your Claude Code subagents do the research and record packets via
+  `record_visible_*`. This is the recommended path on Windows.
+- **The headless Codex path** (`analyze_symbol` / `collect_evidence`, which run
+  `codex exec`) is **not reliable on native Windows**: the npm-installed `codex` is a
+  `.cmd`/shell shim that Node's `spawn` cannot launch directly, and routing the large
+  analyst prompts through a shell would corrupt special characters. Use either:
+  - **WSL** (Windows Subsystem for Linux) — run Codex + the plugin inside WSL, where it
+    behaves exactly like Linux; or
+  - the **Claude Code visible path** above (no `codex` binary required).
+- Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil-agent\`
+  (via `os.homedir()`), paths use `path.join`, and the MCP wiring is plain `node`.
+
+---
+
 ## 中文速览
 
 - 前置:Node ≥ 18;headless 真跑研究需要已登录的 Codex CLI(worker 是 `codex exec`)。
