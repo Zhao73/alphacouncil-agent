@@ -5,6 +5,17 @@ import { join } from "node:path";
 import os from "node:os";
 import { __test__ } from "../mcp/server.mjs";
 
+const governanceSkill = readFileSync(join(process.cwd(), "skills", "agent-skills-governance", "SKILL.md"), "utf8");
+const alphaSkill = readFileSync(join(process.cwd(), "skills", "alphacouncil-agent", "SKILL.md"), "utf8");
+const claudeRules = readFileSync(join(process.cwd(), "CLAUDE.md"), "utf8");
+const agentsRules = readFileSync(join(process.cwd(), "AGENTS.md"), "utf8");
+if (!governanceSkill.includes("addyosmani/agent-skills") || !governanceSkill.includes("Stop Gates") || !governanceSkill.includes("Anti-Rationalizations")) {
+  throw new Error("agent-skills governance skill must be bundled with explicit gates and anti-rationalizations.");
+}
+for (const [name, text] of [["alphacouncil-agent skill", alphaSkill], ["CLAUDE.md", claudeRules], ["AGENTS.md", agentsRules]]) {
+  if (!text.includes("agent-skills-governance")) throw new Error(`${name} must reference the bundled governance skill.`);
+}
+
 const workerPrompt = __test__.taskPrompt("market_data", "NOK", "2026-06-22", "帮我看看 NOK", "auto");
 if (!workerPrompt.includes("不要调用 alphacouncil-agent 插件/MCP 工具") || !workerPrompt.includes("字段内容用中文")) {
   throw new Error("worker prompt must be Chinese and block recursive alphacouncil-agent calls.");

@@ -15,6 +15,10 @@ The plugin turns `@alphacouncil-agent <ticker/request>` into a full equity-resea
 
 Default behavior is full workflow. Do not downgrade to lite, smoke-test, or debug output unless the user explicitly asks for it.
 
+## Agent-Skills Governance
+
+Also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with this plugin and applies the `addyosmani/agent-skills` style of explicit gates, anti-rationalizations, and exit criteria to AlphaCouncil runs. Do not treat it as an optional local setup step.
+
 ## Analyst Roles
 
 Default evidence roles:

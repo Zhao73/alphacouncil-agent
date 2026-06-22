@@ -7,6 +7,10 @@ description: Use AlphaCouncil Agent for listed-equity research workflows that ne
 
 Use this plugin when the user invokes `@alphacouncil-agent` or asks for a multi-agent public-equity research workflow.
 
+## Agent-Skills Governance
+
+Also apply `../agent-skills-governance/SKILL.md` before planning, running, synthesizing, or reporting. That bundled skill provides the agent-skills-style anti-laziness gates for every installer of this plugin; it is not a separate local dependency.
+
 ## Mandatory Council Contract (MUST READ FIRST)
 
 You MUST run the full multi-agent council before giving any final answer. This is not optional and cannot be shortcut.

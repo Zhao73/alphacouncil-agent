@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Multi-agent public-equity research workflow plugin for Codex & Claude Code: sourced evidence packets, bull/bear debate, and a portfolio-manager Buy/Overweight/Hold/Underweight/Sell decision.",
   "type": "module",
   "license": "MIT",
