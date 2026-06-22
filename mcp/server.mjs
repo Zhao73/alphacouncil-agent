@@ -116,6 +116,19 @@ function withDisclaimer(markdown, language) {
   return `${text}${note}`;
 }
 
+function withVerificationBanner(markdown, gate, language) {
+  const text = typeof markdown === "string" ? markdown : "";
+  if (!gate || gate.verification !== "needs_verification") return text;
+  const pairs = gate.missing_claim_source_ids || [];
+  const lines = pairs.length
+    ? pairs.map((item) => `- ${item.task}: ${item.source_id}`).join("\n")
+    : "- (unspecified)";
+  const banner = isChineseLanguage(language)
+    ? `\n\n---\n\n## 来源核验 / Source Verification Gate\n\n**状态:needs_verification。** 以下重大论断引用了不存在的来源 ID,本次运行尚未通过来源核验:\n\n${lines}\n`
+    : `\n\n---\n\n## Source Verification Gate / 来源核验\n\n**Status: needs_verification.** The following material claims cite source IDs that are not present in any evidence packet; this run has NOT passed source verification:\n\n${lines}\n`;
+  return `${text}${banner}`;
+}
+
 function runPath(id) {
   if (typeof id !== "string" || !/^[A-Z0-9.^=+\-_]{1,80}$/.test(id)) {
     throw new Error("run_id is invalid.");
@@ -151,6 +164,7 @@ function agentState(run, role) {
 }
 
 function statusSnapshot(run) {
+  const gate = verificationStatus(run);
   return {
     run_id: run.run_id,
     symbol: run.symbol,
@@ -161,6 +175,8 @@ function statusSnapshot(run) {
     dry_run: run.dry_run,
     status: run.status,
     phase: run.phase,
+    verification: gate.verification,
+    missing_source_count: gate.missing_claim_source_ids.length,
     started_at: run.started_at,
     updated_at: run.updated_at,
     completed_at: run.completed_at,
@@ -217,6 +233,14 @@ function sourceManifest(run) {
 
 function writeSourceManifest(run) {
   writeJson(join(runPath(run.run_id), "source_manifest.json"), sourceManifest(run));
+}
+
+function verificationStatus(run) {
+  const missing = sourceManifest(run).missing_claim_source_ids;
+  return {
+    verification: missing.length ? "needs_verification" : "passed",
+    missing_claim_source_ids: missing,
+  };
 }
 
 function updateTask(run, task, status, patch = {}) {
@@ -282,6 +306,31 @@ function renderPacketMarkdown(packet, index) {
   ].join("\n");
 }
 
+function renderDebateRounds(rounds) {
+  if (!Array.isArray(rounds) || rounds.length === 0) return "";
+  const blocks = rounds.map((round) => [
+    `#### Round ${round.round}`,
+    "",
+    round.summary || "",
+    "",
+    "##### Long Thesis",
+    bullets(round.long_thesis),
+    "",
+    "##### Short Thesis",
+    bullets(round.short_thesis),
+    "",
+    "##### Questions",
+    bullets(round.questions),
+    "",
+    "##### Questions Answered",
+    bullets(round.questions_answered),
+    "",
+    "##### Raw Output / Prompt",
+    fence(round.raw_text || "", "text"),
+  ].join("\n"));
+  return ["### Debate Rounds", "", ...blocks].join("\n\n");
+}
+
 function renderDebateMarkdown(agent) {
   if (!agent) return "";
   return [
@@ -324,9 +373,10 @@ function renderDebateMarkdown(agent) {
     "### Report Markdown",
     agent.report_markdown || "",
     "",
+    renderDebateRounds(agent.debate_rounds),
     "### Raw Output / Prompt",
     fence(agent.raw_text || "", "text"),
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 function writeAllAgentsMarkdown(run, debate = {}) {
@@ -509,7 +559,8 @@ function existingDebate(dir) {
 
 function visibleStatusAfterPacket(run) {
   if (agentState(run, "portfolio_manager").status === "completed") {
-    return { status: "complete", phase: "complete", completed_at: run.completed_at || new Date().toISOString() };
+    const finished = verificationStatus(run).verification === "needs_verification" ? "needs_verification" : "complete";
+    return { status: finished, phase: finished, completed_at: run.completed_at || new Date().toISOString() };
   }
   if (DEBATE_ROLES.some((role) => agentState(run, role).status === "completed")) {
     return { status: "running", phase: "visible_debate", completed_at: null };
@@ -578,10 +629,17 @@ function recordVisibleDecision(args) {
   const file = role === "portfolio_manager" ? "manager_synthesis.json" : `${role}.json`;
   writeJson(join(dir, file), packet);
   if (role === "portfolio_manager") {
+    const gate = verificationStatus(run);
     writeJson(join(dir, "decision.json"), packet);
-    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(packet.report_markdown || packet.summary, run.language)}\n`);
-    run.status = "complete";
-    run.phase = "complete";
+    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withVerificationBanner(packet.report_markdown || packet.summary, gate, run.language), run.language)}\n`);
+    if (gate.verification === "needs_verification") {
+      run.status = "needs_verification";
+      run.phase = "needs_verification";
+      appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
+    } else {
+      run.status = "complete";
+      run.phase = "complete";
+    }
     run.completed_at = new Date().toISOString();
   } else {
     run.status = "running";
@@ -662,6 +720,9 @@ function normalizeDebate(packet, role, run, raw = "") {
     invalidation: Array.isArray(packet?.invalidation) ? packet.invalidation : [],
     source_ids: Array.isArray(packet?.source_ids) ? packet.source_ids : [],
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
+    questions: Array.isArray(packet?.questions) ? packet.questions : [],
+    questions_answered: Array.isArray(packet?.questions_answered) ? packet.questions_answered : [],
+    debate_rounds: Array.isArray(packet?.debate_rounds) ? packet.debate_rounds : [],
     report_markdown: typeof packet?.report_markdown === "string" ? packet.report_markdown : "",
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
     thread_title: typeof packet?.thread_title === "string" ? packet.thread_title : undefined,
@@ -818,9 +879,20 @@ function debatePrompt(role, run, context = {}) {
     portfolio_manager: `You are the final Portfolio Manager. Read the evidence plus bull and bear arguments. Decide who won: bull, bear, or balanced. Output the final rating, position sizing, valuation range, catalysts, risks, invalidation, confidence, and a polished final report in ${language}. The report must be a complete investment-committee report that is readable without opening attachments. It must include separate visible sections for conclusion, analyst work log, bull/bear debate record, long thesis, short thesis, market expectations and implied thresholds, analyst rating/target-price revisions, earnings-call management signals, quant factor / technical risk view, news and company/industry voice signals, short interest / borrow / options information, strategic transaction or NVIDIA terms, valuation range, key catalysts, major risks, position recommendation, separate short-term 1-4 week / medium-term 3-6 month / long-term 12 month views, data gaps / unavailable data, invalidation conditions, confidence, and source table. The analyst work log must summarize every evidence agent's key data, news, earnings, filings, quant, and valuation findings. The debate record must summarize the bull case, bear case, rebuttal, unresolved questions, and winner. Do not write execution labels such as "visible version", "lite", "smoke test", "debug", or explain that another output format was not used. Do not hide news or voice work only in the source table. List every missing data item in the data-gaps section; if no critical item is missing, state that no critical data gaps were found.`,
   }[role] || "Produce a portfolio debate memo.";
 
+  const roundThreeInstruction = context.round === 3
+    ? (chinese
+        ? "本轮为问答轮:在 `questions` 数组里给出恰好 3 个针对对方的尖锐问题,并在 `questions_answered` 数组里逐条回答对方提出的问题。"
+        : "This is the Q&A round: in a `questions` array list exactly 3 sharp questions for the other side, and in a `questions_answered` array answer the 3 questions the other side asked you.")
+    : "";
+
   return [
     ...base,
     roleText,
+    roundThreeInstruction,
+    context.round ? `Debate round: ${context.round}` : "",
+    context.brief ? `Brief length for round 1: ${context.brief}` : "",
+    context.otherCaseR1 ? `Opponent prior-round case JSON: ${JSON.stringify(context.otherCaseR1)}` : "",
+    context.questionsForYou ? `Questions you must answer JSON: ${JSON.stringify(context.questionsForYou)}` : "",
     context.bull ? `Bull argument JSON: ${JSON.stringify(context.bull)}` : "",
     context.bear ? `Bear argument JSON: ${JSON.stringify(context.bear)}` : "",
     role === "portfolio_manager" ? outputModeInstruction(context.outputMode || "chat", language) : "",
@@ -943,6 +1015,22 @@ function debateFromCodex(result, role, run, fallbackPrompt) {
       report_markdown: cleanLog(result.text),
     }, role, run, cleanLog(result.text));
   }
+}
+
+function mergeDebateRounds(rounds) {
+  const list = (rounds || []).filter(Boolean);
+  if (list.length === 0) return null;
+  const base = list[list.length - 1];
+  const debate_rounds = list.map((packet, index) => ({
+    round: index + 1,
+    summary: packet.summary || "",
+    long_thesis: packet.long_thesis || [],
+    short_thesis: packet.short_thesis || [],
+    questions: packet.questions || [],
+    questions_answered: packet.questions_answered || [],
+    raw_text: packet.raw_text || "",
+  }));
+  return { ...base, debate_rounds };
 }
 
 async function mapLimit(items, limit, worker) {
@@ -1130,6 +1218,19 @@ function managerFallback(run, userPrompt = "") {
   }, "portfolio_manager", run);
 }
 
+async function runDebateRole(run, role, context, timeoutMs) {
+  const prompt = debatePrompt(role, run, context);
+  updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round });
+  const result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+    updateAgent(run, role, "running", { pid, output, round: context.round });
+  }, ({ pid, output, elapsed_ms }) => {
+    updateAgent(run, role, "running", { pid, output, round: context.round });
+    appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
+  });
+  const packet = debateFromCodex(result, role, run, prompt);
+  return { packet, result };
+}
+
 async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
   const timeoutMs = Number.isFinite(args.synthesis_timeout_ms) ? args.synthesis_timeout_ms : Number(args.timeout_ms || 600000);
@@ -1163,37 +1264,37 @@ async function synthesizeDecision(run, args) {
     return { bull, bear, manager: fallback };
   }
 
-  const bullPrompt = debatePrompt("bull_researcher", run);
-  updateAgent(run, "bull_researcher", "running", { started_at: new Date().toISOString() });
-  const bullResult = await runCodex(bullPrompt, timeoutMs, ({ pid, output }) => {
-    updateAgent(run, "bull_researcher", "running", { pid, output });
-  }, ({ pid, output, elapsed_ms }) => {
-    updateAgent(run, "bull_researcher", "running", { pid, output });
-    appendEvent(run, "agent_heartbeat", { role: "bull_researcher", pid, output, elapsed_ms });
-  });
-  const bull = debateFromCodex(bullResult, "bull_researcher", run, bullPrompt);
+  // Three-round debate: R1 cases, R2 cross-rebuttal, R3 Q&A.
+  appendEvent(run, "debate_round", { round: 1 });
+  const bullR1 = await runDebateRole(run, "bull_researcher", { round: 1, brief: "long" }, timeoutMs);
+  const bearR1 = await runDebateRole(run, "bear_researcher", { round: 1, brief: "short", bull: bullR1.packet }, timeoutMs);
+
+  appendEvent(run, "debate_round", { round: 2 });
+  const bullR2 = await runDebateRole(run, "bull_researcher", { round: 2, otherCaseR1: bearR1.packet }, timeoutMs);
+  const bearR2 = await runDebateRole(run, "bear_researcher", { round: 2, otherCaseR1: bullR1.packet }, timeoutMs);
+
+  appendEvent(run, "debate_round", { round: 3 });
+  const bullR3 = await runDebateRole(run, "bull_researcher", { round: 3, otherCaseR1: bearR2.packet, questionsForYou: bearR2.packet.questions }, timeoutMs);
+  const bearR3 = await runDebateRole(run, "bear_researcher", { round: 3, otherCaseR1: bullR2.packet, questionsForYou: bullR2.packet.questions }, timeoutMs);
+
+  const bull = mergeDebateRounds([bullR1.packet, bullR2.packet, bullR3.packet]);
+  const bear = mergeDebateRounds([bearR1.packet, bearR2.packet, bearR3.packet]);
+  const bullOk = [bullR1, bullR2, bullR3].every((step) => step.result.ok) && bull.verdict !== "PARSE_FAILED";
+  const bearOk = [bearR1, bearR2, bearR3].every((step) => step.result.ok) && bear.verdict !== "PARSE_FAILED";
+  const lastBull = bullR3.result;
+  const lastBear = bearR3.result;
+
   writeJson(join(dir, "bull_researcher.json"), bull);
-  updateAgent(run, "bull_researcher", bullResult.ok && bull.verdict !== "PARSE_FAILED" ? "completed" : "failed", {
+  updateAgent(run, "bull_researcher", bullOk ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "bull_researcher.json"),
-    error: bullResult.ok ? undefined : (bullResult.timedOut ? "timeout" : `exit code ${bullResult.code}`),
+    error: bullOk ? undefined : (lastBull.timedOut ? "timeout" : `exit code ${lastBull.code}`),
   });
-  writeAllAgentsMarkdown(run, { bull });
-
-  const bearPrompt = debatePrompt("bear_researcher", run, { bull });
-  updateAgent(run, "bear_researcher", "running", { started_at: new Date().toISOString() });
-  const bearResult = await runCodex(bearPrompt, timeoutMs, ({ pid, output }) => {
-    updateAgent(run, "bear_researcher", "running", { pid, output });
-  }, ({ pid, output, elapsed_ms }) => {
-    updateAgent(run, "bear_researcher", "running", { pid, output });
-    appendEvent(run, "agent_heartbeat", { role: "bear_researcher", pid, output, elapsed_ms });
-  });
-  const bear = debateFromCodex(bearResult, "bear_researcher", run, bearPrompt);
   writeJson(join(dir, "bear_researcher.json"), bear);
-  updateAgent(run, "bear_researcher", bearResult.ok && bear.verdict !== "PARSE_FAILED" ? "completed" : "failed", {
+  updateAgent(run, "bear_researcher", bearOk ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "bear_researcher.json"),
-    error: bearResult.ok ? undefined : (bearResult.timedOut ? "timeout" : `exit code ${bearResult.code}`),
+    error: bearOk ? undefined : (lastBear.timedOut ? "timeout" : `exit code ${lastBear.code}`),
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 
@@ -1208,17 +1309,24 @@ async function synthesizeDecision(run, args) {
   const manager = managerResult.ok
     ? debateFromCodex(managerResult, "portfolio_manager", run, managerPrompt)
     : managerFallback(run, args.prompt || "");
+  const gate = verificationStatus(run);
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
-  writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(manager.report_markdown || manager.summary, run.language)}\n`);
+  writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withVerificationBanner(manager.report_markdown || manager.summary, gate, run.language), run.language)}\n`);
   updateAgent(run, "portfolio_manager", managerResult.ok && manager.verdict !== "PARSE_FAILED" ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "manager_synthesis.json"),
     error: managerResult.ok ? undefined : (managerResult.timedOut ? "timeout" : `exit code ${managerResult.code}`),
   });
   run.completed_at = new Date().toISOString();
-  run.phase = "complete";
-  run.status = "complete";
+  if (gate.verification === "needs_verification") {
+    run.phase = "needs_verification";
+    run.status = "needs_verification";
+    appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
+  } else {
+    run.phase = "complete";
+    run.status = "complete";
+  }
   writeStatus(run);
   appendEvent(run, "run_complete", { decision: manager.rating, winner: manager.winner });
   writeAllAgentsMarkdown(run, { bull, bear, manager });
@@ -1423,4 +1531,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   startStdioServer();
 }
 
-export const __test__ = { taskPrompt, extractJson, normalizePacket, sourceManifest, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage };
+export const __test__ = { taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage };

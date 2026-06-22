@@ -40,6 +40,51 @@ if (manifest.source_count !== 1 || manifest.missing_claim_source_ids.length !== 
   throw new Error("source manifest did not preserve scoped sources.");
 }
 
+// Verification gate: clean run passes.
+const cleanGate = __test__.verificationStatus({ packets: [scoped] });
+if (cleanGate.verification !== "passed" || cleanGate.missing_claim_source_ids.length !== 0) {
+  throw new Error("verificationStatus must pass a run with no missing claim sources.");
+}
+// Verification gate: a claim citing an unknown source id flips to needs_verification.
+const missingPacket = __test__.normalizePacket({
+  claims: [{ claim: "c", evidence: "e", confidence: "high", source_ids: ["ghost:S9"] }],
+  sources: [],
+  confidence: "high",
+}, "market_data", "NVDA", "2026-06-22", "{}");
+const gappedGate = __test__.verificationStatus({ packets: [missingPacket] });
+if (gappedGate.verification !== "needs_verification" || gappedGate.missing_claim_source_ids.length !== 1) {
+  throw new Error("verificationStatus must flag a claim citing a missing source id.");
+}
+const missEntry = gappedGate.missing_claim_source_ids[0];
+if (missEntry.task !== "market_data" || missEntry.source_id !== "ghost:S9") {
+  throw new Error("verificationStatus must preserve {task, source_id} shape.");
+}
+// withVerificationBanner: identity on pass, banner on needs_verification.
+if (__test__.withVerificationBanner("BODY", cleanGate, "English") !== "BODY") {
+  throw new Error("withVerificationBanner must be identity when the gate passes.");
+}
+if (!__test__.withVerificationBanner("BODY", gappedGate, "English").includes("Source Verification Gate")) {
+  throw new Error("withVerificationBanner must surface the gate when needs_verification.");
+}
+
+// normalizeDebate optional contract fields default to empty arrays.
+const debateDefaults = __test__.normalizeDebate({}, "bull_researcher", { symbol: "NVDA", as_of: "2026-06-22" }, "");
+if (!Array.isArray(debateDefaults.debate_rounds) || debateDefaults.debate_rounds.length !== 0
+  || !Array.isArray(debateDefaults.questions) || debateDefaults.questions.length !== 0
+  || !Array.isArray(debateDefaults.questions_answered) || debateDefaults.questions_answered.length !== 0) {
+  throw new Error("normalizeDebate must default debate_rounds/questions/questions_answered to empty arrays.");
+}
+
+// mergeDebateRounds: top-level from last round, debate_rounds preserves all three.
+const mkRound = (rating, summary) => __test__.normalizeDebate({ rating, summary }, "bull_researcher", { symbol: "NVDA", as_of: "2026-06-22" }, summary);
+const merged = __test__.mergeDebateRounds([mkRound("Hold", "r1"), mkRound("Overweight", "r2"), mkRound("Buy", "r3")]);
+if (merged.rating !== "Buy" || merged.summary !== "r3") {
+  throw new Error("mergeDebateRounds must take top-level fields from the last round.");
+}
+if (merged.debate_rounds.length !== 3 || merged.debate_rounds.map((r) => r.round).join(",") !== "1,2,3") {
+  throw new Error("mergeDebateRounds must capture all three rounds in order.");
+}
+
 const child = spawn("node", ["./mcp/server.mjs"], {
   cwd: new URL("..", import.meta.url),
   stdio: ["pipe", "pipe", "inherit"],
@@ -127,6 +172,9 @@ if (!finalReport.includes("多空辩论记录") && !finalReport.includes("Bull/B
 const status = JSON.parse(readFileSync(statusPath, "utf8"));
 if (status.status !== "complete" || !status.tasks.every((task) => task.status === "completed")) {
   throw new Error("status.json did not record a complete dry run.");
+}
+if (status.verification !== "passed" || status.missing_source_count !== 0) {
+  throw new Error("clean dry run must surface verification=passed with zero missing sources.");
 }
 const events = readFileSync(eventsPath, "utf8");
 if (!events.includes("run_started") || !events.includes("run_complete")) {
@@ -230,6 +278,9 @@ if (!visibleTrace.includes("Visible thread ID: thread-visible-market") || !visib
 const visibleStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "status.json"), "utf8"));
 if (visibleStatus.status !== "complete" || visibleStatus.phase !== "complete") {
   throw new Error("late visible packet update did not preserve complete status.");
+}
+if (visibleStatus.verification !== "passed") {
+  throw new Error("clean visible run must surface verification=passed.");
 }
 const visiblePacket = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "market_data.json"), "utf8"));
 if (visiblePacket.raw_text !== "original visible agent output") {
