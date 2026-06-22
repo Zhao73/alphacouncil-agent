@@ -141,7 +141,9 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 - **Node.js ≥ 18** — install from [nodejs.org](https://nodejs.org), or in PowerShell:
   `winget install OpenJS.NodeJS.LTS`. Verify with `node --version`.
-- (Headless path only) the Codex CLI plus **WSL** — see the runtime caveat below.
+- (Headless path only) the Codex CLI installed and authenticated. v0.3.0+ supports
+  native Windows `codex.cmd` installs; WSL is only a fallback if your Codex CLI
+  itself does not work from PowerShell/CMD.
 
 ### Install in Codex desktop (Windows)
 
@@ -183,16 +185,26 @@ The Claude Code **visible path works natively on Windows** — it never spawns t
 binary; your Claude Code subagents do the research and record packets via
 `record_visible_*`. **This is the recommended Windows path.**
 
-### Runtime caveat (Windows)
+### Runtime notes (Windows)
 
 The **headless Codex path** (`analyze_symbol` / `collect_evidence`, which launch `codex exec`
-workers) is **not reliable on native Windows**: the npm-installed `codex` is a `.cmd`/shell
-shim that Node's `spawn` cannot launch directly, and routing the large analyst prompts through
-a shell would corrupt special characters. For full headless research on Windows, use either:
+workers) is supported on native Windows in v0.3.0+: the server launches through
+`cmd.exe /d /s /c` so `codex.cmd` resolves correctly, and it sends large analyst prompts
+through stdin (`codex exec -`) instead of putting Chinese/multiline prompts on the command
+line. Timeout cleanup uses the normal Node process plus Windows process-tree termination.
 
-- **WSL** (Windows Subsystem for Linux) — run Codex + the plugin inside WSL, where it behaves
-  exactly like Linux; or
-- the **Claude Code visible path** above (no `codex` binary required).
+If headless still fails, check these first:
+
+- `node --version` is >= 18.
+- `codex --version` works in PowerShell or CMD.
+- Codex CLI is logged in for the same Windows user running Codex Desktop.
+- If `codex` is not on PATH, set `ALPHACOUNCIL_AGENT_CODEX_CMD` to the absolute path of
+  `codex.cmd`.
+
+Fallbacks:
+
+- Use **WSL** and run Codex + the plugin inside Linux if your native Codex CLI install is broken.
+- Use the **visible path** above when you do not want the MCP server to spawn `codex` at all.
 
 Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil-agent\`
 (via `os.homedir()`), paths use `path.join`, and the MCP wiring is plain `node`.
@@ -201,7 +213,7 @@ Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil
 
 ## 中文速览
 
-- 前置:Node ≥ 18;headless 真跑研究需要已登录的 Codex CLI(worker 是 `codex exec`)。
+- 前置:Node ≥ 18;headless 真跑研究需要已登录的 Codex CLI(worker 是 `codex exec`)。Windows v0.3.0+ 原生支持 `codex.cmd`;WSL 只是 fallback。
 - Codex 安装:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `/plugins` 安装 → `/reload-plugins`;或 clone 到 `~/.codex/plugins/` 走本地 marketplace。
 - Claude Code 安装:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
 - 没有 Codex CLI 时:用 visible 工作流,让 Claude 子代理产出证据并用 `record_visible_*` 录入,无需 codex。
@@ -210,7 +222,7 @@ Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil
 
 ## 日本語クイックガイド
 
-- 前提:Node ≥ 18。headless でリサーチを実走させるには、認証済みの Codex CLI が必要(worker は `codex exec`)。
+- 前提:Node ≥ 18。headless でリサーチを実走させるには、認証済みの Codex CLI が必要(worker は `codex exec`)。Windows は v0.3.0+ で `codex.cmd` をネイティブに起動可能。WSL は fallback。
 - Codex でのインストール:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `/plugins` でインストール → `/reload-plugins`。または `~/.codex/plugins/` に clone してローカル marketplace 経由でも可。
 - Claude Code でのインストール:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
 - Codex CLI が無い場合:visible ワークフローを使用。Claude のサブエージェントに根拠を生成させ、`record_visible_*` で記録する(codex 不要)。

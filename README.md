@@ -69,7 +69,8 @@ See **[docs/INSTALL.md](docs/INSTALL.md)** for full Codex and Claude Code setup.
 
 **Prerequisites:** Node.js >= 18. The headless research path also needs an
 installed, authenticated **Codex CLI** (each analyst worker runs as `codex
-exec`); without it, use the visible workflow described in the install guide.
+exec`). On Windows, v0.3.0+ launches the CLI through `cmd.exe` and feeds prompts
+over stdin so native `codex.cmd` installs work without WSL in the normal case.
 
 ```text
 # Codex
@@ -107,7 +108,9 @@ VERDICT: Overweight  (confidence: medium)
 └─ Source table ............ every claim mapped to <task>:<source_id>
 ```
 
-The full report is also written to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`.
+The concise handoff is written to `~/.alphacouncil-agent/runs/<run_id>/user_response.md`.
+The full report is written to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`,
+with analyst Markdown files and `artifact_index.md` in the same run directory.
 
 ## What It Does
 
@@ -177,7 +180,7 @@ Both editions share the same workflow, JSON packet contract, audit artifacts, th
 | Model & cost | One model | **Pick per role** — evidence on Sonnet, debate/verdict on Opus 4.8 (or all-Opus / all-Sonnet) |
 | Language | User's language | User's language across every subagent + the live workflow |
 
-**Honest scope:** same model family, same prompts, same audit contract — the win is context isolation, always-on parallel fan-out, and a deterministic barrier, *not* a smarter model. As of **v0.2.0** the shared server runs the 3-round debate and enforces both the missing-source and full-run completeness gates in **both** editions; the Claude Code edition adds parallel per-round execution and host-driven per-claim verification. Live-web staleness and paywalls limit both editions equally.
+**Honest scope:** same model family, same prompts, same audit contract — the win is context isolation, always-on parallel fan-out, and deterministic gates, *not* a smarter model. As of **v0.3.0** the shared server runs the 3-round debate, enforces missing-source / full-run / report-quality gates, writes concise and full report artifacts, and supports native Windows Codex CLI launching. The Claude Code edition adds parallel per-round execution and host-driven per-claim verification. Live-web staleness and paywalls limit both editions equally.
 
 ## Data Contract
 
@@ -228,6 +231,8 @@ The check validates:
 - default real-run behavior
 - visible-run recording
 - `events.jsonl`, `status.json`, `all_agents.md`, `source_manifest.json`
+- `final_report.md`, `user_response.md`, `artifact_index.md`, `report_quality.json`
+- one Markdown file per evidence analyst plus bull, bear, and portfolio manager
 - final report includes analyst work log, bull/bear debate record and data gaps
 
 ## Codex Install Shape

@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "AlphaCouncil plugins for public-equity research.",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "alphacouncil-agent",
       "source": "./",
       "description": "Multi-agent equity research: evidence packets, bull/bear debate, portfolio-manager decision.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": { "name": "Zhao73" },
       "category": "finance",
       "keywords": ["equity-research", "investing", "multi-agent", "mcp", "finance"]

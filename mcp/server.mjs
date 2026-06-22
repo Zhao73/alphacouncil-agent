@@ -8,7 +8,8 @@ import readline from "node:readline";
 const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(os.homedir(), ".alphacouncil-agent");
 const RUNS_DIR = join(DATA_DIR, "runs");
 const SERVER_NAME = "alphacouncil-agent";
-const VERSION = "0.1.0";
+const VERSION = "0.3.0";
+const CODEX_CMD = process.env.ALPHACOUNCIL_AGENT_CODEX_CMD || "codex";
 const DEFAULT_TASKS = [
   "market_data",
   "earnings_deep_dive",
@@ -35,6 +36,29 @@ const OUTPUT_MODES = [
   "public_equity",
   "investment_banking",
   "sales",
+];
+const REPORT_SECTION_TERMS = [
+  ["结论", "Conclusion"],
+  ["分析师工作记录", "Analyst Work Log"],
+  ["多空辩论记录", "Bull/Bear Debate"],
+  ["市场预期", "Market Expectations"],
+  ["分析师评级", "Analyst Rating"],
+  ["电话会", "Earnings Call"],
+  ["量化", "Quant"],
+  ["新闻", "News"],
+  ["short interest", "Short Interest"],
+  ["战略交易", "Strategic Transaction"],
+  ["估值", "Valuation"],
+  ["催化剂", "Catalyst"],
+  ["风险", "Risk"],
+  ["仓位", "Position"],
+  ["短线", "Short-Term"],
+  ["中期", "Medium-Term"],
+  ["长期", "Long-Term"],
+  ["数据缺口", "Data Gaps"],
+  ["反证", "Invalidation"],
+  ["置信", "Confidence"],
+  ["来源表", "Source Table"],
 ];
 
 const JsonRpcError = {
@@ -181,6 +205,8 @@ function statusSnapshot(run) {
     completeness: completeness.completeness,
     missing_evidence_count: completeness.missing_evidence_count,
     missing_debate_count: completeness.missing_debate_count,
+    report_quality: run.report_quality?.status || "not_checked",
+    missing_report_items_count: run.report_quality?.missing?.length || 0,
     started_at: run.started_at,
     updated_at: run.updated_at,
     completed_at: run.completed_at,
@@ -469,6 +495,212 @@ function writeAllAgentsMarkdown(run, debate = {}) {
   return path;
 }
 
+function clip(text, max = 520) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+function artifactPaths(run) {
+  const dir = runPath(run.run_id);
+  const analyst_markdown = Object.fromEntries(
+    [...(run.tasks || []), ...DEBATE_ROLES].map((role) => [role, join(dir, `${role}.md`)])
+  );
+  return {
+    run_dir: dir,
+    final_report_md: join(dir, "final_report.md"),
+    user_response_md: join(dir, "user_response.md"),
+    artifact_index_md: join(dir, "artifact_index.md"),
+    all_agents_md: join(dir, "all_agents.md"),
+    evidence_json: join(dir, "evidence.json"),
+    source_manifest_json: join(dir, "source_manifest.json"),
+    status_json: join(dir, "status.json"),
+    events_jsonl: join(dir, "events.jsonl"),
+    report_quality_json: join(dir, "report_quality.json"),
+    decision_json: join(dir, "decision.json"),
+    analyst_markdown,
+  };
+}
+
+function writeAnalystMarkdownFiles(run, debate = {}) {
+  const dir = runPath(run.run_id);
+  for (const [index, packet] of (run.packets || []).entries()) {
+    writeFileSync(join(dir, `${packet.task}.md`), `${renderPacketMarkdown(packet, index)}\n`);
+  }
+  const debateFiles = [
+    ["bull_researcher", debate.bull],
+    ["bear_researcher", debate.bear],
+    ["portfolio_manager", debate.manager],
+  ];
+  for (const [role, packet] of debateFiles) {
+    if (packet) writeFileSync(join(dir, `${role}.md`), `${renderDebateMarkdown({ ...packet, role })}\n`);
+  }
+}
+
+function validateFinalReport(markdown, run) {
+  const text = String(markdown || "");
+  const haystack = text.toLowerCase();
+  const missing = [];
+  for (const terms of REPORT_SECTION_TERMS) {
+    if (!terms.some((term) => haystack.includes(term.toLowerCase()))) {
+      missing.push(`missing section: ${terms[0]}`);
+    }
+  }
+  for (const task of run.tasks || []) {
+    if (!haystack.includes(String(task).toLowerCase())) missing.push(`missing analyst work log entry: ${task}`);
+  }
+  const sourceCount = (run.packets || []).reduce((sum, packet) => sum + (packet.sources?.length || 0), 0);
+  if (sourceCount > 0 && !/[a-z_]+:s\d+/i.test(text)) missing.push("missing scoped source IDs such as market_data:S1");
+  const minLength = run.dry_run ? 600 : 1600;
+  if (text.replace(/\s+/g, "").length < minLength) missing.push(`report too short: minimum ${minLength} non-space characters`);
+  return {
+    status: missing.length ? "needs_revision" : "passed",
+    missing,
+    checked_at: new Date().toISOString(),
+    required_sections: REPORT_SECTION_TERMS.map((terms) => terms[0]),
+  };
+}
+
+function writeReportQuality(run, markdown) {
+  const quality = validateFinalReport(markdown, run);
+  run.report_quality = quality;
+  writeJson(join(runPath(run.run_id), "report_quality.json"), quality);
+  return quality;
+}
+
+function finalReportMarkdown(run, manager) {
+  const gate = verificationStatus(run);
+  const completeness = completenessStatus(run);
+  return withDisclaimer(
+    withCompletenessBanner(
+      withVerificationBanner(manager.report_markdown || manager.summary, gate, run.language),
+      completeness,
+      run.language
+    ),
+    run.language
+  );
+}
+
+function writeArtifactIndex(run, debate = {}) {
+  const artifacts = artifactPaths(run);
+  const lines = [
+    `# ${run.symbol} AlphaCouncil Artifacts`,
+    "",
+    `- Run ID: ${run.run_id}`,
+    `- Status: ${run.status}`,
+    `- Report quality: ${run.report_quality?.status || "not_checked"}`,
+    "",
+    "## Main Files",
+    "",
+    `- Final report: ${artifacts.final_report_md}`,
+    `- Chat handoff summary: ${artifacts.user_response_md}`,
+    `- Full agent trace: ${artifacts.all_agents_md}`,
+    `- Evidence JSON: ${artifacts.evidence_json}`,
+    `- Decision JSON: ${artifacts.decision_json}`,
+    `- Source manifest: ${artifacts.source_manifest_json}`,
+    `- Status: ${artifacts.status_json}`,
+    `- Events: ${artifacts.events_jsonl}`,
+    `- Report quality: ${artifacts.report_quality_json}`,
+    "",
+    "## Analyst Markdown Files",
+    "",
+    ...(run.tasks || []).map((task) => `- ${task}: ${artifacts.analyst_markdown[task]}`),
+    debate.bull ? `- bull_researcher: ${artifacts.analyst_markdown.bull_researcher}` : "",
+    debate.bear ? `- bear_researcher: ${artifacts.analyst_markdown.bear_researcher}` : "",
+    debate.manager ? `- portfolio_manager: ${artifacts.analyst_markdown.portfolio_manager}` : "",
+  ].filter(Boolean);
+  writeFileSync(artifacts.artifact_index_md, `${lines.join("\n")}\n`);
+  return artifacts.artifact_index_md;
+}
+
+function packetSummary(run, task) {
+  return (run.packets || []).find((packet) => packet.task === task)?.summary || "";
+}
+
+function userResponseMarkdown(run, manager) {
+  const chinese = isChineseLanguage(run.language);
+  const artifacts = artifactPaths(run);
+  const invalidation = (manager.invalidation || []).slice(0, 3).map((item) => `- ${clip(item, 220)}`).join("\n") || "- None";
+  if (chinese) {
+    return [
+      `# ${run.symbol} AlphaCouncil 摘要`,
+      "",
+      "## 结论",
+      `- 评级: ${manager.rating || "Hold"}`,
+      `- 多空胜负: ${manager.winner || "unknown"}`,
+      `- 置信度: ${manager.confidence || "low"}`,
+      `- 判断: ${clip(manager.verdict || manager.summary, 620)}`,
+      "",
+      "## 关键内容",
+      `- 最新财报: ${clip(packetSummary(run, "earnings_deep_dive"), 420) || "未覆盖。"}`,
+      `- 前瞻门槛: ${clip(packetSummary(run, "forward_expectations"), 420) || "未覆盖。"}`,
+      `- 新闻/行业信号: ${clip([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "未覆盖。"}`,
+      `- 估值/价位: ${clip(manager.valuation_range, 520) || "未覆盖。"}`,
+      `- 仓位: ${clip(manager.position, 420) || "未覆盖。"}`,
+      "",
+      "## 失效条件",
+      invalidation,
+      "",
+      "## 文件位置",
+      `- 完整报告: ${artifacts.final_report_md}`,
+      `- 分析师全文索引: ${artifacts.artifact_index_md}`,
+      `- 全部代理追踪: ${artifacts.all_agents_md}`,
+      `- 报告质量检查: ${artifacts.report_quality_json}`,
+    ].join("\n");
+  }
+  return [
+    `# ${run.symbol} AlphaCouncil Summary`,
+    "",
+    "## Conclusion",
+    `- Rating: ${manager.rating || "Hold"}`,
+    `- Debate winner: ${manager.winner || "unknown"}`,
+    `- Confidence: ${manager.confidence || "low"}`,
+    `- Judgment: ${clip(manager.verdict || manager.summary, 620)}`,
+    "",
+    "## Key Content",
+    `- Latest earnings: ${clip(packetSummary(run, "earnings_deep_dive"), 420) || "Not covered."}`,
+    `- Forward thresholds: ${clip(packetSummary(run, "forward_expectations"), 420) || "Not covered."}`,
+    `- News / industry signal: ${clip([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "Not covered."}`,
+    `- Valuation / price range: ${clip(manager.valuation_range, 520) || "Not covered."}`,
+    `- Position: ${clip(manager.position, 420) || "Not covered."}`,
+    "",
+    "## Invalidation",
+    invalidation,
+    "",
+    "## File Locations",
+    `- Full report: ${artifacts.final_report_md}`,
+    `- Analyst file index: ${artifacts.artifact_index_md}`,
+    `- Full agent trace: ${artifacts.all_agents_md}`,
+    `- Report quality check: ${artifacts.report_quality_json}`,
+  ].join("\n");
+}
+
+function writeUserResponse(run, manager) {
+  const markdown = userResponseMarkdown(run, manager);
+  writeFileSync(artifactPaths(run).user_response_md, `${markdown}\n`);
+  return markdown;
+}
+
+function writeFinalArtifacts(run, debate = {}) {
+  const manager = debate.manager;
+  if (!manager) {
+    writeAnalystMarkdownFiles(run, debate);
+    writeArtifactIndex(run, debate);
+    return { artifacts: artifactPaths(run) };
+  }
+  const finalMarkdown = finalReportMarkdown(run, manager);
+  writeFileSync(artifactPaths(run).final_report_md, `${finalMarkdown}\n`);
+  const quality = writeReportQuality(run, finalMarkdown);
+  if (quality.status !== "passed" && completenessStatus(run).completeness === "complete" && verificationStatus(run).verification === "passed") {
+    run.status = "needs_revision";
+    run.phase = "needs_revision";
+    appendEvent(run, "needs_revision", { missing: quality.missing });
+  }
+  writeAnalystMarkdownFiles(run, debate);
+  const user_response_markdown = writeUserResponse(run, manager);
+  writeArtifactIndex(run, debate);
+  return { final_report_markdown: finalMarkdown, user_response_markdown, report_quality: quality, artifacts: artifactPaths(run) };
+}
+
 function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "auto") {
   const resolvedLanguage = resolveLanguage({ language, prompt: userPrompt });
   if (isChineseLanguage(resolvedLanguage)) {
@@ -594,6 +826,7 @@ function visibleStatusAfterPacket(run) {
     let finished;
     if (completenessStatus(run).completeness === "incomplete") finished = "incomplete";
     else if (verificationStatus(run).verification === "needs_verification") finished = "needs_verification";
+    else if (run.report_quality?.status === "needs_revision") finished = "needs_revision";
     else finished = "complete";
     return { status: finished, phase: finished, completed_at: run.completed_at || new Date().toISOString() };
   }
@@ -643,6 +876,8 @@ function recordVisiblePacket(args) {
     output: join(dir, `${task}.json`),
   });
   writeJson(join(dir, "evidence.json"), run);
+  writeAnalystMarkdownFiles(run, existingDebate(dir));
+  writeArtifactIndex(run, existingDebate(dir));
   writeAllAgentsMarkdown(run, existingDebate(dir));
   return run;
 }
@@ -663,11 +898,11 @@ function recordVisibleDecision(args) {
   }, role, run, rawRecordText(args.packet));
   const file = role === "portfolio_manager" ? "manager_synthesis.json" : `${role}.json`;
   writeJson(join(dir, file), packet);
+  let finalArtifacts = {};
   if (role === "portfolio_manager") {
     const gate = verificationStatus(run);
     const completeness = completenessStatus(run);
     writeJson(join(dir, "decision.json"), packet);
-    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withCompletenessBanner(withVerificationBanner(packet.report_markdown || packet.summary, gate, run.language), completeness, run.language), run.language)}\n`);
     if (completeness.completeness === "incomplete") {
       run.status = "incomplete";
       run.phase = "incomplete";
@@ -696,9 +931,17 @@ function recordVisibleDecision(args) {
     output: join(dir, file),
   });
   writeJson(join(dir, "evidence.json"), run);
-  if (role === "portfolio_manager") appendEvent(run, "run_complete", { decision: packet.rating, winner: packet.winner });
+  if (role === "portfolio_manager") {
+    finalArtifacts = writeFinalArtifacts(run, existingDebate(dir));
+    writeJson(join(dir, "evidence.json"), run);
+    if (run.status === "complete") appendEvent(run, "run_complete", { decision: packet.rating, winner: packet.winner });
+  } else {
+    writeAnalystMarkdownFiles(run, existingDebate(dir));
+    writeArtifactIndex(run, existingDebate(dir));
+  }
+  writeStatus(run);
   writeAllAgentsMarkdown(run, existingDebate(dir));
-  return { run, decision: packet };
+  return { run, decision: packet, ...finalArtifacts };
 }
 
 function extractJson(text) {
@@ -801,6 +1044,41 @@ function dryDebate(role, run, prompt) {
   }, role, run, prompt);
 }
 
+function quoteCmdArg(value) {
+  const text = String(value);
+  if (!text) return "\"\"";
+  if (!/[ \t"&|<>^]/.test(text)) return text;
+  return `"${text.replace(/(\\*)"/g, "$1$1\\\"").replace(/(\\+)$/g, "$1$1")}"`;
+}
+
+function codexInvocation(args, platform = process.platform, env = process.env) {
+  const fullArgs = [...args, "-"];
+  if (platform === "win32") {
+    return {
+      command: env.ComSpec || "cmd.exe",
+      args: ["/d", "/s", "/c", [env.ALPHACOUNCIL_AGENT_CODEX_CMD || CODEX_CMD, ...fullArgs].map(quoteCmdArg).join(" ")],
+      options: { detached: false, windowsHide: true },
+    };
+  }
+  return { command: CODEX_CMD, args: fullArgs, options: { detached: true } };
+}
+
+function stopChild(child, force = false) {
+  if (!child.pid) return;
+  if (process.platform === "win32") {
+    const args = ["/pid", String(child.pid), "/t"];
+    if (force) args.push("/f");
+    const killer = spawn("taskkill", args, { stdio: "ignore", windowsHide: true });
+    killer.on("error", () => child.kill(force ? "SIGKILL" : "SIGTERM"));
+    return;
+  }
+  try {
+    process.kill(-child.pid, force ? "SIGKILL" : "SIGTERM");
+  } catch {
+    child.kill(force ? "SIGKILL" : "SIGTERM");
+  }
+}
+
 function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}) {
   return new Promise((resolvePromise) => {
     mkdirSync(DATA_DIR, { recursive: true });
@@ -818,9 +1096,15 @@ function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {})
       DATA_DIR,
       "-o",
       outFile,
-      prompt,
     ];
-    const child = spawn("codex", args, { cwd: DATA_DIR, detached: true, stdio: ["ignore", "pipe", "pipe"] });
+    const invocation = codexInvocation(args);
+    const child = spawn(invocation.command, invocation.args, {
+      cwd: DATA_DIR,
+      stdio: ["pipe", "pipe", "pipe"],
+      ...invocation.options,
+    });
+    child.stdin.on("error", () => {});
+    child.stdin.end(prompt, "utf8");
     onStart({ pid: child.pid, output: outFile });
     const startedAt = Date.now();
     let stdout = "";
@@ -841,20 +1125,9 @@ function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {})
     }, 30000);
     const timer = setTimeout(() => {
       timedOut = true;
-      if (child.pid) {
-        try {
-          process.kill(-child.pid, "SIGTERM");
-        } catch {
-          child.kill("SIGTERM");
-        }
-      }
+      stopChild(child);
       killTimer = setTimeout(() => {
-        if (!child.pid) return;
-        try {
-          process.kill(-child.pid, "SIGKILL");
-        } catch {
-          child.kill("SIGKILL");
-        }
+        stopChild(child, true);
       }, 5000);
     }, timeoutMs);
     // ponytail: drain both pipes; switch to streaming logs if progress UI needs live CLI output.
@@ -948,7 +1221,7 @@ function summaryModes() {
     {
       mode: "chat",
       best_for: "默认最终答复、快速判断、直接复制到聊天窗口。",
-      effect: "一页中文投资委员会结论，先给 Buy/Overweight/Hold/Underweight/Sell，再给多空胜负和证据。",
+      effect: "聊天里给不冗长但完整的交付摘要；完整报告必须写入 final_report.md，并覆盖新闻、财报、前瞻、估值、风险和文件位置。",
       fit: "best_default",
     },
     {
@@ -1018,8 +1291,8 @@ function outputModeInstruction(mode, language = "English") {
     `Mode purpose: ${picked?.best_for || ""}`,
     `Mode effect: ${picked?.effect || ""}`,
     chinese
-      ? "report_markdown 必须是完整正文，不是运行说明。必须包含“分析师工作记录”和“多空辩论记录”；禁止写“可见版”“lite”“smoke test”“debug”“没有使用某输出格式”等执行标签。"
-      : "report_markdown must be the complete report body, not an execution note. Include Analyst Work Log and Bull/Bear Debate Record; do not write execution labels such as visible version, lite, smoke test, debug, or mention that another output format was not used.",
+      ? "report_markdown 必须是完整正文，不是运行说明。必须覆盖 report contract 的所有章节，尤其新闻、最新财报、前瞻门槛、卖方修正、估值、风险、仓位、数据缺口和来源表。聊天摘要可以简洁，但 final_report.md 不得偷懒。"
+      : "report_markdown must be the complete report body, not an execution note. It must cover every report-contract section, especially news, latest earnings, forward thresholds, sell-side revisions, valuation, risks, position sizing, data gaps, and source table. The chat handoff may be concise; final_report.md must not be lazy.",
     selected === "presentations"
       ? "In report_markdown, write a slide-by-slide outline with slide titles and concise bullets, not dense prose."
       : "",
@@ -1141,6 +1414,8 @@ async function collectEvidence(args) {
     writeJson(join(dir, `${packet.task}.json`), packet);
     writeJson(join(dir, "evidence.json"), run);
     writeSourceManifest(run);
+    writeAnalystMarkdownFiles(run, existingDebate(dir));
+    writeArtifactIndex(run, existingDebate(dir));
     writeAllAgentsMarkdown(run);
   };
 
@@ -1256,8 +1531,8 @@ function managerFallback(run, userPrompt = "") {
     short_thesis: summary.open_questions.slice(0, 6),
     confidence: summary.confidence,
     report_markdown: chinese
-      ? `# ${run.symbol} 投资委员会初稿\n\n## 结论\n${summary.final_decision}\n\n## 分析师工作记录\n${analystLog}\n\n## 多空辩论记录\n${debateRecord}\n\n## 证据状态\n已生成 ${run.packets.length} 个 evidence packets，来源数量 ${summary.source_count}。\n\n## 数据缺口/未覆盖项\n${summary.open_questions.length ? summary.open_questions.map((item) => `- ${item}`).join("\n") : "- 未发现关键数据缺口。"}\n`
-      : `# ${run.symbol} Investment Committee Draft\n\n## Conclusion\n${summary.final_decision}\n\n## Analyst Work Log\n${analystLog}\n\n## Bull/Bear Debate Record\n${debateRecord}\n\n## Evidence Status\nGenerated ${run.packets.length} evidence packets with ${summary.source_count} sources.\n\n## Data Gaps / Unavailable Data\n${summary.open_questions.length ? summary.open_questions.map((item) => `- ${item}`).join("\n") : "- No critical data gaps were found."}\n`,
+      ? `# ${run.symbol} 投资委员会初稿\n\n## 结论\n${summary.final_decision}\n\n## 分析师工作记录\n${analystLog}\n\n## 多空辩论记录\n${debateRecord}\n\n## 多头观点\n${summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => `- ${claim.claim}`).join("\n") || "- 本轮没有可用多头论点。"}\n\n## 空头观点\n${summary.open_questions.slice(0, 6).map((item) => `- ${item}`).join("\n") || "- 本轮没有可用空头论点。"}\n\n## 市场预期与隐含门槛\n${clip(packetSummary(run, "forward_expectations"), 900) || "- 本轮没有前瞻预期证据。"}\n\n## 分析师评级/目标价变化\n${clip(packetSummary(run, "sell_side_revisions"), 900) || "- 本轮没有卖方修正证据。"}\n\n## 电话会管理层信号\n${clip(packetSummary(run, "earnings_call_transcript"), 900) || "- 本轮没有电话会证据。"}\n\n## 量化/因子视角\n${clip(packetSummary(run, "quant_factor"), 900) || "- 本轮没有量化因子证据。"}\n\n## 新闻和公司/行业人物发言信号\n${clip([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join("\n"), 1200) || "- 本轮没有新闻或人物发言证据。"}\n\n## short interest / borrow / options 信息\n${clip(packetSummary(run, "quant_factor"), 700) || "- 本轮没有 short interest / borrow / options 数据。"}\n\n## 战略交易或 NVIDIA 条款\n${clip(packetSummary(run, "ib_event_analysis"), 900) || "- 本轮没有交易事件证据。"}\n\n## 估值区间\n${clip(packetSummary(run, "valuation_long_short"), 900) || "- 本轮没有估值证据。"}\n\n## 关键催化剂\n- 等待 portfolio_manager 完整综合。\n\n## 主要风险\n${summary.open_questions.slice(0, 6).map((item) => `- ${item}`).join("\n") || "- 暂未发现额外风险。"}\n\n## 仓位建议\n- 经理综合未完成前仅作为初稿，不给正式仓位。\n\n## 短线 1-4 周判断\n- 需等待完整经理综合。\n\n## 中期 3-6 个月判断\n- 需等待完整经理综合。\n\n## 长期 12 个月判断\n- 需等待完整经理综合。\n\n## 数据缺口/未覆盖项\n${summary.open_questions.length ? summary.open_questions.map((item) => `- ${item}`).join("\n") : "- 未发现关键数据缺口。"}\n\n## 反证条件\n- 若证据来源缺失或完整经理综合失败，本初稿不能作为正式结论。\n\n## 置信度\n${summary.confidence}\n\n## 来源表\n- 来源数量: ${summary.source_count}\n`
+      : `# ${run.symbol} Investment Committee Draft\n\n## Conclusion\n${summary.final_decision}\n\n## Analyst Work Log\n${analystLog}\n\n## Bull/Bear Debate Record\n${debateRecord}\n\n## Long Thesis\n${summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => `- ${claim.claim}`).join("\n") || "- No usable long thesis yet."}\n\n## Short Thesis\n${summary.open_questions.slice(0, 6).map((item) => `- ${item}`).join("\n") || "- No usable short thesis yet."}\n\n## Market Expectations and Implied Thresholds\n${clip(packetSummary(run, "forward_expectations"), 900) || "- No forward-expectations evidence in this run."}\n\n## Analyst Rating and Target-Price Revisions\n${clip(packetSummary(run, "sell_side_revisions"), 900) || "- No sell-side revision evidence in this run."}\n\n## Earnings Call Management Signals\n${clip(packetSummary(run, "earnings_call_transcript"), 900) || "- No earnings-call evidence in this run."}\n\n## Quant Factor / Technical Risk View\n${clip(packetSummary(run, "quant_factor"), 900) || "- No quant-factor evidence in this run."}\n\n## News and Company / Industry Voice Signals\n${clip([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join("\n"), 1200) || "- No news or voice evidence in this run."}\n\n## Short Interest / Borrow / Options Information\n${clip(packetSummary(run, "quant_factor"), 700) || "- No short interest / borrow / options data in this run."}\n\n## Strategic Transaction or NVIDIA Terms\n${clip(packetSummary(run, "ib_event_analysis"), 900) || "- No transaction evidence in this run."}\n\n## Valuation Range\n${clip(packetSummary(run, "valuation_long_short"), 900) || "- No valuation evidence in this run."}\n\n## Key Catalysts\n- Wait for completed portfolio-manager synthesis.\n\n## Major Risks\n${summary.open_questions.slice(0, 6).map((item) => `- ${item}`).join("\n") || "- No additional risks surfaced yet."}\n\n## Position Recommendation\n- Draft only; no formal position before completed manager synthesis.\n\n## Short-Term 1-4 Week View\n- Requires completed manager synthesis.\n\n## Medium-Term 3-6 Month View\n- Requires completed manager synthesis.\n\n## Long-Term 12 Month View\n- Requires completed manager synthesis.\n\n## Data Gaps / Unavailable Data\n${summary.open_questions.length ? summary.open_questions.map((item) => `- ${item}`).join("\n") : "- No critical data gaps were found."}\n\n## Invalidation Conditions\n- If evidence sources are missing or manager synthesis fails, this draft cannot stand as the final decision.\n\n## Confidence\n${summary.confidence}\n\n## Source Table\n- Source count: ${summary.source_count}\n`,
   }, "portfolio_manager", run);
 }
 
@@ -1299,7 +1574,6 @@ async function synthesizeDecision(run, args) {
     writeJson(join(dir, "decision.json"), fallback);
     const dryGate = verificationStatus(run);
     const dryCompleteness = completenessStatus(run);
-    writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withCompletenessBanner(fallback.report_markdown, dryCompleteness, run.language), run.language)}\n`);
     run.completed_at = new Date().toISOString();
     if (dryCompleteness.completeness === "incomplete") {
       run.phase = "incomplete";
@@ -1313,10 +1587,12 @@ async function synthesizeDecision(run, args) {
       run.phase = "complete";
       run.status = "complete";
     }
+    const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager: fallback });
+    writeJson(join(dir, "evidence.json"), run);
     writeStatus(run);
-    appendEvent(run, "run_complete", { decision: fallback.rating, winner: fallback.winner });
+    if (run.status === "complete") appendEvent(run, "run_complete", { decision: fallback.rating, winner: fallback.winner });
     writeAllAgentsMarkdown(run, { bull, bear, manager: fallback });
-    return { bull, bear, manager: fallback };
+    return { bull, bear, manager: fallback, ...finalArtifacts };
   }
 
   // Three-round debate: R1 cases, R2 cross-rebuttal, R3 Q&A.
@@ -1373,7 +1649,6 @@ async function synthesizeDecision(run, args) {
     error: managerResult.ok ? undefined : (managerResult.timedOut ? "timeout" : `exit code ${managerResult.code}`),
   });
   const completeness = completenessStatus(run);
-  writeFileSync(join(dir, "final_report.md"), `${withDisclaimer(withCompletenessBanner(withVerificationBanner(manager.report_markdown || manager.summary, gate, run.language), completeness, run.language), run.language)}\n`);
   run.completed_at = new Date().toISOString();
   if (completeness.completeness === "incomplete") {
     run.phase = "incomplete";
@@ -1387,16 +1662,26 @@ async function synthesizeDecision(run, args) {
     run.phase = "complete";
     run.status = "complete";
   }
+  const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager });
+  writeJson(join(dir, "evidence.json"), run);
   writeStatus(run);
-  appendEvent(run, "run_complete", { decision: manager.rating, winner: manager.winner });
+  if (run.status === "complete") appendEvent(run, "run_complete", { decision: manager.rating, winner: manager.winner });
   writeAllAgentsMarkdown(run, { bull, bear, manager });
-  return { bull, bear, manager };
+  return { bull, bear, manager, ...finalArtifacts };
 }
 
 async function analyzeSymbol(args) {
   const run = await collectEvidence(args);
   const debate = await synthesizeDecision(run, args);
-  return { run, debate, decision: debate.manager };
+  return {
+    run,
+    debate,
+    decision: debate.manager,
+    final_report_markdown: debate.final_report_markdown,
+    user_response_markdown: debate.user_response_markdown,
+    report_quality: debate.report_quality,
+    artifacts: debate.artifacts || artifactPaths(run),
+  };
 }
 
 function tools() {
@@ -1515,23 +1800,31 @@ async function handleToolCall(id, params) {
     const decisionPath = join(dir, "decision.json");
     const decision = existsSync(decisionPath) ? readJson(decisionPath) : null;
     const allAgentsPath = join(dir, "all_agents.md");
+    const finalReportPath = join(dir, "final_report.md");
+    const userResponsePath = join(dir, "user_response.md");
     const statusPath = join(dir, "status.json");
     const eventsPath = join(dir, "events.jsonl");
     const sourceManifestPath = join(dir, "source_manifest.json");
+    const reportQualityPath = join(dir, "report_quality.json");
     sendResult(id, jsonContent(`Loaded AlphaCouncil Agent run ${idArg}`, {
       evidence,
       decision,
       source_manifest: existsSync(sourceManifestPath) ? readJson(sourceManifestPath) : sourceManifest(evidence),
+      report_quality: existsSync(reportQualityPath) ? readJson(reportQualityPath) : null,
       status: existsSync(statusPath) ? readJson(statusPath) : null,
       events: existsSync(eventsPath) ? readFileSync(eventsPath, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line)) : [],
       artifacts: {
+        ...artifactPaths(evidence),
         all_agents_md: allAgentsPath,
-        final_report_md: join(dir, "final_report.md"),
+        final_report_md: finalReportPath,
+        user_response_md: userResponsePath,
         source_manifest_json: sourceManifestPath,
         status_json: statusPath,
         events_jsonl: eventsPath,
       },
       all_agents_markdown: existsSync(allAgentsPath) ? readFileSync(allAgentsPath, "utf8") : "",
+      final_report_markdown: existsSync(finalReportPath) ? readFileSync(finalReportPath, "utf8") : "",
+      user_response_markdown: existsSync(userResponsePath) ? readFileSync(userResponsePath, "utf8") : "",
     }));
     return;
   }
@@ -1591,4 +1884,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   startStdioServer();
 }
 
-export const __test__ = { taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, completenessStatus, withCompletenessBanner, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage };
+export const __test__ = { taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, completenessStatus, withCompletenessBanner, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage, codexInvocation, validateFinalReport, artifactPaths, userResponseMarkdown };

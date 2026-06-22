@@ -27,6 +27,20 @@ if (cleaned.includes("\u001b") || cleaned.length !== 20) {
 if (__test__.isDryRun({}) || !__test__.isDryRun({ dry_run: true }) || __test__.isDryRun({ dry_run: false })) {
   throw new Error("dry_run default must launch real Codex subagents.");
 }
+const posixCodex = __test__.codexInvocation(["exec", "-C", "/tmp/alpha council"], "linux", { ALPHACOUNCIL_AGENT_CODEX_CMD: "codex" });
+if (posixCodex.command !== "codex" || posixCodex.args.at(-1) !== "-" || posixCodex.options.detached !== true) {
+  throw new Error("posix codex invocation must call codex directly and read prompt from stdin.");
+}
+const winCodex = __test__.codexInvocation(["exec", "-C", "C:\\Users\\Example User\\.alphacouncil-agent"], "win32", {
+  ComSpec: "C:\\Windows\\System32\\cmd.exe",
+  ALPHACOUNCIL_AGENT_CODEX_CMD: "codex",
+});
+if (winCodex.command !== "C:\\Windows\\System32\\cmd.exe" || winCodex.args.slice(0, 3).join(" ") !== "/d /s /c") {
+  throw new Error("windows codex invocation must use cmd.exe so codex.cmd resolves.");
+}
+if (!winCodex.args[3].includes("\"C:\\Users\\Example User\\.alphacouncil-agent\"") || !winCodex.args[3].endsWith(" -")) {
+  throw new Error("windows codex invocation must quote spaced paths and read prompt from stdin.");
+}
 const scoped = __test__.normalizePacket({
   claims: [{ claim: "price", evidence: "source", confidence: "high", source_ids: ["S1"] }],
   sources: [{ id: "S1", title: "Quote", url: "https://example.com" }],
@@ -128,6 +142,84 @@ if (merged.rating !== "Buy" || merged.summary !== "r3") {
 if (merged.debate_rounds.length !== 3 || merged.debate_rounds.map((r) => r.round).join(",") !== "1,2,3") {
   throw new Error("mergeDebateRounds must capture all three rounds in order.");
 }
+const completeVisibleReport = `# NOK Visible Selfcheck Report
+
+## Conclusion
+Hold. This is a complete selfcheck report body used to prove the quality gate accepts a report with every required section and rejects thin recaps.
+
+## Analyst Work Log
+### market_data
+The market_data analyst produced a visible packet. This section names the planned analyst explicitly and records the evidence handoff.
+
+## Bull/Bear Debate Record
+The bull researcher argued for upside, the bear researcher argued for downside, and the portfolio manager balanced both sides.
+
+## Long Thesis
+The long thesis is present for report-contract coverage.
+
+## Short Thesis
+The short thesis is present for report-contract coverage.
+
+## Market Expectations and Implied Thresholds
+The report states what the market would need to see, even when this selfcheck has no live market expectations.
+
+## Analyst Rating and Target-Price Revisions
+Analyst rating and target-price revision coverage is present.
+
+## Earnings Call Management Signals
+Earnings call management signal coverage is present.
+
+## Quant Factor / Technical Risk View
+Quant factor and technical risk coverage is present.
+
+## News and Company / Industry Voice Signals
+News and company or industry voice coverage is present.
+
+## Short Interest / Borrow / Options Information
+Short Interest, borrow, and options coverage is present, with unavailable data called out rather than omitted.
+
+## Strategic Transaction or NVIDIA Terms
+Strategic Transaction coverage is present even when no transaction exists.
+
+## Valuation Range
+Valuation coverage is present.
+
+## Key Catalysts
+Catalyst coverage is present.
+
+## Major Risks
+Risk coverage is present.
+
+## Position Recommendation
+Position coverage is present.
+
+## Short-Term 1-4 Week View
+Short-Term coverage is present.
+
+## Medium-Term 3-6 Month View
+Medium-Term coverage is present.
+
+## Long-Term 12 Month View
+Long-Term coverage is present.
+
+## Data Gaps / Unavailable Data
+No critical data gaps were found in this selfcheck fixture.
+
+## Invalidation Conditions
+Invalidation coverage is present.
+
+## Confidence
+medium
+
+## Source Table
+market_data:S1 - Selfcheck quote source. This paragraph intentionally keeps the body long enough that the quality gate catches genuinely short reports instead of accepting a heading-only stub.`;
+const qualityRun = { ...completeRun, run_id: "QUALITY", symbol: "NOK", as_of: "2026-06-22", dry_run: false, language: "English", tasks: ["market_data"], packets: [scoped] };
+if (__test__.validateFinalReport(completeVisibleReport, qualityRun).status !== "passed") {
+  throw new Error("complete fixture report must pass report quality.");
+}
+if (__test__.validateFinalReport("# Thin\n\n## Conclusion\nToo short.", qualityRun).status !== "needs_revision") {
+  throw new Error("thin report must fail report quality.");
+}
 
 const child = spawn("node", ["./mcp/server.mjs"], {
   cwd: new URL("..", import.meta.url),
@@ -178,12 +270,23 @@ if (!responses.some((item) => item.id === 3 && item.result?.structuredContent?.d
   throw new Error("dry-run analyze_symbol did not return a DRY_RUN decision.");
 }
 const analysis = responses.find((item) => item.id === 3);
+if (!analysis?.result?.structuredContent?.final_report_markdown || !analysis?.result?.structuredContent?.user_response_markdown) {
+  throw new Error("analyze_symbol must return final_report_markdown and user_response_markdown.");
+}
+if (analysis.result.structuredContent.report_quality?.status !== "passed") {
+  throw new Error("dry-run final report quality must pass.");
+}
 const runId = analysis?.result?.structuredContent?.run?.run_id;
 const tracePath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "all_agents.md");
 const statusPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "status.json");
 const eventsPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "events.jsonl");
 const sourceManifestPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "source_manifest.json");
 const finalReportPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "final_report.md");
+const userResponsePath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "user_response.md");
+const artifactIndexPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "artifact_index.md");
+const reportQualityPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "report_quality.json");
+const dryAnalystPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "market_data.md");
+const dryPmPath = join(os.homedir(), ".alphacouncil-agent", "runs", runId, "portfolio_manager.md");
 if (!existsSync(tracePath)) {
   throw new Error("all_agents.md was not written.");
 }
@@ -199,6 +302,9 @@ if (!existsSync(sourceManifestPath)) {
 if (!existsSync(finalReportPath)) {
   throw new Error("final_report.md was not written.");
 }
+for (const path of [userResponsePath, artifactIndexPath, reportQualityPath, dryAnalystPath, dryPmPath]) {
+  if (!existsSync(path)) throw new Error(`${path} was not written.`);
+}
 const trace = readFileSync(tracePath, "utf8");
 if (!trace.includes("Evidence Subagent") || !trace.includes("portfolio_manager")) {
   throw new Error("all_agents.md does not include the expected agent sections.");
@@ -213,9 +319,27 @@ if (!finalReport.includes("分析师工作记录") && !finalReport.includes("Ana
 if (!finalReport.includes("多空辩论记录") && !finalReport.includes("Bull/Bear Debate Record")) {
   throw new Error("final_report.md must include bull/bear debate record.");
 }
+if (!finalReport.includes("Market Expectations") || !finalReport.includes("News and Company")) {
+  throw new Error("final_report.md must include forward-looking and news sections.");
+}
+const userResponse = readFileSync(userResponsePath, "utf8");
+if (!userResponse.includes("Full report:") || !userResponse.includes("Latest earnings:")) {
+  throw new Error("user_response.md must include concise handoff and file locations.");
+}
+const artifactIndex = readFileSync(artifactIndexPath, "utf8");
+if (!artifactIndex.includes("market_data.md") || !artifactIndex.includes("portfolio_manager.md")) {
+  throw new Error("artifact_index.md must list analyst markdown files.");
+}
+const reportQuality = JSON.parse(readFileSync(reportQualityPath, "utf8"));
+if (reportQuality.status !== "passed") {
+  throw new Error("report_quality.json must pass for a complete dry run.");
+}
 const status = JSON.parse(readFileSync(statusPath, "utf8"));
 if (status.status !== "complete" || !status.tasks.every((task) => task.status === "completed")) {
   throw new Error("status.json did not record a complete dry run.");
+}
+if (status.report_quality !== "passed") {
+  throw new Error("status.json must surface report quality.");
 }
 if (status.verification !== "passed" || status.missing_source_count !== 0) {
   throw new Error("clean dry run must surface verification=passed with zero missing sources.");
@@ -298,7 +422,7 @@ sendVisible({
       role: "portfolio_manager",
       thread_id: "thread-visible-pm",
       thread_title: "AlphaCouncil Agent NOK portfolio_manager",
-      packet: { verdict: "VISIBLE_OK", rating: "Hold", winner: "balanced", summary: "visible decision", confidence: "medium", report_markdown: "# Visible OK" },
+      packet: { verdict: "VISIBLE_OK", rating: "Hold", winner: "balanced", summary: "visible decision", confidence: "medium", report_markdown: completeVisibleReport },
     },
   },
 });
@@ -390,12 +514,20 @@ const visibleStatus = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-
 if (visibleStatus.status !== "complete" || visibleStatus.phase !== "complete") {
   throw new Error("late visible packet update did not preserve complete status.");
 }
+if (visibleStatus.report_quality !== "passed") {
+  throw new Error("visible run must surface passed report quality.");
+}
 if (visibleStatus.verification !== "passed") {
   throw new Error("clean visible run must surface verification=passed.");
 }
 const visiblePacket = JSON.parse(readFileSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", "market_data.json"), "utf8"));
 if (visiblePacket.raw_text !== "original visible agent output") {
   throw new Error("replayed visible packet nested or rewrote raw_text.");
+}
+for (const file of ["user_response.md", "artifact_index.md", "report_quality.json", "market_data.md", "portfolio_manager.md"]) {
+  if (!existsSync(join(os.homedir(), ".alphacouncil-agent", "runs", "SELFTEST-VISIBLE", file))) {
+    throw new Error(`visible run did not write ${file}.`);
+  }
 }
 
 // Incomplete visible run: PM recorded with missing evidence + missing bull/bear must be flagged.

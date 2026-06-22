@@ -101,7 +101,9 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 └─ 出典テーブル .......... すべての主張を <task>:<source_id> に対応付け
 ```
 
-完全なレポートは `~/.alphacouncil-agent/runs/<run_id>/final_report.md` にも書き出されます。
+簡潔なユーザー向け要約は `~/.alphacouncil-agent/runs/<run_id>/user_response.md` に書き出されます。
+完全なレポートは `~/.alphacouncil-agent/runs/<run_id>/final_report.md` に書き出され、
+同じディレクトリに各アナリストの Markdown ファイルと `artifact_index.md` も保存されます。
 
 ## 何ができるか
 
@@ -171,7 +173,7 @@ flowchart TD
 | モデルとコスト | 単一モデル | **役割ごとに選択** — 取証は Sonnet、ディベート/判定は Opus 4.8(全 Opus / 全 Sonnet も可) |
 | 言語 | ユーザーの言語 | 全サブエージェント + ライブ workflow を通じてユーザーの言語 |
 
-**正直なスコープ:** 同じモデルファミリー・同じプロンプト・同じ監査契約 —— 強みは文脈の分離、常時並列ファンアウト、決定的バリアであり、より賢いモデルではありません。**v0.2.0** 以降、共有 server が**両版**で 3 ラウンドのディベートを実行し、「欠落ソース」と「完全実行」の 2 つのゲートを強制します。Claude Code 版はさらにラウンドごとの並列実行とホスト駆動の主張ごと検証を追加します。ライブ Web の鮮度とペイウォールは両版に等しく当てはまります。
+**正直なスコープ:** 同じモデルファミリー・同じプロンプト・同じ監査契約 —— 強みは文脈の分離、常時並列ファンアウト、決定的ゲートであり、より賢いモデルではありません。**v0.3.0** 以降、共有 server は 3 ラウンドのディベート、「欠落ソース / 完全実行 / レポート品質」のゲート、簡潔な引き渡し要約、完全レポート、ファイル索引、Windows ネイティブ Codex CLI 起動を提供します。Claude Code 版はさらにラウンドごとの並列実行とホスト駆動の主張ごと検証を追加します。ライブ Web の鮮度とペイウォールは両版に等しく当てはまります。
 
 ## データ契約
 
@@ -203,7 +205,7 @@ flowchart TD
 npm run check
 ```
 
-セルフチェックの検証内容:MCP server の構文、ツール schema の公開、source ID のスコープ、デフォルトの実走挙動、可視ランの記録、`events.jsonl`/`status.json`/`all_agents.md`/`source_manifest.json`、および最終レポートにアナリスト作業ログ・強気/弱気ディベート記録・データ欠落が含まれているか。
+セルフチェックの検証内容:MCP server の構文、ツール schema の公開、source ID のスコープ、デフォルトの実走挙動、可視ランの記録、`events.jsonl`/`status.json`/`all_agents.md`/`source_manifest.json`、`final_report.md`/`user_response.md`/`artifact_index.md`/`report_quality.json`、アナリスト Markdown ファイル、および最終レポートの必須セクション。
 
 ## 備考
 

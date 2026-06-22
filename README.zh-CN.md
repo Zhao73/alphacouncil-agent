@@ -101,7 +101,9 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 └─ 来源表 .............. 每条主张映射到 <task>:<source_id>
 ```
 
-完整报告同时写入 `~/.alphacouncil-agent/runs/<run_id>/final_report.md`。
+简洁交付摘要写入 `~/.alphacouncil-agent/runs/<run_id>/user_response.md`。
+完整报告写入 `~/.alphacouncil-agent/runs/<run_id>/final_report.md`。
+同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。
 
 ## 它能做什么
 
@@ -171,7 +173,7 @@ flowchart TD
 | 模型与成本 | 单一模型 | **按角色选** —— 取证用 Sonnet,辩论/裁决用 Opus 4.8(也可全 Opus / 全 Sonnet) |
 | 语言 | 用户语言 | 每个子代理 + 实时 workflow 全程用户语言 |
 
-**诚实边界:** 同模型家族、同提示词、同审计契约 —— 优势在于上下文隔离、始终并行展开、确定性 barrier,**不是**更聪明的模型。自 **v0.2.0** 起,共享 server 已在**两个版本**中实现 3 轮辩论,并强制执行「缺失来源」与「完整度」两道门禁;Claude Code 版额外提供每轮并行执行和宿主驱动的逐条 claim 验证。联网数据的时效性与付费墙对两版限制相同。
+**诚实边界:** 同模型家族、同提示词、同审计契约 —— 优势在于上下文隔离、始终并行展开、确定性门禁,**不是**更聪明的模型。自 **v0.3.0** 起,共享 server 会执行 3 轮辩论,强制执行「缺失来源 / 完整流程 / 报告质量」门禁,写出简洁交付摘要、完整报告和文件索引,并支持 Windows 原生 Codex CLI 启动。Claude Code 版额外提供每轮并行执行和宿主驱动的逐条 claim 验证。联网数据的时效性与付费墙对两版限制相同。
 
 ## 数据契约
 
@@ -203,7 +205,7 @@ flowchart TD
 npm run check
 ```
 
-自检会校验:MCP server 语法、工具 schema 暴露、source ID 作用域、默认真跑行为、可见运行录入、`events.jsonl`/`status.json`/`all_agents.md`/`source_manifest.json`,以及最终报告是否包含分析师工作记录、多空辩论记录和数据缺口。
+自检会校验:MCP server 语法、工具 schema 暴露、source ID 作用域、默认真跑行为、可见运行录入、`events.jsonl`/`status.json`/`all_agents.md`/`source_manifest.json`,以及 `final_report.md`、`user_response.md`、`artifact_index.md`、`report_quality.json`、分析师 Markdown 文件和最终报告章节完整性。
 
 ## 说明
 

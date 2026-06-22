@@ -39,6 +39,8 @@ Debate roles:
 
 ## Hard Output Rules
 
+Also follow `docs/report-contract.md`.
+
 Final reports must include:
 
 - conclusion and final rating
@@ -64,6 +66,8 @@ Final reports must include:
 - invalidation conditions
 - confidence
 - source table
+
+The final chat handoff may be concise, but it must not replace the saved report. Completed runs must write `final_report.md`, `user_response.md`, `artifact_index.md`, `report_quality.json`, one Markdown file per evidence analyst, and Markdown files for bull, bear, and portfolio manager. Tell the user where those files are.
 
 Never hide missing data. If a source is unavailable, say so in `open_questions` and in the final report's data-gap section. If no critical data is missing, explicitly state that no critical data gaps were found.
 
