@@ -33,6 +33,14 @@
 
 ---
 
+<div align="center">
+
+<img src="assets/demo.gif" alt="AlphaCouncil Agent demo" width="100%" />
+
+<sub><i>One command → a council of analyst agents → bull/bear debate → a portfolio-manager verdict.</i></sub>
+
+</div>
+
 AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity research workflows. It coordinates multiple analyst agents, gathers sourced evidence, runs bull/bear debate, and produces a portfolio-manager style final report.
 
 ### ✨ Why AlphaCouncil

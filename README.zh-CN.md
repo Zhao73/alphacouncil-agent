@@ -33,6 +33,14 @@
 
 ---
 
+<div align="center">
+
+<img src="assets/demo.gif" alt="AlphaCouncil Agent 演示" width="100%" />
+
+<sub><i>一句命令 → 一组分析师代理 → 多空辩论 → 投资组合经理给出结论。</i></sub>
+
+</div>
+
 AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 插件。它会协调多个分析师子代理、收集带来源的证据、进行多空辩论,并产出投资组合经理风格的最终报告。
 
 ### ✨ 为什么用 AlphaCouncil

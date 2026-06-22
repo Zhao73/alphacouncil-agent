@@ -33,6 +33,14 @@
 
 ---
 
+<div align="center">
+
+<img src="assets/demo.gif" alt="AlphaCouncil Agent デモ" width="100%" />
+
+<sub><i>コマンド一発 → アナリスト評議会 → 強気/弱気ディベート → PM の判定。</i></sub>
+
+</div>
+
 AlphaCouncil Agent は、**上場株式のリサーチ**向けの Codex / Claude Code プラグインです。複数のアナリスト・サブエージェントを統括し、出典付きの根拠を集め、強気/弱気のディベートを行い、ポートフォリオマネージャー視点の最終レポートを生成します。
 
 ### ✨ AlphaCouncil を使う理由
