@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "alphacouncil-agent": {
+      "command": "node",
+      "args": [
+        "./mcp/server.mjs"
+      ],
+      "cwd": "."
+    }
+  }
+}

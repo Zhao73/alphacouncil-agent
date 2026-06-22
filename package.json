@@ -1,0 +1,31 @@
+{
+  "name": "alphacouncil-agent",
+  "version": "0.1.0",
+  "description": "Multi-agent public-equity research workflow plugin for Codex & Claude Code: sourced evidence packets, bull/bear debate, and a portfolio-manager Buy/Overweight/Hold/Underweight/Sell decision.",
+  "type": "module",
+  "license": "MIT",
+  "author": "Zhao73",
+  "homepage": "https://github.com/Zhao73/alphacouncil-agent#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zhao73/alphacouncil-agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Zhao73/alphacouncil-agent/issues"
+  },
+  "keywords": [
+    "codex",
+    "claude-code",
+    "mcp",
+    "equity-research",
+    "investing",
+    "multi-agent",
+    "plugin"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "check": "node --check ./mcp/server.mjs && node ./scripts/selfcheck.mjs"
+  }
+}

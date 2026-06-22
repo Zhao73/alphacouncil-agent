@@ -1,0 +1,22 @@
+{
+  "name": "alphacouncil",
+  "owner": {
+    "name": "Zhao73",
+    "url": "https://github.com/Zhao73/alphacouncil-agent"
+  },
+  "metadata": {
+    "description": "AlphaCouncil plugins for public-equity research.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "alphacouncil-agent",
+      "source": "./",
+      "description": "Multi-agent equity research: evidence packets, bull/bear debate, portfolio-manager decision.",
+      "version": "0.1.0",
+      "author": { "name": "Zhao73" },
+      "category": "finance",
+      "keywords": ["equity-research", "investing", "multi-agent", "mcp", "finance"]
+    }
+  ]
+}

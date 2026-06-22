@@ -1,0 +1,32 @@
+{
+  "name": "alphacouncil-agent",
+  "version": "0.1.0",
+  "description": "Host-visible or background public-equity research workflow with shared evidence packets.",
+  "author": {
+    "name": "Zhao73"
+  },
+  "homepage": "https://github.com/Zhao73/alphacouncil-agent#readme",
+  "repository": "https://github.com/Zhao73/alphacouncil-agent",
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "AlphaCouncil Agent",
+    "shortDescription": "Run visible or background equity research workflows.",
+    "longDescription": "AlphaCouncil Agent supports host-orchestrated visible Codex analyst threads for public-equity research, plus background MCP workers for saved evidence packets, filings, news, management commentary, valuation, debate, and portfolio decisions.",
+    "developerName": "Zhao73",
+    "category": "Finance",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "brandColor": "#0F766E",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
+    "defaultPrompt": [
+      "@alphacouncil-agent analyze NVDA as a long/short pitch.",
+      "@alphacouncil-agent collect evidence for AAPL earnings.",
+      "@alphacouncil-agent compare NVDA, AMD, AVGO."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
