@@ -53,6 +53,7 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity rese
 | ⏱️ **Multi-horizon verdict** | Buy/Hold/Sell plus separate 1-4 week, 3-6 month, and 12-month views. |
 | 🔑 **No data vendor, no API keys** | No financial-data API, market-data feed, or brokerage login. Analysts gather evidence live via the agent's own web search (**Codex web search** / **Claude Code WebSearch + WebFetch**) — billed only to your existing Codex / Claude Code subscription. MIT licensed. |
 | 📚 **Bundled research playbooks** | Public-equity-investing & investment-banking methodology ship as **local skills** — no dependency on Codex-only remote workflows, so Claude Code gets the same research depth (`skills/public-equity-investing`, `skills/investment-banking`). |
+| 📈 **Real market data, no key** | Built-in `get_quote` pulls delayed (~15m) index / index-futures (incl. night session) / FX / rates / vol / commodity / stock levels via Yahoo + Stooq — no API key, so analysts cite real numbers, not guesses. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 

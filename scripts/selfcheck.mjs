@@ -28,6 +28,21 @@ const quantPrompt = __test__.taskPrompt("quant_factor", "NOK", "2026-06-22", "�
 if (!quantPrompt.includes("量化组合经理") || !quantPrompt.includes("动能") || !quantPrompt.includes("open_questions")) {
   throw new Error("quant_factor prompt must request factor evidence and missing-data reporting.");
 }
+// Market-data helpers (offline; no network in selfcheck).
+if (__test__.resolveMarketSymbol("KOSPI") !== "^KS11" || __test__.resolveMarketSymbol("纳指期货") !== "NQ=F" || __test__.resolveMarketSymbol("NVDA") !== "NVDA") {
+  throw new Error("resolveMarketSymbol must map aliases and pass through raw tickers.");
+}
+const yq = __test__.parseYahooChart({ chart: { result: [{ meta: { symbol: "^KS11", regularMarketPrice: 2500, chartPreviousClose: 2450, currency: "KRW", marketState: "POST", regularMarketTime: 1700000000 } }] } }, "^KS11");
+if (yq.price !== 2500 || yq.previous_close !== 2450 || yq.change !== 50 || yq.change_pct !== 2.04 || yq.source !== "yahoo") {
+  throw new Error("parseYahooChart must compute price/change/change_pct from chart meta.");
+}
+let yahooThrew = false;
+try { __test__.parseYahooChart({ chart: { result: [{ meta: {} }] } }, "X"); } catch { yahooThrew = true; }
+if (!yahooThrew) throw new Error("parseYahooChart must throw when no price is present.");
+const sq = __test__.parseStooqCsv("Symbol,Date,Time,Open,High,Low,Close,Volume\n^spx,2026-06-22,21:00:00,5000,5050,4990,5030,0", "^spx");
+if (sq.price !== 5030 || sq.source !== "stooq") {
+  throw new Error("parseStooqCsv must parse the close from the CSV row.");
+}
 if (__test__.resolveLanguage({ prompt: "帮我看看 NOK" }) !== "中文" || __test__.resolveLanguage({ prompt: "Can I enter NOK?" }) !== "English") {
   throw new Error("language inference failed.");
 }
@@ -263,10 +278,13 @@ child.kill("SIGTERM");
 await once(child, "close");
 
 const responses = lines.map((line) => JSON.parse(line));
-if (!responses.some((item) => item.id === 2 && item.result?.tools?.length === 7)) {
+if (!responses.some((item) => item.id === 2 && item.result?.tools?.length === 8)) {
   throw new Error("tools/list did not return the expected tools.");
 }
 const toolsList = responses.find((item) => item.id === 2)?.result?.tools || [];
+if (!toolsList.some((tool) => tool.name === "get_quote")) {
+  throw new Error("tools/list must expose get_quote.");
+}
 const analyzeTool = toolsList.find((tool) => tool.name === "analyze_symbol");
 if (analyzeTool?.inputSchema?.properties?.dry_run?.default !== false) {
   throw new Error("analyze_symbol dry_run schema default must be false.");

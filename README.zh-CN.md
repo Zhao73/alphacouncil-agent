@@ -53,6 +53,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
 | 🔑 **不依赖金融 API,无需任何密钥** | 不需要金融数据 API、行情源或券商账号。分析师通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
 | 📚 **内置研究方法论** | 股票研究与投行事件分析的方法论以**本地 skill** 形式打包(`skills/public-equity-investing`、`skills/investment-banking`)——不依赖 Codex 专属远程工作流,Claude Code 也能获得同等研究深度。 |
+| 📈 **真实行情兜底,免 key** | 内置 `get_quote` 通过 Yahoo + Stooq 拉延迟(~15分钟)的指数 / 股指期货(含夜盘)/ 汇率 / 利率 / 波动率 / 商品 / 个股点位——不用 API key,分析师引用真实数字而非猜测。 |
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
