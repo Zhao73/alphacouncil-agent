@@ -7,11 +7,25 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    name: check (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing must not hide the others.
+      fail-fast: false
+      matrix:
+        # Node 18 is the floor declared in package.json engines; 22 catches forward breakage.
+        # Windows matters because codexInvocation's win32 branch, quoteCmdArg and stopChild's
+        # taskkill path shipped for months without ever executing on a Windows runner.
+        include:
+          - { os: ubuntu-latest, node: '18' }
+          - { os: ubuntu-latest, node: '20' }
+          - { os: ubuntu-latest, node: '22' }
+          - { os: windows-latest, node: '20' }
+          - { os: macos-latest, node: '20' }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - name: Run self-check
+          node-version: ${{ matrix.node }}
+      - name: Run checks
         run: npm run check
