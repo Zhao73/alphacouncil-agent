@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
-import { CODEX_CMD, DATA_DIR } from "./constants.mjs";
+import { CODEX_CMD, DATA_DIR, LIMITS } from "./constants.mjs";
 import { appendLimited } from "./text.mjs";
 
 export function quoteCmdArg(value) {
@@ -78,19 +78,26 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       clearTimeout(timer);
       clearInterval(heartbeat);
       if (killTimer) clearTimeout(killTimer);
+      // The caller already has the text by now. Nothing deleted this before, so every
+      // analyst of every run left one file behind in DATA_DIR forever.
+      try {
+        unlinkSync(outFile);
+      } catch {
+        // Codex may never have created it (spawn error, immediate timeout).
+      }
       resolvePromise(value);
     };
     const heartbeat = setInterval(() => {
       onHeartbeat({ pid: child.pid, output: outFile, elapsed_ms: Date.now() - startedAt });
-    }, 30000);
+    }, LIMITS.HEARTBEAT_MS);
     const timer = setTimeout(() => {
       timedOut = true;
       stopChild(child);
       killTimer = setTimeout(() => {
         stopChild(child, true);
-      }, 5000);
+      }, LIMITS.SIGKILL_GRACE_MS);
     }, timeoutMs);
-    // ponytail: drain both pipes; switch to streaming logs if progress UI needs live CLI output.
+    // Drain both pipes; switch to streaming logs if a progress UI needs live CLI output.
     child.stdout.on("data", (chunk) => { stdout = appendLimited(stdout, chunk.toString()); });
     child.stderr.on("data", (chunk) => { stderr = appendLimited(stderr, chunk.toString()); });
     child.on("error", (error) => {
@@ -102,6 +109,32 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       finish({ ok: code === 0 && text.trim().length > 0, code, text, stderr, stdout, outFile, timedOut });
     });
   });
+}
+
+/**
+ * Delete Codex output files left behind by older versions (and by any run killed
+ * between spawn and finish). Called once at server start; never throws.
+ */
+export function sweepStaleOutputs(now = Date.now()) {
+  let removed = 0;
+  let entries;
+  try {
+    entries = readdirSync(DATA_DIR);
+  } catch {
+    return removed;
+  }
+  for (const name of entries) {
+    if (!/^codex-\d+-[0-9a-f]+\.txt$/.test(name)) continue;
+    const path = join(DATA_DIR, name);
+    try {
+      if (now - statSync(path).mtimeMs < LIMITS.STALE_OUTPUT_MS) continue;
+      unlinkSync(path);
+      removed += 1;
+    } catch {
+      // Another process may have removed it, or it may not be ours to delete.
+    }
+  }
+  return removed;
 }
 
 export async function mapLimit(items, limit, worker) {

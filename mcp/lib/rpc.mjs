@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { DEBATE_ROLES, DEFAULT_TASKS, JsonRpcError, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
-import { readJson } from "./fsutil.mjs";
+import { DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
+import { RpcCode, methodNotFound, toRpcError } from "./errors.mjs";
+import { readJson, readJsonl } from "./fsutil.mjs";
+import { sweepStaleOutputs } from "./codex.mjs";
 import { sourceManifest } from "./gates.mjs";
 import { artifactPaths, runPath } from "./run-store.mjs";
 import { summaryModes } from "./output-modes.mjs";
@@ -17,8 +19,8 @@ export function sendResult(id, result) {
   send({ jsonrpc: "2.0", id, result });
 }
 
-export function sendError(id, code, message) {
-  send({ jsonrpc: "2.0", id, error: { code, message } });
+export function sendError(id, code, message, data) {
+  send({ jsonrpc: "2.0", id, error: { code, message, ...(data === undefined ? {} : { data }) } });
 }
 
 export function jsonContent(text, structuredContent = {}) {
@@ -40,10 +42,10 @@ export function tools() {
     language: { type: "string", default: "auto", description: "Reader-facing language for subagents and final report, e.g. auto, zh-CN, en-US, ja-JP. Auto infers from prompt." },
     tasks: { type: "array", items: { type: "string", enum: DEFAULT_TASKS } },
     dry_run: { type: "boolean", default: false, description: "Default false. Set true only for planning/self-tests without launching Codex subagents." },
-    max_concurrency: { type: "number", default: 3 },
-    timeout_ms: { type: "number", default: 600000 },
+    max_concurrency: { type: "number", default: LIMITS.CONCURRENCY_DEFAULT },
+    timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     synthesis: { type: "boolean", default: true, description: "Run bull, bear, and portfolio-manager synthesis after evidence collection." },
-    synthesis_timeout_ms: { type: "number", default: 600000 },
+    synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
@@ -167,13 +169,15 @@ export async function handleToolCall(id, params) {
     const eventsPath = join(dir, "events.jsonl");
     const sourceManifestPath = join(dir, "source_manifest.json");
     const reportQualityPath = join(dir, "report_quality.json");
+    const eventLog = readJsonl(eventsPath);
     sendResult(id, jsonContent(`Loaded AlphaCouncil Agent run ${idArg}`, {
       evidence,
       decision,
       source_manifest: existsSync(sourceManifestPath) ? readJson(sourceManifestPath) : sourceManifest(evidence),
       report_quality: existsSync(reportQualityPath) ? readJson(reportQualityPath) : null,
       status: existsSync(statusPath) ? readJson(statusPath) : null,
-      events: existsSync(eventsPath) ? readFileSync(eventsPath, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line)) : [],
+      events: eventLog.entries,
+      events_parse_errors: eventLog.parse_errors,
       artifacts: {
         ...artifactPaths(evidence),
         all_agents_md: allAgentsPath,
@@ -194,7 +198,7 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(JSON.stringify(modes, null, 2), { modes }));
     return;
   }
-  throw new Error(`Unknown tool: ${name}`);
+  throw methodNotFound(`Unknown tool: ${name}`);
 }
 
 export async function handleRequest(message) {
@@ -220,23 +224,39 @@ export async function handleRequest(message) {
     try {
       await handleToolCall(id, params);
     } catch (error) {
-      sendError(id, JsonRpcError.INVALID_PARAMS, error instanceof Error ? error.message : String(error));
+      // Previously every throw became INVALID_PARAMS, so a missing run directory or a
+      // failed fetch was reported to the host as a caller mistake.
+      const rpc = toRpcError(error);
+      sendError(id, rpc.code, rpc.message, rpc.data);
     }
     return;
   }
   if (id !== undefined) {
-    sendError(id, JsonRpcError.METHOD_NOT_FOUND, `Method not found: ${method}`);
+    sendError(id, RpcCode.METHOD_NOT_FOUND, `Method not found: ${method}`);
   }
 }
 
 export function startStdioServer() {
+  // stdout is the JSON-RPC frame channel; diagnostics must never go there.
+  process.on("uncaughtException", (error) => {
+    process.stderr.write(`[alphacouncil] uncaught exception: ${error?.stack || error}\n`);
+  });
+  process.on("unhandledRejection", (reason) => {
+    process.stderr.write(`[alphacouncil] unhandled rejection: ${reason?.stack || reason}\n`);
+  });
+  sweepStaleOutputs();
   const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on("line", (line) => {
     if (!line.trim()) return;
+    let message;
     try {
-      void handleRequest(JSON.parse(line));
-    } catch {
-      // Ignore malformed host messages.
+      message = JSON.parse(line);
+    } catch (error) {
+      // Answering is strictly better than the old silent `catch {}`: the host learns
+      // its frame was rejected instead of waiting for a reply that never comes.
+      sendError(null, RpcCode.PARSE_ERROR, `invalid JSON frame: ${error.message}`);
+      return;
     }
+    void handleRequest(message);
   });
 }

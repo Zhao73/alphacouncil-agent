@@ -60,7 +60,33 @@ export const REPORT_SECTION_TERMS = [
   ["来源表", "Source Table"],
 ];
 
-export const JsonRpcError = {
-  METHOD_NOT_FOUND: -32601,
-  INVALID_PARAMS: -32602,
-};
+/**
+ * Every tunable that used to be a bare number inline. Frozen so a typo is a TypeError
+ * in strict mode rather than a silent global retune.
+ */
+export const LIMITS = Object.freeze({
+  /** Rolling cap on captured child stdout/stderr. */
+  LOG_TAIL_BYTES: 20000,
+  /** Cap applied when a log is cleaned for display or storage. */
+  CLEAN_LOG_BYTES: 4000,
+  /** Cap for one-line summaries in handoffs and fallback reports. */
+  CLIP_CHARS: 520,
+  /** How often a long-running Codex child reports that it is still alive. */
+  HEARTBEAT_MS: 30000,
+  /** Grace period between SIGTERM and SIGKILL for a timed-out child. */
+  SIGKILL_GRACE_MS: 5000,
+  /** Default per-subagent Codex timeout. */
+  CODEX_TIMEOUT_MS: Number(process.env.ALPHACOUNCIL_AGENT_TIMEOUT_MS) || 600000,
+  CONCURRENCY_MIN: 1,
+  CONCURRENCY_MAX: 6,
+  CONCURRENCY_DEFAULT: Number(process.env.ALPHACOUNCIL_AGENT_CONCURRENCY) || 3,
+  /** Minimum non-space characters before a final report is considered a real report. */
+  REPORT_MIN_CHARS: 1600,
+  REPORT_MIN_CHARS_DRY: 600,
+  /** Timeout for one keyless quote fetch. */
+  QUOTE_FETCH_MS: 8000,
+  /** Cap on symbols per get_quote call. */
+  QUOTE_MAX_SYMBOLS: 25,
+  /** Age after which a leftover Codex output file is swept at startup. */
+  STALE_OUTPUT_MS: 24 * 60 * 60 * 1000,
+});

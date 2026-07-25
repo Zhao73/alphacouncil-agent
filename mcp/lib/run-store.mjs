@@ -2,6 +2,7 @@ import { appendFileSync } from "node:fs";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { DEBATE_ROLES, RUNS_DIR } from "./constants.mjs";
+import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
 import { agentState, completenessStatus, sourceManifest, taskState, verificationStatus } from "./gates.mjs";
 
@@ -18,15 +19,15 @@ export function runId(symbol) {
 
 export function safeSymbol(symbol) {
   if (typeof symbol !== "string" || !/^[A-Za-z0-9.^=+\-]{1,32}$/.test(symbol)) {
-    throw new Error("symbol must be 1-32 chars and contain only ticker-safe characters.");
+    throw invalidParams("symbol must be 1-32 chars and contain only ticker-safe characters.");
   }
-  if (/^\.+$/.test(symbol)) throw new Error("symbol cannot be only dots.");
+  if (/^\.+$/.test(symbol)) throw invalidParams("symbol cannot be only dots.");
   return symbol.toUpperCase();
 }
 
 export function runPath(id) {
   if (typeof id !== "string" || !/^[A-Z0-9.^=+\-_]{1,80}$/.test(id)) {
-    throw new Error("run_id is invalid.");
+    throw invalidParams("run_id is invalid.");
   }
   return join(RUNS_DIR, id);
 }

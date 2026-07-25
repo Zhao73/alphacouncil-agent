@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { RATINGS } from "./constants.mjs";
+import { LIMITS, RATINGS } from "./constants.mjs";
+import { internalError } from "./errors.mjs";
 import { isChineseLanguage } from "./lang.mjs";
 import { cleanLog, clip } from "./text.mjs";
 import { scopedSourceId } from "./gates.mjs";
@@ -22,7 +23,7 @@ export function extractJson(text) {
     if (start !== -1 && end > start) {
       return JSON.parse(text.slice(start, end + 1));
     }
-    throw new Error("subagent did not return JSON");
+    throw internalError("subagent did not return JSON");
   }
 }
 
@@ -44,7 +45,7 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     task,
     symbol,
     as_of: asOfDate,
-    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, 4000),
+    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
     claims,
     metrics: packet?.metrics && typeof packet.metrics === "object" ? packet.metrics : {},
     sources,
@@ -65,7 +66,7 @@ export function normalizeDebate(packet, role, run, raw = "") {
     verdict: typeof packet?.verdict === "string" ? packet.verdict : "",
     rating: RATINGS.includes(packet?.rating) ? packet.rating : "Hold",
     winner: ["bull", "bear", "balanced", "unknown"].includes(packet?.winner) ? packet.winner : "unknown",
-    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, 4000),
+    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
     long_thesis: Array.isArray(packet?.long_thesis) ? packet.long_thesis : [],
     short_thesis: Array.isArray(packet?.short_thesis) ? packet.short_thesis : [],
     valuation_range: typeof packet?.valuation_range === "string" ? packet.valuation_range : "",

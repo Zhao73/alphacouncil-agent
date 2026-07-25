@@ -1,4 +1,4 @@
-import { REPORT_SECTION_TERMS } from "./constants.mjs";
+import { LIMITS, REPORT_SECTION_TERMS } from "./constants.mjs";
 import { isChineseLanguage } from "./lang.mjs";
 
 export function withDisclaimer(markdown, language) {
@@ -114,7 +114,7 @@ export function validateFinalReport(markdown, run) {
   }
   const sourceCount = (run.packets || []).reduce((sum, packet) => sum + (packet.sources?.length || 0), 0);
   if (sourceCount > 0 && !/[a-z_]+:s\d+/i.test(text)) missing.push("missing scoped source IDs such as market_data:S1");
-  const minLength = run.dry_run ? 600 : 1600;
+  const minLength = run.dry_run ? LIMITS.REPORT_MIN_CHARS_DRY : LIMITS.REPORT_MIN_CHARS;
   if (text.replace(/\s+/g, "").length < minLength) missing.push(`report too short: minimum ${minLength} non-space characters`);
   return {
     status: missing.length ? "needs_revision" : "passed",

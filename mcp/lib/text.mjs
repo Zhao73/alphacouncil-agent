@@ -1,9 +1,11 @@
-export function appendLimited(base, chunk, max = 20000) {
+import { LIMITS } from "./constants.mjs";
+
+export function appendLimited(base, chunk, max = LIMITS.LOG_TAIL_BYTES) {
   const next = `${base}${chunk}`;
   return next.length > max ? next.slice(-max) : next;
 }
 
-export function cleanLog(value, max = 4000) {
+export function cleanLog(value, max = LIMITS.CLEAN_LOG_BYTES) {
   return String(value || "")
     .replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, "")
     .slice(-max);
@@ -19,7 +21,7 @@ export function bullets(items) {
   return items.map((item) => `- ${typeof item === "string" ? item : JSON.stringify(item)}`).join("\n");
 }
 
-export function clip(text, max = 520) {
+export function clip(text, max = LIMITS.CLIP_CHARS) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }

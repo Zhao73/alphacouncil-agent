@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { DEBATE_ROLES, DEFAULT_TASKS, OUTPUT_MODES } from "./constants.mjs";
+import { DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES } from "./constants.mjs";
+import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
 import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
 import { cleanLog } from "./text.mjs";
@@ -86,10 +87,10 @@ export function visibleStatusAfterPacket(run) {
 export function recordVisiblePacket(args) {
   const run = readJson(join(runPath(args.run_id), "evidence.json"));
   if (run.execution_mode !== "visible_host_threads") {
-    throw new Error("record_visible_packet requires a run created by plan_visible_run.");
+    throw invalidParams("record_visible_packet requires a run created by plan_visible_run.");
   }
   const task = args.task;
-  if (!run.tasks.includes(task)) throw new Error(`Unknown task for this run: ${task}`);
+  if (!run.tasks.includes(task)) throw invalidParams(`Unknown task for this run: ${task}`);
   const dir = runPath(run.run_id);
   const packet = normalizePacket({
     ...(args.packet || {}),
@@ -119,10 +120,10 @@ export function recordVisiblePacket(args) {
 export function recordVisibleDecision(args) {
   const run = readJson(join(runPath(args.run_id), "evidence.json"));
   if (run.execution_mode !== "visible_host_threads") {
-    throw new Error("record_visible_decision requires a run created by plan_visible_run.");
+    throw invalidParams("record_visible_decision requires a run created by plan_visible_run.");
   }
   const role = args.role;
-  if (!DEBATE_ROLES.includes(role)) throw new Error(`Unknown decision role: ${role}`);
+  if (!DEBATE_ROLES.includes(role)) throw invalidParams(`Unknown decision role: ${role}`);
   const dir = runPath(run.run_id);
   const packet = normalizeDebate({
     ...(args.packet || {}),
@@ -184,7 +185,7 @@ export function isDryRun(args = {}) {
 
 export async function collectEvidence(args) {
   if (args.visibility_required) {
-    throw new Error("visibility_required=true cannot be satisfied by headless MCP. Use host-level multi_agent or codex_app threads first, then record_visible_packet/record_visible_decision.");
+    throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-level multi_agent or codex_app threads first, then record_visible_packet/record_visible_decision.");
   }
   const symbol = safeSymbol(args.symbol);
   const asOfDate = args.as_of || today();
@@ -192,8 +193,8 @@ export async function collectEvidence(args) {
   const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
   const dryRun = isDryRun(args);
   const language = resolveLanguage(args);
-  const timeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : 600000;
-  const maxConcurrency = Math.max(1, Math.min(6, Number(args.max_concurrency || 3)));
+  const timeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
+  const maxConcurrency = Math.max(LIMITS.CONCURRENCY_MIN, Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || LIMITS.CONCURRENCY_DEFAULT)));
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
 
@@ -315,7 +316,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
 
 export async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
-  const timeoutMs = Number.isFinite(args.synthesis_timeout_ms) ? args.synthesis_timeout_ms : Number(args.timeout_ms || 600000);
+  const timeoutMs = Number.isFinite(args.synthesis_timeout_ms) ? args.synthesis_timeout_ms : Number(args.timeout_ms || LIMITS.CODEX_TIMEOUT_MS);
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
   run.phase = "debate";
   run.status = "running";

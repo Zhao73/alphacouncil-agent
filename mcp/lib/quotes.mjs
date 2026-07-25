@@ -1,3 +1,6 @@
+import { LIMITS } from "./constants.mjs";
+import { invalidParams } from "./errors.mjs";
+
 // ---- Keyless delayed market data (Yahoo primary, Stooq fallback) ------------
 export const MARKET_ALIASES = {
   kospi: "^KS11", "韩股": "^KS11", "韩国综合": "^KS11", kospi200: "^KS200",
@@ -63,7 +66,7 @@ export function parseStooqCsv(csv, requested) {
   };
 }
 
-export async function fetchText(url, timeoutMs = 8000) {
+export async function fetchText(url, timeoutMs = LIMITS.QUOTE_FETCH_MS) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -93,9 +96,9 @@ export async function fetchQuote(input) {
 
 export async function getQuotes(args) {
   const list = Array.isArray(args?.symbols) ? args.symbols : (args?.symbol ? [args.symbol] : []);
-  if (list.length === 0) throw new Error("get_quote requires symbols[] or symbol.");
+  if (list.length === 0) throw invalidParams("get_quote requires symbols[] or symbol.");
   const quotes = await Promise.all(
-    list.slice(0, 25).map((s) => fetchQuote(s).catch((e) => ({ query: s, error: String((e && e.message) || e) }))),
+    list.slice(0, LIMITS.QUOTE_MAX_SYMBOLS).map((s) => fetchQuote(s).catch((e) => ({ query: s, error: String((e && e.message) || e) }))),
   );
   return {
     as_of: new Date().toISOString(),
