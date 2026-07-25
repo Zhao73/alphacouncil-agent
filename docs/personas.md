@@ -25,6 +25,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `bull_researcher` | debate | yes | default | deep | Bull Researcher | long-case, rebuttal | original |
 | `bear_researcher` | debate | yes | default | deep | Bear Researcher | short-case, rebuttal | original |
 | `portfolio_manager` | debate | yes | default | deep | Portfolio Manager | verdict, rating, synthesis | original |
+| `_master_base` | master | no | - | deep | Master seat preamble | shared | original |
 | `master_aschenbrenner` | master | yes | masters-modern | deep | Aschenbrenner Lens | scaling, compute, power, timeline-pricing | original |
 | `master_buffett` | master | yes | masters-value | deep | Buffett Lens | moat, owner-earnings, circle-of-competence | ai-berkshire (MIT) |
 | `master_graham` | master | yes | masters-value-classic | deep | Graham Lens | margin-of-safety, balance-sheet, mr-market | original |
@@ -46,7 +47,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 17 masters, 36 files.
+Totals: 11 evidence analysts, 3 debate roles, 17 masters, 37 files.
 
 ## Provenance
 

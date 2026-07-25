@@ -1,9 +1,9 @@
 import { join } from "node:path";
 import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
-import { compactEvidence } from "./packets.mjs";
+import { compactEvidence, compactMasterOpinions } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
-import { personaPrompt, registry } from "./personas/registry.mjs";
+import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 
 /**
  * Prompt text lives in personas/, not here.
@@ -74,9 +74,49 @@ export function debatePrompt(role, run, context = {}) {
     context.brief ? `Brief length for round 1: ${context.brief}` : "",
     context.otherCaseR1 ? `Opponent prior-round case JSON: ${JSON.stringify(context.otherCaseR1)}` : "",
     context.questionsForYou ? `Questions you must answer JSON: ${JSON.stringify(context.questionsForYou)}` : "",
+    // The masters ran before the debate; the bull and bear must argue with their
+    // disagreements rather than restate the evidence unopposed.
+    (run.master_opinions || []).length
+      ? `Master seat opinions JSON (read the disagreements; you must engage with them, not ignore them): ${JSON.stringify(compactMasterOpinions(run))}`
+      : "",
     context.bull ? `Bull argument JSON: ${JSON.stringify(context.bull)}` : "",
     context.bear ? `Bear argument JSON: ${JSON.stringify(context.bear)}` : "",
     role === "portfolio_manager" ? outputModeInstruction(context.outputMode || "chat", language) : "",
     `Evidence JSON: ${evidenceJson}`,
   ].filter(Boolean).join("\n\n");
+}
+
+/**
+ * A master seat reads the finished evidence through one philosophy.
+ *
+ * Masters deliberately run after the evidence stage and before the debate: they are a
+ * judgment layer, not an evidence layer, and their disagreements are what the bull and
+ * bear then have to argue with.
+ */
+export function masterPrompt(masterId, run) {
+  const reg = registry();
+  const persona = reg.get(masterId);
+  if (!persona || persona.kind !== "master") throw new Error(`unknown master persona: ${masterId}`);
+  const language = run.language || "English";
+  const values = { symbol: run.symbol, as_of: run.as_of, language };
+
+  return [
+    render(personaPrompt(reg.get("_master_base"), language), values),
+    `Master: ${personaTitle(persona, language)} (${persona.id})`,
+    render(personaPrompt(persona, language), values),
+    `Walk-away conditions you must check explicitly: ${(persona.disqualifiers || []).join(" | ")}`,
+    `Evidence JSON: ${JSON.stringify(compactEvidence(run))}`,
+  ].filter(Boolean).join("\n\n");
+}
+
+/** The master ids a run has selected, from an explicit list or a roster name. */
+export function selectedMasters(run) {
+  const reg = registry();
+  if (Array.isArray(run.masters) && run.masters.length) {
+    return selectRoster(reg, { ids: run.masters }).filter((p) => p.kind === "master").map((p) => p.id);
+  }
+  if (run.masters_roster) {
+    return selectRoster(reg, { kind: "master", roster: run.masters_roster }).map((p) => p.id);
+  }
+  return [];
 }

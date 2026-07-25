@@ -12,7 +12,7 @@ import { summaryModes } from "./output-modes.mjs";
 import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
-import { analyzeSymbol, collectEvidence, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
 export function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -42,6 +42,8 @@ export function tools() {
   // selectable through the tool schema with no code change.
   const analystIds = registry().ids("analyst");
   const debateIds = registry().ids("debate");
+  const masterIds = registry().ids("master");
+  const masterRosters = [...new Set(registry().all().filter((p) => p.kind === "master" && p.enabled).flatMap((p) => p.rosters))].sort();
   const common = {
     symbol: { type: "string", description: "Exchange ticker. US, HK, JP, KR, CN and TW symbols all work, e.g. AAPL, 0700.HK, 7203.T, 005930.KS, 600519.SS." },
     as_of: { type: "string", description: "Analysis date YYYY-MM-DD. Defaults to today." },
@@ -54,6 +56,8 @@ export function tools() {
     synthesis: { type: "boolean", default: true, description: "Run bull, bear, and portfolio-manager synthesis after evidence collection." },
     synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
+    masters_roster: { type: "string", enum: masterRosters, description: "Optional master bench. Masters read the finished evidence through one philosophy each and run BETWEEN the evidence stage and the debate; their disagreements become inputs the bull and bear must answer. They never gather evidence and are not part of the completeness gate." },
+    masters: { type: "array", items: { type: "string", enum: masterIds }, description: "Explicit master personas, overriding masters_roster." },
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
   return [
@@ -65,6 +69,8 @@ export function tools() {
         prompt: common.prompt,
         language: common.language,
         tasks: common.tasks,
+        masters_roster: common.masters_roster,
+        masters: common.masters,
         run_id: { type: "string" },
       },
       required: ["symbol"],
@@ -110,6 +116,16 @@ export function tools() {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("record_master_opinion", "Record one completed master-seat opinion into a planned visible run. Masters run AFTER every evidence packet is recorded and BEFORE the bull/bear debate, so the debate has their disagreements to argue with. A master may return stance=out_of_scope, which is a conclusion rather than an abstention. Masters are optional and never affect the completeness gate.", {
+      type: "object",
+      properties: {
+        run_id: { type: "string" },
+        master: { type: "string", enum: masterIds },
+        packet: { type: "object" },
+        thread_id: { type: "string" },
+      },
+      required: ["run_id", "master", "packet"],
+    }),
     tool("preflight_permissions", "MANDATORY before a visible run: check that the host actually grants the network tools the evidence agents need. Background subagents cannot raise an interactive permission prompt, so a missing allowlist entry blocks their searches SILENTLY and they answer from training knowledge while still filling in every report section. Returns status ok | blocked | unknown with a remedy.", {
       type: "object",
       properties: {
@@ -157,6 +173,14 @@ export async function handleToolCall(id, params) {
   if (name === "record_visible_decision") {
     const result = recordVisibleDecision(args);
     sendResult(id, jsonContent(`Recorded visible decision ${args.role} for ${result.run.symbol}: ${result.run.run_id}`, result));
+    return;
+  }
+  if (name === "record_master_opinion") {
+    const result = recordMasterOpinion(args);
+    sendResult(id, jsonContent(
+      `Recorded master opinion ${args.master} (${result.opinion.stance}) for ${result.run.symbol}: ${result.recorded}/${result.expected} master seats in.`,
+      result,
+    ));
     return;
   }
   if (name === "preflight_permissions") {

@@ -8,9 +8,9 @@ import { cleanLog } from "./text.mjs";
 import { completenessStatus, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { debateFromCodex, dryDebate, dryPacket, extractJson, managerFallback, mergeDebateRounds, normalizeDebate, normalizePacket, rawRecordText } from "./packets.mjs";
+import { debateFromCodex, dryDebate, dryPacket, extractJson, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizePacket, rawRecordText } from "./packets.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
-import { debatePrompt, taskPrompt } from "./prompts.mjs";
+import { debatePrompt, masterPrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 
 export function visibleRun(args) {
   const symbol = safeSymbol(args.symbol);
@@ -38,9 +38,14 @@ export function visibleRun(args) {
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
     agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
     packets: [],
+    // Masters are an optional judgment layer. They are deliberately NOT part of the
+    // completeness gate: turning the bench on must not be able to mark a run incomplete.
+    masters_roster: typeof args.masters_roster === "string" ? args.masters_roster : undefined,
+    masters: Array.isArray(args.masters) ? args.masters : undefined,
+    master_opinions: [],
   };
   writeStatus(run);
-  appendEvent(run, "visible_run_planned", { tasks });
+  appendEvent(run, "visible_run_planned", { tasks, masters: selectedMasters(run) });
   writeJson(join(dir, "evidence.json"), run);
   writeSourceManifest(run);
   writeAllAgentsMarkdown(run);
@@ -66,7 +71,47 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     ].filter(Boolean).join("\n"),
     output_contract: isChineseLanguage(run.language) ? "只返回一个 JSON debate packet。" : `Return one JSON debate packet with reader-facing fields in ${run.language}.`,
   }));
-  return { evidence_agents, debate_agents };
+  const master_agents = selectedMasters(run).map((id) => ({
+    role: id,
+    title: `AlphaCouncil Agent ${run.symbol} ${id}`,
+    prompt_template: [
+      masterPrompt(id, run),
+      "",
+      isChineseLanguage(run.language)
+        ? "主线程必须先粘贴已完成的 Evidence JSON，再运行这个大师议席；大师在证据之后、辩论之前运行。"
+        : "The main thread must paste the completed Evidence JSON first. Masters run after the evidence stage and before the debate.",
+    ].filter(Boolean).join("\n"),
+    output_contract: isChineseLanguage(run.language)
+      ? "只返回一个 JSON master opinion。"
+      : `Return one JSON master opinion with reader-facing fields in ${run.language}.`,
+  }));
+  return { evidence_agents, master_agents, debate_agents };
+}
+
+export function recordMasterOpinion(args) {
+  const run = readJson(join(runPath(args.run_id), "evidence.json"));
+  if (run.execution_mode !== "visible_host_threads") {
+    throw invalidParams("record_master_opinion requires a run created by plan_visible_run.");
+  }
+  const allowed = selectedMasters(run);
+  if (!allowed.includes(args.master)) {
+    throw invalidParams(`master ${args.master} was not selected for this run. Selected: ${allowed.join(", ") || "none"}`);
+  }
+  const dir = runPath(run.run_id);
+  const opinion = normalizeMasterOpinion(
+    { ...(args.packet || {}), thread_id: args.thread_id },
+    args.master,
+    run,
+    rawRecordText(args.packet),
+  );
+  const byId = new Map((run.master_opinions || []).map((item) => [item.master, item]));
+  byId.set(args.master, opinion);
+  run.master_opinions = allowed.map((id) => byId.get(id)).filter(Boolean);
+  writeJson(join(dir, `${args.master}.json`), opinion);
+  saveRun(run);
+  writeJson(join(dir, "evidence.json"), run);
+  appendEvent(run, "master_opinion_recorded", { master: args.master, stance: opinion.stance });
+  return { run, opinion, recorded: run.master_opinions.length, expected: allowed.length };
 }
 
 export function visibleStatusAfterPacket(run) {

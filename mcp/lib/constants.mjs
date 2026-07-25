@@ -24,6 +24,7 @@ export const DEFAULT_TASKS = [
 ];
 export const RATINGS = ["Buy", "Overweight", "Hold", "Underweight", "Sell"];
 export const DEBATE_ROLES = ["bull_researcher", "bear_researcher", "portfolio_manager"];
+export const MASTER_STANCES = ["constructive", "cautious", "opposed", "out_of_scope"];
 // product_design / creative_production / sales were removed: each described itself as
 // "not for investment summary". Unknown values fall back to public_equity, so a host
 // still passing an old name degrades cleanly instead of erroring.
