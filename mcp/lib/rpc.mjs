@@ -15,7 +15,7 @@ import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { screenTicker, explainResult } from "./screen.mjs";
 import { fetchUniverse } from "./sec.mjs";
-import { industryBrief, listIndustries } from "./industry.mjs";
+import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
 export function send(message) {
@@ -161,6 +161,19 @@ export function tools() {
       },
       required: ["industry"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("industry_coverage", "Ask what is actually known about an industry BEFORE researching it. Returns whether a curated value-chain map exists, whether SEC's SIC classification covers it, or neither -- with guidance for each case. SIC reaches every industry with a US filer; a curated map additionally carries chain position, non-US participants and demand drivers. Use this so a report never presents an uncurated participant list as if it were complete.", {
+      type: "object",
+      properties: { industry: { type: "string" } },
+      required: ["industry"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("industry_peers", "Find US filers related to a company using SEC's own SIC classification -- no curation and no model. Covers every industry with a US filer, including ones no curated map reaches. It gives no value-chain position and no non-US participants: for those prefer industry_brief where a map exists. Peer matching is by company name and is a starting universe, not an index membership list.", {
+      type: "object",
+      properties: {
+        cik: { type: "string", description: "Anchor company CIK. Resolve one with list_us_universe." },
+        limit: { type: "number", default: 25 },
+      },
+      required: ["cik"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("list_industries", "The industries that have a hand-maintained map. Deliberately a short list: an unmapped industry should be handled by research rather than by inventing a participant list.", {
       type: "object",
       properties: {},
@@ -257,9 +270,29 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(lines.join("\n"), brief));
     return;
   }
+  if (name === "industry_coverage") {
+    const coverage = industryCoverage(args.industry);
+    sendResult(id, jsonContent(
+      `"${args.industry}": curated map ${coverage.curated ? `yes (${coverage.curated.id})` : "no"}, SIC group ${coverage.sic_group ? `yes (${coverage.sic_group.id})` : "no"}. ${coverage.guidance}`,
+      coverage,
+    ));
+    return;
+  }
+  if (name === "industry_peers") {
+    const result = await peersBySic(args);
+    sendResult(id, jsonContent(
+      `${result.anchor.name}: SIC ${result.sic ?? "unknown"} (${result.sic_description ?? "-"})${result.group ? `, group ${result.group.id}` : ""}. ${result.peers.length} name-matched peers.`,
+      result,
+    ));
+    return;
+  }
   if (name === "list_industries") {
     const industries = listIndustries();
-    sendResult(id, jsonContent(`${industries.length} mapped industries: ${industries.map((i) => i.id).join(", ")}.`, { industries }));
+    sendResult(id, jsonContent(
+      `${industries.length} curated industry map(s): ${industries.map((i) => i.id).join(", ")}. `
+      + `Plus ${SIC_GROUPS.length} SIC groups covering every US filer -- use industry_coverage to see which applies.`,
+      { curated: industries, sic_groups: SIC_GROUPS },
+    ));
     return;
   }
   if (name === "screen_ticker") {

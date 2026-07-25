@@ -112,3 +112,20 @@ export const CONCEPTS = {
 };
 
 export const secUserAgent = () => UA;
+
+/** Company metadata including SIC industry classification. Keyless. */
+export async function fetchSubmissions(cik) {
+  const padded = String(cik).replace(/\D/g, "").padStart(10, "0");
+  if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
+  const data = await secJson(`https://data.sec.gov/submissions/CIK${padded}.json`);
+  return {
+    cik: padded,
+    name: data.name,
+    tickers: data.tickers || [],
+    exchanges: data.exchanges || [],
+    sic: data.sic || null,
+    sic_description: data.sicDescription || null,
+    state_of_incorporation: data.stateOfIncorporation || null,
+    fiscal_year_end: data.fiscalYearEnd || null,
+  };
+}

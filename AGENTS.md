@@ -37,11 +37,12 @@ Verified against a real opencode 1.18.4 install rather than from documentation:
 - Per-agent permissions come from each persona's `tools_hint`, so only the roles that
   actually gather evidence get the network, and no role can edit files or run shell commands.
 
-**Unverified:** whether OpenCode discovers the bundled `skills/` directory through
-`skills.paths`. It could not be established on the test machine, where a third-party
-plugin manages the skill catalogue and masks native discovery. The config declares the
-path because it matches the published schema, but do not rely on it: the MCP tools and
-the agent files carry the workflow on their own.
+**Skills:** opencode 1.18.4 serves `debug skill` from a static catalogue -- a skill added
+at runtime never appears, in any location, including `~/.claude/skills` and with a clean
+`OPENCODE_CONFIG_DIR`. Tested both with and without third-party plugins. So the workflow
+does not ship as skills on OpenCode; it ships through `instructions`, which IS resolved:
+`opencode debug config` shows all four workflow files loaded alongside `AGENTS.md`. The
+MCP tools and `.opencode/agent/*.md` carry the rest.
 
 `websearch` is gated in OpenCode — it needs the OpenCode provider or `OPENCODE_ENABLE_EXA=1`.
 Run `preflight_permissions` before a fan-out; it reads OpenCode's permission syntax too.

@@ -63,3 +63,54 @@ test("listIndustries reports what is actually mapped", () => {
     assert.ok(industry.participant_count >= 5);
   }
 });
+
+// ---- SIC coverage: the half that reaches every industry ---------------------
+
+import { sicGroupFor, industryCoverage, SIC_GROUPS } from "../../mcp/lib/industry.mjs";
+
+test("SIC groups cover the major sectors without overlapping ambiguously", () => {
+  assert.ok(SIC_GROUPS.length >= 20, "coverage must be broad enough to be useful");
+  for (const group of SIC_GROUPS) {
+    assert.ok(group.range[0] <= group.range[1], `${group.id} has an inverted range`);
+    assert.ok(group.title.zh && group.title.en, `${group.id} needs both languages`);
+  }
+});
+
+test("the narrowest matching SIC range wins", () => {
+  // 3674 falls inside electronics as well; semiconductors is the specific answer.
+  assert.equal(sicGroupFor(3674).id, "semiconductors");
+  assert.equal(sicGroupFor(7372).id, "software");
+  assert.equal(sicGroupFor(6022).id, "banks");
+  assert.equal(sicGroupFor(2836).id, "pharma_biotech");
+  assert.equal(sicGroupFor(99999), null);
+  assert.equal(sicGroupFor("not a code"), null);
+});
+
+test("coverage tells the caller which half of the story exists", () => {
+  const curated = industryCoverage("存储");
+  assert.equal(curated.curated.id, "memory");
+  assert.match(curated.guidance, /curated map exists/);
+
+  // The point of the SIC layer: an industry nobody wrote a map for is still reachable.
+  const sicOnly = industryCoverage("banks");
+  assert.equal(sicOnly.curated, null);
+  assert.equal(sicOnly.sic_group.id, "banks");
+  assert.match(sicOnly.guidance, /not curated/);
+
+  const neither = industryCoverage("tulips");
+  assert.equal(neither.curated, null);
+  assert.equal(neither.sic_group, null);
+  assert.match(neither.guidance, /not authoritative/);
+});
+
+test("coverage never claims completeness it does not have", () => {
+  for (const query of ["banks", "software", "tulips"]) {
+    const coverage = industryCoverage(query);
+    if (!coverage.curated) {
+      assert.ok(
+        /not curated|not authoritative/.test(coverage.guidance),
+        `${query}: guidance must warn the participant list is not curated`,
+      );
+    }
+  }
+});
