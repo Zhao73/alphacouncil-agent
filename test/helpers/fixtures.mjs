@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { repoFile } from "./paths.mjs";
 import { __test__ } from "../../mcp/server.mjs";
 
-export const completeReport = readFileSync(repoFile("test/fixtures/complete-report.md"), "utf8").trimEnd();
+// Normalize line endings: a Windows checkout yields CRLF, which turns every
+// `fixture.replace("...\n...")` in the tests into a silent no-op.
+export const completeReport = readFileSync(repoFile("test/fixtures/complete-report.md"), "utf8")
+  .replace(/\r\n/g, "\n")
+  .trimEnd();
 
 /** A normalized evidence packet whose single claim cites a source that exists. */
 export function scopedPacket() {

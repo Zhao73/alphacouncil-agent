@@ -1,0 +1,9 @@
+# Check everything out with LF. Without this, Windows runners get CRLF and any test that
+# manipulates fixture text with "\n" literals silently becomes a no-op.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary

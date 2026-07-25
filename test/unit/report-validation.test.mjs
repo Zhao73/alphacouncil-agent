@@ -56,10 +56,16 @@ test("deleting the Risks section is now detected", () => {
   assert.ok(failed(without).some((m) => m.startsWith("missing section: risks")), failed(without).join("; "));
 });
 
+test("the fixture uses LF so text-manipulating tests are not silent no-ops", () => {
+  assert.ok(!completeReport.includes("\r"), "fixture must be normalized to LF");
+  assert.match(completeReport, /## Major Risks\nRisk coverage is present\./);
+});
+
 test("a heading that merely mentions a keyword does not satisfy another section", () => {
   // "Quant Factor / Technical Risk View" contains "risk"; longest-alias assignment must
   // still route it to quant and leave risks unsatisfied.
   const without = completeReport.replace("## Major Risks\nRisk coverage is present.\n\n", "");
+  assert.ok(without.length < completeReport.length, "fixture text must actually change");
   const result = validateFinalReport(without, run);
   assert.equal(result.sections.find((s) => s.id === "quant")?.status, "ok");
   assert.equal(result.sections.find((s) => s.id === "risks")?.status, "missing");
@@ -73,12 +79,14 @@ test("Position Recommendation is not swallowed by the conclusion section", () =>
 
 test("a bold pseudo-heading does not count as a section", () => {
   const weakened = completeReport.replace("## Major Risks\n", "**Major Risks**\n");
+  assert.notEqual(weakened, completeReport, "fixture text must actually change");
   assert.ok(failed(weakened).some((m) => m.startsWith("missing section: risks")));
 });
 
 test("a placeholder body is rejected even though the heading exists", () => {
   for (const filler of ["- None", "N/A", "TBD", "待补充"]) {
     const stubbed = completeReport.replace("## Major Risks\nRisk coverage is present.", `## Major Risks\n${filler}`);
+    assert.notEqual(stubbed, completeReport, "fixture text must actually change");
     assert.ok(
       failed(stubbed).some((m) => m.startsWith("placeholder section: risks")),
       `"${filler}" should be rejected as a placeholder`,
@@ -93,6 +101,7 @@ test("a task id in the source table does not satisfy the analyst work log", () =
     "### market_data\nThe market_data analyst produced a visible packet. This section names the planned analyst explicitly and records the evidence handoff.",
     "The work log names no analyst at all, which is exactly the failure this check exists for.",
   );
+  assert.notEqual(moved, completeReport, "fixture text must actually change");
   assert.match(moved, /market_data:S1/, "the task id must still appear in the source table");
   assert.ok(
     failed(moved).includes("missing analyst work log entry: market_data"),
