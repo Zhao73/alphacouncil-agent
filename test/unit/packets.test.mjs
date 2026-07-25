@@ -15,7 +15,7 @@ test("source IDs are task-scoped after normalization", () => {
 test("source manifest preserves scoped sources", () => {
   const manifest = sourceManifest({
     run_id: "TEST",
-    symbol: "NVDA",
+    symbol: "AAPL",
     as_of: "2026-06-22",
     packets: [scopedPacket()],
   });
@@ -24,7 +24,7 @@ test("source manifest preserves scoped sources", () => {
 });
 
 test("normalizeDebate defaults optional contract arrays to empty", () => {
-  const debate = normalizeDebate({}, "bull_researcher", { symbol: "NVDA", as_of: "2026-06-22" }, "");
+  const debate = normalizeDebate({}, "bull_researcher", { symbol: "AAPL", as_of: "2026-06-22" }, "");
   assert.deepEqual(debate.debate_rounds, []);
   assert.deepEqual(debate.questions, []);
   assert.deepEqual(debate.questions_answered, []);
@@ -32,7 +32,7 @@ test("normalizeDebate defaults optional contract arrays to empty", () => {
 
 test("mergeDebateRounds takes top-level fields from the last round and keeps all rounds", () => {
   const round = (rating, summary) =>
-    normalizeDebate({ rating, summary }, "bull_researcher", { symbol: "NVDA", as_of: "2026-06-22" }, summary);
+    normalizeDebate({ rating, summary }, "bull_researcher", { symbol: "AAPL", as_of: "2026-06-22" }, summary);
   const merged = mergeDebateRounds([round("Hold", "r1"), round("Overweight", "r2"), round("Buy", "r3")]);
   assert.equal(merged.rating, "Buy");
   assert.equal(merged.summary, "r3");

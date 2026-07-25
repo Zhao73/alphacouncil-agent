@@ -23,7 +23,7 @@ test("verificationStatus flags a claim citing an unknown source id", () => {
     claims: [{ claim: "c", evidence: "e", confidence: "high", source_ids: ["ghost:S9"] }],
     sources: [],
     confidence: "high",
-  }, "market_data", "NVDA", "2026-06-22", "{}");
+  }, "market_data", "AAPL", "2026-06-22", "{}");
   const gate = verificationStatus({ packets: [orphan] });
   assert.equal(gate.verification, "needs_verification");
   assert.equal(gate.missing_claim_source_ids.length, 1);
@@ -41,7 +41,7 @@ test("withVerificationBanner is identity on pass and surfaces the gate on failur
     claims: [{ claim: "c", evidence: "e", confidence: "high", source_ids: ["ghost:S9"] }],
     sources: [],
     confidence: "high",
-  }, "market_data", "NVDA", "2026-06-22", "{}");
+  }, "market_data", "AAPL", "2026-06-22", "{}");
   const gapped = verificationStatus({ packets: [orphan] });
   assert.match(withVerificationBanner("BODY", gapped, "English"), /Source Verification Gate/);
 });

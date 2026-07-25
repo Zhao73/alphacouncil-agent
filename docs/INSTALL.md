@@ -66,7 +66,7 @@ offline/local development — it avoids hand-editing paths.
 **Use it:**
 
 ```text
-@alphacouncil-agent analyze NVDA as a long/short pitch
+@alphacouncil-agent analyze AAPL as a long/short pitch
 @alphacouncil-agent 帮我看看 NOK
 ```
 

@@ -83,7 +83,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 エージェントにそのまま話しかけるだけ。@ でエージェントを呼び、ティッカーや質問を添えます:
 
 ```text
-@alphacouncil-agent NVDA をロング/ショートのピッチとして分析して
+@alphacouncil-agent 7203.T をロング/ショートのピッチとして分析して
 @alphacouncil-agent 現在の水準で AAPL は買い?
 @alphacouncil-agent 12か月の視点で TSLA と RIVN を比較して
 @alphacouncil-agent トヨタ(7203)を分析して
@@ -184,7 +184,7 @@ flowchart TD
 ```json
 {
   "task": "market_data",
-  "symbol": "NVDA",
+  "symbol": "7203.T",
   "as_of": "YYYY-MM-DD",
   "summary": "string",
   "claims": [

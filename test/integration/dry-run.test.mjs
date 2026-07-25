@@ -20,7 +20,7 @@ before(async () => {
   toolsList = list.result?.tools || [];
 
   const response = await server.callTool("analyze_symbol", {
-    symbol: "NVDA",
+    symbol: "AAPL",
     dry_run: true,
     tasks: ["market_data", "valuation_long_short"],
   });

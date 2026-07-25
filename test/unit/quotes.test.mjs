@@ -9,7 +9,7 @@ const { resolveMarketSymbol, parseYahooChart, parseStooqCsv } = __test__;
 test("resolveMarketSymbol maps aliases and passes raw tickers through", () => {
   assert.equal(resolveMarketSymbol("KOSPI"), "^KS11");
   assert.equal(resolveMarketSymbol("纳指期货"), "NQ=F");
-  assert.equal(resolveMarketSymbol("NVDA"), "NVDA");
+  assert.equal(resolveMarketSymbol("AAPL"), "AAPL");
 });
 
 test("parseYahooChart computes price/change/change_pct from chart meta", () => {

@@ -14,7 +14,7 @@ export function scopedPacket() {
     claims: [{ claim: "price", evidence: "source", confidence: "high", source_ids: ["S1"] }],
     sources: [{ id: "S1", title: "Quote", url: "https://example.com" }],
     confidence: "high",
-  }, "market_data", "NVDA", "2026-06-22", "{}");
+  }, "market_data", "AAPL", "2026-06-22", "{}");
 }
 
 /** A run where every planned task and both researchers are recorded as completed. */

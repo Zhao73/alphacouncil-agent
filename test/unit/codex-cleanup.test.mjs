@@ -40,7 +40,7 @@ test("a dry run leaves no codex temp files in the data dir", async () => {
   try {
     const server = startServer({ dataDir: dir });
     await server.request("initialize", {});
-    await server.callTool("analyze_symbol", { symbol: "NVDA", dry_run: true, tasks: ["market_data"] });
+    await server.callTool("analyze_symbol", { symbol: "AAPL", dry_run: true, tasks: ["market_data"] });
     await server.close();
 
     const leaked = readdirSync(dir).filter((f) => /^codex-/.test(f));

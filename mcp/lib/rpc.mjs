@@ -42,7 +42,7 @@ export function tools() {
   const analystIds = registry().ids("analyst");
   const debateIds = registry().ids("debate");
   const common = {
-    symbol: { type: "string", description: "Ticker, e.g. NVDA." },
+    symbol: { type: "string", description: "Exchange ticker. US, HK, JP, KR, CN and TW symbols all work, e.g. AAPL, 0700.HK, 7203.T, 005930.KS, 600519.SS." },
     as_of: { type: "string", description: "Analysis date YYYY-MM-DD. Defaults to today." },
     prompt: { type: "string", description: "User objective or extra instructions." },
     language: { type: "string", default: "auto", description: "Reader-facing language for subagents and final report, e.g. auto, zh-CN, en-US, ja-JP. Auto infers from prompt." },
@@ -109,7 +109,7 @@ export function tools() {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("get_quote", "Keyless DELAYED market data (Yahoo/Stooq, ~15m or EOD) for indices, index futures (incl. night session), FX, rates, vol, commodities, and stocks. Accepts plain names ('KOSPI','纳指期货','VIX','美元指数','10年美债','黄金') or raw tickers (^KS11, ES=F, NVDA). Use for real index/futures/macro numbers; on error treat as a data gap (open_questions). Not real-time, not investment advice.", {
+    tool("get_quote", "Keyless DELAYED market data (Yahoo/Stooq, ~15m or EOD) for indices, index futures (incl. night session), FX, rates, vol, commodities, and stocks. Accepts plain names ('KOSPI','纳指期货','VIX','美元指数','10年美债','黄金') or raw tickers (^KS11, ES=F, 7203.T). Use for real index/futures/macro numbers; on error treat as a data gap (open_questions). Not real-time, not investment advice.", {
       type: "object",
       properties: {
         symbols: { type: "array", items: { type: "string" }, description: "Names or tickers, e.g. ['KOSPI','ES=F','VIX','美元指数']." },
