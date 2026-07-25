@@ -4,6 +4,7 @@ import readline from "node:readline";
 import { DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl } from "./fsutil.mjs";
+import { resolveLanguage } from "./lang.mjs";
 import { sweepStaleOutputs } from "./codex.mjs";
 import { sourceManifest } from "./gates.mjs";
 import { artifactPaths, runPath } from "./run-store.mjs";
@@ -101,7 +102,7 @@ export function tools() {
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("compare_summary_modes", "Compare chat, PDF, presentation, document, and specialist plugin modes for final AlphaCouncil Agent synthesis.", {
       type: "object",
-      properties: {},
+      properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("get_quote", "Keyless DELAYED market data (Yahoo/Stooq, ~15m or EOD) for indices, index futures (incl. night session), FX, rates, vol, commodities, and stocks. Accepts plain names ('KOSPI','纳指期货','VIX','美元指数','10年美债','黄金') or raw tickers (^KS11, ES=F, NVDA). Use for real index/futures/macro numbers; on error treat as a data gap (open_questions). Not real-time, not investment advice.", {
       type: "object",
@@ -194,7 +195,7 @@ export async function handleToolCall(id, params) {
     return;
   }
   if (name === "compare_summary_modes") {
-    const modes = summaryModes();
+    const modes = summaryModes(resolveLanguage(args));
     sendResult(id, jsonContent(JSON.stringify(modes, null, 2), { modes }));
     return;
   }
