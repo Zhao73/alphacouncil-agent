@@ -51,6 +51,9 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     sources,
     open_questions: Array.isArray(packet?.open_questions) ? packet.open_questions : [],
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
+    // How much material this task actually had. Deliberately separate from confidence:
+    // a rich-but-contradictory task can be A/low, a sparse-but-decisive one C/high.
+    information_richness: ["A", "B", "C"].includes(packet?.information_richness) ? packet.information_richness : "unrated",
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
     thread_title: typeof packet?.thread_title === "string" ? packet.thread_title : undefined,
     execution_mode: typeof packet?.execution_mode === "string" ? packet.execution_mode : undefined,

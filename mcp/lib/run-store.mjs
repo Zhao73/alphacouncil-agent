@@ -32,6 +32,20 @@ export function runPath(id) {
   return join(RUNS_DIR, id);
 }
 
+/**
+ * How much material the evidence agents actually found, counted by grade.
+ * A run that is mostly C is not necessarily wrong, but it is a different kind of report
+ * and the reader should be told before the conclusion, not after.
+ */
+export function richnessSummary(run) {
+  const counts = { A: 0, B: 0, C: 0, unrated: 0 };
+  for (const packet of run.packets || []) {
+    const grade = ["A", "B", "C"].includes(packet.information_richness) ? packet.information_richness : "unrated";
+    counts[grade] += 1;
+  }
+  return counts;
+}
+
 export function statusSnapshot(run) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
@@ -50,6 +64,7 @@ export function statusSnapshot(run) {
     completeness: completeness.completeness,
     missing_evidence_count: completeness.missing_evidence_count,
     missing_debate_count: completeness.missing_debate_count,
+    information_richness: richnessSummary(run),
     report_quality: run.report_quality?.status || "not_checked",
     missing_report_items_count: run.report_quality?.missing?.length || 0,
     started_at: run.started_at,

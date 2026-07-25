@@ -27,6 +27,7 @@ export function renderPacketMarkdown(packet, index) {
     packet.thread_id ? `- Visible thread ID: ${packet.thread_id}` : "",
     packet.thread_title ? `- Visible thread title: ${packet.thread_title}` : "",
     `- Confidence: ${packet.confidence}`,
+    `- Information richness: ${packet.information_richness || "unrated"}`,
     "",
     "### Summary",
     packet.summary || "",
