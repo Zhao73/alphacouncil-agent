@@ -33,8 +33,19 @@ before(async () => {
 after(() => removeDataDir(dataDir));
 
 test("tools/list exposes the full tool surface", () => {
-  assert.equal(toolsList.length, 8);
-  assert.ok(toolsList.some((tool) => tool.name === "get_quote"), "get_quote must be exposed");
+  // Assert on names, not a count: a bare number tells a future reader nothing about
+  // which tool went missing.
+  assert.deepEqual(toolsList.map((tool) => tool.name).sort(), [
+    "analyze_symbol",
+    "collect_evidence",
+    "compare_summary_modes",
+    "get_quote",
+    "plan_visible_run",
+    "preflight_permissions",
+    "read_run",
+    "record_visible_decision",
+    "record_visible_packet",
+  ]);
 });
 
 test("analyze_symbol schema keeps dry_run opt-in and exposes language and tasks", () => {

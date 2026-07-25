@@ -10,6 +10,7 @@ import { sourceManifest } from "./gates.mjs";
 import { artifactPaths, runPath } from "./run-store.mjs";
 import { summaryModes } from "./output-modes.mjs";
 import { registry } from "./personas/registry.mjs";
+import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { analyzeSymbol, collectEvidence, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
@@ -109,6 +110,12 @@ export function tools() {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("preflight_permissions", "MANDATORY before a visible run: check that the host actually grants the network tools the evidence agents need. Background subagents cannot raise an interactive permission prompt, so a missing allowlist entry blocks their searches SILENTLY and they answer from training knowledge while still filling in every report section. Returns status ok | blocked | unknown with a remedy.", {
+      type: "object",
+      properties: {
+        roster: { type: "string", default: "default", description: "Which analyst roster the run will use." },
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("get_quote", "Keyless DELAYED market data (Yahoo/Stooq, ~15m or EOD) for indices, index futures (incl. night session), FX, rates, vol, commodities, and stocks. Accepts plain names ('KOSPI','纳指期货','VIX','美元指数','10年美债','黄金') or raw tickers (^KS11, ES=F, 7203.T). Use for real index/futures/macro numbers; on error treat as a data gap (open_questions). Not real-time, not investment advice.", {
       type: "object",
       properties: {
@@ -125,8 +132,14 @@ export async function handleToolCall(id, params) {
   if (name === "plan_visible_run") {
     const run = visibleRun(args);
     const specs = visibleAgentSpecs(run, args.prompt || "");
-    sendResult(id, jsonContent(`Planned visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}`, {
+    // Returned with the plan, not left to a separate opt-in call: a host that skips the
+    // preflight is exactly the host whose subagents will fail silently.
+    const preflight = preflightNetworkPermissions({ roster: args.roster || "default" });
+    sendResult(id, jsonContent(
+      `Planned visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}. Network preflight: ${preflight.status}.`,
+      {
       run,
+      preflight,
       ...specs,
       artifacts: {
         all_agents_md: join(runPath(run.run_id), "all_agents.md"),
@@ -144,6 +157,11 @@ export async function handleToolCall(id, params) {
   if (name === "record_visible_decision") {
     const result = recordVisibleDecision(args);
     sendResult(id, jsonContent(`Recorded visible decision ${args.role} for ${result.run.symbol}: ${result.run.run_id}`, result));
+    return;
+  }
+  if (name === "preflight_permissions") {
+    const result = preflightNetworkPermissions({ roster: args.roster || "default" });
+    sendResult(id, jsonContent(`Network permission preflight: ${result.status}. ${result.message}`, result));
     return;
   }
   if (name === "get_quote") {
