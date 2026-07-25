@@ -8,7 +8,9 @@ import readline from "node:readline";
 const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(os.homedir(), ".alphacouncil-agent");
 const RUNS_DIR = join(DATA_DIR, "runs");
 const SERVER_NAME = "alphacouncil-agent";
-const VERSION = "0.3.2";
+// Single source of truth for the version. Resolved from import.meta.url, never process.cwd(),
+// because hosts launch this server from arbitrary working directories.
+const VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const CODEX_CMD = process.env.ALPHACOUNCIL_AGENT_CODEX_CMD || "codex";
 const DEFAULT_TASKS = [
   "market_data",
@@ -2003,4 +2005,4 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   startStdioServer();
 }
 
-export const __test__ = { taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, completenessStatus, withCompletenessBanner, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage, codexInvocation, validateFinalReport, artifactPaths, userResponseMarkdown, resolveMarketSymbol, parseYahooChart, parseStooqCsv };
+export const __test__ = { VERSION, taskPrompt, extractJson, normalizePacket, normalizeDebate, sourceManifest, verificationStatus, completenessStatus, withCompletenessBanner, mergeDebateRounds, withVerificationBanner, summarizeRun, safeSymbol, summaryModes, outputModeInstruction, writeAllAgentsMarkdown, cleanLog, isDryRun, resolveLanguage, codexInvocation, validateFinalReport, artifactPaths, userResponseMarkdown, resolveMarketSymbol, parseYahooChart, parseStooqCsv };
