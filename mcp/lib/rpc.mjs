@@ -15,6 +15,7 @@ import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { screenTicker, explainResult } from "./screen.mjs";
 import { fetchUniverse } from "./sec.mjs";
+import { industryBrief, listIndustries } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
 export function send(message) {
@@ -153,6 +154,17 @@ export function tools() {
       },
       required: ["run_id", "verifier", "seat", "verdict"],
     }),
+    tool("industry_brief", "Start from an industry rather than a ticker. Returns the participant list by position in the value chain -- INCLUDING the non-US names a SEC-only pipeline would silently drop, such as Korean and Japanese makers -- plus who actually drives demand, the questions a run must answer, how the industry behaves through a cycle, and which participants this pipeline can screen mechanically versus which need their own regulator's feed. Returns a frame, never a verdict.", {
+      type: "object",
+      properties: {
+        industry: { type: "string", description: "Free text; ids and aliases in both languages, e.g. memory, 存储, HBM, DRAM." },
+      },
+      required: ["industry"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("list_industries", "The industries that have a hand-maintained map. Deliberately a short list: an unmapped industry should be handled by research rather than by inventing a participant list.", {
+      type: "object",
+      properties: {},
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("screen_ticker", "Run the mechanical elimination screen against a company's own SEC filings. No language model is involved: seven hard rules (10y ROE, 5y cumulative FCF, interest cover, gross margin, OCF/NI, net margin, dilution) with three exemptions, and every rejection names the metric, the measured value and the threshold. Rules whose inputs are missing from the filings are reported as skipped, never as passes. Surviving is not a recommendation -- it means the name is worth research time. US filers only; other markets need their own regulator feed.", {
       type: "object",
       properties: {
@@ -233,6 +245,21 @@ export async function handleToolCall(id, params) {
       `Recorded ${args.verifier} -> ${args.verdict} for ${args.seat}. Effective weight now ${seat ? seat.effective_weight : "n/a"}.`,
       result,
     ));
+    return;
+  }
+  if (name === "industry_brief") {
+    const brief = industryBrief(args.industry);
+    const lines = [
+      `${brief.title.en} / ${brief.title.zh}: ${brief.participants.length} mapped participants across ${brief.layers.length} chain layers.`,
+      `Screenable from SEC filings: ${brief.coverage.sec_screenable.join(", ") || "none"}.`,
+      `Need a local regulator feed: ${brief.coverage.needs_local_regulator_feed.map((p) => `${p.symbol} (${p.market})`).join(", ") || "none"}.`,
+    ];
+    sendResult(id, jsonContent(lines.join("\n"), brief));
+    return;
+  }
+  if (name === "list_industries") {
+    const industries = listIndustries();
+    sendResult(id, jsonContent(`${industries.length} mapped industries: ${industries.map((i) => i.id).join(", ")}.`, { industries }));
     return;
   }
   if (name === "screen_ticker") {
