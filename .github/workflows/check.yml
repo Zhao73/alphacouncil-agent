@@ -1,8 +1,9 @@
 name: check
 
 on:
+  # Every branch, not just main: the refactor lands on a feature branch and each
+  # commit needs the matrix before it reaches main.
   push:
-    branches: [main]
   pull_request:
 
 jobs:
