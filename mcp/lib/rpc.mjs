@@ -13,7 +13,7 @@ import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
-import { screenTicker, explainResult } from "./screen.mjs";
+import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
@@ -187,6 +187,22 @@ export function tools() {
       },
       required: ["cik"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("screen_candidates", "Run the mechanical elimination screen over a list of candidates and report every rejection with the metric, the measured value and the threshold. This is the 'find me stocks' path, and no language model participates in it. Capped at 40 names: SEC is one request per company and rate-limits, so narrow the funnel first with industry_brief, industry_peers or list_us_universe. A fetch failure is reported as unavailable rather than eliminated, because dropping a name because SEC timed out would bias the survivors.", {
+      type: "object",
+      properties: {
+        candidates: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { cik: { type: "string" }, ticker: { type: "string" } },
+            required: ["cik"],
+          },
+          description: "Up to 40 companies.",
+        },
+        as_of: { type: "string", description: "YYYY-MM-DD. Only filings filed by this date are used." },
+      },
+      required: ["candidates"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("list_us_universe", "The full SEC list of US listed companies (~10k) as {cik, ticker, title}. Keyless. Use it to resolve a ticker to a CIK, or as the starting universe for a screen.", {
       type: "object",
       properties: {
@@ -298,6 +314,15 @@ export async function handleToolCall(id, params) {
   if (name === "screen_ticker") {
     const result = await screenTicker(args);
     sendResult(id, jsonContent(explainResult(result, result.ticker), result));
+    return;
+  }
+  if (name === "screen_candidates") {
+    const result = await screenBatch({ candidates: args.candidates, asOf: args.as_of });
+    const lines = [
+      `Screened ${result.screened}: ${result.survivors.length} survive, ${result.eliminated.length} eliminated, ${result.unavailable.length} unavailable.`,
+      ...result.eliminated.map((e) => `  ${e.ticker} eliminated by ${e.reasons.map((r) => `${r.rule} = ${r.measured}${r.unit === "%" ? "%" : ` ${r.unit}`} vs ${r.threshold}`).join("; ")}`),
+    ];
+    sendResult(id, jsonContent(lines.join("\n"), result));
     return;
   }
   if (name === "list_us_universe") {

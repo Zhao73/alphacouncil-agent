@@ -69,7 +69,9 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     if (o.length < 3 || c.length < 3) return null;
     const n = Math.min(o.length, c.length);
     const total = sum(o.slice(-n).map((x) => x.val)) - sum(c.slice(-n).map((x) => x.val));
-    return { passed: total >= 0, value: Number((total / 1e9).toFixed(2)), unit: "USD bn", threshold: 0, years: n };
+    // Raw dollars, not billions rounded to two places: rounding erased the entire figure
+    // for anything below ~$5m, which is most of the small-cap universe.
+    return { passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, years: n };
   });
 
   add("interest_cover", "EBIT / interest below 2x", () => {
@@ -187,4 +189,78 @@ export async function screenTicker({ cik, ticker, asOf = null }) {
   const facts = await fetchCompanyFacts(cik);
   const result = evaluateRules(facts, { asOf });
   return { ticker: ticker || facts.entityName, cik, entity: facts.entityName, as_of: asOf, ...result };
+}
+
+
+/**
+ * Screen a list of candidates and report every elimination with its reason.
+ *
+ * Deliberately bounded rather than "screen the whole market": each company is one SEC
+ * request at ~120ms, so 10,000 filers is twenty minutes of requests SEC would rightly
+ * throttle. A funnel narrows first -- by industry, index, or a name list -- and this
+ * layer eliminates mechanically from what is handed to it.
+ */
+export async function screenBatch({ candidates = [], asOf = null, concurrency = 3 } = {}) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    throw invalidParams("screenBatch needs candidates: [{cik, ticker}]");
+  }
+  if (candidates.length > 40) {
+    throw invalidParams(`too many candidates (${candidates.length}). Narrow the funnel first -- SEC is one request per company and rate-limits. Cap is 40.`);
+  }
+
+  const results = [];
+  const queue = [...candidates];
+  const worker = async () => {
+    while (queue.length) {
+      const candidate = queue.shift();
+      try {
+        results.push(await screenTicker({ ...candidate, asOf }));
+      } catch (error) {
+        // A fetch failure is a data gap, never an elimination: silently dropping a name
+        // because SEC timed out would bias the survivors.
+        results.push({
+          ticker: candidate.ticker || candidate.cik,
+          cik: candidate.cik,
+          verdict: "unavailable",
+          error: String(error.message || error),
+        });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(4, concurrency)) }, worker));
+
+  const survivors = results.filter((r) => r.verdict === "survives");
+  const eliminated = results.filter((r) => r.verdict === "eliminated");
+  const unavailable = results.filter((r) => r.verdict === "unavailable");
+
+  return {
+    as_of: asOf,
+    screened: results.length,
+    survivors: survivors.map((r) => ({
+      ticker: r.ticker,
+      cik: r.cik,
+      entity: r.entity,
+      rules_computed: r.evaluated_count,
+      rules_total: r.rules.length,
+      exemptions: r.exemptions,
+    })),
+    eliminated: eliminated.map((r) => ({
+      ticker: r.ticker,
+      cik: r.cik,
+      // The whole point: never "did not pass", always which metric at which value.
+      reasons: r.failures.map((f) => ({
+        rule: f.id,
+        label: f.label,
+        measured: f.value,
+        unit: f.unit,
+        threshold: f.threshold,
+        years: f.years,
+      })),
+    })),
+    unavailable: unavailable.map((r) => ({ ticker: r.ticker, cik: r.cik, error: r.error })),
+    disclaimer:
+      "Surviving is not a recommendation. These rules eliminate; they never select. A survivor is a name worth "
+      + "spending research time on, and the council still has to run. Rules whose inputs were missing from the "
+      + "filings were skipped rather than passed, so check rules_computed before treating a survivor as clean.",
+  };
 }
