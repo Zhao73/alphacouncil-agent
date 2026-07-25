@@ -26,6 +26,13 @@ const MODEL_BY_TIER = {
   deep: "opus",
 };
 
+// OpenCode addresses models as provider/model, unlike Claude Code's bare alias.
+const OPENCODE_MODEL_BY_TIER = {
+  fast: "anthropic/claude-haiku-4-5-20251001",
+  standard: "anthropic/claude-sonnet-4-5",
+  deep: "anthropic/claude-opus-4-5",
+};
+
 const reg = loadPersonas();
 const analysts = reg.ids("analyst").map((id) => reg.get(id));
 const debate = reg.ids("debate").map((id) => reg.get(id));
@@ -68,7 +75,7 @@ function personasDoc() {
   ].join("\n");
 }
 
-/** Claude Code subagent files. OpenCode does not read .claude/agents/; that is Phase 2. */
+/** Claude Code subagent files. OpenCode does not read .claude/agents/ at all. */
 function claudeAgentFiles() {
   const files = {};
   for (const persona of [...analysts, ...debate]) {
@@ -90,6 +97,37 @@ function claudeAgentFiles() {
   return files;
 }
 
+/**
+ * OpenCode subagents. Verified against opencode 1.18.4: project-level
+ * `.opencode/agent/<name>.md` files ARE discovered (`opencode debug agent <name>`),
+ * unlike `.claude/agents/`, which OpenCode does not read at all.
+ */
+function opencodeAgentFiles() {
+  const files = {};
+  for (const persona of [...analysts, ...debate]) {
+    const title = personaTitle(persona, "English");
+    const body = persona.bodies[persona.default_lang] || "";
+    const frontmatter = [
+      "---",
+      `description: ${JSON.stringify(`${title} for AlphaCouncil equity research. ${(persona.tags || []).join(", ")}`)}`,
+      "mode: subagent",
+      `model: ${OPENCODE_MODEL_BY_TIER[persona.model_tier] || OPENCODE_MODEL_BY_TIER.standard}`,
+      "temperature: 0.1",
+      // Evidence roles need the network; debate roles reason over what was already
+      // gathered. Verified: a global `permission` block in opencode.json is merged into
+      // EVERY agent and wins over these, so opencode.json deliberately declares none.
+      "permission:",
+      "  edit: deny",
+      "  bash: deny",
+      `  webfetch: ${persona.tools_hint?.includes("webfetch") ? "allow" : "deny"}`,
+      `  websearch: ${persona.tools_hint?.includes("websearch") ? "allow" : "deny"}`,
+      "---",
+    ].join("\n");
+    files[`.opencode/agent/alphacouncil-${persona.id}.md`] = `${frontmatter}\n\n${BANNER}\n\n${body}\n`;
+  }
+  return files;
+}
+
 function replaceRegion(text, name, replacement) {
   const start = `<!-- generated:${name} start -->`;
   const end = `<!-- generated:${name} end -->`;
@@ -100,7 +138,7 @@ function replaceRegion(text, name, replacement) {
 }
 
 function buildOutputs() {
-  const outputs = { ...claudeAgentFiles() };
+  const outputs = { ...claudeAgentFiles(), ...opencodeAgentFiles() };
   outputs["docs/personas.md"] = personasDoc();
   outputs["skills/alphacouncil-agent/SKILL.md"] = replaceRegion(
     readFileSync(repo("skills/alphacouncil-agent/SKILL.md"), "utf8"),
@@ -130,15 +168,18 @@ for (const [rel, content] of Object.entries(outputs)) {
 }
 
 // A persona deleted from personas/ must not leave an orphan agent file behind.
-const agentDir = repo(".claude/agents");
-const expected = new Set(Object.keys(outputs).filter((f) => f.startsWith(".claude/agents/")).map((f) => f.split("/").pop()));
-if (existsSync(agentDir)) {
+for (const agentDirRel of [".claude/agents", ".opencode/agent"]) {
+  const agentDir = repo(agentDirRel);
+  const expected = new Set(
+    Object.keys(outputs).filter((f) => f.startsWith(`${agentDirRel}/`)).map((f) => f.split("/").pop()),
+  );
+  if (!existsSync(agentDir)) continue;
   for (const file of readdirSync(agentDir)) {
     if (!file.startsWith("alphacouncil-") || expected.has(file)) continue;
-    if (check) stale.push({ rel: `.claude/agents/${file}`, current: "(present)", content: "(should be deleted)" });
+    if (check) stale.push({ rel: `${agentDirRel}/${file}`, current: "(present)", content: "(should be deleted)" });
     else {
       rmSync(join(agentDir, file));
-      console.log(`removed orphan .claude/agents/${file}`);
+      console.log(`removed orphan ${agentDirRel}/${file}`);
     }
   }
 }

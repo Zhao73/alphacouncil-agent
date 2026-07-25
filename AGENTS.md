@@ -7,3 +7,41 @@ For report-generation behavior, also follow `docs/report-contract.md`. The chat 
 For anti-laziness governance, also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with the plugin so installed agents inherit the same gates without separately installing `addyosmani/agent-skills`.
 
 Run `npm run check` after any code or prompt change.
+
+## Hosts
+
+The MCP server is the load-bearing integration on every host: it reads `personas/` directly,
+so a host that ignores the generated agent files still gets correct prompts.
+
+| Host | Config | Agents | Skills |
+|---|---|---|---|
+| Claude Code | `.claude-plugin/plugin.json`, `.mcp.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
+| Codex | `.codex-plugin/plugin.json`, `.mcp.json` | — | `skills/` via the plugin manifest |
+| OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | see the caveat below |
+
+### OpenCode
+
+Verified against a real opencode 1.18.4 install rather than from documentation:
+
+- `opencode mcp list` shows `alphacouncil-agent connected`. The MCP entry must use
+  OpenCode's shape — `{"type":"local","command":["node","./mcp/server.mjs"]}` — a single
+  argv array. Copying Claude Code's `{command, args}` produces a server that never starts,
+  and the env key is `environment`, not `env`.
+- `opencode debug agent alphacouncil-<role>` parses the generated agent files, resolves
+  `anthropic/claude-…` into a provider and model, and applies their permissions.
+  OpenCode does **not** read `.claude/agents/`, `.mcp.json` or `.claude/settings.json`.
+- `opencode.json` deliberately declares **no** global `permission` block. A global block is
+  merged into every agent and overrides the per-agent one, which silently hands the debate
+  roles the network access they are specifically denied. Verified both ways: with the block,
+  `bull_researcher` resolved to `websearch: allow`; without it, `deny`.
+- Per-agent permissions come from each persona's `tools_hint`, so only the roles that
+  actually gather evidence get the network, and no role can edit files or run shell commands.
+
+**Unverified:** whether OpenCode discovers the bundled `skills/` directory through
+`skills.paths`. It could not be established on the test machine, where a third-party
+plugin manages the skill catalogue and masks native discovery. The config declares the
+path because it matches the published schema, but do not rely on it: the MCP tools and
+the agent files carry the workflow on their own.
+
+`websearch` is gated in OpenCode — it needs the OpenCode provider or `OPENCODE_ENABLE_EXA=1`.
+Run `preflight_permissions` before a fan-out; it reads OpenCode's permission syntax too.

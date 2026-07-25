@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "alphacouncil-agent": {
+      "type": "local",
+      "command": ["node", "./mcp/server.mjs"],
+      "enabled": true
+    }
+  },
+  "instructions": ["AGENTS.md"],
+  "skills": {
+    "paths": ["./skills"]
+  }
+}
