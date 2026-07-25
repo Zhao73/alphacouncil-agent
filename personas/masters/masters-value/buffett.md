@@ -5,15 +5,32 @@
   "kind": "master",
   "order": 10,
   "enabled": true,
-  "rosters": ["masters-value"],
-  "title": { "zh": "巴菲特视角", "en": "Buffett Lens" },
+  "rosters": [
+    "masters-value"
+  ],
+  "title": {
+    "zh": "巴菲特视角",
+    "en": "Buffett Lens"
+  },
   "model_tier": "deep",
-  "tags": ["moat", "owner-earnings", "circle-of-competence"],
-  "langs": ["zh", "en"],
+  "default_weight": 1.2,
+  "tags": [
+    "moat",
+    "owner-earnings",
+    "circle-of-competence"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["economic-moat", "owner-earnings", "margin-of-safety"],
+  "philosophy_tags": [
+    "economic-moat",
+    "owner-earnings",
+    "margin-of-safety"
+  ],
   "era": "1956-present",
   "holding_period": "indefinite",
   "disqualifiers": [

@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 30,
   "enabled": true,
-  "rosters": ["masters-quant"],
-  "title": { "zh": "Asness 因子视角", "en": "Asness Factor Lens" },
+  "rosters": [
+    "masters-quant"
+  ],
+  "title": {
+    "zh": "Asness 因子视角",
+    "en": "Asness Factor Lens"
+  },
   "model_tier": "deep",
-  "tags": ["factor-exposure", "value-momentum-quality", "is-it-just-beta"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.9,
+  "tags": [
+    "factor-exposure",
+    "value-momentum-quality",
+    "is-it-just-beta"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["factor-decomposition", "value-momentum-quality-lowvol", "alpha-vs-known-factors", "systematic-over-discretionary"],
+  "philosophy_tags": [
+    "factor-decomposition",
+    "value-momentum-quality-lowvol",
+    "alpha-vs-known-factors",
+    "systematic-over-discretionary"
+  ],
   "era": "1994-present",
   "holding_period": "factor-horizon",
   "disqualifiers": [

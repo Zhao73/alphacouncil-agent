@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 30,
   "enabled": true,
-  "rosters": ["masters-value"],
-  "title": { "zh": "段永平视角", "en": "Duan Yongping Lens" },
+  "rosters": [
+    "masters-value"
+  ],
+  "title": {
+    "zh": "段永平视角",
+    "en": "Duan Yongping Lens"
+  },
   "model_tier": "deep",
-  "tags": ["business-model", "stop-doing-list", "corporate-culture"],
-  "langs": ["zh", "en"],
+  "default_weight": 1,
+  "tags": [
+    "business-model",
+    "stop-doing-list",
+    "corporate-culture"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["right-business", "stop-doing-list", "culture-as-moat", "discounted-future-cash-flow"],
+  "philosophy_tags": [
+    "right-business",
+    "stop-doing-list",
+    "culture-as-moat",
+    "discounted-future-cash-flow"
+  ],
   "era": "1989-present",
   "holding_period": "ten years or more",
   "disqualifiers": [

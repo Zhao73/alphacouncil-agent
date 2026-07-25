@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 10,
   "enabled": true,
-  "rosters": ["masters-adversarial"],
-  "title": { "zh": "索罗斯视角", "en": "Soros Lens" },
+  "rosters": [
+    "masters-adversarial"
+  ],
+  "title": {
+    "zh": "索罗斯视角",
+    "en": "Soros Lens"
+  },
   "model_tier": "deep",
-  "tags": ["reflexivity", "boom-bust", "test-the-thesis"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.7,
+  "tags": [
+    "reflexivity",
+    "boom-bust",
+    "test-the-thesis"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["reflexivity", "fallibility", "boom-bust-sequence", "test-not-prove"],
+  "philosophy_tags": [
+    "reflexivity",
+    "fallibility",
+    "boom-bust-sequence",
+    "test-not-prove"
+  ],
   "era": "1969-2011",
   "holding_period": "as long as the reflexive process runs",
   "disqualifiers": [

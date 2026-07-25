@@ -13,7 +13,7 @@ import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
-import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
 export function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -58,6 +58,7 @@ export function tools() {
     synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
     masters_roster: { type: "string", enum: masterRosters, description: "Optional master bench. Masters read the finished evidence through one philosophy each and run BETWEEN the evidence stage and the debate; their disagreements become inputs the bull and bear must answer. They never gather evidence and are not part of the completeness gate." },
+    seat_weights: { type: "object", description: "Override the declared weight of any seat, e.g. {\"master_buffett\": 2, \"master_soros\": 0}. Weights are an editable prior, not an optimum: a return backtest of LLM judgment would be invalidated by look-ahead bias." },
     masters: { type: "array", items: { type: "string", enum: masterIds }, description: "Explicit master personas, overriding masters_roster." },
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
@@ -72,6 +73,7 @@ export function tools() {
         tasks: common.tasks,
         masters_roster: common.masters_roster,
         masters: common.masters,
+        seat_weights: common.seat_weights,
         run_id: { type: "string" },
       },
       required: ["symbol"],
@@ -137,6 +139,18 @@ export function tools() {
         },
       },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("record_verifier_verdict", "Record one Stage 2b verifier outcome against the seat that cited the claim. Verdicts that failed verification (contradicted, disagree, refuted) automatically reduce that seat's weight in the portfolio-manager synthesis; cannot_confirm and source_unreachable reduce it less. A seat is down-weighted, never silently erased.", {
+      type: "object",
+      properties: {
+        run_id: { type: "string" },
+        verifier: { type: "string", enum: registry().ids("verifier") },
+        seat: { type: "string", description: "The seat whose claim was checked, e.g. bull_researcher or master_buffett." },
+        verdict: { type: "string", description: "Must be one of the verifier's declared verdict_values." },
+        claim: { type: "string" },
+        note: { type: "string" },
+      },
+      required: ["run_id", "verifier", "seat", "verdict"],
+    }),
     tool("preflight_permissions", "MANDATORY before a visible run: check that the host actually grants the network tools the evidence agents need. Background subagents cannot raise an interactive permission prompt, so a missing allowlist entry blocks their searches SILENTLY and they answer from training knowledge while still filling in every report section. Returns status ok | blocked | unknown with a remedy.", {
       type: "object",
       properties: {
@@ -190,6 +204,15 @@ export async function handleToolCall(id, params) {
     const result = recordMasterOpinion(args);
     sendResult(id, jsonContent(
       `Recorded master opinion ${args.master} (${result.opinion.stance}) for ${result.run.symbol}: ${result.recorded}/${result.expected} master seats in.`,
+      result,
+    ));
+    return;
+  }
+  if (name === "record_verifier_verdict") {
+    const result = recordVerifierVerdict(args);
+    const seat = result.weights.seats.find((s) => s.seat === args.seat);
+    sendResult(id, jsonContent(
+      `Recorded ${args.verifier} -> ${args.verdict} for ${args.seat}. Effective weight now ${seat ? seat.effective_weight : "n/a"}.`,
       result,
     ));
     return;

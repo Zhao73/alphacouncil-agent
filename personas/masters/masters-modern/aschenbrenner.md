@@ -5,15 +5,34 @@
   "kind": "master",
   "order": 10,
   "enabled": true,
-  "rosters": ["masters-modern"],
-  "title": { "zh": "Aschenbrenner 视角", "en": "Aschenbrenner Lens" },
+  "rosters": [
+    "masters-modern"
+  ],
+  "title": {
+    "zh": "Aschenbrenner 视角",
+    "en": "Aschenbrenner Lens"
+  },
   "model_tier": "deep",
-  "tags": ["scaling", "compute", "power", "timeline-pricing"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.8,
+  "tags": [
+    "scaling",
+    "compute",
+    "power",
+    "timeline-pricing"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["trend-extrapolation", "orders-of-magnitude", "physical-bottlenecks", "timeline-as-the-variable"],
+  "philosophy_tags": [
+    "trend-extrapolation",
+    "orders-of-magnitude",
+    "physical-bottlenecks",
+    "timeline-as-the-variable"
+  ],
   "era": "2023-present",
   "holding_period": "the length of the buildout",
   "disqualifiers": [

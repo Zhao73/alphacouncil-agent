@@ -3,6 +3,7 @@ import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
 import { compactEvidence, compactMasterOpinions } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
+import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 
 /**
@@ -81,6 +82,15 @@ export function debatePrompt(role, run, context = {}) {
       : "",
     context.bull ? `Bull argument JSON: ${JSON.stringify(context.bull)}` : "",
     context.bear ? `Bear argument JSON: ${JSON.stringify(context.bear)}` : "",
+    // The PM must reproduce the weighting rather than average the seats silently.
+    role === "portfolio_manager"
+      ? [
+        chinese
+          ? "各席位权重如下。你的最终裁决必须按这个权重加权，并且必须在报告里原样复现这张表（含核验调整原因）。权重为 0 的席位（自述超出判断范围）不计入。若你的结论与高权重席位相反，必须明确说明为什么。"
+          : "Seat weights follow. Weight your verdict by them, and reproduce this table verbatim in the report, including the adjustment reasons. Seats at weight 0 declared themselves out of scope and do not count. If your conclusion opposes a high-weight seat, say explicitly why.",
+        weightTableMarkdown(resolveSeatWeights(run, run.seat_weight_overrides || {}), language),
+      ].filter(Boolean).join("\n\n")
+      : "",
     role === "portfolio_manager" ? outputModeInstruction(context.outputMode || "chat", language) : "",
     `Evidence JSON: ${evidenceJson}`,
   ].filter(Boolean).join("\n\n");

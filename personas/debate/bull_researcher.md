@@ -13,6 +13,7 @@
     "en": "Bull Researcher"
   },
   "model_tier": "deep",
+  "default_weight": 1,
   "tags": [
     "long-case",
     "rebuttal"

@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 20,
   "enabled": true,
-  "rosters": ["masters-quant"],
-  "title": { "zh": "索普视角", "en": "Thorp Lens" },
+  "rosters": [
+    "masters-quant"
+  ],
+  "title": {
+    "zh": "索普视角",
+    "en": "Thorp Lens"
+  },
   "model_tier": "deep",
-  "tags": ["kelly-sizing", "edge-and-odds", "risk-of-ruin"],
-  "langs": ["zh", "en"],
+  "default_weight": 1,
+  "tags": [
+    "kelly-sizing",
+    "edge-and-odds",
+    "risk-of-ruin"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["kelly-criterion", "expected-value", "risk-of-ruin", "bet-size-over-bet-selection"],
+  "philosophy_tags": [
+    "kelly-criterion",
+    "expected-value",
+    "risk-of-ruin",
+    "bet-size-over-bet-selection"
+  ],
   "era": "1961-present",
   "holding_period": "until the edge is gone",
   "disqualifiers": [

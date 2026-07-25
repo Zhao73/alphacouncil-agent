@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 40,
   "enabled": true,
-  "rosters": ["masters-adversarial"],
-  "title": { "zh": "做空者视角", "en": "Short Seller Lens" },
+  "rosters": [
+    "masters-adversarial"
+  ],
+  "title": {
+    "zh": "做空者视角",
+    "en": "Short Seller Lens"
+  },
   "model_tier": "deep",
-  "tags": ["forensic-accounting", "crowding", "borrow"],
-  "langs": ["zh", "en"],
+  "default_weight": 1.2,
+  "tags": [
+    "forensic-accounting",
+    "crowding",
+    "borrow"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["forensic-accounting", "accrual-quality", "promotional-management", "asymmetric-risk-of-shorts"],
+  "philosophy_tags": [
+    "forensic-accounting",
+    "accrual-quality",
+    "promotional-management",
+    "asymmetric-risk-of-shorts"
+  ],
   "era": "1985-present",
   "holding_period": "until the accounting or the story breaks",
   "disqualifiers": [

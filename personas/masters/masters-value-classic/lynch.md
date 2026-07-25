@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 30,
   "enabled": true,
-  "rosters": ["masters-value-classic"],
-  "title": { "zh": "彼得·林奇视角", "en": "Peter Lynch Lens" },
+  "rosters": [
+    "masters-value-classic"
+  ],
+  "title": {
+    "zh": "彼得·林奇视角",
+    "en": "Peter Lynch Lens"
+  },
   "model_tier": "deep",
-  "tags": ["category-first", "peg", "story-in-two-minutes"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.9,
+  "tags": [
+    "category-first",
+    "peg",
+    "story-in-two-minutes"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["six-categories", "peg-ratio", "two-minute-drill", "diworsification"],
+  "philosophy_tags": [
+    "six-categories",
+    "peg-ratio",
+    "two-minute-drill",
+    "diworsification"
+  ],
   "era": "1977-1990",
   "holding_period": "until the story changes",
   "disqualifiers": [

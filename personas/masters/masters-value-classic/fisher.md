@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 20,
   "enabled": true,
-  "rosters": ["masters-value-classic"],
-  "title": { "zh": "费雪视角", "en": "Fisher Lens" },
+  "rosters": [
+    "masters-value-classic"
+  ],
+  "title": {
+    "zh": "费雪视角",
+    "en": "Fisher Lens"
+  },
   "model_tier": "deep",
-  "tags": ["scuttlebutt", "growth-quality", "r-and-d"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.9,
+  "tags": [
+    "scuttlebutt",
+    "growth-quality",
+    "r-and-d"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["scuttlebutt", "fifteen-points", "sales-organization", "long-range-outlook"],
+  "philosophy_tags": [
+    "scuttlebutt",
+    "fifteen-points",
+    "sales-organization",
+    "long-range-outlook"
+  ],
   "era": "1928-2004",
   "holding_period": "as long as the growth runway lasts",
   "disqualifiers": [

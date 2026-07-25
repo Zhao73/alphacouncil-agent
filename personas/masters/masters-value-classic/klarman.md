@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 50,
   "enabled": true,
-  "rosters": ["masters-value-classic"],
-  "title": { "zh": "克拉曼视角", "en": "Klarman Lens" },
+  "rosters": [
+    "masters-value-classic"
+  ],
+  "title": {
+    "zh": "克拉曼视角",
+    "en": "Klarman Lens"
+  },
   "model_tier": "deep",
-  "tags": ["absolute-return", "cash-as-option", "bottom-up"],
-  "langs": ["zh", "en"],
+  "default_weight": 1,
+  "tags": [
+    "absolute-return",
+    "cash-as-option",
+    "bottom-up"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["absolute-return", "margin-of-safety", "cash-as-optionality", "no-forced-buying"],
+  "philosophy_tags": [
+    "absolute-return",
+    "margin-of-safety",
+    "cash-as-optionality",
+    "no-forced-buying"
+  ],
   "era": "1982-present",
   "holding_period": "until value is realised",
   "disqualifiers": [

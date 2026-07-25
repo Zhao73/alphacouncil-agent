@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 10,
   "enabled": true,
-  "rosters": ["masters-quant"],
-  "title": { "zh": "西蒙斯视角", "en": "Simons Lens" },
+  "rosters": [
+    "masters-quant"
+  ],
+  "title": {
+    "zh": "西蒙斯视角",
+    "en": "Simons Lens"
+  },
   "model_tier": "deep",
-  "tags": ["signal-vs-noise", "no-narrative", "sample-size"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.8,
+  "tags": [
+    "signal-vs-noise",
+    "no-narrative",
+    "sample-size"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["statistical-edge", "no-story-telling", "sample-size-discipline", "capacity-constraints"],
+  "philosophy_tags": [
+    "statistical-edge",
+    "no-story-telling",
+    "sample-size-discipline",
+    "capacity-constraints"
+  ],
   "era": "1978-2010",
   "holding_period": "as long as the edge persists",
   "disqualifiers": [

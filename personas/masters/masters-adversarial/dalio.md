@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 30,
   "enabled": true,
-  "rosters": ["masters-adversarial"],
-  "title": { "zh": "达利欧视角", "en": "Dalio Lens" },
+  "rosters": [
+    "masters-adversarial"
+  ],
+  "title": {
+    "zh": "达利欧视角",
+    "en": "Dalio Lens"
+  },
   "model_tier": "deep",
-  "tags": ["debt-cycle", "machine-view", "regime"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.8,
+  "tags": [
+    "debt-cycle",
+    "machine-view",
+    "regime"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["debt-cycles", "economy-as-machine", "regime-dependence", "believability-weighting"],
+  "philosophy_tags": [
+    "debt-cycles",
+    "economy-as-machine",
+    "regime-dependence",
+    "believability-weighting"
+  ],
   "era": "1975-present",
   "holding_period": "regime-dependent",
   "disqualifiers": [

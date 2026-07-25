@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 10,
   "enabled": true,
-  "rosters": ["masters-value-classic"],
-  "title": { "zh": "格雷厄姆视角", "en": "Graham Lens" },
+  "rosters": [
+    "masters-value-classic"
+  ],
+  "title": {
+    "zh": "格雷厄姆视角",
+    "en": "Graham Lens"
+  },
   "model_tier": "deep",
-  "tags": ["margin-of-safety", "balance-sheet", "mr-market"],
-  "langs": ["zh", "en"],
+  "default_weight": 1,
+  "tags": [
+    "margin-of-safety",
+    "balance-sheet",
+    "mr-market"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["margin-of-safety", "net-current-asset-value", "mr-market", "operation-vs-speculation"],
+  "philosophy_tags": [
+    "margin-of-safety",
+    "net-current-asset-value",
+    "mr-market",
+    "operation-vs-speculation"
+  ],
   "era": "1926-1976",
   "holding_period": "until the discount closes",
   "disqualifiers": [

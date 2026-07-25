@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 20,
   "enabled": true,
-  "rosters": ["masters-adversarial"],
-  "title": { "zh": "德鲁肯米勒视角", "en": "Druckenmiller Lens" },
+  "rosters": [
+    "masters-adversarial"
+  ],
+  "title": {
+    "zh": "德鲁肯米勒视角",
+    "en": "Druckenmiller Lens"
+  },
   "model_tier": "deep",
-  "tags": ["liquidity", "concentration", "eighteen-months-ahead"],
-  "langs": ["zh", "en"],
+  "default_weight": 0.7,
+  "tags": [
+    "liquidity",
+    "concentration",
+    "eighteen-months-ahead"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["liquidity-drives-markets", "concentration-when-right", "sell-when-thesis-breaks", "price-action-as-evidence"],
+  "philosophy_tags": [
+    "liquidity-drives-markets",
+    "concentration-when-right",
+    "sell-when-thesis-breaks",
+    "price-action-as-evidence"
+  ],
   "era": "1981-2010",
   "holding_period": "until the liquidity or the thesis turns",
   "disqualifiers": [

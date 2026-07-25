@@ -51,6 +51,12 @@ function validate(meta, bodies, file, errors) {
   if (meta.output_contract !== undefined && !OUTPUT_CONTRACTS.includes(meta.output_contract)) {
     fail(`output_contract must be one of ${OUTPUT_CONTRACTS.join("|")}, got ${JSON.stringify(meta.output_contract)}`);
   }
+  if (meta.default_weight !== undefined) {
+    if (!Number.isFinite(meta.default_weight) || meta.default_weight <= 0) {
+      fail(`default_weight must be a positive number, got ${JSON.stringify(meta.default_weight)}`);
+    }
+  }
+
   if (meta.kind === "master") {
     // A master persona is a point of view with an explicit failure condition. Without
     // disqualifiers it degrades into generic commentary that agrees with everything.

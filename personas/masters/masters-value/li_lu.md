@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 40,
   "enabled": true,
-  "rosters": ["masters-value"],
-  "title": { "zh": "李录视角", "en": "Li Lu Lens" },
+  "rosters": [
+    "masters-value"
+  ],
+  "title": {
+    "zh": "李录视角",
+    "en": "Li Lu Lens"
+  },
   "model_tier": "deep",
-  "tags": ["ten-year-certainty", "civilization-trend", "management-integrity"],
-  "langs": ["zh", "en"],
+  "default_weight": 1,
+  "tags": [
+    "ten-year-certainty",
+    "civilization-trend",
+    "management-integrity"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["ten-year-certainty", "modernization-trend", "intellectual-honesty", "concentrated-ownership"],
+  "philosophy_tags": [
+    "ten-year-certainty",
+    "modernization-trend",
+    "intellectual-honesty",
+    "concentrated-ownership"
+  ],
   "era": "1997-present",
   "holding_period": "ten years or more",
   "disqualifiers": [

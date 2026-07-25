@@ -5,15 +5,33 @@
   "kind": "master",
   "order": 40,
   "enabled": true,
-  "rosters": ["masters-value-classic"],
-  "title": { "zh": "霍华德·马克斯视角", "en": "Howard Marks Lens" },
+  "rosters": [
+    "masters-value-classic"
+  ],
+  "title": {
+    "zh": "霍华德·马克斯视角",
+    "en": "Howard Marks Lens"
+  },
   "model_tier": "deep",
-  "tags": ["second-level-thinking", "cycle-position", "risk-is-permanent-loss"],
-  "langs": ["zh", "en"],
+  "default_weight": 1.1,
+  "tags": [
+    "second-level-thinking",
+    "cycle-position",
+    "risk-is-permanent-loss"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["second-level-thinking", "market-cycle", "risk-as-permanent-loss", "price-vs-value"],
+  "philosophy_tags": [
+    "second-level-thinking",
+    "market-cycle",
+    "risk-as-permanent-loss",
+    "price-vs-value"
+  ],
   "era": "1969-present",
   "holding_period": "cycle-dependent",
   "disqualifiers": [

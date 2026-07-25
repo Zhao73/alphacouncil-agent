@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
+import { registry } from "./personas/registry.mjs";
 import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
 import { cleanLog } from "./text.mjs";
 import { completenessStatus, verificationStatus } from "./gates.mjs";
@@ -11,6 +12,7 @@ import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, 
 import { debateFromCodex, dryDebate, dryPacket, extractJson, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizePacket, rawRecordText } from "./packets.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
+import { resolveSeatWeights } from "./weights.mjs";
 
 export function visibleRun(args) {
   const symbol = safeSymbol(args.symbol);
@@ -43,6 +45,10 @@ export function visibleRun(args) {
     masters_roster: typeof args.masters_roster === "string" ? args.masters_roster : undefined,
     masters: Array.isArray(args.masters) ? args.masters : undefined,
     master_opinions: [],
+    // Verifier outcomes, keyed to the seat that cited the claim. These drive the
+    // down-weighting in weights.mjs.
+    verifier_verdicts: [],
+    seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
   };
   writeStatus(run);
   appendEvent(run, "visible_run_planned", { tasks, masters: selectedMasters(run) });
@@ -495,4 +501,38 @@ export async function analyzeSymbol(args) {
     report_quality: debate.report_quality,
     artifacts: debate.artifacts || artifactPaths(run),
   };
+}
+
+export function recordVerifierVerdict(args) {
+  const run = readJson(join(runPath(args.run_id), "evidence.json"));
+  if (run.execution_mode !== "visible_host_threads") {
+    throw invalidParams("record_verifier_verdict requires a run created by plan_visible_run.");
+  }
+  const verifier = registry().get(args.verifier);
+  if (!verifier || verifier.kind !== "verifier") {
+    throw invalidParams(`unknown verifier: ${args.verifier}`);
+  }
+  if (!verifier.verdict_values.includes(args.verdict)) {
+    throw invalidParams(`verdict must be one of ${verifier.verdict_values.join(", ")} for ${args.verifier}, got ${JSON.stringify(args.verdict)}`);
+  }
+  run.verifier_verdicts = [
+    ...(run.verifier_verdicts || []),
+    {
+      verifier: args.verifier,
+      seat: args.seat,
+      verdict: args.verdict,
+      claim: typeof args.claim === "string" ? args.claim : "",
+      note: typeof args.note === "string" ? args.note : "",
+      at: new Date().toISOString(),
+    },
+  ];
+  saveRun(run);
+  writeJson(join(runPath(run.run_id), "evidence.json"), run);
+  appendEvent(run, "verifier_verdict", { verifier: args.verifier, seat: args.seat, verdict: args.verdict });
+  return { run_id: run.run_id, recorded: run.verifier_verdicts.length, weights: resolveSeatWeights(run, run.seat_weight_overrides) };
+}
+
+/** Current weighting for a run, for the PM prompt and for the report. */
+export function seatWeights(run) {
+  return resolveSeatWeights(run, run.seat_weight_overrides || {});
 }

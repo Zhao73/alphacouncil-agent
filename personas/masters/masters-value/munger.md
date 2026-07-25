@@ -5,15 +5,32 @@
   "kind": "master",
   "order": 20,
   "enabled": true,
-  "rosters": ["masters-value"],
-  "title": { "zh": "芒格视角", "en": "Munger Lens" },
+  "rosters": [
+    "masters-value"
+  ],
+  "title": {
+    "zh": "芒格视角",
+    "en": "Munger Lens"
+  },
   "model_tier": "deep",
-  "tags": ["inversion", "mental-models", "failure-paths"],
-  "langs": ["zh", "en"],
+  "default_weight": 1.2,
+  "tags": [
+    "inversion",
+    "mental-models",
+    "failure-paths"
+  ],
+  "langs": [
+    "zh",
+    "en"
+  ],
   "default_lang": "en",
   "output_contract": "master_opinion",
   "tools_hint": [],
-  "philosophy_tags": ["inversion", "latticework-of-mental-models", "incentive-caused-bias"],
+  "philosophy_tags": [
+    "inversion",
+    "latticework-of-mental-models",
+    "incentive-caused-bias"
+  ],
   "era": "1962-2023",
   "holding_period": "indefinite",
   "disqualifiers": [

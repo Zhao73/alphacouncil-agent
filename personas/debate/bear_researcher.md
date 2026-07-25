@@ -13,6 +13,7 @@
     "en": "Bear Researcher"
   },
   "model_tier": "deep",
+  "default_weight": 1,
   "tags": [
     "short-case",
     "rebuttal"

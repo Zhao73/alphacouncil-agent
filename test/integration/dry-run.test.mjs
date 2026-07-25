@@ -45,6 +45,7 @@ test("tools/list exposes the full tool surface", () => {
     "preflight_permissions",
     "read_run",
     "record_master_opinion",
+    "record_verifier_verdict",
     "record_visible_decision",
     "record_visible_packet",
   ]);
