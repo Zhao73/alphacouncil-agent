@@ -38,6 +38,7 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
 
 1. If `multi_agent_v1.spawn_agent` is available, spawn separate visible agents for the full default analyst team:
 <!-- generated:roster start -->
+   - `macro_regime`
    - `market_data`
    - `earnings_deep_dive`
    - `forward_expectations`

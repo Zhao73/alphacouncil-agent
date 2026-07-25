@@ -100,7 +100,10 @@ test("the shipped persona set loads and covers every task and debate role", () =
     assert.ok(persona, `no persona for debate role ${role}`);
     assert.equal(persona.kind, "debate");
   }
-  assert.deepEqual(reg.ids("analyst"), DEFAULT_TASKS);
+  // DEFAULT_TASKS is the default roster, not the whole analyst set: optional analysts
+  // such as macro_regime ship in other rosters and must not widen the default fan-out.
+  assert.deepEqual(selectRoster(reg, { kind: "analyst", roster: "default" }).map((p) => p.id), DEFAULT_TASKS);
+  for (const task of DEFAULT_TASKS) assert.ok(reg.ids("analyst").includes(task));
 });
 
 test("every shipped persona carries both languages with non-empty bodies", () => {
@@ -198,7 +201,9 @@ test("master personas are selectable by roster and stay out of the analyst enum"
   const masters = selectRoster(reg, { kind: "master", roster: "masters-value" });
   assert.ok(masters.length >= 2, "the masters-value roster must have seed personas");
   assert.ok(masters.every((p) => p.kind === "master"));
-  assert.deepEqual(reg.ids("analyst"), DEFAULT_TASKS, "masters must not leak into the evidence roster");
+  for (const id of reg.ids("analyst")) {
+    assert.equal(reg.get(id).kind, "analyst", "masters must not leak into the evidence roster");
+  }
 });
 
 test("every master declares what would make it walk away", () => {
@@ -260,8 +265,20 @@ test("a verifier without a verdict space is rejected", () => {
 
 test("verifiers stay out of the evidence and debate rosters", () => {
   const reg = shippedPersonas();
-  assert.deepEqual(reg.ids("analyst"), DEFAULT_TASKS);
+  assert.deepEqual(selectRoster(reg, { kind: "analyst", roster: "default" }).map((p) => p.id), DEFAULT_TASKS);
   assert.deepEqual(reg.ids("debate"), DEBATE_ROLES);
+  for (const id of reg.ids("verifier")) {
+    assert.ok(!reg.ids("analyst").includes(id));
+    assert.ok(!reg.ids("debate").includes(id));
+  }
+});
+
+test("an optional analyst is selectable but stays out of the default roster", () => {
+  const reg = shippedPersonas();
+  assert.ok(reg.get("macro_regime"), "macro_regime must exist");
+  assert.ok(reg.ids("analyst").includes("macro_regime"), "it must be selectable through the tool schema");
+  assert.ok(!DEFAULT_TASKS.includes("macro_regime"), "it must not widen the default fan-out");
+  assert.deepEqual(reg.get("macro_regime").rosters, ["full"]);
 });
 
 // ---- the full master bench ------------------------------------------------

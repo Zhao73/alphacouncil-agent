@@ -10,6 +10,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | id | kind | enabled | rosters | model tier | title | tags | provenance |
 |---|---|---|---|---|---|---|---|
 | `_evidence_base` | analyst | no | - | fast | Evidence worker preamble | shared | original |
+| `macro_regime` | analyst | yes | full | standard | Macro Regime Analyst | regime, rates, liquidity, cross-market | original |
 | `market_data` | analyst | yes | default | fast | Market Data Analyst | price, volume, technicals | original |
 | `earnings_deep_dive` | analyst | yes | default | fast | Earnings Deep Dive Analyst | earnings, margins, segments, cash-flow | original |
 | `forward_expectations` | analyst | yes | default | fast | Forward Expectations Analyst | guidance, consensus, thresholds | original |
@@ -47,7 +48,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 17 masters, 37 files.
+Totals: 12 evidence analysts, 3 debate roles, 17 masters, 38 files.
 
 ## Provenance
 

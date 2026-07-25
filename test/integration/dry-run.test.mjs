@@ -39,6 +39,7 @@ test("tools/list exposes the full tool surface", () => {
     "analyze_symbol",
     "collect_evidence",
     "compare_summary_modes",
+    "get_macro_snapshot",
     "get_quote",
     "plan_visible_run",
     "preflight_permissions",

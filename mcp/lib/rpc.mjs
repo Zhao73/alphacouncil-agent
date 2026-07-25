@@ -12,6 +12,7 @@ import { summaryModes } from "./output-modes.mjs";
 import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
+import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
 export function send(message) {
@@ -126,6 +127,16 @@ export function tools() {
       },
       required: ["run_id", "master", "packet"],
     }),
+    tool("get_macro_snapshot", "Keyless DELAYED top-down macro context in one call: rate curve, dollar and credit, commodities, risk appetite and breadth, and cross-market indices, plus derived pairs (10Y-3M spread, copper/gold, HY/IG, equal-weight vs cap-weight). Use it to place a single name inside its macro environment. These are observations, not a regime call, and unavailable series are data gaps for open_questions.", {
+      type: "object",
+      properties: {
+        blocks: {
+          type: "array",
+          items: { type: "string", enum: MACRO_BLOCKS.map((b) => b.id) },
+          description: "Subset of macro blocks. Defaults to all.",
+        },
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("preflight_permissions", "MANDATORY before a visible run: check that the host actually grants the network tools the evidence agents need. Background subagents cannot raise an interactive permission prompt, so a missing allowlist entry blocks their searches SILENTLY and they answer from training knowledge while still filling in every report section. Returns status ok | blocked | unknown with a remedy.", {
       type: "object",
       properties: {
@@ -186,6 +197,15 @@ export async function handleToolCall(id, params) {
   if (name === "preflight_permissions") {
     const result = preflightNetworkPermissions({ roster: args.roster || "default" });
     sendResult(id, jsonContent(`Network permission preflight: ${result.status}. ${result.message}`, result));
+    return;
+  }
+  if (name === "get_macro_snapshot") {
+    const data = await getMacroSnapshot(args);
+    const total = data.blocks.reduce((sum, block) => sum + block.members.length, 0);
+    sendResult(id, jsonContent(
+      `Macro snapshot: ${total - data.unavailable.length}/${total} series, ${data.derived.filter((d) => d.available).length}/${data.derived.length} derived measures.`,
+      data,
+    ));
     return;
   }
   if (name === "get_quote") {
