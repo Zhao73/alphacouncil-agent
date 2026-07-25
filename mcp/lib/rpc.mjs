@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
+import { LIMITS, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
@@ -9,6 +9,7 @@ import { sweepStaleOutputs } from "./codex.mjs";
 import { sourceManifest } from "./gates.mjs";
 import { artifactPaths, runPath } from "./run-store.mjs";
 import { summaryModes } from "./output-modes.mjs";
+import { registry } from "./personas/registry.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { analyzeSymbol, collectEvidence, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
@@ -36,12 +37,16 @@ export function tool(name, description, inputSchema, annotations = {}) {
 }
 
 export function tools() {
+  // Derived from personas/, not from a frozen list: adding a persona file makes the role
+  // selectable through the tool schema with no code change.
+  const analystIds = registry().ids("analyst");
+  const debateIds = registry().ids("debate");
   const common = {
     symbol: { type: "string", description: "Ticker, e.g. NVDA." },
     as_of: { type: "string", description: "Analysis date YYYY-MM-DD. Defaults to today." },
     prompt: { type: "string", description: "User objective or extra instructions." },
     language: { type: "string", default: "auto", description: "Reader-facing language for subagents and final report, e.g. auto, zh-CN, en-US, ja-JP. Auto infers from prompt." },
-    tasks: { type: "array", items: { type: "string", enum: DEFAULT_TASKS } },
+    tasks: { type: "array", items: { type: "string", enum: analystIds } },
     dry_run: { type: "boolean", default: false, description: "Default false. Set true only for planning/self-tests without launching Codex subagents." },
     max_concurrency: { type: "number", default: LIMITS.CONCURRENCY_DEFAULT },
     timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
@@ -67,7 +72,7 @@ export function tools() {
       type: "object",
       properties: {
         run_id: { type: "string" },
-        task: { type: "string", enum: DEFAULT_TASKS },
+        task: { type: "string", enum: analystIds },
         packet: { type: "object" },
         thread_id: { type: "string" },
         thread_title: { type: "string" },
@@ -78,7 +83,7 @@ export function tools() {
       type: "object",
       properties: {
         run_id: { type: "string" },
-        role: { type: "string", enum: DEBATE_ROLES },
+        role: { type: "string", enum: debateIds },
         packet: { type: "object" },
         thread_id: { type: "string" },
         thread_title: { type: "string" },
@@ -204,6 +209,10 @@ export async function handleToolCall(id, params) {
 
 export async function handleRequest(message) {
   const { id, method, params } = message;
+  if (startupFailure && id !== undefined) {
+    sendError(id, RpcCode.INTERNAL_ERROR, `alphacouncil-agent cannot serve requests: ${startupFailure}`);
+    return;
+  }
   if (method === "initialize") {
     sendResult(id, {
       protocolVersion: params?.protocolVersion ?? "2025-11-25",
@@ -237,6 +246,12 @@ export async function handleRequest(message) {
   }
 }
 
+/**
+ * Set when the persona set fails to load. Every request then answers with an actionable
+ * error instead of the server appearing healthy and producing empty prompts later.
+ */
+let startupFailure = null;
+
 export function startStdioServer() {
   // stdout is the JSON-RPC frame channel; diagnostics must never go there.
   process.on("uncaughtException", (error) => {
@@ -246,6 +261,15 @@ export function startStdioServer() {
     process.stderr.write(`[alphacouncil] unhandled rejection: ${reason?.stack || reason}\n`);
   });
   sweepStaleOutputs();
+  // Load personas eagerly. Lazy loading made `initialize` succeed against a missing or
+  // malformed persona set, so the host believed the server was healthy and only found
+  // out several tool calls later.
+  try {
+    registry();
+  } catch (error) {
+    startupFailure = error.message;
+    process.stderr.write(`[alphacouncil] ${error.message}\n`);
+  }
   const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on("line", (line) => {
     if (!line.trim()) return;
