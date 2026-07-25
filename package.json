@@ -26,7 +26,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "check": "node --check ./mcp/server.mjs && node --test",
-    "test": "node --test"
+    "check": "node --check ./mcp/server.mjs && node scripts/sync-personas.mjs --check && node --test",
+    "test": "node --test",
+    "sync": "node scripts/sync-personas.mjs"
   }
 }

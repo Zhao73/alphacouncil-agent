@@ -37,6 +37,7 @@ Use visible Codex subagents whenever the user asks to see subagents, asks for a 
 Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summary unless the user explicitly asks for lite, smoke test, or debug output. Do not describe the final user-facing report as "visible version", "lite", "smoke", or "debug"; those are execution details, not investment-report content.
 
 1. If `multi_agent_v1.spawn_agent` is available, spawn separate visible agents for the full default analyst team:
+<!-- generated:roster start -->
    - `market_data`
    - `earnings_deep_dive`
    - `forward_expectations`
@@ -51,6 +52,7 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - `bull_researcher`
    - `bear_researcher`
    - `portfolio_manager`
+<!-- generated:roster end -->
 2. Give each visible agent a narrow prompt and require JSON evidence or debate output. Tell each agent not to call `alphacouncil-agent` recursively.
 3. Use the selected or inferred language for visible agent prompts, evidence packets, debate packets, and final synthesis. Keep JSON field names in English.
 4. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
