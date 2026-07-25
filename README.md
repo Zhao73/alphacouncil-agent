@@ -90,7 +90,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 Just talk to it. Mention the agent and a ticker or a question:
 
 ```text
-@alphacouncil-agent analyze NVDA as a long/short pitch
+@alphacouncil-agent analyze AAPL as a long/short pitch
 @alphacouncil-agent is AAPL a buy at current levels?
 @alphacouncil-agent compare TSLA vs RIVN for a 12-month horizon
 @alphacouncil-agent 帮我看看 700.HK 现在能不能买
@@ -191,7 +191,7 @@ Evidence agents return JSON packets:
 ```json
 {
   "task": "market_data",
-  "symbol": "NVDA",
+  "symbol": "AAPL",
   "as_of": "YYYY-MM-DD",
   "summary": "string",
   "claims": [

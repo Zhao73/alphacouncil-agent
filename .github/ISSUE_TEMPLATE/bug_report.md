@@ -9,7 +9,7 @@ labels: bug
 A clear and concise description of what went wrong.
 
 **To reproduce**
-What did you run? (e.g. `@alphacouncil-agent analyze NVDA ...`, or which MCP tool)
+What did you run? (e.g. `@alphacouncil-agent analyze <TICKER> ...`, or which MCP tool)
 
 **Expected behavior**
 What you expected to happen.

@@ -83,7 +83,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 直接对它说话,@ 一下代理,带上代码或问题:
 
 ```text
-@alphacouncil-agent 把 NVDA 当成多空 pitch 来分析
+@alphacouncil-agent 把 0700.HK 当成多空 pitch 来分析
 @alphacouncil-agent 现在这个价位 AAPL 能不能买?
 @alphacouncil-agent 以 12 个月维度对比 TSLA 和 RIVN
 @alphacouncil-agent 帮我看看 700.HK 现在能不能买
@@ -184,7 +184,7 @@ flowchart TD
 ```json
 {
   "task": "market_data",
-  "symbol": "NVDA",
+  "symbol": "0700.HK",
   "as_of": "YYYY-MM-DD",
   "summary": "string",
   "claims": [

@@ -23,9 +23,9 @@
     "composerIcon": "./assets/logo-icon.png",
     "logo": "./assets/logo-icon.png",
     "defaultPrompt": [
-      "@alphacouncil-agent analyze NVDA as a long/short pitch.",
+      "@alphacouncil-agent analyze AAPL as a long/short pitch.",
       "@alphacouncil-agent collect evidence for AAPL earnings.",
-      "@alphacouncil-agent compare NVDA, AMD, AVGO."
+      "@alphacouncil-agent compare AAPL, 0700.HK, 7203.T."
     ]
   },
   "mcpServers": "./.mcp.json"

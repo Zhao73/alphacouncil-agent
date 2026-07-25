@@ -30,7 +30,7 @@ run writes:
 - quant factor / technical risk view
 - news and company / industry voice signals
 - short interest / borrow / options information when available
-- strategic transaction, banking-event, NVIDIA, or similar terms when relevant
+- strategic transaction or banking-event analysis when relevant
 - valuation range
 - key catalysts
 - major risks
@@ -71,3 +71,24 @@ A run should not be marked `complete` if the report is missing required sections
 planned analyst work-log entries, scoped source IDs when sources exist, or enough
 body content to make the decision auditable. In that case write
 `report_quality.json` and set status to `needs_revision`.
+
+## How the gate checks this
+
+`report_quality.json` (schema_version 2) is produced by `validateFinalReport`. A section
+counts only when all of the following hold:
+
+- it is a real Markdown ATX heading (`##` or `###`), not bold text and not a `#` inside a
+  code fence;
+- its normalized title matches one of the section's aliases -- the longest matching alias
+  wins, so `Quant Factor / Technical Risk View` is the quant section and does not also
+  satisfy the risks section;
+- the body between that heading and the next heading of the same or higher level is not a
+  placeholder (`- None`, `N/A`, `TBD`, `待补充`) and carries at least the section's
+  `min_body` non-space characters.
+
+Every planned analyst task id must appear **inside the Analyst Work Log section body**.
+Mentioning it only in the source table does not count.
+
+`report_quality.json` lists each section with `status` (`ok` / `missing` / `placeholder` /
+`too_thin`), the heading it matched, its line, and its body size, so a `needs_revision`
+result says which section failed and why.

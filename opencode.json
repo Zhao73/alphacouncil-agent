@@ -1,0 +1,20 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "alphacouncil-agent": {
+      "type": "local",
+      "command": [
+        "node",
+        "./mcp/server.mjs"
+      ],
+      "enabled": true
+    }
+  },
+  "instructions": [
+    "AGENTS.md",
+    "skills/alphacouncil-agent/SKILL.md",
+    "skills/agent-skills-governance/SKILL.md",
+    "skills/public-equity-investing/SKILL.md",
+    "skills/investment-banking/SKILL.md"
+  ]
+}

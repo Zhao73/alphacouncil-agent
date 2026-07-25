@@ -1,0 +1,74 @@
+{
+  "_comment": "Industry maps: who participates, where they sit in the chain, and who drives demand. Hand-maintained and deliberately incomplete -- the point is to give a starting frame that names non-US participants a US-filings-only pipeline would miss, not to be a database. Add an industry by adding an entry.",
+  "_schema": {
+    "aliases": "what a user might type",
+    "layers": "chain position -> participants, upstream of the end market first",
+    "demand_drivers": "who or what actually creates the orders",
+    "key_questions": "what a research run on this industry must answer",
+    "cyclicality": "how this industry behaves through a cycle, so a low P/E is read correctly"
+  },
+  "industries": {
+    "memory": {
+      "aliases": ["memory", "存储", "存储芯片", "dram", "nand", "hbm", "memory chips", "半导体存储"],
+      "title": { "zh": "存储半导体", "en": "Memory semiconductors" },
+      "layers": [
+        {
+          "layer": { "zh": "设备与材料", "en": "Equipment and materials" },
+          "participants": [
+            { "name": "ASML", "symbol": "ASML", "market": "US/NL", "note": "EUV monopoly; gates advanced-node capacity" },
+            { "name": "Applied Materials", "symbol": "AMAT", "market": "US" },
+            { "name": "Lam Research", "symbol": "LRCX", "market": "US", "note": "etch/deposition, heavily memory-levered" },
+            { "name": "Tokyo Electron", "symbol": "8035.T", "market": "JP" },
+            { "name": "Advantest", "symbol": "6857.T", "market": "JP", "note": "HBM test is a stated bottleneck" }
+          ]
+        },
+        {
+          "layer": { "zh": "存储原厂", "en": "Memory makers" },
+          "participants": [
+            { "name": "Samsung Electronics", "symbol": "005930.KS", "market": "KR", "note": "DRAM+NAND+foundry; DART filer, not SEC" },
+            { "name": "SK hynix", "symbol": "000660.KS", "market": "KR", "note": "HBM share leader; DART filer, not SEC" },
+            { "name": "Micron", "symbol": "MU", "market": "US", "note": "the only major pure-play with SEC filings" },
+            { "name": "Kioxia", "symbol": "285A.T", "market": "JP", "note": "NAND; EDINET filer" },
+            { "name": "SanDisk", "symbol": "SNDK", "market": "US", "note": "NAND, separated from Western Digital" },
+            { "name": "Nanya Technology", "symbol": "2408.TW", "market": "TW" },
+            { "name": "Changxin / YMTC", "symbol": null, "market": "CN", "note": "unlisted; capacity additions still move global supply" }
+          ]
+        },
+        {
+          "layer": { "zh": "封装与配套", "en": "Packaging and adjacent" },
+          "participants": [
+            { "name": "TSMC", "symbol": "TSM", "market": "US/TW", "note": "CoWoS advanced packaging couples HBM to accelerators" },
+            { "name": "Amkor", "symbol": "AMKR", "market": "US" },
+            { "name": "ASE", "symbol": "ASX", "market": "US/TW" }
+          ]
+        },
+        {
+          "layer": { "zh": "直接客户", "en": "Direct customers" },
+          "participants": [
+            { "name": "NVIDIA", "symbol": "NVDA", "market": "US", "note": "HBM demand concentrated here" },
+            { "name": "AMD", "symbol": "AMD", "market": "US" },
+            { "name": "Broadcom", "symbol": "AVGO", "market": "US", "note": "custom accelerators for hyperscalers" },
+            { "name": "Dell", "symbol": "DELL", "market": "US" },
+            { "name": "Super Micro", "symbol": "SMCI", "market": "US" }
+          ]
+        }
+      ],
+      "demand_drivers": [
+        { "name": "Hyperscaler capex", "who": ["GOOGL", "MSFT", "AMZN", "META"], "note": "Capex guidance changes are the single most-watched leading indicator for this chain. Read the guided number and the split between compute and everything else, not the headline." },
+        { "name": "Smartphone and PC units", "note": "the traditional cycle driver, now secondary to AI but still sets the floor for commodity DRAM/NAND" },
+        { "name": "Automotive and industrial", "note": "smaller, longer-dated, less cyclical" }
+      ],
+      "key_questions": [
+        "Is the current price move about HBM specifically or about commodity DRAM/NAND? They can move in opposite directions in the same quarter.",
+        "Where is supply in its cycle: are the makers adding wafer capacity, converting existing capacity, or holding it back?",
+        "HBM is sold on long-term agreements; how much of next year is already contracted and at what price?",
+        "Which link actually binds right now -- wafer capacity, advanced packaging, test capacity, or power? Bottlenecks move, and last year's bottleneck is often this year's glut.",
+        "Hyperscaler capex is guidance, not orders. What has actually been ordered, and what is the lead time?"
+      ],
+      "cyclicality": {
+        "zh": "强周期。利润在周期顶部最高、市盈率最低——在这个行业里低市盈率是危险信号而不是便宜信号。用价格/账面或产能周期位置来判断，不要用市盈率。",
+        "en": "Deeply cyclical. Earnings peak and the multiple bottoms at the top of the cycle, so a low P/E here is a warning rather than a bargain. Judge on price-to-book or position in the capacity cycle instead."
+      }
+    }
+  }
+}

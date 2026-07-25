@@ -37,6 +37,8 @@ Use visible Codex subagents whenever the user asks to see subagents, asks for a 
 Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summary unless the user explicitly asks for lite, smoke test, or debug output. Do not describe the final user-facing report as "visible version", "lite", "smoke", or "debug"; those are execution details, not investment-report content.
 
 1. If `multi_agent_v1.spawn_agent` is available, spawn separate visible agents for the full default analyst team:
+<!-- generated:roster start -->
+   - `macro_regime`
    - `market_data`
    - `earnings_deep_dive`
    - `forward_expectations`
@@ -51,6 +53,7 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - `bull_researcher`
    - `bear_researcher`
    - `portfolio_manager`
+<!-- generated:roster end -->
 2. Give each visible agent a narrow prompt and require JSON evidence or debate output. Tell each agent not to call `alphacouncil-agent` recursively.
 3. Use the selected or inferred language for visible agent prompts, evidence packets, debate packets, and final synthesis. Keep JSON field names in English.
 4. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
@@ -181,7 +184,7 @@ Debate agents return:
 - For exact index / index-futures (incl. night session) / FX / rates / vol / commodity / stock levels, call the **`get_quote`** MCP tool (keyless, ~15m delayed; accepts names like `KOSPI`/`纳指期货`/`VIX`/`美元指数` or raw tickers) and cite it. Web search is the interpretation layer and the fallback when `get_quote` errors — then record the gap in `open_questions`. `get_quote` is delayed market data, never a real-time feed.
 - Every material claim should map back to an evidence packet with sources and confidence.
 - Evidence sources are globally scoped as `<task>:<local_source_id>` and mirrored in `source_manifest.json`; never cite bare `S1/S2` after packets are merged.
-- Final manager reports must include separate visible sections for market expectations / implied beat-miss thresholds, analyst rating or target-price revisions, earnings-call management signals, quant factor / technical risk view, news and management/industry voice signals, short interest / borrow / options where available, NVIDIA or other strategic transaction terms where relevant, data gaps / unavailable data, and separate short-term 1-4 weeks / medium-term 3-6 months / long-term 12 months views. Do not hide these only in the source table. If a data source is unavailable, state that explicitly instead of omitting the section. If no key source is missing, include a data-gaps section saying no critical gaps were found.
+- Final manager reports must include separate visible sections for market expectations / implied beat-miss thresholds, analyst rating or target-price revisions, earnings-call management signals, quant factor / technical risk view, news and management/industry voice signals, short interest / borrow / options where available, strategic transaction or banking-event terms where relevant, data gaps / unavailable data, and separate short-term 1-4 weeks / medium-term 3-6 months / long-term 12 months views. Do not hide these only in the source table. If a data source is unavailable, state that explicitly instead of omitting the section. If no key source is missing, include a data-gaps section saying no critical gaps were found.
 - Final manager reports must also include an "Analyst Work Log" / "分析师工作记录" section summarizing every evidence agent packet, plus a "Bull/Bear Debate" / "多空辩论记录" section summarizing the long case, short case, rebuttal, unanswered questions, and who won. Do not replace these with a one-paragraph execution summary.
 - Completed runs must write `final_report.md`, `user_response.md`, `artifact_index.md`, `report_quality.json`, one Markdown file per evidence analyst, and Markdown files for `bull_researcher`, `bear_researcher`, and `portfolio_manager`. If `report_quality.json` is not `passed`, report the run as `needs_revision`, not complete.
 - The `management_industry_voices` agent only uses publicly verifiable commentary from executives, board members, official company channels, customers, suppliers, competitors, regulators, industry experts, and channel voices. It must separate direct quotes, paraphrases, and media interpretation, and must not imply non-public inside information.
