@@ -30,7 +30,7 @@ run writes:
 - quant factor / technical risk view
 - news and company / industry voice signals
 - short interest / borrow / options information when available
-- strategic transaction, banking-event, NVIDIA, or similar terms when relevant
+- strategic transaction or banking-event analysis when relevant
 - valuation range
 - key catalysts
 - major risks

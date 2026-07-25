@@ -34,7 +34,7 @@ News and company or industry voice coverage is present.
 ## Short Interest / Borrow / Options Information
 Short Interest, borrow, and options coverage is present, with unavailable data called out rather than omitted.
 
-## Strategic Transaction or NVIDIA Terms
+## Strategic Transaction or Banking Event
 Strategic Transaction coverage is present even when no transaction exists.
 
 ## Valuation Range
