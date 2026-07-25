@@ -51,6 +51,19 @@ function validate(meta, bodies, file, errors) {
   if (meta.output_contract !== undefined && !OUTPUT_CONTRACTS.includes(meta.output_contract)) {
     fail(`output_contract must be one of ${OUTPUT_CONTRACTS.join("|")}, got ${JSON.stringify(meta.output_contract)}`);
   }
+  if (meta.kind === "master") {
+    // A master persona is a point of view with an explicit failure condition. Without
+    // disqualifiers it degrades into generic commentary that agrees with everything.
+    if (!Array.isArray(meta.philosophy_tags) || meta.philosophy_tags.length === 0) {
+      fail("a master persona must declare philosophy_tags");
+    }
+    if (!Array.isArray(meta.disqualifiers) || meta.disqualifiers.length === 0) {
+      fail("a master persona must declare disqualifiers: what would make this master walk away");
+    }
+    if (typeof meta.era !== "string" || !meta.era) fail("a master persona must declare era");
+    if (typeof meta.holding_period !== "string" || !meta.holding_period) fail("a master persona must declare holding_period");
+  }
+
   if (meta.source !== undefined && meta.source !== null) {
     const s = meta.source;
     if (typeof s !== "object" || !s.name || !s.license) {

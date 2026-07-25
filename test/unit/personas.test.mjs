@@ -190,3 +190,38 @@ test("an unknown language falls back to the persona default rather than an empty
   const persona = shippedPersonas().get("market_data");
   assert.equal(personaPrompt(persona, "Klingon"), personaPrompt(persona, "English"));
 });
+
+// ---- masters --------------------------------------------------------------
+
+test("master personas are selectable by roster and stay out of the analyst enum", () => {
+  const reg = shippedPersonas();
+  const masters = selectRoster(reg, { kind: "master", roster: "masters-value" });
+  assert.ok(masters.length >= 2, "the masters-value roster must have seed personas");
+  assert.ok(masters.every((p) => p.kind === "master"));
+  assert.deepEqual(reg.ids("analyst"), DEFAULT_TASKS, "masters must not leak into the evidence roster");
+});
+
+test("every master declares what would make it walk away", () => {
+  for (const master of shippedPersonas().all().filter((p) => p.kind === "master")) {
+    assert.ok(master.philosophy_tags?.length, `${master.id} needs philosophy_tags`);
+    assert.ok(master.disqualifiers?.length, `${master.id} needs disqualifiers`);
+    assert.ok(master.era, `${master.id} needs era`);
+    assert.ok(master.holding_period, `${master.id} needs holding_period`);
+  }
+});
+
+test("a master persona without disqualifiers is rejected", () => {
+  withDir({
+    "m.md": personaText({ id: "m_x", kind: "master", philosophy_tags: ["x"], era: "now", holding_period: "long" }),
+    ...Object.fromEntries(DEFAULT_TASKS.map((t) => [`${t}.md`, personaText({ id: t })])),
+    ...Object.fromEntries(DEBATE_ROLES.map((r) => [`${r}.md`, personaText({ id: r, kind: "debate" })])),
+  }, (dir) => {
+    assert.throws(() => loadPersonas({ dir }), /must declare disqualifiers/);
+  });
+});
+
+test("adapted master content carries its upstream attribution", () => {
+  const buffett = shippedPersonas().get("master_buffett");
+  assert.equal(buffett.source.license, "MIT");
+  assert.match(buffett.source.attribution, /xbtlin/);
+});
