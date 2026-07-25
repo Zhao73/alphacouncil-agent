@@ -5,3 +5,6 @@ node_modules/
 .env.*
 runs/
 .alphacouncil-agent/
+
+# Session/runtime state from agent harnesses, never product code
+.omo/
