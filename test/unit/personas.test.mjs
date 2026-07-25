@@ -225,3 +225,41 @@ test("adapted master content carries its upstream attribution", () => {
   assert.equal(buffett.source.license, "MIT");
   assert.match(buffett.source.attribution, /xbtlin/);
 });
+
+// ---- verifiers ------------------------------------------------------------
+
+test("the three Stage 2b verifiers exist with disjoint verdict spaces", () => {
+  const reg = shippedPersonas();
+  const verifiers = selectRoster(reg, { kind: "verifier", roster: "verify" });
+  assert.deepEqual(verifiers.map((p) => p.id), ["source_fidelity", "rederivation", "refuter"]);
+  for (const verifier of verifiers) {
+    assert.ok(verifier.verdict_values.length >= 2, `${verifier.id} needs a verdict space`);
+    assert.equal(verifier.output_contract, "verifier_verdict");
+  }
+  // Each verifier answers a different question, so their verdict vocabularies differ.
+  const spaces = verifiers.map((v) => v.verdict_values.join("|"));
+  assert.equal(new Set(spaces).size, verifiers.length, "verifiers must not share a verdict space");
+});
+
+test("each verifier declares the tools its method actually needs", () => {
+  const reg = shippedPersonas();
+  // source_fidelity opens one cited URL; the other two must search independently.
+  assert.deepEqual(reg.get("source_fidelity").tools_hint, ["webfetch"]);
+  for (const id of ["rederivation", "refuter"]) {
+    assert.ok(reg.get(id).tools_hint.includes("websearch"), `${id} must be able to search`);
+  }
+});
+
+test("a verifier without a verdict space is rejected", () => {
+  withDir({
+    "v.md": personaText({ id: "v_x", kind: "verifier", output_contract: "verifier_verdict" }),
+    ...Object.fromEntries(DEFAULT_TASKS.map((t) => [`${t}.md`, personaText({ id: t })])),
+    ...Object.fromEntries(DEBATE_ROLES.map((r) => [`${r}.md`, personaText({ id: r, kind: "debate" })])),
+  }, (dir) => assert.throws(() => loadPersonas({ dir }), /must declare verdict_values/));
+});
+
+test("verifiers stay out of the evidence and debate rosters", () => {
+  const reg = shippedPersonas();
+  assert.deepEqual(reg.ids("analyst"), DEFAULT_TASKS);
+  assert.deepEqual(reg.ids("debate"), DEBATE_ROLES);
+});

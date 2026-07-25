@@ -64,6 +64,17 @@ function validate(meta, bodies, file, errors) {
     if (typeof meta.holding_period !== "string" || !meta.holding_period) fail("a master persona must declare holding_period");
   }
 
+  if (meta.kind === "verifier") {
+    // A verifier whose verdict space is undefined cannot be aggregated: the caller has
+    // no way to decide what "2 of 3 confirmed" means.
+    if (!Array.isArray(meta.verdict_values) || meta.verdict_values.length < 2) {
+      fail("a verifier persona must declare verdict_values with at least two outcomes");
+    }
+    if (meta.output_contract !== "verifier_verdict") {
+      fail(`a verifier persona must use output_contract "verifier_verdict", got ${JSON.stringify(meta.output_contract)}`);
+    }
+  }
+
   if (meta.source !== undefined && meta.source !== null) {
     const s = meta.source;
     if (typeof s !== "object" || !s.name || !s.license) {

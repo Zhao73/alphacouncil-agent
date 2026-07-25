@@ -27,8 +27,11 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `portfolio_manager` | debate | yes | default | deep | Portfolio Manager | verdict, rating, synthesis | original |
 | `master_buffett` | master | yes | masters-value | deep | Buffett Lens | moat, owner-earnings, circle-of-competence | ai-berkshire (MIT) |
 | `master_munger` | master | yes | masters-value | deep | Munger Lens | inversion, mental-models, failure-paths | ai-berkshire (MIT) |
+| `source_fidelity` | verifier | yes | verify | fast | Source Fidelity Verifier | citation, primary-source | original |
+| `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
+| `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 2 masters, 18 files.
+Totals: 11 evidence analysts, 3 debate roles, 2 masters, 21 files.
 
 ## Provenance
 
