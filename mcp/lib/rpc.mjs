@@ -13,6 +13,8 @@ import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
+import { screenTicker, explainResult } from "./screen.mjs";
+import { fetchUniverse } from "./sec.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 
 export function send(message) {
@@ -151,6 +153,22 @@ export function tools() {
       },
       required: ["run_id", "verifier", "seat", "verdict"],
     }),
+    tool("screen_ticker", "Run the mechanical elimination screen against a company's own SEC filings. No language model is involved: seven hard rules (10y ROE, 5y cumulative FCF, interest cover, gross margin, OCF/NI, net margin, dilution) with three exemptions, and every rejection names the metric, the measured value and the threshold. Rules whose inputs are missing from the filings are reported as skipped, never as passes. Surviving is not a recommendation -- it means the name is worth research time. US filers only; other markets need their own regulator feed.", {
+      type: "object",
+      properties: {
+        cik: { type: "string", description: "SEC CIK. Use list_us_universe to resolve a ticker." },
+        ticker: { type: "string" },
+        as_of: { type: "string", description: "YYYY-MM-DD. Only filings actually filed by this date are used, which is what keeps a historical screen free of look-ahead bias." },
+      },
+      required: ["cik"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("list_us_universe", "The full SEC list of US listed companies (~10k) as {cik, ticker, title}. Keyless. Use it to resolve a ticker to a CIK, or as the starting universe for a screen.", {
+      type: "object",
+      properties: {
+        contains: { type: "string", description: "Case-insensitive filter on ticker or company name." },
+        limit: { type: "number", default: 50 },
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("preflight_permissions", "MANDATORY before a visible run: check that the host actually grants the network tools the evidence agents need. Background subagents cannot raise an interactive permission prompt, so a missing allowlist entry blocks their searches SILENTLY and they answer from training knowledge while still filling in every report section. Returns status ok | blocked | unknown with a remedy.", {
       type: "object",
       properties: {
@@ -214,6 +232,24 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(
       `Recorded ${args.verifier} -> ${args.verdict} for ${args.seat}. Effective weight now ${seat ? seat.effective_weight : "n/a"}.`,
       result,
+    ));
+    return;
+  }
+  if (name === "screen_ticker") {
+    const result = await screenTicker(args);
+    sendResult(id, jsonContent(explainResult(result, result.ticker), result));
+    return;
+  }
+  if (name === "list_us_universe") {
+    const all = await fetchUniverse();
+    const needle = String(args.contains || "").trim().toLowerCase();
+    const matched = needle
+      ? all.filter((c) => c.ticker.toLowerCase().includes(needle) || c.title.toLowerCase().includes(needle))
+      : all;
+    const limit = Number.isFinite(args.limit) ? Math.max(1, Math.min(500, args.limit)) : 50;
+    sendResult(id, jsonContent(
+      `${matched.length} of ${all.length} US filers matched${needle ? ` "${args.contains}"` : ""}; returning ${Math.min(limit, matched.length)}.`,
+      { total: all.length, matched: matched.length, companies: matched.slice(0, limit) },
     ));
     return;
   }

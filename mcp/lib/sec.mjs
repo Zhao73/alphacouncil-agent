@@ -1,0 +1,114 @@
+import { LIMITS } from "./constants.mjs";
+import { invalidParams } from "./errors.mjs";
+
+/**
+ * Keyless SEC client.
+ *
+ * SEC requires a descriptive User-Agent with a contact and rate-limits to ~10 req/s.
+ * Everything here comes from filings, so a figure is what the company actually reported,
+ * not a vendor's adjusted version of it.
+ *
+ * The field that matters most is `filed`. A fiscal year ending 2024-09-28 was not public
+ * until 2024-11-01, so anything that reasons "as of" a date must filter on `filed`, not
+ * on the period end. Getting this wrong is the single easiest way to build a screen or a
+ * backtest that looks brilliant and is measuring the future.
+ */
+// SEC's User-Agent rules are stricter than the published guidance and were established
+// by testing, not by reading: it wants `Name/version (email)`, and it returns 403 with an
+// HTML body when the contact contains a URL or a domain it associates with crawlers --
+// including a github.com noreply address. Anyone running this at volume should set
+// ALPHACOUNCIL_SEC_USER_AGENT to a real contact of their own.
+const UA = process.env.ALPHACOUNCIL_SEC_USER_AGENT
+  || "AlphaCouncil-Agent/0.4 (alphacouncil@runbox.com)";
+
+const MIN_INTERVAL_MS = 120; // stay under SEC's ~10 req/s guidance
+let lastCall = 0;
+
+async function throttle() {
+  const wait = lastCall + MIN_INTERVAL_MS - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastCall = Date.now();
+}
+
+async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2) {
+  await throttle();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      headers: { "User-Agent": UA, Accept: "application/json" },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    const text = await res.text();
+    if (text.trimStart().startsWith("<")) throw new Error(`SEC returned HTML rather than JSON for ${url} (rate limited or blocked)`);
+    return JSON.parse(text);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The full US listed universe: ~10k entries of {cik, ticker, title}. */
+export async function fetchUniverse() {
+  const raw = await secJson("https://www.sec.gov/files/company_tickers.json");
+  return Object.values(raw).map((row) => ({
+    cik: String(row.cik_str).padStart(10, "0"),
+    ticker: row.ticker,
+    title: row.title,
+  }));
+}
+
+export async function fetchCompanyFacts(cik) {
+  const padded = String(cik).replace(/\D/g, "").padStart(10, "0");
+  if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
+  return secJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${padded}.json`);
+}
+
+/**
+ * Annual series for a concept, newest last, filtered to what was public by `asOf`.
+ *
+ * Tries several tags because the same economic quantity has different names depending on
+ * when and under which taxonomy a company filed.
+ */
+export function annualSeries(facts, tags, { asOf = null, unit = "USD" } = {}) {
+  const cutoff = asOf ? new Date(asOf).getTime() : null;
+  for (const tag of tags) {
+    const entries = facts?.facts?.["us-gaap"]?.[tag]?.units?.[unit];
+    if (!Array.isArray(entries) || entries.length === 0) continue;
+
+    const byPeriod = new Map();
+    for (const entry of entries) {
+      if (entry.form !== "10-K" || !entry.end || !Number.isFinite(entry.val)) continue;
+      // Look-ahead guard: a filing is only usable once it was actually filed.
+      if (cutoff && new Date(entry.filed).getTime() > cutoff) continue;
+      const prior = byPeriod.get(entry.end);
+      // Keep the most recently filed value for a period: restatements supersede.
+      if (!prior || new Date(entry.filed) > new Date(prior.filed)) byPeriod.set(entry.end, entry);
+    }
+    if (byPeriod.size === 0) continue;
+    const series = [...byPeriod.values()].sort((a, b) => new Date(a.end) - new Date(b.end));
+    return { tag, unit, series };
+  }
+  return null;
+}
+
+/** Concept aliases, ordered by preference. */
+export const CONCEPTS = {
+  revenue: [
+    "RevenueFromContractWithCustomerExcludingAssessedTax",
+    "Revenues",
+    "SalesRevenueNet",
+    "RevenueFromContractWithCustomerIncludingAssessedTax",
+  ],
+  netIncome: ["NetIncomeLoss", "ProfitLoss"],
+  grossProfit: ["GrossProfit"],
+  operatingIncome: ["OperatingIncomeLoss"],
+  operatingCashFlow: ["NetCashProvidedByUsedInOperatingActivities", "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
+  capex: ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
+  equity: ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"],
+  assets: ["Assets"],
+  interestExpense: ["InterestExpense", "InterestIncomeExpenseNet", "InterestExpenseDebt"],
+  sharesOutstanding: ["CommonStockSharesOutstanding", "WeightedAverageNumberOfDilutedSharesOutstanding"],
+};
+
+export const secUserAgent = () => UA;
