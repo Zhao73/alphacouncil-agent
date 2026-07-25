@@ -46,8 +46,18 @@ test("withVerificationBanner is identity on pass and surfaces the gate on failur
   assert.match(withVerificationBanner("BODY", gapped, "English"), /Source Verification Gate/);
 });
 
-test("completenessStatus marks a fully recorded run complete", () => {
+test("completenessStatus requires the portfolio manager, not just the researchers", () => {
+  // completeRun() leaves portfolio_manager pending on purpose.
   const gate = completenessStatus(completeRun());
+  assert.equal(gate.completeness, "incomplete");
+  assert.equal(gate.missing_evidence_count, 0);
+  assert.deepEqual(gate.missing_debate, ["portfolio_manager"]);
+});
+
+test("completenessStatus marks a run complete once the PM is recorded too", () => {
+  const run = completeRun();
+  run.agent_status.portfolio_manager = { role: "portfolio_manager", status: "completed" };
+  const gate = completenessStatus(run);
   assert.equal(gate.completeness, "complete");
   assert.equal(gate.missing_evidence_count, 0);
   assert.equal(gate.missing_debate_count, 0);
@@ -76,7 +86,9 @@ test("completenessStatus flags a missing debate researcher", () => {
 });
 
 test("withCompletenessBanner is identity when complete and prepends a banner when not", () => {
-  assert.equal(withCompletenessBanner("BODY", completenessStatus(completeRun()), "English"), "BODY");
+  const done = completeRun();
+  done.agent_status.portfolio_manager = { role: "portfolio_manager", status: "completed" };
+  assert.equal(withCompletenessBanner("BODY", completenessStatus(done), "English"), "BODY");
 
   const incomplete = completenessStatus({
     ...completeRun(),

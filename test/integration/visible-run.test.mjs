@@ -9,8 +9,12 @@ import { completeReport } from "../helpers/fixtures.mjs";
 let dataDir;
 const visibleRunId = `SELFTEST-VISIBLE-${process.pid}`;
 const incompleteRunId = `SELFTEST-INCOMPLETE-${process.pid}`;
+const noPmRunId = `SELFTEST-NOPM-${process.pid}`;
+const pmLastRunId = `SELFTEST-PMLAST-${process.pid}`;
 let visibleDir;
 let incompleteDir;
+let noPmDir;
+let pmLastDir;
 const recorded = {};
 
 const packet = (summary, extra = {}) => ({
@@ -27,6 +31,8 @@ before(async () => {
   dataDir = makeDataDir();
   visibleDir = join(dataDir, "runs", visibleRunId);
   incompleteDir = join(dataDir, "runs", incompleteRunId);
+  noPmDir = join(dataDir, "runs", noPmRunId);
+  pmLastDir = join(dataDir, "runs", pmLastRunId);
   const server = startServer({ dataDir });
 
   // A complete visible run: plan, record evidence, both researchers, then the PM.
@@ -111,10 +117,84 @@ before(async () => {
     },
   }));
 
+  // Full evidence + both researchers, but the PM is never recorded. This is the case
+  // the old gate reported as complete.
+  await server.callTool("plan_visible_run", { symbol: "NOK", run_id: noPmRunId, tasks: ["market_data"] });
+  await server.callTool("record_visible_packet", {
+    run_id: noPmRunId,
+    task: "market_data",
+    thread_id: "thread-nopm-market",
+    packet: packet("evidence without a PM"),
+  });
+  for (const role of ["bull_researcher", "bear_researcher"]) {
+    recorded[role] = structured(await server.callTool("record_visible_decision", {
+      run_id: noPmRunId,
+      role,
+      thread_id: `thread-nopm-${role}`,
+      packet: { verdict: "OK", rating: "Hold", winner: "balanced", summary: role, confidence: "medium" },
+    }));
+  }
+
+  // The PM is the final call and nothing follows it. The visible run above is repaired
+  // by its trailing late-packet calls, which masks an ordering bug in the gate; here
+  // there is nothing to repair it.
+  await server.callTool("plan_visible_run", { symbol: "NOK", run_id: pmLastRunId, tasks: ["market_data"] });
+  await server.callTool("record_visible_packet", {
+    run_id: pmLastRunId,
+    task: "market_data",
+    thread_id: "thread-pmlast-market",
+    packet: packet("evidence"),
+  });
+  for (const role of ["bull_researcher", "bear_researcher"]) {
+    await server.callTool("record_visible_decision", {
+      run_id: pmLastRunId,
+      role,
+      thread_id: `thread-pmlast-${role}`,
+      packet: { verdict: "OK", rating: "Hold", winner: "balanced", summary: role, confidence: "medium" },
+    });
+  }
+  recorded.pmLast = structured(await server.callTool("record_visible_decision", {
+    run_id: pmLastRunId,
+    role: "portfolio_manager",
+    thread_id: "thread-pmlast-pm",
+    packet: {
+      verdict: "OK", rating: "Hold", winner: "balanced", summary: "final",
+      confidence: "medium", report_markdown: completeReport,
+    },
+  }));
+
   await server.close();
 });
 
 after(() => removeDataDir(dataDir));
+
+test("the PM call that completes a run reports complete in its own response", () => {
+  assert.equal(recorded.pmLast.run?.status, "complete");
+  assert.equal(recorded.pmLast.run?.phase, "complete");
+});
+
+test("a run whose last call is the PM is persisted as complete", () => {
+  const status = JSON.parse(readFileSync(join(pmLastDir, "status.json"), "utf8"));
+  assert.equal(status.completeness, "complete");
+  assert.equal(status.missing_debate_count, 0);
+  assert.equal(status.status, "complete");
+  assert.equal(status.phase, "complete");
+});
+
+test("a run with full evidence and both researchers but no PM is NOT complete", () => {
+  const status = JSON.parse(readFileSync(join(noPmDir, "status.json"), "utf8"));
+  assert.equal(status.completeness, "incomplete");
+  assert.equal(status.missing_evidence_count, 0);
+  assert.equal(status.missing_debate_count, 1, "only portfolio_manager should be missing");
+  assert.notEqual(status.status, "complete");
+});
+
+test("recording the PM last flips a fully staffed run to complete", () => {
+  const status = JSON.parse(readFileSync(join(visibleDir, "status.json"), "utf8"));
+  assert.equal(status.completeness, "complete");
+  assert.equal(status.missing_debate_count, 0);
+  assert.equal(status.status, "complete");
+});
 
 test("the visible decision is recorded with its thread id", () => {
   assert.equal(recorded.pm.decision?.thread_id, "thread-visible-pm");
@@ -157,6 +237,7 @@ test("a PM recorded over missing evidence and missing researchers is flagged inc
   assert.equal(status.phase, "incomplete");
   assert.equal(status.completeness, "incomplete");
   assert.equal(status.missing_evidence_count, 1);
+  // The PM itself was recorded, so only the two researchers are missing.
   assert.equal(status.missing_debate_count, 2);
 });
 

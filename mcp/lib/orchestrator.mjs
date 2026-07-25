@@ -133,6 +133,15 @@ export function recordVisibleDecision(args) {
   }, role, run, rawRecordText(args.packet));
   const file = role === "portfolio_manager" ? "manager_synthesis.json" : `${role}.json`;
   writeJson(join(dir, file), packet);
+  // Mark the agent completed BEFORE evaluating the gates. The completeness gate now
+  // counts portfolio_manager, so reading it first would report every finished run as
+  // incomplete -- the PM would never be recorded by the time it was checked.
+  updateAgent(run, role, "completed", {
+    completed_at: new Date().toISOString(),
+    thread_id: args.thread_id,
+    thread_title: args.thread_title,
+    output: join(dir, file),
+  });
   let finalArtifacts = {};
   if (role === "portfolio_manager") {
     const gate = verificationStatus(run);
@@ -159,12 +168,6 @@ export function recordVisibleDecision(args) {
     run.phase = "visible_debate";
   }
   saveRun(run);
-  updateAgent(run, role, "completed", {
-    completed_at: new Date().toISOString(),
-    thread_id: args.thread_id,
-    thread_title: args.thread_title,
-    output: join(dir, file),
-  });
   writeJson(join(dir, "evidence.json"), run);
   if (role === "portfolio_manager") {
     finalArtifacts = writeFinalArtifacts(run, existingDebate(dir));

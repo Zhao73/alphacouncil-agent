@@ -1,4 +1,4 @@
-import { LIMITS, REPORT_SECTION_TERMS } from "./constants.mjs";
+import { DEBATE_ROLES, LIMITS, REPORT_SECTION_TERMS } from "./constants.mjs";
 import { isChineseLanguage } from "./lang.mjs";
 
 export function withDisclaimer(markdown, language) {
@@ -75,8 +75,11 @@ export function agentState(run, role) {
 export function completenessStatus(run) {
   const tasks = Array.isArray(run.tasks) ? run.tasks : [];
   const missing_evidence = tasks.filter((task) => taskState(run, task).status !== "completed");
-  const debateResearchers = ["bull_researcher", "bear_researcher"];
-  const missing_debate = debateResearchers.filter((role) => agentState(run, role).status !== "completed");
+  // All three debate roles, including portfolio_manager. SKILL.md and the
+  // record_visible_decision tool description have always promised the PM is enforced;
+  // the gate only ever checked the two researchers, so a run that skipped the PM
+  // entirely could still report itself complete.
+  const missing_debate = DEBATE_ROLES.filter((role) => agentState(run, role).status !== "completed");
   const complete = missing_evidence.length === 0 && missing_debate.length === 0;
   return {
     completeness: complete ? "complete" : "incomplete",
