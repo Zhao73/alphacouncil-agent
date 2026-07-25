@@ -1,0 +1,124 @@
+import { appendFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { DEBATE_ROLES, RUNS_DIR } from "./constants.mjs";
+import { readJson, writeJson } from "./fsutil.mjs";
+import { agentState, completenessStatus, sourceManifest, taskState, verificationStatus } from "./gates.mjs";
+
+export { agentState, taskState };
+
+export function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function runId(symbol) {
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z");
+  return `${symbol.toUpperCase()}-${stamp}`;
+}
+
+export function safeSymbol(symbol) {
+  if (typeof symbol !== "string" || !/^[A-Za-z0-9.^=+\-]{1,32}$/.test(symbol)) {
+    throw new Error("symbol must be 1-32 chars and contain only ticker-safe characters.");
+  }
+  if (/^\.+$/.test(symbol)) throw new Error("symbol cannot be only dots.");
+  return symbol.toUpperCase();
+}
+
+export function runPath(id) {
+  if (typeof id !== "string" || !/^[A-Z0-9.^=+\-_]{1,80}$/.test(id)) {
+    throw new Error("run_id is invalid.");
+  }
+  return join(RUNS_DIR, id);
+}
+
+export function statusSnapshot(run) {
+  const gate = verificationStatus(run);
+  const completeness = completenessStatus(run);
+  return {
+    run_id: run.run_id,
+    symbol: run.symbol,
+    as_of: run.as_of,
+    language: run.language,
+    execution_mode: run.execution_mode,
+    visibility_required: run.visibility_required,
+    dry_run: run.dry_run,
+    status: run.status,
+    phase: run.phase,
+    verification: gate.verification,
+    missing_source_count: gate.missing_claim_source_ids.length,
+    completeness: completeness.completeness,
+    missing_evidence_count: completeness.missing_evidence_count,
+    missing_debate_count: completeness.missing_debate_count,
+    report_quality: run.report_quality?.status || "not_checked",
+    missing_report_items_count: run.report_quality?.missing?.length || 0,
+    started_at: run.started_at,
+    updated_at: run.updated_at,
+    completed_at: run.completed_at,
+    tasks: run.tasks.map((task) => taskState(run, task)),
+    agents: DEBATE_ROLES.map((role) => agentState(run, role)),
+  };
+}
+
+export function writeStatus(run, patch = {}) {
+  Object.assign(run, patch, { updated_at: new Date().toISOString() });
+  writeJson(join(runPath(run.run_id), "status.json"), statusSnapshot(run));
+}
+
+export function appendEvent(run, type, data = {}) {
+  appendFileSync(join(runPath(run.run_id), "events.jsonl"), `${JSON.stringify({
+    at: new Date().toISOString(),
+    type,
+    ...data,
+  })}\n`);
+}
+
+export function writeSourceManifest(run) {
+  writeJson(join(runPath(run.run_id), "source_manifest.json"), sourceManifest(run));
+}
+
+export function updateTask(run, task, status, patch = {}) {
+  run.task_status[task] = { ...taskState(run, task), ...patch, task, status, updated_at: new Date().toISOString() };
+  writeStatus(run);
+  appendEvent(run, `task_${status}`, { task, ...patch });
+}
+
+export function updateAgent(run, role, status, patch = {}) {
+  run.agent_status[role] = { ...agentState(run, role), ...patch, role, status, updated_at: new Date().toISOString() };
+  writeStatus(run);
+  appendEvent(run, `agent_${status}`, { role, ...patch });
+}
+
+export function artifactPaths(run) {
+  const dir = runPath(run.run_id);
+  const analyst_markdown = Object.fromEntries(
+    [...(run.tasks || []), ...DEBATE_ROLES].map((role) => [role, join(dir, `${role}.md`)])
+  );
+  return {
+    run_dir: dir,
+    final_report_md: join(dir, "final_report.md"),
+    user_response_md: join(dir, "user_response.md"),
+    artifact_index_md: join(dir, "artifact_index.md"),
+    all_agents_md: join(dir, "all_agents.md"),
+    evidence_json: join(dir, "evidence.json"),
+    source_manifest_json: join(dir, "source_manifest.json"),
+    status_json: join(dir, "status.json"),
+    events_jsonl: join(dir, "events.jsonl"),
+    report_quality_json: join(dir, "report_quality.json"),
+    decision_json: join(dir, "decision.json"),
+    analyst_markdown,
+  };
+}
+
+export function existingDebate(dir) {
+  return {
+    bull: existsSync(join(dir, "bull_researcher.json")) ? readJson(join(dir, "bull_researcher.json")) : null,
+    bear: existsSync(join(dir, "bear_researcher.json")) ? readJson(join(dir, "bear_researcher.json")) : null,
+    manager: existsSync(join(dir, "manager_synthesis.json")) ? readJson(join(dir, "manager_synthesis.json")) : null,
+  };
+}
+
+export function saveRun(run) {
+  writeJson(join(runPath(run.run_id), "evidence.json"), run);
+  writeSourceManifest(run);
+  writeStatus(run);
+}
