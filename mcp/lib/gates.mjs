@@ -1,4 +1,5 @@
-import { DEBATE_ROLES, LIMITS, REPORT_SECTION_TERMS } from "./constants.mjs";
+import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, REPORT_SECTIONS } from "./constants.mjs";
+import { denseLength, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage } from "./lang.mjs";
 
 export function withDisclaimer(markdown, language) {
@@ -103,26 +104,92 @@ export function withCompletenessBanner(markdown, completeness, language) {
   return `${banner}\n\n---\n\n${text}`;
 }
 
-export function validateFinalReport(markdown, run) {
-  const text = String(markdown || "");
-  const haystack = text.toLowerCase();
-  const missing = [];
-  for (const terms of REPORT_SECTION_TERMS) {
-    if (!terms.some((term) => haystack.includes(term.toLowerCase()))) {
-      missing.push(`missing section: ${terms[0]}`);
+/**
+ * Assign each heading to at most one required section, longest matching alias first.
+ *
+ * Without the longest-alias rule, "Quant Factor / Technical Risk View" would satisfy the
+ * risks section as well as the quant section, and a report could pass while genuinely
+ * having no risks section at all.
+ */
+function assignHeadings(headings) {
+  const assigned = new Map();
+  for (const heading of headings) {
+    const normalized = normalizeHeading(heading.title);
+    if (!normalized) continue;
+    let best = null;
+    for (const section of REPORT_SECTIONS) {
+      for (const alias of section.aliases) {
+        const needle = normalizeHeading(alias);
+        if (!needle || !normalized.includes(needle)) continue;
+        if (!best || needle.length > best.needleLength) {
+          best = { section, needleLength: needle.length };
+        }
+      }
+    }
+    if (!best) continue;
+    const existing = assigned.get(best.section.id);
+    // Keep the richest body when a report repeats a section.
+    if (!existing || denseLength(heading.body) > denseLength(existing.body)) {
+      assigned.set(best.section.id, heading);
     }
   }
-  for (const task of run.tasks || []) {
-    if (!haystack.includes(String(task).toLowerCase())) missing.push(`missing analyst work log entry: ${task}`);
+  return assigned;
+}
+
+const isPlaceholder = (body) => {
+  const compact = String(body || "").replace(/^[-*+]\s*/, "").trim().toLowerCase();
+  return PLACEHOLDER_BODIES.includes(compact);
+};
+
+export function validateFinalReport(markdown, run) {
+  const text = String(markdown || "");
+  const headings = parseHeadings(text);
+  const assigned = assignHeadings(headings);
+  const missing = [];
+  const sections = [];
+
+  for (const section of REPORT_SECTIONS) {
+    const heading = assigned.get(section.id);
+    if (!heading) {
+      missing.push(`missing section: ${section.id}`);
+      sections.push({ id: section.id, status: "missing" });
+      continue;
+    }
+    const bodyChars = denseLength(heading.body);
+    if (isPlaceholder(heading.body)) {
+      missing.push(`placeholder section: ${section.id} ("${heading.title}")`);
+      sections.push({ id: section.id, status: "placeholder", heading: heading.title, line: heading.line, body_chars: bodyChars });
+      continue;
+    }
+    if (bodyChars < section.min_body) {
+      missing.push(`section too thin: ${section.id} ("${heading.title}") has ${bodyChars} of ${section.min_body} required characters`);
+      sections.push({ id: section.id, status: "too_thin", heading: heading.title, line: heading.line, body_chars: bodyChars });
+      continue;
+    }
+    sections.push({ id: section.id, status: "ok", heading: heading.title, line: heading.line, body_chars: bodyChars });
   }
+
+  // Scoped to the analyst work log body. The old check searched the whole document, so
+  // a task id appearing once in the source table satisfied "this analyst was reported".
+  const workLog = assigned.get("analyst_work_log");
+  const workLogBody = (workLog?.body || "").toLowerCase();
+  for (const task of run.tasks || []) {
+    if (!workLogBody.includes(String(task).toLowerCase())) {
+      missing.push(`missing analyst work log entry: ${task}`);
+    }
+  }
+
   const sourceCount = (run.packets || []).reduce((sum, packet) => sum + (packet.sources?.length || 0), 0);
   if (sourceCount > 0 && !/[a-z_]+:s\d+/i.test(text)) missing.push("missing scoped source IDs such as market_data:S1");
   const minLength = run.dry_run ? LIMITS.REPORT_MIN_CHARS_DRY : LIMITS.REPORT_MIN_CHARS;
-  if (text.replace(/\s+/g, "").length < minLength) missing.push(`report too short: minimum ${minLength} non-space characters`);
+  if (denseLength(text) < minLength) missing.push(`report too short: minimum ${minLength} non-space characters`);
+
   return {
+    schema_version: 2,
     status: missing.length ? "needs_revision" : "passed",
     missing,
+    sections,
     checked_at: new Date().toISOString(),
-    required_sections: REPORT_SECTION_TERMS.map((terms) => terms[0]),
+    required_sections: REPORT_SECTIONS.map((section) => section.id),
   };
 }

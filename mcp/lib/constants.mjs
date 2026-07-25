@@ -36,6 +36,45 @@ export const OUTPUT_MODES = [
   "investment_banking",
   "sales",
 ];
+/**
+ * The report contract, as a structured registry.
+ *
+ * `aliases` are matched against normalized headings; the LONGEST matching alias wins, so
+ * a heading like "Quant Factor / Technical Risk View" is assigned to `quant` rather than
+ * being allowed to satisfy `risks`. `min_body` is the number of non-space characters the
+ * section body must carry, calibrated against the manager fallback report, which emits
+ * several legitimately terse sections ("## Confidence\nmedium").
+ */
+export const REPORT_SECTIONS = [
+  { id: "conclusion", aliases: ["结论", "conclusion"], min_body: 6 },
+  { id: "analyst_work_log", aliases: ["分析师工作记录", "analyst work log"], min_body: 12, per_task: true },
+  { id: "debate_record", aliases: ["多空辩论记录", "bull bear debate", "debate record"], min_body: 20 },
+  { id: "market_expectations", aliases: ["市场预期", "market expectations"], min_body: 8 },
+  { id: "analyst_rating", aliases: ["分析师评级", "analyst rating", "target price"], min_body: 8 },
+  { id: "earnings_call", aliases: ["电话会", "earnings call"], min_body: 8 },
+  { id: "quant", aliases: ["量化", "quant"], min_body: 8 },
+  { id: "news", aliases: ["新闻", "news"], min_body: 8 },
+  { id: "short_interest", aliases: ["short interest", "borrow"], min_body: 8 },
+  { id: "strategic_transaction", aliases: ["战略交易", "strategic transaction", "banking event"], min_body: 8 },
+  { id: "valuation", aliases: ["估值", "valuation"], min_body: 8 },
+  { id: "catalysts", aliases: ["催化剂", "catalyst"], min_body: 8 },
+  { id: "risks", aliases: ["风险", "risk"], min_body: 8 },
+  { id: "position", aliases: ["仓位", "position"], min_body: 8 },
+  { id: "short_term", aliases: ["短线", "short term"], min_body: 6 },
+  { id: "medium_term", aliases: ["中期", "medium term"], min_body: 6 },
+  { id: "long_term", aliases: ["长期", "long term"], min_body: 6 },
+  { id: "data_gaps", aliases: ["数据缺口", "data gaps", "unavailable data"], min_body: 8 },
+  { id: "invalidation", aliases: ["反证", "invalidation"], min_body: 8 },
+  { id: "confidence", aliases: ["置信", "confidence"], min_body: 3 },
+  { id: "source_table", aliases: ["来源表", "source table"], min_body: 6 },
+];
+
+/** Bodies that look like a section but say nothing. */
+export const PLACEHOLDER_BODIES = [
+  "", "-", "n/a", "na", "tbd", "todo", "none", "- none", "待补充", "- 待补充", "无", "- 无",
+];
+
+/** @deprecated Superseded by REPORT_SECTIONS; kept only for external readers. */
 export const REPORT_SECTION_TERMS = [
   ["结论", "Conclusion"],
   ["分析师工作记录", "Analyst Work Log"],
