@@ -263,3 +263,63 @@ test("verifiers stay out of the evidence and debate rosters", () => {
   assert.deepEqual(reg.ids("analyst"), DEFAULT_TASKS);
   assert.deepEqual(reg.ids("debate"), DEBATE_ROLES);
 });
+
+// ---- the full master bench ------------------------------------------------
+
+const MASTER_ROSTERS = [
+  "masters-value", "masters-value-classic", "masters-adversarial", "masters-quant", "masters-modern",
+];
+
+test("every master roster is populated and disjoint", () => {
+  const reg = shippedPersonas();
+  const seen = new Set();
+  for (const roster of MASTER_ROSTERS) {
+    const members = selectRoster(reg, { kind: "master", roster });
+    assert.ok(members.length > 0, `${roster} is empty`);
+    for (const member of members) {
+      assert.ok(!seen.has(member.id), `${member.id} appears in more than one roster`);
+      seen.add(member.id);
+    }
+  }
+  assert.equal(seen.size, reg.ids("master").length, "every master belongs to a roster");
+});
+
+test("the bench actually disagrees with itself", () => {
+  // A committee of lenses that all share a philosophy is one lens wearing hats. These
+  // three must be present and must not share tags, or the debate has no opposition.
+  const reg = shippedPersonas();
+  const value = new Set(reg.get("master_buffett").philosophy_tags);
+  const adversarial = new Set(reg.get("master_soros").philosophy_tags);
+  const quant = new Set(reg.get("master_simons").philosophy_tags);
+  for (const [a, b, label] of [[value, adversarial, "value vs adversarial"], [value, quant, "value vs quant"]]) {
+    const shared = [...a].filter((tag) => b.has(tag));
+    assert.deepEqual(shared, [], `${label} must not share a philosophy tag`);
+  }
+});
+
+test("every master states what would make it walk away, in falsifiable terms", () => {
+  for (const master of shippedPersonas().all().filter((p) => p.kind === "master")) {
+    assert.ok(master.disqualifiers?.length >= 2, `${master.id} needs at least two disqualifiers`);
+    for (const item of master.disqualifiers) {
+      assert.ok(item.length > 20, `${master.id} has a disqualifier too vague to check: "${item}"`);
+    }
+  }
+});
+
+test("no master body contains an unfalsifiable star rating", () => {
+  // ai-berkshire scores things like "★★★☆☆: the model is understandable but ten-year
+  // certainty is low". The table shape is useful; the score is not checkable.
+  for (const master of shippedPersonas().all().filter((p) => p.kind === "master")) {
+    for (const [lang, body] of Object.entries(master.bodies)) {
+      assert.ok(!/[★☆]/.test(body), `${master.id} [${lang}] uses star ratings`);
+    }
+  }
+});
+
+test("adapted masters carry attribution and original ones declare none", () => {
+  for (const master of shippedPersonas().all().filter((p) => p.kind === "master")) {
+    if (master.source === null) continue;
+    assert.ok(master.source.license, `${master.id} adapts upstream work and must name the licence`);
+    assert.ok(master.source.attribution, `${master.id} must carry the upstream copyright line`);
+  }
+});

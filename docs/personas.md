@@ -25,13 +25,28 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `bull_researcher` | debate | yes | default | deep | Bull Researcher | long-case, rebuttal | original |
 | `bear_researcher` | debate | yes | default | deep | Bear Researcher | short-case, rebuttal | original |
 | `portfolio_manager` | debate | yes | default | deep | Portfolio Manager | verdict, rating, synthesis | original |
+| `master_aschenbrenner` | master | yes | masters-modern | deep | Aschenbrenner Lens | scaling, compute, power, timeline-pricing | original |
 | `master_buffett` | master | yes | masters-value | deep | Buffett Lens | moat, owner-earnings, circle-of-competence | ai-berkshire (MIT) |
+| `master_graham` | master | yes | masters-value-classic | deep | Graham Lens | margin-of-safety, balance-sheet, mr-market | original |
+| `master_simons` | master | yes | masters-quant | deep | Simons Lens | signal-vs-noise, no-narrative, sample-size | original |
+| `master_soros` | master | yes | masters-adversarial | deep | Soros Lens | reflexivity, boom-bust, test-the-thesis | original |
+| `master_druckenmiller` | master | yes | masters-adversarial | deep | Druckenmiller Lens | liquidity, concentration, eighteen-months-ahead | original |
+| `master_fisher` | master | yes | masters-value-classic | deep | Fisher Lens | scuttlebutt, growth-quality, r-and-d | original |
 | `master_munger` | master | yes | masters-value | deep | Munger Lens | inversion, mental-models, failure-paths | ai-berkshire (MIT) |
+| `master_thorp` | master | yes | masters-quant | deep | Thorp Lens | kelly-sizing, edge-and-odds, risk-of-ruin | original |
+| `master_asness` | master | yes | masters-quant | deep | Asness Factor Lens | factor-exposure, value-momentum-quality, is-it-just-beta | original |
+| `master_dalio` | master | yes | masters-adversarial | deep | Dalio Lens | debt-cycle, machine-view, regime | original |
+| `master_duan_yongping` | master | yes | masters-value | deep | Duan Yongping Lens | business-model, stop-doing-list, corporate-culture | ai-berkshire (MIT) |
+| `master_lynch` | master | yes | masters-value-classic | deep | Peter Lynch Lens | category-first, peg, story-in-two-minutes | original |
+| `master_li_lu` | master | yes | masters-value | deep | Li Lu Lens | ten-year-certainty, civilization-trend, management-integrity | ai-berkshire (MIT) |
+| `master_marks` | master | yes | masters-value-classic | deep | Howard Marks Lens | second-level-thinking, cycle-position, risk-is-permanent-loss | original |
+| `master_short_seller` | master | yes | masters-adversarial | deep | Short Seller Lens | forensic-accounting, crowding, borrow | original |
+| `master_klarman` | master | yes | masters-value-classic | deep | Klarman Lens | absolute-return, cash-as-option, bottom-up | original |
 | `source_fidelity` | verifier | yes | verify | fast | Source Fidelity Verifier | citation, primary-source | original |
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 2 masters, 21 files.
+Totals: 11 evidence analysts, 3 debate roles, 17 masters, 36 files.
 
 ## Provenance
 
