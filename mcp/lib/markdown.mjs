@@ -6,6 +6,7 @@ import { isChineseLanguage } from "./lang.mjs";
 import { bullets, clip, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
+import { personaTitle, registry } from "./personas/registry.mjs";
 
 export function renderPacketMarkdown(packet, index) {
   const claims = packet.claims.length
@@ -47,6 +48,91 @@ export function renderPacketMarkdown(packet, index) {
     "### Raw Output / Prompt",
     fence(packet.raw_text || "", "text"),
   ].join("\n");
+}
+
+/**
+ * A recorded master opinion, rendered so a reader can see what the lens actually said.
+ *
+ * Master opinions were stored, gated for completeness and weighted into the synthesis, and
+ * then rendered nowhere: a run could select ten lenses, pass every gate, and emit a report
+ * in which none of them were readable. `out_of_scope` is included deliberately — a method
+ * declining to judge is a finding, and hiding it is how a bench looks unanimous.
+ */
+export function renderMasterMarkdown(opinion, lang) {
+  if (!opinion) return "";
+  const title = masterTitle(opinion.master, lang);
+  return [
+    `## ${title}`,
+    "",
+    `- ID: ${opinion.master}`,
+    `- Stance: ${opinion.stance || "unknown"}`,
+    `- Verdict: ${opinion.verdict || ""}`,
+    `- Confidence: ${opinion.confidence || "low"}`,
+    opinion.thread_id ? `- Visible thread ID: ${opinion.thread_id}` : "",
+    "",
+    "### Summary",
+    opinion.summary || "",
+    "",
+    "### Key Findings",
+    bullets(opinion.key_findings),
+    "",
+    "### Disagreements With The Analysts",
+    bullets(opinion.disagreements),
+    "",
+    "### Disqualifiers Triggered",
+    bullets(opinion.disqualifiers_triggered),
+    "",
+    "### What Would Change My Mind",
+    bullets(opinion.what_would_change_my_mind),
+    "",
+    "### Sources",
+    (opinion.source_ids || []).length ? (opinion.source_ids || []).map((id) => `- ${id}`).join("\n") : "- None",
+  ].filter((line) => line !== "").join("\n");
+}
+
+/**
+ * Printed above every rendered bench, in the report's language.
+ *
+ * Master seats share a base model, an evidence brief and a context window, so their errors
+ * are correlated and their agreement is not independent confirmation. Published measurements
+ * put LLM error correlation above 60%, which is why a tally of concurring seats is the
+ * weakest thing a council produces and the dissenting seat is the informative one. Stating
+ * this next to the opinions is the difference between a bench and a vote count.
+ */
+export function masterCorrelationNote(run) {
+  const opinions = run?.master_opinions || [];
+  if (!opinions.length) return "";
+  const stances = new Map();
+  for (const opinion of opinions) {
+    const key = opinion.stance || "unknown";
+    stances.set(key, (stances.get(key) || 0) + 1);
+  }
+  const spread = [...stances.entries()].map(([stance, n]) => `${stance}=${n}`).join(", ");
+  const zh = isChineseLanguage(run?.language);
+  return zh
+    ? [
+      "> **这些席位不是独立样本。** 它们共享同一个基础模型、同一份证据简报和同一个上下文，",
+      `> 因此错误是相关的。本次立场分布（${spread}）**不能当作票数来计算**：一致本身是预期结果，`,
+      "> 不是发现。有信息量的是分歧席位，以及它的分歧来自信息差还是方法差。",
+    ].join("\n")
+    : [
+      "> **These seats are not independent samples.** They share a base model, an evidence",
+      `> brief and a context window, so their errors are correlated. The stance spread (${spread})`,
+      "> **is not a vote count**: agreement is the expected outcome, not a finding. The",
+      "> informative seat is the dissenting one, and why it dissents.",
+    ].join("\n");
+}
+
+/** Registry title when the persona resolves, the raw id when it does not. */
+function masterTitle(id, lang) {
+  if (!id) return "Master";
+  try {
+    const persona = registry().get(id);
+    const title = personaTitle(persona, lang);
+    return title && title !== id ? `${title} (${id})` : id;
+  } catch {
+    return id;
+  }
 }
 
 export function renderDebateRounds(rounds) {
@@ -163,6 +249,17 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
     "",
     ...run.packets.map(renderPacketMarkdown),
   ];
+  const opinions = run.master_opinions || [];
+  if (opinions.length) {
+    sections.push(
+      "",
+      "# Master Bench",
+      "",
+      masterCorrelationNote(run),
+      "",
+      ...opinions.map((opinion) => renderMasterMarkdown(opinion, run.language)),
+    );
+  }
   if (debate.bull || debate.bear || debate.manager) {
     sections.push(
       "",
@@ -192,6 +289,9 @@ export function writeAnalystMarkdownFiles(run, debate = {}) {
   ];
   for (const [role, packet] of debateFiles) {
     if (packet) writeFileSync(join(dir, `${role}.md`), `${renderDebateMarkdown({ ...packet, role })}\n`);
+  }
+  for (const opinion of run.master_opinions || []) {
+    writeFileSync(join(dir, `${opinion.master}.md`), `${renderMasterMarkdown(opinion, run.language)}\n`);
   }
 }
 
@@ -242,6 +342,10 @@ export function writeArtifactIndex(run, debate = {}) {
     debate.bull ? `- bull_researcher: ${artifacts.analyst_markdown.bull_researcher}` : "",
     debate.bear ? `- bear_researcher: ${artifacts.analyst_markdown.bear_researcher}` : "",
     debate.manager ? `- portfolio_manager: ${artifacts.analyst_markdown.portfolio_manager}` : "",
+    ...((run.master_opinions || []).length
+      ? ["", "## Master Bench Markdown Files", "",
+        ...(run.master_opinions || []).map((o) => `- ${o.master} (${o.stance || "unknown"}): ${join(runPath(run.run_id), `${o.master}.md`)}`)]
+      : []),
   ].filter(Boolean);
   writeFileSync(artifacts.artifact_index_md, `${lines.join("\n")}\n`);
   return artifacts.artifact_index_md;

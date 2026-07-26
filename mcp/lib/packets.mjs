@@ -218,6 +218,47 @@ export function managerFallback(run, userPrompt = "") {
 }
 
 /**
+ * Common ways a caller says a stance that is not one of the four we store.
+ *
+ * Mapping these is not politeness. An unmapped value used to fall through to "cautious",
+ * which is a real stance carrying real weight -- so a caller writing "avoid" got a seat
+ * that looked deliberate and voted. Ten such seats render as unanimity that no master
+ * produced.
+ */
+const STANCE_SYNONYMS = new Map([
+  ["long", "constructive"], ["bullish", "constructive"], ["buy", "constructive"],
+  ["positive", "constructive"], ["overweight", "constructive"],
+  ["neutral", "cautious"], ["hold", "cautious"], ["mixed", "cautious"], ["wait", "cautious"],
+  ["short", "opposed"], ["bearish", "opposed"], ["sell", "opposed"], ["avoid", "opposed"],
+  ["negative", "opposed"], ["underweight", "opposed"],
+  ["n/a", "out_of_scope"], ["na", "out_of_scope"], ["skip", "out_of_scope"],
+  ["abstain", "out_of_scope"], ["unknown", "out_of_scope"],
+]);
+
+/**
+ * Never silently invent a stance.
+ *
+ * Anything we cannot map becomes `out_of_scope`, which weights.mjs already treats as
+ * carrying zero weight. Guessing "cautious" for an unrecognised value manufactures a
+ * confident-looking seat out of a caller's typo; declining to score it does not.
+ */
+export function coerceStance(value, masterId = "") {
+  if (MASTER_STANCES.includes(value)) return value;
+  if (typeof value === "string") {
+    const mapped = STANCE_SYNONYMS.get(value.trim().toLowerCase());
+    if (mapped) return mapped;
+  }
+  if (value !== undefined && value !== null && value !== "") {
+    process.emitWarning(
+      `alphacouncil: unrecognised master stance ${JSON.stringify(value)}`
+      + `${masterId ? ` from ${masterId}` : ""}; recorded as out_of_scope (zero weight). `
+      + `Allowed: ${MASTER_STANCES.join(", ")}.`
+    );
+  }
+  return "out_of_scope";
+}
+
+/**
  * A master's opinion. Deliberately NOT a debate packet: a master issues no rating and
  * declares no winner. out_of_scope is a first-class stance -- "by my method this name is
  * outside what I can judge" is a conclusion, not an abstention.
@@ -229,7 +270,7 @@ export function normalizeMasterOpinion(packet, masterId, run, raw = "") {
     symbol: run.symbol,
     as_of: run.as_of,
     verdict: typeof packet?.verdict === "string" ? packet.verdict : "",
-    stance: MASTER_STANCES.includes(packet?.stance) ? packet.stance : "cautious",
+    stance: coerceStance(packet?.stance, masterId),
     summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
     key_findings: list(packet?.key_findings),
     disagreements: list(packet?.disagreements),

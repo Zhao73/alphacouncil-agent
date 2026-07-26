@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { LIMITS, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
+import { LIMITS, MASTER_STANCES, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
@@ -136,7 +136,11 @@ export function tools() {
       properties: {
         run_id: { type: "string" },
         master: { type: "string", enum: masterIds },
-        packet: { type: "object" },
+        packet: {
+          type: "object",
+          description: `The master_opinion packet. stance MUST be one of ${MASTER_STANCES.join(" | ")} -- anything else is recorded as out_of_scope and carries zero weight, so a seat whose stance does not survive normalization silently stops voting. Common synonyms (long/bullish, neutral/hold, short/bearish/avoid, n/a/abstain) are mapped for you.`,
+          properties: { stance: { type: "string", enum: MASTER_STANCES } },
+        },
         thread_id: { type: "string" },
       },
       required: ["run_id", "master", "packet"],

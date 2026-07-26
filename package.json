@@ -62,6 +62,8 @@
     ".opencode/command/",
     ".grok/commands/",
     "docs/INSTALL.md",
+    "docs/plans/",
+    "docs/roadmap.md",
     "SECURITY.md",
     "CONTRIBUTING.md"
   ]

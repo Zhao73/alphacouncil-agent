@@ -84,13 +84,29 @@ test("out_of_scope is preserved as a stance rather than coerced", async () => {
   assert.ok(existsSync(join(runDir, "master_buffett.json")));
 });
 
-test("an unknown stance falls back to cautious instead of passing through", async () => {
+// This used to fall back to "cautious", which is a real stance carrying real weight: a
+// caller's typo became a seat that looked deliberate and voted. Ten of them render as a
+// unanimity no master produced. Declining to score an unrecognised value is the safe
+// failure; inventing a confident one is not.
+test("an unrecognised stance is recorded as out_of_scope, not as a vote", async () => {
   const result = structured(await server.callTool("record_master_opinion", {
     run_id: runId,
     master: "master_munger",
     packet: { verdict: "v", stance: "wildly bullish", summary: "s" },
   }));
-  assert.equal(result.opinion.stance, "cautious");
+  assert.equal(result.opinion.stance, "out_of_scope");
+});
+
+test("stances a caller plausibly writes are mapped rather than discarded", async () => {
+  const cases = [["long", "constructive"], ["avoid", "opposed"], ["hold", "cautious"], ["N/A", "out_of_scope"]];
+  for (const [given, expected] of cases) {
+    const result = structured(await server.callTool("record_master_opinion", {
+      run_id: runId,
+      master: "master_munger",
+      packet: { verdict: "v", stance: given, summary: "s" },
+    }));
+    assert.equal(result.opinion.stance, expected, `${given} should normalize to ${expected}`);
+  }
 });
 
 // The point of running masters before the debate: the bull and bear must answer them.
