@@ -38,8 +38,13 @@ A council is anywhere from 7 to 44 seats. That range is the user's time and mone
 choosing silently is wrong in both directions: pick small and the bench they were promised
 never runs, pick everything and a one-line question costs a full fan-out.
 
-Present the three presets with their seat counts and relative cost, and say that they can
-instead name individual analysts and a master roster. Then wait for the answer.
+**Show the named roster, not three abstractions.** `list_council_options` returns every
+analyst with what it covers and every master school with its members. Put those in front of
+the user and let them pick: whole schools, individual seats, or all of them. The presets are
+shortcuts offered alongside the list, not the only way to choose.
+
+Naming the seats is not decoration. A preset labelled "32 seats" hid the fact that five
+masters were never in the roster it selected, and nobody could see it without counting.
 
 **Do not ask when they have already told you.** A user who named a roster, said "run
 everything", said "just be quick", or is repeating a run with the same shape has answered;
@@ -47,8 +52,11 @@ asking again is an interruption, not diligence.
 
 How to ask, per host:
 
-- **Claude Code** — use `AskUserQuestion` with the presets as options.
-- **Codex, OpenCode, Grok Build** — ask in chat as a short numbered list and wait for a reply.
+- **Claude Code** — `AskUserQuestion`. One question for the analysts, one for the master
+  bench with `multiSelect: true` over the six schools, each option naming its members. Six
+  schools fit where twenty-one individual lenses do not, and the names are still visible.
+- **Codex, OpenCode, Grok Build** — print the two tables and ask them to reply with the
+  seats or schools they want, or "all".
 
 Two things to say plainly when you ask:
 

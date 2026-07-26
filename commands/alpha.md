@@ -43,8 +43,10 @@ is where the spend is.
 
 ## Full council
 
-1. **Ask which preset first.** Call `list_council_options` and present the three with their
-   seat counts. A council is 7 to 44 seats and that range is the user's time and money.
+1. **Show the roster and let them pick.** Call `list_council_options` and put the named
+   analysts and the six master schools in front of the user — whole schools, individual
+   seats, or all. Presets are shortcuts shown alongside, not the only way to choose. A
+   council is 7 to 44 seats and that range is the user's time and money.
    **Skip the question when the request already answered it** — a named roster, "everything",
    "be quick". A confirmation nobody needed is an interruption.
 2. Follow `skills/alphacouncil-agent/SKILL.md` from Stage 0. Do not improvise a shorter

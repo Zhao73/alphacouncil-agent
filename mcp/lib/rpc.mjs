@@ -582,16 +582,37 @@ export async function handleToolCall(id, params) {
   }
   if (name === "list_council_options") {
     const data = councilOptions({ language: args.language || "English" });
-    const rows = data.presets.map((p) => [
-      p.id, p.label, `${p.seats} seats`, `~${p.rough_minutes}m`, p.good_for,
+    const zh = /中文|chinese|zh/i.test(String(args.language || ""));
+    // Named seats, not three abstractions. A user choosing what to spend on should see who
+    // is in the room; "standard, 32 seats" hides both the composition and the omissions --
+    // it hid five masters that the preset never actually ran.
+    const analystRows = data.analysts.map((a) => [
+      a.id, a.title, a.in_default ? (zh ? "默认" : "default") : (zh ? "可选" : "optional"), a.covers || "-",
+    ]);
+    const masterRows = data.master_rosters.map((r) => [
+      r.roster, String(r.count), r.members.map((m) => m.id.replace("master_", "")).join(", "),
     ]);
     const text = [
-      table(["Preset", "What runs", "Seats", "Rough cost", "Good for"], rows, { title: "Choose a council" }),
+      table(
+        zh ? ["席位", "职责", "是否默认", "覆盖"] : ["Seat", "Role", "In default", "Covers"],
+        analystRows, { title: zh ? `分析师 — ${data.analysts.length} 位可选，默认 ${data.default_analysts.length} 位` : `Analysts — ${data.analysts.length} available, ${data.default_analysts.length} in the default fan-out`, zh },
+      ),
       "",
-      `Master rosters: ${data.master_rosters.map((r) => `${r.roster} (${r.count})`).join(" · ")} — ${data.all_masters_count} lenses in total.`,
-      `Analysts: ${data.analysts.length} available, ${data.default_analysts.length} in the default fan-out.`,
+      table(
+        zh ? ["学派名册", "人数", "成员"] : ["School", "Count", "Members"],
+        masterRows, { title: zh ? `大师议席 — 共 ${data.all_masters_count} 位` : `Master bench — ${data.all_masters_count} lenses`, zh },
+      ),
       "",
-      "Ask the user which they want before starting. Do not ask if they already said.",
+      table(
+        zh ? ["预设", "内容", "席位", "相对成本"] : ["Preset", "What runs", "Seats", "Relative cost"],
+        data.presets.map((p) => [p.id, p.label, `${p.seats}`, `~${p.rough_minutes}`]),
+        { title: zh ? "快捷预设（也可以自己点名）" : "Shortcuts — or name the seats yourself", zh },
+      ),
+      "",
+      zh
+        ? "把上面的名单给用户看，让他们**自己勾选**：可以按学派名册选、可以点名单个席位、也可以全选。预设只是快捷方式，不是唯一选项。用户已经说清楚要什么就别问。"
+        : "Show the user these lists and let them **pick**: by school, by individual seat, or all of them. "
+          + "The presets are shortcuts, not the only way to choose. Do not ask if they already said.",
     ].join("\n");
     sendResult(id, jsonContent(text, data));
     return;
