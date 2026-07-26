@@ -37,6 +37,7 @@
   "files": [
     "mcp/",
     "personas/",
+    "knowledge/",
     "data/",
     "skills/",
     "docs/report-contract.md",
