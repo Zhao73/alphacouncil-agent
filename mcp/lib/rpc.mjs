@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
 import { LIMITS, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
-import { RpcCode, methodNotFound, toRpcError } from "./errors.mjs";
+import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
 import { sweepStaleOutputs } from "./codex.mjs";
@@ -14,6 +14,8 @@ import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { fetchOptionsChain } from "./options.mjs";
+import { getMarketNarrative } from "./narrative.mjs";
+import { fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
 import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
@@ -154,6 +156,29 @@ export function tools() {
         as_of: { type: "string", description: "ISO date used to compute days-to-expiry. Defaults to today." },
       },
       required: ["symbol"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("get_market_narrative", "What story the market is currently telling itself, read from keyless news feeds (Federal Reserve, SEC, WSJ, CNBC, Yahoo) and cross-checked against the macro tape. Returns ranked themes with their share of coverage, dated and linked sample headlines, and for each theme the actual market series that would corroborate it. Headline counts measure ATTENTION, never truth: where a theme leads coverage and its series has not moved, that divergence is the finding. Every item must carry a timestamp inside the window or it is reported as excluded. Themes come from a fixed lexicon, so a genuinely new narrative lands in unclassified_headlines rather than being discovered, and the output says so.", {
+      type: "object",
+      properties: {
+        days: { type: "number", description: "Recency window in days. Defaults to 7." },
+        as_of: { type: "string", description: "ISO date treated as now. Defaults to today." },
+        extra_queries: {
+          type: "array", items: { type: "string" },
+          description: "Up to 4 extra Google News queries to fold in, e.g. a sector or a country.",
+        },
+        top: { type: "number", description: "How many themes to return. Defaults to 6." },
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("get_news", "Dated headlines for one symbol, one search query, or one company's SEC filings, from keyless feeds (Yahoo Finance RSS, Google News RSS, EDGAR Atom). Every item must carry a parsable timestamp inside the window; undated and out-of-window items are counted and sampled under excluded_outside_window rather than being shown as recent. Filings are the one source here that cannot be spun, so prefer them for anything material.", {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Ticker for the Yahoo per-name feed." },
+        query: { type: "string", description: "Free-text Google News query, e.g. 'HBM supply Samsung'." },
+        cik: { type: "string", description: "SEC CIK for the filings feed." },
+        forms: { type: "string", description: "Filing type for the CIK feed. Defaults to 8-K." },
+        days: { type: "number", description: "Recency window in days. Defaults to 14." },
+        as_of: { type: "string", description: "ISO date treated as now. Defaults to today." },
+      },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("record_verifier_verdict", "Record one Stage 2b verifier outcome against the seat that cited the claim. Verdicts that failed verification (contradicted, disagree, refuted) automatically reduce that seat's weight in the portfolio-manager synthesis; cannot_confirm and source_unreachable reduce it less. A seat is down-weighted, never silently erased.", {
       type: "object",
@@ -473,6 +498,32 @@ export async function handleToolCall(id, params) {
       `${data.symbol} options: ${data.contracts_with_iv}/${data.contracts_total} contracts with usable IV, `
       + `front ATM IV ${front ? (front.atm_iv * 100).toFixed(1) + "% at " + front.dte + "d" : "unavailable"}, `
       + `put/call OI ${data.open_interest.put_call_ratio ?? "n/a"}. Delayed. IV percentile is not computable from this snapshot.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "get_market_narrative") {
+    const data = await getMarketNarrative(args || {});
+    const lead = data.themes[0];
+    sendResult(id, jsonContent(
+      `Market narrative over ${data.window_days}d: ${data.headlines_in_window} headlines in window `
+      + `(${data.excluded_outside_window} excluded as stale or undated). `
+      + (lead ? `Leading theme: ${lead.label.en} at ${lead.share_of_coverage_pct}% of coverage. ` : "No theme matched. ")
+      + `${data.unclassified_headlines} headlines matched no known theme.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "get_news") {
+    const specs = [];
+    if (args.symbol) specs.push(tickerNewsFeed(args.symbol));
+    if (args.query) specs.push(queryNewsFeed(args.query));
+    if (args.cik) specs.push(filingsFeed(args.cik, args.forms || "8-K"));
+    if (!specs.length) throw invalidParams("get_news needs at least one of symbol, query or cik");
+    const data = await fetchFeeds(specs, { days: args.days ?? 14, asOf: args.as_of ?? null });
+    sendResult(id, jsonContent(
+      `${data.items.length} headlines in the last ${args.days ?? 14}d from ${data.feeds.filter((f) => f.ok).length}/${data.feeds.length} feeds; `
+      + `${data.excluded_outside_window} excluded as stale or undated.`,
       data,
     ));
     return;

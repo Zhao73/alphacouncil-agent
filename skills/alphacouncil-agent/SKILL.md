@@ -45,6 +45,7 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - `quant_factor`
    - `valuation_long_short`
    - `news_industry_management`
+   - `market_narrative`
    - `insider_sec`
    - `ib_event_analysis`
    - `bull_researcher`
