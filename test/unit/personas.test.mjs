@@ -349,13 +349,17 @@ test("the default fan-out is eight analysts, not eleven", () => {
   // The three removed roles were merged, not dropped: their subject matter has to
   // survive inside the role that absorbed it.
   const reg = shippedPersonas();
-  for (const [absorbed, into] of [
-    ["earnings call", "earnings_deep_dive"],
-    ["sell-side", "forward_expectations"],
-    ["human commentary", "news_industry_management"],
+  // Each absorbing seat must both declare the absorption and actually carry the topic.
+  // The declaration alone could be a comment; the topic alone could be a coincidence.
+  for (const [topic, into] of [
+    [/earnings call|the call\b/, "earnings_deep_dive"],
+    [/sell-side|target-price/, "forward_expectations"],
+    [/practitioner|industry voices/, "news_industry_management"],
   ]) {
     const body = reg.get(into).bodies.en.toLowerCase();
-    assert.match(body, new RegExp(absorbed.toLowerCase()), `${into} must still cover ${absorbed}`);
+    assert.match(body, /absorbed the former standalone/,
+      `${into} must state which role it absorbed, so a reader knows where the topic went`);
+    assert.match(body, topic, `${into} must still carry the absorbed topic, not just claim to`);
   }
   for (const gone of ["earnings_call_transcript", "sell_side_revisions", "management_industry_voices"]) {
     assert.equal(reg.get(gone), undefined, `${gone} should no longer exist as a separate persona`);

@@ -114,12 +114,27 @@ export function masterPrompt(masterId, run) {
   const language = run.language || "English";
   const values = { symbol: run.symbol, as_of: run.as_of, language };
 
+  const chinese = isChineseLanguage(language);
+  // Masters see the same established facts the analysts saw, not only what the analysts
+  // chose to report. A master's value is a different selection from the same facts --
+  // Munger looking at incentives, Burry at the notes -- and reading only the analysts'
+  // packets destroys exactly that. It also means one weak packet would bias all 21 seats
+  // identically, which is the worst kind of error: large and perfectly correlated.
+  const grounded = groundingBlock(run.grounding, language);
+  const packetLabel = chinese
+    ? "以下是分析师席位的证据包。这是**其他席位对同一批事实的解读**，不是事实本身。"
+      + "你可以不同意他们的读法，但必须说明你依据的是上面哪一条原始事实。"
+    : "Below are the analyst seats' evidence packets. These are **other seats' readings of the "
+      + "same facts**, not the facts themselves. You may disagree with a reading, but say which "
+      + "established fact above your disagreement rests on.";
+
   return [
     render(personaPrompt(reg.get("_master_base"), language), values),
     `Master: ${personaTitle(persona, language)} (${persona.id})`,
     render(personaPrompt(persona, language), values),
     `Walk-away conditions you must check explicitly: ${(persona.disqualifiers || []).join(" | ")}`,
-    `Evidence JSON: ${JSON.stringify(compactEvidence(run))}`,
+    grounded,
+    `${packetLabel}\nEvidence JSON: ${JSON.stringify(compactEvidence(run))}`,
   ].filter(Boolean).join("\n\n");
 }
 
