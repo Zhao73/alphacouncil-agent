@@ -215,3 +215,27 @@ test("the dilution rule actually computes, rather than skipping forever", async 
   assert.equal(dilution.value, 40);
   assert.equal(dilution.passed, false);
 });
+
+// Nothing in the reader caches one company's facts, so a second company cannot leak into a
+// first. This pins that: fetchCompanyFacts takes a CIK and returns fresh data, and the
+// module-level state that does exist is the SEC ticker list, the TWSE dataset and a rate
+// limiter -- none of it per-company. Asserted on fixtures so it runs offline.
+test("evaluating one company cannot leak into another", async () => {
+  const { evaluateRules } = await import("../../mcp/lib/screen.mjs");
+  const ten = (v) => Array.from({ length: 10 }, () => v);
+  // Enough history that rules actually compute -- comparing two all-skip signatures would
+  // pass no matter what the reader did.
+  const A = facts({ NetIncomeLoss: ten(10), StockholdersEquity: ten(100), Revenues: ten(200) });
+  const B = facts({ NetIncomeLoss: ten(90), StockholdersEquity: ten(100), Revenues: ten(200) });
+
+  const first = evaluateRules(A, {});
+  assert.ok(first.evaluated_count > 0, "the fixture must compute something to be worth comparing");
+  evaluateRules(B, {});
+  const again = evaluateRules(A, {});
+
+  const signature = (r) => r.rules.map((x) => `${x.id}:${x.skipped ? "skip" : x.value}`).join("|");
+  assert.equal(signature(first), signature(again),
+    "the same filings must evaluate identically regardless of what ran in between");
+  assert.notEqual(signature(first), signature(evaluateRules(B, {})),
+    "and different filings must not evaluate the same");
+});
