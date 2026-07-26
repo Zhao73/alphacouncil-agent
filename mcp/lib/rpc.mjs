@@ -15,6 +15,8 @@ import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
+import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
+import { table, mark, metricValue } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
@@ -163,6 +165,16 @@ export function tools() {
       },
       required: ["industry"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("market_financials", "Structured financials for ANY market, degrading in a stated order: keyless regulator feed (SEC for US, TWSE for Taiwan), then a feed needing a free key (DART for Korea, EDINET for Japan) reported as not-configured rather than pretended away, then quotes plus search which always work. Never returns an empty result silently -- it says which feed is missing, why, and what to use instead.", {
+      type: "object",
+      properties: { symbol: { type: "string", description: "Exchange symbol, e.g. 2408.TW, 000660.KS, 285A.T, 0700.HK." } },
+      required: ["symbol"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("market_coverage", "Ask up front what this pipeline can and cannot fetch for a set of symbols, before building a report on them. Returns per-symbol whether structured financials are available, summary-only, or absent, and which environment variable would unlock a market. Names without a feed are still researchable from documents -- but every figure taken that way has to be labelled as such.", {
+      type: "object",
+      properties: { symbols: { type: "array", items: { type: "string" } } },
+      required: ["symbols"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("compose_research_brief", "Assemble the hard facts BEFORE the analysts search: quote, SEC filer profile, the mechanical screen with every computed metric, macro readings, and the industry chain map. Returns both the structured data and a prompt block that tells an analyst these numbers are already established and that its search exists to explain, extend and challenge them -- with the rule that a searched number never silently overwrites a filed one. Pass the returned `grounding` object to plan_visible_run so every analyst prompt carries it.", {
       type: "object",
       properties: {
@@ -299,6 +311,43 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(lines.join("\n"), brief));
     return;
   }
+  if (name === "market_financials") {
+    const result = await fetchMarketFinancials(args.symbol);
+    let text;
+    if (result.financials) {
+      const f = result.financials;
+      const rows = [
+        ["Revenue", metricValue(f.revenue, f.currency)],
+        ["Gross profit", metricValue(f.gross_profit, f.currency)],
+        ["Operating income", metricValue(f.operating_income, f.currency)],
+        ["Net income", metricValue(f.net_income, f.currency)],
+        ["EPS", String(f.eps ?? "n/a")],
+      ];
+      text = [
+        table(["Line", `Value (${f.unit})`], rows,
+          { title: `${f.company_name} ${f.gregorian_year ?? ""}Q${f.period.quarter} -- ${f.source}` }),
+        `\n${f.note}`,
+      ].join("\n");
+    } else {
+      text = [
+        `${args.symbol} (${result.market}, ${result.regulator}): no structured feed.`,
+        result.guidance,
+        result.fallback?.quote ? `Quote: ${result.fallback.quote.price}. ${result.fallback.caveat}` : "",
+      ].filter(Boolean).join("\n");
+    }
+    sendResult(id, jsonContent(text, result));
+    return;
+  }
+  if (name === "market_coverage") {
+    const coverage = coverageFor(args.symbols || []);
+    const rows = coverage.rows.map((r) => [r.symbol, r.market, r.regulator, r.structured_financials, r.needs_env || r.reason?.slice(0, 50) || "-"]);
+    const text = [
+      table(["Symbol", "Market", "Regulator", "Structured financials", "Blocker"], rows, { title: "Data coverage" }),
+      `\n${coverage.note}`,
+    ].join("\n");
+    sendResult(id, jsonContent(text, coverage));
+    return;
+  }
   if (name === "compose_research_brief") {
     const grounding = await gatherGrounding({
       symbol: args.symbol, cik: args.cik, industry: args.industry,
@@ -345,16 +394,31 @@ export async function handleToolCall(id, params) {
   }
   if (name === "screen_ticker") {
     const result = await screenTicker(args);
-    sendResult(id, jsonContent(explainResult(result, result.ticker), result));
+    const rows = result.rules.map((r) => (r.skipped
+      ? [r.label, "not computable", "-", "_skipped_"]
+      : [r.label, metricValue(r.value, r.unit), String(r.threshold), mark(r.passed)]));
+    const text = [
+      table(["Rule", "Measured", "Threshold", "Result"], rows, { title: `${result.ticker}: ${result.verdict}` }),
+      result.exemptions.length ? `\nExempted: ${result.exemptions.map((e) => `${e.rule} (${e.reason})`).join("; ")}` : "",
+      result.skipped_count ? `\n${result.skipped_count} rule(s) not computable from filings and NOT treated as passes.` : "",
+    ].filter(Boolean).join("\n");
+    sendResult(id, jsonContent(text, result));
     return;
   }
   if (name === "screen_candidates") {
     const result = await screenBatch({ candidates: args.candidates, asOf: args.as_of });
-    const lines = [
-      `Screened ${result.screened}: ${result.survivors.length} survive, ${result.eliminated.length} eliminated, ${result.unavailable.length} unavailable.`,
-      ...result.eliminated.map((e) => `  ${e.ticker} eliminated by ${e.reasons.map((r) => `${r.rule} = ${r.measured}${r.unit === "%" ? "%" : ` ${r.unit}`} vs ${r.threshold}`).join("; ")}`),
+    const rows = [
+      ...result.survivors.map((s2) => [s2.ticker, "survives", `${s2.rules_computed}/${s2.rules_total} rules`, "-"]),
+      ...result.eliminated.map((e) => [e.ticker, "**eliminated**", "-",
+        e.reasons.map((r) => `${r.rule} ${metricValue(r.measured, r.unit)} vs ${r.threshold}`).join("; ")]),
+      ...result.unavailable.map((u) => [u.ticker, "_unavailable_", "-", u.error?.slice(0, 60) ?? ""]),
     ];
-    sendResult(id, jsonContent(lines.join("\n"), result));
+    const text = [
+      table(["Ticker", "Verdict", "Coverage", "Eliminated by"], rows,
+        { title: `Screened ${result.screened}: ${result.survivors.length} survive, ${result.eliminated.length} eliminated` }),
+      "\nSurviving is not a recommendation -- these rules eliminate, they never select.",
+    ].join("\n");
+    sendResult(id, jsonContent(text, result));
     return;
   }
   if (name === "list_us_universe") {
