@@ -107,6 +107,25 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 完整报告写入 `~/.alphacouncil-agent/runs/<run_id>/final_report.md`。
 同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。
 
+### 斜杠命令
+
+**一个命令，`/alpha`。** 模式当参数 —— 只用记一个名字，而不是在上百条命令的菜单里找四个。
+
+| 输入 | 跑什么 | 额度消耗 |
+|---|---|---|
+| `/alpha MU` | 完整议会 —— 先问你跑哪个预设 | 每席一个子代理 |
+| `/alpha MU quick` | 4 分析师 + 辩论，无大师、无验证 | 7 席 |
+| `/alpha MU screen` | 只跑机械筛选 | **零** |
+| `/alpha MU options` | 隐含波动率期限结构、偏斜、持仓分布 | **零** |
+| `/alpha MU news` | 带日期的申报与新闻 | **零** |
+| `/alpha market AI` | 市场在讲什么故事 | **零** |
+| `/alpha` | 列出模式后停下 | **零** |
+
+标「零」的四个只调免 key 数据工具、**不启动任何子代理**，除了你敲的这一轮之外不消耗额度。议会模式每个席位起一个子代理，那是这个插件的全部成本所在。
+
+Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用户级的，拷贝一次：
+`mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
+
 ## 它能做什么
 
 默认是完整运行，不是精简摘要：

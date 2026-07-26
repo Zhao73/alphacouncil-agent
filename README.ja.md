@@ -107,6 +107,25 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 完全なレポートは `~/.alphacouncil-agent/runs/<run_id>/final_report.md` に書き出され、
 同じディレクトリに各アナリストの Markdown ファイルと `artifact_index.md` も保存されます。
 
+### スラッシュコマンド
+
+**コマンドは `/alpha` ひとつ。** モードは引数です —— 100 を超えるコマンド一覧の中から 4 つを探すのではなく、覚える名前はひとつだけです。
+
+| 入力 | 実行内容 | モデル消費 |
+|---|---|---|
+| `/alpha MU` | フル委員会 —— 先にどのプリセットか確認します | 席ごとに 1 サブエージェント |
+| `/alpha MU quick` | アナリスト 4 名＋討論。マスター陣なし、検証なし | 7 席 |
+| `/alpha MU screen` | 機械的スクリーニングのみ | **なし** |
+| `/alpha MU options` | IV ターム構造、スキュー、建玉分布 | **なし** |
+| `/alpha MU news` | 日付付きの提出書類とニュース | **なし** |
+| `/alpha market AI` | 市場が語っている物語 | **なし** |
+| `/alpha` | モード一覧を出して停止 | **なし** |
+
+**なし** と記した 4 つはキー不要のデータツールを呼ぶだけで、サブエージェントを一切起動しません。入力したそのターン以外に消費はありません。委員会モードは席ごとにサブエージェントを起動し、それがこのプラグインのコストのすべてです。
+
+Claude Code、OpenCode、Grok Build ではインストール後すぐ使えます。Codex の prompts はユーザースコープなので一度コピーしてください：
+`mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
+
 ## 何ができるか
 
 既定はフル実行であり、簡易サマリーではありません：

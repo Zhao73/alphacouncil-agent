@@ -49,6 +49,33 @@ that figures for those names must come from a primary document and be cited as s
 Run `node scripts/doctor.mjs` at any time to see which copy is running, whether the
 persona set loads, and what the data directory holds.
 
+## How to invoke it once installed
+
+One command, `/alpha`. Modes are arguments.
+
+```text
+/alpha MU              full council — asks which preset first
+/alpha MU quick        4 analysts + debate, no bench, no verification
+/alpha MU screen       mechanical filings screen only        (no model spend)
+/alpha MU options      IV term structure, skew, positioning  (no model spend)
+/alpha MU news         dated filings and headlines           (no model spend)
+/alpha market AI       what the market is talking about      (no model spend)
+/alpha                 lists the modes and stops             (no model spend)
+```
+
+The four marked *no model spend* call keyless data tools and spawn no subagents. **Start
+there** — they show real data at no cost, so you can see the shape of the thing before
+committing a fan-out. The council modes spawn one subagent per seat: 7 for `quick`, 32 for
+the standard preset, 44 for deep.
+
+Codex keeps prompts user-scoped rather than in the plugin, so copy it once:
+
+```bash
+mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/
+```
+
+`@alphacouncil-agent <question>` still works everywhere and does the same thing.
+
 ## Prerequisites
 
 - **Node.js ≥ 18** (the MCP server is ESM and uses modern Node APIs).

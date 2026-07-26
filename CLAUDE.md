@@ -19,6 +19,12 @@ Default behavior is full workflow. Do not downgrade to lite, smoke-test, or debu
 
 Also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with this plugin and applies the `addyosmani/agent-skills` style of explicit gates, anti-rationalizations, and exit criteria to AlphaCouncil runs. Do not treat it as an optional local setup step.
 
+## Invocation
+
+`/alpha <ticker>` runs the council; `/alpha` with no arguments lists its modes and stops.
+`quick`, `screen`, `options`, `news` and `market` select narrower modes, and the last four
+spawn no subagents at all.
+
 ## Analyst Roles
 
 Default evidence roles (the eight-seat default fan-out):
