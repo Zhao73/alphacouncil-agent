@@ -2,6 +2,20 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.5.1] — 2026-07-26
+
+### Added
+
+- **Slash commands**: `/alphacouncil`, `/alphacouncil-quick`, `/alphacouncil-screen` and
+  `/alphacouncil-market`, authored once and generated into every host's command directory.
+  0.5.0 shipped with no command directory at all, so the plugin could only be reached by
+  @-mention or by describing it in prose.
+
+### Fixed
+
+- The npm package did not carry the command directories, which meant an installed copy and
+  a checkout behaved differently.
+
 ## [0.5.0] — 2026-07-26
 
 Everything below is keyless: no API key, no account, no config file.
