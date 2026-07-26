@@ -418,3 +418,38 @@ test("every master states how it thinks, not just what it checks", () => {
     assert.match(m.bodies.en, /##\s*Who you are/, `${m.id} en needs a personality section`);
   }
 });
+
+// Verification runs on a budget. A verifier with no rule for choosing what to check will
+// check whatever is in front of it, and the layer becomes theatre: everything was verified
+// and the claim that mattered was not.
+test("every verifier states which claims are worth a pass and how it itself fails", () => {
+  const reg = shippedPersonas();
+  const verifiers = reg.ids("verifier").map((id) => reg.get(id));
+  assert.equal(verifiers.length, 3, "source_fidelity, rederivation and refuter");
+  for (const v of verifiers) {
+    assert.match(v.bodies.zh, /该验哪一条/, `${v.id} zh needs a claim-selection rule`);
+    assert.match(v.bodies.en, /Which claim to verify/, `${v.id} en needs a claim-selection rule`);
+    assert.match(v.bodies.zh, /你自己的失败模式/, `${v.id} zh must name its own failure mode`);
+    assert.match(v.bodies.en, /Your own failure mode/, `${v.id} en must name its own failure mode`);
+  }
+});
+
+// The refuter defaults to "this is wrong", which means it can find counter-evidence
+// against anything. Manufacturing a weakened verdict lowers that seat's weight for no
+// reason -- and weight moves the final rating, so this is not a cosmetic problem.
+test("the refuter is told that a stands verdict is a real result", () => {
+  const refuter = shippedPersonas().get("refuter");
+  assert.match(refuter.bodies.zh, /给 stands 不丢人/);
+  assert.match(refuter.bodies.en, /stands is not a failure/);
+  assert.match(refuter.bodies.zh, /强度必须\*\*不低于\*\*/, "counter-evidence must be at least as strong");
+  assert.match(refuter.bodies.en, /at least as strong/);
+});
+
+// get_options_chain is a snapshot with no history, so an IV-percentile claim cannot be
+// settled here. The seat that re-derives numbers has to know that before it tries.
+test("rederivation knows which claims this system cannot confirm", () => {
+  const r = shippedPersonas().get("rederivation");
+  assert.match(r.bodies.zh, /无历史/);
+  assert.match(r.bodies.en, /no history/);
+  assert.match(r.bodies.zh, /cannot_confirm/);
+});
