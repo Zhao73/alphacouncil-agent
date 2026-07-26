@@ -15,6 +15,7 @@ import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { getMarketNarrative } from "./narrative.mjs";
+import { getSocialPulse, verifyXPost } from "./social.mjs";
 import { fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
@@ -179,6 +180,22 @@ export function tools() {
         days: { type: "number", description: "Recency window in days. Defaults to 14." },
         as_of: { type: "string", description: "ISO date treated as now. Defaults to today." },
       },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("get_social_pulse", "Keyless retail and technical-community discussion for a name or theme, from Reddit (searched inside the equity subreddits, not site-wide), Hacker News, and any Bluesky handles supplied. IMPORTANT: X / Twitter has NO free discovery channel -- Nitter search is dead, the X API bills per post and xAI bills per call -- so this does NOT cover professional FinTwit, and Reddit is not a substitute for it. Mention volume measures attention, never correctness. Nothing here may enter a conclusion alone; it is a lead to be confirmed against a filing or recorded in open_questions.", {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Company name or theme to search for." },
+        symbol: { type: "string", description: "Used as the query when query is absent." },
+        subreddits: { type: "array", items: { type: "string" }, description: "Override the default equity subreddits." },
+        handles: { type: "array", items: { type: "string" }, description: "Bluesky handles to read. Search needs auth; reading a named account does not." },
+        days: { type: "number", description: "Recency window in days. Defaults to 7." },
+        as_of: { type: "string", description: "ISO date treated as now." },
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("verify_x_post", "Confirm that one X post id exists and read back its text, author and date. Use it whenever a report or search result quotes a post: a decoded snowflake timestamp proves nothing, because any invented 19-digit id decodes to a plausible date, so existence has to be checked separately. This is verification only and cannot search or discover posts.", {
+      type: "object",
+      properties: { id: { type: "string", description: "Numeric X post id." } },
+      required: ["id"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("record_verifier_verdict", "Record one Stage 2b verifier outcome against the seat that cited the claim. Verdicts that failed verification (contradicted, disagree, refuted) automatically reduce that seat's weight in the portfolio-manager synthesis; cannot_confirm and source_unreachable reduce it less. A seat is down-weighted, never silently erased.", {
       type: "object",
@@ -524,6 +541,25 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(
       `${data.items.length} headlines in the last ${args.days ?? 14}d from ${data.feeds.filter((f) => f.ok).length}/${data.feeds.length} feeds; `
       + `${data.excluded_outside_window} excluded as stale or undated.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "get_social_pulse") {
+    const data = await getSocialPulse(args || {});
+    sendResult(id, jsonContent(
+      `Social pulse for ${data.query ?? "(no query)"}: ${data.counts.reddit} Reddit, ${data.counts.hackernews} HN, `
+      + `${data.counts.bluesky} Bluesky over ${data.window_days}d. No free X discovery exists, so professional `
+      + `FinTwit is NOT covered. Mentions measure attention, not correctness.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "verify_x_post") {
+    const data = await verifyXPost(args.id);
+    sendResult(id, jsonContent(
+      data.exists ? `Post ${data.id} exists: @${data.author ?? "unknown"} on ${(data.created_at || "").slice(0, 10)}.`
+        : `Post ${data.id} could not be confirmed: ${data.reason}.`,
       data,
     ));
     return;

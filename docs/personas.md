@@ -18,6 +18,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `valuation_long_short` | analyst | yes | default | standard | Valuation & Long/Short Analyst | valuation, thesis, position-sizing | original |
 | `news_industry_management` | analyst | yes | default | fast | News & Industry Analyst | news, industry, management | original |
 | `market_narrative` | analyst | yes | full | fast | Market Narrative Analyst | narrative, positioning, macro-context | original |
+| `social_pulse` | analyst | yes | full | fast | Retail Sentiment and Crowding Analyst | sentiment, crowding, social | original |
 | `insider_sec` | analyst | yes | default | fast | Insider & SEC Filings Analyst | sec, form-4, filings, buyback | original |
 | `ib_event_analysis` | analyst | yes | default | fast | Banking Event Analyst | m-and-a, ecm, dilution, capital-allocation | original |
 | `_debate_base` | debate | no | - | deep | Debate role preamble | shared | original |
@@ -50,7 +51,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 10 evidence analysts, 3 debate roles, 21 masters, 40 files.
+Totals: 11 evidence analysts, 3 debate roles, 21 masters, 41 files.
 
 ## Provenance
 

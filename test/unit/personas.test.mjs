@@ -453,3 +453,16 @@ test("rederivation knows which claims this system cannot confirm", () => {
   assert.match(r.bodies.en, /no history/);
   assert.match(r.bodies.zh, /cannot_confirm/);
 });
+
+// This seat's danger is implying it saw social media when the one layer that matters --
+// professional FinTwit -- has no free channel and is entirely absent.
+test("the social seat declares the X blind spot rather than implying full coverage", () => {
+  const s = shippedPersonas().get("social_pulse");
+  assert.ok(s, "social_pulse must ship");
+  assert.match(s.bodies.zh, /Reddit 不是它的替代品/);
+  assert.match(s.bodies.en, /Reddit is not a substitute for it/);
+  assert.match(s.bodies.zh, /不许单独进入结论/, "social content must never stand alone in a conclusion");
+  assert.match(s.bodies.en, /may enter the conclusion on its own/);
+  // The optional seats belong to full, never to the default fan-out, which stays at eight.
+  assert.deepEqual(s.rosters, ["full"]);
+});
