@@ -388,7 +388,11 @@ test("masters-core seats at least ten and spans opposing schools", () => {
   // adversarial and quant schools to be present.
   const ids = core.map((p) => p.id);
   assert.ok(ids.includes("master_soros") || ids.includes("master_dalio"), "needs a macro/reflexivity lens");
-  assert.ok(ids.includes("master_short_seller"), "needs a short seller");
+  assert.ok(ids.includes("master_forensic_short"), "needs a forensic short seller");
+  // The lens is named for its method, not its stance. "Short seller" described a position
+  // while "Burry" described a person, so the two read as duplicates of each other -- and a
+  // reader reasonably assumed the anonymous one just was Burry.
+  assert.ok(ids.includes("master_burry"), "and the structural-mispricing lens is separate");
   assert.ok(ids.includes("master_simons") || ids.includes("master_asness"), "needs a quant lens");
   assert.ok(ids.includes("master_buffett"), "needs the value core");
 

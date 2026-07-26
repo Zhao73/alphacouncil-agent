@@ -39,9 +39,9 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `master_dalio` | master | yes | masters-adversarial, masters-core | deep | Dalio Lens | debt-cycle, machine-view, regime | original |
 | `master_duan_yongping` | master | yes | masters-value, masters-core | deep | Duan Yongping Lens | business-model, stop-doing-list, corporate-culture | ai-berkshire (MIT) |
 | `master_lynch` | master | yes | masters-value-classic, masters-core | deep | Peter Lynch Lens | category-first, peg, story-in-two-minutes | original |
+| `master_forensic_short` | master | yes | masters-adversarial, masters-core | deep | Forensic Short Seller Lens | forensic-accounting, crowding, borrow | original |
 | `master_li_lu` | master | yes | masters-value, masters-core | deep | Li Lu Lens | ten-year-certainty, civilization-trend, management-integrity | ai-berkshire (MIT) |
 | `master_marks` | master | yes | masters-value-classic, masters-core | deep | Howard Marks Lens | second-level-thinking, cycle-position, risk-is-permanent-loss | original |
-| `master_short_seller` | master | yes | masters-adversarial, masters-core | deep | Short Seller Lens | forensic-accounting, crowding, borrow | original |
 | `master_burry` | master | yes | masters-adversarial, masters-core | deep | Michael Burry Lens | primary-documents, contrarian, structural-short | original |
 | `master_klarman` | master | yes | masters-value-classic, masters-core | deep | Klarman Lens | absolute-return, cash-as-option, bottom-up | original |
 | `master_taleb` | master | yes | masters-options, masters-core | deep | Taleb Lens (Convexity and Tails) | tail-risk, convexity, options | original |
