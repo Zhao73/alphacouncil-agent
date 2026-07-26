@@ -2,6 +2,80 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.8.0] — 2026-07-27
+
+Minor rather than patch: **the master bench changes from prompt voices to method models,
+and a defect is fixed that manufactured consensus in every prior run.**
+
+A user asked why the masters never appear in the report. The answer turned out to be three
+problems wearing one coat, and the third is the one that mattered.
+
+### Fixed
+
+- **An unrecognised master stance was silently rewritten as `cautious`.** The enum check
+  fell through to a default and the default was a real stance carrying real weight, so a
+  caller writing `avoid`, `long` or `neutral` got a seat that looked deliberate and voted.
+  A ten-seat run whose opinions ranged from avoid to long **recorded `cautious` ten times**
+  and rendered as a unanimity nobody produced. Worse in the other direction: a mistyped
+  `out_of_scope`, which carries zero weight, would have been promoted to a full vote.
+  Unmappable values now record as `out_of_scope` and warn; plausible synonyms are mapped;
+  the tool schema states the enum so a caller can see it before guessing.
+- **Master opinions were rendered nowhere.** `markdown.mjs` contained no reference to
+  `master`. Opinions were recorded, gated for completeness and weighted into the synthesis,
+  and a run could select ten lenses, pass every gate, and publish a report in which none of
+  them were readable.
+- **`record_*` echoed the entire run on every call.** Payloads grew with each recording and
+  a late call in a twenty-one-seat run passed 240k characters — context exhaustion arriving
+  exactly when a run was nearly finished. They now return progress and a path to
+  `status.json`.
+- **The Bluesky handle loader silently returned an empty list**, because `readFileSync` was
+  never imported and the `catch` swallowed the `ReferenceError`.
+
+### Added
+
+- **Persona v2: method models, not impressions.** A master is now an eligibility gate, a
+  scoring function with cited thresholds, an evidence slice and a narrative — in that order,
+  with the model confined to the last. `docs/persona-v2-spec.md`,
+  `schemas/persona-v2.schema.json`.
+- **Four pilot packs** — Buffett, Duan Yongping, Marks, Taleb — each with its own gate rather
+  than its own adjectives. On the real NOK facts the Buffett method declines (a 20-F filer
+  has no long-run series) while the Taleb method acts (an option chain exists). Different
+  methods see different companies, which twenty-one prompts over one brief never could.
+- **The admission bar is enforced in the loader.** A corpus below 25 propositions / 5 primary
+  sources / 5 decisions / 3 failures / 10 vetoes / 10 counterfactuals is downgraded to
+  `operator_lens` and carries its shortfall. All four pilots are honestly below it. A display
+  name reading as a person, a doctrine rule citing no grade A/B source, and a threshold
+  without provenance are each refused.
+- **Swap experiments.** Name swap: renaming a pack moves no verdict. Policy swap: Taleb's
+  policy under Buffett's name judges as Taleb. The differentiation diagnostic returns `none`
+  for four renamed copies of one method, which is what makes `effective` on the real four
+  worth anything.
+- **Memory with both clauses of the leak rule** — `public_at <= as_of AND
+  memory_created_at <= as_of`. The second clause stops a model reading its own diary. Undated
+  records are excluded rather than assumed harmless, and a postmortem cannot be written
+  before the horizon it judges.
+- **Enforced evidence slices.** The frozen fact pack is shared and unoverridable; what each
+  method may read on top of it is filtered in code, not requested in a prompt.
+
+### Changed
+
+- **The bench prints dissent first**, and a correlation note above every bench states that
+  the seats share a base model and an evidence brief, so their agreement is not independent
+  confirmation and the stance spread is not a vote count. Unanimity is reported as the
+  absence of independent dissent.
+- **`master_bench` is a required report section**, conditional on a bench having run, so
+  screen and quick modes are not failed for omitting one they never selected.
+- **Curated Bluesky accounts** are configurable by file or environment and ship **empty**:
+  unverified handles would be invented sources inside a tool that exists to refuse them. X
+  remains uncovered and the payload says so.
+
+### Not yet wired
+
+The v2 engine is tested and shipped but the live council still runs the v1 prompt personas.
+Integration, the remaining seventeen masters, and `N_eff` — which needs resolved ground truth
+that does not exist yet — are next. Investment return is recorded as a long-run outcome and
+is never a gate.
+
 ## [0.6.0] — 2026-07-26
 
 Minor rather than patch: **every screened number changes.** Anyone comparing a result from
