@@ -9,6 +9,46 @@ plain MCP server in the Claude desktop app.
 
 ---
 
+
+## npm
+
+```bash
+npm install -g alphacouncil-agent
+```
+
+Then point any MCP host at the `alphacouncil-agent` binary. For Claude Code:
+
+```json
+{ "mcpServers": { "alphacouncil-agent": { "command": "alphacouncil-agent" } } }
+```
+
+For OpenCode, `command` takes an argv array:
+
+```json
+{ "mcp": { "alphacouncil-agent": { "type": "local", "command": ["alphacouncil-agent"] } } }
+```
+
+Or run it without installing: `npx alphacouncil-agent`.
+
+## Configuration: none required
+
+There is nothing to configure. Every core data source is keyless — SEC EDGAR for US
+filings, TWSE for Taiwan, Yahoo and Stooq for quotes and macro — and the package has no
+dependencies, so the install is the download and nothing else.
+
+Two optional free keys widen coverage. Without them the tools still answer; they report
+which market is missing a feed and which variable would unlock it, and analysts are told
+that figures for those names must come from a primary document and be cited as such.
+
+| Variable | Unlocks | Register |
+|---|---|---|
+| `ALPHACOUNCIL_DART_KEY` | Korean filings (Samsung, SK hynix) | <https://opendart.fss.or.kr> |
+| `ALPHACOUNCIL_EDINET_KEY` | Japanese filings (Kioxia, Tokyo Electron) | EDINET portal |
+| `ALPHACOUNCIL_SEC_USER_AGENT` | Your own SEC contact, advisable at volume | n/a |
+
+Run `node scripts/doctor.mjs` at any time to see which copy is running, whether the
+persona set loads, and what the data directory holds.
+
 ## Prerequisites
 
 - **Node.js ≥ 18** (the MCP server is ESM and uses modern Node APIs).
