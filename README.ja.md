@@ -113,15 +113,19 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 | 入力 | 実行内容 | モデル消費 |
 |---|---|---|
-| `/alpha MU` | フル委員会 —— 先にどのプリセットか確認します | 席ごとに 1 サブエージェント |
-| `/alpha MU quick` | アナリスト 4 名＋討論。マスター陣なし、検証なし | 7 席 |
-| `/alpha MU screen` | 機械的スクリーニングのみ | **なし** |
-| `/alpha MU options` | IV ターム構造、スキュー、建玉分布 | **なし** |
-| `/alpha MU news` | 日付付きの提出書類とニュース | **なし** |
-| `/alpha market AI` | 市場が語っている物語 | **なし** |
+| `/alpha <ticker>` | フル委員会 —— 先にどのプリセットか確認します | 席ごとに 1 サブエージェント |
+| `/alpha <ticker> quick` | アナリスト 4 名＋討論。マスター陣なし、検証なし | 7 席 |
+| `/alpha <ticker> screen` | 機械的スクリーニングのみ | **なし** |
+| `/alpha <ticker> options` | IV ターム構造、スキュー、建玉分布 | **なし** |
+| `/alpha <ticker> news` | 日付付きの提出書類とニュース | **なし** |
+| `/alpha market <theme>` | 市場が語っている物語 | **なし** |
 | `/alpha` | モード一覧を出して停止 | **なし** |
 
 **なし** と記した 4 つはキー不要のデータツールを呼ぶだけで、サブエージェントを一切起動しません。入力したそのターン以外に消費はありません。委員会モードは席ごとにサブエージェントを起動し、それがこのプラグインのコストのすべてです。
+
+上場銘柄なら何でも：`/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`。
+提出書類ベースのモードは米国登録企業が必要です。他市場は黙って空を返すのではなく `market_coverage` で対応状況を示します。
+
 
 Claude Code、OpenCode、Grok Build ではインストール後すぐ使えます。Codex の prompts はユーザースコープなので一度コピーしてください：
 `mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`

@@ -54,12 +54,12 @@ persona set loads, and what the data directory holds.
 One command, `/alpha`. Modes are arguments.
 
 ```text
-/alpha MU              full council — asks which preset first
-/alpha MU quick        4 analysts + debate, no bench, no verification
-/alpha MU screen       mechanical filings screen only        (no model spend)
-/alpha MU options      IV term structure, skew, positioning  (no model spend)
-/alpha MU news         dated filings and headlines           (no model spend)
-/alpha market AI       what the market is talking about      (no model spend)
+/alpha <ticker>              full council — asks which preset first
+/alpha <ticker> quick        4 analysts + debate, no bench, no verification
+/alpha <ticker> screen       mechanical filings screen only        (no model spend)
+/alpha <ticker> options      IV term structure, skew, positioning  (no model spend)
+/alpha <ticker> news         dated filings and headlines           (no model spend)
+/alpha market <theme>       what the market is talking about      (no model spend)
 /alpha                 lists the modes and stops             (no model spend)
 ```
 

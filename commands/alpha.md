@@ -22,13 +22,20 @@ Request: **$ARGUMENTS**
 When `$ARGUMENTS` is empty, print exactly this and stop:
 
 ```
-/alpha MU              full council — asks which preset first
-/alpha MU quick        4 analysts + debate, no bench, no verification
-/alpha MU screen       mechanical filings screen only        (no model spend)
-/alpha MU options      IV term structure, skew, positioning  (no model spend)
-/alpha MU news         dated filings and headlines           (no model spend)
-/alpha market AI       what the market is talking about      (no model spend)
+/alpha <TICKER>          full council — asks which preset first
+/alpha <TICKER> quick    4 analysts + debate, no bench, no verification
+/alpha <TICKER> screen   mechanical filings screen only        (no model spend)
+/alpha <TICKER> options  IV term structure, skew, positioning  (no model spend)
+/alpha <TICKER> news     dated filings and headlines           (no model spend)
+/alpha market <theme>    what the market is talking about      (no model spend)
+
+examples
+  /alpha AAPL            /alpha 0700.HK quick     /alpha 7203.T news
+  /alpha NVDA screen     /alpha market rates      /alpha "is TSM cheap?"
 ```
+
+Any listed equity. Filings-based modes need a US filer; for other markets say which market it
+is and use `market_coverage`, rather than returning nothing.
 
 Say plainly that the four marked modes call keyless data tools and spawn no subagents, so
 they cost nothing beyond this turn. The council modes spawn one subagent per seat, and that

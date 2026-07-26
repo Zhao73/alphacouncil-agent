@@ -76,12 +76,12 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha MU` | Full council — asks which preset first | one subagent per seat |
-| `/alpha MU quick` | 4 analysts + debate, no bench, no verification | 7 seats |
-| `/alpha MU screen` | Mechanical filings screen only | **none** |
-| `/alpha MU options` | IV term structure, skew, positioning | **none** |
-| `/alpha MU news` | Dated filings and headlines | **none** |
-| `/alpha market AI` | What the market is talking about | **none** |
+| `/alpha <ticker>` | Full council — asks which preset first | one subagent per seat |
+| `/alpha <ticker> quick` | 4 analysts + debate, no bench, no verification | 7 seats |
+| `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
+| `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
+| `/alpha <ticker> news` | Dated filings and headlines | **none** |
+| `/alpha market <theme>` | What the market is talking about | **none** |
 | `/alpha` | Lists the modes and stops | **none** |
 
 The four marked **none** call keyless data tools and spawn no subagents, so they cost

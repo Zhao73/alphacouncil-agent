@@ -130,17 +130,21 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha MU` | Full council — asks which preset first | one subagent per seat |
-| `/alpha MU quick` | 4 analysts + debate, no bench, no verification | 7 seats |
-| `/alpha MU screen` | Mechanical filings screen only | **none** |
-| `/alpha MU options` | IV term structure, skew, positioning | **none** |
-| `/alpha MU news` | Dated filings and headlines | **none** |
-| `/alpha market AI` | What the market is talking about | **none** |
+| `/alpha <ticker>` | Full council — asks which preset first | one subagent per seat |
+| `/alpha <ticker> quick` | 4 analysts + debate, no bench, no verification | 7 seats |
+| `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
+| `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
+| `/alpha <ticker> news` | Dated filings and headlines | **none** |
+| `/alpha market <theme>` | What the market is talking about | **none** |
 | `/alpha` | Lists the modes and stops | **none** |
 
 The four marked **none** call keyless data tools and spawn no subagents, so they cost
 nothing beyond the turn you type them in. The council modes spawn one subagent per seat, and
 that is the entire cost of running this.
+
+Any listed equity: `/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`.
+Filings-based modes need a US filer; other markets are reported through `market_coverage` rather than silently returning nothing.
+
 
 Available in Claude Code, OpenCode and Grok Build as soon as the plugin is installed. Codex keeps
 its prompts user-scoped, so copy it once: `mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
