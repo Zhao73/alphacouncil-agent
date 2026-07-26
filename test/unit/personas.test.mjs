@@ -388,18 +388,18 @@ test("every master still belongs to a school roster as well as core", () => {
   }
 });
 
-// The pipeline has no options-chain feed. Without an explicit refusal in the prompt, a
-// model asked for an options view will supply IV, skew and Greeks from training data --
-// stale numbers that read as live ones. Every options master must decline in both langs.
-test("options masters refuse to invent chain data they cannot fetch", () => {
+// get_options_chain gives IV, skew and open interest but no history, so IV percentile is
+// uncomputable. Left unstated, a model asked "is IV high?" answers from training data and
+// the stale number reads exactly like a live one.
+test("options masters name the chain feed and refuse to invent IV history", () => {
   const reg = shippedPersonas();
   const members = selectRoster(reg, { kind: "master", roster: "masters-options" });
   assert.ok(members.length >= 3, "the options bench needs at least three lenses");
-  for (const member of members) {
-    assert.match(member.bodies.zh, /没有期权链数据源/, `${member.id} zh must declare the missing feed`);
-    assert.match(member.bodies.zh, /禁止给出具体的 IV 数字/, `${member.id} zh must forbid inventing IV`);
-    assert.match(member.bodies.en, /no options-chain feed/, `${member.id} en must declare the missing feed`);
-    assert.match(member.bodies.en, /Do not give a specific IV number/, `${member.id} en must forbid inventing IV`);
+  for (const m of members) {
+    assert.match(m.bodies.zh, /get_options_chain/, `${m.id} zh must name the tool`);
+    assert.match(m.bodies.en, /get_options_chain/, `${m.id} en must name the tool`);
+    assert.match(m.bodies.zh, /无法从本系统计算/, `${m.id} zh must refuse IV percentile`);
+    assert.match(m.bodies.en, /cannot be computed here/, `${m.id} en must refuse IV percentile`);
   }
 });
 

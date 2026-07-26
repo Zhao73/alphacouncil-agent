@@ -71,16 +71,18 @@
 - **一个头寸如果同时依赖三个 Greeks 都朝有利方向走，那它不是一个交易，是一个祈祷。**
 - 说清这个头寸的盈利主要来自哪一个 Greek，其余的是成本还是风险。
 
-## 数据约束（必须先声明）
+## 数据约束（先读这一节）
 
-本系统**没有期权链数据源**。你拿不到隐含波动率、偏斜、未平仓量、Greeks、期限结构中的任何一项。
+你**有**期权链数据：调用 `get_options_chain`，得到 CBOE 延迟报价的摘要——ATM 隐含波动率期限结构、25 delta 偏斜、未平仓量与成交量的看跌看涨比、未平仓量最集中的行权价、以及 ATM 买卖价差占中值的比例。
 
-因此：
-- **禁止给出具体的 IV 数字、偏斜数值或 Greeks 值。** 这些数在你的训练数据里存在，但它们是旧的，且与今天无关。
-- 你的产出必须是**条件性的**：「若 IV 处于 X 区间，则该结构合理；若处于 Y 区间，则不合理」。把判断规则给出来，让使用者自己去券商端读数填入。
-- 明确在 open_questions 里列出：需要哪几个具体数字才能把你的条件判断落成结论。
+你**没有**的是：
+- **IV 历史**。这是快照，不是时间序列。所以「当前 IV 处于 52 周 80 分位」这类判断**无法从本系统计算**，必须留在 open_questions 里，不许估。
+- **实现波动率**。不在这个源里。若你的论证依赖 IV 与实现波动率的比较，明确说明需要从价格历史另行计算。
+- **非美标的**。CBOE 只覆盖美国上市，其余会返回 unavailable。此时不要用美国同类标的的 IV 代替，直接报缺失。
 
-这不是缺陷，这是纪律。一个编造出来的 IV 会让整份期权分析变成有害的精确假象。
+两条硬纪律：
+1. **iv = 0 的合约已被过滤**（已过期或深度实值）。如果你在别处看到 IV 为 0，那是缺失值不是低波动，不要读成低波动。
+2. **报价是延迟的**。任何基于价差的执行成本估计都要注明这一点。
 
 ## 结构建议（条件式）
 
@@ -121,16 +123,18 @@ Any options position must be able to answer: what is making you money?
 - **A position that needs all three to move your way is not a trade, it is a prayer.**
 - Say which single Greek is the profit source and whether the others are costs or risks.
 
-## Data constraint -- declare this first
+## Data constraint -- read this first
 
-This system has **no options-chain feed**. You have no implied volatility, no skew, no open interest, no Greeks, no term structure.
+You **do** have chain data: call `get_options_chain` for a CBOE delayed-quote digest -- the ATM implied-volatility term structure, 25-delta skew, put/call ratios on open interest and volume, the strikes holding the most open interest, and the ATM bid-ask spread as a share of mid.
 
-Therefore:
-- **Do not give a specific IV number, skew value or Greek.** Those numbers exist in your training data, but they are stale and unrelated to today.
-- Your output must be **conditional**: "if IV is in range X this structure makes sense; in range Y it does not." Give the decision rule and let the user read the live number from their broker and fill it in.
-- List in open_questions exactly which numbers are needed to turn your conditional into a conclusion.
+What you **do not** have:
+- **IV history.** This is a snapshot, not a series. So "IV is in the 80th percentile of its 52-week range" **cannot be computed here** and must stay in open_questions rather than being estimated.
+- **Realised volatility.** Not in this feed. If your argument depends on comparing implied against realised, say plainly that it must be computed separately from price history.
+- **Non-US names.** CBOE covers US listings only; anything else returns unavailable. Do not substitute a comparable US name's IV -- report the gap.
 
-This is not a shortcoming, it is discipline. A fabricated IV turns the whole options section into a harmful illusion of precision.
+Two hard rules:
+1. **Contracts with iv = 0 are already filtered out** (expired or deep in the money). If you see a zero IV anywhere else, that is a missing value and not low volatility. Never read it as low volatility.
+2. **Quotes are delayed.** Any execution-cost estimate built on the spread must say so.
 
 ## Structure suggestions, stated conditionally
 

@@ -13,6 +13,7 @@ import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
+import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
 import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
@@ -145,6 +146,14 @@ export function tools() {
           description: "Subset of macro blocks. Defaults to all.",
         },
       },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("get_options_chain", "Keyless DELAYED options chain digest from CBOE for one US-listed symbol: ATM implied-volatility term structure, 25-delta skew, put/call ratios on open interest and volume, the strikes holding the most open interest, and the ATM bid-ask spread as a share of mid. Contracts reporting iv = 0 (expired or deep in the money) are excluded rather than read as zero volatility. This is a snapshot with no history, so IV percentile or rank CANNOT be computed from it and must stay an open question. Non-US listings are generally absent and are reported as unavailable, never guessed.", {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "US-listed underlying, e.g. MU or BRK.B." },
+        as_of: { type: "string", description: "ISO date used to compute days-to-expiry. Defaults to today." },
+      },
+      required: ["symbol"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("record_verifier_verdict", "Record one Stage 2b verifier outcome against the seat that cited the claim. Verdicts that failed verification (contradicted, disagree, refuted) automatically reduce that seat's weight in the portfolio-manager synthesis; cannot_confirm and source_unreachable reduce it less. A seat is down-weighted, never silently erased.", {
       type: "object",
@@ -449,6 +458,21 @@ export async function handleToolCall(id, params) {
     const total = data.blocks.reduce((sum, block) => sum + block.members.length, 0);
     sendResult(id, jsonContent(
       `Macro snapshot: ${total - data.unavailable.length}/${total} series, ${data.derived.filter((d) => d.available).length}/${data.derived.length} derived measures.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "get_options_chain") {
+    const data = await fetchOptionsChain(args.symbol, { asOf: args.as_of });
+    if (!data.available) {
+      sendResult(id, jsonContent(`No options chain for ${data.symbol}: ${data.reason}`, data));
+      return;
+    }
+    const front = data.term_structure[0];
+    sendResult(id, jsonContent(
+      `${data.symbol} options: ${data.contracts_with_iv}/${data.contracts_total} contracts with usable IV, `
+      + `front ATM IV ${front ? (front.atm_iv * 100).toFixed(1) + "% at " + front.dte + "d" : "unavailable"}, `
+      + `put/call OI ${data.open_interest.put_call_ratio ?? "n/a"}. Delayed. IV percentile is not computable from this snapshot.`,
       data,
     ));
     return;
