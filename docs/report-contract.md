@@ -93,3 +93,18 @@ Mentioning it only in the source table does not count.
 `report_quality.json` lists each section with `status` (`ok` / `missing` / `placeholder` /
 `too_thin`), the heading it matched, its line, and its body size, so a `needs_revision`
 result says which section failed and why.
+
+### Sections the gate checks that were previously undocumented
+
+- **Earnings-call management signals** — what management committed to, and whether the last
+  commitment was met. The Q&A matters more than the prepared remarks.
+- **Short-term view (1–4 weeks)**, **medium-term view (3–6 months)** and **long-term view
+  (12 months)** — three separate sections, because a name can be a poor trade and a good
+  hold at the same time and collapsing them hides that.
+- **Price levels** — three bands with the condition attached to each. "The cycle position is
+  undetermined" does not excuse omitting them; it changes what the bands are conditional on.
+
+The authoritative list is `REPORT_SECTIONS` in `mcp/lib/constants.mjs`. The gate parses
+heading structure, not substrings: a section needs a real level-2 or level-3 heading, a
+title matching one of its aliases, and body text above a per-section minimum that is not a
+placeholder such as `N/A`, `TBD` or `待补充`.

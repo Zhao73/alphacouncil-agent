@@ -2,7 +2,7 @@
 
 Notable changes per release. Dates are UTC.
 
-## [Unreleased]
+## [0.5.0] — 2026-07-26
 
 Everything below is keyless: no API key, no account, no config file.
 
@@ -41,8 +41,38 @@ Everything below is keyless: no API key, no account, no config file.
 - Verifiers gained a claim-selection rule (verification runs on a budget), their own failure
   modes, and knowledge of which claims this system cannot settle at all.
 - `screen_ticker` accepts a `ticker` and resolves the CIK itself; `cik` is no longer required.
+- **The master bench and the verifier pass now run on every host.** They were described only
+  in the Claude Code section of `SKILL.md`, so on Codex and OpenCode the twenty-one lenses
+  and three verifiers never executed at all — the same plugin was a materially different
+  product depending on where it ran.
+- **`list_council_options` and a mandatory Stage 0.** A council is 7 to 44 seats, which is
+  the user's time and money, so the host asks which one to run instead of choosing silently
+  — and is told when not to ask, because a confirmation nobody needed is an interruption.
+- **Grok Build support**, verified against grok 0.2.101: `.grok/config.toml` (TOML, not
+  JSON), 14 generated `.grok/agents` definitions, and `AGENTS.md` as the project prompt. A
+  repo-local server stays unstarted until the folder is trusted, which is a security prompt
+  rather than a misconfiguration.
+- `plan_visible_run` gathers the established facts itself. It previously accepted them only
+  if the caller passed them and nothing told the caller to, so on the visible path — the one
+  Claude Code uses — every analyst and every master ran with no filings, no quote and no
+  macro, and nothing in the output said so.
+- A run that selects a master bench and records no opinions is now `incomplete`, and the
+  banner names the seats that never reported.
 
 ### Fixed
+
+- **The npm package shipped no host agent files.** `.claude/agents/`, `.opencode/agent/` and
+  `.grok/agents/` were all outside `files`, so an install gave you the server and no
+  subagent definitions for three of the four hosts.
+- **`CLAUDE.md` listed three roles that no longer exist** — `sell_side_revisions`,
+  `earnings_call_transcript` and `management_industry_voices` — and it is loaded as an
+  instruction file, so an agent reading it would dispatch seats that had been merged away.
+- Bilingual `{en, zh}` labels rendered as `[object Object]` next to real numbers, which reads
+  as a broken field rather than a missing one. A contract test now renders every surface in
+  both languages against object-label fixtures.
+- `SKILL.md` named none of the data tools, including `screen_ticker`. It is the runtime
+  instruction Codex, OpenCode and Grok Build load, so a tool it never names is a tool those
+  hosts never call. Nothing failed; the capability was invisible.
 
 - `screen_ticker` offered a `ticker` property in its schema and threw on anything without a
   `cik`, so a caller passing the documented argument got an error.

@@ -88,3 +88,35 @@ test("every host is told to ask which council to run before starting", () => {
   assert.match(stage0, /Do not ask when they have already told you/,
     "re-asking a user who already answered is an interruption");
 });
+
+// CLAUDE.md is an instruction file, not a description of one. It listed three roles that
+// had been merged away -- sell_side_revisions, earnings_call_transcript and
+// management_industry_voices -- so an agent reading it would try to dispatch seats that do
+// not exist. Stale docs are a bug when the doc is loaded as a prompt.
+test("CLAUDE.md names the roles that actually exist", async () => {
+  const { DEFAULT_TASKS, DEBATE_ROLES } = await import("../../mcp/lib/constants.mjs");
+  const { registry } = await import("../../mcp/lib/personas/registry.mjs");
+  const claude = readFileSync(repoFile("CLAUDE.md"), "utf8");
+
+  for (const id of [...DEFAULT_TASKS, ...DEBATE_ROLES]) {
+    assert.ok(claude.includes(`\`${id}\``), `CLAUDE.md must name ${id}`);
+  }
+  const known = new Set(registry().all().map((p) => p.id));
+  const cited = [...claude.matchAll(/`([a-z][a-z0-9_]{4,40})`/g)].map((m) => m[1]);
+  const ghosts = cited.filter((id) => /^(market_data|earnings_|forward_|sell_side|quant_|valuation_|news_|management_|insider_|ib_|macro_|social_|bull_|bear_|portfolio_)/.test(id) && !known.has(id));
+  assert.deepEqual(ghosts, [], `CLAUDE.md dispatches roles that no longer exist: ${ghosts.join(", ")}`);
+});
+
+// Three of the four hosts read generated agent files, and none of them were in the npm
+// package: an install gave you the server and no subagent definitions.
+test("the npm package ships the files every host actually reads", () => {
+  const pkg = JSON.parse(readFileSync(repoFile("package.json"), "utf8"));
+  for (const needed of [
+    "mcp/", "personas/", "skills/",
+    ".claude-plugin/", ".codex-plugin/", ".mcp.json",
+    ".claude/agents/", "opencode.json", ".opencode/agent/",
+    ".grok/agents/", ".grok/config.toml",
+  ]) {
+    assert.ok(pkg.files.includes(needed), `package.json files must include ${needed}`);
+  }
+});

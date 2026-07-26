@@ -21,19 +21,26 @@ Also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with this p
 
 ## Analyst Roles
 
-Default evidence roles:
+Default evidence roles (the eight-seat default fan-out):
 
 - `market_data`
-- `earnings_deep_dive`
-- `forward_expectations`
-- `sell_side_revisions`
-- `earnings_call_transcript`
+- `earnings_deep_dive` — absorbed the former standalone earnings-call role
+- `forward_expectations` — absorbed the former standalone sell-side-revisions role
 - `quant_factor`
 - `valuation_long_short`
-- `news_industry_management`
-- `management_industry_voices`
+- `news_industry_management` — absorbed the former standalone industry-voices role
 - `insider_sec`
 - `ib_event_analysis`
+
+Optional analysts, on the `full` roster rather than the default:
+
+- `macro_regime`
+- `market_narrative`
+- `social_pulse`
+
+Master bench: 21 lenses across six rosters, run between evidence and debate on **every**
+host. Verifiers: `source_fidelity`, `rederivation`, `refuter`. See `skills/alphacouncil-agent/SKILL.md`
+for the workflow and `docs/personas.md` for the full roster.
 
 Debate roles:
 
