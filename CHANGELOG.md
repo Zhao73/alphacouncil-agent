@@ -2,6 +2,37 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.6.0] — 2026-07-26
+
+Minor rather than patch: **every screened number changes.** Anyone comparing a result from
+0.5.x will see different figures, and the 0.5.x ones were wrong.
+
+### Fixed
+
+- **Quarterly and stub periods were counted as years.** A 10-K reports quarterly and
+  acquisition-stub periods alongside annual ones, and the reader keyed only on the end date.
+  Lumentum's fiscal 2015 became ten separate "years" — nine quarters and stubs plus the real
+  363-day period — so every multi-year rule averaged quarterly income against annual equity.
+  LITE's ten-year ROE read 2.26% and is **-1.64%**; MU's read 10.03% and is **12.83%**.
+  Periods must now span 300–400 days, wide enough for a 53-week fiscal year, with instant
+  balance-sheet facts exempt because they have no duration.
+- **Tag aliases stopped at the first match instead of merging.** Revenue moved to the ASC 606
+  tag in 2022, so a company filing since 2013 appeared to have four years of history — which
+  then fired a "listed under ten years" exemption on a decade-old filer. Aliases now merge,
+  the preferred one winning a contested year and a later filing winning within one alias.
+- **The dilution rule had never once been computed.** Share counts live under the XBRL
+  `shares` unit and the reader asked for `USD`, so it reported `skipped` for every company
+  ever screened — seven rules advertised, six ever computed, and a skip is indistinguishable
+  from a genuine data gap. AAPL now computes 7 of 7.
+
+### Testing
+
+- The existing dilution test passed throughout because its fixture also put share counts
+  under `USD` — the same mistake as the reader, so the two agreed with each other. The
+  fixture now uses the unit XBRL actually uses.
+- A regression test pins that one company's filings cannot leak into another's result.
+  Verified live as well: LITE, then AAPL, then LITE again, identical to the digit.
+
 ## [0.5.5] — 2026-07-26
 
 ### Fixed
