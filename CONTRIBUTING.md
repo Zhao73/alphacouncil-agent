@@ -42,3 +42,24 @@ were using the Codex headless path or the visible workflow.
 
 By contributing, you agree that your contributions are licensed under the
 [MIT License](LICENSE).
+
+## Commit messages
+
+Write them from a file or a quoted heredoc, never inline in a shell string:
+
+```bash
+git commit -F /tmp/msg.txt
+# or
+git commit -F - <<'MSG'
+...
+MSG
+```
+
+Backticks in a commit message are command substitution to the shell, which silently deletes
+the text between them before git ever sees it. It happened once here, to a sentence naming
+a CLI subcommand; the words were simply gone from the published history. Quoting the
+heredoc delimiter (`<<'MSG'`, not `<<MSG`) disables expansion.
+
+If a message does go out wrong, prefer `git notes add` over `git commit --amend` once the
+commit is an ancestor of a published tag. Rewriting it leaves the release pointing at an
+object that no longer exists, which is a worse outcome than an imperfect message.
