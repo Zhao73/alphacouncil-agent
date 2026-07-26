@@ -402,3 +402,15 @@ test("options masters refuse to invent chain data they cannot fetch", () => {
     assert.match(member.bodies.en, /Do not give a specific IV number/, `${member.id} en must forbid inventing IV`);
   }
 });
+
+// A lens without a stated way of thinking degenerates into a checklist, and a bench of
+// checklists agrees with itself -- which is the failure this whole roster exists to avoid.
+test("every master states how it thinks, not just what it checks", () => {
+  const reg = shippedPersonas();
+  const masters = reg.ids("master").map((id) => reg.get(id));
+  assert.ok(masters.length >= 20, "the bench should not silently shrink");
+  for (const m of masters) {
+    assert.match(m.bodies.zh, /##\s*你是谁/, `${m.id} zh needs a personality section`);
+    assert.match(m.bodies.en, /##\s*Who you are/, `${m.id} en needs a personality section`);
+  }
+});

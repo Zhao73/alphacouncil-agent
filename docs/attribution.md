@@ -84,3 +84,16 @@ documented methodologies**, not statements by, endorsements from, or affiliation
 those individuals. They are written as analytical lenses — what each approach asks and
 what would make it walk away — rather than as impersonations. No private communication,
 proprietary research, or non-public information from any of them is used.
+
+## On the master lenses
+
+`personas/masters/` contains 21 lenses named after real investors, traders and authors.
+Each one is a reconstruction of a publicly documented method — a simulation of how that
+person's stated approach would read the evidence in front of it, and what they would
+plausibly decide. **None of it is a quotation, a statement, a view, or an endorsement by
+the named person, and no file contains anything they actually said.** The wording,
+the ordering of concerns and the stated failure modes were written for this project.
+
+The methods themselves are drawn from published books, letters and interviews, which is
+why the lenses can be checked against the record. The voice cannot be, and is not offered
+as anything but a device for making a committee disagree with itself usefully.
