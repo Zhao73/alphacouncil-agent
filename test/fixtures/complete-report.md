@@ -40,6 +40,13 @@ Strategic Transaction coverage is present even when no transaction exists.
 ## Valuation Range
 Valuation coverage is present.
 
+## Price Levels
+| Band | Implies | Action | Basis |
+|---|---|---|---|
+| above 120 | odds unfavourable | do not touch | above the historical range |
+| 80-100 | thesis holds with margin | start a position | earnings floor of the worst year |
+| below 70 | materially undervalued | add unless the thesis broke | asset floor |
+
 ## Key Catalysts
 Catalyst coverage is present.
 

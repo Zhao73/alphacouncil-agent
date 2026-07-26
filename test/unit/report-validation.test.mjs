@@ -118,3 +118,36 @@ test("a report with every heading but no body fails on thinness, not on structur
   assert.ok(missing.some((m) => m.startsWith("placeholder section:")), missing.join("; "));
   assert.ok(missing.some((m) => m.startsWith("report too short")));
 });
+
+// Three master lenses demand a price condition -- Marks asks at what price it stops being
+// "leave it", Graham asks for a calculable floor, Thorp asks for a size -- but the PM
+// could skip it entirely with "the cycle position is undetermined". A research tool that
+// never produces a price is not usable for a decision.
+test("a report without price levels is rejected", () => {
+  const without = completeReport.replace(/## Price Levels[\s\S]*?(?=## Key Catalysts)/, "");
+  assert.notEqual(without, completeReport, "fixture text must actually change");
+  assert.ok(
+    failed(without).some((m) => m.startsWith("missing section: price_levels")),
+    failed(without).join("; "),
+  );
+});
+
+test("a price section that only says the cycle is undetermined is too thin to pass", () => {
+  const evasive = completeReport.replace(/## Price Levels[\s\S]*?(?=## Key Catalysts)/, "## Price Levels\nTBD\n\n");
+  const missing = failed(evasive);
+  assert.ok(
+    missing.some((m) => m.startsWith("placeholder section: price_levels") || m.startsWith("section too thin: price_levels")),
+    missing.join("; "),
+  );
+});
+
+test("the PM is told price levels are mandatory and are not a target price", async () => {
+  const { registry } = await import("../../mcp/lib/personas/registry.mjs");
+  const pm = registry().get("portfolio_manager");
+  assert.match(pm.bodies.en, /Price levels are mandatory/);
+  assert.match(pm.bodies.en, /not a target price/);
+  assert.match(pm.bodies.zh, /价位参考是必须给的/);
+  // The evasion this closes, named explicitly in the persona.
+  assert.match(pm.bodies.en, /does not excuse omitting price levels/);
+  assert.match(pm.bodies.zh, /不是免除给价位的理由/);
+});

@@ -59,6 +59,12 @@ export const REPORT_SECTIONS = [
   { id: "short_interest", aliases: ["short interest", "borrow"], min_body: 8 },
   { id: "strategic_transaction", aliases: ["战略交易", "strategic transaction", "banking event"], min_body: 8 },
   { id: "valuation", aliases: ["估值", "valuation"], min_body: 8 },
+  // Required, and deliberately not called "target price". A single number pretends to a
+  // precision nobody has; what a reader needs is the price at which the case changes.
+  // Three master lenses already demand this -- Marks asks at what price it stops being
+  // "leave it", Graham asks for a calculable floor, Thorp asks for a size -- and the PM
+  // used to be able to skip it with "the cycle position is undetermined".
+  { id: "price_levels", aliases: ["价位", "入场价位", "price levels", "entry level", "价格条件"], min_body: 30 },
   { id: "catalysts", aliases: ["催化剂", "catalyst"], min_body: 8 },
   { id: "risks", aliases: ["风险", "risk"], min_body: 8 },
   { id: "position", aliases: ["仓位", "position"], min_body: 8 },

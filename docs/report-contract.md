@@ -32,6 +32,7 @@ run writes:
 - short interest / borrow / options information when available
 - strategic transaction or banking-event analysis when relevant
 - valuation range
+- price levels: a table of price bands with the condition that triggers each, not a single target price
 - key catalysts
 - major risks
 - position recommendation
