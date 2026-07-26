@@ -3,6 +3,7 @@ import { getMacroSnapshot } from "./macro.mjs";
 import { screenTicker } from "./screen.mjs";
 import { resolveIndustry, industryCoverage } from "./industry.mjs";
 import { fetchSubmissions } from "./sec.mjs";
+import { fetchMarketFinancials, coverageFor, marketFor } from "./markets.mjs";
 
 /**
  * Hard facts, assembled before any analyst starts searching.
@@ -80,6 +81,16 @@ export async function gatherGrounding({ symbol, cik, industry, macro = true, asO
     }));
   }
 
+  // Non-US symbols never reach the SEC path, so without this they arrived at the analyst
+  // with nothing but a price.
+  if (symbol && marketFor(symbol)?.id !== "US") {
+    jobs.push(safely("market financials", () => fetchMarketFinancials(symbol)).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      out.market = r.value;
+      if (!r.value.financials) out.unavailable.push(`structured financials for ${symbol}: ${r.value.guidance}`);
+    }));
+  }
+
   if (industry) {
     const curated = resolveIndustry(industry);
     out.industry = {
@@ -99,6 +110,10 @@ export async function gatherGrounding({ symbol, cik, industry, macro = true, asO
   }
 
   await Promise.all(jobs);
+
+  // Coverage across every symbol in play, so a report cannot quietly become US-only.
+  const inPlay = [symbol, ...(out.industry?.participants || []).map((p) => p.symbol)].filter(Boolean);
+  if (inPlay.length) out.coverage = coverageFor([...new Set(inPlay)]);
   return out;
 }
 
@@ -154,6 +169,20 @@ export function groundingBlock(grounding, language = "English") {
   if (grounding.macro?.derived?.length) {
     lines.push(chinese ? "- 宏观读数：" : "- Macro readings:");
     for (const d of grounding.macro.derived) lines.push(`  - ${d.label}: ${d.value}`);
+  }
+  if (grounding.market?.financials) {
+    const f = grounding.market.financials;
+    lines.push(chinese
+      ? `- ${f.source} 申报（${f.gregorian_year ?? f.period.year}Q${f.period.quarter}，${f.currency} ${f.unit}）：营收 ${f.revenue?.toLocaleString() ?? "n/a"}｜毛利 ${f.gross_profit?.toLocaleString() ?? "n/a"}｜营业利益 ${f.operating_income?.toLocaleString() ?? "n/a"}｜EPS ${f.eps ?? "n/a"}`
+      : `- ${f.source} filing (${f.gregorian_year ?? f.period.year}Q${f.period.quarter}, ${f.currency} ${f.unit}): revenue ${f.revenue?.toLocaleString() ?? "n/a"} | gross profit ${f.gross_profit?.toLocaleString() ?? "n/a"} | operating income ${f.operating_income?.toLocaleString() ?? "n/a"} | EPS ${f.eps ?? "n/a"}`);
+  }
+  if (grounding.coverage?.rows?.length) {
+    const none = grounding.coverage.rows.filter((r) => r.structured_financials === "no").map((r) => r.symbol);
+    if (none.length) {
+      lines.push(chinese
+        ? `- 以下标的没有结构化财务源，任何关于它们的财务数字必须来自你读到的原始文件并注明出处：${none.join("、")}`
+        : `- No structured financial feed for: ${none.join(", ")}. Any financial figure for these must come from a primary document you actually read, and be cited as such.`);
+    }
   }
   if (grounding.industry?.participants?.length) {
     const names = grounding.industry.participants.map((p) => `${p.name}${p.symbol ? ` (${p.symbol})` : " (unlisted)"}`);

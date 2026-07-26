@@ -73,3 +73,39 @@ test("a prompt without grounding is unchanged, so the golden still holds", () =>
     taskPrompt("quant_factor", "MU", "2026-07-26", "", "en-US", null),
   );
 });
+
+// ---- non-US coverage inside the grounding block ----------------------------
+
+test("names with no structured feed are named, with the rule for citing them", () => {
+  const block = groundingBlock({
+    quote: { symbol: "2408.TW", price: 100, source: "yahoo" },
+    coverage: {
+      rows: [
+        { symbol: "2408.TW", structured_financials: "summary only" },
+        { symbol: "000660.KS", structured_financials: "no" },
+        { symbol: "285A.T", structured_financials: "no" },
+      ],
+    },
+    unavailable: [],
+  }, "English");
+  assert.match(block, /No structured financial feed for: 000660\.KS, 285A\.T/);
+  assert.match(block, /primary document you actually read/);
+  assert.ok(!block.includes("2408.TW, 000660"), "a summary-only feed is not the same as none");
+});
+
+test("a non-US filing is rendered with its currency, unit and calendar", () => {
+  const block = groundingBlock({
+    quote: { symbol: "2408.TW", price: 100, source: "yahoo" },
+    market: {
+      financials: {
+        source: "TWSE OpenAPI", company_name: "南亞科", currency: "TWD",
+        unit: "thousands as filed", gregorian_year: 2026, period: { quarter: 1 },
+        revenue: 49086932, gross_profit: 33325482, operating_income: 30111283, eps: 8.41,
+      },
+    },
+    unavailable: [],
+  }, "English");
+  assert.match(block, /TWSE OpenAPI filing \(2026Q1, TWD thousands as filed\)/);
+  assert.match(block, /49,086,932/);
+  assert.match(block, /EPS 8\.41/);
+});
