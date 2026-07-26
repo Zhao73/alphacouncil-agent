@@ -18,6 +18,7 @@ so a host that ignores the generated agent files still gets correct prompts.
 | Claude Code | `.claude-plugin/plugin.json`, `.mcp.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
 | Codex | `.codex-plugin/plugin.json`, `.mcp.json` | — | `skills/` via the plugin manifest |
 | OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | see the caveat below |
+| Grok Build | `.grok/config.toml` | `.grok/agents/alphacouncil-*.md` | `AGENTS.md` (this file) |
 
 ### OpenCode
 
@@ -46,6 +47,27 @@ MCP tools and `.opencode/agent/*.md` carry the rest.
 
 `websearch` is gated in OpenCode — it needs the OpenCode provider or `OPENCODE_ENABLE_EXA=1`.
 Run `preflight_permissions` before a fan-out; it reads OpenCode's permission syntax too.
+
+### Grok Build
+
+Verified against a real install (grok 0.2.101) rather than from documentation:
+
+- MCP lives in `.grok/config.toml` as TOML, not JSON:
+  `[mcp_servers.alphacouncil-agent]` with `command`, `args` and `enabled`. Generate it with
+  `grok mcp add alphacouncil-agent -s project -t stdio node -- ./mcp/server.mjs` rather than
+  hand-writing it. Grok also lists `.mcp.json` among its config sources, so the Claude Code
+  file is read too.
+- **A repo-local server will not start until the folder is trusted.** `grok mcp doctor`
+  reports `folder untrusted (repo-local (project-scoped) server not started)`. That is a
+  security prompt, not a misconfiguration: trust the folder on first launch.
+- `AGENTS.md` is the project system prompt, which is why the generated agents set
+  `agents_md: true` and inherit it.
+- Agent definitions are `.md` with `name` / `description` frontmatter in `.grok/agents/`.
+  Every generated seat uses `permission_mode: plan`, matching the bundled read-only
+  `explore` agent: the council gathers and reasons, it never edits the repo.
+- Skills resolve from `.grok/skills/` and `.claude/skills/`. This repo ships neither, so on
+  Grok Build the workflow arrives through `AGENTS.md` plus the MCP tools, the same shape
+  that works on OpenCode.
 
 ## Market data coverage
 

@@ -128,6 +128,32 @@ function opencodeAgentFiles() {
   return files;
 }
 
+/**
+ * Grok Build subagents. Its dialect, read from a real install (grok 0.2.101): `name` and
+ * `description` are required, `permission_mode: plan` is the read-only stance the bundled
+ * `explore` agent uses, and `agents_md: true` makes the agent inherit AGENTS.md -- which is
+ * where this project's host instructions live.
+ */
+function grokAgentFiles() {
+  const files = {};
+  for (const persona of [...analysts, ...debate]) {
+    const title = personaTitle(persona, "English");
+    const body = persona.bodies[persona.default_lang] || "";
+    const frontmatter = [
+      "---",
+      `name: alphacouncil-${persona.id}`,
+      `description: ${JSON.stringify(`${title} for AlphaCouncil equity research. ${(persona.tags || []).join(", ")}`)}`,
+      // Every seat is read-only: they gather and reason, they never edit the repo.
+      "permission_mode: plan",
+      "prompt_mode: full",
+      "agents_md: true",
+      "---",
+    ].join("\n");
+    files[`.grok/agents/alphacouncil-${persona.id}.md`] = `${frontmatter}\n\n${BANNER}\n\n${body}\n`;
+  }
+  return files;
+}
+
 function replaceRegion(text, name, replacement) {
   const start = `<!-- generated:${name} start -->`;
   const end = `<!-- generated:${name} end -->`;
@@ -138,7 +164,7 @@ function replaceRegion(text, name, replacement) {
 }
 
 function buildOutputs() {
-  const outputs = { ...claudeAgentFiles(), ...opencodeAgentFiles() };
+  const outputs = { ...claudeAgentFiles(), ...opencodeAgentFiles(), ...grokAgentFiles() };
   outputs["docs/personas.md"] = personasDoc();
   outputs["skills/alphacouncil-agent/SKILL.md"] = replaceRegion(
     readFileSync(repo("skills/alphacouncil-agent/SKILL.md"), "utf8"),
@@ -168,7 +194,7 @@ for (const [rel, content] of Object.entries(outputs)) {
 }
 
 // A persona deleted from personas/ must not leave an orphan agent file behind.
-for (const agentDirRel of [".claude/agents", ".opencode/agent"]) {
+for (const agentDirRel of [".claude/agents", ".opencode/agent", ".grok/agents"]) {
   const agentDir = repo(agentDirRel);
   const expected = new Set(
     Object.keys(outputs).filter((f) => f.startsWith(`${agentDirRel}/`)).map((f) => f.split("/").pop()),

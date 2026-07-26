@@ -16,6 +16,7 @@ import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { getMarketNarrative } from "./narrative.mjs";
 import { getSocialPulse, verifyXPost } from "./social.mjs";
+import { councilOptions } from "./council-options.mjs";
 import { fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
@@ -150,6 +151,10 @@ export function tools() {
         },
       },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("list_council_options", "The menu to show the user BEFORE a run starts: three presets (quick / standard / deep) with their seat counts and relative cost, every analyst seat, every master roster with its members, and the verifiers. A council can be four seats or thirty-eight, and that difference is the user's time and money -- so ask which they want rather than choosing for them. Skip the question only when they have already said (named a roster, said 'everything', said 'be quick').", {
+      type: "object",
+      properties: { language: { type: "string", description: "Language for the labels. Defaults to English." } },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("get_options_chain", "Keyless DELAYED options chain digest from CBOE for one US-listed symbol: ATM implied-volatility term structure, 25-delta skew, put/call ratios on open interest and volume, the strikes holding the most open interest, and the ATM bid-ask spread as a share of mid. Contracts reporting iv = 0 (expired or deep in the money) are excluded rather than read as zero volatility. This is a snapshot with no history, so IV percentile or rank CANNOT be computed from it and must stay an open question. Non-US listings are generally absent and are reported as unavailable, never guessed.", {
       type: "object",
       properties: {
@@ -573,6 +578,22 @@ export async function handleToolCall(id, params) {
         : `Post ${data.id} could not be confirmed: ${data.reason}.`,
       data,
     ));
+    return;
+  }
+  if (name === "list_council_options") {
+    const data = councilOptions({ language: args.language || "English" });
+    const rows = data.presets.map((p) => [
+      p.id, p.label, `${p.seats} seats`, `~${p.rough_minutes}m`, p.good_for,
+    ]);
+    const text = [
+      table(["Preset", "What runs", "Seats", "Rough cost", "Good for"], rows, { title: "Choose a council" }),
+      "",
+      `Master rosters: ${data.master_rosters.map((r) => `${r.roster} (${r.count})`).join(" · ")} — ${data.all_masters_count} lenses in total.`,
+      `Analysts: ${data.analysts.length} available, ${data.default_analysts.length} in the default fan-out.`,
+      "",
+      "Ask the user which they want before starting. Do not ask if they already said.",
+    ].join("\n");
+    sendResult(id, jsonContent(text, data));
     return;
   }
   if (name === "get_quote") {

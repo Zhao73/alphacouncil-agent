@@ -1,0 +1,4 @@
+[mcp_servers.alphacouncil-agent]
+command = "node"
+args = ["./mcp/server.mjs"]
+enabled = true

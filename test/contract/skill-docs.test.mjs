@@ -71,3 +71,20 @@ test("the master bench and verifiers are host-neutral, not Claude Code only", ()
   assert.match(visible, /out_of_scope/, "out_of_scope must be described as a conclusion, not an abstention");
   assert.match(visible, /incomplete/, "the bench gate must be stated where the workflow is");
 });
+
+// A council runs from 7 to 44 seats. Choosing silently spends the user's time and money on
+// a shape they never agreed to -- and in the other direction, quietly runs four seats when
+// they were promised twenty-one lenses.
+test("every host is told to ask which council to run before starting", () => {
+  const skill = readFileSync(repoFile("skills/alphacouncil-agent/SKILL.md"), "utf8");
+  const stage0 = skill.slice(skill.indexOf("## Stage 0"), skill.indexOf("## Visible-First Workflow"));
+  assert.ok(stage0.length > 400, "Stage 0 must exist ahead of the workflow");
+  assert.match(stage0, /list_council_options/);
+  // Naming each host matters: without it the instruction reads as Claude-Code-only, which
+  // is exactly how the master bench ended up never running on Codex and OpenCode.
+  for (const host of ["Claude Code", "Codex", "OpenCode", "Grok Build"]) {
+    assert.ok(stage0.includes(host), `Stage 0 must say how to ask on ${host}`);
+  }
+  assert.match(stage0, /Do not ask when they have already told you/,
+    "re-asking a user who already answered is an interruption");
+});

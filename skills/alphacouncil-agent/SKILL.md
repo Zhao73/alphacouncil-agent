@@ -30,6 +30,33 @@ Do not ask startup option questions by default. For underspecified requests such
 
 Ask only when the user explicitly requests option selection before launch. Use the inferred language for visible main-thread preflight/progress updates, visible agent prompts, evidence packets, debate packets, and final synthesis unless the user explicitly requests another language. Always pass the original user request in `prompt`, and pass the inferred language as `language` to AlphaCouncil Agent MCP tools.
 
+## Stage 0 — Ask which council to run (every host)
+
+**Before planning a run, call `list_council_options` and let the user choose.**
+
+A council is anywhere from 7 to 44 seats. That range is the user's time and money, and
+choosing silently is wrong in both directions: pick small and the bench they were promised
+never runs, pick everything and a one-line question costs a full fan-out.
+
+Present the three presets with their seat counts and relative cost, and say that they can
+instead name individual analysts and a master roster. Then wait for the answer.
+
+**Do not ask when they have already told you.** A user who named a roster, said "run
+everything", said "just be quick", or is repeating a run with the same shape has answered;
+asking again is an interruption, not diligence.
+
+How to ask, per host:
+
+- **Claude Code** — use `AskUserQuestion` with the presets as options.
+- **Codex, OpenCode, Grok Build** — ask in chat as a short numbered list and wait for a reply.
+
+Two things to say plainly when you ask:
+
+- The estimates are relative magnitudes, not promises. "Roughly three times the seats" is
+  honest; "about 33 minutes" is not.
+- If they choose everything, say once that it will be noticeably slower — then run it. They
+  are allowed to spend their own time; they are not required to guess what it costs.
+
 ## Visible-First Workflow
 
 Use visible Codex subagents whenever the user asks to see subagents, asks for a chat-style analyst team, says child agents must be visible, or invokes `@alphacouncil-agent` for an investment decision without explicitly requesting headless/background mode.
