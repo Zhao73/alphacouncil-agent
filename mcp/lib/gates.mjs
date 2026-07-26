@@ -161,7 +161,9 @@ export function validateFinalReport(markdown, run) {
   const missing = [];
   const sections = [];
 
+  const benchRan = ((run?.masters || []).length > 0) || ((run?.master_opinions || []).length > 0);
   for (const section of REPORT_SECTIONS) {
+    if (section.when_masters && !benchRan) continue;
     const heading = assigned.get(section.id);
     if (!heading) {
       missing.push(`missing section: ${section.id}`);
@@ -203,6 +205,6 @@ export function validateFinalReport(markdown, run) {
     missing,
     sections,
     checked_at: new Date().toISOString(),
-    required_sections: REPORT_SECTIONS.map((section) => section.id),
+    required_sections: REPORT_SECTIONS.filter((s) => !s.when_masters || benchRan).map((section) => section.id),
   };
 }

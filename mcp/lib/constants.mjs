@@ -51,6 +51,10 @@ export const REPORT_SECTIONS = [
   { id: "conclusion", aliases: ["结论", "conclusion"], min_body: 6 },
   { id: "analyst_work_log", aliases: ["分析师工作记录", "analyst work log"], min_body: 12, per_task: true },
   { id: "debate_record", aliases: ["多空辩论记录", "bull bear debate", "debate record"], min_body: 20 },
+  // Required only when a bench actually ran. A report that spends ten master seats and
+  // then mentions none of them is the defect this entry exists to catch; a screen-only
+  // run that never selected one must not be failed for omitting it.
+  { id: "master_bench", aliases: ["大师席", "master bench", "master lens"], min_body: 20, when_masters: true },
   { id: "market_expectations", aliases: ["市场预期", "market expectations"], min_body: 8 },
   { id: "analyst_rating", aliases: ["分析师评级", "analyst rating", "target price"], min_body: 8 },
   { id: "earnings_call", aliases: ["电话会", "earnings call"], min_body: 8 },

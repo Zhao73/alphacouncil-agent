@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { masterCorrelationNote, renderMasterMarkdown } from "../../mcp/lib/markdown.mjs";
+import { validateFinalReport } from "../../mcp/lib/gates.mjs";
+import { REPORT_SECTIONS } from "../../mcp/lib/constants.mjs";
 
 const opinion = (over = {}) => ({
   master: "master_buffett",
@@ -75,4 +77,28 @@ test("the correlation note follows the report language", () => {
 test("no bench means no note", () => {
   assert.equal(masterCorrelationNote({ language: "en", master_opinions: [] }), "");
   assert.equal(masterCorrelationNote({}), "");
+});
+
+/** A report body that satisfies every section except the one under test. */
+function reportWithout(skipId) {
+  const filler = "x".repeat(120);
+  return REPORT_SECTIONS
+    .filter((s) => s.id !== skipId)
+    .map((s) => `## ${s.id}\n\n${filler}\n`)
+    .join("\n");
+}
+
+test("a run that spent ten master seats cannot publish a report that omits them", () => {
+  const run = { masters: ["master_buffett"], master_opinions: [opinion()], tasks: [] };
+  const quality = validateFinalReport(reportWithout("master_bench"), run);
+  assert.equal(quality.status, "needs_revision");
+  assert.ok(quality.missing.some((m) => m.includes("master_bench")), quality.missing.join("; "));
+});
+
+test("a run with no bench is not failed for omitting a bench section", () => {
+  // screen/quick modes select no masters; requiring the section there would be a false alarm.
+  const run = { masters: [], master_opinions: [], tasks: [] };
+  const quality = validateFinalReport(reportWithout("master_bench"), run);
+  assert.ok(!quality.missing.some((m) => m.includes("master_bench")), quality.missing.join("; "));
+  assert.ok(!quality.required_sections.includes("master_bench"));
 });
