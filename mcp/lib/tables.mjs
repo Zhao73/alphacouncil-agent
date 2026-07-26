@@ -16,12 +16,29 @@ const escape = (value) => String(value ?? "").replace(/\|/g, "\\|").replace(/\n/
  * @param {string} [options.title]
  * @param {string} [options.empty] shown instead of an empty table
  */
-export function table(headers, rows, { title, empty = "_(no rows)_" } = {}) {
+/**
+ * Reduce any cell to display text.
+ *
+ * A {en, zh} label reaching a template literal renders as "[object Object]", which sits
+ * next to real numbers and reads as a broken field rather than a missing one -- so the
+ * reader distrusts the surrounding data without being able to say why. Two shipped that
+ * way before this existed, in the grounding block's skipped rules and its macro readings.
+ */
+const cellText = (cell, zh) => {
+  if (cell == null) return "";
+  if (typeof cell === "object" && !Array.isArray(cell)) {
+    if ("en" in cell || "zh" in cell) return (zh ? cell.zh : cell.en) ?? cell.en ?? cell.zh ?? "";
+    return JSON.stringify(cell);
+  }
+  return String(cell);
+};
+
+export function table(headers, rows, { title, empty = "_(no rows)_", zh = false } = {}) {
   const parts = title ? [`**${title}**`, ""] : [];
   if (!rows.length) return [...parts, empty].join("\n");
   parts.push(`| ${headers.map(escape).join(" | ")} |`);
   parts.push(`|${headers.map(() => "---").join("|")}|`);
-  for (const row of rows) parts.push(`| ${row.map(escape).join(" | ")} |`);
+  for (const row of rows) parts.push(`| ${row.map((cell) => escape(cellText(cell, zh))).join(" | ")} |`);
   return parts.join("\n");
 }
 

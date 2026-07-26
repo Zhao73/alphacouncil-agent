@@ -81,13 +81,22 @@ export function completenessStatus(run) {
   // the gate only ever checked the two researchers, so a run that skipped the PM
   // entirely could still report itself complete.
   const missing_debate = DEBATE_ROLES.filter((role) => agentState(run, role).status !== "completed");
-  const complete = missing_evidence.length === 0 && missing_debate.length === 0;
+  // A run that selected a master bench and recorded no opinions used to report itself
+  // complete. That let the most expensive stage be skipped silently while the report still
+  // read as a finished committee -- and a bench nobody consulted is worse than no bench,
+  // because the reader believes the verdict survived twenty-one lenses.
+  const selected = Array.isArray(run.masters) ? run.masters : [];
+  const recorded = new Set((run.master_opinions || []).map((o) => o.master));
+  const missing_masters = selected.filter((id) => !recorded.has(id));
+  const complete = missing_evidence.length === 0 && missing_debate.length === 0 && missing_masters.length === 0;
   return {
     completeness: complete ? "complete" : "incomplete",
     missing_evidence,
     missing_debate,
+    missing_masters,
     missing_evidence_count: missing_evidence.length,
     missing_debate_count: missing_debate.length,
+    missing_masters_count: missing_masters.length,
   };
 }
 
@@ -96,11 +105,15 @@ export function withCompletenessBanner(markdown, completeness, language) {
   if (!completeness || completeness.completeness !== "incomplete") return text;
   const ev = completeness.missing_evidence || [];
   const db = completeness.missing_debate || [];
+  const ms = completeness.missing_masters || [];
   const evLine = ev.length ? ev.map((task) => `- ${task}`).join("\n") : "- (none)";
   const dbLine = db.length ? db.map((role) => `- ${role}`).join("\n") : "- (none)";
+  // Naming the skipped seats matters more than the flag: "incomplete" without a list
+  // invites the reader to assume it was something minor.
+  const msLine = ms.length ? ms.map((id) => `- ${id}`).join("\n") : "";
   const banner = isChineseLanguage(language)
-    ? `> [!WARNING]\n## 流程未完成 / Incomplete Council Run\n\n**状态:incomplete。** 本次运行未跑完完整委员会流程,结论不可信。\n\n未完成的证据角色:\n${evLine}\n\n未完成的辩论角色:\n${dbLine}\n`
-    : `> [!WARNING]\n## Incomplete Council Run / 流程未完成\n\n**Status: incomplete.** This run did NOT execute the full council workflow; the conclusion is unreliable.\n\nMissing evidence roles:\n${evLine}\n\nMissing debate roles:\n${dbLine}\n`;
+    ? `> [!WARNING]\n## 流程未完成 / Incomplete Council Run\n\n**状态:incomplete。** 本次运行未跑完完整委员会流程,结论不可信。\n\n未完成的证据角色:\n${evLine}\n\n未完成的辩论角色:\n${dbLine}\n${msLine ? `\n未给出意见的大师席位:\n${msLine}\n` : ""}`
+    : `> [!WARNING]\n## Incomplete Council Run / 流程未完成\n\n**Status: incomplete.** This run did NOT execute the full council workflow; the conclusion is unreliable.\n\nMissing evidence roles:\n${evLine}\n\nMissing debate roles:\n${dbLine}\n${msLine ? `\nMaster seats that gave no opinion:\n${msLine}\n` : ""}`;
   return `${banner}\n\n---\n\n${text}`;
 }
 

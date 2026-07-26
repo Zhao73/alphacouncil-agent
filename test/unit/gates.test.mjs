@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { __test__ } from "../../mcp/server.mjs";
 import { completeReport, completeRun, scopedPacket } from "../helpers/fixtures.mjs";
+import { DEBATE_ROLES } from "../../mcp/lib/constants.mjs";
 
 const {
   verificationStatus,
@@ -120,4 +121,54 @@ test("a complete fixture report passes the quality gate", () => {
 
 test("a thin report fails the quality gate", () => {
   assert.equal(validateFinalReport("# Thin\n\n## Conclusion\nToo short.", qualityRun).status, "needs_revision");
+});
+
+// A run that selected a bench and recorded no opinions used to report itself complete, so
+// the most expensive stage could be skipped in silence while the report still read as a
+// finished committee. A bench nobody consulted is worse than no bench: the reader believes
+// the verdict survived twenty-one lenses when it survived none.
+test("a run that skips its selected masters is incomplete, and says which ones", () => {
+  const base = {
+    tasks: [],
+    agent_status: Object.fromEntries(DEBATE_ROLES.map((r) => [r, { role: r, status: "completed" }])),
+    masters: ["master_buffett", "master_munger"],
+  };
+  const none = completenessStatus({ ...base, master_opinions: [] });
+  assert.equal(none.completeness, "incomplete");
+  assert.deepEqual(none.missing_masters, ["master_buffett", "master_munger"]);
+  assert.equal(none.missing_masters_count, 2);
+
+  const partial = completenessStatus({ ...base, master_opinions: [{ master: "master_buffett" }] });
+  assert.equal(partial.completeness, "incomplete");
+  assert.deepEqual(partial.missing_masters, ["master_munger"]);
+
+  const all = completenessStatus({
+    ...base,
+    master_opinions: [{ master: "master_buffett" }, { master: "master_munger" }],
+  });
+  assert.equal(all.completeness, "complete");
+  assert.deepEqual(all.missing_masters, []);
+});
+
+test("a run that selected no masters is unaffected by the bench gate", () => {
+  const status = completenessStatus({
+    tasks: [],
+    agent_status: Object.fromEntries(DEBATE_ROLES.map((r) => [r, { role: r, status: "completed" }])),
+  });
+  assert.equal(status.completeness, "complete");
+  assert.deepEqual(status.missing_masters, []);
+});
+
+test("the incomplete banner names the skipped master seats", () => {
+  const status = completenessStatus({
+    tasks: [],
+    agent_status: Object.fromEntries(DEBATE_ROLES.map((r) => [r, { role: r, status: "completed" }])),
+    masters: ["master_marks"],
+    master_opinions: [],
+  });
+  const zh = withCompletenessBanner("body", status, "中文");
+  assert.match(zh, /未给出意见的大师席位/);
+  assert.match(zh, /master_marks/);
+  const en = withCompletenessBanner("body", status, "English");
+  assert.match(en, /Master seats that gave no opinion/);
 });

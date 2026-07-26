@@ -7,7 +7,7 @@ import { readJson, readJsonl } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
 import { sweepStaleOutputs } from "./codex.mjs";
 import { sourceManifest } from "./gates.mjs";
-import { artifactPaths, runPath } from "./run-store.mjs";
+import { artifactPaths, runPath, saveRun } from "./run-store.mjs";
 import { summaryModes } from "./output-modes.mjs";
 import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
@@ -310,12 +310,24 @@ export async function handleToolCall(id, params) {
   const args = params?.arguments || {};
   if (name === "plan_visible_run") {
     const run = visibleRun(args);
+    // Gather the established facts here rather than accepting them only when a host
+    // remembers to pass them. Without this the whole visible path -- which is the path
+    // Claude Code uses -- runs every analyst and every master with no filings, no quote and
+    // no macro, and nothing in the output says so. Same reasoning as the preflight below:
+    // the host that skips the optional step is exactly the host whose seats fail quietly.
+    if (!run.grounding) {
+      run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of })
+        .catch((error) => ({ error: String(error?.message || error), facts_unavailable: true }));
+      saveRun(run);
+    }
     const specs = visibleAgentSpecs(run, args.prompt || "");
     // Returned with the plan, not left to a separate opt-in call: a host that skips the
     // preflight is exactly the host whose subagents will fail silently.
     const preflight = preflightNetworkPermissions({ roster: args.roster || "default" });
     sendResult(id, jsonContent(
-      `Planned visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}. Network preflight: ${preflight.status}.`,
+      `Planned visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}. `
+      + `Network preflight: ${preflight.status}. `
+      + `Established facts: ${run.grounding && !run.grounding.facts_unavailable ? "attached to every seat" : "UNAVAILABLE -- seats will run without filings or quotes, say so in the report"}.`,
       {
       run,
       preflight,

@@ -2,7 +2,7 @@ import { fetchQuote } from "./quotes.mjs";
 import { getMacroSnapshot } from "./macro.mjs";
 import { screenTicker } from "./screen.mjs";
 import { resolveIndustry, industryCoverage } from "./industry.mjs";
-import { fetchSubmissions } from "./sec.mjs";
+import { fetchSubmissions, fetchUniverse } from "./sec.mjs";
 import { fetchMarketFinancials, coverageFor, marketFor } from "./markets.mjs";
 
 /**
@@ -38,6 +38,14 @@ async function safely(label, fn) {
  * @param {string} [options.asOf]     only use filings filed by this date
  */
 export async function gatherGrounding({ symbol, cik, industry, macro = true, asOf = null } = {}) {
+  // Without this, a caller that has a ticker but not a CIK gets no filer profile and no
+  // mechanical screen -- the filings half of "established facts" disappears and nothing
+  // in the output says it was skipped.
+  if (!cik && symbol && marketFor(symbol)?.id === "US") {
+    cik = await fetchUniverse()
+      .then((rows) => rows.find((r) => String(r.ticker).toUpperCase() === String(symbol).toUpperCase())?.cik)
+      .catch(() => undefined);
+  }
   const jobs = [];
   const out = { as_of: asOf, gathered_at: new Date().toISOString(), unavailable: [] };
 
@@ -131,6 +139,13 @@ const fmt = (value, unit) => {
  * model to paraphrase; what changes behaviour is telling it what these facts are FOR and
  * what it may not do with them.
  */
+/** Render a bilingual label. Every {en, zh} value must pass through here before display. */
+const localized = (label, chinese) => {
+  if (label == null) return "";
+  if (typeof label === "string") return label;
+  return (chinese ? label.zh : label.en) ?? label.en ?? label.zh ?? "";
+};
+
 export function groundingBlock(grounding, language = "English") {
   const chinese = /中文|chinese|zh/i.test(String(language));
   if (!grounding || (!grounding.quote && !grounding.screen && !grounding.macro && !grounding.industry)) return "";
@@ -158,17 +173,22 @@ export function groundingBlock(grounding, language = "English") {
       ? `- 硬指标筛选：${s.verdict === "survives" ? "通过" : "淘汰"}（${s.rules_computed}/${s.rules_total} 条可算）`
       : `- Mechanical screen: ${s.verdict} (${s.rules_computed} of ${s.rules_total} rules computable)`);
     for (const m of s.metrics) {
-      lines.push(`  - ${typeof m.label === "string" ? m.label : (chinese ? m.label.zh : m.label.en)}: ${fmt(m.value, m.unit)} (${m.direction === "max" ? "max" : "min"} ${m.threshold}) ${m.passed ? "pass" : "FAIL"}`);
+      lines.push(`  - ${localized(m.label, chinese)}: ${fmt(m.value, m.unit)} (${m.direction === "max" ? "max" : "min"} ${m.threshold}) ${m.passed ? "pass" : "FAIL"}`);
     }
     if (s.skipped.length) {
       lines.push(chinese
-        ? `  - 无法从申报计算，未按通过处理：${s.skipped.join(", ")}`
-        : `  - Not computable from filings and NOT treated as passes: ${s.skipped.join(", ")}`);
+        ? `  - 无法从申报计算，未按通过处理：${s.skipped.map((x) => localized(x.label, chinese) || x.rule).join("、")}`
+        : `  - Not computable from filings and NOT treated as passes: ${s.skipped.map((x) => localized(x.label, chinese) || x.rule).join(", ")}`);
     }
   }
   if (grounding.macro?.derived?.length) {
     lines.push(chinese ? "- 宏观读数：" : "- Macro readings:");
-    for (const d of grounding.macro.derived) lines.push(`  - ${d.label}: ${d.value}`);
+    // Derived labels are {en, zh}; interpolating the object printed "[object Object]"
+    // next to a real number, which reads as a broken field rather than a missing one.
+    for (const d of grounding.macro.derived) {
+      const name = localized(d.label, chinese) || d.id;
+      lines.push(`  - ${name}: ${d.value}`);
+    }
   }
   if (grounding.market?.financials) {
     const f = grounding.market.financials;
