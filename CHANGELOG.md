@@ -2,6 +2,14 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.5.3] — 2026-07-26
+
+### Fixed
+
+- The 0.5.2 tarball was cut before the translated READMEs and `docs/INSTALL.md` learned that
+  `/alpha` exists, so an installed copy carried stale Chinese and Japanese documentation
+  while the repository did not. Docs-only; no code changed.
+
 ## [0.5.2] — 2026-07-26
 
 ### Changed
