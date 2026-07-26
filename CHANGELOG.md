@@ -2,6 +2,27 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.5.5] — 2026-07-26
+
+### Fixed
+
+- **Five masters never ran.** Aschenbrenner, Druckenmiller, Fisher, Asness and Klarman were
+  not in the `masters-core` roster, which is what the standard preset selects, while the
+  seat estimate counted every master. The menu offered 21 lenses and the run delivered 16,
+  with nothing failing and nothing warning. A test now asserts the roster equals the full
+  set rather than merely being large.
+
+### Changed
+
+- **Stage 0 asks one question, about the master bench, then runs.** It previously asked which
+  preset, then which analysts, then confirmed — an interview before any work. The analysts
+  have an obvious default; the bench is the part a user has a view on and where cost varies.
+- `list_council_options` prints the **named** roster: every analyst with what it covers, and
+  the six master schools with their members. Presets remain as shortcuts. Naming the seats is
+  what made the missing five visible.
+- Command help uses `<TICKER>` with examples across US, Hong Kong and Tokyo listings. One
+  real ticker repeated down the column read as if the tool were about that company.
+
 ## [0.5.4] — 2026-07-26
 
 ### Fixed
