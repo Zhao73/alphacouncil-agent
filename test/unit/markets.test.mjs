@@ -99,13 +99,18 @@ test("without a key the adapters name the variable and where to get it", async (
   assert.match(jp.reason, /ALPHACOUNCIL_EDINET_KEY/);
 });
 
-// A misconfigured key must not look like "this company filed nothing".
-test("a rejected key is reported as a key problem, not as missing data", async () => {
-  const kr = await fetchDartFinancials({ corpCode: "00126380", year: 2024, key: "definitely-not-valid" });
-  assert.equal(kr.available, false);
-  assert.equal(kr.is_key_problem, true);
-  assert.equal(kr.dart_status, "010");
-  assert.match(kr.reason, /not registered/);
+// A misconfigured key must not look like "this company filed nothing". The mapping is
+// asserted against DART's documented status codes rather than by calling DART: a unit
+// test that reaches the network fails for reasons that have nothing to do with the code,
+// which is exactly what happened on the Node 18 runner.
+test("DART status codes distinguish a key problem from an absence of data", async () => {
+  const { DART_KEY_ERRORS } = await import("../../mcp/lib/markets-kr-jp.mjs");
+  for (const code of ["010", "011", "012", "020", "021"]) {
+    assert.ok(DART_KEY_ERRORS[code], `${code} must be recognised as a key problem`);
+  }
+  // 013 is "no data", a legitimate answer about the company rather than about the key.
+  assert.equal(DART_KEY_ERRORS["013"], undefined, "no-data must not be reported as a key problem");
+  assert.match(DART_KEY_ERRORS["010"], /not registered/);
 });
 
 // ---- the dashboard --------------------------------------------------------

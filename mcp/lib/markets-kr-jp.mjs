@@ -31,7 +31,7 @@ async function getJson(url, headers = {}) {
 // ---- Korea: DART ----------------------------------------------------------
 
 /** DART status codes that mean "your key is the problem", not "no data". */
-const DART_KEY_ERRORS = {
+export const DART_KEY_ERRORS = {
   "010": "the key is not registered",
   "011": "the key is suspended",
   "012": "access denied for this IP",
