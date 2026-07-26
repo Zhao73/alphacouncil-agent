@@ -26,16 +26,16 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `bear_researcher` | debate | yes | default | deep | Bear Researcher | short-case, rebuttal | original |
 | `portfolio_manager` | debate | yes | default | deep | Portfolio Manager | verdict, rating, synthesis | original |
 | `_master_base` | master | no | - | deep | Master seat preamble | shared | original |
-| `master_aschenbrenner` | master | yes | masters-modern | deep | Aschenbrenner Lens | scaling, compute, power, timeline-pricing | original |
+| `master_aschenbrenner` | master | yes | masters-modern, masters-core | deep | Aschenbrenner Lens | scaling, compute, power, timeline-pricing | original |
 | `master_buffett` | master | yes | masters-value, masters-core | deep | Buffett Lens | moat, owner-earnings, circle-of-competence | ai-berkshire (MIT) |
 | `master_graham` | master | yes | masters-value-classic, masters-core | deep | Graham Lens | margin-of-safety, balance-sheet, mr-market | original |
 | `master_simons` | master | yes | masters-quant, masters-core | deep | Simons Lens | signal-vs-noise, no-narrative, sample-size | original |
 | `master_soros` | master | yes | masters-adversarial, masters-core | deep | Soros Lens | reflexivity, boom-bust, test-the-thesis | original |
-| `master_druckenmiller` | master | yes | masters-adversarial | deep | Druckenmiller Lens | liquidity, concentration, eighteen-months-ahead | original |
-| `master_fisher` | master | yes | masters-value-classic | deep | Fisher Lens | scuttlebutt, growth-quality, r-and-d | original |
+| `master_druckenmiller` | master | yes | masters-adversarial, masters-core | deep | Druckenmiller Lens | liquidity, concentration, eighteen-months-ahead | original |
+| `master_fisher` | master | yes | masters-value-classic, masters-core | deep | Fisher Lens | scuttlebutt, growth-quality, r-and-d | original |
 | `master_munger` | master | yes | masters-value, masters-core | deep | Munger Lens | inversion, mental-models, failure-paths | ai-berkshire (MIT) |
 | `master_thorp` | master | yes | masters-quant, masters-core | deep | Thorp Lens | kelly-sizing, edge-and-odds, risk-of-ruin | original |
-| `master_asness` | master | yes | masters-quant | deep | Asness Factor Lens | factor-exposure, value-momentum-quality, is-it-just-beta | original |
+| `master_asness` | master | yes | masters-quant, masters-core | deep | Asness Factor Lens | factor-exposure, value-momentum-quality, is-it-just-beta | original |
 | `master_dalio` | master | yes | masters-adversarial, masters-core | deep | Dalio Lens | debt-cycle, machine-view, regime | original |
 | `master_duan_yongping` | master | yes | masters-value, masters-core | deep | Duan Yongping Lens | business-model, stop-doing-list, corporate-culture | ai-berkshire (MIT) |
 | `master_lynch` | master | yes | masters-value-classic, masters-core | deep | Peter Lynch Lens | category-first, peg, story-in-two-minutes | original |
@@ -43,7 +43,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `master_marks` | master | yes | masters-value-classic, masters-core | deep | Howard Marks Lens | second-level-thinking, cycle-position, risk-is-permanent-loss | original |
 | `master_short_seller` | master | yes | masters-adversarial, masters-core | deep | Short Seller Lens | forensic-accounting, crowding, borrow | original |
 | `master_burry` | master | yes | masters-adversarial, masters-core | deep | Michael Burry Lens | primary-documents, contrarian, structural-short | original |
-| `master_klarman` | master | yes | masters-value-classic | deep | Klarman Lens | absolute-return, cash-as-option, bottom-up | original |
+| `master_klarman` | master | yes | masters-value-classic, masters-core | deep | Klarman Lens | absolute-return, cash-as-option, bottom-up | original |
 | `master_taleb` | master | yes | masters-options, masters-core | deep | Taleb Lens (Convexity and Tails) | tail-risk, convexity, options | original |
 | `master_natenberg` | master | yes | masters-options, masters-core | deep | Natenberg Lens (Volatility Pricing) | implied-volatility, options-pricing, market-making | original |
 | `master_sinclair` | master | yes | masters-options, masters-core | deep | Sinclair Lens (Volatility Trading and Execution) | volatility-forecasting, edge-measurement, position-sizing, options | original |

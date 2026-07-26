@@ -366,6 +366,19 @@ test("the default fan-out is eight analysts, not eleven", () => {
   }
 });
 
+// The `standard` preset advertises the whole bench and runs whatever masters-core contains.
+// Five masters were never added to it, so the menu promised 21 lenses and 16 reported --
+// a discrepancy invisible until a run was inspected seat by seat.
+test("masters-core is the whole bench, not a subset", () => {
+  const reg = shippedPersonas();
+  const core = selectRoster(reg, { kind: "master", roster: "masters-core" }).map((p) => p.id);
+  const all = reg.ids("master");
+  const missing = all.filter((id) => !core.includes(id));
+  assert.deepEqual(missing, [],
+    `these masters never run under the standard preset: ${missing.join(", ")}`);
+  assert.equal(core.length, all.length);
+});
+
 test("masters-core seats at least ten and spans opposing schools", () => {
   const reg = shippedPersonas();
   const core = selectRoster(reg, { kind: "master", roster: "masters-core" });

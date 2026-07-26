@@ -6,7 +6,8 @@
   "order": 20,
   "enabled": true,
   "rosters": [
-    "masters-value-classic"
+    "masters-value-classic",
+    "masters-core"
   ],
   "title": {
     "zh": "费雪视角",

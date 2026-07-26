@@ -6,7 +6,8 @@
   "order": 20,
   "enabled": true,
   "rosters": [
-    "masters-adversarial"
+    "masters-adversarial",
+    "masters-core"
   ],
   "title": {
     "zh": "德鲁肯米勒视角",

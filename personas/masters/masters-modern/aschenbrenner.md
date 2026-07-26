@@ -6,7 +6,8 @@
   "order": 10,
   "enabled": true,
   "rosters": [
-    "masters-modern"
+    "masters-modern",
+    "masters-core"
   ],
   "title": {
     "zh": "Aschenbrenner 视角",

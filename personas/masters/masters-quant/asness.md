@@ -6,7 +6,8 @@
   "order": 30,
   "enabled": true,
   "rosters": [
-    "masters-quant"
+    "masters-quant",
+    "masters-core"
   ],
   "title": {
     "zh": "Asness 因子视角",
