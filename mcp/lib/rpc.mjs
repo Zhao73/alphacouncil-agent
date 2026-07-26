@@ -16,7 +16,7 @@ import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
 import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
-import { table, mark, metricValue } from "./tables.mjs";
+import { table, mark, metricValue, groundingDashboard } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
@@ -366,8 +366,8 @@ export async function handleToolCall(id, params) {
       grounding.industry?.participants ? `industry (${grounding.industry.participants.length} participants)` : null,
     ].filter(Boolean);
     sendResult(id, jsonContent(
-      `Grounded on: ${facts.join(", ") || "nothing available"}.${grounding.unavailable.length ? ` Data gaps: ${grounding.unavailable.length}.` : ""}`,
-      { grounding, prompt_block: block },
+      groundingDashboard(grounding, resolveLanguage(args)),
+      { grounding, prompt_block: block, dashboard: groundingDashboard(grounding, resolveLanguage(args)) },
     ));
     return;
   }

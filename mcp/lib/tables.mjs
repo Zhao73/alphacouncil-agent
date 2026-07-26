@@ -44,3 +44,66 @@ export function metricValue(value, unit) {
   if (unit === "USD") return money(value);
   return unit ? `${value} ${unit}` : String(value);
 }
+
+
+/**
+ * One dashboard for a whole grounding payload.
+ *
+ * A run currently answers across several tool calls, and the reader has to hold five
+ * results in their head to see the picture. This renders the lot as sections of a single
+ * document: what is established, what could not be fetched, and who is in play with which
+ * data behind them.
+ */
+export function groundingDashboard(g, language = "English") {
+  const zh = /中文|chinese|zh/i.test(String(language));
+  const t = (en, cn) => (zh ? cn : en);
+  const out = [];
+
+  out.push(`# ${t("Research dashboard", "研究总览")}${g.quote?.symbol ? ` — ${g.quote.symbol}` : ""}`);
+
+  const facts = [];
+  if (g.filer) facts.push([t("Filer", "主体"), `${g.filer.name} (SIC ${g.filer.sic ?? "?"})`, g.filer.sic_description ?? "-", "SEC"]);
+  if (g.quote) {
+    facts.push([t("Quote", "行情"), `${g.quote.price}${g.quote.currency ? " " + g.quote.currency : ""}`,
+      g.quote.change_pct != null ? `${g.quote.change_pct > 0 ? "+" : ""}${g.quote.change_pct}%` : "-",
+      `${g.quote.source} ${t("(~15m delayed)", "（延迟约15分钟）")}`]);
+  }
+  if (g.market?.financials) {
+    const f = g.market.financials;
+    facts.push([t("Latest filing", "最新申报"), `${f.gregorian_year ?? f.period?.year}Q${f.period?.quarter}`,
+      `${t("revenue", "营收")} ${f.revenue?.toLocaleString() ?? "n/a"} ${f.currency}`, f.source]);
+  }
+  if (facts.length) out.push("", table([t("Item", "项目"), t("Value", "数值"), t("Detail", "细节"), t("Source", "来源")], facts, { title: t("Established facts", "已确立的事实") }));
+
+  if (g.screen) {
+    const rows = g.screen.metrics.map((m) => [m.label, metricValue(m.value, m.unit), String(m.threshold), mark(m.passed)]);
+    for (const id of g.screen.skipped || []) rows.push([id, t("not computable", "无法计算"), "-", t("_skipped_", "_跳过_")]);
+    out.push("", table([t("Rule", "规则"), t("Measured", "实测"), t("Threshold", "阈值"), t("Result", "结果")], rows,
+      { title: `${t("Mechanical screen", "硬指标筛选")} — ${g.screen.verdict} (${g.screen.rules_computed}/${g.screen.rules_total})` }));
+  }
+
+  if (g.macro?.derived?.length) {
+    out.push("", table([t("Reading", "读数"), t("Value", "数值")],
+      g.macro.derived.map((d) => [d.label, String(d.value)]), { title: t("Macro", "宏观") }));
+  }
+
+  if (g.coverage?.rows?.length) {
+    out.push("", table(
+      [t("Symbol", "标的"), t("Market", "市场"), t("Structured financials", "结构化财务"), t("Blocker", "阻碍")],
+      g.coverage.rows.map((r) => [r.symbol, r.market, r.structured_financials, r.needs_env || (r.reason ? r.reason.slice(0, 40) : "-")]),
+      { title: t("Data coverage", "数据覆盖") }));
+  }
+
+  if (g.industry?.participants?.length) {
+    out.push("", table([t("Layer", "环节"), t("Company", "公司"), t("Symbol", "代码"), t("Market", "市场")],
+      g.industry.participants.map((p) => [p.layer?.[zh ? "zh" : "en"] ?? "-", p.name, p.symbol ?? t("unlisted", "未上市"), p.market ?? "-"]),
+      { title: t("Value chain", "产业链") }));
+  }
+
+  if (g.unavailable?.length) {
+    out.push("", `**${t("Data gaps — do not fill these from memory", "数据缺口 — 禁止用记忆填补")}**`, "",
+      ...g.unavailable.map((u) => `- ${u}`));
+  }
+
+  return out.join("\n");
+}

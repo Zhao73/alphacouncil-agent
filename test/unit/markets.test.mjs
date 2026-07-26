@@ -104,3 +104,55 @@ test("a rejected key is reported as a key problem, not as missing data", async (
   assert.equal(kr.dart_status, "010");
   assert.match(kr.reason, /not registered/);
 });
+
+// ---- the dashboard --------------------------------------------------------
+
+import { groundingDashboard } from "../../mcp/lib/tables.mjs";
+
+const dashboardInput = {
+  quote: { symbol: "MU", price: 920.95, currency: "USD", change_pct: -6.99, source: "yahoo" },
+  filer: { name: "MICRON TECHNOLOGY INC", sic: 3674, sic_description: "Semiconductors" },
+  screen: {
+    verdict: "survives", rules_computed: 6, rules_total: 7,
+    metrics: [{ label: "long-run gross margin below 15%", value: 27.17, unit: "%", threshold: 15, passed: true }],
+    skipped: ["dilution"],
+  },
+  macro: { derived: [{ label: "10Y minus 3M", value: 0.874 }] },
+  coverage: { rows: [{ symbol: "000660.KS", market: "KR", structured_financials: "no", needs_env: "ALPHACOUNCIL_DART_KEY" }] },
+  industry: { participants: [{ name: "SK hynix", symbol: "000660.KS", market: "KR", layer: { zh: "存储原厂", en: "Memory makers" } }] },
+  unavailable: ["structured financials for 285A.T"],
+};
+
+test("the dashboard puts every section in one document", () => {
+  const out = groundingDashboard(dashboardInput, "English");
+  for (const section of ["Established facts", "Mechanical screen", "Macro", "Data coverage", "Value chain"]) {
+    assert.match(out, new RegExp(section), `missing section: ${section}`);
+  }
+  assert.match(out, /27\.17%/);
+  assert.match(out, /SK hynix/);
+  assert.match(out, /ALPHACOUNCIL_DART_KEY/);
+});
+
+test("a skipped rule appears in the dashboard as skipped, not as a pass", () => {
+  const out = groundingDashboard(dashboardInput, "English");
+  assert.match(out, /dilution \| not computable/);
+  assert.ok(!/dilution \| .* \| pass/.test(out));
+});
+
+// Gaps must survive into the human-facing view, or the dashboard becomes a way to lose them.
+test("data gaps are shown with the instruction not to fill them", () => {
+  assert.match(groundingDashboard(dashboardInput, "English"), /Data gaps — do not fill these from memory/);
+  assert.match(groundingDashboard(dashboardInput, "中文"), /数据缺口 — 禁止用记忆填补/);
+});
+
+test("the dashboard follows the requested language", () => {
+  const zh = groundingDashboard(dashboardInput, "中文");
+  assert.match(zh, /研究总览/);
+  assert.match(zh, /硬指标筛选/);
+  assert.match(zh, /存储原厂/);
+  assert.match(zh, /未上市|000660\.KS/);
+});
+
+test("an empty grounding still produces a heading rather than throwing", () => {
+  assert.match(groundingDashboard({ unavailable: [] }, "English"), /Research dashboard/);
+});
