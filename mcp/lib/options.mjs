@@ -106,9 +106,14 @@ export function summarizeChain(payload, { asOf, maxExpiries = 8 } = {}) {
     };
   }).filter((t) => t.atm_iv !== null);
 
-  // 25-delta skew on the front expiry with real data: put IV minus call IV. Positive means
-  // downside protection is bid, which is the normal state for equities; the size is the signal.
-  const front = term[0]?.expiry;
+  // Skew and the headline IV are read from the first expiry at least a week out, not from
+  // the nearest one. A one-day contract prices pin risk and discreteness rather than
+  // volatility: on a live MU chain the 1-DTE ATM printed 69.6% between neighbours at 98.7%
+  // and 105.2%. Quoting that as "front ATM IV" hands the reader the least reliable number
+  // on the board as the summary of the whole surface.
+  const MIN_REFERENCE_DTE = 7;
+  const reference = term.find((t) => t.dte >= MIN_REFERENCE_DTE) || term[term.length - 1] || null;
+  const front = reference?.expiry;
   const put25 = front ? nearestDelta(live, front, "put", 0.25) : null;
   const call25 = front ? nearestDelta(live, front, "call", 0.25) : null;
   const skew = put25 && call25 ? round(put25.iv - call25.iv) : null;
@@ -142,6 +147,18 @@ export function summarizeChain(payload, { asOf, maxExpiries = 8 } = {}) {
     contracts_with_iv: live.length,
     expiries_available: [...new Set(all.map((r) => r.expiry))].length,
     term_structure: term,
+    // Which expiry the headline numbers below were read from, and why it may not be the
+    // nearest one. Without this the reader cannot tell that a short expiry was skipped.
+    reference_expiry: reference ? {
+      expiry: reference.expiry,
+      dte: reference.dte,
+      atm_iv: reference.atm_iv,
+      note: term[0] && term[0].dte < MIN_REFERENCE_DTE
+        ? `Nearest expiry is ${term[0].expiry} at ${term[0].dte}d and was skipped for the headline: `
+          + "under a week, an ATM implied vol reflects pin risk and discrete pricing more than volatility. "
+          + "It remains in term_structure."
+        : "Nearest expiry is at least a week out and is used directly.",
+    } : null,
     skew_25delta: skew === null ? null : {
       expiry: front,
       put_iv: round(put25.iv),

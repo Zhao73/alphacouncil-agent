@@ -131,3 +131,21 @@ test("every rule names what it measures, in both languages, with a direction", (
     if (!r.skipped) assert.ok(["min", "max"].includes(r.direction), `${r.id} needs a direction`);
   }
 });
+
+// The tool schema offers `ticker`, so callers pass one. Demanding a cik anyway turned a
+// documented argument into an error and sent the caller off to look up an identifier the
+// universe file already holds -- found by calling the tool the way its schema advertises.
+test("screen_ticker's schema and its implementation agree on what identifies a company", async () => {
+  const { tools } = await import("../../mcp/lib/rpc.mjs");
+  const schema = tools().find((t) => t.name === "screen_ticker").inputSchema;
+  const offered = Object.keys(schema.properties);
+  assert.ok(offered.includes("ticker"), "the schema offers ticker");
+  assert.ok(offered.includes("cik"));
+  // Requiring cik while offering ticker is the contradiction that produced the bug.
+  assert.ok(!(schema.required || []).includes("cik"),
+    "cik must not be required while ticker is offered as an alternative");
+
+  const { screenTicker } = await import("../../mcp/lib/screen.mjs");
+  await assert.rejects(() => screenTicker({}), /needs a cik or a ticker/,
+    "with neither identifier the error must name both options");
+});

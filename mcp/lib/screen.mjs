@@ -1,4 +1,4 @@
-import { fetchCompanyFacts, annualSeries, CONCEPTS } from "./sec.mjs";
+import { fetchUniverse, fetchCompanyFacts, annualSeries, CONCEPTS } from "./sec.mjs";
 import { invalidParams } from "./errors.mjs";
 
 /**
@@ -185,10 +185,27 @@ export function explainResult(result, ticker) {
 }
 
 export async function screenTicker({ cik, ticker, asOf = null }) {
-  if (!cik) throw invalidParams("screenTicker needs a cik");
-  const facts = await fetchCompanyFacts(cik);
+  // The tool schema offers `ticker`, so callers pass one. Demanding a CIK anyway turned a
+  // documented argument into an error and made the caller go look up an identifier the
+  // universe file already holds -- the opposite of working without configuration.
+  let resolved = cik;
+  if (!resolved && ticker) {
+    const wanted = String(ticker).trim().toUpperCase();
+    const universe = await fetchUniverse();
+    const hit = universe.find((row) => String(row.ticker).toUpperCase() === wanted);
+    if (!hit) {
+      throw invalidParams(
+        `no US filer with ticker "${ticker}" in the SEC universe. `
+        + "Non-US listings are absent from it; supply a cik, or use market_coverage to see what this market supports.",
+      );
+    }
+    resolved = hit.cik;
+  }
+  if (!resolved) throw invalidParams("screenTicker needs a cik or a ticker");
+  const cikUsed = resolved;
+  const facts = await fetchCompanyFacts(cikUsed);
   const result = evaluateRules(facts, { asOf });
-  return { ticker: ticker || facts.entityName, cik, entity: facts.entityName, as_of: asOf, ...result };
+  return { ticker: ticker || facts.entityName, cik: cikUsed, resolved_from_ticker: !cik && Boolean(ticker), entity: facts.entityName, as_of: asOf, ...result };
 }
 
 

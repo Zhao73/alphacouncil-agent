@@ -262,10 +262,9 @@ export function tools() {
       type: "object",
       properties: {
         cik: { type: "string", description: "SEC CIK. Use list_us_universe to resolve a ticker." },
-        ticker: { type: "string" },
+        ticker: { type: "string", description: "US ticker, e.g. MU. Resolved to a CIK against the SEC universe, so supplying this is enough." },
         as_of: { type: "string", description: "YYYY-MM-DD. Only filings actually filed by this date are used, which is what keeps a historical screen free of look-ahead bias." },
       },
-      required: ["cik"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("screen_candidates", "Run the mechanical elimination screen over a list of candidates and report every rejection with the metric, the measured value and the threshold. This is the 'find me stocks' path, and no language model participates in it. Capped at 40 names: SEC is one request per company and rate-limits, so narrow the funnel first with industry_brief, industry_peers or list_us_universe. A fetch failure is reported as unavailable rather than eliminated, because dropping a name because SEC timed out would bias the survivors.", {
       type: "object",
@@ -510,10 +509,10 @@ export async function handleToolCall(id, params) {
       sendResult(id, jsonContent(`No options chain for ${data.symbol}: ${data.reason}`, data));
       return;
     }
-    const front = data.term_structure[0];
+    const ref = data.reference_expiry;
     sendResult(id, jsonContent(
       `${data.symbol} options: ${data.contracts_with_iv}/${data.contracts_total} contracts with usable IV, `
-      + `front ATM IV ${front ? (front.atm_iv * 100).toFixed(1) + "% at " + front.dte + "d" : "unavailable"}, `
+      + `reference ATM IV ${ref ? (ref.atm_iv * 100).toFixed(1) + "% at " + ref.dte + "d (" + ref.expiry + ")" : "unavailable"}, `
       + `put/call OI ${data.open_interest.put_call_ratio ?? "n/a"}. Delayed. IV percentile is not computable from this snapshot.`,
       data,
     ));
