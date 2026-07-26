@@ -4,6 +4,7 @@ import { runPath } from "./run-store.mjs";
 import { compactEvidence, compactMasterOpinions } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
 import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
+import { groundingBlock } from "./grounding.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 
 /**
@@ -21,7 +22,7 @@ function render(template, values) {
     (Object.prototype.hasOwnProperty.call(values, key) ? String(values[key] ?? "") : match));
 }
 
-export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "auto") {
+export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "auto", grounding = null) {
   const resolvedLanguage = resolveLanguage({ language, prompt: userPrompt });
   const chinese = isChineseLanguage(resolvedLanguage);
   const reg = registry();
@@ -38,7 +39,10 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
   const body = render(personaPrompt(reg.get(task), resolvedLanguage), { symbol, as_of: asOfDate, language: resolvedLanguage })
     || (chinese ? "收集与投资决策相关的证据。" : "Collect evidence relevant to the investment decision.");
 
-  return `${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`;
+  // Grounding goes AFTER the role brief: the analyst must know its job before it is told
+  // which facts are already settled, or it reads them as the whole assignment.
+  const grounded = groundingBlock(grounding, resolvedLanguage);
+  return [`${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`, grounded].filter(Boolean).join("\n\n");
 }
 
 export function debatePrompt(role, run, context = {}) {

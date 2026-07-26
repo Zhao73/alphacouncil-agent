@@ -48,6 +48,9 @@ export function visibleRun(args) {
     // Verifier outcomes, keyed to the seat that cited the claim. These drive the
     // down-weighting in weights.mjs.
     verifier_verdicts: [],
+    // Deterministic facts injected into every analyst prompt, so search explains and
+    // challenges established numbers rather than re-deriving them from nothing.
+    grounding: args.grounding && typeof args.grounding === "object" ? args.grounding : null,
     seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
   };
   writeStatus(run);
@@ -62,7 +65,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   const evidence_agents = run.tasks.map((task) => ({
     role: task,
     title: isChineseLanguage(run.language) ? `AlphaCouncil Agent ${run.symbol} ${task} 证据子代理` : `AlphaCouncil Agent ${run.symbol} ${task} evidence subagent`,
-    prompt: taskPrompt(task, run.symbol, run.as_of, userPrompt, run.language),
+    prompt: taskPrompt(task, run.symbol, run.as_of, userPrompt, run.language, run.grounding),
     output_contract: isChineseLanguage(run.language) ? "只返回一个 JSON evidence packet。" : `Return one JSON evidence packet with reader-facing fields in ${run.language}.`,
   }));
   const debate_agents = DEBATE_ROLES.map((role) => ({

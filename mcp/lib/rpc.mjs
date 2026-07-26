@@ -14,6 +14,7 @@ import { preflightNetworkPermissions } from "./preflight.mjs";
 import { getQuotes } from "./quotes.mjs";
 import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
+import { gatherGrounding, groundingBlock } from "./grounding.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
@@ -77,6 +78,7 @@ export function tools() {
         masters_roster: common.masters_roster,
         masters: common.masters,
         seat_weights: common.seat_weights,
+        grounding: { type: "object", description: "The `grounding` object from compose_research_brief. Injected into every analyst prompt." },
         run_id: { type: "string" },
       },
       required: ["symbol"],
@@ -161,6 +163,17 @@ export function tools() {
       },
       required: ["industry"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("compose_research_brief", "Assemble the hard facts BEFORE the analysts search: quote, SEC filer profile, the mechanical screen with every computed metric, macro readings, and the industry chain map. Returns both the structured data and a prompt block that tells an analyst these numbers are already established and that its search exists to explain, extend and challenge them -- with the rule that a searched number never silently overwrites a filed one. Pass the returned `grounding` object to plan_visible_run so every analyst prompt carries it.", {
+      type: "object",
+      properties: {
+        symbol: common.symbol,
+        cik: { type: "string", description: "SEC CIK; enables the filer profile and the mechanical screen." },
+        industry: { type: "string", description: "Industry query; adds the value-chain participants including non-US names." },
+        macro: { type: "boolean", default: true },
+        as_of: { type: "string", description: "YYYY-MM-DD; only filings filed by this date are used." },
+        language: common.language,
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("industry_coverage", "Ask what is actually known about an industry BEFORE researching it. Returns whether a curated value-chain map exists, whether SEC's SIC classification covers it, or neither -- with guidance for each case. SIC reaches every industry with a US filer; a curated map additionally carries chain position, non-US participants and demand drivers. Use this so a report never presents an uncurated participant list as if it were complete.", {
       type: "object",
       properties: { industry: { type: "string" } },
@@ -284,6 +297,25 @@ export async function handleToolCall(id, params) {
       `Need a local regulator feed: ${brief.coverage.needs_local_regulator_feed.map((p) => `${p.symbol} (${p.market})`).join(", ") || "none"}.`,
     ];
     sendResult(id, jsonContent(lines.join("\n"), brief));
+    return;
+  }
+  if (name === "compose_research_brief") {
+    const grounding = await gatherGrounding({
+      symbol: args.symbol, cik: args.cik, industry: args.industry,
+      macro: args.macro !== false, asOf: args.as_of,
+    });
+    const block = groundingBlock(grounding, resolveLanguage(args));
+    const facts = [
+      grounding.quote ? "quote" : null,
+      grounding.filer ? "filer profile" : null,
+      grounding.screen ? `screen (${grounding.screen.rules_computed}/${grounding.screen.rules_total} rules)` : null,
+      grounding.macro ? `macro (${grounding.macro.derived.length} readings)` : null,
+      grounding.industry?.participants ? `industry (${grounding.industry.participants.length} participants)` : null,
+    ].filter(Boolean);
+    sendResult(id, jsonContent(
+      `Grounded on: ${facts.join(", ") || "nothing available"}.${grounding.unavailable.length ? ` Data gaps: ${grounding.unavailable.length}.` : ""}`,
+      { grounding, prompt_block: block },
+    ));
     return;
   }
   if (name === "industry_coverage") {
