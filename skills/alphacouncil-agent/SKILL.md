@@ -30,40 +30,30 @@ Do not ask startup option questions by default. For underspecified requests such
 
 Ask only when the user explicitly requests option selection before launch. Use the inferred language for visible main-thread preflight/progress updates, visible agent prompts, evidence packets, debate packets, and final synthesis unless the user explicitly requests another language. Always pass the original user request in `prompt`, and pass the inferred language as `language` to AlphaCouncil Agent MCP tools.
 
-## Stage 0 — Ask which council to run (every host)
+## Stage 0 — Ask which masters, then run
 
-**Before planning a run, call `list_council_options` and let the user choose.**
+**One question, about the master bench only. Then start.**
 
-A council is anywhere from 7 to 44 seats. That range is the user's time and money, and
-choosing silently is wrong in both directions: pick small and the bench they were promised
-never runs, pick everything and a one-line question costs a full fan-out.
+The analysts have a sensible default -- the eight-seat fan-out -- and asking about them every
+time is a question with an obvious answer. The bench is the part a user actually has a view
+on, and it is where the cost varies most: 21 lenses or 4 is a real difference.
 
-**Show the named roster, not three abstractions.** `list_council_options` returns every
-analyst with what it covers and every master school with its members. Put those in front of
-the user and let them pick: whole schools, individual seats, or all of them. The presets are
-shortcuts offered alongside the list, not the only way to choose.
+1. Call `list_council_options`.
+2. Ask **once**: which master schools? Offer the six by name with their members, plus "all"
+   and "none". In Claude Code use `AskUserQuestion` with `multiSelect: true`; elsewhere print
+   the table and take a reply.
+3. **Then run.** Do not ask about analysts, presets, or confirmation. The answer to "which
+   masters" is the whole configuration decision.
 
-Naming the seats is not decoration. A preset labelled "32 seats" hid the fact that five
-masters were never in the roster it selected, and nobody could see it without counting.
+Analysts default to the eight-seat fan-out. Use all eleven only if the user asked for
+breadth, and say so in the report rather than asking first.
 
-**Do not ask when they have already told you.** A user who named a roster, said "run
-everything", said "just be quick", or is repeating a run with the same shape has answered;
-asking again is an interruption, not diligence.
+**Skip the question entirely when the request already answered it** — a named school,
+"everything", "no masters", "be quick", or a repeat of a run with the same shape. A
+confirmation nobody needed is an interruption.
 
-How to ask, per host:
-
-- **Claude Code** — `AskUserQuestion`. One question for the analysts, one for the master
-  bench with `multiSelect: true` over the six schools, each option naming its members. Six
-  schools fit where twenty-one individual lenses do not, and the names are still visible.
-- **Codex, OpenCode, Grok Build** — print the two tables and ask them to reply with the
-  seats or schools they want, or "all".
-
-Two things to say plainly when you ask:
-
-- The estimates are relative magnitudes, not promises. "Roughly three times the seats" is
-  honest; "about 33 minutes" is not.
-- If they choose everything, say once that it will be noticeably slower — then run it. They
-  are allowed to spend their own time; they are not required to guess what it costs.
+Say the cost once, in the same message as the question: each master is one subagent, so the
+bench is the difference between roughly 11 seats and roughly 32. Do not quote minutes.
 
 ## Visible-First Workflow
 

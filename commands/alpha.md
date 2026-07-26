@@ -43,12 +43,11 @@ is where the spend is.
 
 ## Full council
 
-1. **Show the roster and let them pick.** Call `list_council_options` and put the named
-   analysts and the six master schools in front of the user — whole schools, individual
-   seats, or all. Presets are shortcuts shown alongside, not the only way to choose. A
-   council is 7 to 44 seats and that range is the user's time and money.
-   **Skip the question when the request already answered it** — a named roster, "everything",
-   "be quick". A confirmation nobody needed is an interruption.
+1. **Ask which masters, once, then run.** Call `list_council_options` and ask only about the
+   master bench — the six schools by name with their members, plus "all" and "none". Analysts
+   default to the eight-seat fan-out; do not ask about them. After the answer, start
+   immediately: no preset question, no confirmation. **Skip the question entirely** when the
+   request already said (a named school, "everything", "no masters", "be quick").
 2. Follow `skills/alphacouncil-agent/SKILL.md` from Stage 0. Do not improvise a shorter
    workflow: a report that looks finished and skipped the bench is worse than an obviously
    partial one.
