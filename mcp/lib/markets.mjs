@@ -1,6 +1,7 @@
 import { LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { fetchQuote } from "./quotes.mjs";
+import { fetchDartFinancials, fetchEdinetFilings } from "./markets-kr-jp.mjs";
 
 /**
  * Where structured financials come from, per market, and what to do when they do not.
@@ -174,7 +175,7 @@ export async function fetchTaiwanFinancials(symbol) {
  * Never returns an empty result silently: when the primary feed is unavailable it says
  * which feed, why, and what the caller should do instead.
  */
-export async function fetchMarketFinancials(symbol) {
+export async function fetchMarketFinancials(symbol, extra = {}) {
   const market = marketFor(symbol);
   if (!market) throw invalidParams(`cannot identify a market for symbol "${symbol}"`);
   const status = feedStatus(market);
@@ -198,6 +199,19 @@ export async function fetchMarketFinancials(symbol) {
     const financials = await fetchTaiwanFinancials(symbol).catch(() => null);
     if (financials) return { ...base, financials, guidance: financials.note };
     return { ...base, financials: null, guidance: `Not found in the TWSE dataset for ${symbol}. Fall back to the quote and to search.` };
+  }
+
+  if (market.id === "KR" && status.available) {
+    const kr = await fetchDartFinancials({ corpCode: extra.corp_code, year: extra.year || new Date().getFullYear() - 1 })
+      .catch((e) => ({ available: false, reason: String(e?.message || e) }));
+    if (kr.available) return { ...base, financials: kr, guidance: kr.note };
+    return { ...base, financials: null, guidance: kr.reason };
+  }
+
+  if (market.id === "JP" && status.available) {
+    const jp = await fetchEdinetFilings({ secCode: symbol }).catch((e) => ({ available: false, reason: String(e?.message || e) }));
+    if (jp.available) return { ...base, financials: null, filings: jp.filings, guidance: jp.note };
+    return { ...base, financials: null, guidance: jp.reason };
   }
 
   // Everything else: say what is missing and fall back to what always works.

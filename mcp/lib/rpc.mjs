@@ -167,7 +167,11 @@ export function tools() {
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("market_financials", "Structured financials for ANY market, degrading in a stated order: keyless regulator feed (SEC for US, TWSE for Taiwan), then a feed needing a free key (DART for Korea, EDINET for Japan) reported as not-configured rather than pretended away, then quotes plus search which always work. Never returns an empty result silently -- it says which feed is missing, why, and what to use instead.", {
       type: "object",
-      properties: { symbol: { type: "string", description: "Exchange symbol, e.g. 2408.TW, 000660.KS, 285A.T, 0700.HK." } },
+      properties: {
+        symbol: { type: "string", description: "Exchange symbol, e.g. 2408.TW, 000660.KS, 285A.T, 0700.HK." },
+        corp_code: { type: "string", description: "Korea only: DART's 8-digit corp_code, which is not the ticker. Samsung Electronics is 00126380, SK hynix 00164779." },
+        year: { type: "number", description: "Korea only: fiscal year. Defaults to last year." },
+      },
       required: ["symbol"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("market_coverage", "Ask up front what this pipeline can and cannot fetch for a set of symbols, before building a report on them. Returns per-symbol whether structured financials are available, summary-only, or absent, and which environment variable would unlock a market. Names without a feed are still researchable from documents -- but every figure taken that way has to be labelled as such.", {
@@ -312,7 +316,7 @@ export async function handleToolCall(id, params) {
     return;
   }
   if (name === "market_financials") {
-    const result = await fetchMarketFinancials(args.symbol);
+    const result = await fetchMarketFinancials(args.symbol, { corp_code: args.corp_code, year: args.year });
     let text;
     if (result.financials) {
       const f = result.financials;

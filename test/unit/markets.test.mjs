@@ -80,3 +80,27 @@ test("money and metric formatting stay readable at every scale", () => {
   assert.equal(metricValue(null, "%"), "n/a");
   assert.equal(mark(false), "**FAIL**");
 });
+
+// ---- Korea and Japan adapters ---------------------------------------------
+
+import { fetchDartFinancials, fetchEdinetFilings } from "../../mcp/lib/markets-kr-jp.mjs";
+
+test("without a key the adapters name the variable and where to get it", async () => {
+  const kr = await fetchDartFinancials({ corpCode: "00126380", year: 2024, key: "" });
+  assert.equal(kr.available, false);
+  assert.match(kr.reason, /ALPHACOUNCIL_DART_KEY/);
+  assert.match(kr.reason, /opendart\.fss\.or\.kr/);
+
+  const jp = await fetchEdinetFilings({ secCode: "285A", key: "" });
+  assert.equal(jp.available, false);
+  assert.match(jp.reason, /ALPHACOUNCIL_EDINET_KEY/);
+});
+
+// A misconfigured key must not look like "this company filed nothing".
+test("a rejected key is reported as a key problem, not as missing data", async () => {
+  const kr = await fetchDartFinancials({ corpCode: "00126380", year: 2024, key: "definitely-not-valid" });
+  assert.equal(kr.available, false);
+  assert.equal(kr.is_key_problem, true);
+  assert.equal(kr.dart_status, "010");
+  assert.match(kr.reason, /not registered/);
+});

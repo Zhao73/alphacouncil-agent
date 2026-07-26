@@ -46,3 +46,29 @@ MCP tools and `.opencode/agent/*.md` carry the rest.
 
 `websearch` is gated in OpenCode — it needs the OpenCode provider or `OPENCODE_ENABLE_EXA=1`.
 Run `preflight_permissions` before a fan-out; it reads OpenCode's permission syntax too.
+
+## Market data coverage
+
+Structured financials come from each market's own regulator, and the pipeline degrades in
+a stated order rather than quietly becoming US-only.
+
+| Market | Regulator | Key needed | What you get |
+|---|---|---|---|
+| US | SEC EDGAR | none | Full XBRL history with filing dates |
+| Taiwan | TWSE OpenAPI | none | Quarterly income-statement summary |
+| Korea | DART | `ALPHACOUNCIL_DART_KEY` | Full statements |
+| Japan | EDINET v2 | `ALPHACOUNCIL_EDINET_KEY` | Filing index; documents are XBRL in a ZIP |
+| Hong Kong, China A | HKEXnews, cninfo | n/a | No machine-readable API; PDFs only |
+
+Both keys are free. Register at <https://opendart.fss.or.kr> and at the EDINET portal,
+then export them. Nothing breaks without them: `market_coverage` reports which symbols
+have no feed, and the grounding block tells analysts that any financial figure for those
+names must come from a primary document they actually read and be cited as such.
+
+Korea indexes by DART's 8-digit `corp_code`, which is not the ticker -- Samsung
+Electronics is `00126380`, SK hynix `00164779`. Japan uses a 5-digit `secCode`, so
+`285A.T` becomes `285A0`.
+
+Call `market_coverage` before building a report across markets. Without it a memory-industry
+report quietly becomes a Micron report, because Micron is the participant whose numbers
+were easy to fetch.
