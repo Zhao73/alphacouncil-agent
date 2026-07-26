@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v2.schema.json",
+  "title": "Persona v2 method model",
+  "description": "A versioned, falsifiable model of a publicly documented investment method. Never a claim to hold a person's judgment: a model that does not clear the admission bar is an Operator Lens and is labelled as one.",
+  "type": "object",
+  "required": ["schema_version", "persona_id", "display_name", "kind", "admission", "decision_policy"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 2 },
+    "persona_id": { "type": "string", "pattern": "^[a-z0-9_]{2,48}$" },
+    "display_name": {
+      "type": "object",
+      "description": "Must read as a method, not a person: 'Buffett Method Model', not 'Warren Buffett'.",
+      "required": ["en"],
+      "additionalProperties": { "type": "string" }
+    },
+    "kind": {
+      "enum": ["method_model", "operator_lens"],
+      "description": "method_model requires a passing admission block; operator_lens is the honest downgrade when the source corpus is thin."
+    },
+
+    "admission": {
+      "type": "object",
+      "description": "Counted from the loaded corpus, not asserted. Falling short downgrades kind to operator_lens.",
+      "required": ["propositions", "primary_sources", "decision_cases", "failure_cases", "vetoes", "counterfactuals"],
+      "additionalProperties": false,
+      "properties": {
+        "propositions": { "type": "integer", "minimum": 0 },
+        "primary_sources": { "type": "integer", "minimum": 0 },
+        "decision_cases": { "type": "integer", "minimum": 0 },
+        "failure_cases": { "type": "integer", "minimum": 0, "description": "Documented misses and changes of mind. These define the boundary of a method more sharply than its aphorisms do." },
+        "vetoes": { "type": "integer", "minimum": 0 },
+        "counterfactuals": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "doctrine": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "claim", "scope", "trigger", "action", "source_ids", "confidence", "version"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": { "type": "string", "pattern": "^[a-z0-9_]+\\.[a-z0-9_]+\\.[0-9]{2,}$" },
+          "claim": { "type": "string", "minLength": 8 },
+          "scope": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "trigger": { "type": "string", "minLength": 3 },
+          "action": { "enum": ["out_of_scope", "veto", "require_evidence", "downweight", "upweight", "watch", "size_cap"] },
+          "source_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "A rule with no source cannot be loaded." },
+          "confidence": { "enum": ["high", "medium", "low"] },
+          "counterexamples": { "type": "array", "items": { "type": "string" } },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "grade", "title", "url", "date"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string" },
+          "grade": {
+            "enum": ["A", "B", "C", "D", "E"],
+            "description": "Only A and B may define a core decision rule. C supports. D stages. E is rejected."
+          },
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "date": { "type": "string" },
+          "excerpt": { "type": "string", "maxLength": 400, "description": "Minimal necessary quotation only. The repository stores method propositions, not copyrighted passages." }
+        }
+      }
+    },
+
+    "research_policy": {
+      "type": "object",
+      "description": "The private query plan run on top of the frozen fact pack. Invisible to other seats until first submission.",
+      "additionalProperties": false,
+      "properties": {
+        "priorities": { "type": "array", "items": { "type": "string" } },
+        "must_recompute": { "type": "array", "items": { "type": "string" }, "description": "Load-bearing figures this model recomputes itself. It may disagree with a derived number; it may never silently overwrite a filed one." },
+        "must_seek_disconfirming": { "type": "array", "items": { "type": "string" } },
+        "evidence_slice": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "decision_policy": {
+      "type": "object",
+      "required": ["eligibility", "stance_bands"],
+      "additionalProperties": false,
+      "properties": {
+        "eligibility": {
+          "type": "object",
+          "description": "Evaluated before any model call. Failing it costs nothing and says more than an essay would.",
+          "required": ["requires", "on_fail"],
+          "additionalProperties": false,
+          "properties": {
+            "requires": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+            "on_fail": { "const": "out_of_scope" }
+          }
+        },
+        "scoring": {
+          "type": "object",
+          "required": ["max_score", "rules"],
+          "additionalProperties": false,
+          "properties": {
+            "max_score": { "type": "number", "exclusiveMinimum": 0 },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["id", "metric", "op", "value", "points", "provenance"],
+                "additionalProperties": false,
+                "properties": {
+                  "id": { "type": "string" },
+                  "metric": { "type": "string" },
+                  "op": { "enum": [">=", ">", "<=", "<", "==", "!="] },
+                  "value": { "type": ["number", "string", "boolean"] },
+                  "points": { "type": "number" },
+                  "provenance": { "type": "string", "minLength": 8, "description": "Which letter, book or talk fixes this threshold. Determinism relocates uncertainty into the constants; provenance is the mitigation." }
+                }
+              }
+            }
+          }
+        },
+        "stance_bands": {
+          "type": "array",
+          "description": "Score-to-stance mapping. The model narrates a stance it did not choose.",
+          "items": {
+            "type": "object",
+            "required": ["min_ratio", "stance"],
+            "additionalProperties": false,
+            "properties": {
+              "min_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+              "stance": { "enum": ["constructive", "cautious", "opposed", "out_of_scope"] }
+            }
+          },
+          "minItems": 1
+        },
+        "vetoes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "condition", "source_ids"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "condition": { "type": "string" },
+              "source_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            }
+          }
+        }
+      }
+    },
+
+    "memory_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "horizon_days": { "type": "integer", "minimum": 1, "description": "When a prediction expires and a postmortem may be written. Earlier writes are refused." },
+        "belief_decay_days": { "type": "integer", "minimum": 1 },
+        "leak_rule": {
+          "const": "public_at <= as_of AND memory_created_at <= as_of",
+          "description": "Both clauses are required. Without the second a model reads the future through its own diary and every backtest built on it is fiction."
+        }
+      }
+    },
+
+    "tools": { "type": "array", "items": { "type": "string" } },
+
+    "voice": {
+      "type": "object",
+      "description": "Style only. Voice may not participate in fact extraction, computation, or signal generation.",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

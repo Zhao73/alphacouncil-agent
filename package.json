@@ -64,6 +64,8 @@
     "docs/INSTALL.md",
     "docs/plans/",
     "docs/roadmap.md",
+    "schemas/",
+    "docs/persona-v2-spec.md",
     "SECURITY.md",
     "CONTRIBUTING.md"
   ]
