@@ -35,9 +35,9 @@
 
 <div align="center">
 
-<img src="assets/demo.gif" alt="AlphaCouncil Agent 演示" width="100%" />
+<img src="assets/run-example.png" alt="A real AlphaCouncil run: six master lenses reaching the same call for different reasons" width="100%" />
 
-<sub><i>一句命令 → 一组分析师代理 → 多空辩论 → 投资组合经理给出结论。</i></sub>
+<sub><i>一次真实运行。六位大师无一支持买入 —— 而分歧不在结论，在理由。</i></sub>
 
 </div>
 

@@ -35,9 +35,9 @@
 
 <div align="center">
 
-<img src="assets/demo.gif" alt="AlphaCouncil Agent デモ" width="100%" />
+<img src="assets/run-example.png" alt="A real AlphaCouncil run: six master lenses reaching the same call for different reasons" width="100%" />
 
-<sub><i>コマンド一発 → アナリスト評議会 → 強気/弱気ディベート → PM の判定。</i></sub>
+<sub><i>実際の実行結果。6つのレンズはいずれも強気ではなく、相違は結論ではなく理由にあります。</i></sub>
 
 </div>
 

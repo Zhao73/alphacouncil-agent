@@ -19,13 +19,22 @@
 <p>
   <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="codex" />
   <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="claude code" />
+  <img src="https://img.shields.io/badge/OpenCode-1a7a6a?style=for-the-badge&logoColor=white" alt="opencode" />
+  <img src="https://img.shields.io/badge/Grok_Build-000000?style=for-the-badge&logo=x&logoColor=white" alt="grok build" />
+</p>
+<p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="mcp" />
+  <img src="https://img.shields.io/badge/API_keys-none_required-2ea043?style=for-the-badge" alt="no api keys" />
+  <img src="https://img.shields.io/badge/dependencies-zero-2ea043?style=for-the-badge" alt="zero dependencies" />
 </p>
 
 <p>
-  <a href="#-usage"><b>Usage</b></a> ·
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
+  <a href="#-usage"><b>Usage</b></a> ·
+  <a href="#-tools--27-all-keyless"><b>Tools</b></a> ·
+  <a href="#-the-bench--21-investor-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
+  <a href="CHANGELOG.md"><b>Changelog</b></a> ·
   <a href="#-disclaimer"><b>Disclaimer</b></a>
 </p>
 
@@ -35,9 +44,9 @@
 
 <div align="center">
 
-<img src="assets/demo.gif" alt="AlphaCouncil Agent demo" width="100%" />
+<img src="assets/run-example.png" alt="A real AlphaCouncil run: six master lenses reaching the same call for different reasons" width="100%" />
 
-<sub><i>One command → a council of analyst agents → bull/bear debate → a portfolio-manager verdict.</i></sub>
+<sub><i>A real run. Six lenses, none constructive — and the disagreement is in the reasons, not the call.</i></sub>
 
 </div>
 
@@ -47,13 +56,13 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity rese
 
 | | |
 |---|---|
-| 🏛️ **A council, not one opinion** | 11 specialist analyst agents (market data, earnings, valuation, quant, insider/SEC, IB events…) run in parallel. |
-| 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio-manager agent that issues an actual rating. |
-| 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. Missing data is listed in a "data gaps" section — never hidden. |
-| ⏱️ **Multi-horizon verdict** | Buy/Hold/Sell plus separate 1-4 week, 3-6 month, and 12-month views. |
-| 🔑 **No data vendor, no API keys** | No financial-data API, market-data feed, or brokerage login. Analysts gather evidence live via the agent's own web search (**Codex web search** / **Claude Code WebSearch + WebFetch**) — billed only to your existing Codex / Claude Code subscription. MIT licensed. |
-| 📚 **Bundled research playbooks** | Public-equity-investing & investment-banking methodology ship as **local skills** — no dependency on Codex-only remote workflows, so Claude Code gets the same research depth (`skills/public-equity-investing`, `skills/investment-banking`). |
-| 📈 **Real market data, no key** | Built-in `get_quote` pulls delayed (~15m) index / index-futures (incl. night session) / FX / rates / vol / commodity / stock levels via Yahoo + Stooq — no API key, so analysts cite real numbers, not guesses. |
+| 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
+| 🎭 **21 investor lenses that disagree** | Buffett, Munger, Graham, Lynch, Marks, Klarman, Soros, Dalio, Burry, Simons, Thorp, Taleb and more read the **same facts** and reach different conclusions. Each names its own failure mode, because a seat that cannot say how it goes wrong will not flag it when it does. |
+| 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio manager who issues an actual rating — and three verifiers that re-source, re-derive and attack every load-bearing claim. A failed check **down-weights the seat that made it**. |
+| 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
+| 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
+| 🔑 **27 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🖥️ **One council on four hosts** | Claude Code, Codex, OpenCode and Grok Build run the **same** workflow, the same bench and the same gates. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
