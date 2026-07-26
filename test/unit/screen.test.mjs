@@ -110,3 +110,24 @@ test("as_of excludes filings that were not public yet", () => {
   const result = evaluateRules(facts({ OperatingIncomeLoss: [100], InterestExpense: [80] }), { asOf: "2016-01-01" });
   assert.ok(rule(result, "interest_cover").skipped, "nothing was filed by that date");
 });
+
+
+test("every rule names what it measures, in both languages, with a direction", () => {
+  const result = evaluateRules(facts({
+    Revenues: [100, 100, 100], NetIncomeLoss: [10, 10, 10],
+    OperatingIncomeLoss: [20], InterestExpense: [5],
+    NetCashProvidedByUsedInOperatingActivities: [15, 15, 15],
+    PaymentsToAcquirePropertyPlantAndEquipment: [5, 5, 5],
+    StockholdersEquity: [50, 50, 50, 50, 50], CommonStockSharesOutstanding: [100, 100, 100],
+    GrossProfit: [40, 40, 40],
+  }));
+  for (const r of result.rules) {
+    assert.equal(typeof r.label, "object", `${r.id} label must be {en, zh}`);
+    assert.ok(r.label.en && r.label.zh, `${r.id} needs both languages`);
+    // The label names the measure; the direction says which way passes. Naming a rule
+    // after its failure condition made "long-run gross margin below 15%: pass" read as a
+    // contradiction.
+    assert.ok(!/below|above|more than/.test(r.label.en), `${r.id} label should name the measure, not the failure`);
+    if (!r.skipped) assert.ok(["min", "max"].includes(r.direction), `${r.id} needs a direction`);
+  }
+});

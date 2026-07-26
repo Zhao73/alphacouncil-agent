@@ -48,7 +48,7 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     }
   };
 
-  add("roe_10y", "10-year average ROE below 8%", () => {
+  add("roe_10y", { en: "10-year average ROE", zh: "10年平均ROE" }, () => {
     const ni = last(netIncome, 10);
     const eq = last(equity, 10);
     if (ni.length < 5 || eq.length < 5) return null;
@@ -60,10 +60,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     }
     if (roes.length < 5) return null;
     const avg = sum(roes) / roes.length;
-    return { passed: avg >= 0.08, value: pct(avg), unit: "%", threshold: 8, years: roes.length };
+    return { passed: avg >= 0.08, value: pct(avg), unit: "%", threshold: 8, direction: "min", years: roes.length };
   });
 
-  add("fcf_5y", "5-year cumulative free cash flow negative", () => {
+  add("fcf_5y", { en: "5-year cumulative free cash flow", zh: "5年累计自由现金流" }, () => {
     const o = last(ocf, 5);
     const c = last(capex, 5);
     if (o.length < 3 || c.length < 3) return null;
@@ -71,18 +71,18 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const total = sum(o.slice(-n).map((x) => x.val)) - sum(c.slice(-n).map((x) => x.val));
     // Raw dollars, not billions rounded to two places: rounding erased the entire figure
     // for anything below ~$5m, which is most of the small-cap universe.
-    return { passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, years: n };
+    return { passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, direction: "min", years: n };
   });
 
-  add("interest_cover", "EBIT / interest below 2x", () => {
+  add("interest_cover", { en: "EBIT / interest cover", zh: "利息保障倍数" }, () => {
     const ebit = last(operatingIncome, 1)[0];
     const int = last(interest, 1)[0];
     if (!ebit || !int || int.val === 0) return null;
     const cover = ebit.val / Math.abs(int.val);
-    return { passed: cover >= 2, value: Number(cover.toFixed(2)), unit: "x", threshold: 2 };
+    return { passed: cover >= 2, value: Number(cover.toFixed(2)), unit: "x", threshold: 2, direction: "min" };
   });
 
-  add("gross_margin", "long-run gross margin below 15%", () => {
+  add("gross_margin", { en: "long-run gross margin", zh: "长期毛利率" }, () => {
     const gp = last(grossProfit, 5);
     const rev = last(revenue, 5);
     if (gp.length < 3 || rev.length < 3) return null;
@@ -94,10 +94,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     }
     if (!margins.length) return null;
     const avg = sum(margins) / margins.length;
-    return { passed: avg >= 0.15, value: pct(avg), unit: "%", threshold: 15, years: margins.length };
+    return { passed: avg >= 0.15, value: pct(avg), unit: "%", threshold: 15, direction: "min", years: margins.length };
   });
 
-  add("ocf_over_ni", "5-year OCF / net income below 0.7", () => {
+  add("ocf_over_ni", { en: "5-year OCF / net income", zh: "5年经营现金流/净利" }, () => {
     const o = last(ocf, 5);
     const ni = last(netIncome, 5);
     if (o.length < 3 || ni.length < 3) return null;
@@ -105,10 +105,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const totalNi = sum(ni.slice(-n).map((x) => x.val));
     if (totalNi <= 0) return null;
     const ratio = sum(o.slice(-n).map((x) => x.val)) / totalNi;
-    return { passed: ratio >= 0.7, value: Number(ratio.toFixed(2)), unit: "x", threshold: 0.7, years: n };
+    return { passed: ratio >= 0.7, value: Number(ratio.toFixed(2)), unit: "x", threshold: 0.7, direction: "min", years: n };
   });
 
-  add("net_margin", "long-run net margin below 5%", () => {
+  add("net_margin", { en: "long-run net margin", zh: "长期净利率" }, () => {
     const ni = last(netIncome, 5);
     const rev = last(revenue, 5);
     if (ni.length < 3 || rev.length < 3) return null;
@@ -116,17 +116,17 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const totalRev = sum(rev.slice(-n).map((x) => x.val));
     if (totalRev <= 0) return null;
     const margin = sum(ni.slice(-n).map((x) => x.val)) / totalRev;
-    return { passed: margin >= 0.05, value: pct(margin), unit: "%", threshold: 5, years: n };
+    return { passed: margin >= 0.05, value: pct(margin), unit: "%", threshold: 5, direction: "min", years: n };
   });
 
-  add("dilution", "5-year share count up more than 20%", () => {
+  add("dilution", { en: "5-year share dilution", zh: "5年股本稀释" }, () => {
     const s = last(shares, 5);
     if (s.length < 3) return null;
     const first = s[0].val;
     const latest = s[s.length - 1].val;
     if (!(first > 0)) return null;
     const change = latest / first - 1;
-    return { passed: change <= 0.20, value: pct(change), unit: "%", threshold: 20, years: s.length };
+    return { passed: change <= 0.20, value: pct(change), unit: "%", threshold: 20, direction: "max", years: s.length };
   });
 
   // Exemptions. These are the only legitimate way past a failed rule -- a good story is
@@ -171,7 +171,7 @@ export function explainResult(result, ticker) {
   if (result.failures.length) {
     lines.push("eliminated by:");
     for (const f of result.failures) {
-      lines.push(`  - ${f.label}: measured ${f.value}${f.unit === "%" ? "%" : ` ${f.unit}`} against a threshold of ${f.threshold}${f.years ? ` over ${f.years}y` : ""}`);
+      lines.push(`  - ${typeof f.label === "string" ? f.label : f.label.en}: measured ${f.value}${f.unit === "%" ? "%" : ` ${f.unit}`} against a threshold of ${f.threshold}${f.years ? ` over ${f.years}y` : ""}`);
     }
   }
   if (result.exemptions.length) {

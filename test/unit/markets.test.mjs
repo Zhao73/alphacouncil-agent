@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { marketFor, feedStatus, coverageFor, MARKETS } from "../../mcp/lib/markets.mjs";
-import { table, mark, money, metricValue } from "../../mcp/lib/tables.mjs";
+import { table, mark, money, metricValue, label, threshold, skippedMark } from "../../mcp/lib/tables.mjs";
 
 test("symbols route to the right market by suffix", () => {
   assert.equal(marketFor("MU").id, "US");
@@ -78,7 +78,10 @@ test("money and metric formatting stay readable at every scale", () => {
   assert.equal(metricValue(27.17, "%"), "27.17%");
   assert.equal(metricValue(2.5, "x"), "2.5 x");
   assert.equal(metricValue(null, "%"), "n/a");
-  assert.equal(mark(false), "**FAIL**");
+  // A glyph to scan plus a word that survives a terminal rendering the glyph badly.
+  assert.match(mark(false), /\*\*FAIL\*\*/);
+  assert.match(mark(true), /pass/);
+  assert.notEqual(mark(true), mark(false));
 });
 
 // ---- Korea and Japan adapters ---------------------------------------------
@@ -155,4 +158,27 @@ test("the dashboard follows the requested language", () => {
 
 test("an empty grounding still produces a heading rather than throwing", () => {
   assert.match(groundingDashboard({ unavailable: [] }, "English"), /Research dashboard/);
+});
+
+
+// ---- bilingual rendering ---------------------------------------------------
+
+test("a label renders in the requested language and tolerates a plain string", () => {
+  assert.equal(label({ en: "10-year average ROE", zh: "10年平均ROE" }, false), "10-year average ROE");
+  assert.equal(label({ en: "10-year average ROE", zh: "10年平均ROE" }, true), "10年平均ROE");
+  assert.equal(label("plain", true), "plain", "an older plain-string label must still render");
+  assert.equal(label(undefined, true), "");
+});
+
+// "27.17% vs 15" can be read either way; the arrow removes the ambiguity.
+test("a threshold shows which direction passes", () => {
+  assert.equal(threshold(8, "min", "%"), "≥ 8%");
+  assert.equal(threshold(20, "max", "%"), "≤ 20%");
+  assert.equal(threshold(0, undefined, "USD"), "0 USD", "no direction means no arrow, not a wrong one");
+});
+
+test("a skipped marker is visually distinct from both pass and fail", () => {
+  const values = new Set([mark(true), mark(false), skippedMark(false)]);
+  assert.equal(values.size, 3);
+  assert.match(skippedMark(true), /跳过/);
 });

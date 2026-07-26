@@ -25,8 +25,22 @@ export function table(headers, rows, { title, empty = "_(no rows)_" } = {}) {
   return parts.join("\n");
 }
 
-/** A pass/fail marker that reads correctly in a terminal and in rendered markdown. */
-export const mark = (ok) => (ok ? "pass" : "**FAIL**");
+/**
+ * Status markers. A glyph plus a word: the glyph gives the row a shape you can scan, the
+ * word survives a terminal that renders the glyph badly.
+ */
+export const mark = (ok) => (ok ? "✅ pass" : "❌ **FAIL**");
+export const SKIPPED = "⚪ skipped";
+export const skippedMark = (zh) => (zh ? "⚪ 跳过" : SKIPPED);
+
+/** A label that may be a plain string or a {en, zh} pair. */
+export const label = (value, zh) => (typeof value === "string" ? value : (zh ? value?.zh : value?.en) ?? "");
+
+/** Threshold with its direction, so "27.17% vs 15" cannot be read backwards. */
+export function threshold(value, direction, unit) {
+  const arrow = direction === "max" ? "≤" : direction === "min" ? "≥" : "";
+  return `${arrow}${arrow ? " " : ""}${metricValue(value, unit)}`;
+}
 
 /** Compact money, so a table column stays readable. */
 export function money(value, currency = "USD") {
@@ -76,21 +90,31 @@ export function groundingDashboard(g, language = "English") {
   if (facts.length) out.push("", table([t("Item", "项目"), t("Value", "数值"), t("Detail", "细节"), t("Source", "来源")], facts, { title: t("Established facts", "已确立的事实") }));
 
   if (g.screen) {
-    const rows = g.screen.metrics.map((m) => [m.label, metricValue(m.value, m.unit), String(m.threshold), mark(m.passed)]);
-    for (const id of g.screen.skipped || []) rows.push([id, t("not computable", "无法计算"), "-", t("_skipped_", "_跳过_")]);
+    const rows = g.screen.metrics.map((m) => [
+      label(m.label, zh), metricValue(m.value, m.unit), threshold(m.threshold, m.direction, m.unit), mark(m.passed),
+    ]);
+    for (const sk of g.screen.skipped || []) rows.push([
+      typeof sk === "string" ? sk : label(sk.label, zh),
+      t("not computable", "无法计算"), "-", skippedMark(zh),
+    ]);
     out.push("", table([t("Rule", "规则"), t("Measured", "实测"), t("Threshold", "阈值"), t("Result", "结果")], rows,
       { title: `${t("Mechanical screen", "硬指标筛选")} — ${g.screen.verdict} (${g.screen.rules_computed}/${g.screen.rules_total})` }));
   }
 
   if (g.macro?.derived?.length) {
     out.push("", table([t("Reading", "读数"), t("Value", "数值")],
-      g.macro.derived.map((d) => [d.label, String(d.value)]), { title: t("Macro", "宏观") }));
+      g.macro.derived.map((d) => [label(d.label, zh), String(d.value)]), { title: t("Macro", "宏观") }));
   }
 
   if (g.coverage?.rows?.length) {
     out.push("", table(
       [t("Symbol", "标的"), t("Market", "市场"), t("Structured financials", "结构化财务"), t("Blocker", "阻碍")],
-      g.coverage.rows.map((r) => [r.symbol, r.market, r.structured_financials, r.needs_env || (r.reason ? r.reason.slice(0, 40) : "-")]),
+      g.coverage.rows.map((r) => [
+        r.symbol, r.market,
+        zh ? { yes: "有", "summary only": "仅摘要", no: "无" }[r.structured_financials] ?? r.structured_financials
+           : r.structured_financials,
+        r.needs_env || (r.reason ? r.reason.slice(0, 40) : "-"),
+      ]),
       { title: t("Data coverage", "数据覆盖") }));
   }
 

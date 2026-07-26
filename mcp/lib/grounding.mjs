@@ -62,11 +62,11 @@ export async function gatherGrounding({ symbol, cik, industry, macro = true, asO
         rules_total: s.rules.length,
         // Only the computed rules: a skipped rule is not a fact about the company.
         metrics: s.rules.filter((x) => !x.skipped).map((x) => ({
-          rule: x.id, label: x.label, value: x.value, unit: x.unit, threshold: x.threshold, passed: x.passed,
+          rule: x.id, label: x.label, value: x.value, unit: x.unit, threshold: x.threshold, direction: x.direction, passed: x.passed,
         })),
         failures: s.failures.map((f) => ({ rule: f.id, value: f.value, unit: f.unit, threshold: f.threshold })),
         exemptions: s.exemptions,
-        skipped: s.rules.filter((x) => x.skipped).map((x) => x.id),
+        skipped: s.rules.filter((x) => x.skipped).map((x) => ({ rule: x.id, label: x.label })),
       };
     }));
   }
@@ -158,7 +158,7 @@ export function groundingBlock(grounding, language = "English") {
       ? `- 硬指标筛选：${s.verdict === "survives" ? "通过" : "淘汰"}（${s.rules_computed}/${s.rules_total} 条可算）`
       : `- Mechanical screen: ${s.verdict} (${s.rules_computed} of ${s.rules_total} rules computable)`);
     for (const m of s.metrics) {
-      lines.push(`  - ${m.label}: ${fmt(m.value, m.unit)} (threshold ${m.threshold}) ${m.passed ? "pass" : "FAIL"}`);
+      lines.push(`  - ${typeof m.label === "string" ? m.label : (chinese ? m.label.zh : m.label.en)}: ${fmt(m.value, m.unit)} (${m.direction === "max" ? "max" : "min"} ${m.threshold}) ${m.passed ? "pass" : "FAIL"}`);
     }
     if (s.skipped.length) {
       lines.push(chinese

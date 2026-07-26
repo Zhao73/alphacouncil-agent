@@ -104,24 +104,24 @@ function derived(quotes) {
   const y5 = price(quotes, "^FVX");
   const y30 = price(quotes, "^TYX");
 
-  push("spread_10y_3m", "10Y minus 3M", y10 !== null && y3m !== null ? Number((y10 - y3m).toFixed(3)) : null,
+  push("spread_10y_3m", { en: "10Y minus 3M", zh: "10年期减3个月" }, y10 !== null && y3m !== null ? Number((y10 - y3m).toFixed(3)) : null,
     "Negative is an inverted curve. The most-watched recession proxy, and the one most often read too early.");
-  push("spread_30y_5y", "30Y minus 5Y", y30 !== null && y5 !== null ? Number((y30 - y5).toFixed(3)) : null,
+  push("spread_30y_5y", { en: "30Y minus 5Y", zh: "30年期减5年期" }, y30 !== null && y5 !== null ? Number((y30 - y5).toFixed(3)) : null,
     "Steepening at the long end usually prices term premium or inflation risk rather than growth.");
 
   const copper = price(quotes, "HG=F");
   const gold = price(quotes, "GC=F");
-  push("copper_gold", "Copper / gold", copper !== null && gold !== null ? Number((copper / gold).toFixed(6)) : null,
+  push("copper_gold", { en: "Copper / gold", zh: "铜金比" }, copper !== null && gold !== null ? Number((copper / gold).toFixed(6)) : null,
     "Rising is a growth signal, falling is a flight to safety. A cheap real-time growth proxy.");
 
   const hyg = price(quotes, "HYG");
   const lqd = price(quotes, "LQD");
-  push("hyg_lqd", "High yield / investment grade", hyg !== null && lqd !== null ? Number((hyg / lqd).toFixed(4)) : null,
+  push("hyg_lqd", { en: "High yield / investment grade", zh: "高收益/投资级" }, hyg !== null && lqd !== null ? Number((hyg / lqd).toFixed(4)) : null,
     "Falling means credit is repricing risk; weak balance sheets feel this before equity does.");
 
   const rsp = price(quotes, "RSP");
   const spy = price(quotes, "SPY");
-  push("breadth_rsp_spy", "Equal weight / cap weight", rsp !== null && spy !== null ? Number((rsp / spy).toFixed(4)) : null,
+  push("breadth_rsp_spy", { en: "Equal weight / cap weight", zh: "等权重/市值加权" }, rsp !== null && spy !== null ? Number((rsp / spy).toFixed(4)) : null,
     "Falling means the index is being carried by its largest members rather than by broad participation.");
 
   return out;

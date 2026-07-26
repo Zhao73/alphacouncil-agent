@@ -16,7 +16,7 @@ import { MACRO_BLOCKS, getMacroSnapshot } from "./macro.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
 import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
-import { table, mark, metricValue, groundingDashboard } from "./tables.mjs";
+import { table, mark, metricValue, groundingDashboard, label, threshold, skippedMark } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
@@ -398,9 +398,10 @@ export async function handleToolCall(id, params) {
   }
   if (name === "screen_ticker") {
     const result = await screenTicker(args);
+    const zh = /中文|chinese|zh/i.test(String(args.language || ""));
     const rows = result.rules.map((r) => (r.skipped
-      ? [r.label, "not computable", "-", "_skipped_"]
-      : [r.label, metricValue(r.value, r.unit), String(r.threshold), mark(r.passed)]));
+      ? [label(r.label, zh), zh ? "无法计算" : "not computable", "-", skippedMark(zh)]
+      : [label(r.label, zh), metricValue(r.value, r.unit), threshold(r.threshold, r.direction, r.unit), mark(r.passed)]));
     const text = [
       table(["Rule", "Measured", "Threshold", "Result"], rows, { title: `${result.ticker}: ${result.verdict}` }),
       result.exemptions.length ? `\nExempted: ${result.exemptions.map((e) => `${e.rule} (${e.reason})`).join("; ")}` : "",
