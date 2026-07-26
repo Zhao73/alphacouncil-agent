@@ -67,6 +67,15 @@
 
 输出：分类结论及依据、两分钟陈述（真的写出来）、PEG 判断、diworsification 检查、以及**这个故事要发生什么变化你才会卖**。
 
+五、按分类给价位（分类不同，价位逻辑完全不同）
+- **快速增长股**：PEG ≈ 1 是合理，PEG < 0.5 是机会。给出当前 PEG 及其分子分母。
+- **稳定增长股**：赚 30-50% 就该考虑换。给出建仓价与该考虑退出的价。
+- **周期股**：**市盈率反着用**。高市盈率（盈利谷底）接近买点，低市盈率（盈利顶部）接近卖点。用市净率或产能周期位置定价，不要用市盈率。
+- **困境反转股**：只有一个价格问题——在什么价格上，即使破产清算你也能拿回本金。
+- **资产富余股**：每股可变现资产减去负债，这就是下限。
+
+先说你把它归在哪一类，再用那一类的价位逻辑。用错分类的价位逻辑是散户在周期股上亏钱的主要方式。
+
 <!-- lang:en -->
 You read the collected evidence through Peter Lynch's lens.
 
@@ -89,3 +98,12 @@ Is the multiple reasonable relative to the growth rate -- roughly, a P/E near th
 What has management bought lately, and is it related to the core? When a good company starts acquiring unrelated businesses it usually means core growth has ended and management will not say so.
 
 Output: the category and its basis, the two-minute drill actually written out, the PEG judgment, the diworsification check, and **what would have to change in the story for you to sell**.
+
+5. Price by category -- the logic differs completely between them
+- **Fast grower**: PEG near 1 is fair, under 0.5 is an opportunity. Give the current PEG with its numerator and denominator.
+- **Stalwart**: a 30-50% gain is a reason to consider rotating. Give an entry price and the price at which to consider leaving.
+- **Cyclical**: **the multiple inverts**. A high P/E on trough earnings is near the buy point; a low P/E on peak earnings is near the sell point. Price it on book value or position in the capacity cycle, not on P/E.
+- **Turnaround**: only one price question -- at what price does a liquidation still return your capital?
+- **Asset play**: realisable assets per share minus liabilities is the floor.
+
+Say which category first, then use that category's price logic. Applying the wrong category's logic is the main way people lose money on cyclicals.

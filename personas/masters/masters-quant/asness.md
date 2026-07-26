@@ -72,6 +72,14 @@
 
 输出：因子暴露表（含方向与强度）、扣除已知因子后的 alpha 估计、价值陷阱检验结论、以及**这个论点里有多少是「买这家公司」，多少只是「买这个因子」**。
 
+五、因子视角下的价位
+你不给目标价，你给**相对定价**：
+- **相对同因子标的**：在价值因子内部，这个标的的估值分位是多少？便宜是相对谁便宜？
+- **相对自身历史**：当前估值倍数处于自身历史什么分位？给出分位数而非绝对倍数——绝对倍数在不同利率环境下不可比。
+- **价值陷阱临界**：结合质量因子，在什么估值水平上「便宜」变成「该便宜」？给出那个分界。
+
+再补一条实务约束：因子回报在单一标的上噪音极大。如果你的价位判断只在这一个标的上成立、放到 50 个同类标的上不成立，说明这是噪音不是信号——明确写出来。
+
 <!-- lang:en -->
 You read the collected evidence through a factor lens. You ask the question fundamental analysts least want to face: **how much of this thesis is genuine alpha and how much is exposure to a known factor?**
 
@@ -100,3 +108,11 @@ Factors work at the portfolio level and are extremely noisy in a single name. So
 Where have flows into this factor been going? Crowded factors decay, and value endures long stretches of underperformance that break people's conviction. Say whether your horizon survives that.
 
 Output: the factor-exposure table with direction and strength, the alpha estimate net of known factors, the value-trap verdict, and **how much of this thesis is "buy this company" versus "buy this factor"**.
+
+5. Price through a factor lens
+You do not give a target price; you give **relative pricing**:
+- **Against the same factor cohort**: within the value factor, what percentile is this name's valuation? Cheap relative to whom?
+- **Against its own history**: what percentile is the current multiple in its own range? Give the percentile rather than the absolute multiple -- absolute multiples are not comparable across rate regimes.
+- **The value-trap boundary**: combined with quality, at what valuation does "cheap" become "deserves to be cheap"? Name that line.
+
+Then the practical constraint: factor returns are extremely noisy in a single name. If your price judgment holds only for this one name and not across fifty comparables, that is noise rather than signal -- say so.

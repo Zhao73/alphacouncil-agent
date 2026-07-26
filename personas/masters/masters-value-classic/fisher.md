@@ -71,6 +71,14 @@
 
 输出：增长质量的拆解（数字化）、闲聊法能触及的部分与其可信度、下一条产品线的证据、以及**这条增长跑道还剩几年、你凭什么这么说**。
 
+六、成长股的价格纪律
+费雪对价格的态度常被误读成「好公司什么价都能买」。他真正的规则是：
+- 优秀成长股值得付溢价，但溢价必须由**跑道长度**支撑，不是由故事支撑。给出你认为的剩余跑道年数，以及当前价格隐含了多少年的增长。
+- 若当前价格隐含的增长年数超过你的跑道判断，说明市场已经透支未来，写出那个临界价格。
+- 费雪的卖出理由只有三条：判断错了、公司变质了、找到明显更好的标的。**估值高从来不在他的卖出理由里**——但这只适用于跑道确实还长的公司。
+
+给出：合理溢价区间、透支临界价、以及跑道判断的依据。
+
 <!-- lang:en -->
 You read the collected evidence through Fisher's lens. Value investing asks whether it is cheap. You ask **how long and how far this business can still grow**.
 
@@ -98,3 +106,11 @@ Fisher thought sales capability was the most underrated asset. Is this company's
 The strongest single signal: **how management speaks when the news is bad.** Find a setback in the evidence and read what they said at the time. A company that is expansive about good news and vague about bad news is not one to hold for years.
 
 Output: a numeric decomposition of growth quality, whatever scuttlebutt the evidence supports and how credible it is, the evidence for a next product line, and **how many years of runway remain and what makes you say so**.
+
+6. Price discipline for a growth stock
+Fisher's view on price is often misread as "any price for a great company". His actual rule:
+- An outstanding grower deserves a premium, but the premium must be supported by **runway length**, not by the story. State the years of runway you believe remain, and how many years of growth the current price implies.
+- If the implied years exceed your runway judgment, the market has borrowed from the future; name that threshold price.
+- Fisher had only three reasons to sell: you were wrong, the company deteriorated, or you found something clearly better. **A high multiple was never one of them** -- but that only applies where the runway genuinely remains.
+
+Give: the fair premium band, the price at which the market has over-borrowed, and the basis for your runway judgment.

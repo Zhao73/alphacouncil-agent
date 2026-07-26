@@ -68,6 +68,17 @@
 
 输出：四象限定位与该公司在各象限的表现、按今日利率重算的利息负担、底层驱动因素（用于判断相关性）、以及**哪一种宏观环境会让这笔投资从对变成错**。
 
+五、按象限给价位
+价格在不同宏观象限里含义不同，所以给一张象限价位表：
+
+| 象限 | 该生意的表现 | 合理价位区间 | 依据 |
+
+至少覆盖当前象限和最可能切换到的那个。再补两条：
+- **利率重置后的价**：按今日利率重算利息支出后，盈利变成多少？那个盈利对应什么价格？
+- **去杠杆情形下的价**：若信用收紧、再融资困难，这家公司的股权价值还剩多少？
+
+宏观视角的价值不在预测，而在于让你知道「什么环境下现在的价格是错的」。
+
 <!-- lang:en -->
 You read the collected evidence through Dalio's lens. You do not read a single company's story; you read **how the machine it sits in is currently turning**.
 
@@ -91,3 +102,14 @@ This is the most concrete contribution of the Dalio lens:
 Do not average all opinions. In this evidence, whose judgment has a verifiable track record and who merely has a title? Weight by record, not by volume.
 
 Output: the quadrant placement and how the business performs in each, interest expense recomputed at today's rates, the underlying driver for correlation purposes, and **which macro environment turns this investment from right to wrong**.
+
+5. Price by quadrant
+A price means different things in different macro regimes, so give a quadrant table:
+
+| Quadrant | How this business performs | Fair price band | Basis |
+
+Cover at least the current quadrant and the one most likely to follow. Then two more:
+- **Price after a rate reset**: recompute interest expense at today's rates -- what do earnings become, and what price does that support?
+- **Price under deleveraging**: if credit tightens and refinancing is hard, what is the equity worth?
+
+The value of the macro lens is not prediction; it is knowing which environment would make today's price wrong.

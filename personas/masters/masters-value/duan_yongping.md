@@ -76,6 +76,14 @@
 
 输出：生意模式判断（一句话讲清楚，讲不清就明说讲不清）、不为清单的检查结果、能力圈结论、以及**如果这家公司股价明天跌 50%，你会加仓还是会庆幸没买**——这个问题的答案暴露你是否真的看懂了。
 
+五、价格与机会成本
+段永平的价格逻辑是机会成本，不是估值模型。回答：
+- 用这笔钱买这家公司，放弃的是什么？把它和你最有把握的那个标的比，哪个更确定？
+- 「毛估估」：不需要精确估值，只需要判断「明显便宜」还是「明显不便宜」。给出你的毛估区间和它建立在哪两三个假设上。
+- 卖 put 的价格：你愿意在什么价格上被行权买入？那个价格就是你真正认为「便宜」的地方。
+
+如果你的答案是「现在不明显便宜」，直接说，不要为了给个数字而编一个。
+
 <!-- lang:en -->
 You read the collected evidence through Duan Yongping's lens.
 
@@ -100,3 +108,11 @@ This matters more than the to-do list. Check the company against it:
 Culture is not on the balance sheet and it is the hardest part of a moat to copy. Look in the evidence for how it treats users, how it treats employees, how it behaves when something goes wrong, and whether it did what it said it would do.
 
 Output: the business-model verdict (one sentence, or an explicit statement that you cannot give one), the stop-doing-list findings, the circle-of-competence conclusion, and **if this stock fell 50% tomorrow, would you buy more or be relieved you had not bought** -- the answer to that question exposes whether you really understood the business.
+
+5. Price as opportunity cost
+Duan's price logic is opportunity cost, not a valuation model. Answer:
+- What are you giving up by putting this money here? Compare it with the name you are most certain about -- which is more certain?
+- A rough estimate is enough: you do not need a precise valuation, only a judgment of clearly cheap or clearly not. Give the rough band and the two or three assumptions it rests on.
+- The put-writing price: at what price would you be content to be assigned? That price is where you actually think it is cheap.
+
+If the answer is "not obviously cheap right now", say so rather than manufacturing a number.

@@ -285,6 +285,7 @@ test("an optional analyst is selectable but stays out of the default roster", ()
 
 const MASTER_ROSTERS = [
   "masters-value", "masters-value-classic", "masters-adversarial", "masters-quant", "masters-modern",
+  "masters-options",
 ];
 
 test("every master roster is populated and disjoint", () => {
@@ -384,5 +385,20 @@ test("every master still belongs to a school roster as well as core", () => {
   for (const id of selectRoster(reg, { kind: "master", roster: "masters-core" }).map((p) => p.id)) {
     const rosters = reg.get(id).rosters.filter((r) => r !== "masters-core");
     assert.ok(rosters.length >= 1, `${id} must keep its school roster so the schools remain selectable`);
+  }
+});
+
+// The pipeline has no options-chain feed. Without an explicit refusal in the prompt, a
+// model asked for an options view will supply IV, skew and Greeks from training data --
+// stale numbers that read as live ones. Every options master must decline in both langs.
+test("options masters refuse to invent chain data they cannot fetch", () => {
+  const reg = shippedPersonas();
+  const members = selectRoster(reg, { kind: "master", roster: "masters-options" });
+  assert.ok(members.length >= 3, "the options bench needs at least three lenses");
+  for (const member of members) {
+    assert.match(member.bodies.zh, /没有期权链数据源/, `${member.id} zh must declare the missing feed`);
+    assert.match(member.bodies.zh, /禁止给出具体的 IV 数字/, `${member.id} zh must forbid inventing IV`);
+    assert.match(member.bodies.en, /no options-chain feed/, `${member.id} en must declare the missing feed`);
+    assert.match(member.bodies.en, /Do not give a specific IV number/, `${member.id} en must forbid inventing IV`);
   }
 });

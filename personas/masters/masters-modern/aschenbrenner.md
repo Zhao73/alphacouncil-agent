@@ -75,6 +75,14 @@
 
 输出：数量化的算力/电力/资本需求、当前瓶颈位置及公司所处环节、明确的时间线及其依据、市场隐含时间线、以及**这个论点在什么条件下会变成又一轮资本开支过剩**。
 
+五、时间线定价（这个视角的价位必须绑定时间线）
+AI 相关标的的价格几乎完全由时间线决定，所以：
+- **市场隐含的时间线**：当前价格对应哪一条建设/放量曲线？倒推出来。
+- **你的时间线对应的价格**：按你在第三节给出的年份，合理价格是多少？
+- **推迟两年的价格**：同样的终局，晚两年发生，现值折损多少？给出那个价格。
+
+三个价格给完后必须补一句：如果市场隐含的时间线比你的更激进，那么即使你的终局判断正确，当前价位也是亏钱的。这是 AI 主题投资最常见的亏损方式——**方向对，时间错**。
+
 <!-- lang:en -->
 You read the collected evidence through Aschenbrenner's lens. The value of this lens is not bullishness on AI; it is **forcing an AI narrative into a falsifiable quantitative question**.
 
@@ -105,3 +113,11 @@ This lens over-extrapolates by nature, so answer:
 - Is any "shortage" here actually a temporary allocation problem rather than a structural capacity one?
 
 Output: quantified compute, power and capital requirements, the current bottleneck and where this company sits, an explicit timeline with its basis, the timeline implied by the current price, and **the conditions under which this thesis becomes another capex glut**.
+
+5. Timeline pricing -- the price here is inseparable from the timeline
+For AI-adjacent names the price is almost entirely a function of timing, so:
+- **The timeline the market implies**: which build-out and ramp curve does the current price correspond to? Work it backwards.
+- **The price implied by your timeline**: at the year you gave in section 3, what is the fair price?
+- **The price if it slips two years**: same endgame, two years later -- how much present value is lost? Name that price.
+
+Having given all three, add the sentence that matters: if the market's implied timeline is more aggressive than yours, the current price loses money even when your endgame judgment is correct. That is the standard way AI-theme investing loses -- **right direction, wrong timing**.

@@ -40,12 +40,16 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `master_li_lu` | master | yes | masters-value, masters-core | deep | Li Lu Lens | ten-year-certainty, civilization-trend, management-integrity | ai-berkshire (MIT) |
 | `master_marks` | master | yes | masters-value-classic, masters-core | deep | Howard Marks Lens | second-level-thinking, cycle-position, risk-is-permanent-loss | original |
 | `master_short_seller` | master | yes | masters-adversarial, masters-core | deep | Short Seller Lens | forensic-accounting, crowding, borrow | original |
+| `master_burry` | master | yes | masters-adversarial, masters-core | deep | Michael Burry Lens | primary-documents, contrarian, structural-short | original |
 | `master_klarman` | master | yes | masters-value-classic | deep | Klarman Lens | absolute-return, cash-as-option, bottom-up | original |
+| `master_taleb` | master | yes | masters-options, masters-core | deep | Taleb Lens (Convexity and Tails) | tail-risk, convexity, options | original |
+| `master_natenberg` | master | yes | masters-options, masters-core | deep | Natenberg Lens (Volatility Pricing) | implied-volatility, options-pricing, market-making | original |
+| `master_sinclair` | master | yes | masters-options, masters-core | deep | Sinclair Lens (Volatility Trading and Execution) | volatility-forecasting, edge-measurement, position-sizing, options | original |
 | `source_fidelity` | verifier | yes | verify | fast | Source Fidelity Verifier | citation, primary-source | original |
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 9 evidence analysts, 3 debate roles, 17 masters, 35 files.
+Totals: 9 evidence analysts, 3 debate roles, 21 masters, 39 files.
 
 ## Provenance
 
