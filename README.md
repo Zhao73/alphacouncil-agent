@@ -119,43 +119,103 @@ with analyst Markdown files and `artifact_index.md` in the same run directory.
 Default stock-analysis runs are full runs, not lite summaries:
 
 - Market data and price action
-- Earnings deep dive
-- Forward expectations and implied beat/miss thresholds
-- Sell-side rating and target-price revisions
-- Earnings-call management signals
-- Quant factor view: momentum, trend, volatility, volume/liquidity, relative strength, short interest, borrow, option IV/skew/expected move when available
-- Valuation and long/short pitch
-- News, industry context, CEO/management and public industry voices
+- Earnings deep dive, including the earnings call
+- Forward expectations, implied beat/miss thresholds, and sell-side target revisions
+- Quant factor view: momentum, trend, volatility, liquidity, relative strength, crowding
+- Valuation and long/short pitch, with price bands rather than a single target
+- News, industry context, supply chain, and management's words checked against their actions
 - SEC filings, Form 4 insider transactions, buybacks, dilution, debt and capital allocation
-- Investment-banking event analysis for M&A, ECM, debt, buyback or strategic transactions
-- Bull researcher, bear researcher and portfolio manager synthesis
+- Investment-banking event analysis for M&A, ECM, debt, buybacks and strategic transactions
+- A bench of 21 investor lenses reading the same facts independently
+- Bull researcher, bear researcher and portfolio-manager synthesis
 
-The final report must be readable directly in chat. It includes analyst work logs, data/news/filing summaries, bull/bear debate, portfolio-manager verdict, short/medium/long-term view, data gaps, confidence and source table.
+The final report is readable directly in chat. It carries analyst work logs, data and filing
+summaries, the bull/bear debate, the PM verdict, entry price bands, short/medium/long-term
+views, data gaps, confidence and a source table.
+
+## 🔧 Tools — 27, all keyless
+
+Nothing below needs an API key, an account, or a config file. Install and run.
+
+| Area | Tools | Source |
+|---|---|---|
+| **Filings** | `screen_ticker` `screen_candidates` `list_us_universe` `compose_research_brief` | SEC EDGAR XBRL |
+| **Non-US filings** | `market_financials` `market_coverage` | TWSE keyless; DART/EDINET on a free key; HK/CN documents only |
+| **Market data** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq, 21 macro series + 5 derived |
+| **Options** | `get_options_chain` | CBOE delayed quotes — IV term structure, 25-delta skew, open interest, Greeks |
+| **News** | `get_news` `get_market_narrative` | Yahoo, Google News, SEC Atom, Fed, WSJ, CNBC |
+| **Social** | `get_social_pulse` `verify_x_post` | Reddit, Hacker News, Bluesky |
+| **Industry** | `industry_brief` `industry_peers` `industry_coverage` `list_industries` | SIC across all US filers + curated maps |
+| **Workflow** | `analyze_symbol` `plan_visible_run` `collect_evidence` `read_run` and 5 more | — |
+
+**What it deliberately will not do.** Every one of these is stated in the tool output itself,
+not only in the docs, because the payload is what gets quoted downstream:
+
+- **IV percentile is not computable.** The chain is a snapshot with no history, so any claim
+  that volatility is high or low against its own past is reported as an open question.
+- **X / Twitter has no free discovery channel** as of 2026-07. Nitter search is dead, the X
+  API bills per post and xAI bills per call. Professional FinTwit is **not** covered, and
+  Reddit is not a substitute for it.
+- **A screen rule whose inputs are missing is `skipped`, never a pass.**
+- **A news item with no parsable timestamp is excluded**, not shown as recent.
+- **A contract reporting `iv = 0`** — CBOE does this for expired and deep-in-the-money
+  contracts — is dropped rather than averaged in, because a zero does not look like a gap,
+  it looks like a calm stock.
+
+## 🏛️ The bench — 21 investor lenses
+
+Reconstructions of publicly documented methods, not anything the named people said. Each
+states how it thinks, what it notices first, its characteristic challenge, and **its own
+failure mode** — a seat that cannot name how it goes wrong will not flag it when it does.
+
+| Roster | Lenses |
+|---|---|
+| Value | Buffett · Munger · Duan Yongping · Li Lu |
+| Classic value | Graham · Fisher · Lynch · Marks · Klarman |
+| Adversarial | Soros · Druckenmiller · Dalio · Burry · short seller |
+| Quant | Simons · Asness · Thorp |
+| Options | Taleb · Natenberg · Sinclair |
+| Modern | Aschenbrenner |
+
+Masters read the **same established facts** the analysts read — filings, quotes, financials,
+macro — and receive the analyst packets separately, labelled as other seats' readings rather
+than as fact. That separation is the point: the bench is worth having only because Munger
+looks at incentives where an analyst looked at margins. See [docs/attribution.md](docs/attribution.md).
 
 ## 🧩 Architecture
 
 ```mermaid
 flowchart TD
-    U["@alphacouncil-agent<br/>ticker / question"] --> SK["SKILL.md<br/>runtime instructions"]
-    SK --> AG{{"Analyst Council"}}
-    AG --> A1["📈 Market Data"]
+    U["@alphacouncil-agent<br/>ticker / question"] --> G[("Established facts<br/>filings · quotes · macro · options")]
+    G --> AG{{"Analyst council"}}
+    G --> MS{{"Master bench<br/>21 lenses"}}
+    AG --> A1["📈 Market data"]
     AG --> A2["💰 Earnings"]
     AG --> A3["⚖️ Valuation"]
-    AG --> A4["🧮 Quant Factors"]
+    AG --> A4["🧮 Quant factors"]
     AG --> A5["🏛️ Insider / SEC"]
-    AG --> A6["🤝 IB Events"]
-    A1 --> EV[("Evidence Base<br/>sourced packets")]
+    AG --> A6["📰 News / narrative"]
+    A1 --> EV[("Evidence base<br/>sourced packets")]
     A2 --> EV
     A3 --> EV
     A4 --> EV
     A5 --> EV
     A6 --> EV
-    EV --> BULL["🐂 Bull Researcher"]
-    EV --> BEAR["🐻 Bear Researcher"]
-    BULL --> PM{{"Portfolio Manager"}}
+    EV -.->|"read as interpretation,<br/>not as fact"| MS
+    EV --> VF{{"Verifiers<br/>fidelity · re-derive · refute"}}
+    VF -->|"failed checks<br/>down-weight the seat"| PM
+    MS --> BULL["🐂 Bull"]
+    MS --> BEAR["🐻 Bear"]
+    EV --> BULL
+    EV --> BEAR
+    BULL --> PM{{"Portfolio manager"}}
     BEAR --> PM
-    PM --> R[["final_report.md<br/>Buy · Hold · Sell"]]
+    PM --> R[["final_report.md<br/>verdict + entry price bands"]]
 ```
+
+The masters branch off the facts, not off the packets. Feeding 21 lenses one analyst's
+selection of what mattered would give them all the same blind spot — a large and perfectly
+correlated error — and would remove the reason for having a bench at all.
 
 Key files:
 
