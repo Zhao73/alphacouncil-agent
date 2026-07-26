@@ -3,7 +3,7 @@ import { join } from "node:path";
 import readline from "node:readline";
 import { LIMITS, MASTER_STANCES, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
-import { readJson, readJsonl } from "./fsutil.mjs";
+import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
 import { sweepStaleOutputs } from "./codex.mjs";
 import { sourceManifest } from "./gates.mjs";
@@ -360,6 +360,13 @@ export async function handleToolCall(id, params) {
       saveRun(run);
     }
     const specs = visibleAgentSpecs(run, args.prompt || "");
+    // Planning settles every seat whose method cannot reach this security, writing those
+    // opinions directly. They have to be persisted here or the completeness gate would keep
+    // waiting for a report from a seat that will never be spawned.
+    if (specs.masters_declined?.length) {
+      saveRun(run);
+      writeJson(join(runPath(run.run_id), "evidence.json"), run);
+    }
     // Returned with the plan, not left to a separate opt-in call: a host that skips the
     // preflight is exactly the host whose subagents will fail silently.
     const preflight = preflightNetworkPermissions({ roster: args.roster || "default" });

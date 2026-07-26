@@ -30,12 +30,40 @@ after(async () => {
   removeDataDir(dataDir);
 });
 
-test("a roster produces one master agent spec per seat", () => {
-  assert.equal(plan.master_agents.length, 4);
-  assert.deepEqual(
-    plan.master_agents.map((a) => a.role),
-    ["master_buffett", "master_munger", "master_duan_yongping", "master_li_lu"],
-  );
+// 0700.HK is a Hong Kong listing, so the SEC screen computes nothing. Methods that need a
+// long-run financial series genuinely cannot evaluate it, and spawning an agent to write an
+// essay about numbers that do not exist is the waste this release removes. Every selected
+// seat is still accounted for: those that can look get an agent, those that cannot are
+// settled deterministically and recorded as out_of_scope.
+test("a roster accounts for every seat, by agent or by deterministic decline", () => {
+  const roster = ["master_buffett", "master_munger", "master_duan_yongping", "master_li_lu"];
+  const spawned = plan.master_agents.map((a) => a.role);
+  const declined = plan.masters_declined.map((d) => d.master);
+  assert.deepEqual([...spawned, ...declined].sort(), [...roster].sort());
+  assert.ok(declined.length > 0, "a HK filer with no computable screen must decline somewhere");
+  for (const d of plan.masters_declined) {
+    assert.equal(d.stance, "out_of_scope");
+    assert.ok(d.unmet.length > 0, `${d.master} must say which requirement was unmet`);
+  }
+});
+
+test("a declined seat costs no agent but still reports", () => {
+  const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+  for (const { master } of plan.masters_declined) {
+    assert.ok(!plan.master_agents.some((a) => a.role === master), `${master} must not be spawned`);
+    const opinion = (run.master_opinions || []).find((o) => o.master === master);
+    assert.ok(opinion, `${master} must still be recorded or the completeness gate can never pass`);
+    assert.equal(opinion.stance, "out_of_scope");
+    assert.equal(opinion.engine, "v2_method_model");
+  }
+});
+
+test("a seat that can look carries its settled verdict into the prompt", () => {
+  for (const agent of plan.master_agents) {
+    if (agent.engine !== "v2_method_model") continue;
+    assert.match(agent.prompt_template, /Settled verdict|已确定的判决/);
+    assert.match(agent.prompt_template, /cannot overturn it|你不能推翻/);
+  }
 });
 
 test("a master prompt carries the evidence, the walk-away conditions and the out_of_scope option", () => {
@@ -79,7 +107,9 @@ test("out_of_scope is preserved as a stance rather than coerced", async () => {
     },
   }));
   assert.equal(result.opinion.stance, "out_of_scope");
-  assert.equal(result.recorded, 1);
+  // Seats that declined deterministically were already recorded during planning, so this
+  // is not the first opinion on the run.
+  assert.ok(result.recorded >= 1);
   assert.equal(result.expected, 4);
   assert.ok(existsSync(join(runDir, "master_buffett.json")));
 });
@@ -131,7 +161,7 @@ test("recorded master disagreements reach the debate prompt", async () => {
   // plan_visible_run rewrites the envelope, so read the persisted opinions instead.
   const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
   assert.ok(Array.isArray(run.master_opinions));
-  assert.ok(replan.master_agents.length === 4);
+  assert.equal(replan.master_agents.length + replan.masters_declined.length, 4);
 });
 
 test("masters do not affect the completeness gate", () => {

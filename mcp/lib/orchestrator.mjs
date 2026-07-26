@@ -13,6 +13,7 @@ import { debateFromCodex, dryDebate, dryPacket, extractJson, managerFallback, me
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
+import { declinedOpinion, planMasters, reconcileOpinion } from "./personas-v2/bridge.mjs";
 
 export function visibleRun(args) {
   const symbol = safeSymbol(args.symbol);
@@ -80,21 +81,83 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     ].filter(Boolean).join("\n"),
     output_contract: isChineseLanguage(run.language) ? "只返回一个 JSON debate packet。" : `Return one JSON debate packet with reader-facing fields in ${run.language}.`,
   }));
-  const master_agents = selectedMasters(run).map((id) => ({
+  // The deterministic pass runs first and settles, for free, every seat whose method cannot
+  // reach this security. Spawning an agent for a lens that has already declined is how the
+  // previous design produced ten confident essays over a screen that computed nothing.
+  const plan = planMasters(run, selectedMasters(run));
+  const zh = isChineseLanguage(run.language);
+  const master_agents = plan.to_run.map(({ id, decision }) => ({
     role: id,
+    engine: decision ? "v2_method_model" : "v1_prompt",
     title: `AlphaCouncil Agent ${run.symbol} ${id}`,
     prompt_template: [
       masterPrompt(id, run),
       "",
-      isChineseLanguage(run.language)
+      decision ? deterministicVerdictBlock(decision, zh) : "",
+      "",
+      zh
         ? "主线程必须先粘贴已完成的 Evidence JSON，再运行这个大师议席；大师在证据之后、辩论之前运行。"
         : "The main thread must paste the completed Evidence JSON first. Masters run after the evidence stage and before the debate.",
     ].filter(Boolean).join("\n"),
-    output_contract: isChineseLanguage(run.language)
+    output_contract: zh
       ? "只返回一个 JSON master opinion。"
       : `Return one JSON master opinion with reader-facing fields in ${run.language}.`,
   }));
-  return { evidence_agents, master_agents, debate_agents };
+  // A declined seat is settled here rather than skipped: it is written straight into the
+  // run as an out_of_scope opinion, so the completeness gate is satisfied and no agent is
+  // ever spawned for a method that cannot look.
+  if (plan.declined.length) {
+    const byId = new Map((run.master_opinions || []).map((o) => [o.master, o]));
+    for (const { id, decision } of plan.declined) {
+      if (!byId.has(id)) byId.set(id, declinedOpinion(run, id, decision));
+    }
+    run.master_opinions = selectedMasters(run).map((id) => byId.get(id)).filter(Boolean);
+  }
+  return {
+    evidence_agents,
+    master_agents,
+    debate_agents,
+    // Recorded, not hidden: a reader must be able to tell a method that judged from a method
+    // that could not look, and neither from a seat that was never offered.
+    master_decisions: plan.decisions,
+    masters_declined: plan.declined.map(({ id, decision }) => ({
+      master: id,
+      stance: decision.stance,
+      reason: decision.reason,
+      unmet: decision.eligibility?.unmet || [],
+    })),
+  };
+}
+
+/**
+ * The stance is already decided. The prompt says so, in the run's language, so the model
+ * writes an explanation rather than a verdict.
+ */
+function deterministicVerdictBlock(decision, zh) {
+  const hits = (decision.score?.hits || []).map((h) => `${h.id}=${h.actual} (>=${h.threshold}, +${h.points})`).join("; ") || "none";
+  const misses = (decision.score?.misses || []).map((m) => `${m.id}=${m.actual}`).join("; ") || "none";
+  const uncomputable = (decision.score?.uncomputable || []).map((u) => u.id).join("; ") || "none";
+  return zh
+    ? [
+      "## 已确定的判决（由确定性政策产生，你不能推翻）",
+      `- 立场：${decision.stance}（依据：${decision.reason}）`,
+      `- 得分：${decision.score?.score ?? "—"}/${decision.score?.max_possible ?? "—"}，覆盖率 ${Math.round((decision.score?.coverage || 0) * 100)}%`,
+      `- 命中：${hits}`,
+      `- 未命中：${misses}`,
+      `- 无法计算（既不算命中也不算未命中）：${uncomputable}`,
+      "",
+      "你的任务是解释这个判决为什么成立、它最可能错在哪里、以及什么证据会推翻它。**不要给出与上面不同的 stance**；如果你认为它错了，把理由写进 disagreements。",
+    ].join("\n")
+    : [
+      "## Settled verdict (produced by the deterministic policy; you cannot overturn it)",
+      `- Stance: ${decision.stance} (basis: ${decision.reason})`,
+      `- Score: ${decision.score?.score ?? "—"}/${decision.score?.max_possible ?? "—"}, coverage ${Math.round((decision.score?.coverage || 0) * 100)}%`,
+      `- Hits: ${hits}`,
+      `- Misses: ${misses}`,
+      `- Uncomputable (neither a hit nor a miss): ${uncomputable}`,
+      "",
+      "Explain why this verdict holds, where it is most likely wrong, and what evidence would overturn it. **Do not return a different stance**; if you think it is wrong, put the reason in disagreements.",
+    ].join("\n");
 }
 
 export function recordMasterOpinion(args) {
@@ -107,20 +170,23 @@ export function recordMasterOpinion(args) {
     throw invalidParams(`master ${args.master} was not selected for this run. Selected: ${allowed.join(", ") || "none"}`);
   }
   const dir = runPath(run.run_id);
-  const opinion = normalizeMasterOpinion(
+  const normalized = normalizeMasterOpinion(
     { ...(args.packet || {}), thread_id: args.thread_id },
     args.master,
     run,
     rawRecordText(args.packet),
   );
+  // A narrated stance that disagrees with the arithmetic does not get to win quietly. The
+  // deterministic verdict stands and the disagreement is preserved on the record.
+  const { opinion, overridden } = reconcileOpinion(run, args.master, normalized);
   const byId = new Map((run.master_opinions || []).map((item) => [item.master, item]));
   byId.set(args.master, opinion);
   run.master_opinions = allowed.map((id) => byId.get(id)).filter(Boolean);
   writeJson(join(dir, `${args.master}.json`), opinion);
   saveRun(run);
   writeJson(join(dir, "evidence.json"), run);
-  appendEvent(run, "master_opinion_recorded", { master: args.master, stance: opinion.stance });
-  return { run, opinion, recorded: run.master_opinions.length, expected: allowed.length };
+  appendEvent(run, "master_opinion_recorded", { master: args.master, stance: opinion.stance, overridden });
+  return { run, opinion, overridden, recorded: run.master_opinions.length, expected: allowed.length };
 }
 
 export function visibleStatusAfterPacket(run) {
