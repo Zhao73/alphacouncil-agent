@@ -34,7 +34,7 @@ const GROUNDING = {
       { label: { en: "10-year average ROE", zh: "10年平均ROE" }, value: 10.03, unit: "%", threshold: 8, direction: "min", passed: true },
       { label: { en: "interest cover", zh: "利息保障倍数" }, value: 25.18, unit: "x", threshold: 2, direction: "min", passed: true },
     ],
-    skipped: [{ rule: "dilution", label: { en: "5-year share dilution", zh: "5年股本稀释" } }],
+    skipped: [{ rule: "dilution", label: { en: "5-year share dilution", zh: "5年股本稀释" } }, "ocf_ni"],
   },
   macro: {
     derived: [
@@ -53,6 +53,10 @@ test("groundingBlock renders every bilingual label in both languages", () => {
     const out = groundingBlock(GROUNDING, lang);
     assert.ok(!hasObjectObject(out), `groundingBlock leaked an object label in ${lang}:\n${out}`);
     assert.ok(out.length > 100, "the block must not be empty");
+    // Both shipped shapes of a skipped rule must render. Rendering neither would print an
+    // empty list, which reads as "nothing was skipped" -- the opposite of the line's job.
+    assert.match(out, /ocf_ni/, "a bare-string skipped rule must render");
+    assert.match(out, lang === "中文" ? /5年股本稀释/ : /5-year share dilution/, "an object skipped rule must render");
   }
 });
 

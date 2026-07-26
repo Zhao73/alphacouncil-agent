@@ -139,6 +139,14 @@ const fmt = (value, unit) => {
  * model to paraphrase; what changes behaviour is telling it what these facts are FOR and
  * what it may not do with them.
  */
+/**
+ * A skipped rule arrives either as a bare id or as {rule, label}. Handling only the object
+ * form silently rendered an empty list -- which reads as "nothing was skipped", the exact
+ * opposite of what the line exists to say.
+ */
+const skippedName = (entry, chinese) =>
+  (typeof entry === "string" ? entry : localized(entry?.label, chinese) || entry?.rule) || String(entry ?? "");
+
 /** Render a bilingual label. Every {en, zh} value must pass through here before display. */
 const localized = (label, chinese) => {
   if (label == null) return "";
@@ -177,8 +185,8 @@ export function groundingBlock(grounding, language = "English") {
     }
     if (s.skipped.length) {
       lines.push(chinese
-        ? `  - 无法从申报计算，未按通过处理：${s.skipped.map((x) => localized(x.label, chinese) || x.rule).join("、")}`
-        : `  - Not computable from filings and NOT treated as passes: ${s.skipped.map((x) => localized(x.label, chinese) || x.rule).join(", ")}`);
+        ? `  - 无法从申报计算，未按通过处理：${s.skipped.map((x) => skippedName(x, chinese)).join("、")}`
+        : `  - Not computable from filings and NOT treated as passes: ${s.skipped.map((x) => skippedName(x, chinese)).join(", ")}`);
     }
   }
   if (grounding.macro?.derived?.length) {
