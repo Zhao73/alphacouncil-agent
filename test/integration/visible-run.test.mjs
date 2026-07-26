@@ -169,8 +169,8 @@ before(async () => {
 after(() => removeDataDir(dataDir));
 
 test("the PM call that completes a run reports complete in its own response", () => {
-  assert.equal(recorded.pmLast.run?.status, "complete");
-  assert.equal(recorded.pmLast.run?.phase, "complete");
+  assert.equal(recorded.pmLast.status, "complete");
+  assert.equal(recorded.pmLast.phase, "complete");
 });
 
 test("a run whose last call is the PM is persisted as complete", () => {
@@ -229,8 +229,8 @@ test("a visible run writes every promised artifact", () => {
 });
 
 test("a PM recorded over missing evidence and missing researchers is flagged incomplete", () => {
-  assert.equal(recorded.shortcut.run?.status, "incomplete");
-  assert.equal(recorded.shortcut.run?.phase, "incomplete");
+  assert.equal(recorded.shortcut.status, "incomplete");
+  assert.equal(recorded.shortcut.phase, "incomplete");
 
   const status = JSON.parse(readFileSync(join(incompleteDir, "status.json"), "utf8"));
   assert.equal(status.status, "incomplete");

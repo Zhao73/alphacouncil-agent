@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { masterCorrelationNote, renderMasterMarkdown } from "../../mcp/lib/markdown.mjs";
 import { validateFinalReport } from "../../mcp/lib/gates.mjs";
 import { REPORT_SECTIONS } from "../../mcp/lib/constants.mjs";
+import { recordAck } from "../../mcp/lib/rpc.mjs";
 
 const opinion = (over = {}) => ({
   master: "master_buffett",
@@ -101,4 +102,28 @@ test("a run with no bench is not failed for omitting a bench section", () => {
   const quality = validateFinalReport(reportWithout("master_bench"), run);
   assert.ok(!quality.missing.some((m) => m.includes("master_bench")), quality.missing.join("; "));
   assert.ok(!quality.required_sections.includes("master_bench"));
+});
+
+test("a record ack reports progress without echoing the whole run", () => {
+  // The regression: these handlers echoed the entire run on every call, so the payload grew
+  // with each recording and a late call in a 21-seat run passed 240k characters.
+  const run = {
+    run_id: "NOK-1", symbol: "NOK", status: "running", phase: "visible_evidence",
+    tasks: ["market_data", "quant_factor"],
+    packets: [{ task: "market_data", raw_text: "y".repeat(50_000), claims: [], sources: [] }],
+    masters: ["master_buffett", "master_munger"],
+    master_opinions: [opinion()],
+    grounding: { blob: "z".repeat(50_000) },
+  };
+  const ack = recordAck(run);
+  const size = JSON.stringify(ack).length;
+  assert.ok(size < 2000, `ack should stay small, was ${size} chars`);
+  assert.ok(!JSON.stringify(ack).includes("y".repeat(100)), "packet bodies must not ride along");
+  assert.ok(!JSON.stringify(ack).includes("z".repeat(100)), "grounding must not ride along");
+  // It must still say what landed and what is outstanding.
+  assert.deepEqual(ack.recorded_tasks, ["market_data"]);
+  assert.deepEqual(ack.pending_tasks, ["quant_factor"]);
+  assert.deepEqual(ack.recorded_masters, ["master_buffett"]);
+  assert.deepEqual(ack.pending_masters, ["master_munger"]);
+  assert.match(ack.status_json, /status\.json$/);
 });

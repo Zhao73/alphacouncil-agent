@@ -38,6 +38,36 @@ export function sendError(id, code, message, data) {
   send({ jsonrpc: "2.0", id, error: { code, message, ...(data === undefined ? {} : { data }) } });
 }
 
+/**
+ * What a `record_*` call returns: progress, not the whole run.
+ *
+ * These handlers used to echo the entire run object -- every packet, every master opinion,
+ * the full grounding block -- on every call. The payload therefore grew with each recording,
+ * and late in a twenty-one-seat run a single response passed 240k characters. On any host
+ * that keeps tool results in the transcript that is a context-exhaustion bug, and it gets
+ * worse exactly when the run is most nearly finished.
+ *
+ * The caller needs to know what landed and what is still outstanding. The full state is on
+ * disk in status.json and is one read away for anyone who wants it.
+ */
+export function recordAck(run, extra = {}) {
+  return {
+    run_id: run.run_id,
+    symbol: run.symbol,
+    status: run.status,
+    phase: run.phase,
+    recorded_tasks: (run.packets || []).map((p) => p.task),
+    pending_tasks: (run.tasks || []).filter((t) => !(run.packets || []).some((p) => p.task === t)),
+    recorded_masters: (run.master_opinions || []).map((o) => o.master),
+    pending_masters: (run.masters || []).filter((m) => !(run.master_opinions || []).some((o) => o.master === m)),
+    completeness: run.completeness,
+    missing_evidence_count: run.missing_evidence_count,
+    missing_debate_count: run.missing_debate_count,
+    status_json: join(runPath(run.run_id), "status.json"),
+    ...extra,
+  };
+}
+
 export function jsonContent(text, structuredContent = {}) {
   return {
     content: [{ type: "text", text }],
@@ -351,19 +381,28 @@ export async function handleToolCall(id, params) {
   }
   if (name === "record_visible_packet") {
     const run = recordVisiblePacket(args);
-    sendResult(id, jsonContent(`Recorded visible evidence packet ${args.task} for ${run.symbol}: ${run.run_id}`, run));
+    sendResult(id, jsonContent(`Recorded visible evidence packet ${args.task} for ${run.symbol}: ${run.run_id}`, recordAck(run)));
     return;
   }
   if (name === "record_visible_decision") {
     const result = recordVisibleDecision(args);
-    sendResult(id, jsonContent(`Recorded visible decision ${args.role} for ${result.run.symbol}: ${result.run.run_id}`, result));
+    sendResult(id, jsonContent(
+      `Recorded visible decision ${args.role} for ${result.run.symbol}: ${result.run.run_id}`,
+      // decision and opinion are small and are what a caller reads back; only the full
+      // run object is dropped.
+      recordAck(result.run, {
+        decision: result.decision,
+        report_quality: result.report_quality?.status,
+        missing_report_items: result.report_quality?.missing || [],
+      }),
+    ));
     return;
   }
   if (name === "record_master_opinion") {
     const result = recordMasterOpinion(args);
     sendResult(id, jsonContent(
       `Recorded master opinion ${args.master} (${result.opinion.stance}) for ${result.run.symbol}: ${result.recorded}/${result.expected} master seats in.`,
-      result,
+      recordAck(result.run, { opinion: result.opinion, recorded: result.recorded, expected: result.expected }),
     ));
     return;
   }
