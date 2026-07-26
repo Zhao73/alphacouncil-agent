@@ -55,16 +55,57 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
 <!-- generated:roster end -->
 2. Give each visible agent a narrow prompt and require JSON evidence or debate output. Tell each agent not to call `alphacouncil-agent` recursively.
 3. Use the selected or inferred language for visible agent prompts, evidence packets, debate packets, and final synthesis. Keep JSON field names in English.
-4. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
+4. **Master bench — runs on every host, not only Claude Code.** After the evidence agents finish and before the debate, pass `masters_roster` or `masters` to `plan_visible_run` and run each selected lens. Each master reads the SAME established facts the analysts read plus the analyst packets, and returns one JSON opinion recorded with `record_master_opinion(run_id, master, packet)`.
+   - Default roster when the user does not choose: `masters-core`.
+   - A master whose method cannot judge this name returns `stance: "out_of_scope"`. That is a conclusion, not an abstention, and it carries zero weight rather than being coerced into a view.
+   - **The run is `incomplete` until every selected master has reported.** A bench nobody consulted is worse than no bench: the reader believes the verdict survived every lens when it survived none.
+   - Feed the masters' disagreements into the bull and bear prompts. Their disagreement is the point; a bench that agrees with the analysts has added nothing.
+5. **Verifiers — also every host.** Build a claim ledger from the merged packets, take only thesis-bearing claims, and run `source_fidelity`, `rederivation` and `refuter` against each. Record each with `record_verifier_verdict(run_id, verifier, seat, verdict, claim)`.
+   - Failed verification **down-weights the seat that made the claim** in the PM synthesis; a seat is never silently erased.
+   - `cannot_confirm` and `stands` are real results. Manufacturing a `weakened` verdict to look diligent lowers a seat's weight for no reason, and weight moves the final rating.
+6. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
    - Round 1: bull writes the long case; bear writes the short case.
    - Round 2: pass bull's packet to bear for rebuttal, and bear's packet to bull for rebuttal.
    - Round 3: each side asks three questions; the other side answers them.
    - Final: portfolio_manager reads evidence plus all debate rounds and decides whether bull, bear, or balanced won.
-5. Return a concise but evidence-rich user handoff in the selected or inferred language: rating, debate winner, key earnings/financial results, forward expectations or event thresholds, important news/industry signals, valuation range, position guidance, top invalidation conditions, and saved file locations. Do not paste an overlong report into chat unless the user asks for the full body inline. The saved `final_report.md` must still be complete enough to read without opening artifacts: include each evidence analyst's summary, key data/news/filing/quant findings, the bull case, bear case, rebuttals/questions where available, portfolio-manager verdict, data gaps, and source table. Include links/paths to saved artifacts in the handoff.
+7. Return a concise but evidence-rich user handoff in the selected or inferred language: rating, debate winner, key earnings/financial results, forward expectations or event thresholds, important news/industry signals, valuation range, position guidance, top invalidation conditions, and saved file locations. Do not paste an overlong report into chat unless the user asks for the full body inline. The saved `final_report.md` must still be complete enough to read without opening artifacts: include each evidence analyst's summary, key data/news/filing/quant findings, the bull case, bear case, rebuttals/questions where available, portfolio-manager verdict, data gaps, and source table. Include links/paths to saved artifacts in the handoff.
    - If the Data Analytics `datascienceWidgets` tools are available, also create a real dashboard/report artifact from the completed evidence and decision: call `validate_artifact` first, then `render_artifact`. Do not treat `output_mode=data_analytics` as only a prose style.
    - If Documents, PDF, Spreadsheets, or Presentations are requested as output formats, use their plugin/skill workflow as a delivery layer after the investment decision is complete; do not move investment judgment into those format plugins.
-6. If the user specifically wants left-sidebar Codex chat threads, use `codex_app.list_projects` and `codex_app.create_thread` instead of MCP headless execution. Create one thread per major role and report the created thread IDs.
-7. Do not treat `plan_visible_run` as execution. It only creates the run envelope and prompts; visible agents/threads must actually be created and read before final synthesis.
+8. If the user specifically wants left-sidebar Codex chat threads, use `codex_app.list_projects` and `codex_app.create_thread` instead of MCP headless execution. Create one thread per major role and report the created thread IDs.
+9. Do not treat `plan_visible_run` as execution. It only creates the run envelope and prompts; visible agents/threads must actually be created and read before final synthesis.
+
+## Data Tools — call these instead of searching
+
+Every tool below is keyless. **A number these can supply must never come from a search
+result, from a summary, or from memory.** Search is for what the tools cannot reach:
+explanation, guidance, competitor commentary, and anything not yet filed.
+
+| Need | Call | Notes |
+|---|---|---|
+| Price | `get_quote` | Delayed ~15m. Say so wherever a level matters. |
+| Filings-based quality screen | `screen_ticker` | Pass `ticker`; the CIK is resolved for you. A rule whose inputs are missing is `skipped`, **never a pass**. |
+| Screen a list | `screen_candidates` | Capped at 40; a fetch failure is `unavailable`, not an elimination. |
+| Full US filer list | `list_us_universe` | SEC `company_tickers.json`. |
+| Non-US financials | `market_financials`, `market_coverage` | TWSE keyless; KR/JP need a free key; HK/CN are documents only. Check coverage **before** promising a number. |
+| Macro context | `get_macro_snapshot` | 21 series, 5 derived. Observations, not a regime call. |
+| Options positioning | `get_options_chain` | IV term structure, 25-delta skew, put/call ratios, open-interest concentration. |
+| Dated news and filings | `get_news` | `symbol`, `query` and/or `cik`. Undated items are excluded, not shown as recent. |
+| What the market is talking about | `get_market_narrative` | Themes ranked by coverage, each paired with the series that would corroborate it. |
+| Retail and technical chatter | `get_social_pulse` | Reddit, Hacker News, Bluesky. |
+| Confirm a quoted X post | `verify_x_post` | A decoded timestamp proves nothing; any invented id decodes to a plausible date. |
+| Industry map | `industry_brief`, `industry_peers`, `industry_coverage` | Ask coverage first — it says whether the participant list is authoritative. |
+| Facts + brief in one call | `compose_research_brief` | Grounding for a whole run. |
+
+### Limits you must carry into the report, not discover later
+
+- **IV percentile is not computable.** The chain is a snapshot with no history. Any claim that
+  volatility is high or low versus its own past goes in `open_questions`.
+- **X / Twitter has no free discovery channel.** Professional FinTwit is **not** covered and
+  Reddit is not a substitute. Say so rather than implying you looked at social media.
+- **Non-US names have no options chain here** and often no structured financials. Report the
+  gap; never substitute a US peer's numbers.
+- **A skipped screen rule is a gap.** Reporting `6/7 passed` without naming the seventh
+  misrepresents the screen.
 
 ## Headless MCP Workflow
 

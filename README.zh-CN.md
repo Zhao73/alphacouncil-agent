@@ -109,46 +109,91 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 ## 它能做什么
 
-默认的个股分析是**完整流程**,不是精简摘要:
+默认是完整运行，不是精简摘要：
 
-- 行情与价格走势
-- 财报深挖
-- 前瞻预期与隐含的 beat/miss 门槛
-- 卖方评级与目标价修正
-- 电话会管理层信号
-- 量化因子视角:动能、趋势、波动率、成交量/流动性、相对强弱、short interest、borrow、期权 IV/skew/隐含波动(能取到时)
-- 估值与多空 pitch
-- 新闻、行业背景、CEO/管理层与公开行业人物发言
-- SEC 文件、Form 4 内部人交易、回购、稀释、债务与资本配置
-- 针对并购/增发/债务/回购或战略交易的投行事件分析
-- 多头研究员、空头研究员与投资组合经理综合
+- 行情与价格行为
+- 财报深度分析，含财报电话会
+- 前瞻预期、隐含的超预期/不及预期门槛、卖方评级与目标价修正
+- 量化因子：动能、趋势、波动率、流动性、相对强弱、拥挤度
+- 估值与多空论点，给价格区间而非单一目标价
+- 新闻、行业背景、产业链，以及管理层言行核对
+- SEC 申报、Form 4 内部人交易、回购、稀释、债务与资本配置
+- 并购、股权与债务融资、回购等事件分析
+- 21 位投资大师视角**独立**读同一批事实
+- 多头、空头与 PM 裁决
 
-最终报告要求能直接在聊天里读完,包含分析师工作记录、数据/新闻/文件摘要、多空辩论、PM 结论、短/中/长期判断、数据缺口、置信度与来源表。
+最终报告可直接在对话中阅读，包含分析师工作记录、数据与申报摘要、多空辩论记录、PM 裁决、入场价格区间、短中长期观点、数据缺口、置信度和来源表。
+
+## 🔧 工具 —— 27 个，全部免 key
+
+以下没有一项需要 API key、账号或配置文件。装完直接跑。
+
+| 领域 | 工具 | 数据源 |
+|---|---|---|
+| **申报** | `screen_ticker` `screen_candidates` `list_us_universe` `compose_research_brief` | SEC EDGAR XBRL |
+| **非美申报** | `market_financials` `market_coverage` | 台交所免 key；DART/EDINET 需免费 key；港股/A股仅文档 |
+| **行情** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq，21 条宏观序列 + 5 项派生 |
+| **期权** | `get_options_chain` | CBOE 延迟报价 —— 隐含波动率期限结构、25Δ 偏斜、未平仓量、Greeks |
+| **新闻** | `get_news` `get_market_narrative` | Yahoo、Google News、SEC Atom、美联储、WSJ、CNBC |
+| **社交** | `get_social_pulse` `verify_x_post` | Reddit、Hacker News、Bluesky |
+| **行业** | `industry_brief` `industry_peers` `industry_coverage` `list_industries` | 全美股 SIC 分类 + 精选产业地图 |
+| **流程** | `analyze_symbol` `plan_visible_run` `collect_evidence` `read_run` 等 9 个 | — |
+
+**它刻意不做什么。** 以下每一条都写在工具输出本身里，不只写在文档里 —— 因为被下游引用的是 payload：
+
+- **隐含波动率分位算不出来。** 期权链是快照无历史，任何「波动率相对自身历史偏高/偏低」的论断都报为待解问题。
+- **X / Twitter 没有免费发现通道**（截至 2026-07）。Nitter 搜索已死、X API 按条计费、xAI 按次计费。**专业 FinTwit 未被覆盖，Reddit 不是它的替代品。**
+- **缺输入的筛选规则报 `skipped`，绝不当作通过。**
+- **无可解析时间戳的新闻条目被剔除**，不会被展示为「最新」。
+- **报 `iv = 0` 的合约被丢弃** —— CBOE 对已过期和深度实值合约返回 0，而 0 混进均值不像缺失值，像一只很平静的股票。
+
+## 🏛️ 大师议席 —— 21 位
+
+这是对公开方法论的重构，**不是本人的任何表述**。每一位都写明自己怎么思考、最先注意什么、典型追问是什么，以及**自己的失败模式** —— 说不出自己怎么错的席位，出错时不会举手。
+
+| 名册 | 席位 |
+|---|---|
+| 价值 | 巴菲特 · 芒格 · 段永平 · 李录 |
+| 经典价值 | 格雷厄姆 · 费雪 · 林奇 · 马克斯 · 克拉曼 |
+| 对抗 | 索罗斯 · 德鲁肯米勒 · 达利欧 · 伯里 · 做空视角 |
+| 量化 | 西蒙斯 · Asness · 索普 |
+| 期权 | 塔勒布 · 纳坦伯格 · 辛克莱 |
+| 现代 | Aschenbrenner |
+
+大师读到的是**和分析师同一份已确立事实**（申报、行情、财务、宏观），分析师的证据包单独给出并标注为「其他席位的解读」而非事实。这个分离是关键：芒格看激励结构的地方分析师看的是毛利率，只有让他们各自取舍，这个议席才有存在意义。详见 [docs/attribution.md](docs/attribution.md)。
 
 ## 🧩 架构
 
 ```mermaid
 flowchart TD
-    U["@alphacouncil-agent<br/>代码 / 问题"] --> SK["SKILL.md<br/>运行时指令"]
-    SK --> AG{{"分析师委员会"}}
-    AG --> A1["📈 行情数据"]
-    AG --> A2["💰 财报"]
-    AG --> A3["⚖️ 估值"]
-    AG --> A4["🧮 量化因子"]
-    AG --> A5["🏛️ 内部人 / SEC"]
-    AG --> A6["🤝 投行事件"]
-    A1 --> EV[("证据库<br/>带来源的包")]
+    U["@alphacouncil-agent"] --> G[("Established facts<br/>filings · quotes · macro · options")]
+    G --> AG{{"Analyst council"}}
+    G --> MS{{"Master bench<br/>21 lenses"}}
+    AG --> A1["Market data"]
+    AG --> A2["Earnings"]
+    AG --> A3["Valuation"]
+    AG --> A4["Quant factors"]
+    AG --> A5["Insider / SEC"]
+    AG --> A6["News / narrative"]
+    A1 --> EV[("Evidence base")]
     A2 --> EV
     A3 --> EV
     A4 --> EV
     A5 --> EV
     A6 --> EV
-    EV --> BULL["🐂 多头研究员"]
-    EV --> BEAR["🐻 空头研究员"]
-    BULL --> PM{{"投资组合经理"}}
+    EV -.->|"interpretation,<br/>not fact"| MS
+    EV --> VF{{"Verifiers"}}
+    VF -->|"failed checks<br/>down-weight the seat"| PM
+    MS --> BULL["Bull"]
+    MS --> BEAR["Bear"]
+    EV --> BULL
+    EV --> BEAR
+    BULL --> PM{{"Portfolio manager"}}
     BEAR --> PM
-    PM --> R[["final_report.md<br/>买入 · 持有 · 卖出"]]
+    PM --> R[["final_report.md"]]
 ```
+
+大师从事实分叉，而非从分析师的证据包分叉。让 21 位大师共用一位分析师对「什么重要」的取舍，会给他们同一个盲区 —— 一个又大又完全相关的误差 —— 也就取消了设立议席的理由。
 
 关键文件:
 
