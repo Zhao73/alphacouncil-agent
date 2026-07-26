@@ -2,6 +2,17 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.5.4] — 2026-07-26
+
+### Fixed
+
+- `docs/INSTALL.md`, `SECURITY.md` and `CONTRIBUTING.md` were never in the package. The
+  install guide is the page an npm user reads specifically to learn how to invoke the thing,
+  and it was absent from every published version.
+- A contract test now asserts the property rather than the entries: every tracked
+  consumer-facing file must be in the package. The gaps had been surfacing one release at a
+  time — the host agent directories in 0.5.1, the install guide in 0.5.3.
+
 ## [0.5.3] — 2026-07-26
 
 ### Fixed

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { repoFile } from "../helpers/paths.mjs";
 
 const read = (rel) => readFileSync(repoFile(rel), "utf8");
@@ -157,4 +158,23 @@ test("the single command entry documents every mode it routes to", () => {
   assert.match(alpha, /empty/i, "an argument-less invocation must list what it can do rather than guessing");
   assert.match(alpha, /no model spend|costs nothing/i,
     "the modes that spawn no subagents must be marked, since that is what the user is choosing between");
+});
+
+// The package.json files array was assembled by hand and gaps surfaced one at a time: the
+// host agent directories in one release, then docs/INSTALL.md -- the page an npm user reads
+// specifically to learn how to invoke the thing -- in the next. This asserts the property
+// instead of the individual entries.
+test("every consumer-facing tracked file is in the npm package", () => {
+  const tracked = execSync("git ls-files", { encoding: "utf8", cwd: repoFile(".") }).trim().split("\n");
+  const packed = JSON.parse(execSync("npm pack --dry-run --json", {
+    encoding: "utf8", cwd: repoFile("."), stdio: ["pipe", "pipe", "ignore"],
+  }))[0].files.map((f) => f.path);
+  const inPackage = new Set(packed);
+
+  // Everything a person reads to install, use, or evaluate the package.
+  const consumerFacing = tracked.filter((f) =>
+    /^(docs\/|commands\/|README|CHANGELOG|LICENSE|SECURITY|CONTRIBUTING)/.test(f));
+  const missing = consumerFacing.filter((f) => !inPackage.has(f));
+  assert.deepEqual(missing, [],
+    `these ship in the repo but not to anyone who installs it: ${missing.join(", ")}`);
 });
