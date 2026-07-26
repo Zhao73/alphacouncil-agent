@@ -24,5 +24,6 @@
         "${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"
       ]
     }
-  }
+  },
+  "commands": "./commands/"
 }

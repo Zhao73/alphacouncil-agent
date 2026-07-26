@@ -154,6 +154,27 @@ function grokAgentFiles() {
   return files;
 }
 
+/**
+ * Slash commands, one authored set fanned out to every host's directory.
+ *
+ * Each host looks somewhere different: Claude Code loads `commands/` from the plugin,
+ * OpenCode reads `.opencode/command/`, Grok Build reads `.grok/commands/` (and treats
+ * `.claude/commands/` as a high-priority compatibility source), and Codex reads
+ * `~/.codex/prompts/`, which is user-scoped and therefore documented rather than generated.
+ */
+function commandFiles() {
+  const files = {};
+  const dir = repo("commands");
+  if (!existsSync(dir)) return files;
+  for (const name of readdirSync(dir).filter((f) => f.endsWith(".md"))) {
+    const source = readFileSync(join(dir, name), "utf8");
+    files[`.opencode/command/${name}`] = source;
+    files[`.grok/commands/${name}`] = source;
+    files[`.claude/commands/${name}`] = source;
+  }
+  return files;
+}
+
 function replaceRegion(text, name, replacement) {
   const start = `<!-- generated:${name} start -->`;
   const end = `<!-- generated:${name} end -->`;
@@ -164,7 +185,7 @@ function replaceRegion(text, name, replacement) {
 }
 
 function buildOutputs() {
-  const outputs = { ...claudeAgentFiles(), ...opencodeAgentFiles(), ...grokAgentFiles() };
+  const outputs = { ...claudeAgentFiles(), ...opencodeAgentFiles(), ...grokAgentFiles(), ...commandFiles() };
   outputs["docs/personas.md"] = personasDoc();
   outputs["skills/alphacouncil-agent/SKILL.md"] = replaceRegion(
     readFileSync(repo("skills/alphacouncil-agent/SKILL.md"), "utf8"),
@@ -194,7 +215,8 @@ for (const [rel, content] of Object.entries(outputs)) {
 }
 
 // A persona deleted from personas/ must not leave an orphan agent file behind.
-for (const agentDirRel of [".claude/agents", ".opencode/agent", ".grok/agents"]) {
+for (const agentDirRel of [".claude/agents", ".opencode/agent", ".grok/agents",
+  ".claude/commands", ".opencode/command", ".grok/commands"]) {
   const agentDir = repo(agentDirRel);
   const expected = new Set(
     Object.keys(outputs).filter((f) => f.startsWith(`${agentDirRel}/`)).map((f) => f.split("/").pop()),

@@ -69,6 +69,25 @@ Verified against a real install (grok 0.2.101) rather than from documentation:
   Grok Build the workflow arrives through `AGENTS.md` plus the MCP tools, the same shape
   that works on OpenCode.
 
+## Slash commands
+
+Authored once in `commands/` and generated into each host's directory by
+`scripts/sync-personas.mjs`, so `/alphacouncil` means the same thing everywhere.
+
+| Command | What it does |
+|---|---|
+| `/alphacouncil <ticker or question>` | Full council. Asks which preset first, unless the request already says. |
+| `/alphacouncil-quick <ticker>` | Four analysts, no bench, no verification — and says in the output what was skipped. |
+| `/alphacouncil-screen <ticker>` | Mechanical filings screen only. No language-model judgment. |
+| `/alphacouncil-market [theme]` | What the market is talking about, checked against the tape. |
+
+| Host | Where it reads them |
+|---|---|
+| Claude Code | `commands/` via `.claude-plugin/plugin.json`, plus `.claude/commands/` for a checkout |
+| OpenCode | `.opencode/command/` |
+| Grok Build | `.grok/commands/`, and `.claude/commands/` as a high-priority compatibility source |
+| Codex | `~/.codex/prompts/` is **user-scoped**, so it is installed rather than shipped: `mkdir -p ~/.codex/prompts && cp commands/*.md ~/.codex/prompts/` |
+
 ## Market data coverage
 
 Structured financials come from each market's own regulator, and the pipeline degrades in

@@ -56,6 +56,10 @@
     "LICENSE",
     "README.md",
     "README.zh-CN.md",
-    "README.ja.md"
+    "README.ja.md",
+    "commands/",
+    ".claude/commands/",
+    ".opencode/command/",
+    ".grok/commands/"
   ]
 }

@@ -123,6 +123,19 @@ The concise handoff is written to `~/.alphacouncil-agent/runs/<run_id>/user_resp
 The full report is written to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`,
 with analyst Markdown files and `artifact_index.md` in the same run directory.
 
+### Slash commands
+
+| Command | What it does |
+|---|---|
+| `/alphacouncil <ticker or question>` | The full council. Asks which preset first, unless your request already says. |
+| `/alphacouncil-quick <ticker>` | A fast directional read — four analysts, no bench, no verification, and it tells you so. |
+| `/alphacouncil-screen <ticker>` | The mechanical filings screen alone. No language-model judgment in it. |
+| `/alphacouncil-market [theme]` | What the market is talking about, checked against what the tape actually did. |
+
+Available in Claude Code, OpenCode and Grok Build as soon as the plugin is installed. Codex
+keeps its prompts user-scoped, so copy them once:
+`mkdir -p ~/.codex/prompts && cp commands/*.md ~/.codex/prompts/`
+
 ## What It Does
 
 Default stock-analysis runs are full runs, not lite summaries:

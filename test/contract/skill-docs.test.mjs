@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { repoFile } from "../helpers/paths.mjs";
 
 const read = (rel) => readFileSync(repoFile(rel), "utf8");
@@ -118,5 +118,29 @@ test("the npm package ships the files every host actually reads", () => {
     ".grok/agents/", ".grok/config.toml",
   ]) {
     assert.ok(pkg.files.includes(needed), `package.json files must include ${needed}`);
+  }
+});
+
+// Four hosts, four different places to look for a slash command. Authoring them once and
+// generating the copies is the only way `/alphacouncil` means the same thing everywhere.
+test("every slash command reaches every host that has a command directory", () => {
+  const authored = readdirSync(repoFile("commands")).filter((f) => f.endsWith(".md"));
+  assert.ok(authored.length >= 4, "the command set should not silently shrink");
+  for (const file of authored) {
+    const source = readFileSync(repoFile(`commands/${file}`), "utf8");
+    assert.match(source, /^---\ndescription: .+/m, `${file} needs a description for the host menu`);
+    for (const dir of [".claude/commands", ".opencode/command", ".grok/commands"]) {
+      const copy = readFileSync(repoFile(`${dir}/${file}`), "utf8");
+      assert.equal(copy, source, `${dir}/${file} drifted from commands/${file}`);
+    }
+  }
+});
+
+test("the plugin manifest and the npm package both declare the commands", () => {
+  const plugin = JSON.parse(readFileSync(repoFile(".claude-plugin/plugin.json"), "utf8"));
+  assert.equal(plugin.commands, "./commands/", "Claude Code loads commands from the manifest");
+  const pkg = JSON.parse(readFileSync(repoFile("package.json"), "utf8"));
+  for (const d of ["commands/", ".claude/commands/", ".opencode/command/", ".grok/commands/"]) {
+    assert.ok(pkg.files.includes(d), `package.json files must include ${d}`);
   }
 });
