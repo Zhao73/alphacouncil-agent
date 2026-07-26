@@ -28,6 +28,29 @@
   "scripts": {
     "check": "node --check ./mcp/server.mjs && node scripts/sync-personas.mjs --check && node --test",
     "test": "node --test",
-    "sync": "node scripts/sync-personas.mjs"
-  }
+    "sync": "node scripts/sync-personas.mjs",
+    "prepublishOnly": "npm run check"
+  },
+  "bin": {
+    "alphacouncil-agent": "./mcp/server.mjs"
+  },
+  "files": [
+    "mcp/",
+    "personas/",
+    "data/",
+    "skills/",
+    "docs/report-contract.md",
+    "docs/personas.md",
+    "docs/attribution.md",
+    ".claude-plugin/",
+    ".codex-plugin/",
+    ".mcp.json",
+    "opencode.json",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "LICENSE",
+    "README.md",
+    "README.zh-CN.md",
+    "README.ja.md"
+  ]
 }
