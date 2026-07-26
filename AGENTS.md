@@ -71,22 +71,29 @@ Verified against a real install (grok 0.2.101) rather than from documentation:
 
 ## Slash commands
 
-Authored once in `commands/` and generated into each host's directory by
-`scripts/sync-personas.mjs`, so `/alphacouncil` means the same thing everywhere.
+**One command, `/alpha`.** Modes are arguments, so there is one name to remember
+rather than four in a menu of a hundred.
 
-| Command | What it does |
-|---|---|
-| `/alphacouncil <ticker or question>` | Full council. Asks which preset first, unless the request already says. |
-| `/alphacouncil-quick <ticker>` | Four analysts, no bench, no verification — and says in the output what was skipped. |
-| `/alphacouncil-screen <ticker>` | Mechanical filings screen only. No language-model judgment. |
-| `/alphacouncil-market [theme]` | What the market is talking about, checked against the tape. |
+| Invocation | What runs | Model spend |
+|---|---|---|
+| `/alpha MU` | Full council — asks which preset first | one subagent per seat |
+| `/alpha MU quick` | 4 analysts + debate, no bench, no verification | 7 seats |
+| `/alpha MU screen` | Mechanical filings screen only | **none** |
+| `/alpha MU options` | IV term structure, skew, positioning | **none** |
+| `/alpha MU news` | Dated filings and headlines | **none** |
+| `/alpha market AI` | What the market is talking about | **none** |
+| `/alpha` | Lists the modes and stops | **none** |
+
+The four marked **none** call keyless data tools and spawn no subagents, so they cost
+nothing beyond the turn you type them in. The council modes spawn one subagent per seat, and
+that is the entire cost of running this.
 
 | Host | Where it reads them |
 |---|---|
 | Claude Code | `commands/` via `.claude-plugin/plugin.json`, plus `.claude/commands/` for a checkout |
 | OpenCode | `.opencode/command/` |
 | Grok Build | `.grok/commands/`, and `.claude/commands/` as a high-priority compatibility source |
-| Codex | `~/.codex/prompts/` is **user-scoped**, so it is installed rather than shipped: `mkdir -p ~/.codex/prompts && cp commands/*.md ~/.codex/prompts/` |
+| Codex | `~/.codex/prompts/` is **user-scoped**: `mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/` |
 
 ## Market data coverage
 

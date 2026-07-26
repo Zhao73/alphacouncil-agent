@@ -125,16 +125,25 @@ with analyst Markdown files and `artifact_index.md` in the same run directory.
 
 ### Slash commands
 
-| Command | What it does |
-|---|---|
-| `/alphacouncil <ticker or question>` | The full council. Asks which preset first, unless your request already says. |
-| `/alphacouncil-quick <ticker>` | A fast directional read — four analysts, no bench, no verification, and it tells you so. |
-| `/alphacouncil-screen <ticker>` | The mechanical filings screen alone. No language-model judgment in it. |
-| `/alphacouncil-market [theme]` | What the market is talking about, checked against what the tape actually did. |
+**One command, `/alpha`.** Modes are arguments, so there is one name to remember
+rather than four in a menu of a hundred.
 
-Available in Claude Code, OpenCode and Grok Build as soon as the plugin is installed. Codex
-keeps its prompts user-scoped, so copy them once:
-`mkdir -p ~/.codex/prompts && cp commands/*.md ~/.codex/prompts/`
+| Invocation | What runs | Model spend |
+|---|---|---|
+| `/alpha MU` | Full council — asks which preset first | one subagent per seat |
+| `/alpha MU quick` | 4 analysts + debate, no bench, no verification | 7 seats |
+| `/alpha MU screen` | Mechanical filings screen only | **none** |
+| `/alpha MU options` | IV term structure, skew, positioning | **none** |
+| `/alpha MU news` | Dated filings and headlines | **none** |
+| `/alpha market AI` | What the market is talking about | **none** |
+| `/alpha` | Lists the modes and stops | **none** |
+
+The four marked **none** call keyless data tools and spawn no subagents, so they cost
+nothing beyond the turn you type them in. The council modes spawn one subagent per seat, and
+that is the entire cost of running this.
+
+Available in Claude Code, OpenCode and Grok Build as soon as the plugin is installed. Codex keeps
+its prompts user-scoped, so copy it once: `mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
 
 ## What It Does
 

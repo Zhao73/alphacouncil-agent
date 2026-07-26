@@ -2,6 +2,19 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.5.2] — 2026-07-26
+
+### Changed
+
+- **Four slash commands collapse into one: `/alpha`**, with the modes as arguments.
+  `/alphacouncil-quick` and friends were long to type and, in a menu of a hundred commands,
+  four near-identical entries are harder to navigate than one. Modes: bare ticker for the
+  full council, plus `quick`, `screen`, `options`, `news`, and `market`. Invoked with no
+  arguments it lists the modes and stops rather than guessing.
+- The modes that spawn no subagents are marked as such, because that is the actual choice a
+  user is making — `screen`, `options`, `news` and `market` call keyless data tools and cost
+  nothing beyond the turn.
+
 ## [0.5.1] — 2026-07-26
 
 ### Added

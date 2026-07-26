@@ -125,7 +125,9 @@ test("the npm package ships the files every host actually reads", () => {
 // generating the copies is the only way `/alphacouncil` means the same thing everywhere.
 test("every slash command reaches every host that has a command directory", () => {
   const authored = readdirSync(repoFile("commands")).filter((f) => f.endsWith(".md"));
-  assert.ok(authored.length >= 4, "the command set should not silently shrink");
+  // Not a count: the set deliberately collapsed from four commands to one entry with modes,
+  // and an assertion on "at least four" would have blocked that as if it were a regression.
+  assert.ok(authored.length >= 1, "at least one command must ship");
   for (const file of authored) {
     const source = readFileSync(repoFile(`commands/${file}`), "utf8");
     assert.match(source, /^---\ndescription: .+/m, `${file} needs a description for the host menu`);
@@ -143,4 +145,16 @@ test("the plugin manifest and the npm package both declare the commands", () => 
   for (const d of ["commands/", ".claude/commands/", ".opencode/command/", ".grok/commands/"]) {
     assert.ok(pkg.files.includes(d), `package.json files must include ${d}`);
   }
+});
+
+// One entry point with modes only works if the entry point documents them. Without this the
+// collapse from four commands to one loses the discoverability the four provided.
+test("the single command entry documents every mode it routes to", () => {
+  const alpha = readFileSync(repoFile("commands/alpha.md"), "utf8");
+  for (const mode of ["quick", "screen", "options", "news", "market"]) {
+    assert.ok(alpha.includes(mode), `/alpha must document its ${mode} mode`);
+  }
+  assert.match(alpha, /empty/i, "an argument-less invocation must list what it can do rather than guessing");
+  assert.match(alpha, /no model spend|costs nothing/i,
+    "the modes that spawn no subagents must be marked, since that is what the user is choosing between");
 });

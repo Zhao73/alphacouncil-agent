@@ -214,16 +214,31 @@ for (const [rel, content] of Object.entries(outputs)) {
   console.log(`wrote ${rel}`);
 }
 
-// A persona deleted from personas/ must not leave an orphan agent file behind.
-for (const agentDirRel of [".claude/agents", ".opencode/agent", ".grok/agents",
-  ".claude/commands", ".opencode/command", ".grok/commands"]) {
+/**
+ * A persona or command removed from source must not leave an orphan behind on three hosts.
+ *
+ * The two directory families need different ownership tests. Agent files are always
+ * `alphacouncil-<id>.md`, so that prefix identifies ours exactly. Commands have been renamed
+ * once already -- `alphacouncil-quick.md` became a mode of `alpha.md` -- and a rule keyed to
+ * the old name left the old files in place on every host. `.claude/commands` can also hold a
+ * user's own commands in a checkout, so the test has to be narrow enough not to touch them.
+ */
+const OWNED = {
+  ".claude/agents": /^alphacouncil-.+\.md$/,
+  ".opencode/agent": /^alphacouncil-.+\.md$/,
+  ".grok/agents": /^alphacouncil-.+\.md$/,
+  ".claude/commands": /^alpha(council)?(-[\w-]+)?\.md$/,
+  ".opencode/command": /^alpha(council)?(-[\w-]+)?\.md$/,
+  ".grok/commands": /^alpha(council)?(-[\w-]+)?\.md$/,
+};
+for (const [agentDirRel, owned] of Object.entries(OWNED)) {
   const agentDir = repo(agentDirRel);
   const expected = new Set(
     Object.keys(outputs).filter((f) => f.startsWith(`${agentDirRel}/`)).map((f) => f.split("/").pop()),
   );
   if (!existsSync(agentDir)) continue;
   for (const file of readdirSync(agentDir)) {
-    if (!file.startsWith("alphacouncil-") || expected.has(file)) continue;
+    if (!owned.test(file) || expected.has(file)) continue;
     if (check) stale.push({ rel: `${agentDirRel}/${file}`, current: "(present)", content: "(should be deleted)" });
     else {
       rmSync(join(agentDir, file));
