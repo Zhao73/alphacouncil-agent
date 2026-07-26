@@ -6,7 +6,8 @@
   "order": 30,
   "enabled": true,
   "rosters": [
-    "masters-adversarial"
+    "masters-adversarial",
+    "masters-core"
   ],
   "title": {
     "zh": "达利欧视角",

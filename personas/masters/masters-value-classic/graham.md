@@ -6,7 +6,8 @@
   "order": 10,
   "enabled": true,
   "rosters": [
-    "masters-value-classic"
+    "masters-value-classic",
+    "masters-core"
   ],
   "title": {
     "zh": "格雷厄姆视角",

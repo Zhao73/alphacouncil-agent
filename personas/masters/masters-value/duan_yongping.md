@@ -6,7 +6,8 @@
   "order": 30,
   "enabled": true,
   "rosters": [
-    "masters-value"
+    "masters-value",
+    "masters-core"
   ],
   "title": {
     "zh": "段永平视角",

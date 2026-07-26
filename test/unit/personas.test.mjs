@@ -340,3 +340,49 @@ test("adapted masters carry attribution and original ones declare none", () => {
     assert.ok(master.source.attribution, `${master.id} must carry the upstream copyright line`);
   }
 });
+
+// ---- roster shape after the consolidation ----------------------------------
+
+test("the default fan-out is eight analysts, not eleven", () => {
+  assert.equal(DEFAULT_TASKS.length, 8);
+  // The three removed roles were merged, not dropped: their subject matter has to
+  // survive inside the role that absorbed it.
+  const reg = shippedPersonas();
+  for (const [absorbed, into] of [
+    ["earnings call", "earnings_deep_dive"],
+    ["sell-side", "forward_expectations"],
+    ["human commentary", "news_industry_management"],
+  ]) {
+    const body = reg.get(into).bodies.en.toLowerCase();
+    assert.match(body, new RegExp(absorbed.toLowerCase()), `${into} must still cover ${absorbed}`);
+  }
+  for (const gone of ["earnings_call_transcript", "sell_side_revisions", "management_industry_voices"]) {
+    assert.equal(reg.get(gone), undefined, `${gone} should no longer exist as a separate persona`);
+  }
+});
+
+test("masters-core seats at least ten and spans opposing schools", () => {
+  const reg = shippedPersonas();
+  const core = selectRoster(reg, { kind: "master", roster: "masters-core" });
+  assert.ok(core.length >= 10, `masters-core has ${core.length}, expected at least 10`);
+
+  // A bench of twelve value investors is one lens wearing twelve hats. Require the
+  // adversarial and quant schools to be present.
+  const ids = core.map((p) => p.id);
+  assert.ok(ids.includes("master_soros") || ids.includes("master_dalio"), "needs a macro/reflexivity lens");
+  assert.ok(ids.includes("master_short_seller"), "needs a short seller");
+  assert.ok(ids.includes("master_simons") || ids.includes("master_asness"), "needs a quant lens");
+  assert.ok(ids.includes("master_buffett"), "needs the value core");
+
+  // Enough distinct philosophy tags that the seats cannot all be asking the same thing.
+  const tags = new Set(core.flatMap((p) => p.philosophy_tags));
+  assert.ok(tags.size >= 25, `only ${tags.size} distinct philosophy tags across the bench`);
+});
+
+test("every master still belongs to a school roster as well as core", () => {
+  const reg = shippedPersonas();
+  for (const id of selectRoster(reg, { kind: "master", roster: "masters-core" }).map((p) => p.id)) {
+    const rosters = reg.get(id).rosters.filter((r) => r !== "masters-core");
+    assert.ok(rosters.length >= 1, `${id} must keep its school roster so the schools remain selectable`);
+  }
+});

@@ -6,7 +6,8 @@
   "order": 40,
   "enabled": true,
   "rosters": [
-    "masters-value"
+    "masters-value",
+    "masters-core"
   ],
   "title": {
     "zh": "李录视角",

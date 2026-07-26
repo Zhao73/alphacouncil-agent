@@ -6,7 +6,8 @@
   "order": 10,
   "enabled": true,
   "rosters": [
-    "masters-quant"
+    "masters-quant",
+    "masters-core"
   ],
   "title": {
     "zh": "西蒙斯视角",

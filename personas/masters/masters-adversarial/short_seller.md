@@ -6,7 +6,8 @@
   "order": 40,
   "enabled": true,
   "rosters": [
-    "masters-adversarial"
+    "masters-adversarial",
+    "masters-core"
   ],
   "title": {
     "zh": "做空者视角",

@@ -6,7 +6,8 @@
   "order": 10,
   "enabled": true,
   "rosters": [
-    "masters-adversarial"
+    "masters-adversarial",
+    "masters-core"
   ],
   "title": {
     "zh": "索罗斯视角",

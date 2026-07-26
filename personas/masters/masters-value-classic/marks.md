@@ -6,7 +6,8 @@
   "order": 40,
   "enabled": true,
   "rosters": [
-    "masters-value-classic"
+    "masters-value-classic",
+    "masters-core"
   ],
   "title": {
     "zh": "霍华德·马克斯视角",

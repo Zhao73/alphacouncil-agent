@@ -6,7 +6,8 @@
   "order": 10,
   "enabled": true,
   "rosters": [
-    "masters-value"
+    "masters-value",
+    "masters-core"
   ],
   "title": {
     "zh": "巴菲特视角",

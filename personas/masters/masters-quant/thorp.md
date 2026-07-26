@@ -6,7 +6,8 @@
   "order": 20,
   "enabled": true,
   "rosters": [
-    "masters-quant"
+    "masters-quant",
+    "masters-core"
   ],
   "title": {
     "zh": "索普视角",

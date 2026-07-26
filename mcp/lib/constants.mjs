@@ -9,16 +9,17 @@ export const SERVER_NAME = "alphacouncil-agent";
 // because hosts launch this server from arbitrary working directories.
 export const VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
 export const CODEX_CMD = process.env.ALPHACOUNCIL_AGENT_CODEX_CMD || "codex";
+// Eight roles, down from eleven. The three removed were merged rather than dropped:
+// the earnings call is part of the earnings read, sell-side revisions are part of the
+// forward-expectations read, and "industry voices" and "industry news" were searching the
+// same ground. Fewer, wider roles means fewer duplicated searches for the same facts.
 export const DEFAULT_TASKS = [
   "market_data",
   "earnings_deep_dive",
   "forward_expectations",
-  "sell_side_revisions",
-  "earnings_call_transcript",
   "quant_factor",
   "valuation_long_short",
   "news_industry_management",
-  "management_industry_voices",
   "insider_sec",
   "ib_event_analysis",
 ];

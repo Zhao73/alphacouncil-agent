@@ -6,7 +6,8 @@
   "order": 20,
   "enabled": true,
   "rosters": [
-    "masters-value"
+    "masters-value",
+    "masters-core"
   ],
   "title": {
     "zh": "芒格视角",
