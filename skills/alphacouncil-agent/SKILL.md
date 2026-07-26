@@ -40,8 +40,14 @@ on, and it is where the cost varies most: 21 lenses or 4 is a real difference.
 
 1. Call `list_council_options`.
 2. Ask **once**: which master schools? Offer the six by name with their members, plus "all"
-   and "none". In Claude Code use `AskUserQuestion` with `multiSelect: true`; elsewhere print
-   the table and take a reply.
+   and "none".
+   - **Claude Code** — `AskUserQuestion` with `multiSelect: true`, one option per school,
+     each naming its members.
+   - **Codex, OpenCode, Grok Build** — print the school table and take a plain reply.
+
+   Naming each host is not redundancy. Leaving it implicit is exactly how the master bench
+   ended up never running on Codex and OpenCode: the instruction existed, in a section only
+   one host read.
 3. **Then run.** Do not ask about analysts, presets, or confirmation. The answer to "which
    masters" is the whole configuration decision.
 
