@@ -69,12 +69,27 @@ problems wearing one coat, and the third is the one that mattered.
   unverified handles would be invented sources inside a tool that exists to refuse them. X
   remains uncovered and the payload says so.
 
-### Not yet wired
+### Wired into the live run
 
-The v2 engine is tested and shipped but the live council still runs the v1 prompt personas.
-Integration, the remaining seventeen masters, and `N_eff` — which needs resolved ground truth
-that does not exist yet — are next. Investment return is recorded as a long-run outcome and
-is never a gate.
+`plan_visible_run` takes the deterministic pass before spawning anything. A seat whose
+method cannot reach the security is settled during planning and written straight into the
+run as an `out_of_scope` opinion — the completeness gate is satisfied and no agent is paid
+for a lens that had already declined. A seat that can look receives its settled verdict
+inside the prompt and is told to explain it rather than choose one; `record_master_opinion`
+then reconciles what came back, and a narrated stance contradicting the arithmetic does not
+win quietly — the deterministic verdict stands and the disagreement is kept as
+`narrated_stance`.
+
+Two distinctions the wiring forced. Absent grounding is not a screen that computed nothing:
+a run that was never measured falls back to v1 prompts instead of having its bench declined
+on missing data. And a declined seat cannot merely be skipped, because the completeness gate
+counts every selected master.
+
+### Still open
+
+The remaining seventeen masters, and `N_eff` — which needs an error-correlation matrix, which
+needs resolved ground truth that does not exist yet. Investment return is recorded as a
+long-run outcome and is never a gate.
 
 ## [0.6.0] — 2026-07-26
 
