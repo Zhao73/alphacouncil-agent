@@ -17,8 +17,16 @@ const pct = (x) => (x === null ? null : Number((x * 100).toFixed(2)));
 const last = (series, n) => series.slice(-n);
 const sum = (xs) => xs.reduce((a, b) => a + b, 0);
 
+/**
+ * XBRL reports share counts under the `shares` unit, not `USD`. Requesting the default unit
+ * for a share concept returns nothing, so the dilution rule reported `skipped` for every
+ * company that has ever been screened -- seven rules advertised, six ever computed, and the
+ * skip looked exactly like a genuine data gap.
+ */
+const UNIT_BY_CONCEPT = { sharesOutstanding: "shares" };
+
 function values(facts, key, asOf) {
-  const found = annualSeries(facts, CONCEPTS[key], { asOf });
+  const found = annualSeries(facts, CONCEPTS[key], { asOf, unit: UNIT_BY_CONCEPT[key] || "USD" });
   return found ? found.series.map((e) => ({ end: e.end, filed: e.filed, val: e.val })) : [];
 }
 

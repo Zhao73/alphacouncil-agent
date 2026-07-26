@@ -70,26 +70,80 @@ export async function fetchCompanyFacts(cik) {
  * Tries several tags because the same economic quantity has different names depending on
  * when and under which taxonomy a company filed.
  */
+/**
+ * How long a reported period is, in days. Instant facts (balance-sheet items) have no start.
+ */
+const spanDays = (entry) =>
+  entry.start ? Math.round((Date.parse(entry.end) - Date.parse(entry.start)) / 86400000) : null;
+
+/**
+ * Is this entry an annual figure?
+ *
+ * A 10-K carries quarterly and stub periods alongside the annual ones. Keying only on the
+ * end date treated each as its own year: Lumentum's 2015 produced ten "years" from one
+ * fiscal year -- nine quarters and stubs plus the real 363-day period. Every multi-year rule
+ * then averaged quarterly income against annual equity, silently.
+ *
+ * Fiscal years run 52 or 53 weeks, so the window has to be wider than 365 exactly.
+ */
+const ANNUAL_MIN_DAYS = 300;
+const ANNUAL_MAX_DAYS = 400;
+const isAnnual = (entry) => {
+  const days = spanDays(entry);
+  // Instant facts have no duration: shares outstanding, equity, total assets.
+  if (days === null) return true;
+  return days >= ANNUAL_MIN_DAYS && days <= ANNUAL_MAX_DAYS;
+};
+
+/** The fiscal year a period belongs to, taken from its end date. */
+const fiscalYear = (entry) => Number(String(entry.end).slice(0, 4));
+
+/**
+ * Annual history for a concept, merged across every alias.
+ *
+ * Merging matters as much as the annual filter. The function used to return at the first
+ * alias with any data, and revenue moved to RevenueFromContractWithCustomerExcludingAssessedTax
+ * when ASC 606 was adopted -- so a company reporting under the new tag since 2022 looked like
+ * it had four years of history, which then fired a "listed under ten years" exemption on a
+ * company that had been public for a decade.
+ *
+ * Aliases are ordered by preference, so an earlier alias wins where both cover a year.
+ */
 export function annualSeries(facts, tags, { asOf = null, unit = "USD" } = {}) {
   const cutoff = asOf ? new Date(asOf).getTime() : null;
+  const byYear = new Map();
+  let usedTags = [];
+
   for (const tag of tags) {
     const entries = facts?.facts?.["us-gaap"]?.[tag]?.units?.[unit];
     if (!Array.isArray(entries) || entries.length === 0) continue;
+    let contributed = false;
 
-    const byPeriod = new Map();
     for (const entry of entries) {
       if (entry.form !== "10-K" || !entry.end || !Number.isFinite(entry.val)) continue;
+      if (!isAnnual(entry)) continue;
       // Look-ahead guard: a filing is only usable once it was actually filed.
       if (cutoff && new Date(entry.filed).getTime() > cutoff) continue;
-      const prior = byPeriod.get(entry.end);
-      // Keep the most recently filed value for a period: restatements supersede.
-      if (!prior || new Date(entry.filed) > new Date(prior.filed)) byPeriod.set(entry.end, entry);
+
+      const year = fiscalYear(entry);
+      const prior = byYear.get(year);
+      if (!prior) {
+        byYear.set(year, { ...entry, tag });
+        contributed = true;
+        continue;
+      }
+      // An earlier alias always wins the year; within one alias, the latest filing wins,
+      // because a restatement supersedes what it restates.
+      if (prior.tag === tag && new Date(entry.filed) > new Date(prior.filed)) {
+        byYear.set(year, { ...entry, tag });
+      }
     }
-    if (byPeriod.size === 0) continue;
-    const series = [...byPeriod.values()].sort((a, b) => new Date(a.end) - new Date(b.end));
-    return { tag, unit, series };
+    if (contributed) usedTags.push(tag);
   }
-  return null;
+
+  if (byYear.size === 0) return null;
+  const series = [...byYear.values()].sort((a, b) => new Date(a.end) - new Date(b.end));
+  return { tag: usedTags[0], tags: usedTags, unit, series };
 }
 
 /** Concept aliases, ordered by preference. */
