@@ -123,6 +123,91 @@ export function masterCorrelationNote(run) {
     ].join("\n");
 }
 
+/**
+ * The bench, ordered so the dissent is read first.
+ *
+ * A concurring seat is the weakest thing a council produces and the minority is where the
+ * information is -- measurements put the minority right in roughly one divergent case in
+ * four, and a majority rule discards exactly that. Printing the concurring block first
+ * reproduces the tally in prose even when the numbers have been removed, so the order is
+ * part of the fix rather than presentation.
+ */
+export function renderBenchSummary(run) {
+  const opinions = run?.master_opinions || [];
+  if (!opinions.length) return "";
+  const zh = isChineseLanguage(run?.language);
+  const counts = new Map();
+  for (const o of opinions) counts.set(o.stance || "unknown", (counts.get(o.stance || "unknown") || 0) + 1);
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const majority = ranked[0]?.[0];
+  const minority = opinions.filter((o) => (o.stance || "unknown") !== majority);
+  const concurring = opinions.filter((o) => (o.stance || "unknown") === majority);
+
+  const row = (o) => `| ${masterTitle(o.master, run?.language)} | ${o.stance || "unknown"} | ${o.confidence || "low"} | ${clip(o.verdict || o.summary || "", 90)} |`;
+  const head = zh
+    ? ["| 方法 | 立场 | 置信度 | 判断 |", "|---|---|---|---|"]
+    : ["| Method | Stance | Confidence | Verdict |", "|---|---|---|---|"];
+
+  const sections = [masterCorrelationNote(run), ""];
+  if (minority.length) {
+    sections.push(
+      zh ? "### 少数派（先读这个）" : "### Minority report (read this first)",
+      "",
+      zh
+        ? `${minority.length} 席与多数不同。分歧席位是本次运行里信息量最高的部分——请先判断分歧来自信息差还是方法差。`
+        : `${minority.length} seat(s) diverge. Divergence is the highest-information part of this run: establish whether it comes from the evidence slice or from the method.`,
+      "",
+      ...head,
+      ...minority.map(row),
+      "",
+    );
+  } else {
+    sections.push(
+      zh
+        ? "### 少数派：无\n\n所有席位立场一致。鉴于它们共享模型与证据，一致是预期结果而非确认——本次运行没有产生任何独立的反对意见。"
+        : "### Minority report: none\n\nEvery seat agreed. Given a shared model and a shared brief, agreement is the expected outcome rather than confirmation: this run produced no independent dissent.",
+      "",
+    );
+  }
+  sections.push(
+    zh ? "### 其余席位" : "### Concurring seats",
+    "",
+    ...head,
+    ...concurring.map(row),
+  );
+  return sections.filter((s) => s !== undefined).join("\n");
+}
+
+/**
+ * The deterministic half, printed as evidence rather than as a vote.
+ *
+ * Shows what each method could actually measure. `coverage` is the honest column: a score
+ * produced from a fifth of a rule set has sampled the company, not judged it.
+ */
+export function renderDecisionTable(decisions, lang) {
+  if (!Array.isArray(decisions) || !decisions.length) return "";
+  const zh = isChineseLanguage(lang);
+  const head = zh
+    ? ["| 方法 | 可评估 | 得分 | 覆盖率 | 立场 | 依据 |", "|---|---|---|---|---|---|"]
+    : ["| Method | Eligible | Score | Coverage | Stance | Basis |", "|---|---|---|---|---|---|"];
+  const rows = decisions.map((d) => {
+    const eligible = d.reason === "eligibility" ? (zh ? "否" : "no") : (zh ? "是" : "yes");
+    const score = d.score && d.score.max_possible ? `${d.score.score}/${d.score.max_possible}` : "—";
+    const coverage = d.score && d.score.declared_max ? `${Math.round((d.score.coverage || 0) * 100)}%` : "—";
+    return `| ${d.persona_id} | ${eligible} | ${score} | ${coverage} | ${d.stance} | ${d.reason} |`;
+  });
+  return [
+    zh ? "### 确定性评分（模型调用之前）" : "### Deterministic scoring (before any model call)",
+    "",
+    ...head,
+    ...rows,
+    "",
+    zh
+      ? "> 覆盖率是这张表最重要的一列：只跑得动一小部分规则的方法是抽样了这家公司，不是判断了它。`可评估=否` 的席位没有花费任何模型调用。"
+      : "> Coverage is the column that matters: a method that could run a fraction of its rules sampled the company rather than judging it. Rows marked not eligible cost no model call.",
+  ].join("\n");
+}
+
 /** Registry title when the persona resolves, the raw id when it does not. */
 function masterTitle(id, lang) {
   if (!id) return "Master";
@@ -255,7 +340,7 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
       "",
       "# Master Bench",
       "",
-      masterCorrelationNote(run),
+      renderBenchSummary(run),
       "",
       ...opinions.map((opinion) => renderMasterMarkdown(opinion, run.language)),
     );

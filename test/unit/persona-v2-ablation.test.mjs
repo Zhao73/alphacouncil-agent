@@ -143,3 +143,50 @@ test("pairwise agreement names the pairs so a reader can see which two are twins
   assert.equal(pairs[0].b, "master_duan_yongping");
   assert.ok(pairs[0].agreement <= 1 && pairs[0].agreement >= 0);
 });
+
+// --- evidence slicing: information asymmetry, enforced rather than requested ---
+import { anonymize, assertAnonymous, reconcile, sliceFor, SliceError } from "../../mcp/lib/personas-v2/slice.mjs";
+
+const FROZEN = { symbol: "NOK", as_of: "2026-07-26", quote: { price: 9.1 }, screen: { rules_computed: 0 } };
+const PACKETS = ["market_data", "earnings_deep_dive", "quant_factor", "insider_sec", "ib_event_analysis", "news_industry_management", "valuation_long_short"]
+  .map((task) => ({ task, summary: `${task} body` }));
+
+test("a slice excludes exactly what it claims to exclude", () => {
+  const b = sliceFor(buffett, { frozen: FROZEN, packets: PACKETS });
+  const t = sliceFor(taleb, { frozen: FROZEN, packets: PACKETS });
+  // Buffett-method never sees the price/vol layer; Taleb-method never sees the filings layer.
+  assert.ok(!b.packets.some((p) => p.task === "quant_factor"), "Buffett slice must not carry quant_factor");
+  assert.ok(b.excluded.includes("quant_factor"));
+  assert.ok(t.packets.some((p) => p.task === "quant_factor"));
+  assert.ok(!t.packets.some((p) => p.task === "earnings_deep_dive"), "Taleb slice must not carry earnings_deep_dive");
+  assert.notDeepEqual(b.packets.map((p) => p.task).sort(), t.packets.map((p) => p.task).sort());
+});
+
+test("the frozen pack is shared and identical across slices", () => {
+  const b = sliceFor(buffett, { frozen: FROZEN, packets: PACKETS });
+  const d = sliceFor(duan, { frozen: FROZEN, packets: PACKETS });
+  assert.deepEqual(b.frozen, d.frozen, "four methods must not discover four market caps");
+  assert.equal(b.frozen.quote.price, 9.1);
+});
+
+test("a recomputed figure may dispute a filed one but never overwrite it", () => {
+  const { accepted, disputes } = reconcile(FROZEN, { "quote.price": 8.4, owner_earnings: 1200 });
+  assert.equal(disputes.length, 1);
+  assert.deepEqual(disputes[0], { path: "quote.price", filed: 9.1, recomputed: 8.4 });
+  assert.equal(accepted["quote.price"], undefined, "the filed number stands");
+  assert.equal(accepted.owner_earnings, 1200, "a derived figure with no filed counterpart is kept");
+});
+
+test("an unrestricted slice is recorded as such so agreement is not miscredited", () => {
+  const open = { ...buffett, research_policy: { ...buffett.research_policy, evidence_slice: [] } };
+  const s = sliceFor(open, { frozen: FROZEN, packets: PACKETS });
+  assert.equal(s.slice, "unrestricted");
+  assert.equal(s.excluded.length, 0);
+});
+
+test("round one carries no identity", () => {
+  const anon = anonymize({ persona_id: "master_buffett", display_name: { en: "x" }, stance: "opposed", confidence: 0.6 });
+  assert.equal(assertAnonymous(anon), true);
+  assert.equal(anon.stance, "opposed");
+  assert.throws(() => assertAnonymous({ persona_id: "master_taleb" }), SliceError);
+});

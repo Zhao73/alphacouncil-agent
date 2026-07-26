@@ -1,0 +1,25 @@
+{
+  "_readme": [
+    "Curated Bluesky accounts read by get_social_pulse. Reading a named account is public;",
+    "search is not, so a curated list is the only free path to a professional layer -- and a",
+    "curated list was the better design anyway, because cashtag search is where the",
+    "promotional accounts live.",
+    "",
+    "This ships EMPTY on purpose. Shipping a list of handles that were never verified to",
+    "exist would put invented sources into a tool whose entire job is refusing invented",
+    "sources. Add accounts you have opened and checked yourself.",
+    "",
+    "Override the file with ALPHACOUNCIL_SOCIAL_HANDLES (comma-separated) or pass handles",
+    "directly to get_social_pulse.",
+    "",
+    "Honest scope: this does not restore X/Twitter coverage. X has no free discovery channel",
+    "-- Nitter search is dead, the X API bills per post, xAI bills per call -- so the",
+    "professional FinTwit layer stays uncovered unless you supply your own credential.",
+    "Reddit is not a substitute for it and must never be reported as one."
+  ],
+  "handles": [],
+  "notes": {
+    "format": "Bluesky handle without the leading @, e.g. someone.bsky.social",
+    "max_read": 12
+  }
+}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { LIMITS } from "./constants.mjs";
 import { parseFeed, applyRecencyGate } from "./feeds.mjs";
 
@@ -215,7 +217,26 @@ export async function verifyXPost(id) {
   };
 }
 
-export async function getSocialPulse({ query = null, symbol = null, subreddits, handles = [], days = 7, asOf = null } = {}) {
+/**
+ * Curated Bluesky accounts, from the caller, the environment, or the shipped file.
+ *
+ * The file ships empty: handles that were never opened and checked would be invented
+ * sources inside a tool whose job is refusing invented sources.
+ */
+export function defaultSocialHandles() {
+  const fromEnv = String(process.env.ALPHACOUNCIL_SOCIAL_HANDLES || "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (fromEnv.length) return fromEnv;
+  try {
+    const file = fileURLToPath(new URL("../../data/social-handles.json", import.meta.url));
+    const parsed = JSON.parse(readFileSync(file, "utf8"));
+    return Array.isArray(parsed?.handles) ? parsed.handles.filter((h) => typeof h === "string" && h.trim()) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function getSocialPulse({ query = null, symbol = null, subreddits, handles, days = 7, asOf = null } = {}) {
+  handles = handles?.length ? handles : defaultSocialHandles();
   const term = query || symbol;
   const [reddit, hn, bsky] = await Promise.all([
     fetchReddit({ subreddits, query: term, days, asOf }).catch((e) => ({ platform: "reddit", ok: false, reason: String(e?.message || e), included: [] })),
@@ -242,6 +263,16 @@ export async function getSocialPulse({ query = null, symbol = null, subreddits, 
       + "surviving instance, the X API bills per post retrieved, and xAI's x_search bills per call. "
       + "This layer therefore does NOT cover professional FinTwit, which is where most of the "
       + "genuinely early equity discussion happens. Treating Reddit as a substitute for it is wrong.",
+      // Written from what actually ran, so a report cannot inherit a stale claim in either
+      // direction: neither "no professional layer" once accounts are configured, nor the
+      // reverse once they are removed.
+      bsky.configured === false
+        ? "No Bluesky accounts are configured, so the one free professional-adjacent channel is "
+          + "inactive. Add verified handles to data/social-handles.json or ALPHACOUNCIL_SOCIAL_HANDLES. "
+          + "The file ships empty deliberately: unverified handles would be invented sources."
+        : `Bluesky ran over ${(bsky.handles_read || []).length || (bsky.included || []).length ? "the configured accounts" : "no reachable accounts"}`
+          + ", by named account only. It is a curated sample, never a search of the platform, so "
+          + "absence of a topic here is not evidence the topic is absent.",
       "StockTwits is behind Cloudflare and Bluesky search requires authentication; neither is "
       + "reachable without credentials, so neither is used.",
       "Reddit and Hacker News are retail and engineer opinion. They evidence what a narrative "

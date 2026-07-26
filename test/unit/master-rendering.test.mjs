@@ -127,3 +127,42 @@ test("a record ack reports progress without echoing the whole run", () => {
   assert.deepEqual(ack.pending_masters, ["master_munger"]);
   assert.match(ack.status_json, /status\.json$/);
 });
+
+import { renderBenchSummary, renderDecisionTable } from "../../mcp/lib/markdown.mjs";
+
+test("the minority is printed before the concurring seats", () => {
+  const run = {
+    language: "en",
+    master_opinions: [
+      opinion({ master: "master_buffett", stance: "opposed" }),
+      opinion({ master: "master_munger", stance: "opposed" }),
+      opinion({ master: "master_taleb", stance: "constructive", verdict: "convexity is underpriced" }),
+    ],
+  };
+  const md = renderBenchSummary(run);
+  const minorityAt = md.indexOf("Minority report");
+  const concurringAt = md.indexOf("Concurring seats");
+  assert.ok(minorityAt > -1 && concurringAt > -1);
+  // Printing the concurring block first reproduces the tally in prose even after the
+  // numbers are gone, so the order is part of the fix.
+  assert.ok(minorityAt < concurringAt, "dissent must be read first");
+  assert.match(md, /convexity is underpriced/);
+});
+
+test("unanimity is reported as the absence of dissent, not as confirmation", () => {
+  const run = { language: "en", master_opinions: [opinion({ stance: "opposed" }), opinion({ master: "m2", stance: "opposed" })] };
+  const md = renderBenchSummary(run);
+  assert.match(md, /Minority report: none/);
+  assert.match(md, /agreement is the expected outcome rather than confirmation/);
+});
+
+test("the decision table shows coverage and marks the seats that cost nothing", () => {
+  const md = renderDecisionTable([
+    { persona_id: "master_buffett", stance: "out_of_scope", reason: "eligibility", score: null },
+    { persona_id: "master_taleb", stance: "constructive", reason: "score", score: { score: 8, max_possible: 10, declared_max: 10, coverage: 1 } },
+  ], "en");
+  assert.match(md, /master_buffett \| no /);
+  assert.match(md, /8\/10/);
+  assert.match(md, /100%/);
+  assert.match(md, /cost no model call/);
+});
