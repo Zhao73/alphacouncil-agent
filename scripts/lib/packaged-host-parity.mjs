@@ -110,8 +110,23 @@ function cleanupTempRoot(root) {
   if (existsSync(target)) fail("temporary packaged-parity workspace cleanup failed");
 }
 
-function npmCommand() {
-  return process.platform === "win32" ? "npm.cmd" : "npm";
+export function npmInvocation(args, {
+  platform = process.platform,
+  env = process.env,
+  nodeExecutable = process.execPath,
+  fileExists = existsSync,
+} = {}) {
+  const npmExecPath = env.npm_execpath;
+  if (typeof npmExecPath === "string" && npmExecPath.trim() && fileExists(npmExecPath)) {
+    return Object.freeze({ command: nodeExecutable, args: Object.freeze([npmExecPath, ...args]) });
+  }
+  if (platform === "win32") {
+    return Object.freeze({
+      command: env.ComSpec || "cmd.exe",
+      args: Object.freeze(["/d", "/s", "/c", "npm.cmd", ...args]),
+    });
+  }
+  return Object.freeze({ command: "npm", args: Object.freeze([...args]) });
 }
 
 function isolatedNpmEnv(tempRoot) {
@@ -194,13 +209,18 @@ function packAndInstall({ repoRoot, tempRoot }) {
   const npmEnv = isolatedNpmEnv(tempRoot);
   // `--ignore-scripts` is a hard recursion boundary: package.json prepublishOnly runs the
   // repository check, which may itself include this packaged E2E.
-  const packed = runCommand(npmCommand(), [
+  const packInvocation = npmInvocation([
     "pack",
     "--json",
     "--ignore-scripts",
     "--pack-destination",
     packDir,
-  ], { cwd: repoRoot, env: npmEnv, label: "npm pack --ignore-scripts" });
+  ], { env: npmEnv });
+  const packed = runCommand(packInvocation.command, packInvocation.args, {
+    cwd: repoRoot,
+    env: npmEnv,
+    label: "npm pack --ignore-scripts",
+  });
   const packJson = parseNpmJson(packed.stdout, "npm pack");
   if (!Array.isArray(packJson) || packJson.length !== 1) fail("npm pack must return exactly one package result");
   const metadata = packJson[0];
@@ -211,7 +231,7 @@ function packAndInstall({ repoRoot, tempRoot }) {
   const tarFiles = (metadata.files || []).map((entry) => normalizedPackagePath(entry.path));
   if (!tarFiles.length || new Set(tarFiles).size !== tarFiles.length) fail("npm pack file inventory is empty or duplicated");
 
-  runCommand(npmCommand(), [
+  const installInvocation = npmInvocation([
     "install",
     "--offline",
     "--ignore-scripts",
@@ -221,7 +241,12 @@ function packAndInstall({ repoRoot, tempRoot }) {
     "--prefix",
     installPrefix,
     tarball,
-  ], { cwd: tempRoot, env: npmEnv, label: "offline npm install from tarball" });
+  ], { env: npmEnv });
+  runCommand(installInvocation.command, installInvocation.args, {
+    cwd: tempRoot,
+    env: npmEnv,
+    label: "offline npm install from tarball",
+  });
 
   const sourcePackage = readJson(join(repoRoot, "package.json"), "source package.json");
   const packageSegments = String(sourcePackage.name).split("/");

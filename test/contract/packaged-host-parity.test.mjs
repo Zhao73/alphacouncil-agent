@@ -2,13 +2,36 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
-import { PACKAGED_PARITY_REPO_ROOT } from "../../scripts/lib/packaged-host-parity.mjs";
+import {
+  PACKAGED_PARITY_REPO_ROOT,
+  npmInvocation,
+} from "../../scripts/lib/packaged-host-parity.mjs";
 import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
 
 test("packaged parity CLI defaults to a read-only temporary check", () => {
   assert.deepEqual(parseArgs([]), { json: false, markdown: false, help: false, checkOnly: true });
   assert.throws(() => parseArgs(["--write"]), /unknown argument/);
   assert.throws(() => parseArgs(["--json", "--markdown"]), /mutually exclusive/);
+});
+
+test("npm execution never spawns a cmd shim directly on Windows", () => {
+  assert.deepEqual(npmInvocation(["pack"], {
+    platform: "win32",
+    env: { npm_execpath: "C:\\npm\\npm-cli.js" },
+    nodeExecutable: "C:\\node\\node.exe",
+    fileExists: () => true,
+  }), {
+    command: "C:\\node\\node.exe",
+    args: ["C:\\npm\\npm-cli.js", "pack"],
+  });
+  assert.deepEqual(npmInvocation(["pack"], {
+    platform: "win32",
+    env: { ComSpec: "C:\\Windows\\System32\\cmd.exe" },
+    fileExists: () => false,
+  }), {
+    command: "C:\\Windows\\System32\\cmd.exe",
+    args: ["/d", "/s", "/c", "npm.cmd", "pack"],
+  });
 });
 
 test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: 120_000 }, () => {
