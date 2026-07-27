@@ -8,13 +8,14 @@ import {
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 
 import { canonicalValue, sha256 } from "./canonical.mjs";
+import { privateKeyPermissionPolicy } from "./platform-durability.mjs";
 import {
   signSourceReviewAttestation,
   sourceReviewSignedPayload,
   validateUnsignedSourceReviewAttestation,
 } from "./source-review-attestations.mjs";
 
-function readPrivateKey(file) {
+function readPrivateKey(file, { platform = process.platform } = {}) {
   const target = resolve(file || "");
   if (!file || !existsSync(target)) throw new Error("an existing private-key file is required");
   if (lstatSync(target).isSymbolicLink()) throw new Error("private-key file must not be a symlink");
@@ -23,7 +24,7 @@ function readPrivateKey(file) {
   try {
     const opened = fstatSync(descriptor);
     if (!opened.isFile()) throw new Error("private-key path must be a regular file");
-    if ((opened.mode & 0o077) !== 0) throw new Error("private-key file permissions must deny group and other access");
+    privateKeyPermissionPolicy(opened.mode, { platform });
     bytes = readFileSync(descriptor);
   } finally {
     closeSync(descriptor);
@@ -88,9 +89,10 @@ export function runOfflineSourceReviewSigning({
   stagingRoot,
   productionRoot,
   now = new Date(),
+  platform = process.platform,
 } = {}) {
   validateRequest(request, now);
-  const { key, target: privateKeyPath } = readPrivateKey(privateKeyFile);
+  const { key, target: privateKeyPath } = readPrivateKey(privateKeyFile, { platform });
   const requestPath = requestFile ? resolve(requestFile) : null;
   const plan = canonicalValue({
     schema_version: 1,

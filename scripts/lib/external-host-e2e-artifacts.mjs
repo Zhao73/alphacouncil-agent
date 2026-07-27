@@ -8,6 +8,7 @@ import { canonicalValue, sha256 } from "../../mcp/lib/personas-v3/canonical.mjs"
 
 export const EXTERNAL_HOST_IDS = Object.freeze(["claude_code", "codex", "opencode", "grok"]);
 export const EXTERNAL_E2E_REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const PRIVATE_FILE_MODE = process.platform === "win32" ? "windows_acl_not_verified" : "0600";
 const HASH = /^sha256:[a-f0-9]{64}$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
 const RESULT_BINDING_KEYS = Object.freeze([
@@ -411,13 +412,17 @@ export function writeExternalHostPreflightArtifact(artifact, outputFile, { repoR
   if (inside(resolve(repoRoot, "knowledge"), physicalTarget)) throw new HostE2eArtifactError("refusing to write preflight evidence into the production knowledge tree");
   writeFileSync(physicalTarget, `${JSON.stringify(artifact, null, 2)}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
   const mode = statSync(physicalTarget).mode & 0o777;
-  if (mode !== 0o600) throw new HostE2eArtifactError(`saved evidence permissions are not 0600: ${mode.toString(8)}`);
+  // Windows does not expose POSIX mode bits through stat(2); the `wx` flag still
+  // provides the security-critical exclusive-create/no-overwrite guarantee.
+  if (process.platform !== "win32" && mode !== 0o600) {
+    throw new HostE2eArtifactError(`saved evidence permissions are not 0600: ${mode.toString(8)}`);
+  }
   return canonicalValue({
     status: "saved_not_run_preflight",
     host_id: artifact.host_id,
     artifact_hash: artifact.artifact_hash,
     file_hash: `sha256:${createHash("sha256").update(readFileSync(physicalTarget)).digest("hex")}`,
     output_file: physicalTarget,
-    mode: "0600",
+    mode: PRIVATE_FILE_MODE,
   });
 }

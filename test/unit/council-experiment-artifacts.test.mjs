@@ -104,7 +104,7 @@ test("case-freeze builder hashes 48 physical inputs across at least 36 clusters 
   assert.equal(artifact.case_order[47], "case-47");
   const output = join(dir, "freeze.json");
   const saved = writeExperimentArtifact(artifact, output);
-  assert.equal(saved.mode, "0600");
+  assert.equal(saved.mode, process.platform === "win32" ? "windows_acl_not_verified" : "0600");
   assert.throws(() => writeExperimentArtifact(artifact, output), /overwrite/);
 });
 
@@ -256,9 +256,15 @@ test("CLI defaults to plan and rejects a symlink import source", (t) => {
   const physical = join(dir, "result.json");
   const link = join(dir, "link.json");
   writeFileSync(physical, `${JSON.stringify(arm())}\n`);
-  import("node:fs").then(() => {});
-  const makeLink = spawnSync("ln", ["-s", physical, link]);
-  assert.equal(makeLink.status, 0);
+  try {
+    symlinkSync(physical, link, "file");
+  } catch (error) {
+    if (process.platform === "win32" && ["EPERM", "EACCES", "ENOTSUP"].includes(error.code)) {
+      t.skip(`file symlinks are unavailable on this Windows runner (${error.code})`);
+      return;
+    }
+    throw error;
+  }
   const result = spawnSync(process.execPath, ["scripts/council-experiment-artifacts.mjs", "--import-result", "--file", link, "--output", join(dir, "out")], { cwd: process.cwd(), encoding: "utf8" });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /physical regular file/);

@@ -164,6 +164,20 @@ function isolatedNpmEnv(root) {
   };
 }
 
+function npmInvocation(args, env) {
+  const npmExecPath = env.npm_execpath;
+  if (typeof npmExecPath === "string" && npmExecPath.trim() && existsSync(npmExecPath)) {
+    return { command: process.execPath, args: [npmExecPath, ...args] };
+  }
+  if (process.platform === "win32") {
+    return {
+      command: env.ComSpec || "cmd.exe",
+      args: ["/d", "/s", "/c", "npm.cmd", ...args],
+    };
+  }
+  return { command: "npm", args };
+}
+
 function safelyInstallAndDerive(tarball, { packageName, releaseId }) {
   const tempBase = realpathSync(tmpdir());
   const root = mkdtempSync(join(tempBase, "alphacouncil-ga-package-"));
@@ -171,11 +185,18 @@ function safelyInstallAndDerive(tarball, { packageName, releaseId }) {
   try {
     const prefix = join(root, "install");
     mkdirSync(prefix);
-    const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-    const result = spawnSync(npm, [
+    const npmEnv = isolatedNpmEnv(root);
+    const invocation = npmInvocation([
       "install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund",
       "--package-lock=false", "--prefix", prefix, tarball,
-    ], { cwd: root, env: isolatedNpmEnv(root), encoding: "utf8", maxBuffer: 16 * 1024 * 1024, timeout: 120_000 });
+    ], npmEnv);
+    const result = spawnSync(invocation.command, invocation.args, {
+      cwd: root,
+      env: npmEnv,
+      encoding: "utf8",
+      maxBuffer: 16 * 1024 * 1024,
+      timeout: 120_000,
+    });
     if (result.error || result.status !== 0) throw new Error(`offline script-disabled npm install failed (${result.error?.code || result.status}): ${(result.stderr || result.stdout || "").trim()}`);
     const segments = String(packageName).split("/");
     if (!segments.length || segments.some((segment) => !segment || segment === "." || segment === "..")) throw new Error("package name cannot resolve an installed path");

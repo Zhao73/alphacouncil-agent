@@ -140,14 +140,14 @@ test("read-only preflight supports executable runtime and PATH overrides but sta
   assert.equal(validateExternalHostE2eArtifact(preflight).valid, true);
 });
 
-test("explicit preflight save is exclusive 0600 and remains valid not_run evidence", (t) => {
+test("explicit preflight save is exclusive and remains valid not_run evidence", (t) => {
   const dir = mkdtempSync(join(tmpdir(), "alphacouncil-preflight-save-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const artifact = preflightExternalHost({ hostId: "opencode", executable: "missing-opencode-fixture", pathOverride: "/usr/bin:/bin" });
   const output = join(dir, "opencode-not-run.json");
   const saved = writeExternalHostPreflightArtifact(artifact, output);
   assert.equal(saved.status, "saved_not_run_preflight");
-  assert.equal(saved.mode, "0600");
+  assert.equal(saved.mode, process.platform === "win32" ? "windows_acl_not_verified" : "0600");
   assert.equal(JSON.parse(readFileSync(output, "utf8")).status, "not_run");
   assert.throws(() => writeExternalHostPreflightArtifact(artifact, output), /overwrite/);
 });
@@ -179,7 +179,7 @@ test("host CLI writes preflight only with explicit --write and refuses overwrite
   const args = ["scripts/host-e2e-artifacts.mjs", "--preflight", "--host", "grok", "--executable", "missing-grok-fixture", "--path", "/usr/bin:/bin", "--write", "--output", output];
   const first = spawnSync(process.execPath, args, { cwd: process.cwd(), encoding: "utf8" });
   assert.equal(first.status, 0, first.stderr);
-  assert.equal(JSON.parse(first.stdout).mode, "0600");
+  assert.equal(JSON.parse(first.stdout).mode, process.platform === "win32" ? "windows_acl_not_verified" : "0600");
   assert.equal(JSON.parse(readFileSync(output, "utf8")).status, "not_run");
   const second = spawnSync(process.execPath, args, { cwd: process.cwd(), encoding: "utf8" });
   assert.equal(second.status, 1);

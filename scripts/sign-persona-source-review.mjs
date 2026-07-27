@@ -53,7 +53,7 @@ function helpText() {
     "",
     "The request must already contain the human reviewer identity, approve/reject decision, exact hashes, real reviewed_at timestamp, all true affirmations, and notes.",
     "Check mode validates the request and key without signing or writing. Write mode creates one new signed attestation and refuses overwrite.",
-    "The private key must be a physical mode-0600-style Ed25519 PEM file. Its bytes are never printed or written elsewhere.",
+    "On POSIX the private key must deny group and other access; on Windows the signer checks a physical non-symlink key but cannot verify NTFS ACLs. Its bytes are never printed or written elsewhere.",
     "This command never generates a reviewer identity, decision, approval, timestamp, key pair, or production write.",
     "",
   ].join("\n");

@@ -220,6 +220,26 @@ test("offline signer is plan-only by default and writes one signature without ex
   }), /refusing overwrite/);
 });
 
+test("offline signer enforces POSIX owner-only keys while Windows uses its explicit ACL-unverified policy", (t) => {
+  const paths = workspace(t);
+  const human = reviewer("Reviewer A", "reviewer:key-a");
+  const request = unsigned({
+    content_hash: `sha256:${"a".repeat(64)}`,
+    anchor_hash: `sha256:${"b".repeat(64)}`,
+  }, human);
+  const requestFile = join(paths.dir, "unsigned.json");
+  const privateKeyFile = join(paths.dir, "reviewer.pem");
+  writeFileSync(requestFile, `${JSON.stringify(request)}\n`);
+  writeFileSync(privateKeyFile, human.privateKey.export({ type: "pkcs8", format: "pem" }), { mode: 0o600 });
+  chmodSync(privateKeyFile, 0o644);
+  assert.throws(() => runOfflineSourceReviewSigning({
+    request, requestFile, privateKeyFile, now: NOW, platform: "linux",
+  }), /deny group and other access/);
+  assert.doesNotThrow(() => runOfflineSourceReviewSigning({
+    request, requestFile, privateKeyFile, now: NOW, platform: "win32",
+  }));
+});
+
 test("review operation schemas and CLI defaults preserve explicit-write boundaries", () => {
   for (const name of ["source-review-batch-v1.schema.json", "source-review-signing-request-v1.schema.json"]) {
     const file = fileURLToPath(new URL(`../../schemas/${name}`, import.meta.url));

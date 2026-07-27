@@ -33,6 +33,7 @@ import { hostname as systemHostname } from "node:os";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { canonicalValue, sha256 } from "./canonical.mjs";
+import { fsyncDirectoryStrictly } from "./platform-durability.mjs";
 import {
   CANONICAL_MASTER_IDS,
   canonicalMasterBlueprints,
@@ -791,9 +792,13 @@ async function withSeatWriteLease(paths, operation, { clock = () => Date.now() }
   }
 }
 
-function fsyncDirectory(dir) {
-  const descriptor = openSync(dir, fsConstants.O_RDONLY);
-  try { fsyncSync(descriptor); } finally { closeSync(descriptor); }
+export function fsyncDirectory(dir, options = {}) {
+  return fsyncDirectoryStrictly(dir, {
+    openImpl: (target) => openSync(target, fsConstants.O_RDONLY),
+    fsyncImpl: fsyncSync,
+    closeImpl: closeSync,
+    ...options,
+  });
 }
 
 function cleanupTransactionDirectory(transactionDir) {

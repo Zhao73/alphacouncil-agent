@@ -679,6 +679,7 @@ test("the report script scans the canonical 26 and emits JSON with required delt
   const run = spawnSync(process.execPath, ["scripts/report-persona-corpus-gaps.mjs", "--json"], {
     cwd: ROOT,
     encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
   });
   assert.equal(run.status, 0, run.stderr);
   const report = JSON.parse(run.stdout);
@@ -697,6 +698,7 @@ test("the default report is Markdown and keeps method-model promotion experiment
   const run = spawnSync(process.execPath, ["scripts/report-persona-corpus-gaps.mjs"], {
     cwd: ROOT,
     encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
   });
   assert.equal(run.status, 0, run.stderr);
   assert.match(run.stdout, /Persona corpus and admission gap report/);

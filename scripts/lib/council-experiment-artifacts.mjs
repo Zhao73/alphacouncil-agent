@@ -12,6 +12,7 @@ export const EXPERIMENT_ARTIFACT_KINDS = Object.freeze([
   "alphacouncil_experiment_result_manifest",
 ]);
 const CANONICAL_PROTOCOL = loadCouncilEvaluationProtocol();
+const PRIVATE_FILE_MODE = process.platform === "win32" ? "windows_acl_not_verified" : "0600";
 
 const HASH = /^sha256:[a-f0-9]{64}$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
@@ -399,8 +400,12 @@ export function writeExperimentArtifact(artifact, outputFile, { repoRoot = REPO_
   if (back === "" || (back !== ".." && !back.startsWith(`..${sep}`) && !isAbsolute(back))) throw new ExperimentArtifactError("refusing to write experiment evidence into the production knowledge tree");
   writeFileSync(physicalTarget, `${JSON.stringify(artifact, null, 2)}\n`, { encoding: "utf8", flag: "wx", mode: 0o600 });
   const mode = statSync(physicalTarget).mode & 0o777;
-  if (mode !== 0o600) throw new ExperimentArtifactError(`saved artifact permissions are not 0600: ${mode.toString(8)}`);
-  return canonicalValue({ status: "saved_unsigned_artifact", artifact_kind: artifact.artifact_kind, artifact_hash: artifact.artifact_hash, file_hash: physicalHash(physicalTarget), output_file: physicalTarget, mode: "0600" });
+  // Windows ACLs are not representable as POSIX mode bits. Keep exclusive
+  // creation and the physical hash check, while enforcing 0600 on POSIX hosts.
+  if (process.platform !== "win32" && mode !== 0o600) {
+    throw new ExperimentArtifactError(`saved artifact permissions are not 0600: ${mode.toString(8)}`);
+  }
+  return canonicalValue({ status: "saved_unsigned_artifact", artifact_kind: artifact.artifact_kind, artifact_hash: artifact.artifact_hash, file_hash: physicalHash(physicalTarget), output_file: physicalTarget, mode: PRIVATE_FILE_MODE });
 }
 
 function physicalHash(file) {
