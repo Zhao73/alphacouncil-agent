@@ -2,6 +2,41 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.0-solo-test.3] — 2026-07-27
+
+This is a post-acceptance hotfix for the **0.9.0 solo-test prerelease** channel. An
+independent public-package RKLB run of `0.9.0-solo-test.2` completed in 23m12s with seven
+of eight evidence seats, exact Round-2-to-Round-3 Q&A binding and all four selected v3
+method seats declining out of scope. The run also exposed one code-zero malformed-JSON
+worker response and a PM report that omitted Master Bench. Because those two defects left
+the run incomplete, `.2` is not treated as a passing acceptance result.
+
+### Fixed from the public `.2` rerun
+
+- **Malformed worker output now fails closed.** A process that exits successfully but
+  violates the one-object JSON contract produces an empty evidence packet. Its malformed
+  output, parse error, bounded parse context, character count and SHA-256 stay in a separate
+  `*.failure.json` diagnostic and cannot enter `evidence.json`, the source manifest or
+  debate claims. The diagnostic is mode `0600` on POSIX; Windows ACL ownership is not
+  independently verified by this release.
+- **One parse-only retry is bounded by the original seat timeout.** The worker receives one
+  fresh transport-contract retry without the malformed response being fed back. The first
+  diagnostic is retained, `task_retry` is recorded, and a second malformed result remains
+  fail-closed. The retry is allocated only the remaining configured worker budget rather
+  than a fresh full timeout.
+- **Recorded master opinions cannot disappear from the final report.** Master Bench is now
+  a system-owned deterministic section. PM-authored bench headings are retained only as
+  explicitly non-authoritative commentary, any prior system section is replaced, and one
+  hash-marked table containing the frozen seat IDs, stances and verdicts is assembled before
+  the quality gate runs.
+- **Worker diagnostics are owner-only on POSIX.** Atomic JSON writes support an explicit
+  file mode and the temporary file is set to `0600` before rename.
+
+The package remains on npm's `next` dist-tag and the GitHub release remains a prerelease.
+Stable `0.9.0` is still reserved for formal production-GA evidence. Assurance is unchanged:
+26 provisional physical `operator_lens`, 52 provisional derived tools, 0 operational seats,
+0 `method_model` seats and 0 human approval signatures.
+
 ## [0.9.0-solo-test.2] — 2026-07-27
 
 This is a corrective **0.9.0 solo-test prerelease**, cut from a real RKLB acceptance run of

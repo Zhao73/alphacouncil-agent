@@ -59,7 +59,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 ## 当前 0.9.0 预发布状态：solo-test
 
-软件包与插件版本表面均为 `0.9.0-solo-test.2`，但这是一条明确隔离的 **solo-test** 渠道，不是正式
+软件包与插件版本表面均为 `0.9.0-solo-test.3`，但这是一条明确隔离的 **solo-test** 渠道，不是正式
 生产 GA。它包含 26 个物理 PersonaPack v3 包与 52 个可执行的
 `provisional_derived_proxy` 工具，用于端到端测试确定性路径。全部 26 席仍是 provisional
 `operator_lens`；`operational`：**0**；`method_model`：**0**。人工来源审批：**0**；

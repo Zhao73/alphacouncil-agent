@@ -16,6 +16,7 @@ import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
 import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
+import { sha256 } from "./personas-v3/canonical.mjs";
 
 function masterRuntimeProvenance(run, plan) {
   const decisions = new Map((plan.decisions || []).map((decision) => [decision.persona_id, decision]));
@@ -496,16 +497,27 @@ export function isDryRun(args = {}) {
  * internal instructions and half-finished searches. That material is useful to an operator
  * but is not a sourced claim and must never enter evidence.json or downstream debate.
  */
-export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeoutMs, result }) {
+export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeoutMs, result, failureKind, parseError }) {
   const chinese = isChineseLanguage(language);
   const timedOut = result?.timedOut === true;
-  const status = timedOut ? "timed_out" : "failed";
+  const parseFailed = failureKind === "parse_failed";
+  const status = parseFailed ? "parse_failed" : (timedOut ? "timed_out" : "failed");
   const exitLabel = Number.isInteger(result?.code) ? `exit code ${result.code}` : "worker error";
-  const reason = timedOut ? `timeout after ${timeoutMs}ms` : exitLabel;
+  const parseMessage = cleanLog(parseError?.message || parseError || "subagent did not return valid JSON", 1_000);
+  const reason = parseFailed ? parseMessage : (timedOut ? `timeout after ${timeoutMs}ms` : exitLabel);
+  const rawOutput = String(result?.text || "");
+  const positionMatch = parseFailed ? /\bposition\s+(\d+)\b/i.exec(parseMessage) : null;
+  const parsePosition = positionMatch ? Number(positionMatch[1]) : null;
+  const contextStart = Number.isInteger(parsePosition) ? Math.max(0, parsePosition - 500) : 0;
+  const contextEnd = Number.isInteger(parsePosition) ? Math.min(rawOutput.length, parsePosition + 500) : 0;
   const packet = normalizePacket({
-    summary: chinese
-      ? `证据席位 ${task} 执行超时或失败；未生成可用于投资判断的证据。`
-      : `Evidence worker ${task} timed out or failed; it produced no evidence usable for an investment decision.`,
+    summary: parseFailed
+      ? (chinese
+        ? `证据席位 ${task} 的输出不符合 JSON 契约；未生成可用于投资判断的证据。`
+        : `Evidence worker ${task} returned output that violated the JSON contract; it produced no evidence usable for an investment decision.`)
+      : (chinese
+        ? `证据席位 ${task} 执行超时或失败；未生成可用于投资判断的证据。`
+        : `Evidence worker ${task} timed out or failed; it produced no evidence usable for an investment decision.`),
     claims: [],
     open_questions: [chinese
       ? `检查 ${task} 的独立失败诊断并重试；不得用该席位的部分对话补齐证据。`
@@ -522,7 +534,18 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     timeout_ms: timeoutMs,
     exit_code: Number.isInteger(result?.code) ? result.code : null,
     reason,
-    diagnostic_excerpt: cleanLog(result?.stderr || result?.stdout || result?.text || reason),
+    diagnostic_excerpt: cleanLog(parseFailed
+      ? (rawOutput || result?.stderr || result?.stdout || reason)
+      : (result?.stderr || result?.stdout || rawOutput || reason)),
+    ...(parseFailed ? {
+      parse_error: parseMessage,
+      parse_position: Number.isInteger(parsePosition) ? parsePosition : null,
+      parse_context: Number.isInteger(parsePosition)
+        ? cleanLog(rawOutput.slice(contextStart, contextEnd), 1_000)
+        : cleanLog(rawOutput, 1_000),
+      output_chars: rawOutput.length,
+      output_sha256: sha256(rawOutput),
+    } : {}),
     recorded_at: new Date().toISOString(),
   };
   return { packet, diagnostic };
@@ -696,54 +719,115 @@ export async function collectEvidence(args) {
       updateTask(run, task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`) });
       return packet;
     }
-    const result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
-      updateTask(run, task, "running", { pid, output });
+    const workerStartedAt = Date.now();
+    const runAttempt = (workerPrompt, budgetMs, attempt) => runCodex(workerPrompt, budgetMs, ({ pid, output }) => {
+      updateTask(run, task, "running", { pid, output, attempts: attempt });
     }, ({ pid, output, elapsed_ms }) => {
-      updateTask(run, task, "running", { pid, output });
-      appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms });
+      updateTask(run, task, "running", { pid, output, attempts: attempt });
+      appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms, attempt });
     });
-    let packet;
-    if (!result.ok) {
+    const commitFailure = ({ failedResult, budgetMs, attempts, failureKind, parseError, retryDiagnostic }) => {
       const failure = workerFailureArtifacts({
+        task,
+        symbol,
+        asOfDate,
+        language,
+        timeoutMs: budgetMs,
+        result: failedResult,
+        failureKind,
+        parseError,
+      });
+      const diagnosticPath = join(dir, `${task}.failure.json`);
+      writeJson(diagnosticPath, failure.diagnostic, { mode: 0o600 });
+      commitPacket(failure.packet);
+      updateTask(run, task, failedResult.timedOut ? "timed_out" : "failed", {
+        completed_at: new Date().toISOString(),
+        output: join(dir, `${task}.json`),
+        diagnostic: diagnosticPath,
+        ...(retryDiagnostic ? { retry_diagnostic: retryDiagnostic } : {}),
+        attempts,
+        error: failureKind === "parse_failed"
+          ? "parse_failed"
+          : (failedResult.timedOut ? "timeout" : `exit code ${failedResult.code}`),
+      });
+      return failure.packet;
+    };
+
+    let result = await runAttempt(prompt, timeoutMs, 1);
+    if (!result.ok) {
+      return commitFailure({ failedResult: result, budgetMs: timeoutMs, attempts: 1 });
+    }
+    let packet;
+    try {
+      packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
+      commitPacket(packet);
+      updateTask(run, task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
+      return packet;
+    } catch (firstParseError) {
+      const firstFailure = workerFailureArtifacts({
         task,
         symbol,
         asOfDate,
         language,
         timeoutMs,
         result,
+        failureKind: "parse_failed",
+        parseError: firstParseError,
       });
-      packet = failure.packet;
-      const diagnosticPath = join(dir, `${task}.failure.json`);
-      writeJson(diagnosticPath, failure.diagnostic);
-      commitPacket(packet);
-      updateTask(run, task, result.timedOut ? "timed_out" : "failed", {
-        completed_at: new Date().toISOString(),
-        output: join(dir, `${task}.json`),
-        diagnostic: diagnosticPath,
-        error: result.timedOut ? "timeout" : `exit code ${result.code}`,
+      const retryDiagnostic = join(dir, `${task}.attempt-1.failure.json`);
+      writeJson(retryDiagnostic, firstFailure.diagnostic, { mode: 0o600 });
+      const elapsedMs = Date.now() - workerStartedAt;
+      const retryTimeoutMs = timeoutMs - elapsedMs;
+      if (retryTimeoutMs <= 0) {
+        return commitFailure({
+          failedResult: result,
+          budgetMs: timeoutMs,
+          attempts: 1,
+          failureKind: "parse_failed",
+          parseError: firstParseError,
+          retryDiagnostic,
+        });
+      }
+
+      appendEvent(run, "task_retry", {
+        task,
+        attempt: 2,
+        max_attempts: 2,
+        reason: "parse_failed",
+        retry_diagnostic: retryDiagnostic,
+        remaining_ms: retryTimeoutMs,
       });
-      return packet;
-    }
-    try {
-      packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
-      commitPacket(packet);
-      updateTask(run, task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`) });
-      return packet;
-    } catch (error) {
-      const raw = cleanLog(result.text);
-      packet = normalizePacket({
-        summary: `Subagent ${task} returned non-JSON output.`,
-        claims: [{ claim: "Output was not parseable JSON", evidence: String(error.message || error), confidence: "low", source_ids: [] }],
-        open_questions: ["Inspect raw_text and rerun with a stricter prompt."],
-        confidence: "low",
-      }, task, symbol, asOfDate, raw);
-      commitPacket(packet);
-      updateTask(run, task, "failed", {
-        completed_at: new Date().toISOString(),
-        output: join(dir, `${task}.json`),
-        error: "parse_failed",
-      });
-      return packet;
+      updateTask(run, task, "running", { attempts: 2, retry_diagnostic: retryDiagnostic });
+      const retryPrompt = `${prompt}\n\nTRANSPORT RETRY ONLY: Your previous final response violated the required JSON transport contract. Return exactly one JSON object matching the schema above, with no prose, Markdown fence, second object, or trailing text. Do not infer or repair facts from the prior malformed response; perform the same source-bounded task again.`;
+      result = await runAttempt(retryPrompt, retryTimeoutMs, 2);
+      if (!result.ok) {
+        return commitFailure({
+          failedResult: result,
+          budgetMs: retryTimeoutMs,
+          attempts: 2,
+          retryDiagnostic,
+        });
+      }
+      try {
+        packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
+        commitPacket(packet);
+        updateTask(run, task, "completed", {
+          completed_at: new Date().toISOString(),
+          output: join(dir, `${task}.json`),
+          attempts: 2,
+          retry_diagnostic: retryDiagnostic,
+        });
+        return packet;
+      } catch (secondParseError) {
+        return commitFailure({
+          failedResult: result,
+          budgetMs: retryTimeoutMs,
+          attempts: 2,
+          failureKind: "parse_failed",
+          parseError: secondParseError,
+          retryDiagnostic,
+        });
+      }
     }
   });
 

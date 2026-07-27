@@ -59,6 +59,19 @@ export function normalizeHeading(text) {
     .trim();
 }
 
+/**
+ * Match a normalized report-section alias without treating an arbitrary Latin prefix as a
+ * word. CJK headings often omit spaces (for example 大师席位分歧处理), so CJK aliases retain
+ * substring semantics; Latin aliases must occupy complete normalized tokens.
+ */
+export function headingIncludesAlias(title, alias) {
+  const normalized = normalizeHeading(title);
+  const needle = normalizeHeading(alias);
+  if (!normalized || !needle) return false;
+  if (/\p{Script=Han}/u.test(needle)) return normalized.includes(needle);
+  return ` ${normalized} `.includes(` ${needle} `);
+}
+
 /** Non-whitespace character count, the only length measure that survives CJK. */
 export function denseLength(text) {
   return String(text || "").replace(/\s+/g, "").length;

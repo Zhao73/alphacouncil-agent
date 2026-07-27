@@ -18,12 +18,12 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:52787d2fad8a03a6e32cd569aecde8f75547d7eca295330352cc30f142e5e46e",
+    "input_hash": "sha256:dbdfc098e2d88ad99cfb8cec8bf9373c31a6aa77bc7e20ad4de2bf1552ea7fcf",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
   "production_effect": "none",
-  "result_hash": "sha256:8692248bc53402ec2f29ddeb988e9b7223632aefdeee6a79a9c8742a88fd96ca",
+  "result_hash": "sha256:32360ab4f9b06ccf513870be40fcfcaa111af6dc8d0c9604f8ba52c5c2358446",
   "results": {
     "blocked_fail_closed_count": 0,
     "completion_status": "completed_machine_simulation",
@@ -34,7 +34,7 @@
         "fact_pack_hash": "sha256:0adab0b69b1e8ba756deaeac3c457e044dd5a7195b1847893db0953772220e41",
         "frozen_decision_hash": "sha256:ddfd120be4926ef3b400a07f8af44c277d170f4c8f48364579b5b21ae48fa661",
         "native_state": "provisional_own_at_price",
-        "pack_hash": "sha256:e0105d61470e5cea7584a4ecb22993dd44b95cb4a2bc6cb1db9d909d4668265b",
+        "pack_hash": "sha256:31c8a773e5b41703a5bb439be0df7c3b66d2650f8670e2467e7ddb5d226b65fe",
         "persona_id": "master_buffett",
         "policy_execution_hash": "sha256:5e853405b4dd96e4760f842c0726e26bf7f87e9e3cc79a6b90e3ceb58a2211a5",
         "score_ratio": 1,
@@ -54,7 +54,7 @@
     "verifier_checks": []
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:f0424bd1eebec24166d1fce1a96302018242cd2344d2cc5e4d2a94462112ea05",
+  "run_artifact_hash": "sha256:4b4092c087c4cb5e26d9ea0ab4f59dee92dc2b75864889c61d87180add3e7c2c",
   "run_id": "A",
   "schema_version": 1,
   "simulation_scope": "single deterministic seat surrogate; formal single-model answer is not simulated"

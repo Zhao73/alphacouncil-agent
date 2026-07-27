@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { masterCorrelationNote, renderMasterMarkdown } from "../../mcp/lib/markdown.mjs";
+import { finalReportMarkdown, masterCorrelationNote, renderMasterMarkdown } from "../../mcp/lib/markdown.mjs";
 import { validateFinalReport } from "../../mcp/lib/gates.mjs";
 import { REPORT_SECTIONS } from "../../mcp/lib/constants.mjs";
+import { normalizeHeading, parseHeadings } from "../../mcp/lib/headings.mjs";
 import { recordAck } from "../../mcp/lib/rpc.mjs";
 
 const opinion = (over = {}) => ({
@@ -102,6 +103,95 @@ test("a run with no bench is not failed for omitting a bench section", () => {
   const quality = validateFinalReport(reportWithout("master_bench"), run);
   assert.ok(!quality.missing.some((m) => m.includes("master_bench")), quality.missing.join("; "));
   assert.ok(!quality.required_sections.includes("master_bench"));
+});
+
+test("final report assembly restores a missing master bench from recorded opinions", () => {
+  const run = {
+    language: "zh-CN",
+    masters: ["master_buffett"],
+    master_opinions: [opinion({ stance: "out_of_scope" })],
+    tasks: [],
+    packets: [],
+  };
+  const markdown = finalReportMarkdown(run, { report_markdown: reportWithout("master_bench") });
+  const quality = validateFinalReport(markdown, run);
+  assert.equal(quality.sections.find((section) => section.id === "master_bench")?.status, "ok");
+  assert.match(markdown, /## 大师席位 \/ Master Bench/);
+  assert.match(markdown, /out_of_scope/);
+});
+
+function benchHeadings(markdown) {
+  return parseHeadings(markdown).filter(({ title }) => {
+    const normalized = normalizeHeading(title);
+    return normalized.includes("master bench") || normalized.includes("master lens") || normalized.includes("大师席");
+  });
+}
+
+test("final report assembly replaces generic PM bench prose with the recorded opinions", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett"],
+    master_opinions: [opinion({ verdict: "RECORDED VERDICT MUST APPEAR" })],
+    tasks: [],
+    packets: [],
+  };
+  const body = reportWithout(null);
+  const markdown = finalReportMarkdown(run, { report_markdown: body });
+  assert.equal(benchHeadings(markdown).length, 1);
+  assert.match(markdown, /master_buffett/);
+  assert.match(markdown, /avoid/);
+  assert.match(markdown, /RECORDED VERDICT MUST APPEAR/);
+  assert.match(markdown, /alphacouncil:recorded-master-bench:v1:sha256:[0-9a-f]{64}/);
+});
+
+test("final report assembly collapses stale duplicate bench aliases into one system-owned bench", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett", "master_taleb"],
+    master_opinions: [
+      opinion({ verdict: "Buffett recorded verdict" }),
+      opinion({ master: "master_taleb", stance: "out_of_scope", verdict: "Taleb recorded verdict" }),
+    ],
+    tasks: [],
+    packets: [],
+  };
+  const stale = `${reportWithout("master_bench")}\n## Master Bench\n\nStale generic verdict.\n\n## Master Lens Notes\n\nAnother stale generic verdict.\n`;
+  const markdown = finalReportMarkdown(run, { report_markdown: stale });
+  assert.equal(benchHeadings(markdown).length, 1);
+  assert.match(markdown, /master_buffett/);
+  assert.match(markdown, /master_taleb/);
+  assert.match(markdown, /Buffett recorded verdict/);
+  assert.match(markdown, /Taleb recorded verdict/);
+});
+
+test("system-owned Master Bench assembly is idempotent", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett"],
+    master_opinions: [opinion()],
+    tasks: [],
+    packets: [],
+  };
+  const once = finalReportMarkdown(run, { report_markdown: reportWithout(null) });
+  const twice = finalReportMarkdown(run, { report_markdown: once });
+  assert.equal(benchHeadings(twice).length, 1);
+  assert.equal((twice.match(/alphacouncil:recorded-master-bench:v1:/g) || []).length, 1);
+  assert.equal((twice.match(/outside the circle of competence/g) || []).length, 1);
+});
+
+test("Master Bench assembly never invents a missing selected opinion", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett", "master_taleb"],
+    master_opinions: [opinion()],
+    tasks: [],
+    packets: [],
+  };
+  const markdown = finalReportMarkdown(run, { report_markdown: reportWithout("master_bench") });
+  const bench = benchHeadings(markdown)[0];
+  assert.match(bench.body, /master_buffett/);
+  assert.doesNotMatch(bench.body, /master_taleb/);
+  assert.match(markdown, /Master seats that gave no opinion:[\s\S]*master_taleb/);
 });
 
 test("a record ack reports progress without echoing the whole run", () => {

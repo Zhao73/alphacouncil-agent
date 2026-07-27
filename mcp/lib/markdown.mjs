@@ -1,8 +1,10 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEBATE_ROLES } from "./constants.mjs";
+import { DEBATE_ROLES, REPORT_SECTIONS } from "./constants.mjs";
 import { writeJson } from "./fsutil.mjs";
+import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage } from "./lang.mjs";
+import { sha256 } from "./personas-v3/canonical.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
@@ -143,7 +145,7 @@ export function renderBenchSummary(run) {
   const minority = opinions.filter((o) => (o.stance || "unknown") !== majority);
   const concurring = opinions.filter((o) => (o.stance || "unknown") === majority);
 
-  const row = (o) => `| ${masterTitle(o.master, run?.language)} | ${o.stance || "unknown"} | ${o.confidence || "low"} | ${clip(o.verdict || o.summary || "", 90)} |`;
+  const row = (o) => `| ${masterTitle(o.master, run?.language)} (\`${o.master}\`) | ${o.stance || "unknown"} | ${o.confidence || "low"} | ${clip(o.verdict || o.summary || "", 90)} |`;
   const head = zh
     ? ["| 方法 | 立场 | 置信度 | 判断 |", "|---|---|---|---|"]
     : ["| Method | Stance | Confidence | Verdict |", "|---|---|---|---|"];
@@ -387,12 +389,71 @@ export function writeReportQuality(run, markdown) {
   return quality;
 }
 
+const RECORDED_BENCH_MARKER_PREFIX = "alphacouncil:recorded-master-bench:v1:";
+
+function recordedBenchMarker(run) {
+  const subject = (run?.master_opinions || []).map((opinion) => ({
+    confidence: String(opinion?.confidence || "low"),
+    master: String(opinion?.master || ""),
+    stance: String(opinion?.stance || "unknown"),
+    summary: String(opinion?.summary || ""),
+    verdict: String(opinion?.verdict || ""),
+  }));
+  return `<!-- ${RECORDED_BENCH_MARKER_PREFIX}${sha256(subject)} -->`;
+}
+
+function isMasterBenchHeading(title) {
+  const normalized = normalizeHeading(title);
+  const section = REPORT_SECTIONS.find(({ id }) => id === "master_bench");
+  return Boolean(normalized && section?.aliases.some((alias) => headingIncludesAlias(title, alias)));
+}
+
+/**
+ * Make the recorded Master Bench a system-owned section.
+ *
+ * PM prose is untrusted narrative: even a long section can omit or contradict the opinions
+ * frozen on the run. Existing PM bench headings are therefore relabelled as commentary,
+ * while a previously generated system section is replaced. This preserves useful prose,
+ * leaves exactly one quality-gate-visible bench and makes repeated assembly idempotent.
+ */
+function withRecordedMasterBench(run, markdown) {
+  const body = String(markdown || "");
+  if (!(run?.master_opinions || []).length) return body;
+  const lines = body.split(/\r?\n/);
+  const headings = parseHeadings(body);
+  const removals = [];
+  const commentaryTitle = isChineseLanguage(run.language)
+    ? "PM 对方法席位的叙述（非系统记录）"
+    : "PM Commentary on Method Seats (non-authoritative)";
+
+  for (const [index, heading] of headings.entries()) {
+    if (!isMasterBenchHeading(heading.title)) continue;
+    const next = headings.slice(index + 1).find((candidate) => candidate.level <= heading.level);
+    const start = heading.line - 1;
+    const end = next ? next.line - 1 : lines.length;
+    if (heading.body.includes(`<!-- ${RECORDED_BENCH_MARKER_PREFIX}`)) {
+      removals.push([start, end]);
+    } else {
+      lines[start] = `${"#".repeat(heading.level)} ${commentaryTitle}`;
+    }
+  }
+
+  for (const [start, end] of removals.sort((a, b) => b[0] - a[0])) {
+    lines.splice(start, end - start);
+  }
+  const cleaned = lines.join("\n").trimEnd();
+  const heading = isChineseLanguage(run.language) ? "## 大师席位 / Master Bench" : "## Master Bench";
+  const systemBench = `${heading}\n\n${recordedBenchMarker(run)}\n\n${renderBenchSummary(run)}`;
+  return `${cleaned ? `${cleaned}\n\n` : ""}${systemBench}\n`;
+}
+
 export function finalReportMarkdown(run, manager) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
+  const reportBody = withRecordedMasterBench(run, manager.report_markdown || manager.summary);
   return withDisclaimer(
     withCompletenessBanner(
-      withVerificationBanner(manager.report_markdown || manager.summary, gate, run.language),
+      withVerificationBanner(reportBody, gate, run.language),
       completeness,
       run.language
     ),

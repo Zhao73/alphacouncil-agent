@@ -68,7 +68,7 @@ This repository is the uploadable source copy. Runtime outputs are written outsi
 
 ## Current 0.9.0 prerelease status: solo-test
 
-The package and plugin surfaces are version `0.9.0-solo-test.2`, but this is an explicitly isolated
+The package and plugin surfaces are version `0.9.0-solo-test.3`, but this is an explicitly isolated
 **solo-test** build, not formal production GA. It packages 26 physical PersonaPack v3 packs
 and 52 executable `provisional_derived_proxy` tools so the deterministic path can be tested
 end to end. All 26 seats remain provisional `operator_lens`; operational: **0**;

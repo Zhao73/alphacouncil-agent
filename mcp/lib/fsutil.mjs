@@ -1,4 +1,4 @@
-import { readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { internalError, invalidParams } from "./errors.mjs";
 
 /**
@@ -8,11 +8,12 @@ import { internalError, invalidParams } from "./errors.mjs";
  * rewrites evidence.json. A plain writeFileSync leaves a window where a concurrent
  * reader (or a crash) sees a half-written file; write-then-rename does not.
  */
-export function writeJson(path, value) {
+export function writeJson(path, value, { mode } = {}) {
   const tmp = `${path}.tmp`;
   const body = `${JSON.stringify(value, null, 2)}\n`;
   try {
-    writeFileSync(tmp, body);
+    writeFileSync(tmp, body, Number.isInteger(mode) ? { mode } : undefined);
+    if (Number.isInteger(mode) && process.platform !== "win32") chmodSync(tmp, mode);
     renameSync(tmp, path);
   } catch (error) {
     try {

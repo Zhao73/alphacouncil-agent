@@ -1,5 +1,5 @@
 import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, REPORT_SECTIONS } from "./constants.mjs";
-import { denseLength, normalizeHeading, parseHeadings } from "./headings.mjs";
+import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage } from "./lang.mjs";
 
 export function withDisclaimer(markdown, language) {
@@ -140,7 +140,7 @@ function assignHeadings(headings) {
     for (const section of REPORT_SECTIONS) {
       for (const alias of section.aliases) {
         const needle = normalizeHeading(alias);
-        if (!needle || !normalized.includes(needle)) continue;
+        if (!needle || !headingIncludesAlias(heading.title, alias)) continue;
         if (!best || needle.length > best.needleLength) {
           best = { section, needleLength: needle.length };
         }

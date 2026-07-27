@@ -70,8 +70,8 @@ export const REPORT_SECTIONS = [
   // "leave it", Graham asks for a calculable floor, Thorp asks for a size -- and the PM
   // used to be able to skip it with "the cycle position is undetermined".
   { id: "price_levels", aliases: ["价位", "入场价位", "price levels", "entry level", "价格条件"], min_body: 30 },
-  { id: "catalysts", aliases: ["催化剂", "catalyst"], min_body: 8 },
-  { id: "risks", aliases: ["风险", "risk"], min_body: 8 },
+  { id: "catalysts", aliases: ["催化剂", "catalyst", "catalysts"], min_body: 8 },
+  { id: "risks", aliases: ["风险", "risk", "risks"], min_body: 8 },
   { id: "position", aliases: ["仓位", "position"], min_body: 8 },
   { id: "short_term", aliases: ["短线", "short term"], min_body: 6 },
   { id: "medium_term", aliases: ["中期", "medium term"], min_body: 6 },

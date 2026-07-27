@@ -1,10 +1,64 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+
+function scriptedCodexCommand(dataDir, {
+  recoverOnSecondAttempt = false,
+  failOnSecondAttempt = false,
+  lateValidOnSecondAttempt = false,
+} = {}) {
+  const driver = join(dataDir, "fake-codex-malformed.mjs");
+  const counter = join(dataDir, "fake-codex-attempts.txt");
+  const malformed = '{"summary":"first-object"}{"summary":"second-object"}';
+  const recovered = JSON.stringify({
+    summary: "retry-recovered",
+    claims: [],
+    metrics: {},
+    sources: [],
+    open_questions: [],
+    confidence: "low",
+    information_richness: "C",
+  });
+  writeFileSync(driver, `#!/usr/bin/env node
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+const args = process.argv.slice(2);
+const outputIndex = args.indexOf("-o");
+if (outputIndex === -1 || !args[outputIndex + 1]) process.exit(2);
+const outputPath = args[outputIndex + 1];
+const counterPath = ${JSON.stringify(counter)};
+const attempt = existsSync(counterPath) ? Number(readFileSync(counterPath, "utf8")) + 1 : 1;
+writeFileSync(counterPath, String(attempt));
+if (${JSON.stringify(failOnSecondAttempt)} && attempt === 2) process.exit(17);
+if (${JSON.stringify(lateValidOnSecondAttempt)} && attempt === 2) {
+  process.on("SIGTERM", () => {
+    writeFileSync(outputPath, JSON.stringify({
+      summary: "LATE-AFTER-TIMEOUT",
+      claims: [{ claim: "late claim", evidence: "late evidence", confidence: "high", source_ids: [] }],
+      metrics: {},
+      sources: [],
+      open_questions: [],
+      confidence: "high",
+      information_richness: "A",
+    }));
+    process.exit(0);
+  });
+  setInterval(() => {}, 1_000);
+}
+const output = ${recoverOnSecondAttempt ? `attempt === 2 ? ${JSON.stringify(recovered)} : ${JSON.stringify(malformed)}` : JSON.stringify(malformed)};
+writeFileSync(outputPath, output);
+`);
+  if (process.platform !== "win32") {
+    chmodSync(driver, 0o755);
+    return { command: driver, counter };
+  }
+  const wrapper = join(dataDir, "fake-codex-malformed.cmd");
+  writeFileSync(wrapper, `@"${process.execPath}" "${driver}" %*\r\n`);
+  return { command: wrapper, counter };
+}
 
 test("headless failures stay out of evidence and every completed debate round is observable", async () => {
   const dataDir = makeDataDir();
@@ -73,6 +127,198 @@ test("headless failures stay out of evidence and every completed debate round is
         .map(({ status }) => status),
       ["failed"],
       "empty question/answer arrays must fail the advertised Q&A gate",
+    );
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("a code-zero malformed worker response is isolated in a failure artifact", async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir);
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "RKLB",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-PARSE-FAILURE-${process.pid}`;
+    const response = await server.callTool("collect_evidence", {
+      symbol: "RKLB",
+      run_id: runId,
+      tasks: ["forward_expectations"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+    });
+    const result = structured(response);
+    const runDir = join(dataDir, "runs", runId);
+    const diagnosticPath = join(runDir, "forward_expectations.failure.json");
+    const firstDiagnosticPath = join(runDir, "forward_expectations.attempt-1.failure.json");
+
+    assert.ok(response.result);
+    assert.ok(existsSync(diagnosticPath), "parse failures need a separate diagnostic");
+    assert.ok(existsSync(firstDiagnosticPath), "the first malformed attempt must remain independently diagnosable");
+    if (process.platform !== "win32") {
+      assert.equal(statSync(diagnosticPath).mode & 0o777, 0o600, "worker diagnostics must be owner-only");
+      assert.equal(statSync(firstDiagnosticPath).mode & 0o777, 0o600, "retry diagnostics must be owner-only");
+    }
+    assert.equal(readFileSync(fake.counter, "utf8"), "2", "a parse failure gets exactly one retry");
+    assert.deepEqual(result.packets[0].claims, []);
+    assert.deepEqual(result.packets[0].sources, []);
+    assert.equal(result.packets[0].raw_text, "");
+    assert.equal(result.task_status.forward_expectations.diagnostic, diagnosticPath);
+    assert.equal(result.task_status.forward_expectations.retry_diagnostic, firstDiagnosticPath);
+    assert.equal(result.task_status.forward_expectations.attempts, 2);
+    assert.equal(result.task_status.forward_expectations.error, "parse_failed");
+
+    const evidenceText = readFileSync(join(runDir, "evidence.json"), "utf8");
+    const manifestText = readFileSync(join(runDir, "source_manifest.json"), "utf8");
+    const diagnostic = JSON.parse(readFileSync(diagnosticPath, "utf8"));
+    assert.doesNotMatch(evidenceText, /first-object|second-object/);
+    assert.doesNotMatch(manifestText, /first-object|second-object/);
+    assert.equal(diagnostic.status, "parse_failed");
+    assert.match(diagnostic.parse_context, /}\{/);
+    const events = readFileSync(join(runDir, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    assert.equal(events.filter((event) => event.type === "task_retry").length, 1);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("a transport failure on the parse retry remains empty evidence", async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir, { failOnSecondAttempt: true });
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "RKLB",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-PARSE-RETRY-TRANSPORT-${process.pid}`;
+    const response = await server.callTool("collect_evidence", {
+      symbol: "RKLB",
+      run_id: runId,
+      tasks: ["forward_expectations"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 5_000,
+    });
+    const run = structured(response);
+    const runDir = join(dataDir, "runs", runId);
+    const evidence = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+    const manifestText = readFileSync(join(runDir, "source_manifest.json"), "utf8");
+
+    assert.equal(readFileSync(fake.counter, "utf8"), "2");
+    assert.equal(run.task_status.forward_expectations.status, "failed");
+    assert.equal(run.task_status.forward_expectations.attempts, 2);
+    assert.equal(run.task_status.forward_expectations.error, "exit code 17");
+    assert.deepEqual(evidence.packets[0].claims, []);
+    assert.deepEqual(evidence.packets[0].sources, []);
+    assert.equal(evidence.packets[0].raw_text, "");
+    assert.doesNotMatch(JSON.stringify(evidence), /first-object|second-object/);
+    assert.doesNotMatch(manifestText, /first-object|second-object/);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("a worker that exits zero with valid JSON after its timeout is still rejected", {
+  skip: process.platform === "win32" ? "the fixture relies on POSIX SIGTERM handling" : false,
+}, async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir, { lateValidOnSecondAttempt: true });
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "RKLB",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-DEADLINE-REJECTION-${process.pid}`;
+    const response = await server.callTool("collect_evidence", {
+      symbol: "RKLB",
+      run_id: runId,
+      tasks: ["forward_expectations"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 800,
+    });
+    const run = structured(response);
+    const runDir = join(dataDir, "runs", runId);
+    const evidenceText = readFileSync(join(runDir, "evidence.json"), "utf8");
+    const manifestText = readFileSync(join(runDir, "source_manifest.json"), "utf8");
+
+    assert.equal(readFileSync(fake.counter, "utf8"), "2");
+    assert.equal(run.task_status.forward_expectations.status, "timed_out");
+    assert.equal(run.task_status.forward_expectations.attempts, 2);
+    assert.equal(run.task_status.forward_expectations.error, "timeout");
+    assert.deepEqual(run.packets[0].claims, []);
+    assert.equal(run.packets[0].raw_text, "");
+    assert.doesNotMatch(evidenceText, /LATE-AFTER-TIMEOUT|late claim|late evidence/);
+    assert.doesNotMatch(manifestText, /LATE-AFTER-TIMEOUT|late claim|late evidence/);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("one bounded parse-only retry can recover a valid evidence packet", async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir, { recoverOnSecondAttempt: true });
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "RKLB",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-PARSE-RETRY-${process.pid}`;
+    const response = await server.callTool("collect_evidence", {
+      symbol: "RKLB",
+      run_id: runId,
+      tasks: ["forward_expectations"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 5_000,
+    });
+    const run = structured(response);
+    const runDir = join(dataDir, "runs", runId);
+    const retryDiagnostic = join(runDir, "forward_expectations.attempt-1.failure.json");
+
+    assert.equal(readFileSync(fake.counter, "utf8"), "2", "the retry must be exactly one extra attempt");
+    assert.equal(run.status, "evidence_complete");
+    assert.equal(run.task_status.forward_expectations.status, "completed");
+    assert.equal(run.task_status.forward_expectations.attempts, 2);
+    assert.equal(run.task_status.forward_expectations.retry_diagnostic, retryDiagnostic);
+    assert.equal(run.packets[0].summary, "retry-recovered");
+    assert.equal(run.packets[0].raw_text.includes("first-object"), false);
+    assert.ok(existsSync(retryDiagnostic));
+    assert.equal(existsSync(join(runDir, "forward_expectations.failure.json")), false);
+
+    const events = readFileSync(join(runDir, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    assert.deepEqual(
+      events.filter((event) => event.type === "task_retry")
+        .map(({ task, attempt, max_attempts, reason }) => ({ task, attempt, max_attempts, reason })),
+      [{ task: "forward_expectations", attempt: 2, max_attempts: 2, reason: "parse_failed" }],
     );
   } finally {
     await server.close();

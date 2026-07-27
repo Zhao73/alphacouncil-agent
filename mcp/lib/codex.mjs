@@ -123,7 +123,10 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     child.on("close", (code) => {
       let text = "";
       if (existsSync(outFile)) text = readFileSync(outFile, "utf8");
-      finish({ ok: code === 0 && text.trim().length > 0, code, text, stderr, stdout, outFile, timedOut });
+      // A cooperative child may flush a valid-looking output and exit zero after it has
+      // received our timeout signal. The deadline still won: post-timeout output must never
+      // be promoted into evidence merely because shutdown happened cleanly.
+      finish({ ok: !timedOut && code === 0 && text.trim().length > 0, code, text, stderr, stdout, outFile, timedOut });
     });
   });
 }

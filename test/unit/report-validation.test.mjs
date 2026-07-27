@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validateFinalReport } from "../../mcp/lib/gates.mjs";
-import { parseHeadings, normalizeHeading, denseLength } from "../../mcp/lib/headings.mjs";
+import { parseHeadings, normalizeHeading, denseLength, headingIncludesAlias } from "../../mcp/lib/headings.mjs";
 import { completeReport, scopedPacket } from "../helpers/fixtures.mjs";
 
 const run = {
@@ -36,6 +36,13 @@ test("normalizeHeading folds punctuation and digits but keeps CJK", () => {
   assert.equal(normalizeHeading("战略交易 / 银行事件"), "战略交易 银行事件");
 });
 
+test("heading aliases use token boundaries instead of arbitrary Latin substrings", () => {
+  assert.equal(headingIncludesAlias("Master Bench / Findings", "master bench"), true);
+  assert.equal(headingIncludesAlias("master_bench", "master bench"), true);
+  assert.equal(headingIncludesAlias("Master Benchmarking Risks", "master bench"), false);
+  assert.equal(headingIncludesAlias("大师席位分歧处理", "大师席"), true);
+});
+
 test("denseLength counts non-whitespace characters", () => {
   assert.equal(denseLength("a b\n c"), 3);
 });
@@ -54,6 +61,12 @@ test("the mixed-language master heading emitted by a Chinese PM satisfies the be
   const result = validateFinalReport(report, { ...run, masters: ["master_buffett"] });
   assert.equal(result.status, "passed", result.missing.join("; "));
   assert.equal(result.sections.find((section) => section.id === "master_bench")?.heading, "Master席位分歧处理");
+});
+
+test("Master Benchmarking Risks is not misclassified as Master Bench", () => {
+  const report = completeReport.replace("## Master Bench", "## Master Benchmarking Risks");
+  const result = validateFinalReport(report, { ...run, masters: ["master_buffett"] });
+  assert.equal(result.sections.find((section) => section.id === "master_bench")?.status, "missing");
 });
 
 // The defect this rewrite exists for: the old gate lowercased the whole document and
