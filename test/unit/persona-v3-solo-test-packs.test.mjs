@@ -16,11 +16,23 @@ import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 import {
   DEFAULT_SOLO_TEST_PACK_ROOT,
   inspectPersonaV3SoloTestPacks,
+  portableRelativePath,
 } from "../../scripts/lib/persona-v3-solo-test-packs.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PACKAGE_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")).version;
 const AS_OF = "2026-07-27";
+
+test("physical pack inventories use canonical slash paths on Windows and POSIX", () => {
+  assert.equal(portableRelativePath("ignored", "ignored", {
+    relativePath: () => "evaluation/golden_cases.jsonl",
+    separator: "/",
+  }), "evaluation/golden_cases.jsonl");
+  assert.equal(portableRelativePath("ignored", "ignored", {
+    relativePath: () => "evaluation\\golden_cases.jsonl",
+    separator: "\\",
+  }), "evaluation/golden_cases.jsonl");
+});
 
 function positiveFactPack(pack) {
   const byFact = new Map();

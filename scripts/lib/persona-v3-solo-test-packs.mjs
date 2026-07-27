@@ -553,12 +553,22 @@ function expectedFilesInSeat(documents) {
   return new Set(Object.keys(documents));
 }
 
+// The generated document keys are repository paths and deliberately use `/`.
+// `path.relative` returns `\\` on Windows, so normalize before comparing the
+// physical inventory to those canonical keys.
+export function portableRelativePath(root, file, {
+  relativePath = relative,
+  separator = sep,
+} = {}) {
+  return relativePath(root, file).split(separator).join("/");
+}
+
 function actualFiles(root, current = root, out = []) {
   for (const entry of readdirSync(current, { withFileTypes: true })) {
     const file = join(current, entry.name);
     if (entry.isSymbolicLink()) fail(`symlink is forbidden in solo-test pack: ${file}`);
     if (entry.isDirectory()) actualFiles(root, file, out);
-    else if (entry.isFile()) out.push(relative(root, file));
+    else if (entry.isFile()) out.push(portableRelativePath(root, file));
     else fail(`special file is forbidden in solo-test pack: ${file}`);
   }
   return out.sort();
