@@ -79,3 +79,20 @@ test("the Claude Code and OpenCode agent sets stay in step", () => {
 test("the MCP entry point the config names actually exists", () => {
   assert.ok(existsSync(join(repoRoot, "mcp", "server.mjs")));
 });
+
+test("Codex MCP wiring is isolated from OpenCode Claude-plugin compatibility imports", () => {
+  assert.equal(
+    existsSync(repoFile(".mcp.json")),
+    false,
+    "a root .mcp.json is auto-imported by OpenCode compatibility plugins and creates a duplicate server",
+  );
+
+  const codexPlugin = JSON.parse(readFileSync(repoFile(".codex-plugin/plugin.json"), "utf8"));
+  assert.equal(codexPlugin.mcpServers, "./codex.mcp.json");
+  const codexMcp = JSON.parse(readFileSync(repoFile("codex.mcp.json"), "utf8"));
+  assert.deepEqual(codexMcp.mcpServers?.["alphacouncil-agent"], {
+    command: "node",
+    args: ["./mcp/server.mjs"],
+    cwd: ".",
+  });
+});

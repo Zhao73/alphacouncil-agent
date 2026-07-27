@@ -110,3 +110,60 @@ test("filing-derived screen metrics convert only when period, publication and so
   assert.equal(fact.derivation, "rederived");
   assert.match(fact.lineage.calculation_hash, /^sha256:[a-f0-9]{64}$/);
 });
+
+test("one SEC record can ground multiple derived metrics without a source identity collision", () => {
+  const grounding = liveGrounding();
+  const sharedSource = "sec:companyfacts:0000000001:NetIncomeLoss:0000000001-26-000001:2025-12-31";
+  grounding.screen = {
+    cik: "0000000001",
+    public_at: "2026-02-15",
+    metrics: [
+      {
+        rule: "roe_10y",
+        value: 12,
+        unit: "%",
+        period_start: "2016-01-01",
+        period_end: "2025-12-31",
+        fiscal_year: 2025,
+        public_at: "2026-02-15",
+        source_ids: [sharedSource],
+      },
+      {
+        rule: "net_margin",
+        value: 8,
+        unit: "%",
+        period_start: "2021-01-01",
+        period_end: "2025-12-31",
+        fiscal_year: 2025,
+        public_at: "2026-02-15",
+        source_ids: [sharedSource],
+      },
+    ],
+  };
+
+  const adapted = adaptGroundingToTypedFacts(grounding, { asOf: AS_OF });
+  assert.deepEqual(
+    adapted.fact_pack.facts
+      .filter((fact) => fact.fact_id === "financial.return_on_equity_10y" || fact.fact_id === "financial.net_margin_5y")
+      .map((fact) => fact.fact_id),
+    ["financial.net_margin_5y", "financial.return_on_equity_10y"],
+  );
+  const [source] = adapted.sources.filter((item) => item.source_id === sharedSource);
+  assert.ok(source);
+  assert.deepEqual(source.locator, {
+    accession: "0000000001-26-000001",
+    cik: "0000000001",
+    period_end: "2025-12-31",
+    tag: "NetIncomeLoss",
+  });
+  assert.doesNotMatch(source.title, /roe|margin/iu);
+  assert.equal(adapted.diagnostics.some((entry) => entry.code === "source_id_collision"), false);
+  assert.equal(
+    adapted.fact_pack.facts.find((fact) => fact.fact_id === "financial.return_on_equity_10y").lineage.tool_id,
+    "grounding_to_typed_facts:screen:roe_10y",
+  );
+  assert.equal(
+    adapted.fact_pack.facts.find((fact) => fact.fact_id === "financial.net_margin_5y").lineage.tool_id,
+    "grounding_to_typed_facts:screen:net_margin",
+  );
+});

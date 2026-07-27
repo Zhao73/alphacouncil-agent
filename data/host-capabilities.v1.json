@@ -39,8 +39,7 @@
       "display_name": "Claude Code",
       "static_contract_status": "shipped_not_live_verified",
       "config_paths": [
-        ".claude-plugin/plugin.json",
-        ".mcp.json"
+        ".claude-plugin/plugin.json"
       ],
       "command_surface": {
         "canonical_source": "commands/alpha.md",
@@ -97,7 +96,7 @@
       "static_contract_status": "shipped_not_live_verified",
       "config_paths": [
         ".codex-plugin/plugin.json",
-        ".mcp.json"
+        "codex.mcp.json"
       ],
       "command_surface": {
         "canonical_source": "commands/alpha.md",
@@ -207,8 +206,7 @@
       "display_name": "Grok Build",
       "static_contract_status": "shipped_not_live_verified",
       "config_paths": [
-        ".grok/config.toml",
-        ".mcp.json"
+        ".grok/config.toml"
       ],
       "command_surface": {
         "canonical_source": "commands/alpha.md",

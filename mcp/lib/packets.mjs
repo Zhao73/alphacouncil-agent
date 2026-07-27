@@ -166,6 +166,57 @@ export function mergeDebateRounds(rounds) {
   return { ...base, debate_rounds };
 }
 
+function threeNonEmptyStrings(value) {
+  return Array.isArray(value)
+    && value.length === 3
+    && value.every((item) => typeof item === "string" && item.trim().length > 0);
+}
+
+function threeBoundAnswers(value, expectedQuestions) {
+  return threeNonEmptyStrings(expectedQuestions)
+    && Array.isArray(value)
+    && value.length === 3
+    && value.every((item, index) => (
+      item
+      && typeof item === "object"
+      && !Array.isArray(item)
+      && item.question === expectedQuestions[index]
+      && typeof item.answer === "string"
+      && item.answer.trim().length > 0
+    ));
+}
+
+/** Fail closed when the advertised Q&A round did not actually exchange questions. */
+export function debateQnaGate({ bullR2, bearR2, bullR3, bearR3 } = {}) {
+  const errors = [];
+  if (!threeNonEmptyStrings(bullR2?.questions)) {
+    errors.push("bull_researcher round 2 must ask exactly 3 opponent questions");
+  }
+  if (!threeNonEmptyStrings(bearR2?.questions)) {
+    errors.push("bear_researcher round 2 must ask exactly 3 opponent questions");
+  }
+  if (!threeBoundAnswers(bullR3?.questions_answered, bearR2?.questions)) {
+    errors.push("bull_researcher round 3 must answer exactly 3 opponent questions with exact question bindings");
+  }
+  if (!threeBoundAnswers(bearR3?.questions_answered, bullR2?.questions)) {
+    errors.push("bear_researcher round 3 must answer exactly 3 opponent questions with exact question bindings");
+  }
+  if (threeNonEmptyStrings(bullR2?.questions)
+    && JSON.stringify(bullR3?.questions) !== JSON.stringify(bullR2.questions)) {
+    errors.push("bull_researcher round 3 must preserve its round 2 questions");
+  }
+  if (threeNonEmptyStrings(bearR2?.questions)
+    && JSON.stringify(bearR3?.questions) !== JSON.stringify(bearR2.questions)) {
+    errors.push("bear_researcher round 3 must preserve its round 2 questions");
+  }
+  return { status: errors.length ? "failed" : "passed", errors };
+}
+
+/** Return the actual failed round, not merely the final round in the role's sequence. */
+export function firstFailedDebateResult(steps = []) {
+  return steps.find((step) => step?.result?.ok !== true)?.result || null;
+}
+
 export function confidenceScore(value) {
   return ({ high: 3, medium: 2, low: 1 })[value] || 1;
 }

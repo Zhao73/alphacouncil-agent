@@ -48,6 +48,14 @@ test("the complete fixture passes", () => {
   assert.ok(result.sections.every((s) => s.status === "ok"));
 });
 
+test("the mixed-language master heading emitted by a Chinese PM satisfies the bench contract", () => {
+  const report = completeReport.replace("## Master Bench", "## Master席位分歧处理");
+  assert.notEqual(report, completeReport, "fixture heading must actually change");
+  const result = validateFinalReport(report, { ...run, masters: ["master_buffett"] });
+  assert.equal(result.status, "passed", result.missing.join("; "));
+  assert.equal(result.sections.find((section) => section.id === "master_bench")?.heading, "Master席位分歧处理");
+});
+
 // The defect this rewrite exists for: the old gate lowercased the whole document and
 // asked `includes("risk")`, so deleting the Risks section changed nothing.
 test("deleting the Risks section is now detected", () => {

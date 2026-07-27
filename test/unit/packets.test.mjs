@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { __test__ } from "../../mcp/server.mjs";
+import { debateQnaGate, firstFailedDebateResult } from "../../mcp/lib/packets.mjs";
 
 import { scopedPacket } from "../helpers/fixtures.mjs";
 
@@ -61,4 +62,49 @@ test("mergeDebateRounds takes top-level fields from the last round and keeps all
   assert.equal(merged.summary, "r3");
   assert.equal(merged.debate_rounds.length, 3);
   assert.deepEqual(merged.debate_rounds.map((r) => r.round), [1, 2, 3]);
+});
+
+test("the debate Q&A gate requires three cross-fed questions and three answers per side", () => {
+  const questions = ["q1", "q2", "q3"];
+  const answers = questions.map((question, index) => ({ question, answer: `a${index + 1}` }));
+  assert.deepEqual(debateQnaGate({
+    bullR2: { questions },
+    bearR2: { questions },
+    bullR3: { questions, questions_answered: answers },
+    bearR3: { questions, questions_answered: answers },
+  }), { status: "passed", errors: [] });
+
+  const failed = debateQnaGate({
+    bullR2: { questions },
+    bearR2: { questions },
+    bullR3: { questions, questions_answered: [] },
+    bearR3: { questions, questions_answered: [] },
+  });
+  assert.equal(failed.status, "failed");
+  assert.deepEqual(failed.errors, [
+    "bull_researcher round 3 must answer exactly 3 opponent questions with exact question bindings",
+    "bear_researcher round 3 must answer exactly 3 opponent questions with exact question bindings",
+  ]);
+
+  const unrelated = debateQnaGate({
+    bullR2: { questions },
+    bearR2: { questions },
+    bullR3: {
+      questions,
+      questions_answered: answers.map((item) => ({ ...item, question: `unrelated ${item.question}` })),
+    },
+    bearR3: { questions, questions_answered: answers },
+  });
+  assert.equal(unrelated.status, "failed");
+  assert.match(unrelated.errors[0], /exact question bindings/);
+});
+
+test("debate transport diagnostics retain an early-round failure after a later success", () => {
+  const early = { ok: false, timedOut: true, code: null };
+  const later = { ok: true, timedOut: false, code: 0 };
+  assert.equal(firstFailedDebateResult([
+    { result: early },
+    { result: later },
+  ]), early);
+  assert.equal(firstFailedDebateResult([{ result: later }]), null);
 });

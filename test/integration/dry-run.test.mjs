@@ -75,6 +75,7 @@ test("tools/list exposes a coherent tool surface", () => {
 test("analyze_symbol schema keeps dry_run opt-in and exposes language and tasks", () => {
   const analyze = toolsList.find((tool) => tool.name === "analyze_symbol");
   assert.equal(analyze?.inputSchema?.properties?.dry_run?.default, false);
+  assert.equal(analyze?.inputSchema?.properties?.wait_for_completion?.default, false);
   assert.ok(analyze?.inputSchema?.properties?.language, "language selection must be exposed");
   assert.ok(analyze?.inputSchema?.properties?.tasks?.items?.enum?.includes("quant_factor"));
 });
@@ -143,6 +144,9 @@ test("status.json surfaces completion, quality, and verification", () => {
   assert.ok(status.tasks.every((task) => task.status === "completed"));
   assert.equal(status.report_quality, "passed");
   assert.equal(status.verification, "passed");
+  assert.equal(status.verification_scope, "source_id_presence_only");
+  assert.equal(status.adversarial_verification, "not_run");
+  assert.equal(status.verifier_verdict_count, 0);
   assert.equal(status.missing_source_count, 0);
   assert.equal(status.selected_master_count, 1);
   assert.equal(status.recorded_master_count, 1);

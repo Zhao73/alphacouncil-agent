@@ -99,7 +99,7 @@ npm run check       # runs the self-check (no Codex auth required)
 
 This repo already ships the manifests Codex expects, at the official paths:
 `.agents/plugins/marketplace.json` (repo marketplace), `.codex-plugin/plugin.json`
-(plugin manifest), and `.mcp.json` (MCP server) — so the one-command install below
+(plugin manifest), and `codex.mcp.json` (Codex-only MCP server wiring) — so the one-command install below
 works out of the box. (`.claude-plugin/marketplace.json` is kept for legacy compat.)
 
 ### A. One command — recommended ✅

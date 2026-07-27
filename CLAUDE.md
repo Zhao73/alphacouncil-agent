@@ -18,7 +18,7 @@ Default behavior is full workflow. Do not downgrade to lite, smoke-test, or debu
 
 ## Current Build Profile
 
-The declared package/plugin version is `0.9.0-solo-test.1`, channel `solo_test`. The isolated packaged
+The declared package/plugin version is `0.9.0-solo-test.2`, channel `solo_test`. The isolated packaged
 tree contains 26 physical v3 packs and 52 executable `provisional_derived_proxy` tools.
 Every seat is still a provisional `operator_lens`: operational = 0, `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.

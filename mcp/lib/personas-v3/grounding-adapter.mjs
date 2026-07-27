@@ -57,12 +57,26 @@ function reportedLineage() {
   return { input_fact_ids: [], tool_id: null, tool_version: null, calculation_hash: null };
 }
 
-function derivedLineage(input) {
+function derivedLineage(input, toolId = ADAPTER_ID) {
   return {
     input_fact_ids: [],
-    tool_id: ADAPTER_ID,
+    tool_id: toolId,
     tool_version: ADAPTER_VERSION,
-    calculation_hash: sha256({ tool_id: ADAPTER_ID, tool_version: ADAPTER_VERSION, input }),
+    calculation_hash: sha256({ tool_id: toolId, tool_version: ADAPTER_VERSION, input }),
+  };
+}
+
+function secCompanyFactsIdentity(id) {
+  const [namespace, feed, cik, tag, filingReference, periodEnd, ...extra] = String(id).split(":");
+  if (namespace !== "sec" || feed !== "companyfacts" || !cik || !tag || !filingReference || !periodEnd || extra.length) {
+    return { title: "SEC Company Facts record", locator: { source_id: id } };
+  }
+  const filingLocator = /^\d{10}-\d{2}-\d{6}$/u.test(filingReference)
+    ? { accession: filingReference }
+    : { filed_at: filingReference };
+  return {
+    title: `SEC Company Facts record for ${tag}`,
+    locator: { cik, tag, ...filingLocator, period_end: periodEnd },
   };
 }
 
@@ -82,6 +96,8 @@ function baseFact({
   confidence,
   derivation = "reported",
   ratioDenominator,
+  derivationToolId = ADAPTER_ID,
+  derivationInput = null,
 }) {
   return {
     schema_version: 1,
@@ -101,7 +117,9 @@ function baseFact({
     derivation,
     confidence,
     restatement_policy: "immutable run snapshot; later observations never overwrite this fact pack",
-    lineage: derivation === "reported" ? reportedLineage() : derivedLineage({ factId, value, sources }),
+    lineage: derivation === "reported"
+      ? reportedLineage()
+      : derivedLineage({ factId, value, sources, ...(derivationInput ? { derivationInput } : {}) }, derivationToolId),
   };
 }
 
@@ -134,15 +152,18 @@ function screenFacts(grounding, context) {
     const companyFactsUrl = digits
       ? `https://data.sec.gov/api/xbrl/companyfacts/CIK${digits.padStart(10, "0")}.json`
       : null;
-    const registered = sources.every((id) => registerSource(context, {
-      source_id: id,
-      source_kind: "regulatory_filing_data",
-      title: `SEC Company Facts input for ${metric.rule}`,
-      url: companyFactsUrl,
-      public_at: publicAt,
-      retrieved_at: grounding.gathered_at || context.asOf,
-      locator: { rule: metric.rule, period_end: metric.period_end || null, source_id: id },
-    }));
+    const registered = sources.every((id) => {
+      const identity = secCompanyFactsIdentity(id);
+      return registerSource(context, {
+        source_id: id,
+        source_kind: "regulatory_filing_data",
+        title: identity.title,
+        url: companyFactsUrl,
+        public_at: publicAt,
+        retrieved_at: grounding.gathered_at || context.asOf,
+        locator: identity.locator,
+      });
+    });
     if (!registered) continue;
     const common = {
       factId: mapping.fact_id,
@@ -154,6 +175,8 @@ function screenFacts(grounding, context) {
       periodStart: metric.period_start || null,
       periodEnd: metric.period_end || null,
       fiscalYear: Number.isInteger(metric.fiscal_year) ? metric.fiscal_year : null,
+      derivationToolId: `${ADAPTER_ID}:screen:${metric.rule}`,
+      derivationInput: { metric_rule: metric.rule },
     };
     if (mapping.kind === "usd") {
       addUnique(context.facts, context.diagnostics, baseFact({

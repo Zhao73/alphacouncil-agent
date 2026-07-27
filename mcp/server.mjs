@@ -2,7 +2,7 @@
 // AlphaCouncil Agent — MCP stdio entry point.
 //
 // This file must stay at mcp/server.mjs: .claude-plugin/plugin.json hardcodes
-// ${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs and .mcp.json hardcodes ./mcp/server.mjs.
+// ${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs and codex.mcp.json hardcodes ./mcp/server.mjs.
 // Everything else lives under mcp/lib/.
 import { realpathSync } from "node:fs";
 import { resolve } from "node:path";

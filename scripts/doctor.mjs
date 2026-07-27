@@ -116,7 +116,7 @@ try {
 
 // 4. Manifest paths that hosts resolve.
 console.log("\nmanifests");
-for (const [file, key] of [[".claude-plugin/plugin.json", "mcpServers"], [".codex-plugin/plugin.json", "mcpServers"], [".mcp.json", null]]) {
+for (const [file, key] of [[".claude-plugin/plugin.json", "mcpServers"], [".codex-plugin/plugin.json", "mcpServers"], ["codex.mcp.json", null]]) {
   const path = join(ROOT, file);
   if (!existsSync(path)) { warn(`${file} missing`, "hosts will not find the server"); continue; }
   try {

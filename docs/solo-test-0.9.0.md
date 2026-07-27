@@ -4,7 +4,7 @@ Verified in the repository worktree on 2026-07-27.
 
 ## What this channel contains
 
-`0.9.0-solo-test.1` is the declared package/plugin version and `solo_test` is the build channel. The
+`0.9.0-solo-test.2` is the declared package/plugin version and `solo_test` is the build channel. The
 isolated tree at `knowledge/solo-test/masters` contains:
 
 - 26/26 physical PersonaPack v3 packs;

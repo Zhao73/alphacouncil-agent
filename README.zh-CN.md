@@ -59,7 +59,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 ## 当前 0.9.0 预发布状态：solo-test
 
-软件包与插件版本表面均为 `0.9.0-solo-test.1`，但这是一条明确隔离的 **solo-test** 渠道，不是正式
+软件包与插件版本表面均为 `0.9.0-solo-test.2`，但这是一条明确隔离的 **solo-test** 渠道，不是正式
 生产 GA。它包含 26 个物理 PersonaPack v3 包与 52 个可执行的
 `provisional_derived_proxy` 工具，用于端到端测试确定性路径。全部 26 席仍是 provisional
 `operator_lens`；`operational`：**0**；`method_model`：**0**。人工来源审批：**0**；
@@ -239,7 +239,7 @@ flowchart TD
 
 - `.codex-plugin/plugin.json` —— Codex 插件元数据
 - `.claude-plugin/plugin.json` —— Claude Code 插件清单
-- `.mcp.json` —— MCP server 接线
+- `codex.mcp.json` —— 独立的 Codex MCP server 接线
 - `skills/alphacouncil-agent/SKILL.md` —— 运行时指令
 - `mcp/server.mjs` —— JSON-RPC MCP server 与工作流实现
 - `scripts/selfcheck.mjs` —— 最小回归自检

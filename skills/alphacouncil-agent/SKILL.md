@@ -125,8 +125,11 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - `cannot_confirm` and `stands` are real results. Manufacturing a `weakened` verdict to look diligent lowers a seat's weight for no reason, and weight moves the final rating.
 6. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
    - Round 1: bull writes the long case; bear writes the short case.
-   - Round 2: pass bull's packet to bear for rebuttal, and bear's packet to bull for rebuttal.
-   - Round 3: each side asks three questions; the other side answers them.
+   - Round 2: pass bull's packet to bear and bear's packet to bull for rebuttal; each side
+     ends with exactly three questions for the opponent.
+   - Round 3: cross-feed those six saved questions; each side preserves its own three in
+     `questions` and answers the opponent's three as exact `{question, answer}` bindings in
+     `questions_answered`.
    - Final: portfolio_manager reads evidence plus all debate rounds and decides whether bull, bear, or balanced won.
 7. Return a concise but evidence-rich user handoff in the selected or inferred language: rating, debate winner, key earnings/financial results, forward expectations or event thresholds, important news/industry signals, valuation range, position guidance, top invalidation conditions, and saved file locations. Do not paste an overlong report into chat unless the user asks for the full body inline. The saved `final_report.md` must still be complete enough to read without opening artifacts: include each evidence analyst's summary, key data/news/filing/quant findings, the bull case, bear case, rebuttals/questions where available, portfolio-manager verdict, data gaps, and source table. Include links/paths to saved artifacts in the handoff.
    - If the Data Analytics `datascienceWidgets` tools are available, also create a real dashboard/report artifact from the completed evidence and decision: call `validate_artifact` first, then `render_artifact`. Do not treat `output_mode=data_analytics` as only a prose style.
@@ -172,14 +175,27 @@ explanation, guidance, competitor commentary, and anything not yet filed.
 Use MCP only when the user explicitly accepts background/headless execution, wants saved files, or asks to inspect/re-run a previous saved run.
 
 1. Call `collect_evidence` when the request needs source gathering and file artifacts.
-2. Call `analyze_symbol` when the user wants a complete long/short or portfolio decision saved under `~/.alphacouncil-agent/runs/`.
-3. Call `read_run` to inspect a saved evidence run.
-4. Call `council_diagnostics` over saved run IDs to measure descriptive agreement, unique
+2. Call `analyze_symbol` with `wait_for_completion=false` when the user wants a complete
+   long/short or portfolio decision saved under `~/.alphacouncil-agent/runs/`. A real full
+   council outlives common MCP response deadlines, so this returns a small accepted response
+   with `run_id`, `status_json`, and `events_jsonl`; it does not mean the report is complete.
+3. Poll `read_run(run_id)` at a bounded interval until `status.status` is terminal:
+   `complete`, `incomplete`, `needs_verification`, or `failed`. Surface meaningful phase
+   changes, not every unchanged poll. Only read/return `decision` and final artifacts after a
+   terminal status. Use `wait_for_completion=true` only when the caller explicitly requires a
+   synchronous run and its MCP connection is known to outlive the entire council.
+4. Headless `analyze_symbol` does not run the host-visible Stage 2b verifier fan-out. Read
+   `status.verification_scope`: `source_id_presence_only` means only that cited IDs resolve
+   inside the saved packets, while `status.adversarial_verification=not_run` means the
+   `source_fidelity`, `rederivation`, and `refuter` agents did not run. Use the Visible-First
+   deep workflow when those verifiers are required; never relabel source-ID presence as
+   adversarial verification.
+5. Call `council_diagnostics` over saved run IDs to measure descriptive agreement, unique
    cited-source contribution, and repeated-input behavioural differentiation. Do not turn
    its seat count or agreement into `N_eff`; that remains `null` without the separately
    preregistered, signed, resolved-outcome ledger.
-5. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
-6. Do not describe MCP `codex exec` workers as visible chat subagents. They are background workers with `status.json`, `events.jsonl`, and `all_agents.md`.
+6. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
+7. Do not describe MCP `codex exec` workers as visible chat subagents. They are background workers with `status.json`, `events.jsonl`, and `all_agents.md`.
 
 ## Claude Code Parallel Path
 
@@ -228,8 +244,12 @@ Run every `master_agent` returned by `plan_visible_run` after the evidence and v
 ### Stage 3 — Debate pipeline (3 rounds, parallel per round)
 Run the documented rounds, each as a parallel fan-out of `bull_researcher` + `bear_researcher` fed the verified evidence:
 - Round 1: bull writes the long case; bear writes the short case (parallel).
-- Round 2: cross-feed each side the other's round-1 packet for rebuttal (parallel; main thread reads `bull_researcher.json` / `bear_researcher.json` and pastes into the next prompts).
-- Round 3: each side asks three questions; the other answers (parallel).
+- Round 2: cross-feed each side the other's round-1 packet for rebuttal; require exactly
+  three opponent questions in each returned `questions` array (parallel).
+- Round 3: cross-feed the saved Round-2 questions; each side copies its own questions and
+  answers the opponent's three as exact `{question, answer}` bindings in
+  `questions_answered` (parallel). A missing, reordered, substituted or non-three
+  question/answer array fails the Q&A gate and the run remains incomplete.
 Persist each round via `record_visible_decision(run_id, role, packet)` so `all_agents.md` accumulates the full trace. DISPUTED/UNVERIFIABLE claims may appear in a thesis only with an explicit caveat.
 
 ### Stage 4 — Verdict + synthesize

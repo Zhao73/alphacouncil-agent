@@ -25,8 +25,8 @@ the only `/alpha` routes that skip this gate.
 
 | Host | Config | Agents | Skills |
 |---|---|---|---|
-| Claude Code | `.claude-plugin/plugin.json`, `.mcp.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
-| Codex | `.codex-plugin/plugin.json`, `.mcp.json` | — | `skills/` via the plugin manifest |
+| Claude Code | `.claude-plugin/plugin.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
+| Codex | `.codex-plugin/plugin.json`, `codex.mcp.json` | — | `skills/` via the plugin manifest |
 | OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | see the caveat below |
 | Grok Build | `.grok/config.toml` | `.grok/agents/alphacouncil-*.md` | `AGENTS.md` (this file) |
 
@@ -40,7 +40,9 @@ Verified against a real opencode 1.18.4 install rather than from documentation:
   and the env key is `environment`, not `env`.
 - `opencode debug agent alphacouncil-<role>` parses the generated agent files, resolves
   `anthropic/claude-…` into a provider and model, and applies their permissions.
-  OpenCode does **not** read `.claude/agents/`, `.mcp.json` or `.claude/settings.json`.
+  OpenCode does **not** natively read `.claude/agents/` or `.claude/settings.json`. Some
+  compatibility plugins auto-import a root `.mcp.json`, so this repository deliberately
+  keeps Codex wiring in `codex.mcp.json` to avoid a duplicate, cwd-sensitive server.
 - `opencode.json` deliberately declares **no** global `permission` block. A global block is
   merged into every agent and overrides the per-agent one, which silently hands the debate
   roles the network access they are specifically denied. Verified both ways: with the block,
@@ -65,8 +67,8 @@ Verified against a real install (grok 0.2.101) rather than from documentation:
 - MCP lives in `.grok/config.toml` as TOML, not JSON:
   `[mcp_servers.alphacouncil-agent]` with `command`, `args` and `enabled`. Generate it with
   `grok mcp add alphacouncil-agent -s project -t stdio node -- ./mcp/server.mjs` rather than
-  hand-writing it. Grok also lists `.mcp.json` among its config sources, so the Claude Code
-  file is read too.
+  hand-writing it. AlphaCouncil does not ship a root `.mcp.json`; this prevents third-party
+  compatibility loaders from importing a second cwd-sensitive server.
 - **A repo-local server will not start until the folder is trusted.** `grok mcp doctor`
   reports `folder untrusted (repo-local (project-scoped) server not started)`. That is a
   security prompt, not a misconfiguration: trust the folder on first launch.

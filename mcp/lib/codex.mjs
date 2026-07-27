@@ -20,7 +20,11 @@ export function codexInvocation(args, platform = process.platform, env = process
       options: { detached: false, windowsHide: true },
     };
   }
-  return { command: CODEX_CMD, args: fullArgs, options: { detached: true } };
+  return {
+    command: env.ALPHACOUNCIL_AGENT_CODEX_CMD || CODEX_CMD,
+    args: fullArgs,
+    options: { detached: true },
+  };
 }
 
 export function stopChild(child, force = false) {
@@ -39,24 +43,37 @@ export function stopChild(child, force = false) {
   }
 }
 
+/**
+ * Build one isolated leaf-worker invocation.
+ *
+ * Native `--search` is the worker's evidence channel. User config is deliberately ignored:
+ * otherwise every globally enabled plugin/MCP server is inherited and a leaf can call a
+ * second Codex-backed search bridge, creating recursive workers and multi-minute nested
+ * timeouts. Authentication still comes from CODEX_HOME according to the Codex CLI contract.
+ */
+export function codexWorkerArgs(outFile, dataDir = DATA_DIR) {
+  return [
+    "--search",
+    "-s",
+    "read-only",
+    "-a",
+    "never",
+    "exec",
+    "--ignore-user-config",
+    "--ephemeral",
+    "--skip-git-repo-check",
+    "-C",
+    dataDir,
+    "-o",
+    outFile,
+  ];
+}
+
 export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}) {
   return new Promise((resolvePromise) => {
     mkdirSync(DATA_DIR, { recursive: true });
     const outFile = join(DATA_DIR, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
-    const args = [
-      "--search",
-      "-s",
-      "read-only",
-      "-a",
-      "never",
-      "exec",
-      "--ephemeral",
-      "--skip-git-repo-check",
-      "-C",
-      DATA_DIR,
-      "-o",
-      outFile,
-    ];
+    const args = codexWorkerArgs(outFile);
     const invocation = codexInvocation(args);
     const child = spawn(invocation.command, invocation.args, {
       cwd: DATA_DIR,

@@ -25,3 +25,19 @@ export function clip(text, max = LIMITS.CLIP_CHARS) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
+
+export function clipAtBoundary(text, max = LIMITS.CLIP_CHARS) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  const characters = [...value];
+  if (characters.length <= max) return value;
+
+  const candidate = characters.slice(0, Math.max(0, max - 1)).join("");
+  const sentenceBoundary = Math.max(
+    ...["。", "！", "？", "；", ".", "!", "?", ";"].map((mark) => candidate.lastIndexOf(mark)),
+  );
+  if (sentenceBoundary >= 0) return `${candidate.slice(0, sentenceBoundary + 1).trimEnd()}…`;
+
+  const wordBoundary = candidate.lastIndexOf(" ");
+  if (wordBoundary > 0) return `${candidate.slice(0, wordBoundary).trimEnd()}…`;
+  return `${candidate}…`;
+}

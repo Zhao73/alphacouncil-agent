@@ -7,6 +7,8 @@ const { taskPrompt } = __test__;
 test("worker prompt follows a Chinese request and blocks recursive plugin calls", () => {
   const prompt = taskPrompt("market_data", "NOK", "2026-06-22", "帮我看看 NOK", "auto");
   assert.match(prompt, /不要调用 alphacouncil-agent 插件\/MCP 工具/);
+  assert.match(prompt, /codex-search-bridge/);
+  assert.match(prompt, /原生.*web search/i);
   assert.match(prompt, /字段内容用中文/);
 });
 
@@ -49,4 +51,34 @@ test("a master prompt still works when no grounding was gathered", () => {
   const run = { run_id: "r2", symbol: "MU", as_of: "2026-07-26", language: "English", masters: ["master_munger"], packets: [], grounding: null };
   const prompt = __test__.masterPrompt ? __test__.masterPrompt("master_munger", run) : null;
   assert.ok(prompt === null || typeof prompt === "string");
+});
+
+test("debate rounds make the Q&A dependency executable", async () => {
+  const { debatePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "QNA-PROMPT",
+    symbol: "RKLB",
+    as_of: "2026-07-28",
+    language: "English",
+    tasks: [],
+    packets: [],
+    masters: [],
+    master_opinions: [],
+  };
+  const roundTwo = debatePrompt("bull_researcher", run, { round: 2 });
+  assert.match(roundTwo, /Schema:.*questions_answered/,
+    "the advertised JSON schema must permit the Q&A fields the round requires");
+  assert.match(roundTwo, /ask exactly 3.*questions/i);
+
+  const asked = ["q1", "q2", "q3"];
+  const received = ["opponent q1", "opponent q2", "opponent q3"];
+  const roundThree = debatePrompt("bull_researcher", run, {
+    round: 3,
+    questionsYouAsked: asked,
+    questionsForYou: received,
+  });
+  assert.match(roundThree, /copy.*round 2 questions/i);
+  assert.match(roundThree, /contain exactly 3.*question.*answer/i);
+  assert.match(roundThree, new RegExp(JSON.stringify(asked).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(roundThree, new RegExp(JSON.stringify(received).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });

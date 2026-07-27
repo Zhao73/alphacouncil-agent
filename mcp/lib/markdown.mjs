@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { DEBATE_ROLES } from "./constants.mjs";
 import { writeJson } from "./fsutil.mjs";
 import { isChineseLanguage } from "./lang.mjs";
-import { bullets, clip, fence } from "./text.mjs";
+import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
@@ -443,7 +443,7 @@ export function packetSummary(run, task) {
 export function userResponseMarkdown(run, manager) {
   const chinese = isChineseLanguage(run.language);
   const artifacts = artifactPaths(run);
-  const invalidation = (manager.invalidation || []).slice(0, 3).map((item) => `- ${clip(item, 220)}`).join("\n") || "- None";
+  const invalidation = (manager.invalidation || []).slice(0, 3).map((item) => `- ${clipAtBoundary(item, 220)}`).join("\n") || "- None";
   if (chinese) {
     return [
       `# ${run.symbol} AlphaCouncil 摘要`,
@@ -452,14 +452,14 @@ export function userResponseMarkdown(run, manager) {
       `- 评级: ${manager.rating || "Hold"}`,
       `- 多空胜负: ${manager.winner || "unknown"}`,
       `- 置信度: ${manager.confidence || "low"}`,
-      `- 判断: ${clip(manager.verdict || manager.summary, 620)}`,
+      `- 判断: ${clipAtBoundary(manager.verdict || manager.summary, 620)}`,
       "",
       "## 关键内容",
-      `- 最新财报: ${clip(packetSummary(run, "earnings_deep_dive"), 420) || "未覆盖。"}`,
-      `- 前瞻门槛: ${clip(packetSummary(run, "forward_expectations"), 420) || "未覆盖。"}`,
-      `- 新闻/行业信号: ${clip([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "未覆盖。"}`,
-      `- 估值/价位: ${clip(manager.valuation_range, 520) || "未覆盖。"}`,
-      `- 仓位: ${clip(manager.position, 420) || "未覆盖。"}`,
+      `- 最新财报: ${clipAtBoundary(packetSummary(run, "earnings_deep_dive"), 420) || "未覆盖。"}`,
+      `- 前瞻门槛: ${clipAtBoundary(packetSummary(run, "forward_expectations"), 420) || "未覆盖。"}`,
+      `- 新闻/行业信号: ${clipAtBoundary([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "未覆盖。"}`,
+      `- 估值/价位: ${clipAtBoundary(manager.valuation_range, 520) || "未覆盖。"}`,
+      `- 仓位: ${clipAtBoundary(manager.position, 420) || "未覆盖。"}`,
       "",
       "## 失效条件",
       invalidation,
@@ -478,14 +478,14 @@ export function userResponseMarkdown(run, manager) {
     `- Rating: ${manager.rating || "Hold"}`,
     `- Debate winner: ${manager.winner || "unknown"}`,
     `- Confidence: ${manager.confidence || "low"}`,
-    `- Judgment: ${clip(manager.verdict || manager.summary, 620)}`,
+    `- Judgment: ${clipAtBoundary(manager.verdict || manager.summary, 620)}`,
     "",
     "## Key Content",
-    `- Latest earnings: ${clip(packetSummary(run, "earnings_deep_dive"), 420) || "Not covered."}`,
-    `- Forward thresholds: ${clip(packetSummary(run, "forward_expectations"), 420) || "Not covered."}`,
-    `- News / industry signal: ${clip([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "Not covered."}`,
-    `- Valuation / price range: ${clip(manager.valuation_range, 520) || "Not covered."}`,
-    `- Position: ${clip(manager.position, 420) || "Not covered."}`,
+    `- Latest earnings: ${clipAtBoundary(packetSummary(run, "earnings_deep_dive"), 420) || "Not covered."}`,
+    `- Forward thresholds: ${clipAtBoundary(packetSummary(run, "forward_expectations"), 420) || "Not covered."}`,
+    `- News / industry signal: ${clipAtBoundary([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "Not covered."}`,
+    `- Valuation / price range: ${clipAtBoundary(manager.valuation_range, 520) || "Not covered."}`,
+    `- Position: ${clipAtBoundary(manager.position, 420) || "Not covered."}`,
     "",
     "## Invalidation",
     invalidation,

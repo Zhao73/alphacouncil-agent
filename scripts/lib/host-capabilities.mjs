@@ -175,14 +175,15 @@ export function validateHostCapabilities(contract = loadHostCapabilities(), { ro
     if (JSON.stringify(byId.get(id)?.model_mapping) !== JSON.stringify(expected)) errors.push(`${id} model mapping differs from shipped generator behavior`);
   }
 
-  const sharedMcp = parseJsonFile(root, ".mcp.json", errors);
-  const sharedServer = sharedMcp?.mcpServers?.["alphacouncil-agent"];
-  if (sharedServer?.command !== "node" || JSON.stringify(sharedServer?.args) !== JSON.stringify(["./mcp/server.mjs"])) errors.push(".mcp.json does not resolve the canonical Node server entry");
   const claudePlugin = parseJsonFile(root, ".claude-plugin/plugin.json", errors);
   const claudeServer = claudePlugin?.mcpServers?.["alphacouncil-agent"];
   if (claudePlugin?.commands !== "./commands/" || claudeServer?.command !== "node" || JSON.stringify(claudeServer?.args) !== JSON.stringify(["${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"])) errors.push("Claude Code plugin command or MCP adapter shape changed");
   const codexPlugin = parseJsonFile(root, ".codex-plugin/plugin.json", errors);
-  if (codexPlugin?.mcpServers !== "./.mcp.json") errors.push("Codex plugin no longer resolves the shared MCP manifest");
+  if (codexPlugin?.mcpServers !== "./codex.mcp.json") errors.push("Codex plugin no longer resolves its isolated MCP manifest");
+  const codexMcp = parseJsonFile(root, "codex.mcp.json", errors);
+  const codexServer = codexMcp?.mcpServers?.["alphacouncil-agent"];
+  if (codexServer?.command !== "node" || JSON.stringify(codexServer?.args) !== JSON.stringify(["./mcp/server.mjs"]) || codexServer?.cwd !== ".") errors.push("codex.mcp.json does not resolve the canonical Node server entry");
+  if (existsSync(join(root, ".mcp.json"))) errors.push("root .mcp.json must remain absent because OpenCode compatibility loaders auto-import it as a duplicate server");
   const opencode = parseJsonFile(root, "opencode.json", errors);
   const openServer = opencode?.mcp?.["alphacouncil-agent"];
   if (openServer?.type !== "local" || openServer?.enabled !== true || JSON.stringify(openServer?.command) !== JSON.stringify(["node", "./mcp/server.mjs"])) errors.push("OpenCode MCP adapter shape changed");

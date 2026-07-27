@@ -63,10 +63,15 @@ export function debatePrompt(role, run, context = {}) {
   const roleText = render(personaPrompt(reg.get(role), language), { symbol: run.symbol, as_of: run.as_of, language, role })
     || (chinese ? "产出投资组合辩论 memo。" : "Produce a portfolio debate memo.");
 
+  const roundTwoInstruction = context.round === 2
+    ? (chinese
+        ? "本轮为交叉反驳轮：在完成反驳后，必须在 `questions` 数组里向对方提出恰好 3 个尖锐、可回答的问题；本轮 `questions_answered` 留空。"
+        : "This is the cross-rebuttal round. After the rebuttal, ask exactly 3 sharp, answerable opponent questions in `questions`; leave `questions_answered` empty in this round.")
+    : "";
   const roundThreeInstruction = context.round === 3
     ? (chinese
-        ? "本轮为问答轮:在 `questions` 数组里给出恰好 3 个针对对方的尖锐问题,并在 `questions_answered` 数组里逐条回答对方提出的问题。"
-        : "This is the Q&A round: in a `questions` array list exactly 3 sharp questions for the other side, and in a `questions_answered` array answer the 3 questions the other side asked you.")
+        ? "本轮为问答回答轮：把你在第 2 轮提出的 3 个问题原样复制到 `questions`。`questions_answered` 必须是恰好 3 个 `{question, answer}` 对象；每个 `question` 按数组位置逐字复制输入的对方问题，`answer` 给出对应回答。"
+        : "This is the Q&A response round. Copy your 3 round 2 questions exactly into `questions`. `questions_answered` must contain exactly 3 `{question, answer}` objects; each `question` must copy the supplied opponent question verbatim at the same array index, and `answer` must answer it.")
     : "";
 
   return [
@@ -74,10 +79,12 @@ export function debatePrompt(role, run, context = {}) {
     // separated by blank lines in the final prompt. Preserve that exactly.
     ...base.split("\n"),
     roleText,
+    roundTwoInstruction,
     roundThreeInstruction,
     context.round ? `Debate round: ${context.round}` : "",
     context.brief ? `Brief length for round 1: ${context.brief}` : "",
     context.otherCaseR1 ? `Opponent prior-round case JSON: ${JSON.stringify(context.otherCaseR1)}` : "",
+    context.questionsYouAsked ? `Your round 2 questions to preserve JSON: ${JSON.stringify(context.questionsYouAsked)}` : "",
     context.questionsForYou ? `Questions you must answer JSON: ${JSON.stringify(context.questionsForYou)}` : "",
     // The masters ran before the debate; the bull and bear must argue with their
     // disagreements rather than restate the evidence unopposed.

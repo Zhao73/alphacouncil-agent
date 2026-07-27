@@ -59,7 +59,7 @@ AlphaCouncil Agent は、**上場株式のリサーチ**向けの Codex / Claude
 
 ## 現在の 0.9.0 ステータス：solo-test
 
-パッケージとプラグインのバージョン表面は `0.9.0-solo-test.1` ですが、これは明示的に分離された
+パッケージとプラグインのバージョン表面は `0.9.0-solo-test.2` ですが、これは明示的に分離された
 **solo-test** チャネルであり、正式な production GA ではありません。決定論的経路を
 エンドツーエンドで試験するため、26 個の物理 PersonaPack v3 パックと 52 個の実行可能な
 `provisional_derived_proxy` ツールを同梱します。全 26 席は provisional
@@ -243,7 +243,7 @@ flowchart TD
 
 - `.codex-plugin/plugin.json` —— Codex プラグインのメタデータ
 - `.claude-plugin/plugin.json` —— Claude Code プラグインのマニフェスト
-- `.mcp.json` —— MCP server の配線
+- `codex.mcp.json` —— Codex 専用 MCP server の配線
 - `skills/alphacouncil-agent/SKILL.md` —— 実行時の指示
 - `mcp/server.mjs` —— JSON-RPC MCP server とワークフロー実装
 - `scripts/selfcheck.mjs` —— 最小限の回帰セルフチェック

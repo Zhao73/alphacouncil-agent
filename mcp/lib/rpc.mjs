@@ -26,9 +26,10 @@ import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
 import { table, mark, metricValue, groundingDashboard, label, threshold, skippedMark } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
-import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, queueHeadlessRun, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
+import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
 
 export function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -222,6 +223,58 @@ async function withSelectedRun(args, entryTool, operation) {
   }
 }
 
+const backgroundRuns = new Map();
+
+function backgroundAnalysisAccepted(runArgs) {
+  const dir = runPath(runArgs.run_id);
+  return {
+    accepted: true,
+    run_id: runArgs.run_id,
+    symbol: safeSymbol(runArgs.symbol),
+    status: "accepted",
+    phase: "queued",
+    execution_mode: "background_codex_exec",
+    poll_tool: "read_run",
+    status_json: join(dir, "status.json"),
+    events_jsonl: join(dir, "events.jsonl"),
+  };
+}
+
+function persistBackgroundFailure(runArgs, error) {
+  const evidencePath = join(runPath(runArgs.run_id), "evidence.json");
+  if (!existsSync(evidencePath)) return;
+  try {
+    const run = readJson(evidencePath);
+    run.status = "failed";
+    run.phase = "failed";
+    run.completed_at = new Date().toISOString();
+    run.background_error = String(error?.message || error);
+    saveRun(run);
+  } catch {
+    // A concurrent read can still use the last atomic status/evidence snapshot. Never let
+    // failure-reporting itself become an unhandled rejection that kills the MCP process.
+  }
+}
+
+function startBackgroundSelectedRun(args, entryTool, operation) {
+  const runArgs = selectedRunArgs(args, entryTool);
+  try {
+    if (!runArgs.existing_run) runArgs.queued_run = queueHeadlessRun(runArgs);
+  } catch (error) {
+    runArgs.release_run_lock();
+    throw attachRunContext(error, runArgs);
+  }
+  const pending = Promise.resolve()
+    .then(() => operation(runArgs))
+    .catch((error) => persistBackgroundFailure(runArgs, attachRunContext(error, runArgs)))
+    .finally(() => {
+      backgroundRuns.delete(runArgs.run_id);
+      runArgs.release_run_lock();
+    });
+  backgroundRuns.set(runArgs.run_id, pending);
+  return backgroundAnalysisAccepted(runArgs);
+}
+
 function loadExistingAnalysis(run) {
   const dir = runPath(run.run_id);
   const decisionPath = join(dir, "decision.json");
@@ -350,7 +403,14 @@ export function tools() {
     }),
     tool("analyze_symbol", "Collect evidence and write a manager-style decision summary.", {
       type: "object",
-      properties: common,
+      properties: {
+        ...common,
+        wait_for_completion: {
+          type: "boolean",
+          default: false,
+          description: "Default false for real runs: return a run_id immediately and poll read_run. Set true only when the MCP client can remain connected for the entire council. Dry runs remain synchronous when this field is omitted.",
+        },
+      },
       required: ["symbol", "selection_receipt"],
     }),
     tool("read_run", "Read a saved AlphaCouncil Agent run from the shared evidence store.", {
@@ -935,6 +995,19 @@ export async function handleToolCall(id, params) {
     return;
   }
   if (name === "analyze_symbol") {
+    const runInBackground = args.wait_for_completion === false
+      || (args.wait_for_completion === undefined && args.dry_run !== true);
+    if (runInBackground) {
+      const accepted = startBackgroundSelectedRun(args, "analyze_symbol", async (runArgs) => {
+        if (runArgs.existing_run) return loadExistingAnalysis(runArgs.existing_run);
+        return analyzeSymbol(runArgs);
+      });
+      sendResult(id, jsonContent(
+        `Accepted AlphaCouncil Agent analysis for ${accepted.symbol}: ${accepted.run_id}. Poll read_run until status is terminal.`,
+        accepted,
+      ));
+      return;
+    }
     const result = await withSelectedRun(args, "analyze_symbol", async (runArgs) => {
       const result = runArgs.existing_run ? loadExistingAnalysis(runArgs.existing_run) : await analyzeSymbol(runArgs);
       return jsonContent(
@@ -1071,6 +1144,11 @@ export function startStdioServer() {
     // Maintenance must not corrupt the JSON-RPC frame channel. Subsequent selection calls
     // still enforce their own locks and fail closed if the store is unsafe.
     process.stderr.write(`[alphacouncil] selection cleanup skipped: ${error?.message || error}\n`);
+  }
+  try {
+    recoverInterruptedBackgroundRuns();
+  } catch (error) {
+    process.stderr.write(`[alphacouncil] background run recovery skipped: ${error?.message || error}\n`);
   }
   // Load personas eagerly. Lazy loading made `initialize` succeed against a missing or
   // malformed persona set, so the host believed the server was healthy and only found

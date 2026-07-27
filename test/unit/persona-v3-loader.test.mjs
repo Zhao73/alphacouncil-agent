@@ -248,8 +248,8 @@ test("a physical v3 pack loads and a self-declared method model stays an operato
 });
 
 test("a physical v3 pack accepts a SemVer prerelease pack version", (t) => {
-  const pack = loadV3Pack(makePack(t, { packVersion: "0.9.0-solo-test.1" }));
-  assert.equal(pack.manifest.pack_version, "0.9.0-solo-test.1");
+  const pack = loadV3Pack(makePack(t, { packVersion: "0.9.0-solo-test.2" }));
+  assert.equal(pack.manifest.pack_version, "0.9.0-solo-test.2");
 });
 
 test("compiler hashes are stable across repeated loads", (t) => {

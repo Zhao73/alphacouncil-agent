@@ -49,6 +49,7 @@ export function richnessSummary(run) {
 export function statusSnapshot(run) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
+  const verifierVerdicts = Array.isArray(run.verifier_verdicts) ? run.verifier_verdicts : [];
   const selectedMasters = Array.isArray(run.masters) ? run.masters : [];
   const recordedMasters = (run.master_opinions || []).map((opinion) => opinion.master);
   const recordedSet = new Set(recordedMasters);
@@ -64,6 +65,9 @@ export function statusSnapshot(run) {
     status: run.status,
     phase: run.phase,
     verification: gate.verification,
+    verification_scope: "source_id_presence_only",
+    adversarial_verification: verifierVerdicts.length ? "recorded_not_exhaustive" : "not_run",
+    verifier_verdict_count: verifierVerdicts.length,
     missing_source_count: gate.missing_claim_source_ids.length,
     completeness: completeness.completeness,
     missing_evidence_count: completeness.missing_evidence_count,

@@ -9,7 +9,7 @@ import { cleanLog } from "./text.mjs";
 import { completenessStatus, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { debateFromCodex, dryDebate, dryPacket, extractJson, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizePacket, rawRecordText } from "./packets.mjs";
+import { debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizePacket, rawRecordText } from "./packets.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
@@ -490,6 +490,45 @@ export function isDryRun(args = {}) {
 }
 
 /**
+ * Keep execution diagnostics separate from investment evidence.
+ *
+ * A timed-out Codex worker can leave a long partial transcript containing tool chatter,
+ * internal instructions and half-finished searches. That material is useful to an operator
+ * but is not a sourced claim and must never enter evidence.json or downstream debate.
+ */
+export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeoutMs, result }) {
+  const chinese = isChineseLanguage(language);
+  const timedOut = result?.timedOut === true;
+  const status = timedOut ? "timed_out" : "failed";
+  const exitLabel = Number.isInteger(result?.code) ? `exit code ${result.code}` : "worker error";
+  const reason = timedOut ? `timeout after ${timeoutMs}ms` : exitLabel;
+  const packet = normalizePacket({
+    summary: chinese
+      ? `证据席位 ${task} 执行超时或失败；未生成可用于投资判断的证据。`
+      : `Evidence worker ${task} timed out or failed; it produced no evidence usable for an investment decision.`,
+    claims: [],
+    open_questions: [chinese
+      ? `检查 ${task} 的独立失败诊断并重试；不得用该席位的部分对话补齐证据。`
+      : `Inspect the separate ${task} failure diagnostic and retry; do not use its partial transcript as evidence.`],
+    confidence: "low",
+  }, task, symbol, asOfDate, "");
+  const diagnostic = {
+    schema_version: 1,
+    task,
+    symbol,
+    as_of: asOfDate,
+    status,
+    timed_out: timedOut,
+    timeout_ms: timeoutMs,
+    exit_code: Number.isInteger(result?.code) ? result.code : null,
+    reason,
+    diagnostic_excerpt: cleanLog(result?.stderr || result?.stdout || result?.text || reason),
+    recorded_at: new Date().toISOString(),
+  };
+  return { packet, diagnostic };
+}
+
+/**
  * A production headless run must not silently become a prompt-only council because its
  * caller omitted `grounding`. Visible runs already collect it in rpc.mjs; this gives the
  * headless path the same fact boundary. Dry runs remain network-free by design.
@@ -509,6 +548,66 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun 
       unavailable: [`grounding failed: ${cleanLog(error?.message || error)}`],
     };
   }
+}
+
+/**
+ * Persist a minimal receipt-bound lifecycle before a background MCP call is accepted.
+ *
+ * Grounding can perform several network requests. Without this envelope, `analyze_symbol`
+ * returned a run_id first and `read_run` failed with ENOENT until those requests finished.
+ * Keeping the queued snapshot deliberately free of inferred facts also means a crash in the
+ * initialization window remains inspectable without pretending that evidence was collected.
+ */
+export function queueHeadlessRun(args) {
+  if (args.visibility_required) {
+    throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-level multi_agent or codex_app threads first, then record_visible_packet/record_visible_decision.");
+  }
+  const symbol = safeSymbol(args.symbol);
+  const asOfDate = args.as_of || today();
+  const id = args.run_id || runId(symbol);
+  const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
+  const dryRun = isDryRun(args);
+  const language = resolveLanguage(args);
+  const frozen = frozenMasterSelection(args);
+  const dir = runPath(id);
+  mkdirSync(dir, { recursive: true });
+  const startedAt = new Date().toISOString();
+  const run = {
+    run_id: id,
+    symbol,
+    as_of: asOfDate,
+    language,
+    dry_run: dryRun,
+    execution_mode: dryRun ? "dry_run" : "background_codex_exec",
+    entry_tool: args.entry_tool || "analyze_symbol",
+    visibility_required: false,
+    started_at: startedAt,
+    updated_at: startedAt,
+    completed_at: null,
+    status: "queued",
+    phase: "queued",
+    tasks,
+    task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
+    agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
+    packets: [],
+    masters: frozen.masters,
+    master_selection: frozen.selection,
+    master_opinions: [],
+    master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
+    verifier_verdicts: [],
+    grounding: args.grounding && typeof args.grounding === "object" ? args.grounding : null,
+    seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
+  };
+  saveRun(run);
+  appendEvent(run, "background_run_queued", {
+    selection_id: frozen.selection.selection_id,
+    catalog_hash: frozen.selection.catalog_hash,
+    selection_hash: frozen.selection.selection_hash,
+    tasks,
+    masters: frozen.masters,
+  });
+  writeAllAgentsMarkdown(run);
+  return run;
 }
 
 export async function collectEvidence(args) {
@@ -533,7 +632,7 @@ export async function collectEvidence(args) {
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
 
-  const startedAt = new Date().toISOString();
+  const startedAt = args.queued_run?.started_at || new Date().toISOString();
   const run = {
     run_id: id,
     symbol,
@@ -605,17 +704,22 @@ export async function collectEvidence(args) {
     });
     let packet;
     if (!result.ok) {
-      const failure = cleanLog(result.stderr || result.stdout || `exit code ${result.code}`);
-      packet = normalizePacket({
-        summary: `Subagent ${task} failed or timed out.`,
-        claims: [{ claim: "Subagent failure", evidence: failure, confidence: "low", source_ids: [] }],
-        open_questions: ["Retry this packet or lower concurrency."],
-        confidence: "low",
-      }, task, symbol, asOfDate, cleanLog(result.text || result.stderr || result.stdout));
+      const failure = workerFailureArtifacts({
+        task,
+        symbol,
+        asOfDate,
+        language,
+        timeoutMs,
+        result,
+      });
+      packet = failure.packet;
+      const diagnosticPath = join(dir, `${task}.failure.json`);
+      writeJson(diagnosticPath, failure.diagnostic);
       commitPacket(packet);
       updateTask(run, task, result.timedOut ? "timed_out" : "failed", {
         completed_at: new Date().toISOString(),
         output: join(dir, `${task}.json`),
+        diagnostic: diagnosticPath,
         error: result.timedOut ? "timeout" : `exit code ${result.code}`,
       });
       return packet;
@@ -643,13 +747,22 @@ export async function collectEvidence(args) {
     }
   });
 
+  const successfulTasks = tasks.filter((task) => taskState(run, task).status === "completed");
+  const failedTasks = tasks.filter((task) => taskState(run, task).status !== "completed");
+  const allEvidenceSucceeded = failedTasks.length === 0;
   run.completed_at = new Date().toISOString();
-  run.phase = "evidence_complete";
-  run.status = tasks.every((task) => taskState(run, task).status === "completed") ? "evidence_complete" : "partial";
+  run.phase = allEvidenceSucceeded ? "evidence_complete" : "evidence_partial";
+  run.status = allEvidenceSucceeded ? "evidence_complete" : "partial";
   writeJson(join(dir, "evidence.json"), run);
   writeSourceManifest(run);
   writeStatus(run);
-  appendEvent(run, "evidence_complete", { completed: run.packets.length, total: tasks.length });
+  appendEvent(run, allEvidenceSucceeded ? "evidence_complete" : "evidence_partial", {
+    successful: successfulTasks.length,
+    failed: failedTasks.length,
+    total: tasks.length,
+    packet_count: run.packets.length,
+    failed_tasks: failedTasks,
+  });
   writeAllAgentsMarkdown(run);
   return run;
 }
@@ -810,6 +923,27 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
   });
   const packet = debateFromCodex(result, role, run, prompt);
+  const roundCompletedAt = new Date().toISOString();
+  // A role can run three times. Leaving it marked `running` after one awaited invocation
+  // returned made sequential rounds look concurrent in status.json. Record the dependency
+  // boundary explicitly while reserving `completed` for the merged three-round artifact.
+  updateAgent(run, role, "waiting", {
+    round: context.round,
+    round_status: "completed",
+    last_completed_round: context.round,
+    round_completed_at: roundCompletedAt,
+    pid: null,
+    output: null,
+  });
+  appendEvent(run, "agent_round_completed", {
+    role,
+    round: context.round,
+    ok: result.ok,
+    timed_out: result.timedOut === true,
+    verdict: packet.verdict,
+    question_count: packet.questions.length,
+    answered_count: packet.questions_answered.length,
+  });
   return { packet, result };
 }
 
@@ -873,27 +1007,62 @@ export async function synthesizeDecision(run, args) {
   const bearR2 = await runDebateRole(run, "bear_researcher", { round: 2, otherCaseR1: bullR1.packet }, timeoutMs);
 
   appendEvent(run, "debate_round", { round: 3 });
-  const bullR3 = await runDebateRole(run, "bull_researcher", { round: 3, otherCaseR1: bearR2.packet, questionsForYou: bearR2.packet.questions }, timeoutMs);
-  const bearR3 = await runDebateRole(run, "bear_researcher", { round: 3, otherCaseR1: bullR2.packet, questionsForYou: bullR2.packet.questions }, timeoutMs);
+  const bullR3 = await runDebateRole(run, "bull_researcher", {
+    round: 3,
+    otherCaseR1: bearR2.packet,
+    questionsYouAsked: bullR2.packet.questions,
+    questionsForYou: bearR2.packet.questions,
+  }, timeoutMs);
+  const bearR3 = await runDebateRole(run, "bear_researcher", {
+    round: 3,
+    otherCaseR1: bullR2.packet,
+    questionsYouAsked: bearR2.packet.questions,
+    questionsForYou: bullR2.packet.questions,
+  }, timeoutMs);
 
   const bull = mergeDebateRounds([bullR1.packet, bullR2.packet, bullR3.packet]);
   const bear = mergeDebateRounds([bearR1.packet, bearR2.packet, bearR3.packet]);
-  const bullOk = [bullR1, bullR2, bullR3].every((step) => step.result.ok) && bull.verdict !== "PARSE_FAILED";
-  const bearOk = [bearR1, bearR2, bearR3].every((step) => step.result.ok) && bear.verdict !== "PARSE_FAILED";
-  const lastBull = bullR3.result;
-  const lastBear = bearR3.result;
+  const qnaGate = debateQnaGate({
+    bullR2: bullR2.packet,
+    bearR2: bearR2.packet,
+    bullR3: bullR3.packet,
+    bearR3: bearR3.packet,
+  });
+  appendEvent(run, "debate_qna_gate", qnaGate);
+  const bullQnaErrors = qnaGate.errors.filter((error) => error.startsWith("bull_researcher"));
+  const bearQnaErrors = qnaGate.errors.filter((error) => error.startsWith("bear_researcher"));
+  const bullTransportOk = [bullR1, bullR2, bullR3].every((step) => step.result.ok);
+  const bearTransportOk = [bearR1, bearR2, bearR3].every((step) => step.result.ok);
+  const bullOk = bullTransportOk && bull.verdict !== "PARSE_FAILED" && bullQnaErrors.length === 0;
+  const bearOk = bearTransportOk && bear.verdict !== "PARSE_FAILED" && bearQnaErrors.length === 0;
+  const bullTransportFailure = firstFailedDebateResult([bullR1, bullR2, bullR3]);
+  const bearTransportFailure = firstFailedDebateResult([bearR1, bearR2, bearR3]);
 
   writeJson(join(dir, "bull_researcher.json"), bull);
   updateAgent(run, "bull_researcher", bullOk ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "bull_researcher.json"),
-    error: bullOk ? undefined : (lastBull.timedOut ? "timeout" : `exit code ${lastBull.code}`),
+    error: bullOk
+      ? undefined
+      : !bullTransportOk
+        ? (bullTransportFailure?.timedOut ? "timeout" : `exit code ${bullTransportFailure?.code ?? "unknown"}`)
+        : bull.verdict === "PARSE_FAILED"
+          ? "parse_failed"
+          : "qna_incomplete",
+    qna_errors: bullQnaErrors,
   });
   writeJson(join(dir, "bear_researcher.json"), bear);
   updateAgent(run, "bear_researcher", bearOk ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "bear_researcher.json"),
-    error: bearOk ? undefined : (lastBear.timedOut ? "timeout" : `exit code ${lastBear.code}`),
+    error: bearOk
+      ? undefined
+      : !bearTransportOk
+        ? (bearTransportFailure?.timedOut ? "timeout" : `exit code ${bearTransportFailure?.code ?? "unknown"}`)
+        : bear.verdict === "PARSE_FAILED"
+          ? "parse_failed"
+          : "qna_incomplete",
+    qna_errors: bearQnaErrors,
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 

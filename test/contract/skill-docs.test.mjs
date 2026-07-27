@@ -73,6 +73,18 @@ test("the master bench and verifiers are host-neutral, not Claude Code only", ()
   assert.match(visible, /incomplete/, "the bench gate must be stated where the workflow is");
 });
 
+test("the headless skill never holds a full council inside one MCP response", () => {
+  const skill = readFileSync(repoFile("skills/alphacouncil-agent/SKILL.md"), "utf8");
+  const headless = skill.slice(skill.indexOf("## Headless MCP Workflow"), skill.indexOf("## Claude Code Parallel Path"));
+  assert.match(headless, /wait_for_completion=false/);
+  assert.match(headless, /poll `read_run(?:\(run_id\))?`/i);
+  assert.match(headless, /complete.*incomplete.*needs_verification.*failed/is);
+  assert.match(headless, /verification_scope/,
+    "headless users must be told which verification gate actually ran");
+  assert.match(headless, /does not run.*verifier|verifier.*not run/is,
+    "headless execution must not be described as the visible three-verifier fan-out");
+});
+
 // A council runs from 7 to 44 seats, and the bench is where that varies. One question, so
 // the user configures the run without being interviewed; and it names each host, because
 // leaving that implicit is how the bench ended up never running on Codex and OpenCode.
@@ -114,7 +126,7 @@ test("the npm package ships the files every host actually reads", () => {
   const pkg = JSON.parse(readFileSync(repoFile("package.json"), "utf8"));
   for (const needed of [
     "mcp/", "personas/", "skills/",
-    ".claude-plugin/", ".codex-plugin/", ".mcp.json",
+    ".claude-plugin/", ".codex-plugin/", "codex.mcp.json",
     ".claude/agents/", "opencode.json", ".opencode/agent/",
     ".grok/agents/", ".grok/config.toml",
   ]) {

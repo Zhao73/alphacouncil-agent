@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.9.0-solo-test.1",
+  "version": "0.9.0-solo-test.2",
   "description": "Host-visible or background public-equity research workflow with shared evidence packets.",
   "author": {
     "name": "Zhao73"
@@ -28,5 +28,5 @@
       "@alphacouncil-agent compare AAPL, 0700.HK, 7203.T."
     ]
   },
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./codex.mcp.json"
 }

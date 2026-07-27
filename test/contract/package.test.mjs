@@ -18,6 +18,19 @@ test("the published package ships everything the server loads at runtime", () =>
   assert.ok(pkg.files.includes("LICENSE"));
 });
 
+test("the published package ships every Codex interface asset named by its manifest", () => {
+  const manifest = JSON.parse(readFileSync(repoFile(".codex-plugin/plugin.json"), "utf8"));
+  const assets = [manifest.interface?.composerIcon, manifest.interface?.logo]
+    .filter(Boolean)
+    .map((path) => path.replace(/^\.\//u, ""));
+
+  assert.ok(assets.length > 0, "Codex interface manifest must name at least one icon");
+  for (const asset of new Set(assets)) {
+    assert.ok(existsSync(repoFile(asset)), `Codex interface asset is missing from the repository: ${asset}`);
+    assert.ok(pkg.files.includes(asset), `package.files must include Codex interface asset ${asset}`);
+  }
+});
+
 test("the bin entry points at a file that exists and is executable", () => {
   const target = pkg.bin["alphacouncil-agent"];
   assert.equal(target, "./mcp/server.mjs");

@@ -2,6 +2,63 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.0-solo-test.2] — 2026-07-27
+
+This is a corrective **0.9.0 solo-test prerelease**, cut from a real RKLB acceptance run of
+`0.9.0-solo-test.1`. It does not change the production assurance boundary: all 26 physical
+packs remain provisional `operator_lens`; operational seats and `method_model` seats remain
+**0**; human source/formula approvals and formal four-host GA evidence remain **0**.
+
+### Fixed from the RKLB run
+
+- **Full headless analysis no longer dies at the host's five-minute MCP deadline.** Real
+  `analyze_symbol` calls now return a small accepted handle immediately, persist a
+  receipt-bound `queued` run before returning, and are polled with `read_run`. Initialization
+  and later background failures therefore remain inspectable under the original `run_id`.
+  On restart, a dead-process background run is terminalized as
+  `failed/server_interrupted`; active locked runs in another host process are left alone.
+- **Leaf workers cannot recursively inherit user MCP plugins.** `codex exec` workers retain
+  native web search but use `--ignore-user-config`, preventing an installed Codex search
+  bridge from spawning nested Codex workers and consuming the entire per-seat timeout. The
+  flag is placed after the `exec` subcommand and covered by an argv-order regression test.
+- **Worker transcripts are no longer investment evidence.** A timed-out or failed analyst
+  writes an empty-claim, low-confidence evidence packet and a separate `*.failure.json`
+  diagnostic. Partial tool chatter, internal instructions and search logs cannot flow into
+  `evidence.json`, the source manifest or the debate.
+- **Partial evidence is named partial.** Runs with failed/timed-out tasks emit
+  `evidence_partial` with successful/failed counts instead of an `evidence_complete 8/8`
+  event merely because eight packet files exist.
+- **Debate telemetry now proves the actual dependency order.** Every awaited Bull/Bear round
+  emits `agent_round_completed`; the role enters `waiting` between rounds instead of staying
+  misleadingly `running` while the opposite side executes.
+- **Round 3 is now a real cross-fed Q&A.** Round 2 must save exactly three opponent
+  questions per side; Round 3 receives those questions and must return exactly three ordered
+  `{question, answer}` bindings. Each `question` must match the corresponding opponent
+  Round-2 question exactly and in position, and every answer must be non-empty. The JSON
+  schema now includes both fields, and any missing, reordered or substituted exchange fails
+  the Q&A gate instead of being marked complete with `questions_answered=[]`.
+- **SEC typed-fact source identity is canonical.** The same Company Facts record may support
+  ROE and net-margin derivations without a false `source_id_collision`. The metric rule now
+  belongs to derivation lineage, not source identity; the RKLB fixture consequently retains
+  `financial.net_margin_5y` without inventing owner earnings, forward growth, liquidity
+  impulse, realized volatility or ruin facts.
+- **Chinese report-quality headings match the generated report contract.** The mixed
+  `Master席位分歧处理` heading emitted by a Chinese PM now satisfies the conditional
+  `master_bench` section instead of causing a false `needs_revision` result.
+- **Chat handoff summaries stop at readable boundaries.** Chinese and English handoff fields
+  prefer sentence or word boundaries and use Unicode code points, avoiding mid-sentence
+  fragments and unpaired surrogate characters.
+- **Headless verification claims are explicit.** `status.json` separates
+  `source_id_presence_only` from adversarial verification and records verifier verdict count.
+  The runtime skill now says plainly that headless execution does not run the host-visible
+  three-verifier fan-out.
+- **Codex MCP wiring no longer creates an OpenCode duplicate.** Codex uses the isolated
+  `codex.mcp.json`; the ambiguous root `.mcp.json` is not shipped. The Codex interface icon
+  is now included in the npm package.
+
+The public package remains on npm's `next` dist-tag and the GitHub release remains a
+prerelease. Stable `0.9.0` is still reserved for the formal production-GA gates.
+
 ## [0.9.0-solo-test.1] — 2026-07-27
 
 This package is the first **0.9.0 solo-test prerelease**, not a formal production-GA release.

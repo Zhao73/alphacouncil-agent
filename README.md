@@ -58,7 +58,7 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity rese
 |---|---|
 | 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
 | 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai and more read the **same facts** through different stated research priorities. Every council run shows the complete catalog and actual maturity before research and lets you select any `1..N` combination or `all`. |
-| 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio manager who issues an actual rating — and three verifiers that re-source, re-derive and attack every load-bearing claim. A failed check **down-weights the seat that made it**. |
+| 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio manager who issues an actual rating. The deep visible workflow also runs three verifiers that re-source, re-derive and attack load-bearing claims; headless status explicitly reports when that fan-out did not run. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
 | 🔑 **27 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
@@ -68,7 +68,7 @@ This repository is the uploadable source copy. Runtime outputs are written outsi
 
 ## Current 0.9.0 prerelease status: solo-test
 
-The package and plugin surfaces are version `0.9.0-solo-test.1`, but this is an explicitly isolated
+The package and plugin surfaces are version `0.9.0-solo-test.2`, but this is an explicitly isolated
 **solo-test** build, not formal production GA. It packages 26 physical PersonaPack v3 packs
 and 52 executable `provisional_derived_proxy` tools so the deterministic path can be tested
 end to end. All 26 seats remain provisional `operator_lens`; operational: **0**;
@@ -277,8 +277,8 @@ correlated error — and would remove the reason for having a bench at all.
 Key files:
 
 - `.codex-plugin/plugin.json` - Codex plugin metadata.
-- `.mcp.json` - MCP server wiring.
-- `assets/logo.png` - plugin icon used by Codex.
+- `codex.mcp.json` - isolated Codex MCP server wiring.
+- `assets/logo-icon.png` - plugin icon used by Codex.
 - `skills/alphacouncil-agent/SKILL.md` - runtime instructions for Codex.
 - `mcp/server.mjs` - JSON-RPC MCP server and workflow implementation.
 - `scripts/selfcheck.mjs` - minimal regression check.
@@ -360,14 +360,14 @@ The plugin expects this local layout:
 
 ```text
 .codex-plugin/plugin.json
-.mcp.json
+codex.mcp.json
 skills/alphacouncil-agent/SKILL.md
 mcp/server.mjs
 scripts/selfcheck.mjs
 package.json
 ```
 
-`.mcp.json` runs:
+`codex.mcp.json` runs:
 
 ```json
 {

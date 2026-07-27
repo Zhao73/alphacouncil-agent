@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer } from "../helpers/rpc-client.mjs";
 
-// Hosts launch this server from wherever they happen to be: .mcp.json says `"cwd": "."`,
+// Hosts launch this server from wherever they happen to be: codex.mcp.json says `"cwd": "."`,
 // and Claude Code resolves ${CLAUDE_PLUGIN_ROOT}. Any intra-repo path that goes through
 // process.cwd() instead of import.meta.url breaks here and nowhere else.
 
