@@ -1,0 +1,129 @@
+{
+  "artifact_hash": "sha256:8b2317d4cf45d777f2ba41116cb55a8de09248c5544ed61bd8ab04e184f6f458",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "sec_gme_short_market_structure_2021",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:7d6faf647cfbf60f02e38e1727a5c2e6e82d0fa3c8be1a49eb01b0826bf905b5",
+    "declared_artifact_hash": "sha256:16f9718896dffcfaeb8418a248104433f6863a7d26482c199051ec70f6a565e9",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:16f9718896dffcfaeb8418a248104433f6863a7d26482c199051ec70f6a565e9",
+    "relative_path": "master_forensic_short/sec_gme_short_market_structure_2021.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_forensic_short",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The proposition is attached to a generic forensic-short lens and the source is an official SEC staff report, not a named-investor attribution.",
+        "status": "none_detected"
+      },
+      "challenges": [
+        "A case conclusion is generalized into a reusable forensic procedure.",
+        "The exact snippet contains neither covering-volume nor persistence criteria."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 31,
+        "actual_text_end": 2228,
+        "actual_text_start": 2160,
+        "declared_kind": "pdf_page",
+        "declared_page": 31,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "What narrower wording would be fully entailed by the cited excerpt alone?"
+      ],
+      "proposed_evidence_excerpt": "While a short squeeze did not appear to be the main driver of events",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 31,
+        "section": "Conclusion",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Test squeeze narratives against participant-level covering volume and persistent price behavior instead of inferring causation from high short interest alone.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "sec_gme_short_market_structure_2021:p1",
+      "review_hash": "sha256:b21c4883389be3afec1ab21e13b2250eec10ea9caea53157cfe95048a5e5f856",
+      "scope_ambiguity": {
+        "rationale": "The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt.",
+        "status": "material"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29",
+      "snippet_hash_recomputed": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29",
+      "support_rationale": "The excerpt supports rejecting a short squeeze as the main driver in this event, but it does not itself state the proposed general test using participant-level covering volume and persistent price behavior.",
+      "support_verdict": "partial"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1231103,
+    "content_hash": "sha256:58405d94685361c221ec7898866689116e0d31e7dceb26ed356a61a523178322",
+    "extracted_text_hash": "sha256:59edc562c2c20c6a07327573514681a44fcd4d29018332b95c10941e97c46100",
+    "extracted_text_hash_recomputed": "sha256:59edc562c2c20c6a07327573514681a44fcd4d29018332b95c10941e97c46100",
+    "raw_bytes_hash_recomputed": "sha256:58405d94685361c221ec7898866689116e0d31e7dceb26ed356a61a523178322",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:0d4131236b5c5729bdecfd1a5490282c34683df4e96326a718014e0b065ce644",
+    "source_record_hash_recomputed": "sha256:0d4131236b5c5729bdecfd1a5490282c34683df4e96326a718014e0b065ce644"
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "artifact_hash": "sha256:8d25f9c3451a830370e5fca3f858a52a6486c27560783708b6623145fc2e7ebd",
+  "artifact_kind": "persona_v3_ai_source_prereview",
+  "assurance_class": "machine_pre_review_only",
+  "candidate_id": "buffett_berkshire_letter_2024",
+  "disagreement": {
+    "explanation": "The roles have different scopes but agree that no source approval or method attribution is established.",
+    "present": false,
+    "role_verdicts": [
+      "archive_integrity_verified_semantics_unreviewed",
+      "production_approval_unsupported",
+      "requires_human_review"
+    ]
+  },
+  "human_claims": false,
+  "human_reviewed": false,
+  "machine_limitations": [
+    "This artifact is deterministic machine triage, not an independent human review.",
+    "It does not contain a verified semantic extraction or exact source locator.",
+    "It is unsigned, cannot enter a trusted reviewer registry, and cannot satisfy source-review quorum."
+  ],
+  "method_attribution_approved": false,
+  "open_questions": [
+    "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+    "Who is the verified author or speaker for that exact passage?",
+    "What published_at and public_at values are supported by the archived material?"
+  ],
+  "persona_id": "master_buffett",
+  "pipeline_id": "alphacouncil_ai_source_prereview_v1",
+  "production_effect": "none",
+  "reviewer_kind": "ai",
+  "roles": [
+    {
+      "concerns": [
+        "Archive integrity alone does not establish method-defining evidence."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:cd9f2d75ce9f2b92a7acfe2655c3a78146d61f97426cbfc0deb29e4417adfffe",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The archived byte stream matches the acquisition record's content hash and byte length.",
+        "The declared content type is application/pdf; the deterministic format probe is pdf_magic.",
+        "This bootstrap pass did not extract or verify a semantic proposition, authorship claim, date, grade, or exact locator."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:4d159a48c3467e2c706400b434f034f5aa609515d22509a7682c203b6172b76d",
+      "prompt_hash": "sha256:3c5ed3beaa183923297e451df14c0f1fc2274478cad9d5a0b7309b2750da1e52",
+      "prompt_id": "alphacouncil.source-prereview.extractor.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "extractor",
+      "role_id": "ai_source_extractor_v1",
+      "verdict": "archive_integrity_verified_semantics_unreviewed"
+    },
+    {
+      "concerns": [
+        "No exact passage has been bound to a method proposition.",
+        "Authorship, publication timing, source grade, and scope remain unresolved in this pre-review."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:578d7ed433ed0c1162b6048814a6f6ee0b361bd4776e8bb1d6a11ad1a3bc5e2e",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The acquisition remains retrieved_unadjudicated.",
+        "The acquisition's human_review.status remains not_requested.",
+        "The machine input contains no verified exact locator or proposition-to-passage binding."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:9b940f9b4e76dafe02851dc6c85f5f29ba3505df3fb0502bf2fc3f784e1d5cfd",
+      "prompt_hash": "sha256:d4564717eafa5f0448e3832a56c70da95358a164fe2fec01354887e071b75738",
+      "prompt_id": "alphacouncil.source-prereview.skeptic.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "skeptic",
+      "role_id": "ai_source_skeptic_v1",
+      "verdict": "production_approval_unsupported"
+    },
+    {
+      "concerns": [
+        "Promoting this artifact would confuse machine triage with trusted human source adjudication."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:194ee7806e3f01279a71a43f4725f4138da6ee6b90af1a731c5cd43fda490425",
+      "input_role_output_hashes": [
+        "sha256:4d159a48c3467e2c706400b434f034f5aa609515d22509a7682c203b6172b76d",
+        "sha256:9b940f9b4e76dafe02851dc6c85f5f29ba3505df3fb0502bf2fc3f784e1d5cfd"
+      ],
+      "observations": [
+        "The extractor established archive integrity but explicitly performed no semantic review.",
+        "The skeptic found no verified proposition-to-locator binding for production use.",
+        "The two independent first-pass roles agree that machine pre-review cannot approve this source."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:f0474807d36f85eba4b0255da104e572a67859340c1c02547e816399867a3c17",
+      "prompt_hash": "sha256:18d54becf6953007bfbab91bbb5955bcf9ffc0989a0948d0d27ab751fa0a82a6",
+      "prompt_id": "alphacouncil.source-prereview.adjudicator.v1",
+      "reads_other_role_outputs": true,
+      "reviewer_kind": "ai",
+      "role": "adjudicator",
+      "role_id": "ai_source_adjudicator_v1",
+      "verdict": "requires_human_review"
+    }
+  ],
+  "schema_version": 1,
+  "semantic_review_performed": false,
+  "source_binding": {
+    "archive_relative_path": "personas-v3/master_buffett/acquisitions/candidates/buffett_berkshire_letter_2024/source.bin",
+    "byte_length": 64860,
+    "content_hash": "sha256:ff21ab9407dec219757587b6ce6a1bf30e59cfff15bb21e81d1faaec7f97a8a7",
+    "content_type": "application/pdf",
+    "final_url": "https://www.berkshirehathaway.com/letters/2024ltr.pdf",
+    "format_probe": "pdf_magic",
+    "record_hash": "sha256:5a53b72e9270d858b6a397fa1216ca06656d4aef97e34dcf4a1f637b3e77befa",
+    "record_relative_path": "personas-v3/master_buffett/acquisitions/candidates/buffett_berkshire_letter_2024/record.json",
+    "retrieved_at": "2026-07-27T06:24:10.856Z",
+    "source_bytes_reverified": true
+  },
+  "verdict": "requires_human_review"
+}

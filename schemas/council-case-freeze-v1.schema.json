@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/council-case-freeze-v1.schema.json",
+  "title": "AlphaCouncil frozen experiment cases",
+  "type": "object",
+  "required": ["schema_version", "artifact_kind", "freeze_id", "protocol_hash", "created_at", "case_order", "cases", "frozen_inputs_hash", "outcomes_withheld", "artifact_hash", "attestations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "alphacouncil_case_freeze" },
+    "freeze_id": { "type": "string", "minLength": 1 },
+    "protocol_hash": { "$ref": "#/$defs/hash" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "case_order": { "type": "array", "minItems": 48, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "cases": { "type": "array", "minItems": 48, "items": { "$ref": "#/$defs/case" } },
+    "frozen_inputs_hash": { "$ref": "#/$defs/hash" },
+    "outcomes_withheld": { "const": true },
+    "artifact_hash": { "$ref": "#/$defs/hash" },
+    "attestations": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "case": {
+      "type": "object",
+      "required": ["case_id", "issuer", "event", "market_regime", "as_of", "input_path", "question_hash", "input_file_hash", "fact_pack_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "case_id": { "type": "string", "minLength": 1 },
+        "issuer": { "type": "string", "minLength": 1 },
+        "event": { "type": "string", "minLength": 1 },
+        "market_regime": { "type": "string", "minLength": 1 },
+        "as_of": { "type": "string", "format": "date-time" },
+        "input_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "question_hash": { "$ref": "#/$defs/hash" },
+        "input_file_hash": { "$ref": "#/$defs/hash" },
+        "fact_pack_hash": { "$ref": "#/$defs/hash" }
+      }
+    }
+  }
+}

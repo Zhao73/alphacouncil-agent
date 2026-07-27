@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-release-source-review-evidence-v1.schema.json",
+  "title": "AlphaCouncil immutable release source-review evidence v1",
+  "description": "Self-contained ledgers, an audit snapshot of Ed25519 public keys, and verified source bindings copied into one PersonaPack v3 release. The embedded key snapshot is not runtime authority; verification also requires an external trusted source_review key registry.",
+  "type": "object",
+  "required": [
+    "schema_version", "artifact_kind", "verified_at", "canonical_master_count",
+    "trusted_reviewer_keys", "trusted_key_registry_hash", "ledger_inventory_hash",
+    "method_defining_source_count", "ledgers", "verified_bindings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_release_source_review_evidence" },
+    "verified_at": { "type": "string", "format": "date-time" },
+    "canonical_master_count": { "const": 26 },
+    "trusted_reviewer_keys": {
+      "description": "Manifest-bound audit snapshot. Every signing key used by this bundle must also match the externally configured runtime trust registry.",
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/trustedKey" }
+    },
+    "trusted_key_registry_hash": { "$ref": "#/$defs/hash" },
+    "ledger_inventory_hash": { "$ref": "#/$defs/hash" },
+    "method_defining_source_count": { "type": "integer", "minimum": 0 },
+    "ledgers": {
+      "type": "array",
+      "minItems": 26,
+      "maxItems": 26,
+      "items": { "$ref": "source-adjudication-ledger-v1.schema.json" }
+    },
+    "verified_bindings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/binding" }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "trustedKey": {
+      "type": "object",
+      "required": [
+        "key_id", "public_key", "principal_id", "revoked", "not_before",
+        "not_after", "purposes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" },
+        "public_key": { "type": "string", "pattern": "^-----BEGIN PUBLIC KEY-----" },
+        "principal_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "revoked": { "type": "boolean" },
+        "not_before": { "type": ["string", "null"], "format": "date-time" },
+        "not_after": { "type": ["string", "null"], "format": "date-time" },
+        "purposes": {
+          "type": "array",
+          "contains": { "const": "source_review" },
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "required": [
+        "persona_id", "source_id", "content_hash", "anchor_hash", "ledger_hash",
+        "attestation_chain_head", "reviewer_principal_ids", "signer_key_ids",
+        "approval_attestation_hashes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+        "source_id": { "type": "string", "pattern": "^[a-z0-9_:-]{3,128}$" },
+        "content_hash": { "$ref": "#/$defs/hash" },
+        "anchor_hash": { "$ref": "#/$defs/hash" },
+        "ledger_hash": { "$ref": "#/$defs/hash" },
+        "attestation_chain_head": { "$ref": "#/$defs/hash" },
+        "reviewer_principal_ids": {
+          "type": "array", "minItems": 2, "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "signer_key_ids": {
+          "type": "array", "minItems": 2, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" }
+        },
+        "approval_attestation_hashes": {
+          "type": "array", "minItems": 2, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/hash" }
+        }
+      }
+    }
+  }
+}

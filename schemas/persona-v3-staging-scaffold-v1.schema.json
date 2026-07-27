@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-staging-scaffold-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 staging scaffold v1",
+  "description": "Non-runnable work metadata. This document cannot declare maturity or authorize production registration.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "persona_id",
+    "canonical_prompt_file",
+    "canonical_title",
+    "target_release",
+    "target_pack_schema_version",
+    "source_adjudication_queue",
+    "target_contracts",
+    "component_plan",
+    "production_guard"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_staging_scaffold" },
+    "persona_id": { "type": "string", "pattern": "^[a-z0-9_]{2,48}$" },
+    "canonical_prompt_file": { "type": "string", "minLength": 3 },
+    "canonical_title": { "$ref": "#/$defs/localized" },
+    "target_release": { "const": "0.9.0" },
+    "target_pack_schema_version": { "const": 3 },
+    "source_adjudication_queue": { "const": "source-adjudication-queue.json" },
+    "target_contracts": {
+      "type": "object",
+      "required": ["manifest", "source_anchor", "decision_policy", "tool_graph", "experiment_results"],
+      "additionalProperties": false,
+      "properties": {
+        "manifest": { "const": "schemas/persona-v3.schema.json" },
+        "source_anchor": { "const": "schemas/source-anchor-v1.schema.json" },
+        "decision_policy": { "const": "schemas/persona-v3-decision-policy-v1.schema.json" },
+        "tool_graph": { "const": "schemas/persona-v3-tool-graph-v1.schema.json" },
+        "experiment_results": { "const": "schemas/persona-v3-experiments-v1.schema.json" }
+      }
+    },
+    "component_plan": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": { "$ref": "#/$defs/component" }
+    },
+    "production_guard": {
+      "type": "object",
+      "required": ["production_eligible", "production_manifest_allowed", "registry_registration_allowed", "promotion_status", "release_approvals"],
+      "additionalProperties": false,
+      "properties": {
+        "production_eligible": { "const": false },
+        "production_manifest_allowed": { "const": false },
+        "registry_registration_allowed": { "const": false },
+        "promotion_status": { "const": "blocked_pending_explicit_release_review" },
+        "release_approvals": { "type": "array", "maxItems": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "localized": {
+      "type": "object",
+      "required": ["en", "zh"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "zh": { "type": "string", "minLength": 1 }
+      }
+    },
+    "component": {
+      "type": "object",
+      "required": ["component", "status", "artifact_hash", "reviewer_ids", "reviewed_at", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "enum": [
+            "sources", "doctrine", "decision_cases", "failures", "counterfactuals",
+            "research_policy", "decision_policy", "tools", "memory_policy", "golden_cases",
+            "pairwise_cases", "calibration_cases", "experiments", "voice_en", "voice_zh"
+          ]
+        },
+        "status": { "enum": ["not_started", "draft", "in_review", "reviewed", "blocked"] },
+        "artifact_hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+        "reviewer_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "reviewed_at": { "type": ["string", "null"] },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "reviewed" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "artifact_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+              "reviewer_ids": { "minItems": 2 },
+              "reviewed_at": { "type": "string", "minLength": 10 }
+            }
+          },
+          "else": {
+            "properties": {
+              "artifact_hash": { "const": null },
+              "reviewed_at": { "const": null }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

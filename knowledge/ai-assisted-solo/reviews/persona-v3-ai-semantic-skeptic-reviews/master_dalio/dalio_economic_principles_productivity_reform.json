@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:be4a20ed316fd01f31b11508512a86e895b3552e4aeeee0035b55a5b9b3dfc36",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "dalio_economic_principles_productivity_reform",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:90018400e89743d772fa6cfa32e16ef793bba1049f213962ce3e51374ce8662a",
+    "declared_artifact_hash": "sha256:c217ca4ed23eb9b181858cb944ca3345b8fd5c1795a142a118654241bc53a20f",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:c217ca4ed23eb9b181858cb944ca3345b8fd5c1795a142a118654241bc53a20f",
+    "relative_path": "master_dalio/dalio_economic_principles_productivity_reform.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_dalio",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 2,
+        "actual_text_end": 313,
+        "actual_text_start": 166,
+        "declared_kind": "pdf_page",
+        "declared_page": 2,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "For our investment purposes we look at relationships between causes and effects that we hope will be useful to others in answering these questions.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 2,
+        "section": "The formula for economic success",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "For macro allocation, organize country analysis around tested cause-effect relationships rather than unsupported opinions.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "dalio_economic_principles_productivity_reform:p1",
+      "review_hash": "sha256:af9eadd8335da473c1d6fa0808c923aced537ec263be88f7700fbf43c0bc98f8",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:106f3af2cee9000eb21bc90cda00c1250f19db23d4b670a594ae5923747ba465",
+      "snippet_hash_recomputed": "sha256:106f3af2cee9000eb21bc90cda00c1250f19db23d4b670a594ae5923747ba465",
+      "support_rationale": "The passage explicitly contrasts cause-effect relationships used for investment purposes with opinions that lack demonstrated linkages.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1658914,
+    "content_hash": "sha256:8fa2d8f8783d2f31639da86cb206e8f9aeed0d924ebd413d5d1028e420630943",
+    "extracted_text_hash": "sha256:432a21c3f720a626533ee31cf2763ab3f2e3fc6715d85c83fb4356c484a634c8",
+    "extracted_text_hash_recomputed": "sha256:432a21c3f720a626533ee31cf2763ab3f2e3fc6715d85c83fb4356c484a634c8",
+    "raw_bytes_hash_recomputed": "sha256:8fa2d8f8783d2f31639da86cb206e8f9aeed0d924ebd413d5d1028e420630943",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:93f45e2ad4eee5f259fe9232e468d6317acb33459d04b8c9381ff4f8f5823eeb",
+    "source_record_hash_recomputed": "sha256:93f45e2ad4eee5f259fe9232e468d6317acb33459d04b8c9381ff4f8f5823eeb"
+  }
+}

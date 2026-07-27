@@ -1,0 +1,87 @@
+{
+  "artifact_hash": "sha256:7ecc24947b9bf39035495d29c031c9032c3e4bc666316664a0efc8d612da257a",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "li_lu_pku_speech_notes_2019",
+  "concise_summary": "Peking University notes summarize Li Lu's distinction between investment and speculation, ownership mindset, competence, and margin of safety.",
+  "contradictions_ambiguities": [
+    "The page explicitly says it contains notes from the speech, not a verbatim transcript, so wording and omissions are secondary."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Investors make money by participating in the long-term value creation of the companies they invest in.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Speculation and investing",
+        "text_end": 834,
+        "text_start": 732
+      },
+      "proposition_id": "li_lu_pku_speech_notes_2019:p1",
+      "snippet_hash": "sha256:a03905bcebbe4db08db339d6825d6a1365c9b2e2ee20f472e480eeccba0dcfb2",
+      "statement": "Define investing as participation in a company's long-term value creation rather than forecasting other market participants.",
+      "support_strength": "direct"
+    },
+    {
+      "evidence_excerpt": "Li bought cheap stocks with sufficient margins of safety (net-net stocks).",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Circle of competence and margin of safety",
+        "text_end": 1420,
+        "text_start": 1346
+      },
+      "proposition_id": "li_lu_pku_speech_notes_2019:p2",
+      "snippet_hash": "sha256:6efb028dd3c526b59861ad36ed2e42460f0a05df657fbb665deddc64b7de9cef",
+      "statement": "Build competence and require sufficient margin of safety before treating a stock as business ownership.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Is there a primary recording or transcript to verify each summarized proposition?"
+  ],
+  "persona_id": "master_li_lu",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The English notes page contains readable substantive text.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 33831,
+    "content_hash": "sha256:3dfe0c5406e3d76b69673b3377837816bad4feaeb8d7134c88be8d1413cdfa77",
+    "content_type": "text/html",
+    "extracted_character_count": 6167,
+    "extracted_text_hash": "sha256:83a5ff0353dd013c72fd4466d2d30f12f882c487c6e6e2f7faad6f5ab710725a",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://english.pku.edu.cn/PKUmedia/9386.html",
+    "page_character_counts": [
+      6167
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:2fa2cc980acd68f469c1a2a9fc733cf782ce7b4f148a25ef261988bc7b7e3ab5",
+    "retrieved_at": "2026-07-27T06:35:08.502Z"
+  },
+  "source_type": "secondary_speech_notes"
+}

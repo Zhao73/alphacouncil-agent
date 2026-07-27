@@ -1,0 +1,105 @@
+{
+  "abstention_policy": "fail_closed",
+  "dsl_version": "1.1",
+  "eligibility": {
+    "all": []
+  },
+  "fact_gate": {
+    "on_missing_critical": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_cycle_unknown"
+    }
+  },
+  "hard_vetoes": [],
+  "native_decision_schema": "cycle_risk_posture_v1",
+  "native_output_fields": [
+    {
+      "field": "metric_1",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "cycle.valuation_percentile"
+      }
+    },
+    {
+      "field": "metric_2",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "valuation.implied_expectations"
+      }
+    }
+  ],
+  "native_states": [
+    "provisional_cycle_unknown",
+    "provisional_defensive",
+    "provisional_balanced",
+    "provisional_aggressive"
+  ],
+  "schema_version": 1,
+  "score_bands": [
+    {
+      "decision": {
+        "common_stance": "opposed",
+        "native_state": "provisional_defensive"
+      },
+      "min_ratio": 0
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_balanced"
+      },
+      "min_ratio": 0.5
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_aggressive"
+      },
+      "min_ratio": 1
+    }
+  ],
+  "scoring": {
+    "max_score": 2,
+    "min_coverage": 1,
+    "on_insufficient_coverage": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_cycle_unknown"
+    },
+    "rules": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "cycle.valuation_percentile"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_1",
+        "source_ids": [
+          "proxy:08cfa8347347faed7"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "valuation.implied_expectations"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_2",
+        "source_ids": [
+          "proxy:08cfa8347347faed7"
+        ]
+      }
+    ]
+  }
+}

@@ -13,7 +13,7 @@ Request: **$ARGUMENTS**
 |---|---|
 | *(empty)* | Print the mode table below and stop. Do not start a run. |
 | a ticker alone, or a question | **Full council.** Go to "Full council" below. |
-| ticker + `quick` | The `quick` preset: 4 analysts and the debate. No bench, no verification. |
+| ticker + `quick` | The `quick` evidence preset: 4 analysts + the selected master methods + debate. No verification. |
 | ticker + `screen` | `screen_ticker` only. No language-model judgment, no subagents. |
 | ticker + `options` | `get_options_chain` only. |
 | ticker + `news` | `get_news` on the symbol, and on its CIK when it is a US filer. |
@@ -22,8 +22,8 @@ Request: **$ARGUMENTS**
 When `$ARGUMENTS` is empty, print exactly this and stop:
 
 ```
-/alpha <TICKER>          full council — asks which preset first
-/alpha <TICKER> quick    4 analysts + debate, no bench, no verification
+/alpha <TICKER>          full council — shows every master, then asks which to run
+/alpha <TICKER> quick    4 analysts + selected masters + debate, no verification
 /alpha <TICKER> screen   mechanical filings screen only        (no model spend)
 /alpha <TICKER> options  IV term structure, skew, positioning  (no model spend)
 /alpha <TICKER> news     dated filings and headlines           (no model spend)
@@ -41,13 +41,40 @@ Say plainly that the four marked modes call keyless data tools and spawn no suba
 they cost nothing beyond this turn. The council modes spawn one subagent per seat, and that
 is where the spend is.
 
+## Council selection gate — mandatory for full and quick
+
+This gate happens before any research tool, run envelope, network fetch or subagent. It is
+the same in Claude Code, Codex, OpenCode and Grok Build.
+
+1. Call `begin_council_selection` with the symbol, original request, language and host. If
+   the request explicitly names masters, also pass those stable IDs as
+   `preselected_master_ids`; this highlights them but does not confirm them.
+2. Show **every returned master individually, in the returned order and with its stable
+   number**. Each row must include `identity`, `method`, `best_for` and `maturity`; a school
+   name or a count is not a substitute for the individual catalog.
+3. Ask for one submission. Accept one number from `1..N`, any comma/space-separated
+   combination, ranges such as `1-4` or `1..4`, stable IDs/names, or `all`. A host-native
+   multi-select is a convenience only. If it is unavailable or cannot show the full catalog,
+   use the numbered text table and plain reply on every host.
+4. If the original request already named masters or said `all`, prefill that choice but
+   **still show the full catalog and require this run's submission**. Do not silently reuse a
+   prior choice. The submitted choice is the confirmation; do not ask a second confirmation.
+5. Call `confirm_master_selection` with the returned `selection_id`, `catalog_hash`,
+   `display_ack: true`, and exactly one of `selected_master_ids`, `select_all: true`, or
+   `selection`. Retain the returned one-use `selection_receipt`.
+6. Only now call `plan_visible_run`, `collect_evidence` or `analyze_symbol`, passing that
+   `selection_receipt`. Do not also pass `masters` or `masters_roster`; the receipt is the
+   authoritative selection. If the receipt is missing, expired, stale or consumed, restart
+   from `begin_council_selection`.
+
+`screen`, `options`, `news` and `market` are data-only modes and skip this gate. `quick` is
+still a council judgment, so it never skips the gate; it changes the analyst fan-out, not the
+master-selection contract.
+
 ## Full council
 
-1. **Ask which masters, once, then run.** Call `list_council_options` and ask only about the
-   master bench — the six schools by name with their members, plus "all" and "none". Analysts
-   default to the eight-seat fan-out; do not ask about them. After the answer, start
-   immediately: no preset question, no confirmation. **Skip the question entirely** when the
-   request already said (a named school, "everything", "no masters", "be quick").
+1. Complete the mandatory council selection gate above. Analysts default to the eight-seat
+   fan-out; do not ask about them.
 2. Follow `skills/alphacouncil-agent/SKILL.md` from Stage 0. Do not improvise a shorter
    workflow: a report that looks finished and skipped the bench is worse than an obviously
    partial one.
@@ -61,9 +88,10 @@ is where the spend is.
 
 ## Quick mode owes the reader one sentence
 
-State in the output that no master lenses ran and nothing was cross-verified, so the
-confidence is lower than a standard run. Without it, a four-seat run reads like a full
-council result.
+Complete the same mandatory council selection gate, then use four analysts, the selected
+masters and the debate without verifier fan-out. State that evidence coverage and
+cross-verification are thinner than a standard run; list the selected masters so the quick
+result cannot be mistaken for the full bench.
 
 ## Screen mode
 

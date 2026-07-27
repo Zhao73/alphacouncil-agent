@@ -1,0 +1,117 @@
+{
+  "artifact_hash": "sha256:16f9718896dffcfaeb8418a248104433f6863a7d26482c199051ec70f6a565e9",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "sec_gme_short_market_structure_2021",
+  "concise_summary": "The SEC staff report reconstructs GameStop equity/options market structure and cautions against monocausal short-squeeze explanations.",
+  "contradictions_ambiguities": [
+    "The report is staff analysis, explicitly not a Commission rule or statement; some participant motivations remain unknowable."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "While a short squeeze did not appear to be the main driver of events",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 31,
+        "section": "Conclusion",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "sec_gme_short_market_structure_2021:p1",
+      "snippet_hash": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29",
+      "statement": "Test squeeze narratives against participant-level covering volume and persistent price behavior instead of inferring causation from high short interest alone.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which data fields are necessary to distinguish short covering, options hedging, and unaffiliated directional demand?"
+  ],
+  "persona_id": "master_forensic_short",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The official staff-report PDF is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1231103,
+    "content_hash": "sha256:58405d94685361c221ec7898866689116e0d31e7dceb26ed356a61a523178322",
+    "content_type": "application/pdf",
+    "extracted_character_count": 108301,
+    "extracted_text_hash": "sha256:59edc562c2c20c6a07327573514681a44fcd4d29018332b95c10941e97c46100",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.sec.gov/files/staff-report-equity-options-market-struction-conditions-early-2021.pdf",
+    "page_character_counts": [
+      732,
+      2146,
+      3158,
+      2105,
+      3306,
+      3067,
+      3195,
+      3408,
+      3044,
+      3327,
+      2421,
+      2985,
+      3518,
+      3113,
+      3012,
+      2954,
+      3481,
+      2206,
+      1818,
+      595,
+      1229,
+      1529,
+      2752,
+      3120,
+      3283,
+      3432,
+      1432,
+      1799,
+      1287,
+      3505,
+      3587,
+      3044,
+      2350,
+      3223,
+      3400,
+      2556,
+      145,
+      2508,
+      1606,
+      2203,
+      802,
+      22,
+      1705,
+      2543,
+      1648
+    ],
+    "page_count": 45,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:0d4131236b5c5729bdecfd1a5490282c34683df4e96326a718014e0b065ce644",
+    "retrieved_at": "2026-07-27T06:36:59.269Z"
+  },
+  "source_type": "official_staff_report"
+}

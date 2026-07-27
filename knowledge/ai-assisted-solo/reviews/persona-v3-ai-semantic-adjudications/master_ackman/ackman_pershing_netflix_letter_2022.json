@@ -1,0 +1,160 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:23099ba0281589d003b0a787eefa8f2fc6066a7c41fb15fa4cf4e9f08c37e6f8",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "ackman_pershing_netflix_letter_2022",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:2e7e21c545734e2e58a6a2143f3615c392cc180d64667ec26b6068cb738b81e5",
+    "declared_artifact_hash": "sha256:f0236690c0122716e8cbeb469b268fe3c0a782219592f76234027bd8b2f6b74b",
+    "recomputed_artifact_hash": "sha256:f0236690c0122716e8cbeb469b268fe3c0a782219592f76234027bd8b2f6b74b",
+    "relative_path": "master_ackman/ackman_pershing_netflix_letter_2022.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_ackman",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Netflix purchase rationale",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 727,
+          "text_start": 544
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Netflix purchase rationale",
+          "text_end": 727,
+          "text_start": 544
+        },
+        "extractor_snippet_hash": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17",
+        "normalized_excerpt": "The opportunity to acquire Netflix at an attractive valuation emerged when investors reacted negatively to the recent quarter’s subscriber growth and management’s short-term guidance.",
+        "skeptic_snippet_hash_claimed": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17",
+        "skeptic_snippet_hash_recomputed": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The excerpt establishes an attractive-valuation opportunity after adverse short-term guidance, but it does not state the proposed only-when rule or the durable-economics condition.",
+      "final_verdict": "partial",
+      "proposition_id": "ackman_pershing_netflix_letter_2022:p1",
+      "review_hash": "sha256:21da3c8ed699185081204556c62be99b07e1a977ddb6d39adaee074908fac649",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "The statement turns a described purchase into a general entry rule.",
+          "The excerpt does not itself say that durable economics remained intact."
+        ],
+        "support_rationale": "The excerpt supports an attractive-valuation opportunity following a negative reaction to subscriber growth and guidance, but the strict only-when condition and durable-economics test come from surrounding rationale rather than the bound snippet.",
+        "support_verdict": "partial"
+      },
+      "statement": "Treat a sharp reaction to short-term operating guidance as an entry candidate only when valuation becomes attractive and durable business economics remain intact.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:949b847d543b9d710c9873a9bdaae6a345cef00cd90bb9b393d34303ad2ae265",
+    "declared_artifact_hash": "sha256:08f5ec4efa82bfa4054ebbeb1c51e3c9c24df82693a4bc596ca7167e90c95098",
+    "recomputed_artifact_hash": "sha256:08f5ec4efa82bfa4054ebbeb1c51e3c9c24df82693a4bc596ca7167e90c95098",
+    "relative_path": "master_ackman/ackman_pershing_netflix_letter_2022.json"
+  },
+  "source_binding": {
+    "byte_length": 95209,
+    "content_hash": "sha256:aa625f083463a1a98f529aaf6342e7dc1f2f2af2942536e34c9568d784dec854",
+    "extracted_character_count_recomputed": 15169,
+    "extracted_text_hash_recomputed": "sha256:eef88f488f82bc9a0030d6722ec4cf1079d33cebbc9e8b1671bf928af399b370",
+    "page_character_counts_recomputed": [
+      15169
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:aa625f083463a1a98f529aaf6342e7dc1f2f2af2942536e34c9568d784dec854",
+    "source_record_hash": "sha256:63cd060bbf7cf11bc9288d72a27c5794cf7c515d32b7399bc352f591e079d11f"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt."
+    ]
+  }
+}

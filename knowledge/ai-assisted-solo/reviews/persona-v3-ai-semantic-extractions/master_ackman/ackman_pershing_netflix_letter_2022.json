@@ -1,0 +1,73 @@
+{
+  "artifact_hash": "sha256:f0236690c0122716e8cbeb469b268fe3c0a782219592f76234027bd8b2f6b74b",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "ackman_pershing_netflix_letter_2022",
+  "concise_summary": "Pershing Square's January 2022 Netflix purchase letter explains the entry catalyst and the business qualities used to justify it.",
+  "contradictions_ambiguities": [
+    "This is a contemporaneous position rationale, not a general rulebook; Pershing later exited Netflix, so outcome evidence must be reviewed separately."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "The opportunity to acquire Netflix at an attractive valuation emerged when investors reacted negatively to the recent quarter’s subscriber growth and management’s short-term guidance.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Netflix purchase rationale",
+        "text_end": 727,
+        "text_start": 544
+      },
+      "proposition_id": "ackman_pershing_netflix_letter_2022:p1",
+      "snippet_hash": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17",
+      "statement": "Treat a sharp reaction to short-term operating guidance as an entry candidate only when valuation becomes attractive and durable business economics remain intact.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which later exit letter records the invalidation condition and realized error?"
+  ],
+  "persona_id": "master_ackman",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The archived HTML contains the full investor letter.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 95209,
+    "content_hash": "sha256:aa625f083463a1a98f529aaf6342e7dc1f2f2af2942536e34c9568d784dec854",
+    "content_type": "text/html; charset=UTF-8",
+    "extracted_character_count": 15169,
+    "extracted_text_hash": "sha256:eef88f488f82bc9a0030d6722ec4cf1079d33cebbc9e8b1671bf928af399b370",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://pershingsquareholdings.com/https-pershingsquareholdings-com-p10305/",
+    "page_character_counts": [
+      15169
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:63cd060bbf7cf11bc9288d72a27c5794cf7c515d32b7399bc352f591e079d11f",
+    "retrieved_at": "2026-07-27T06:22:37.037Z"
+  },
+  "source_type": "investor_letter"
+}

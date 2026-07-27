@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/council-experiment-result-manifest-v1.schema.json",
+  "title": "AlphaCouncil canonical experiment result manifest",
+  "type": "object",
+  "required": ["schema_version", "artifact_kind", "manifest_id", "protocol_hash", "case_freeze_hash", "frozen_inputs_hash", "created_at", "run_order", "runs", "human_adjudication", "result_status", "passed_claims", "promotion_effect", "artifact_hash", "attestations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "alphacouncil_experiment_result_manifest" },
+    "manifest_id": { "type": "string", "minLength": 1 },
+    "protocol_hash": { "$ref": "#/$defs/hash" },
+    "case_freeze_hash": { "$ref": "#/$defs/hash" },
+    "frozen_inputs_hash": { "$ref": "#/$defs/hash" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "run_order": { "const": ["A", "B", "C", "D13", "D26", "E:D13", "E:D26", "H"] },
+    "runs": { "type": "array", "minItems": 8, "maxItems": 8, "items": { "$ref": "#/$defs/run" } },
+    "human_adjudication": {
+      "type": "object",
+      "required": ["arm_identity_blinded", "separate_named_human_required", "automated_adjudicator_forbidden", "adjudication_artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "arm_identity_blinded": { "const": true },
+        "separate_named_human_required": { "const": true },
+        "automated_adjudicator_forbidden": { "const": true },
+        "adjudication_artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "result_status": { "enum": ["incomplete", "ready_for_external_signature"] },
+    "passed_claims": { "type": "array", "maxItems": 0 },
+    "promotion_effect": { "const": "none" },
+    "artifact_hash": { "$ref": "#/$defs/hash" },
+    "attestations": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "run": {
+      "type": "object",
+      "required": ["run_key", "arm_id", "arm_variant", "artifact_path", "artifact_file_hash", "artifact_hash", "case_freeze_hash", "frozen_inputs_hash", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "run_key": { "enum": ["A", "B", "C", "D13", "D26", "E:D13", "E:D26", "H"] },
+        "arm_id": { "enum": ["A", "B", "C", "D13", "D26", "E", "H"] },
+        "arm_variant": { "enum": [null, "D13", "D26"] },
+        "artifact_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "artifact_file_hash": { "$ref": "#/$defs/hash" },
+        "artifact_hash": { "$ref": "#/$defs/hash" },
+        "case_freeze_hash": { "$ref": "#/$defs/hash" },
+        "frozen_inputs_hash": { "$ref": "#/$defs/hash" },
+        "status": { "enum": ["completed", "failed", "not_run"] }
+      }
+    }
+  }
+}

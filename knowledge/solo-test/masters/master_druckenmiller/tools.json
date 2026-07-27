@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:8bf90c3d3ea82c533da8255783967157d13f76178cf1cd45f179174b2cac6bda",
+    "derivation_spec_hash": "sha256:6e657cf2e0d3b6e16760345abdfdc92c19b019a1208c7a262811b720f3e5621d",
+    "derivation_spec_id": "master_druckenmiller.liquidity_revision_map.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_druckenmiller.liquidity_revision_map",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:de8fef8804db7af7b8794a13f22674e5f5c1b2e1b151bea1f98ebf83b99be66d",
+    "inputs": [
+      {
+        "fact_id": "macro.liquidity_impulse"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "macro.liquidity_impulse",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:a1824b5155371ea3d1cf56dac74b5311ed0c6c47cae05015d9dbb37b9be2a73d",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:807c7db58258313d3"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:8a1bccb57d5726bd0009c2f08492454a8bd1983f74a0371edc0f9d69f4aa0553",
+    "derivation_spec_hash": "sha256:4eeeea5baf92a4cc7968978257fcff4fbd81ea42062e390aaf6859c547223166",
+    "derivation_spec_id": "master_druckenmiller.inflection_payoff.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_druckenmiller.inflection_payoff",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:1b423c91614202973ba8aca591b6a611b94805176660c04d91d70990e9b3fbe3",
+    "inputs": [
+      {
+        "fact_id": "macro.liquidity_impulse"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "macro.forward_inflection",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:6975c731d20556a475bfeceaaa4d99050b3513ade1196d67f7c981ba4c544e0d",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:807c7db58258313d3"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

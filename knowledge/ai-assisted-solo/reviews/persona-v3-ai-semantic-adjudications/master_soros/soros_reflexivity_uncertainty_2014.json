@@ -1,0 +1,153 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:6067bb51b35742243c7688526a44db1adecb72102df835fe5be7d5965295c9fa",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "soros_reflexivity_uncertainty_2014",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:01275b662d2a3d543389a380790a7773a044a8e3299f10eccabfb64b485c8844",
+    "declared_artifact_hash": "sha256:04de769b19d60363d2821f467ea79fcd16955b85a1fffc059e5828d0d6ef4c1b",
+    "recomputed_artifact_hash": "sha256:04de769b19d60363d2821f467ea79fcd16955b85a1fffc059e5828d0d6ef4c1b",
+    "relative_path": "master_soros/soros_reflexivity_uncertainty_2014.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_soros",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Reflexive feedback loops",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 13970,
+          "text_start": 13855
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Reflexive feedback loops",
+          "text_end": 13970,
+          "text_start": 13855
+        },
+        "extractor_snippet_hash": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec",
+        "normalized_excerpt": "Reflexive feedback loops between the cognitive and manipulative functions connect the realms of beliefs and events.",
+        "skeptic_snippet_hash_claimed": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec",
+        "skeptic_snippet_hash_recomputed": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The essay explicitly describes a circular two-way connection between beliefs and events.",
+      "final_verdict": "supported",
+      "proposition_id": "soros_reflexivity_uncertainty_2014:p1",
+      "review_hash": "sha256:df159bb28a865e3d16d7c5944b51f32870765ae916d02363903982d27aea0d69",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The essay explicitly describes continuous circular influence between participant views and events in both directions.",
+        "support_verdict": "supported"
+      },
+      "statement": "Analyze beliefs and fundamentals as a two-way feedback process rather than assuming participant views only passively reflect events.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:d21ade93bff415bb294ea34f3027342f072e99b6dc2ce96b0f91cbac4e67571f",
+    "declared_artifact_hash": "sha256:89b911ac98e5547f6d58b673dbd1ba740d144b77be30f296c4c8696efe8210f2",
+    "recomputed_artifact_hash": "sha256:89b911ac98e5547f6d58b673dbd1ba740d144b77be30f296c4c8696efe8210f2",
+    "relative_path": "master_soros/soros_reflexivity_uncertainty_2014.json"
+  },
+  "source_binding": {
+    "byte_length": 111016,
+    "content_hash": "sha256:b741086183ff818ebd3a2c889b4d3ef8b977ce744e219033ebc7ca62576514cc",
+    "extracted_character_count_recomputed": 73039,
+    "extracted_text_hash_recomputed": "sha256:2d47e82e6e81bf936a48aa863a244756db430e3163fe9a157adc492a4ed86a69",
+    "page_character_counts_recomputed": [
+      73039
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:b741086183ff818ebd3a2c889b4d3ef8b977ce744e219033ebc7ca62576514cc",
+    "source_record_hash": "sha256:2250b98e026098f05c4620f63deb201d340b3a0e616a2c537b09c62584a6adfb"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

@@ -1,0 +1,215 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict.",
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:30b2df5b932622a13b0e74841d904dcfefc56de9feeb52965a80c6a7def78d03",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "sinclair_cboe_risk_reversal_2026",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:33eb60d68070d0bf1dfb4c5ed53171d7d23eeb2339fabbe7a6fb50923cce985e",
+    "declared_artifact_hash": "sha256:b6fb5d93154835febc5a8aec5bc16929dccf8825f708ef71e8c4b023aaace6f5",
+    "recomputed_artifact_hash": "sha256:b6fb5d93154835febc5a8aec5bc16929dccf8825f708ef71e8c4b023aaace6f5",
+    "relative_path": "master_sinclair/sinclair_cboe_risk_reversal_2026.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_sinclair",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Risk-reversal rationale",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 4900,
+          "text_start": 4816
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Risk-reversal rationale",
+          "text_end": 4900,
+          "text_start": 4816
+        },
+        "extractor_snippet_hash": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222",
+        "normalized_excerpt": "The risk-reversal takes advantage of the relative mispricing between puts and calls.",
+        "skeptic_snippet_hash_claimed": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222",
+        "skeptic_snippet_hash_recomputed": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The located passage links put-call relative mispricing, a volatility view, sensible valuation, and positive expected value.",
+      "final_verdict": "supported",
+      "proposition_id": "sinclair_cboe_risk_reversal_2026:p1",
+      "review_hash": "sha256:af0d0c95b4c8e6eabdc575ae9eefc3e2badd74ffb10c7342e19e5dcc8823b0ee",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The passage and immediate continuation explicitly link put/call relative mispricing, a volatility view, sensible valuation, and positive expected value.",
+        "support_verdict": "supported"
+      },
+      "statement": "Use a risk reversal only when rich puts versus cheap calls and a defensible volatility view produce positive expected value.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    },
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Dynamic exposure rule",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 8544,
+          "text_start": 8494
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Dynamic exposure rule",
+          "text_end": 8544,
+          "text_start": 8494
+        },
+        "extractor_snippet_hash": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9",
+        "normalized_excerpt": "When the skew flattens or reverses, we scale back.",
+        "skeptic_snippet_hash_claimed": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9",
+        "skeptic_snippet_hash_recomputed": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The exact sentence directly requires scaling back when skew flattens or reverses.",
+      "final_verdict": "supported",
+      "proposition_id": "sinclair_cboe_risk_reversal_2026:p2",
+      "review_hash": "sha256:773f57c2fdfca9146610e6deb6b677db4a1d2a743dd040b3744d75d54174b76e",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The article states directly that exposure is scaled back when skew flattens or reverses.",
+        "support_verdict": "supported"
+      },
+      "statement": "Reduce the position when the downside skew no longer supplies the relative-value edge.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:98fc2a2e26c96af997d7167a8f8ea27a0c9986085e3d4f8c4852a107af949f10",
+    "declared_artifact_hash": "sha256:c44234365ce504537d6ea10e249a85195417e51889a5cb58658c82d732cca77e",
+    "recomputed_artifact_hash": "sha256:c44234365ce504537d6ea10e249a85195417e51889a5cb58658c82d732cca77e",
+    "relative_path": "master_sinclair/sinclair_cboe_risk_reversal_2026.json"
+  },
+  "source_binding": {
+    "byte_length": 394729,
+    "content_hash": "sha256:396bea49e3e2c2c1a8ad627fb7df75c798dd58a8d1f6e9c5a005560e4d4366ca",
+    "extracted_character_count_recomputed": 13570,
+    "extracted_text_hash_recomputed": "sha256:03af275409e9cf109019e736bc16c6fab0461a9908fa9dbc19105a91df846bc8",
+    "page_character_counts_recomputed": [
+      13570
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:396bea49e3e2c2c1a8ad627fb7df75c798dd58a8d1f6e9c5a005560e4d4366ca",
+    "source_record_hash": "sha256:e396399b04e6b2b5a861aa948e43a3b1412db6434be8bd67cdd59f62fe050ba2"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

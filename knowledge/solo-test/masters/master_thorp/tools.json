@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:2ba3ac5b35cc5602ce88a5ba7571d134cec1d2e9390b0dab4f2a80b6bb9649b0",
+    "derivation_spec_hash": "sha256:a495305aa77816f76fc7d6abe38f8b8ff3a79c6d17b67b84a8ef7e2383adfeca",
+    "derivation_spec_id": "master_thorp.edge_recalculator.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_thorp.edge_recalculator",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:33a9b40891c92384b5fabbb989a7e57de4a36bbc7d8df2e0f831e95da59eeec1",
+    "inputs": [
+      {
+        "fact_id": "probability.outcome_distribution"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "trade.edge",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:99afc640bca08b0e348e6c86a1f4627aa2befc5decfaadc97ae5e864148eea04",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:1366952123de20fc8"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:e480491cd694394c9708f3c551753d0d74282f724fdb03a57b1845f28ed63a80",
+    "derivation_spec_hash": "sha256:f8f0d4ff36cadb45ee57fd18d6b83145601ee86e19c1d10fd23a905283aaadbf",
+    "derivation_spec_id": "master_thorp.fractional_kelly.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_thorp.fractional_kelly",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:ef43f103a768a23cdb087be838c5c82e4b28415acab9d9584c26b44ba61b0c7d",
+    "inputs": [
+      {
+        "fact_id": "risk.ruin_probability"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "position.fraction",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:5bd012b824912381c03959281fd6ebb57adb27390b0cb4fa609a610f87710447",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:1366952123de20fc8"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

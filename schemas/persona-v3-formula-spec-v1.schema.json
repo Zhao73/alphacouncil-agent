@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alphacouncil.local/schemas/persona-v3-formula-spec-v1.schema.json",
+  "title": "PersonaPack v3 formula authoring specification v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "artifact_status",
+    "formula_spec_id",
+    "persona_id",
+    "prototype_id",
+    "tool_id",
+    "dsl_target",
+    "production_effect",
+    "prototype_provenance",
+    "authorship_request",
+    "formula",
+    "provenance",
+    "review"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_formula_spec" },
+    "artifact_status": {
+      "enum": ["needs_formula_authorship", "executable_candidate"]
+    },
+    "formula_spec_id": { "$ref": "#/$defs/id" },
+    "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "prototype_id": { "$ref": "#/$defs/id" },
+    "tool_id": { "$ref": "#/$defs/id" },
+    "dsl_target": { "const": "1.1" },
+    "production_effect": { "const": "none" },
+    "prototype_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_path", "source_content_hash"],
+      "properties": {
+        "source_path": {
+          "type": "string",
+          "pattern": "^knowledge/staging/personas-v3/master_[a-z0-9_]+/artifacts/tools\\.json$"
+        },
+        "source_content_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "authorship_request": { "$ref": "#/$defs/authorshipRequest" },
+    "formula": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/formula" }
+      ]
+    },
+    "provenance": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/provenance" }
+      ]
+    },
+    "review": { "$ref": "#/$defs/review" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "artifact_status": { "const": "needs_formula_authorship" } },
+        "required": ["artifact_status"]
+      },
+      "then": {
+        "properties": {
+          "formula": { "type": "null" },
+          "provenance": { "type": "null" },
+          "review": {
+            "properties": {
+              "status": { "const": "pending_human_adjudication" },
+              "reviewer_ids": { "maxItems": 0 },
+              "reviewed_at": { "type": "null" },
+              "approval_reference": { "type": "null" },
+              "review_subject_hash": { "type": "null" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "artifact_status": { "const": "executable_candidate" } },
+        "required": ["artifact_status"]
+      },
+      "then": {
+        "properties": {
+          "formula": { "$ref": "#/$defs/formula" },
+          "provenance": { "$ref": "#/$defs/provenance" },
+          "review": {
+            "properties": {
+              "status": { "const": "approved" },
+              "reviewer_ids": { "minItems": 2 },
+              "reviewed_at": { "type": "string", "format": "date-time" },
+              "approval_reference": { "type": "string", "minLength": 1 },
+              "review_subject_hash": { "$ref": "#/$defs/hash" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.:-]{1,159}$"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "period": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basis", "window", "alignment"],
+      "properties": {
+        "basis": {
+          "enum": ["instant", "duration", "forecast_horizon", "not_applicable"]
+        },
+        "window": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^P[1-9][0-9]*[DMY]$" }
+          ]
+        },
+        "alignment": {
+          "enum": ["exact", "same_period", "as_of", "not_applicable"]
+        }
+      }
+    },
+    "operand": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "oneOf": [
+        {
+          "required": ["fact_id"],
+          "properties": { "fact_id": { "$ref": "#/$defs/id" } },
+          "additionalProperties": false
+        },
+        {
+          "required": ["output_id"],
+          "properties": { "output_id": { "$ref": "#/$defs/id" } },
+          "additionalProperties": false
+        },
+        {
+          "required": ["literal"],
+          "properties": {
+            "literal": { "type": "number" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "inputContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operand", "value_kind", "unit", "period", "on_missing"],
+      "properties": {
+        "operand": { "$ref": "#/$defs/operand" },
+        "value_kind": { "enum": ["monetary", "ratio", "count", "scalar"] },
+        "unit": { "$ref": "#/$defs/nonEmptyString" },
+        "period": { "$ref": "#/$defs/period" },
+        "on_missing": { "enum": ["fail", "skip"] }
+      }
+    },
+    "outputContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output_id", "value_kind", "unit", "period"],
+      "properties": {
+        "output_id": { "$ref": "#/$defs/id" },
+        "value_kind": { "enum": ["monetary", "ratio", "count", "scalar"] },
+        "unit": { "$ref": "#/$defs/nonEmptyString" },
+        "period": { "$ref": "#/$defs/period" }
+      }
+    },
+    "formula": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "operation", "on_missing", "inputs", "output"],
+      "properties": {
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "kind": { "enum": ["recomputation", "calculator", "transform"] },
+        "operation": {
+          "enum": [
+            "identity",
+            "add",
+            "subtract",
+            "multiply",
+            "divide",
+            "sum",
+            "mean",
+            "min",
+            "max",
+            "abs",
+            "negate",
+            "clamp"
+          ]
+        },
+        "on_missing": { "enum": ["fail", "skip"] },
+        "inputs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/inputContract" }
+        },
+        "output": { "$ref": "#/$defs/outputContract" }
+      }
+    },
+    "authorshipRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_family",
+        "purpose",
+        "candidate_input_fact_types",
+        "candidate_output_fact_types",
+        "computation_steps",
+        "unresolved_contracts",
+        "blocking_reasons"
+      ],
+      "properties": {
+        "operation_family": { "$ref": "#/$defs/nonEmptyString" },
+        "purpose": { "$ref": "#/$defs/nonEmptyString" },
+        "candidate_input_fact_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "candidate_output_fact_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        },
+        "computation_steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "unresolved_contracts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["formula", "operation", "input", "output", "unit", "period", "on_missing", "provenance", "review"]
+          }
+        },
+        "blocking_reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basis_type", "source_ids", "formula_citation", "author_id", "authored_at", "source_as_of"],
+      "properties": {
+        "basis_type": {
+          "enum": ["primary_source_formula", "standard_definition", "reviewed_internal_derivation"]
+        },
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "formula_citation": { "$ref": "#/$defs/nonEmptyString" },
+        "author_id": { "$ref": "#/$defs/nonEmptyString" },
+        "authored_at": { "type": "string", "format": "date-time" },
+        "source_as_of": { "type": "string", "format": "date" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer_ids", "reviewed_at", "approval_reference", "review_subject_hash"],
+      "properties": {
+        "status": { "enum": ["pending_human_adjudication", "approved", "rejected"] },
+        "reviewer_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonEmptyString" }
+        },
+        "reviewed_at": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "format": "date-time" }
+          ]
+        },
+        "approval_reference": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/nonEmptyString" }
+          ]
+        },
+        "review_subject_hash": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/hash" }
+          ]
+        }
+      }
+    }
+  }
+}

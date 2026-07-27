@@ -1,0 +1,131 @@
+{
+  "artifact_hash": "sha256:c8dbd13892941832c790d4d9bf10d7d17e54e83f1b17690fc44e9744c4814ee9",
+  "artifact_kind": "persona_v3_ai_source_prereview",
+  "assurance_class": "machine_pre_review_only",
+  "candidate_id": "burry_fcic_interview_archive",
+  "disagreement": {
+    "explanation": "The roles have different scopes but agree that no source approval or method attribution is established.",
+    "present": false,
+    "role_verdicts": [
+      "archive_integrity_verified_semantics_unreviewed",
+      "production_approval_unsupported",
+      "requires_human_review"
+    ]
+  },
+  "human_claims": false,
+  "human_reviewed": false,
+  "machine_limitations": [
+    "This artifact is deterministic machine triage, not an independent human review.",
+    "It does not contain a verified semantic extraction or exact source locator.",
+    "It is unsigned, cannot enter a trusted reviewer registry, and cannot satisfy source-review quorum."
+  ],
+  "method_attribution_approved": false,
+  "open_questions": [
+    "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+    "Who is the verified author or speaker for that exact passage?",
+    "What published_at and public_at values are supported by the archived material?"
+  ],
+  "persona_id": "master_burry",
+  "pipeline_id": "alphacouncil_ai_source_prereview_v1",
+  "production_effect": "none",
+  "reviewer_kind": "ai",
+  "roles": [
+    {
+      "concerns": [
+        "Archive integrity alone does not establish method-defining evidence."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:7b27e4e5b325af81d6595dc41eedb6fd68a983e74f87ff38efa11380a83582cc",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The archived byte stream matches the acquisition record's content hash and byte length.",
+        "The declared content type is text/html; the deterministic format probe is html_markup.",
+        "This bootstrap pass did not extract or verify a semantic proposition, authorship claim, date, grade, or exact locator."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:73f74e1593f72493a087357a95f72d31406b8a664c3da28eb1a51c6b5a546cfe",
+      "prompt_hash": "sha256:3c5ed3beaa183923297e451df14c0f1fc2274478cad9d5a0b7309b2750da1e52",
+      "prompt_id": "alphacouncil.source-prereview.extractor.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "extractor",
+      "role_id": "ai_source_extractor_v1",
+      "verdict": "archive_integrity_verified_semantics_unreviewed"
+    },
+    {
+      "concerns": [
+        "No exact passage has been bound to a method proposition.",
+        "Authorship, publication timing, source grade, and scope remain unresolved in this pre-review."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:ccc63033b2cd3362602a015030721168721c7e52835079e3e95e65bedf3e9835",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The acquisition remains retrieved_unadjudicated.",
+        "The acquisition's human_review.status remains not_requested.",
+        "The machine input contains no verified exact locator or proposition-to-passage binding."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:d2e85634e57e8f539f35d0c19aae8671efcfb5328a7f6e8b747b65607bfb2b91",
+      "prompt_hash": "sha256:d4564717eafa5f0448e3832a56c70da95358a164fe2fec01354887e071b75738",
+      "prompt_id": "alphacouncil.source-prereview.skeptic.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "skeptic",
+      "role_id": "ai_source_skeptic_v1",
+      "verdict": "production_approval_unsupported"
+    },
+    {
+      "concerns": [
+        "Promoting this artifact would confuse machine triage with trusted human source adjudication."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:7253be79d67b50c4a1fa17faf4b1fe5b9a8891fc156cf6b43ab77474f230dde4",
+      "input_role_output_hashes": [
+        "sha256:73f74e1593f72493a087357a95f72d31406b8a664c3da28eb1a51c6b5a546cfe",
+        "sha256:d2e85634e57e8f539f35d0c19aae8671efcfb5328a7f6e8b747b65607bfb2b91"
+      ],
+      "observations": [
+        "The extractor established archive integrity but explicitly performed no semantic review.",
+        "The skeptic found no verified proposition-to-locator binding for production use.",
+        "The two independent first-pass roles agree that machine pre-review cannot approve this source."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:b0c005fc9901fb0cfe9853c8b7de80b5720f1b5292d376b84d796374e15439c2",
+      "prompt_hash": "sha256:18d54becf6953007bfbab91bbb5955bcf9ffc0989a0948d0d27ab751fa0a82a6",
+      "prompt_id": "alphacouncil.source-prereview.adjudicator.v1",
+      "reads_other_role_outputs": true,
+      "reviewer_kind": "ai",
+      "role": "adjudicator",
+      "role_id": "ai_source_adjudicator_v1",
+      "verdict": "requires_human_review"
+    }
+  ],
+  "schema_version": 1,
+  "semantic_review_performed": false,
+  "source_binding": {
+    "archive_relative_path": "personas-v3/master_burry/acquisitions/candidates/burry_fcic_interview_archive/source.bin",
+    "byte_length": 6245,
+    "content_hash": "sha256:8176a20a17671c39b4252b212d19e69440fc05d4f9ada0a575077020db9583c6",
+    "content_type": "text/html",
+    "final_url": "https://fcic.law.stanford.edu/interviews/view/14",
+    "format_probe": "html_markup",
+    "record_hash": "sha256:311b5a67f2f48ed19c4d24ffba9d3618243909d1c2e522f6304a039dd7bf8ee8",
+    "record_relative_path": "personas-v3/master_burry/acquisitions/candidates/burry_fcic_interview_archive/record.json",
+    "retrieved_at": "2026-07-27T06:23:31.273Z",
+    "source_bytes_reverified": true
+  },
+  "verdict": "requires_human_review"
+}

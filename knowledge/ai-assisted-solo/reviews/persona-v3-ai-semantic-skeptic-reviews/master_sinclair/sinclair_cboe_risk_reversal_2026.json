@@ -1,0 +1,175 @@
+{
+  "artifact_hash": "sha256:c44234365ce504537d6ea10e249a85195417e51889a5cb58658c82d732cca77e",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "sinclair_cboe_risk_reversal_2026",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:33eb60d68070d0bf1dfb4c5ed53171d7d23eeb2339fabbe7a6fb50923cce985e",
+    "declared_artifact_hash": "sha256:b6fb5d93154835febc5a8aec5bc16929dccf8825f708ef71e8c4b023aaace6f5",
+    "proposition_count": 2,
+    "recomputed_artifact_hash": "sha256:b6fb5d93154835febc5a8aec5bc16929dccf8825f708ef71e8c4b023aaace6f5",
+    "relative_path": "master_sinclair/sinclair_cboe_risk_reversal_2026.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_sinclair",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 4900,
+        "actual_text_start": 4816,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "The risk-reversal takes advantage of the relative mispricing between puts and calls.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Risk-reversal rationale",
+        "text_end": 4900,
+        "text_start": 4816
+      },
+      "proposed_statement": "Use a risk reversal only when rich puts versus cheap calls and a defensible volatility view produce positive expected value.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "sinclair_cboe_risk_reversal_2026:p1",
+      "review_hash": "sha256:388f35a89aa4133eb57b8945e2af48224aa1db87b7c63af8d9b87521d69972a6",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222",
+      "snippet_hash_recomputed": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222",
+      "support_rationale": "The passage and immediate continuation explicitly link put/call relative mispricing, a volatility view, sensible valuation, and positive expected value.",
+      "support_verdict": "supported"
+    },
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 8544,
+        "actual_text_start": 8494,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "When the skew flattens or reverses, we scale back.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Dynamic exposure rule",
+        "text_end": 8544,
+        "text_start": 8494
+      },
+      "proposed_statement": "Reduce the position when the downside skew no longer supplies the relative-value edge.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "sinclair_cboe_risk_reversal_2026:p2",
+      "review_hash": "sha256:1ad2ba777df5a62f899371106c875d828e50dbcc9465392d38a1782dc755fe57",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9",
+      "snippet_hash_recomputed": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9",
+      "support_rationale": "The article states directly that exposure is scaled back when skew flattens or reverses.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 394729,
+    "content_hash": "sha256:396bea49e3e2c2c1a8ad627fb7df75c798dd58a8d1f6e9c5a005560e4d4366ca",
+    "extracted_text_hash": "sha256:03af275409e9cf109019e736bc16c6fab0461a9908fa9dbc19105a91df846bc8",
+    "extracted_text_hash_recomputed": "sha256:03af275409e9cf109019e736bc16c6fab0461a9908fa9dbc19105a91df846bc8",
+    "raw_bytes_hash_recomputed": "sha256:396bea49e3e2c2c1a8ad627fb7df75c798dd58a8d1f6e9c5a005560e4d4366ca",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:e396399b04e6b2b5a861aa948e43a3b1412db6434be8bd67cdd59f62fe050ba2",
+    "source_record_hash_recomputed": "sha256:e396399b04e6b2b5a861aa948e43a3b1412db6434be8bd67cdd59f62fe050ba2"
+  }
+}

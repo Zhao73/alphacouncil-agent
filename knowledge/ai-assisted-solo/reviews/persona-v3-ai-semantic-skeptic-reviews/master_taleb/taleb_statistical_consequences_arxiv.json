@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:80d63a7d19d00bc6edf4bb0f435c48babbc05861096a45e2d3765a8d5db11204",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_statistical_consequences_arxiv",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:1667b9977452b248df78b33be0e8747f0954ddc72c6ccf74080e7ec20dcc277a",
+    "declared_artifact_hash": "sha256:ce1b32eb3a2ada18310eb471044218378362ed9f3c50cd3e9a634a43fd9f350f",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:ce1b32eb3a2ada18310eb471044218378362ed9f3c50cd3e9a634a43fd9f350f",
+    "relative_path": "master_taleb/taleb_statistical_consequences_arxiv.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 71,
+        "actual_text_end": 1359,
+        "actual_text_start": 1277,
+        "declared_kind": "pdf_page",
+        "declared_page": 71,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "the directly observable sample mean which is biased under fat-tailed distributions",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 71,
+        "section": "Shadow moment",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Under fat-tailed distributions, avoid relying on the directly observed sample mean without examining bias and tail-parameter methods.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "taleb_statistical_consequences_arxiv:p1",
+      "review_hash": "sha256:cad04ce35832f8cef8d7538e15bb002117c7df11b7773909f843afd17b1f8667",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:f8361c6810dc52b197dd46c7a00451ac46eaad669a1227c798bbea9ffea5c66d",
+      "snippet_hash_recomputed": "sha256:f8361c6810dc52b197dd46c7a00451ac46eaad669a1227c798bbea9ffea5c66d",
+      "support_rationale": "The manuscript directly calls the observed sample mean biased under fat tails and recommends distribution-based plug-in or shadow-mean treatment.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 34102041,
+    "content_hash": "sha256:758e18b7337840104db93296144d67cf5514bf2de128fe557dc84bc32a0ad567",
+    "extracted_text_hash": "sha256:d8a4975ce82934e626c108b227fef2d3f863e871f9199f75682f2a262ddde9c3",
+    "extracted_text_hash_recomputed": "sha256:d8a4975ce82934e626c108b227fef2d3f863e871f9199f75682f2a262ddde9c3",
+    "raw_bytes_hash_recomputed": "sha256:758e18b7337840104db93296144d67cf5514bf2de128fe557dc84bc32a0ad567",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:5493e015bb91b0c2e648631cbcc1628ec1c2e9e9070dc6b28d0ce610bec4f7fe",
+    "source_record_hash_recomputed": "sha256:5493e015bb91b0c2e648631cbcc1628ec1c2e9e9070dc6b28d0ce610bec4f7fe"
+  }
+}

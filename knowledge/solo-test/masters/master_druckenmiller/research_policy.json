@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when no dominant forward driver can be identified and monitored.",
+    "Reject concentration when price action persistently contradicts the stated inflection.",
+    "Reject when plausible downside is not bounded relative to the forward payoff."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

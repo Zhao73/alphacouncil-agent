@@ -1,0 +1,156 @@
+{
+  "agreements": [],
+  "artifact_hash": "sha256:eeca0e63e9f90f3c38b97a1f87136b5fced02cd7a92d360ee9601b715ada8029",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "munger_sec_wesco_annual_report_2009",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:9b4e48662eb3e2cdc3a6ceeb4d506357ca3db6f53bc5ca720cdad4e77ccd18a5",
+    "declared_artifact_hash": "sha256:6191619120980b24cdfa8e3e83f05fd214fe20c95a6ee8bf6205be970adf7e24",
+    "recomputed_artifact_hash": "sha256:6191619120980b24cdfa8e3e83f05fd214fe20c95a6ee8bf6205be970adf7e24",
+    "relative_path": "master_munger/munger_sec_wesco_annual_report_2009.json"
+  },
+  "final_overall_verdict": "unverifiable",
+  "final_rationale": "No source-bound method proposition exists in the extractor artifact, so this candidate remains semantically unverifiable.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_munger",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:d09f653e7f5b59c00bb641fe99237bf46b9b243d87499e61dedac74ed56d2d3c",
+    "declared_artifact_hash": "sha256:ec38923a47b4bfdb4cbc82766521af086d733eaf01ef229bcc8f602978256bac",
+    "recomputed_artifact_hash": "sha256:ec38923a47b4bfdb4cbc82766521af086d733eaf01ef229bcc8f602978256bac",
+    "relative_path": "master_munger/munger_sec_wesco_annual_report_2009.json"
+  },
+  "source_binding": {
+    "byte_length": 5702630,
+    "content_hash": "sha256:c1b4cb2bb06fc0ca8e58044dd42d0678cff39a981131e1cf7ce4964651c57b32",
+    "extracted_character_count_recomputed": 201303,
+    "extracted_text_hash_recomputed": "sha256:265c8acb762c3a50d44cffa806b003a3ce506b971aaefb724a58ebe6eb2f0a80",
+    "page_character_counts_recomputed": [
+      105,
+      1116,
+      2594,
+      2159,
+      3791,
+      3640,
+      3576,
+      3281,
+      2465,
+      34,
+      3241,
+      3810,
+      4647,
+      4734,
+      4361,
+      4536,
+      3908,
+      4641,
+      3868,
+      2767,
+      2021,
+      2560,
+      4642,
+      3863,
+      3254,
+      5273,
+      4739,
+      2985,
+      4036,
+      4747,
+      3765,
+      4555,
+      4231,
+      4230,
+      3974,
+      4870,
+      4451,
+      3713,
+      3667,
+      2965,
+      1696,
+      2165,
+      4317,
+      1258,
+      1208,
+      2092,
+      1188,
+      4191,
+      4039,
+      4405,
+      4697,
+      4105,
+      2493,
+      2416,
+      3549,
+      2148,
+      1949,
+      2480,
+      4213,
+      1911,
+      1047,
+      907,
+      881,
+      133
+    ],
+    "page_count_recomputed": 64,
+    "raw_bytes_hash_recomputed": "sha256:c1b4cb2bb06fc0ca8e58044dd42d0678cff39a981131e1cf7ce4964651c57b32",
+    "source_record_hash": "sha256:6e8d62eca3098e3a99d5327799521767d23d675ce4c6bb81b17fcc512dc45b7c"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "No readable proposition is available to resolve method authorship."
+    ],
+    "date": [
+      "No human-approved publication-date anchor is available in this machine lane."
+    ],
+    "scope": [
+      "No source-bound proposition is available to resolve method scope."
+    ]
+  }
+}

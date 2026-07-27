@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:4e78163469fe3deccd073ee75c0792c57c60cae630f80643ea209b4e05d8ba1b",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "cathie_wood_ark_disruptive_innovation_2017",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:3d926ea429be47e8bf2dc60dc9a276f434d7211823debe446bff0a4c2312e696",
+    "declared_artifact_hash": "sha256:56b7a851b3d89378591bdc982a9fc2a62344c3b3d4ec300b2c7152b870cd0f1c",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:56b7a851b3d89378591bdc982a9fc2a62344c3b3d4ec300b2c7152b870cd0f1c",
+    "relative_path": "master_cathie_wood/cathie_wood_ark_disruptive_innovation_2017.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_cathie_wood",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The PDF is an ARK publication associated with Cathie Wood, but the excerpt itself does not carry a personal signature.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 3,
+        "actual_text_end": 879,
+        "actual_text_start": 750,
+        "declared_kind": "pdf_page",
+        "declared_page": 3,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Companies just have to be on the right side of disruptive innovation to enjoy them. If not, they probably will become value traps",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 3,
+        "section": "On the right side of disruptive innovation",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Evaluate companies by whether they benefit from declining technology cost curves or risk becoming incumbent value traps.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "cathie_wood_ark_disruptive_innovation_2017:p1",
+      "review_hash": "sha256:e60373e056e991996eecc1db05a595950412fe086dbd32e904c24fd77007dcbd",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:ec06c29ee87838b75a4358e764636aebbbf2a3471b4773e31892652152529080",
+      "snippet_hash_recomputed": "sha256:ec06c29ee87838b75a4358e764636aebbbf2a3471b4773e31892652152529080",
+      "support_rationale": "The passage and immediate heading explicitly contrast beneficiaries of declining innovation cost curves with companies that may become value traps.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 350855,
+    "content_hash": "sha256:77ae03debacf365576261d79eb25f97eeea89715f3a37021511ee4de789c9c51",
+    "extracted_text_hash": "sha256:1ed2dde2b3a084bab1aba64be7bfdc8ba6cdf6e520dc5144bfb10ae56b4511a8",
+    "extracted_text_hash_recomputed": "sha256:1ed2dde2b3a084bab1aba64be7bfdc8ba6cdf6e520dc5144bfb10ae56b4511a8",
+    "raw_bytes_hash_recomputed": "sha256:77ae03debacf365576261d79eb25f97eeea89715f3a37021511ee4de789c9c51",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:cd374a21db25778783efba68862aa0d81ce911938f19a55606f2cb555480311c",
+    "source_record_hash_recomputed": "sha256:cd374a21db25778783efba68862aa0d81ce911938f19a55606f2cb555480311c"
+  }
+}

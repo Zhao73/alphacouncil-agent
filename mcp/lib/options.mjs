@@ -212,5 +212,5 @@ export async function fetchOptionsChain(symbol, { asOf } = {}) {
   }
   const summary = summarizeChain(payload, { asOf });
   if (!summary) return { symbol: sym, available: false, reason: `CBOE returned no option rows for ${sym}` };
-  return { symbol: sym, available: true, ...summary };
+  return { symbol: sym, available: true, source_url: CBOE(sym), ...summary };
 }

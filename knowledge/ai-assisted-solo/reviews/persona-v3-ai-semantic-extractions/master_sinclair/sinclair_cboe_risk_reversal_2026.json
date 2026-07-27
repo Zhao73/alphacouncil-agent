@@ -1,0 +1,87 @@
+{
+  "artifact_hash": "sha256:b6fb5d93154835febc5a8aec5bc16929dccf8825f708ef71e8c4b023aaace6f5",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "sinclair_cboe_risk_reversal_2026",
+  "concise_summary": "Sinclair argues that price-insensitive insurance and covered-call flows can distort put/call relative value and describes a dynamic risk-reversal response.",
+  "contradictions_ambiguities": [
+    "The article cites historical index results but does not expose all estimation, transaction-cost, and live-execution details."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "The risk-reversal takes advantage of the relative mispricing between puts and calls.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Risk-reversal rationale",
+        "text_end": 4900,
+        "text_start": 4816
+      },
+      "proposition_id": "sinclair_cboe_risk_reversal_2026:p1",
+      "snippet_hash": "sha256:1961726b518a192b57ed27f9e7f6151116a0f62f92774828515aa8ec7fcbc222",
+      "statement": "Use a risk reversal only when rich puts versus cheap calls and a defensible volatility view produce positive expected value.",
+      "support_strength": "direct"
+    },
+    {
+      "evidence_excerpt": "When the skew flattens or reverses, we scale back.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Dynamic exposure rule",
+        "text_end": 8544,
+        "text_start": 8494
+      },
+      "proposition_id": "sinclair_cboe_risk_reversal_2026:p2",
+      "snippet_hash": "sha256:1b8b15c2e2ccabf48b52efdb7bcddce8519a4fb0fc004437817a1fca98dddbd9",
+      "statement": "Reduce the position when the downside skew no longer supplies the relative-value edge.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "How are volatility forecasts, friction, delta hedging, and position limits computed before entry?"
+  ],
+  "persona_id": "master_sinclair",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The guest-author article contains readable substantive text.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 394729,
+    "content_hash": "sha256:396bea49e3e2c2c1a8ad627fb7df75c798dd58a8d1f6e9c5a005560e4d4366ca",
+    "content_type": "text/html; charset=utf-8",
+    "extracted_character_count": 13570,
+    "extracted_text_hash": "sha256:03af275409e9cf109019e736bc16c6fab0461a9908fa9dbc19105a91df846bc8",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://www.cboe.com/insights/posts/the-power-of-the-risk-reversal",
+    "page_character_counts": [
+      13570
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:e396399b04e6b2b5a861aa948e43a3b1412db6434be8bd67cdd59f62fe050ba2",
+    "retrieved_at": "2026-07-27T06:36:59.269Z"
+  },
+  "source_type": "options_strategy_commentary"
+}

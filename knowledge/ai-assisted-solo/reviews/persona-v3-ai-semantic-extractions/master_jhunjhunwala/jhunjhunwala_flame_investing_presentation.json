@@ -1,0 +1,120 @@
+{
+  "artifact_hash": "sha256:395837e0adf03d0689724ff017fa03d0db1a94f696cfa099198c31928305eb2d",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "jhunjhunwala_flame_investing_presentation",
+  "concise_summary": "The presentation covers Indian long-run growth, compounding, security selection, holding, and independent exit decisions.",
+  "contradictions_ambiguities": [
+    "Several rules are slide bullets without case detail, thresholds, or failure examples."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Sustainable competitive advantage",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 19,
+        "section": "What to look for",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "jhunjhunwala_flame_investing_presentation:p1",
+      "snippet_hash": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565",
+      "statement": "Look for addressable opportunity, sustainable competitive advantage, scalability, management integrity, economic value creation, and price-value divergence.",
+      "support_strength": "direct"
+    },
+    {
+      "evidence_excerpt": "Make exit an independent decision, not driven by profit or loss.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 20,
+        "section": "Exiting an investment",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "jhunjhunwala_flame_investing_presentation:p2",
+      "snippet_hash": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671",
+      "statement": "Make the exit decision independently of whether the position currently shows a profit or loss.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "How were these criteria weighted in actual winning and losing investments?"
+  ],
+  "persona_id": "master_jhunjhunwala",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The presentation is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 142921,
+    "content_hash": "sha256:2d213e7593783e08065920e2c90a7ef08cf2331c0dd11e30bc39ba43d145ae5b",
+    "content_type": "application/pdf",
+    "extracted_character_count": 8155,
+    "extracted_text_hash": "sha256:0bc2a6d52266ca6771ff28c2fd64590e2c1e983b2575f25968bb41bf673f2f16",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.flame.edu.in/pdfs/fil/guest_lecture/FIL_Rakesh%20JhunJhunwala.pdf",
+    "page_character_counts": [
+      130,
+      277,
+      18,
+      173,
+      349,
+      419,
+      40,
+      160,
+      202,
+      37,
+      429,
+      224,
+      1035,
+      32,
+      124,
+      250,
+      307,
+      22,
+      244,
+      702,
+      21,
+      180,
+      16,
+      710,
+      286,
+      120,
+      207,
+      255,
+      220,
+      295,
+      205,
+      6,
+      450,
+      10
+    ],
+    "page_count": 34,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:1422977018a0e3138153c0d521871ca1e911b2342e69cc56ef5e3d2908f8cd81",
+    "retrieved_at": "2026-07-27T06:24:10.855Z"
+  },
+  "source_type": "primary_presentation_slides"
+}

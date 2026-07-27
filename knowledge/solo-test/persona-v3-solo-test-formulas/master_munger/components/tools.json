@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:b9b4890170ebd812afafa39a240b6b528a8d097b13b4979db1ce0242860db112",
+    "derivation_spec_hash": "sha256:c06b14df3f95aa5a8de58fe9395e5c914493dff41cd912db889a7933910d8cca",
+    "derivation_spec_id": "master_munger.incentive_map.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_munger.incentive_map",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:b1cb46672ea817ef0d4f4f7386b146b2c667c7940f1e991eb422a883e2d7a9c6",
+    "inputs": [
+      {
+        "fact_id": "governance.incentive_structure"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "governance.incentive_structure",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:a8c9c9a0c0f03a05c6547d38302b4f5df8ff0b16ba8f785daac16d07d5adafcc",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_munger.incentive_map.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:0d72d3b4ab874eef0a47fb1ef169819bd9f4bafa4c402cdffa1329e1ae5763c2",
+    "derivation_spec_hash": "sha256:1a415983d8052349b4ba93be9536460a98482cdd2c9144f808c30a868af87624",
+    "derivation_spec_id": "master_munger.failure_path_graph.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_munger.failure_path_graph",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:a053319d92c8e5e8ab432b8ad3e286ff65b0f276c4508ae59ff23618f57f718e",
+    "inputs": [
+      {
+        "fact_id": "risk.failure_paths"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "risk.failure_paths",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:a1a70a21216ddc520ba47d4ec18efce6189d859cd4c84505200f573c72477470",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_munger.failure_path_graph.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

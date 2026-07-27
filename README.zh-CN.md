@@ -57,6 +57,17 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
+## 当前 0.9.0 预发布状态：solo-test
+
+软件包与插件版本表面均为 `0.9.0-solo-test.1`，但这是一条明确隔离的 **solo-test** 渠道，不是正式
+生产 GA。它包含 26 个物理 PersonaPack v3 包与 52 个可执行的
+`provisional_derived_proxy` 工具，用于端到端测试确定性路径。全部 26 席仍是 provisional
+`operator_lens`；`operational`：**0**；`method_model`：**0**。人工来源审批：**0**；
+人工公式审批：**0**；人工审批签名：**0**。
+
+生产 loader 会拒绝这套树，生产 assembly、cutover 与 GA 继续 fail-closed。精确测试命令与
+已核验状态见 [docs/solo-test-0.9.0.md](docs/solo-test-0.9.0.md)。
+
 ## 📜 免责声明
 
 本软件**仅供教育与研究**,**不构成投资建议**,不构成任何证券买卖推荐或要约。AI 生成的分析可能不完整、过时或错误。投资决策前请自行核实并咨询持牌专业人士。作者不对任何损失承担责任。
@@ -113,15 +124,15 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 | 输入 | 跑什么 | 额度消耗 |
 |---|---|---|
-| `/alpha <ticker>` | 完整议会 —— 先问你跑哪个预设 | 每席一个子代理 |
-| `/alpha <ticker> quick` | 4 分析师 + 辩论，无大师、无验证 | 7 席 |
+| `/alpha <ticker>` | 逐人展示全部大师，确认 `1..N`/区间/`all` 后运行完整议会 | 每个所选席位一个子代理 |
+| `/alpha <ticker> quick` | 同样强制选择大师，再跑 4 分析师 + 所选大师 + 辩论；无验证 | 随选择数量变化 |
 | `/alpha <ticker> screen` | 只跑机械筛选 | **零** |
 | `/alpha <ticker> options` | 隐含波动率期限结构、偏斜、持仓分布 | **零** |
 | `/alpha <ticker> news` | 带日期的申报与新闻 | **零** |
 | `/alpha market <theme>` | 市场在讲什么故事 | **零** |
 | `/alpha` | 列出模式后停下 | **零** |
 
-标「零」的四个只调免 key 数据工具、**不启动任何子代理**，除了你敲的这一轮之外不消耗额度。议会模式每个席位起一个子代理，那是这个插件的全部成本所在。
+标「零」的四个只调免 key 数据工具、**不启动任何子代理**，除了你敲的这一轮之外不消耗额度。完整与 quick 都是议会模式：研究前逐人显示编号、身份、方法和最适用场景。四个宿主都支持统一的编号文本选择，原生多选只是增强。即使请求已经点名，也只作为预填；仍须显示全表并确认本次一次性 receipt。
 
 任何上市股票：`/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`。
 基于申报的模式需要美国申报主体；其他市场会通过 `market_coverage` 说明覆盖情况，而不是静默返回空结果。
@@ -142,7 +153,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 - 新闻、行业背景、产业链，以及管理层言行核对
 - SEC 申报、Form 4 内部人交易、回购、稀释、债务与资本配置
 - 并购、股权与债务融资、回购等事件分析
-- 21 位投资大师视角**独立**读同一批事实
+- 可逐席选择的 26 个投资方法视角读取同一批事实
 - 多头、空头与 PM 裁决
 
 最终报告可直接在对话中阅读，包含分析师工作记录、数据与申报摘要、多空辩论记录、PM 裁决、入场价格区间、短中长期观点、数据缺口、置信度和来源表。
@@ -170,7 +181,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 - **无可解析时间戳的新闻条目被剔除**，不会被展示为「最新」。
 - **报 `iv = 0` 的合约被丢弃** —— CBOE 对已过期和深度实值合约返回 0，而 0 混进均值不像缺失值，像一只很平静的股票。
 
-## 🏛️ 大师议席 —— 21 位
+## 🏛️ 大师议席 —— 26 位
 
 这是对公开方法论的重构，**不是本人的任何表述**。每一位都写明自己怎么思考、最先注意什么、典型追问是什么，以及**自己的失败模式** —— 说不出自己怎么错的席位，出错时不会举手。
 
@@ -182,6 +193,12 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 量化 | 西蒙斯 · Asness · 索普 |
 | 期权 | 塔勒布 · 纳坦伯格 · 辛克莱 |
 | 现代 | Aschenbrenner |
+| v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
+
+0.9.0 solo-test 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
+方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个工具是可执行的
+`provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
+`method_model` 数量均为 0，正式生产 GA 继续 fail-closed。
 
 大师读到的是**和分析师同一份已确立事实**（申报、行情、财务、宏观），分析师的证据包单独给出并标注为「其他席位的解读」而非事实。这个分离是关键：芒格看激励结构的地方分析师看的是毛利率，只有让他们各自取舍，这个议席才有存在意义。详见 [docs/attribution.md](docs/attribution.md)。
 
@@ -191,7 +208,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 flowchart TD
     U["@alphacouncil-agent"] --> G[("Established facts<br/>filings · quotes · macro · options")]
     G --> AG{{"Analyst council"}}
-    G --> MS{{"Master bench<br/>21 lenses"}}
+    G --> MS{{"Master bench<br/>26 lenses"}}
     AG --> A1["Market data"]
     AG --> A2["Earnings"]
     AG --> A3["Valuation"]
@@ -216,7 +233,7 @@ flowchart TD
     PM --> R[["final_report.md"]]
 ```
 
-大师从事实分叉，而非从分析师的证据包分叉。让 21 位大师共用一位分析师对「什么重要」的取舍，会给他们同一个盲区 —— 一个又大又完全相关的误差 —— 也就取消了设立议席的理由。
+大师从事实分叉，而非从分析师的证据包分叉。让 26 位大师共用一位分析师对「什么重要」的取舍，会给他们同一个盲区 —— 一个又大又完全相关的误差 —— 也就取消了设立议席的理由。
 
 关键文件:
 

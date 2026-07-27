@@ -1,0 +1,172 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:fb44f6916af8cf3005116c1486edb79eb3566a656020575a39516656ccbfa648",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "damodaran_nyu_narrative_numbers",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:3eb5b36594e8d952da427b49f9550a1432d26a84f21146005a3df9be9cded9e3",
+    "declared_artifact_hash": "sha256:2fb96798fc07df60cf726665377230f111cf92d4c5a797a555f8902109130ab8",
+    "recomputed_artifact_hash": "sha256:2fb96798fc07df60cf726665377230f111cf92d4c5a797a555f8902109130ab8",
+    "relative_path": "master_damodaran/damodaran_nyu_narrative_numbers.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 2,
+          "page": 3,
+          "section_claimed": "Every valuation starts with a narrative",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 105,
+          "text_start": 2
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 3,
+          "section": "Every valuation starts with a narrative",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870",
+        "normalized_excerpt": "Every valuation starts with a narrative, a story that you see unfolding for your company in the future.",
+        "skeptic_snippet_hash_claimed": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870",
+        "skeptic_snippet_hash_recomputed": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The located slide begins valuation with a future narrative and immediately constrains it by company, market, competition, management, and macro assessments.",
+      "final_verdict": "supported",
+      "proposition_id": "damodaran_nyu_narrative_numbers:p1",
+      "review_hash": "sha256:8e600f56bd77ac836a7df7e33ad993194798f6c374335102e508d743094c76b1",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The cited slide begins with a forward narrative and immediately enumerates company, market, competition, and macro assessments that constrain it.",
+        "support_verdict": "supported"
+      },
+      "statement": "Begin valuation with a forward company narrative, then constrain it by products, market, competition, management, and macro conditions.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:59bd7018647ff3f188827aab933fc6917a0366ee08eadd58a02342102225cf8e",
+    "declared_artifact_hash": "sha256:0230db4db9644c1e90ce8628cfcfdfb20ccca6e06c3c6be74095261040c1e2e9",
+    "recomputed_artifact_hash": "sha256:0230db4db9644c1e90ce8628cfcfdfb20ccca6e06c3c6be74095261040c1e2e9",
+    "relative_path": "master_damodaran/damodaran_nyu_narrative_numbers.json"
+  },
+  "source_binding": {
+    "byte_length": 3842989,
+    "content_hash": "sha256:d94466da9796eb9156a1d982d2b2a342fb8c21bc9af7867915c9ff9b12a46002",
+    "extracted_character_count_recomputed": 6401,
+    "extracted_text_hash_recomputed": "sha256:4f7a4bfb8ee93a1a84fb2324fecd5eec12b89d4fe4b9b61340c2d41e1d247544",
+    "page_character_counts_recomputed": [
+      38,
+      51,
+      600,
+      20,
+      463,
+      699,
+      24,
+      24,
+      20,
+      678,
+      91,
+      646,
+      61,
+      51,
+      1477,
+      24,
+      559,
+      20,
+      20,
+      835
+    ],
+    "page_count_recomputed": 20,
+    "raw_bytes_hash_recomputed": "sha256:d94466da9796eb9156a1d982d2b2a342fb8c21bc9af7867915c9ff9b12a46002",
+    "source_record_hash": "sha256:4b2227abd4457ba4b49b57d90875e94147e5df4f7da169d07a7a8ce3d5c7d399"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

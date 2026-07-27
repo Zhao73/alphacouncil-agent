@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-ai-assisted-solo-status-v1.schema.json",
+  "title": "PersonaPack v3 AI-assisted solo release-status report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "profile_id",
+    "assurance_class",
+    "human_review_satisfied",
+    "formal_ga_effect",
+    "production_eligible",
+    "method_model_eligible",
+    "integrity_status",
+    "local_test_status",
+    "release_status",
+    "solo_packs",
+    "ai_review_coverage",
+    "automated_experiment_coverage",
+    "live_host_coverage",
+    "n_eff",
+    "blockers",
+    "integrity_errors",
+    "report_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_ai_assisted_solo_status" },
+    "profile_id": { "const": "ai_assisted_solo" },
+    "assurance_class": { "const": "machine_cross_review_only" },
+    "human_review_satisfied": { "const": false },
+    "formal_ga_effect": { "const": "none" },
+    "production_eligible": { "const": false },
+    "method_model_eligible": { "const": false },
+    "integrity_status": { "enum": ["passed", "failed"] },
+    "local_test_status": { "enum": ["ready", "blocked"] },
+    "release_status": { "enum": ["ready", "blocked"] },
+    "solo_packs": { "$ref": "#/$defs/coverage" },
+    "ai_review_coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "source", "semantic", "formula"],
+      "properties": {
+        "status": { "enum": ["passed", "blocked"] },
+        "source": { "$ref": "#/$defs/coverage" },
+        "semantic": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "extraction", "skeptic", "adjudication"],
+          "properties": {
+            "status": { "enum": ["passed", "blocked"] },
+            "extraction": { "$ref": "#/$defs/coverage" },
+            "skeptic": { "$ref": "#/$defs/coverage" },
+            "adjudication": { "$ref": "#/$defs/coverage" }
+          }
+        },
+        "formula": { "$ref": "#/$defs/coverage" }
+      }
+    },
+    "automated_experiment_coverage": { "$ref": "#/$defs/coverage" },
+    "live_host_coverage": { "$ref": "#/$defs/coverage" },
+    "n_eff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "n_eff", "confidence_interval_95", "artifact_present", "disclosure_complete", "formal_n_eff_effect", "reasons"],
+      "properties": {
+        "status": { "enum": ["publishable", "insufficient_resolved_outcomes", "missing", "invalid"] },
+        "n_eff": { "type": ["number", "null"] },
+        "confidence_interval_95": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+          ]
+        },
+        "artifact_present": { "type": "boolean" },
+        "disclosure_complete": { "type": "boolean" },
+        "formal_n_eff_effect": { "const": "none" },
+        "reasons": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "blockers": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "integrity_errors": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "report_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["status", "completed", "required", "errors"],
+      "properties": {
+        "status": { "enum": ["passed", "blocked"] },
+        "completed": { "type": "integer", "minimum": 0 },
+        "required": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

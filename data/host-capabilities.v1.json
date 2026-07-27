@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "contract_id": "alphacouncil-host-capabilities-v1",
+  "evidence_scope": "repository_static_contract_only",
+  "live_e2e_overall": "not_run",
+  "shared_selection_protocol": {
+    "steps": [
+      "begin_council_selection",
+      "display_complete_returned_catalog",
+      "collect_one_user_submission",
+      "confirm_master_selection_display_ack_true",
+      "consume_one_run_selection_receipt"
+    ],
+    "required_selector_fields": [
+      "index",
+      "id",
+      "identity",
+      "method",
+      "best_for",
+      "maturity",
+      "pack_hash"
+    ],
+    "numbered_inputs": [
+      "single_index",
+      "multiple_indexes",
+      "inclusive_range",
+      "stable_id",
+      "all"
+    ],
+    "catalog_hash_semantics": "sha256_of_frozen_language_catalog_snapshot",
+    "pack_hash_semantics": "non_null_per_seat_hash_bound_into_selection_receipt",
+    "receipt_semantics": "short_lived_one_run_symbol_intent_catalog_and_selected_pack_hash_binding",
+    "native_chooser_requirement": "optional_ui_sugar_only",
+    "numbered_fallback_requirement": "mandatory"
+  },
+  "hosts": [
+    {
+      "host_id": "claude_code",
+      "display_name": "Claude Code",
+      "static_contract_status": "shipped_not_live_verified",
+      "config_paths": [
+        ".claude-plugin/plugin.json",
+        ".mcp.json"
+      ],
+      "command_surface": {
+        "canonical_source": "commands/alpha.md",
+        "repository_adapters": [
+          ".claude/commands/alpha.md"
+        ],
+        "installation_scope": "plugin_and_repository",
+        "freshness_contract": "exact_copy"
+      },
+      "chooser": {
+        "native": "optional_not_required_not_live_verified",
+        "numbered_fallback": "required_shipped"
+      },
+      "visible_subagents": {
+        "support": "shipped_definitions_host_capability_required",
+        "definition_surface": ".claude/agents/",
+        "live_status": "not_run"
+      },
+      "parallelism": {
+        "support": "host_managed_best_effort",
+        "configured_limit": null,
+        "live_status": "not_run"
+      },
+      "model_mapping": {
+        "policy": "generated_per_tier",
+        "fast": "haiku",
+        "standard": "sonnet",
+        "deep": "opus"
+      },
+      "permissions": {
+        "policy": "agent_tool_allowlist",
+        "network": "evidence_roles_only",
+        "edit": "not_granted",
+        "shell": "not_granted"
+      },
+      "resume": {
+        "saved_run_artifacts": "server_supported",
+        "host_session_resume": "not_live_verified",
+        "live_status": "not_run"
+      },
+      "degradation": [
+        "native chooser unavailable -> print complete numbered catalog",
+        "visible Task capability unavailable -> state limitation and require explicit headless choice",
+        "per-agent model selection unavailable -> use host default and record degradation"
+      ],
+      "live_e2e": {
+        "status": "not_run",
+        "artifact": null
+      }
+    },
+    {
+      "host_id": "codex",
+      "display_name": "Codex",
+      "static_contract_status": "shipped_not_live_verified",
+      "config_paths": [
+        ".codex-plugin/plugin.json",
+        ".mcp.json"
+      ],
+      "command_surface": {
+        "canonical_source": "commands/alpha.md",
+        "repository_adapters": [],
+        "installation_scope": "user_scoped_prompt_copy",
+        "freshness_contract": "compare_if_installed"
+      },
+      "chooser": {
+        "native": "optional_not_required_not_live_verified",
+        "numbered_fallback": "required_shipped"
+      },
+      "visible_subagents": {
+        "support": "host_capability_dependent_no_shipped_agent_files",
+        "definition_surface": null,
+        "live_status": "not_run"
+      },
+      "parallelism": {
+        "support": "host_managed_best_effort",
+        "configured_limit": null,
+        "live_status": "not_run"
+      },
+      "model_mapping": {
+        "policy": "host_default",
+        "fast": null,
+        "standard": null,
+        "deep": null
+      },
+      "permissions": {
+        "policy": "host_managed_plus_mcp_contract",
+        "network": "preflight_required",
+        "edit": "not_requested_by_council",
+        "shell": "not_requested_by_visible_council"
+      },
+      "resume": {
+        "saved_run_artifacts": "server_supported",
+        "host_session_resume": "not_live_verified",
+        "live_status": "not_run"
+      },
+      "degradation": [
+        "native chooser unavailable -> print complete numbered catalog",
+        "user prompt missing or stale -> reinstall commands/alpha.md into the Codex prompts directory",
+        "visible subagents unavailable -> state limitation and require explicit headless choice"
+      ],
+      "live_e2e": {
+        "status": "not_run",
+        "artifact": null
+      }
+    },
+    {
+      "host_id": "opencode",
+      "display_name": "OpenCode",
+      "static_contract_status": "shipped_not_live_verified",
+      "config_paths": [
+        "opencode.json"
+      ],
+      "command_surface": {
+        "canonical_source": "commands/alpha.md",
+        "repository_adapters": [
+          ".opencode/command/alpha.md"
+        ],
+        "installation_scope": "repository",
+        "freshness_contract": "exact_copy"
+      },
+      "chooser": {
+        "native": "optional_not_required_not_live_verified",
+        "numbered_fallback": "required_shipped"
+      },
+      "visible_subagents": {
+        "support": "shipped_definitions_host_capability_required",
+        "definition_surface": ".opencode/agent/",
+        "live_status": "not_run"
+      },
+      "parallelism": {
+        "support": "host_managed_best_effort",
+        "configured_limit": null,
+        "live_status": "not_run"
+      },
+      "model_mapping": {
+        "policy": "generated_per_tier",
+        "fast": "anthropic/claude-haiku-4-5-20251001",
+        "standard": "anthropic/claude-sonnet-4-5",
+        "deep": "anthropic/claude-opus-4-5"
+      },
+      "permissions": {
+        "policy": "per_agent_explicit_deny_and_network_allow",
+        "network": "evidence_roles_only_and_provider_dependent",
+        "edit": "deny",
+        "shell": "deny"
+      },
+      "resume": {
+        "saved_run_artifacts": "server_supported",
+        "host_session_resume": "not_live_verified",
+        "live_status": "not_run"
+      },
+      "degradation": [
+        "native chooser unavailable -> print complete numbered catalog",
+        "web search provider unavailable -> mark evidence gap and do not invent results",
+        "per-agent model unavailable -> use configured host fallback and record degradation"
+      ],
+      "live_e2e": {
+        "status": "not_run",
+        "artifact": null
+      }
+    },
+    {
+      "host_id": "grok",
+      "display_name": "Grok Build",
+      "static_contract_status": "shipped_not_live_verified",
+      "config_paths": [
+        ".grok/config.toml",
+        ".mcp.json"
+      ],
+      "command_surface": {
+        "canonical_source": "commands/alpha.md",
+        "repository_adapters": [
+          ".grok/commands/alpha.md"
+        ],
+        "installation_scope": "repository_trust_required",
+        "freshness_contract": "exact_copy"
+      },
+      "chooser": {
+        "native": "optional_not_required_not_live_verified",
+        "numbered_fallback": "required_shipped"
+      },
+      "visible_subagents": {
+        "support": "shipped_definitions_host_capability_required",
+        "definition_surface": ".grok/agents/",
+        "live_status": "not_run"
+      },
+      "parallelism": {
+        "support": "host_managed_best_effort",
+        "configured_limit": null,
+        "live_status": "not_run"
+      },
+      "model_mapping": {
+        "policy": "host_default",
+        "fast": null,
+        "standard": null,
+        "deep": null
+      },
+      "permissions": {
+        "policy": "generated_plan_mode",
+        "network": "host_plan_mode_and_environment_dependent",
+        "edit": "plan_mode",
+        "shell": "plan_mode"
+      },
+      "resume": {
+        "saved_run_artifacts": "server_supported",
+        "host_session_resume": "not_live_verified",
+        "live_status": "not_run"
+      },
+      "degradation": [
+        "native chooser unavailable -> print complete numbered catalog",
+        "repository not trusted -> MCP remains unavailable and the council must not claim execution",
+        "per-agent model mapping unavailable -> use host default and record degradation"
+      ],
+      "live_e2e": {
+        "status": "not_run",
+        "artifact": null
+      }
+    }
+  ]
+}

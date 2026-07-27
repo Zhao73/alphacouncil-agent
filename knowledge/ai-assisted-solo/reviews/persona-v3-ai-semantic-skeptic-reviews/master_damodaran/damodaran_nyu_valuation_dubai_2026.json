@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:e9e9f8ba5a500ca785266010ed9a5dc0149ba95a6717f5dfda656eaf2e6fc73c",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "damodaran_nyu_valuation_dubai_2026",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:733bdbabfd76326693ff38d7fb6de15143efb2522f3d329fe68e07e556d48d45",
+    "declared_artifact_hash": "sha256:f018c323b73ac7202dc8506246d1c6a6f8cd3b90c0c2b9d3adfc8f854d86df00",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:f018c323b73ac7202dc8506246d1c6a6f8cd3b90c0c2b9d3adfc8f854d86df00",
+    "relative_path": "master_damodaran/damodaran_nyu_valuation_dubai_2026.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 4,
+        "actual_text_end": 509,
+        "actual_text_start": 488,
+        "declared_kind": "pdf_page",
+        "declared_page": 4,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Valuation is a craft.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 4,
+        "section": "Valuation as craft",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Treat valuation as an iterative craft improved by repeated application, not as exact science or irreducible artistic intuition.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "damodaran_nyu_valuation_dubai_2026:p1",
+      "review_hash": "sha256:2e9f3af6d48fa164993c71e42f9b28344e12d7c156f748ef64bcf726dcad0f84",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:09f7c98c44800b6460d9e9faae72af3a394d0c6ba8e9e1121ac57ad8f5fdfa59",
+      "snippet_hash_recomputed": "sha256:09f7c98c44800b6460d9e9faae72af3a394d0c6ba8e9e1121ac57ad8f5fdfa59",
+      "support_rationale": "The same slide rejects science and art labels and defines craft as a skill improved by doing, directly supporting the proposed distinction.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 25396928,
+    "content_hash": "sha256:95d6d0cb929ab8b0e41db213de6c3d817b5d199763edd76bfa7bbd4a3e810011",
+    "extracted_text_hash": "sha256:3b5a7ba24c345a5eb605206fc4f46e83512dfa991edc659954dbfffea1b853f1",
+    "extracted_text_hash_recomputed": "sha256:3b5a7ba24c345a5eb605206fc4f46e83512dfa991edc659954dbfffea1b853f1",
+    "raw_bytes_hash_recomputed": "sha256:95d6d0cb929ab8b0e41db213de6c3d817b5d199763edd76bfa7bbd4a3e810011",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:7b1a32bd02f52e8b7ef93ade18164765092ce0a2867dd6cef588690c48c1aebb",
+    "source_record_hash_recomputed": "sha256:7b1a32bd02f52e8b7ef93ade18164765092ce0a2867dd6cef588690c48c1aebb"
+  }
+}

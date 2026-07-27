@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-draft-pack-index-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 non-production draft index v1",
+  "description": "Index for an editorial prototype. It cannot declare source adjudication, maturity, admission, or production registration.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "artifact_status",
+    "human_adjudication_status",
+    "persona_id",
+    "production_effect",
+    "build_spec_inventory_id",
+    "build_spec_hash",
+    "artifact_files",
+    "coverage_contract",
+    "production_guard",
+    "warnings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_draft_pack_index" },
+    "artifact_status": { "const": "editorial_prototype" },
+    "human_adjudication_status": { "const": "pending_human_adjudication" },
+    "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "production_effect": { "const": "none" },
+    "build_spec_inventory_id": { "const": "personapack-v3-build-specs" },
+    "build_spec_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "artifact_files": {
+      "type": "object",
+      "required": [
+        "method_hypotheses",
+        "research_policy",
+        "decision_policy",
+        "tools",
+        "case_plan",
+        "memory_policy",
+        "voice_en",
+        "voice_zh",
+        "draft_pack_index"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "method_hypotheses": { "const": "artifacts/method-hypotheses.json" },
+        "research_policy": { "const": "artifacts/research-policy.json" },
+        "decision_policy": { "const": "artifacts/decision-policy.json" },
+        "tools": { "const": "artifacts/tools.json" },
+        "case_plan": { "const": "artifacts/case-plan.json" },
+        "memory_policy": { "const": "artifacts/memory-policy.json" },
+        "voice_en": { "const": "artifacts/voice-en.md" },
+        "voice_zh": { "const": "artifacts/voice-zh.md" },
+        "draft_pack_index": { "const": "artifacts/draft-pack-index.json" }
+      }
+    },
+    "coverage_contract": {
+      "type": "object",
+      "required": ["required_fact_types", "planned_tool_ids", "veto_ids", "native_states"],
+      "additionalProperties": false,
+      "properties": {
+        "required_fact_types": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "planned_tool_ids": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "veto_ids": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "native_states": { "$ref": "#/$defs/nonEmptyUniqueStrings" }
+      }
+    },
+    "production_guard": {
+      "type": "object",
+      "required": ["production_eligible", "production_registration_allowed", "production_loader_registered", "manifest_allowed", "promotion_effect"],
+      "additionalProperties": false,
+      "properties": {
+        "production_eligible": { "const": false },
+        "production_registration_allowed": { "const": false },
+        "production_loader_registered": { "const": false },
+        "manifest_allowed": { "const": false },
+        "promotion_effect": { "const": "none" }
+      }
+    },
+    "warnings": { "type": "array", "minItems": 3, "items": { "type": "string", "minLength": 12 } }
+  },
+  "$defs": {
+    "nonEmptyUniqueStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 2 }
+    }
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-decision-policy-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 deterministic decision policy DSL 1.1",
+  "description": "A data-only policy with explicit native-state projection, optional-fact coverage and fail-closed missing-data behavior. It contains no source code, callbacks, templates, property paths, regular expressions or model-authored decisions.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "dsl_version",
+    "native_decision_schema",
+    "native_states",
+    "abstention_policy",
+    "fact_gate",
+    "eligibility",
+    "hard_vetoes",
+    "scoring",
+    "score_bands",
+    "native_output_fields"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "dsl_version": { "const": "1.1" },
+    "native_decision_schema": { "$ref": "#/$defs/id" },
+    "native_states": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/nativeState" }
+    },
+    "abstention_policy": { "const": "fail_closed" },
+    "fact_gate": {
+      "type": "object",
+      "required": ["on_missing_critical"],
+      "additionalProperties": false,
+      "properties": {
+        "on_missing_critical": { "$ref": "#/$defs/abstentionMapping" }
+      }
+    },
+    "eligibility": {
+      "type": "object",
+      "required": ["all"],
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/eligibilityCondition" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "hard_vetoes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["veto_id", "condition", "source_ids", "on_trigger", "on_uncomputable"],
+        "additionalProperties": false,
+        "properties": {
+          "veto_id": { "$ref": "#/$defs/id" },
+          "condition": { "$ref": "#/$defs/condition" },
+          "source_ids": { "$ref": "#/$defs/sourceIds" },
+          "on_trigger": { "$ref": "#/$defs/vetoMapping" },
+          "on_uncomputable": { "$ref": "#/$defs/vetoUncomputable" }
+        }
+      },
+      "uniqueItems": true
+    },
+    "scoring": {
+      "type": "object",
+      "required": ["max_score", "min_coverage", "on_insufficient_coverage", "rules"],
+      "additionalProperties": false,
+      "properties": {
+        "max_score": { "type": "number", "exclusiveMinimum": 0 },
+        "min_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "on_insufficient_coverage": { "$ref": "#/$defs/abstentionMapping" },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["rule_id", "condition", "points", "coverage_weight", "source_ids"],
+            "additionalProperties": false,
+            "properties": {
+              "rule_id": { "$ref": "#/$defs/id" },
+              "condition": { "$ref": "#/$defs/condition" },
+              "points": { "type": "number", "exclusiveMinimum": 0 },
+              "coverage_weight": { "type": "number", "exclusiveMinimum": 0 },
+              "source_ids": { "$ref": "#/$defs/sourceIds" }
+            }
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "score_bands": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["min_ratio", "decision"],
+        "additionalProperties": false,
+        "properties": {
+          "min_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+          "decision": { "$ref": "#/$defs/decisionMapping" }
+        }
+      },
+      "uniqueItems": true
+    },
+    "native_output_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["field", "value", "on_missing"],
+        "additionalProperties": false,
+        "properties": {
+          "field": { "$ref": "#/$defs/id" },
+          "value": { "$ref": "#/$defs/operand" },
+          "on_missing": { "enum": ["fail", "omit", "null"] }
+        }
+      },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,159}$" },
+    "stance": { "enum": ["constructive", "cautious", "opposed", "out_of_scope"] },
+    "nativeState": {
+      "allOf": [
+        { "$ref": "#/$defs/id" },
+        { "not": { "enum": ["constructive", "cautious", "opposed", "out_of_scope"] } }
+      ]
+    },
+    "sourceIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "decisionMapping": {
+      "type": "object",
+      "required": ["native_state", "common_stance"],
+      "additionalProperties": false,
+      "properties": {
+        "native_state": { "$ref": "#/$defs/nativeState" },
+        "common_stance": { "$ref": "#/$defs/stance" }
+      }
+    },
+    "abstentionMapping": {
+      "type": "object",
+      "required": ["native_state", "common_stance"],
+      "additionalProperties": false,
+      "properties": {
+        "native_state": { "$ref": "#/$defs/nativeState" },
+        "common_stance": { "const": "out_of_scope" }
+      }
+    },
+    "vetoMapping": {
+      "type": "object",
+      "required": ["native_state", "common_stance"],
+      "additionalProperties": false,
+      "properties": {
+        "native_state": { "$ref": "#/$defs/nativeState" },
+        "common_stance": { "enum": ["opposed", "out_of_scope"] }
+      }
+    },
+    "vetoUncomputable": {
+      "type": "object",
+      "required": ["action", "decision"],
+      "additionalProperties": false,
+      "properties": {
+        "action": { "enum": ["trigger", "abstain"] },
+        "decision": { "$ref": "#/$defs/vetoMapping" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "action": { "const": "abstain" } }, "required": ["action"] },
+          "then": { "properties": { "decision": { "$ref": "#/$defs/abstentionMapping" } } }
+        }
+      ]
+    },
+    "operand": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["fact_id"],
+          "additionalProperties": false,
+          "properties": { "fact_id": { "$ref": "#/$defs/id" } }
+        },
+        {
+          "type": "object",
+          "required": ["output_id"],
+          "additionalProperties": false,
+          "properties": { "output_id": { "$ref": "#/$defs/id" } }
+        },
+        {
+          "type": "object",
+          "required": ["literal"],
+          "additionalProperties": false,
+          "properties": { "literal": { "type": ["number", "string", "boolean", "null"] } }
+        }
+      ]
+    },
+    "condition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["op", "left", "right"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "enum": ["eq", "neq", "gt", "gte", "lt", "lte", "date_gt", "date_gte", "date_lt", "date_lte"] },
+            "left": { "$ref": "#/$defs/operand" },
+            "right": { "$ref": "#/$defs/operand" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "exists" },
+            "value": { "$ref": "#/$defs/operand" }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "conditions"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "enum": ["all", "any"] },
+            "conditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/condition" }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "condition"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "not" },
+            "condition": { "$ref": "#/$defs/condition" }
+          }
+        }
+      ]
+    },
+    "eligibilityCondition": {
+      "type": "object",
+      "required": ["condition_id", "condition", "source_ids", "on_false", "on_uncomputable"],
+      "additionalProperties": false,
+      "properties": {
+        "condition_id": { "$ref": "#/$defs/id" },
+        "condition": { "$ref": "#/$defs/condition" },
+        "source_ids": { "$ref": "#/$defs/sourceIds" },
+        "on_false": { "$ref": "#/$defs/abstentionMapping" },
+        "on_uncomputable": { "$ref": "#/$defs/abstentionMapping" }
+      }
+    }
+  }
+}

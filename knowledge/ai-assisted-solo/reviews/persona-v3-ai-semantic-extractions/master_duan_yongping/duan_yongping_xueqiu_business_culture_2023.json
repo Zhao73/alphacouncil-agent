@@ -1,0 +1,58 @@
+{
+  "artifact_hash": "sha256:17e9b88cf74f76e1d5c0ce29e1d4412b662eb24ab4a1f7bcee1654195df53d77",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "duan_yongping_xueqiu_business_culture_2023",
+  "concise_summary": "The archived response is an opaque WAF/encrypted payload and does not expose readable article text.",
+  "contradictions_ambiguities": [
+    "Candidate naming and URL cannot substitute for source content; no semantic claim is supportable from the bytes."
+  ],
+  "human_reviewed": false,
+  "language": "und",
+  "method_attribution_approved": false,
+  "method_propositions": [],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can a permitted static or first-party export of the exact post be acquired and hashed?"
+  ],
+  "persona_id": "master_duan_yongping",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "Visible-text extraction produced opaque encoded material rather than natural language.",
+    "status": "unreadable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 110310,
+    "content_hash": "sha256:eaece8af228fdc955eb8ef7d296a56e76a7693cbc0d3af7560f3df66bd459527",
+    "content_type": "text/html",
+    "extracted_character_count": 34071,
+    "extracted_text_hash": "sha256:347cf8a16c47f73998fd6cb1e2f71a6b867a33bf4667bdbf04a51de04dc95d2d",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://xueqiu.com/1247347556/246717955",
+    "page_character_counts": [
+      34071
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:c8382c1ab6b00229d3b94bf8ae2fe0409ef586df0e63503f1848c004f71f58b8",
+    "retrieved_at": "2026-07-27T06:37:47.601Z"
+  },
+  "source_type": "blocked_web_response"
+}

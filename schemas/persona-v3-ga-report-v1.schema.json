@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-ga-report-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 GA gate report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "status",
+    "requirements",
+    "canonical_count",
+    "physical_v3_count",
+    "production_loader_visible",
+    "compiled_count",
+    "operational_or_higher",
+    "candidate_or_higher",
+    "method_model_count",
+    "prompt_lens_count",
+    "legacy_v2_count",
+    "invalid",
+    "unsafe",
+    "placeholder",
+    "pending_review",
+    "silent_fallback",
+    "canonical_ids",
+    "physical_v3_ids",
+    "production_loader_visible_ids",
+    "compiled_ids",
+    "legacy_v2_ids",
+    "invalid_findings",
+    "unsafe_findings",
+    "pending_review_items",
+    "expected_version",
+    "package_version",
+    "package_json_hash",
+    "experiment_status",
+    "host_status",
+    "package_status",
+    "cutover_status",
+    "rollback_status",
+    "release_manifest",
+    "release_evidence",
+    "aggregate_loader_status",
+    "gate_failures",
+    "personas",
+    "report_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_ga_report" },
+    "status": { "enum": ["passed", "failed"] },
+    "requirements": { "$ref": "#/$defs/requirements" },
+    "canonical_count": { "$ref": "#/$defs/count" },
+    "physical_v3_count": { "$ref": "#/$defs/count" },
+    "production_loader_visible": { "$ref": "#/$defs/count" },
+    "compiled_count": { "$ref": "#/$defs/count" },
+    "operational_or_higher": { "$ref": "#/$defs/count" },
+    "candidate_or_higher": { "$ref": "#/$defs/count" },
+    "method_model_count": { "$ref": "#/$defs/count" },
+    "prompt_lens_count": { "$ref": "#/$defs/count" },
+    "legacy_v2_count": { "$ref": "#/$defs/count" },
+    "invalid": { "$ref": "#/$defs/count" },
+    "unsafe": { "$ref": "#/$defs/count" },
+    "placeholder": { "$ref": "#/$defs/count" },
+    "pending_review": { "$ref": "#/$defs/count" },
+    "silent_fallback": { "$ref": "#/$defs/count" },
+    "canonical_ids": { "$ref": "#/$defs/idList" },
+    "physical_v3_ids": { "$ref": "#/$defs/idList" },
+    "production_loader_visible_ids": { "$ref": "#/$defs/idList" },
+    "compiled_ids": { "$ref": "#/$defs/idList" },
+    "legacy_v2_ids": { "$ref": "#/$defs/idList" },
+    "invalid_findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "unsafe_findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "pending_review_items": { "type": "array", "items": { "$ref": "#/$defs/pendingReview" } },
+    "expected_version": { "anyOf": [{ "$ref": "#/$defs/version" }, { "type": "null" }] },
+    "package_version": { "anyOf": [{ "$ref": "#/$defs/version" }, { "type": "null" }] },
+    "package_json_hash": { "$ref": "#/$defs/nullableHash" },
+    "experiment_status": { "$ref": "#/$defs/evidenceStatus" },
+    "host_status": { "$ref": "#/$defs/evidenceStatus" },
+    "package_status": { "$ref": "#/$defs/evidenceStatus" },
+    "cutover_status": { "$ref": "#/$defs/evidenceStatus" },
+    "rollback_status": { "$ref": "#/$defs/evidenceStatus" },
+    "release_manifest": { "$ref": "#/$defs/releaseManifest" },
+    "release_evidence": { "$ref": "#/$defs/releaseEvidence" },
+    "aggregate_loader_status": { "enum": ["passed", "failed"] },
+    "gate_failures": { "type": "array", "items": { "$ref": "#/$defs/gateFailure" } },
+    "personas": { "type": "array", "items": { "$ref": "#/$defs/persona" } },
+    "report_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "id": { "type": "string", "pattern": "^[a-z0-9_]{2,48}$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "nullableHash": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+    "releaseId": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "nullableReleaseId": { "anyOf": [{ "$ref": "#/$defs/releaseId" }, { "type": "null" }] },
+    "idList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/id" }
+    },
+    "admission": {
+      "enum": ["invalid", "prompt_lens", "operator_lens", "operational", "candidate", "method_model"]
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["require_count", "require_min_admission", "forbid_legacy", "forbid_prompt_lens", "require_release_evidence", "expected_version"],
+      "properties": {
+        "require_count": { "type": "integer", "minimum": 1 },
+        "require_min_admission": { "$ref": "#/$defs/admission" },
+        "forbid_legacy": { "type": "boolean" },
+        "forbid_prompt_lens": { "type": "boolean" },
+        "require_release_evidence": { "const": true },
+        "expected_version": { "anyOf": [{ "$ref": "#/$defs/version" }, { "type": "null" }] }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "code", "persona_id", "message"],
+      "properties": {
+        "scope": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 },
+        "persona_id": { "anyOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "message": { "type": "string", "minLength": 1 }
+      }
+    },
+    "pendingReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["persona_id", "candidate_id", "status"],
+      "properties": {
+        "persona_id": { "$ref": "#/$defs/id" },
+        "candidate_id": { "type": "string", "minLength": 3 },
+        "status": { "enum": ["retrieved_unadjudicated", "pending", "blocked"] }
+      }
+    },
+    "evidenceStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence", "reasons"],
+      "properties": {
+        "status": { "enum": ["not_provided", "pending", "passed", "failed", "ready", "blocked"] },
+        "evidence": { "enum": ["none", "release_evidence", "derived_core_gate", "core_gate_and_release_evidence"] },
+        "reasons": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "releaseManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provided", "status", "release_id", "manifest_hash", "catalog_bound", "pack_hashes_match", "full_verification", "errors"],
+      "properties": {
+        "provided": { "type": "boolean" },
+        "status": { "enum": ["not_provided", "valid", "invalid"] },
+        "release_id": { "$ref": "#/$defs/nullableReleaseId" },
+        "manifest_hash": { "$ref": "#/$defs/nullableHash" },
+        "catalog_bound": { "type": "boolean" },
+        "pack_hashes_match": { "type": "boolean" },
+        "full_verification": { "type": "boolean" },
+        "errors": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "releaseEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provided", "status", "evidence_hash", "release_id", "release_manifest_hash",
+        "manifest_bound", "signature_valid", "approver_key_ids", "approver_principal_ids",
+        "physical_artifact_hashes", "errors"
+      ],
+      "properties": {
+        "provided": { "type": "boolean" },
+        "status": { "enum": ["not_provided", "valid", "invalid"] },
+        "evidence_hash": { "$ref": "#/$defs/nullableHash" },
+        "release_id": { "$ref": "#/$defs/nullableReleaseId" },
+        "release_manifest_hash": { "$ref": "#/$defs/nullableHash" },
+        "manifest_bound": { "type": "boolean" },
+        "signature_valid": { "type": "boolean" },
+        "approver_key_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" }
+        },
+        "approver_principal_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+        },
+        "physical_artifact_hashes": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/nullableHash" }
+        },
+        "errors": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "gateFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "persona_ids"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "persona_ids": { "$ref": "#/$defs/idList" }
+      }
+    },
+    "persona": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "persona_id",
+        "admission_level",
+        "pack_format",
+        "physical_v3",
+        "production_loader_visible",
+        "compiled",
+        "pack_hash",
+        "placeholder_files",
+        "pending_review",
+        "silent_fallback",
+        "errors"
+      ],
+      "properties": {
+        "persona_id": { "$ref": "#/$defs/id" },
+        "admission_level": { "$ref": "#/$defs/admission" },
+        "pack_format": { "enum": ["v1_prompt", "v2_inline", "v3_physical"] },
+        "physical_v3": { "type": "boolean" },
+        "production_loader_visible": { "type": "boolean" },
+        "compiled": { "type": "boolean" },
+        "pack_hash": { "$ref": "#/$defs/nullableHash" },
+        "placeholder_files": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "pending_review": { "$ref": "#/$defs/count" },
+        "silent_fallback": { "type": "boolean" },
+        "errors": { "type": "array", "uniqueItems": true, "items": { "type": "string" } }
+      }
+    }
+  }
+}

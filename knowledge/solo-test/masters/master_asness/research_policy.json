@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject attribution when factor construction is not versioned and reproducible.",
+    "Reject an alpha claim fully explained by cheap systematic exposures.",
+    "Reject an implementable-edge claim erased by crowding and costs."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

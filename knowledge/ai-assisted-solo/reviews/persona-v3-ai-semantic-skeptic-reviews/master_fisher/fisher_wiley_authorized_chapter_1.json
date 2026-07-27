@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:aec435c85e3b08eb92ac5a2bd0d43c85af5b838eade330ca70e8cb3e697f273a",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "fisher_wiley_authorized_chapter_1",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:6f3448f5a9e3365a9beb9859af87a8c19a45ebc621d515e24bd3b5b84fac6f0f",
+    "declared_artifact_hash": "sha256:6b603fafd704dca7cf8e2ba06a5e476fe58d7f8dee1dd0fc57dd0f07a55b0a96",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:6b603fafd704dca7cf8e2ba06a5e476fe58d7f8dee1dd0fc57dd0f07a55b0a96",
+    "relative_path": "master_fisher/fisher_wiley_authorized_chapter_1.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_fisher",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 2,
+        "actual_text_end": 1026,
+        "actual_text_start": 887,
+        "declared_kind": "pdf_page",
+        "declared_page": 2,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "finding the really outstanding companies and staying with them through all the fluctuations of a gyrating market proved far more profitable",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 2,
+        "section": "Clues from the past",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Seek outstanding companies and hold through market fluctuations rather than relying primarily on buying and selling the business cycle.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "fisher_wiley_authorized_chapter_1:p1",
+      "review_hash": "sha256:95a130eb8b0da3854ef4b89b58911be70bc2b136c045e9758e413487e330dd8b",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77",
+      "snippet_hash_recomputed": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77",
+      "support_rationale": "The authorized excerpt explicitly says finding outstanding companies and staying through market fluctuations proved more profitable than cycle trading.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 68051,
+    "content_hash": "sha256:eb2709711d5e20893964141e04fb85f9b8402a6f02bb65457f38be928cd714ec",
+    "extracted_text_hash": "sha256:dbc94d3dabc451840948cd55b7c6b8dd7cbb8c71637063af9c42c4e5155b74ec",
+    "extracted_text_hash_recomputed": "sha256:dbc94d3dabc451840948cd55b7c6b8dd7cbb8c71637063af9c42c4e5155b74ec",
+    "raw_bytes_hash_recomputed": "sha256:eb2709711d5e20893964141e04fb85f9b8402a6f02bb65457f38be928cd714ec",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:4776ed2a273da5532cce136ebcc5a34ba0e102250bed37680480e5ae58a45fba",
+    "source_record_hash_recomputed": "sha256:4776ed2a273da5532cce136ebcc5a34ba0e102250bed37680480e5ae58a45fba"
+  }
+}

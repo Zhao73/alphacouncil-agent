@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/ai-source-prereview-v1.schema.json",
+  "title": "AlphaCouncil machine-only source pre-review v1",
+  "description": "A hash-bound AI/machine triage artifact. It is never a human source-review attestation and has no production effect.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_kind", "pipeline_id", "reviewer_kind", "assurance_class",
+    "human_reviewed", "human_claims", "semantic_review_performed", "method_attribution_approved",
+    "production_effect", "persona_id", "candidate_id", "source_binding", "roles", "verdict",
+    "disagreement", "open_questions", "machine_limitations", "artifact_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_ai_source_prereview" },
+    "pipeline_id": { "const": "alphacouncil_ai_source_prereview_v1" },
+    "reviewer_kind": { "const": "ai" },
+    "assurance_class": { "const": "machine_pre_review_only" },
+    "human_reviewed": { "const": false },
+    "human_claims": { "const": false },
+    "semantic_review_performed": { "const": false },
+    "method_attribution_approved": { "const": false },
+    "production_effect": { "const": "none" },
+    "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]$" },
+    "source_binding": { "$ref": "#/$defs/source_binding" },
+    "roles": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        { "$ref": "#/$defs/extractor" },
+        { "$ref": "#/$defs/skeptic" },
+        { "$ref": "#/$defs/adjudicator" }
+      ],
+      "items": false
+    },
+    "verdict": { "const": "requires_human_review" },
+    "disagreement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["present", "role_verdicts", "explanation"],
+      "properties": {
+        "present": { "type": "boolean" },
+        "role_verdicts": { "$ref": "#/$defs/non_empty_strings" },
+        "explanation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "open_questions": { "$ref": "#/$defs/non_empty_strings" },
+    "machine_limitations": { "$ref": "#/$defs/non_empty_strings" },
+    "artifact_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "non_empty_strings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "source_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_relative_path", "archive_relative_path", "record_hash", "content_hash",
+        "byte_length", "content_type", "retrieved_at", "final_url", "source_bytes_reverified",
+        "format_probe"
+      ],
+      "properties": {
+        "record_relative_path": { "type": "string", "pattern": "^personas-v3/master_[a-z0-9_]+/acquisitions/candidates/[a-z0-9_-]+/record\\.json$" },
+        "archive_relative_path": { "type": "string", "pattern": "^personas-v3/master_[a-z0-9_]+/acquisitions/candidates/[a-z0-9_-]+/source\\.bin$" },
+        "record_hash": { "$ref": "#/$defs/hash" },
+        "content_hash": { "$ref": "#/$defs/hash" },
+        "byte_length": { "type": "integer", "minimum": 1 },
+        "content_type": { "type": ["string", "null"] },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "final_url": { "type": "string", "format": "uri" },
+        "source_bytes_reverified": { "const": true },
+        "format_probe": { "enum": ["pdf_magic", "html_markup", "declared_text_unclassified", "opaque_binary"] }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role", "role_id", "reviewer_kind", "execution_mode", "prompt_id", "prompt_hash",
+        "reads_other_role_outputs", "input_role_output_hashes", "input_binding_hash", "verdict",
+        "observations", "concerns", "open_questions", "output_hash"
+      ],
+      "properties": {
+        "role": { "enum": ["extractor", "skeptic", "adjudicator"] },
+        "role_id": { "enum": ["ai_source_extractor_v1", "ai_source_skeptic_v1", "ai_source_adjudicator_v1"] },
+        "reviewer_kind": { "const": "ai" },
+        "execution_mode": { "const": "deterministic_machine_preflight" },
+        "prompt_id": { "type": "string", "pattern": "^alphacouncil\\.source-prereview\\.[a-z]+\\.v1$" },
+        "prompt_hash": { "$ref": "#/$defs/hash" },
+        "reads_other_role_outputs": { "type": "boolean" },
+        "input_role_output_hashes": { "type": "array", "items": { "$ref": "#/$defs/hash" } },
+        "input_binding_hash": { "$ref": "#/$defs/hash" },
+        "verdict": { "type": "string", "minLength": 1 },
+        "observations": { "$ref": "#/$defs/non_empty_strings" },
+        "concerns": { "$ref": "#/$defs/non_empty_strings" },
+        "open_questions": { "$ref": "#/$defs/non_empty_strings" },
+        "output_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "extractor": {
+      "allOf": [
+        { "$ref": "#/$defs/role" },
+        { "properties": { "role": { "const": "extractor" }, "role_id": { "const": "ai_source_extractor_v1" }, "reads_other_role_outputs": { "const": false }, "input_role_output_hashes": { "maxItems": 0 } } }
+      ]
+    },
+    "skeptic": {
+      "allOf": [
+        { "$ref": "#/$defs/role" },
+        { "properties": { "role": { "const": "skeptic" }, "role_id": { "const": "ai_source_skeptic_v1" }, "reads_other_role_outputs": { "const": false }, "input_role_output_hashes": { "maxItems": 0 } } }
+      ]
+    },
+    "adjudicator": {
+      "allOf": [
+        { "$ref": "#/$defs/role" },
+        { "properties": { "role": { "const": "adjudicator" }, "role_id": { "const": "ai_source_adjudicator_v1" }, "reads_other_role_outputs": { "const": true }, "input_role_output_hashes": { "minItems": 2, "maxItems": 2 } } }
+      ]
+    }
+  }
+}

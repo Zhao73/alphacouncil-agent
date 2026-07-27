@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:6cdefe5b398a0d3f07ecde625c54b3c829d19ad7a564de8dc7339ffbc09ac1fe",
+    "derivation_spec_hash": "sha256:06eb2b7aa50fd446fcead03ecd9e3495f779f9e6f6f9b50250667833ed6bf950",
+    "derivation_spec_id": "master_burry.capital_structure_reader.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_burry.capital_structure_reader",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:1691149e6b849b2419f0d2561b00b11c3822e957272e5a11fd6ae6552379c90f",
+    "inputs": [
+      {
+        "fact_id": "capital_structure.seniority"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "capital_structure.seniority",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:a6f9bba672b6528535d5f3ca1b89edc1700d55a519e1a7ecb622349745ba8f3f",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:671173c81294794a1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:8523e508ca7228a643a4d2d190a0e2e638b9430c8d799f49939b400c46b3cf36",
+    "derivation_spec_hash": "sha256:c48f91bb43dde9875ad2b6f5a55ac287c0b0782b0d41466ec50b17d5f168fe90",
+    "derivation_spec_id": "master_burry.mispricing_carry.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_burry.mispricing_carry",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:7777d20d14f9fc076c707450424b59cad7ad6891f9f3fd759d834c8997844dfa",
+    "inputs": [
+      {
+        "fact_id": "mispricing.mechanism"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "mispricing.mechanism",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:793d438dec6616db00a364707b3377453cbb511112e75a0fba0cb128e13794a3",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:671173c81294794a1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

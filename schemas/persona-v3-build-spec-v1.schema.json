@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-build-spec-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 non-production build-spec inventory",
+  "description": "Planning-only requirements for building the 26 physical PersonaPack v3 seats. A build spec is not a source, corpus item, reviewer approval, experiment result or production pack.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "inventory_id",
+    "inventory_status",
+    "canonical_catalog_source",
+    "seat_count",
+    "adjudication_policy",
+    "seats"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "inventory_id": { "const": "personapack-v3-build-specs" },
+    "inventory_status": { "const": "non_production_planning_only" },
+    "canonical_catalog_source": { "const": "mcp/lib/personas/registry.mjs" },
+    "seat_count": { "const": 26 },
+    "adjudication_policy": {
+      "type": "object",
+      "required": ["method_attribution", "source_grading", "case_labels", "veto_thresholds", "reviewer_approvals", "experiments", "promotion_effect"],
+      "additionalProperties": false,
+      "properties": {
+        "method_attribution": { "const": "pending_human_adjudication" },
+        "source_grading": { "const": "pending_human_adjudication" },
+        "case_labels": { "const": "pending_human_adjudication" },
+        "veto_thresholds": { "const": "pending_human_adjudication" },
+        "reviewer_approvals": { "const": "none" },
+        "experiments": { "const": "not_started" },
+        "promotion_effect": { "const": "none" }
+      }
+    },
+    "seats": {
+      "type": "array",
+      "minItems": 26,
+      "maxItems": 26,
+      "items": { "$ref": "#/$defs/seat" }
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 3 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "pendingHuman": {
+      "const": "pending_human_adjudication"
+    },
+    "seat": {
+      "type": "object",
+      "required": [
+        "persona_id",
+        "build_status",
+        "current_material",
+        "method_scope",
+        "required_fact_types",
+        "native_decision_contract",
+        "planned_dedicated_tools",
+        "veto_families",
+        "primary_source_acquisition_targets",
+        "case_acquisition_targets",
+        "known_limits",
+        "human_adjudication"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+        "build_status": { "const": "spec_only" },
+        "current_material": {
+          "type": "object",
+          "required": ["prompt_path", "material_level", "legacy_v2_manifest"],
+          "additionalProperties": false,
+          "properties": {
+            "prompt_path": { "$ref": "#/$defs/safePath" },
+            "material_level": { "enum": ["v1_prompt", "v2_operator"] },
+            "legacy_v2_manifest": { "anyOf": [{ "$ref": "#/$defs/safePath" }, { "type": "null" }] }
+          }
+        },
+        "method_scope": {
+          "type": "object",
+          "required": ["planning_hypothesis", "applicable_domains", "excluded_claims"],
+          "additionalProperties": false,
+          "properties": {
+            "planning_hypothesis": { "type": "string", "minLength": 20 },
+            "applicable_domains": { "$ref": "#/$defs/nonEmptyStrings" },
+            "excluded_claims": { "$ref": "#/$defs/nonEmptyStrings" }
+          }
+        },
+        "required_fact_types": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9_.:-]{3,160}$" },
+          "minItems": 4,
+          "uniqueItems": true
+        },
+        "native_decision_contract": {
+          "type": "object",
+          "required": ["schema_id", "implementation_status", "eligibility_facts", "states", "required_outputs", "fail_closed_reasons"],
+          "additionalProperties": false,
+          "properties": {
+            "schema_id": { "type": "string", "pattern": "^[a-z0-9_]+_v1$" },
+            "implementation_status": { "const": "planned_unverified" },
+            "eligibility_facts": { "$ref": "#/$defs/nonEmptyStrings" },
+            "states": { "$ref": "#/$defs/nonEmptyStrings" },
+            "required_outputs": { "$ref": "#/$defs/nonEmptyStrings" },
+            "fail_closed_reasons": { "$ref": "#/$defs/nonEmptyStrings" }
+          }
+        },
+        "planned_dedicated_tools": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["tool_id", "purpose", "output_fact_types", "implementation_status"],
+            "additionalProperties": false,
+            "properties": {
+              "tool_id": { "type": "string", "pattern": "^master_[a-z0-9_]+\\.[a-z0-9_]+$" },
+              "purpose": { "type": "string", "minLength": 12 },
+              "output_fact_types": {
+                "type": "array",
+                "items": { "type": "string", "pattern": "^[a-z0-9_.:-]{3,160}$" },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "implementation_status": { "const": "planned_unverified" }
+            }
+          }
+        },
+        "veto_families": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["veto_id", "candidate_rule", "human_adjudication_status"],
+            "additionalProperties": false,
+            "properties": {
+              "veto_id": { "type": "string", "pattern": "^master_[a-z0-9_]+\\.[a-z0-9_]+$" },
+              "candidate_rule": { "type": "string", "minLength": 12 },
+              "human_adjudication_status": { "$ref": "#/$defs/pendingHuman" }
+            }
+          }
+        },
+        "primary_source_acquisition_targets": {
+          "type": "array",
+          "minItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["target_id", "source_family", "acquisition_target", "acquisition_status", "human_adjudication_status"],
+            "additionalProperties": false,
+            "properties": {
+              "target_id": { "type": "string", "pattern": "^[a-z0-9_]+\\.source_[0-9]+$" },
+              "source_family": { "enum": ["author_signed", "institutional_primary", "public_record", "published_work"] },
+              "acquisition_target": { "type": "string", "minLength": 16 },
+              "acquisition_status": { "const": "not_started" },
+              "human_adjudication_status": { "$ref": "#/$defs/pendingHuman" }
+            }
+          }
+        },
+        "case_acquisition_targets": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": ["case_family", "acquisition_target", "minimum_count", "acquisition_status", "human_adjudication_status"],
+            "additionalProperties": false,
+            "properties": {
+              "case_family": { "enum": ["decision", "failure", "counterfactual", "golden"] },
+              "acquisition_target": { "type": "string", "minLength": 16 },
+              "minimum_count": { "type": "integer", "minimum": 1 },
+              "acquisition_status": { "const": "not_started" },
+              "human_adjudication_status": { "$ref": "#/$defs/pendingHuman" }
+            }
+          }
+        },
+        "known_limits": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 16 },
+          "minItems": 2,
+          "uniqueItems": true
+        },
+        "human_adjudication": {
+          "type": "object",
+          "required": ["method_attribution", "source_grade", "case_outcomes", "veto_thresholds", "counterfactual_labels", "reviewer_approvals", "experiment_status"],
+          "additionalProperties": false,
+          "properties": {
+            "method_attribution": { "$ref": "#/$defs/pendingHuman" },
+            "source_grade": { "$ref": "#/$defs/pendingHuman" },
+            "case_outcomes": { "$ref": "#/$defs/pendingHuman" },
+            "veto_thresholds": { "$ref": "#/$defs/pendingHuman" },
+            "counterfactual_labels": { "$ref": "#/$defs/pendingHuman" },
+            "reviewer_approvals": { "const": "none" },
+            "experiment_status": { "const": "not_started" }
+          }
+        }
+      }
+    },
+    "safePath": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-release-evidence-v1.schema.json",
+  "title": "AlphaCouncil signed PersonaPack v3 GA release evidence",
+  "description": "External release approvals over physical host, package and experiment artifact bindings. No free-form evidence hash can satisfy this contract.",
+  "type": "object",
+  "required": [
+    "schema_version", "artifact_kind", "release_id", "release_manifest_hash",
+    "release_source_review_evidence_hash", "expected_version", "generated_at",
+    "artifacts", "claims", "attestations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_ga_release_evidence" },
+    "release_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "release_manifest_hash": { "$ref": "#/$defs/hash" },
+    "release_source_review_evidence_hash": { "$ref": "#/$defs/hash" },
+    "expected_version": { "$ref": "#/$defs/version" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "artifacts": {
+      "type": "object",
+      "required": ["external_hosts", "package", "experiment_adjudication", "release_operations"],
+      "additionalProperties": false,
+      "properties": {
+        "external_hosts": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "prefixItems": [
+            { "$ref": "#/$defs/claudeHost" },
+            { "$ref": "#/$defs/codexHost" },
+            { "$ref": "#/$defs/opencodeHost" },
+            { "$ref": "#/$defs/grokHost" }
+          ],
+          "items": false
+        },
+        "package": { "$ref": "#/$defs/binding" },
+        "experiment_adjudication": { "$ref": "#/$defs/binding" },
+        "release_operations": { "$ref": "#/$defs/releaseOperations" }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "required": ["experiment_adjudication", "external_host_e2e", "package"],
+      "additionalProperties": false,
+      "properties": {
+        "experiment_adjudication": { "const": "passed" },
+        "external_host_e2e": { "const": "passed" },
+        "package": { "const": "passed" }
+      }
+    },
+    "attestations": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "#/$defs/attestation" }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "binding": {
+      "type": "object",
+      "required": ["relative_path", "file_hash", "artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "file_hash": { "$ref": "#/$defs/hash" },
+        "artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "hostBinding": {
+      "type": "object",
+      "required": ["host_id", "relative_path", "file_hash", "artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "host_id": { "enum": ["claude_code", "codex", "opencode", "grok"] },
+        "relative_path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "file_hash": { "$ref": "#/$defs/hash" },
+        "artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "operationBinding": {
+      "type": "object",
+      "required": ["pointer_history", "approval", "release_manifest", "previous_release_manifest"],
+      "additionalProperties": false,
+      "properties": {
+        "pointer_history": { "$ref": "#/$defs/binding" },
+        "approval": { "$ref": "#/$defs/binding" },
+        "release_manifest": { "$ref": "#/$defs/binding" },
+        "previous_release_manifest": { "$ref": "#/$defs/binding" }
+      }
+    },
+    "releaseOperations": {
+      "type": "object",
+      "required": ["cutover", "rollback", "final_cutover", "current_pointer", "activation_marker"],
+      "additionalProperties": false,
+      "properties": {
+        "cutover": { "$ref": "#/$defs/operationBinding" },
+        "rollback": { "$ref": "#/$defs/operationBinding" },
+        "final_cutover": { "$ref": "#/$defs/operationBinding" },
+        "current_pointer": { "$ref": "#/$defs/binding" },
+        "activation_marker": { "$ref": "#/$defs/binding" }
+      }
+    },
+    "claudeHost": { "allOf": [{ "$ref": "#/$defs/hostBinding" }, { "properties": { "host_id": { "const": "claude_code" } } }] },
+    "codexHost": { "allOf": [{ "$ref": "#/$defs/hostBinding" }, { "properties": { "host_id": { "const": "codex" } } }] },
+    "opencodeHost": { "allOf": [{ "$ref": "#/$defs/hostBinding" }, { "properties": { "host_id": { "const": "opencode" } } }] },
+    "grokHost": { "allOf": [{ "$ref": "#/$defs/hostBinding" }, { "properties": { "host_id": { "const": "grok" } } }] },
+    "attestation": {
+      "type": "object",
+      "required": ["reviewer_id", "signer_key_id", "signed_at", "signature"],
+      "additionalProperties": false,
+      "properties": {
+        "reviewer_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "signer_key_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" },
+        "signed_at": { "type": "string", "format": "date-time" },
+        "signature": { "type": "string", "pattern": "^ed25519:[A-Za-z0-9_-]{86}$" }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject a reflexivity thesis that cannot show feedback from price to fundamentals.",
+    "Reject a position that cannot survive before the loop is expected to break.",
+    "Reject a trade thesis with no observable condition for admitting the loop changed."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "artifact_hash": "sha256:2fe3c60d33dd0f531a9729366613b1bb3c76829f031ab10cd889c77a3178dba0",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "duan_yongping_xueqiu_business_culture_2023",
+  "challenges": [
+    "The archived page is an opaque WAF/encrypted response rather than readable article text.",
+    "No proposition may be reconstructed from model memory or adjacent sources."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:e4273886bb347c65585e62dfee9a31c157663c1e9937f87b512875d95a1cec92",
+    "declared_artifact_hash": "sha256:17e9b88cf74f76e1d5c0ce29e1d4412b662eb24ab4a1f7bcee1654195df53d77",
+    "proposition_count": 0,
+    "recomputed_artifact_hash": "sha256:17e9b88cf74f76e1d5c0ce29e1d4412b662eb24ab4a1f7bcee1654195df53d77",
+    "relative_path": "master_duan_yongping/duan_yongping_xueqiu_business_culture_2023.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can the original transcript, audio, readable PDF, or unobstructed page be archived and reviewed?"
+  ],
+  "overall_verdict": "unverifiable",
+  "persona_id": "master_duan_yongping",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [],
+  "readability_recheck": {
+    "extractor_status": "unreadable",
+    "independent_status": "unreadable",
+    "reason": "Independent byte reopening produced no usable prose or an opaque WAF payload.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 110310,
+    "content_hash": "sha256:eaece8af228fdc955eb8ef7d296a56e76a7693cbc0d3af7560f3df66bd459527",
+    "extracted_text_hash": "sha256:347cf8a16c47f73998fd6cb1e2f71a6b867a33bf4667bdbf04a51de04dc95d2d",
+    "extracted_text_hash_recomputed": "sha256:347cf8a16c47f73998fd6cb1e2f71a6b867a33bf4667bdbf04a51de04dc95d2d",
+    "raw_bytes_hash_recomputed": "sha256:eaece8af228fdc955eb8ef7d296a56e76a7693cbc0d3af7560f3df66bd459527",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:c8382c1ab6b00229d3b94bf8ae2fe0409ef586df0e63503f1848c004f71f58b8",
+    "source_record_hash_recomputed": "sha256:c8382c1ab6b00229d3b94bf8ae2fe0409ef586df0e63503f1848c004f71f58b8"
+  }
+}

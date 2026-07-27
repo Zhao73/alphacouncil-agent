@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-tool-graph-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 deterministic tool graph DSL 1.1",
+  "description": "Pure arithmetic tools executed in manifest.computation.pipeline order. Inputs name exact typed facts or earlier outputs and every tool declares fail or skip behavior for missing optional inputs; no code or network operation is accepted.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "schema_version",
+      "dsl_version",
+      "id",
+      "version",
+      "kind",
+      "operation",
+      "on_missing",
+      "inputs",
+      "input_contracts",
+      "output_id",
+      "value_kind",
+      "unit",
+      "output_period",
+      "input_schema_hash",
+      "output_schema_hash",
+      "source_ids"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "schema_version": { "const": 1 },
+      "dsl_version": { "const": "1.1" },
+      "id": { "$ref": "#/$defs/id" },
+      "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+      "kind": { "enum": ["recomputation", "calculator", "transform"] },
+      "operation": { "enum": ["identity", "add", "subtract", "multiply", "divide", "sum", "mean", "min", "max", "abs", "negate", "clamp"] },
+      "on_missing": { "enum": ["fail", "skip"] },
+      "inputs": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "#/$defs/operand" }
+      },
+      "input_contracts": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "$ref": "#/$defs/inputContract" }
+      },
+      "output_id": { "$ref": "#/$defs/id" },
+      "value_kind": { "enum": ["monetary", "ratio", "count", "scalar"] },
+      "unit": { "type": "string", "minLength": 1 },
+      "output_period": { "$ref": "#/$defs/periodContract" },
+      "input_schema_hash": { "$ref": "#/$defs/hash" },
+      "output_schema_hash": { "$ref": "#/$defs/hash" },
+      "source_ids": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": { "type": "string", "minLength": 1 }
+      },
+      "formula_spec_id": { "$ref": "#/$defs/id" },
+      "formula_spec_hash": { "$ref": "#/$defs/hash" },
+      "formula_review_subject_hash": { "$ref": "#/$defs/hash" },
+      "approval_bundle_hash": { "$ref": "#/$defs/hash" },
+      "assurance_class": { "const": "provisional_derived_proxy" },
+      "review_status": { "const": "not_human_reviewed" },
+      "intended_use": { "const": "local_test_only" },
+      "production_eligible": { "const": false },
+      "derivation_spec_id": { "$ref": "#/$defs/id" },
+      "derivation_spec_hash": { "$ref": "#/$defs/hash" },
+      "derivation_evidence_hash": { "$ref": "#/$defs/hash" }
+    },
+    "oneOf": [
+      {
+        "required": [
+          "formula_spec_id",
+          "formula_spec_hash",
+          "formula_review_subject_hash",
+          "approval_bundle_hash"
+        ],
+        "not": {
+          "anyOf": [
+            { "required": ["assurance_class"] },
+            { "required": ["derivation_spec_id"] },
+            { "required": ["derivation_evidence_hash"] }
+          ]
+        }
+      },
+      {
+        "required": [
+          "assurance_class",
+          "review_status",
+          "intended_use",
+          "production_eligible",
+          "derivation_spec_id",
+          "derivation_spec_hash",
+          "derivation_evidence_hash"
+        ],
+        "not": {
+          "anyOf": [
+            { "required": ["formula_spec_id"] },
+            { "required": ["formula_spec_hash"] },
+            { "required": ["formula_review_subject_hash"] },
+            { "required": ["approval_bundle_hash"] }
+          ]
+        }
+      }
+    ]
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,159}$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "periodContract": {
+      "type": "object",
+      "required": ["basis", "window", "alignment"],
+      "additionalProperties": false,
+      "properties": {
+        "basis": { "enum": ["instant", "duration", "forecast_horizon", "not_applicable"] },
+        "window": { "type": ["string", "null"], "pattern": "^P[1-9][0-9]*[DMY]$" },
+        "alignment": { "enum": ["exact", "same_period", "as_of", "not_applicable"] }
+      }
+    },
+    "inputContract": {
+      "type": "object",
+      "required": ["value_kind", "unit", "period", "on_missing"],
+      "additionalProperties": false,
+      "properties": {
+        "value_kind": { "enum": ["monetary", "ratio", "count", "scalar"] },
+        "unit": { "type": "string", "minLength": 1 },
+        "period": { "$ref": "#/$defs/periodContract" },
+        "on_missing": { "enum": ["fail", "skip"] }
+      }
+    },
+    "operand": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["fact_id"],
+          "additionalProperties": false,
+          "properties": { "fact_id": { "$ref": "#/$defs/id" } }
+        },
+        {
+          "type": "object",
+          "required": ["output_id"],
+          "additionalProperties": false,
+          "properties": { "output_id": { "$ref": "#/$defs/id" } }
+        },
+        {
+          "type": "object",
+          "required": ["literal"],
+          "additionalProperties": false,
+          "properties": { "literal": { "type": "number" } }
+        }
+      ]
+    }
+  }
+}

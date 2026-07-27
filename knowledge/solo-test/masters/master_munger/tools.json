@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:b9b4890170ebd812afafa39a240b6b528a8d097b13b4979db1ce0242860db112",
+    "derivation_spec_hash": "sha256:c06b14df3f95aa5a8de58fe9395e5c914493dff41cd912db889a7933910d8cca",
+    "derivation_spec_id": "master_munger.incentive_map.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_munger.incentive_map",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:b490e2b21d7864f7406c46c5424ca4e12336f5a43718d2bdc85fd8bf9d4c6295",
+    "inputs": [
+      {
+        "fact_id": "governance.incentive_structure"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "governance.incentive_structure",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:3ddcc830fb4a7246a717196095f64c54b46b19f88ee2c4941a3634c80a84501c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:d4d52af8b246f7129"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:0d72d3b4ab874eef0a47fb1ef169819bd9f4bafa4c402cdffa1329e1ae5763c2",
+    "derivation_spec_hash": "sha256:1a415983d8052349b4ba93be9536460a98482cdd2c9144f808c30a868af87624",
+    "derivation_spec_id": "master_munger.failure_path_graph.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_munger.failure_path_graph",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:8254231c1aceef4f5b5245a358850653105210a0d408bf21cbee1fe571d9d21a",
+    "inputs": [
+      {
+        "fact_id": "risk.failure_paths"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "risk.failure_paths",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:79453188b6af5a0850f9bcad6b8b25db9e11473375448b569dc2a90038ac8081",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:d4d52af8b246f7129"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

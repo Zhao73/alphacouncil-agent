@@ -13,7 +13,100 @@ import { debateFromCodex, dryDebate, dryPacket, extractJson, managerFallback, me
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
-import { declinedOpinion, planMasters, reconcileOpinion } from "./personas-v2/bridge.mjs";
+import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
+import { gatherGrounding } from "./grounding.mjs";
+import { councilOptions } from "./council-options.mjs";
+
+function masterRuntimeProvenance(run, plan) {
+  const decisions = new Map((plan.decisions || []).map((decision) => [decision.persona_id, decision]));
+  const planned = new Map(
+    [...(plan.to_run || []), ...(plan.declined || []), ...(plan.completed || []), ...(plan.blocked || [])]
+      .map((item) => [item.id, item]),
+  );
+  return Object.fromEntries(selectedMasters(run).map((id) => {
+    const decision = decisions.get(id) || {};
+    const item = planned.get(id) || {};
+    return [id, {
+      engine: decision.engine || item.engine || "unknown",
+      pack_hash: decision.pack_hash || run.master_selection?.selected_master_pack_hashes?.[id] || null,
+      corpus_hash: decision.corpus_hash || null,
+      policy_hash: decision.policy_hash || null,
+      tool_graph_hash: decision.tool_graph_hash || null,
+      fact_pack_hash: decision.fact_pack_hash || item.preDecision?.fact_pack?.fact_pack_hash || null,
+      evidence_snapshot_hash: decision.evidence_snapshot_hash || item.preDecision?.evidence_snapshot_hash || null,
+    }];
+  }));
+}
+
+function attachMasterRuntimeProvenance(run, masterId, opinion, engine = null) {
+  const provenance = run.master_runtime_provenance?.[masterId] || {};
+  return {
+    ...opinion,
+    engine: opinion.engine || engine || provenance.engine || "unknown",
+    pack_hash: opinion.pack_hash || provenance.pack_hash
+      || run.master_selection?.selected_master_pack_hashes?.[masterId] || null,
+    corpus_hash: opinion.corpus_hash || provenance.corpus_hash || null,
+    policy_hash: opinion.policy_hash || provenance.policy_hash || null,
+    tool_graph_hash: opinion.tool_graph_hash || provenance.tool_graph_hash || null,
+    fact_pack_hash: opinion.fact_pack_hash || provenance.fact_pack_hash || null,
+    evidence_snapshot_hash: opinion.evidence_snapshot_hash || provenance.evidence_snapshot_hash || null,
+  };
+}
+
+function frozenMasterSelection(args = {}) {
+  const selection = args.master_selection;
+  if (!selection || selection.status !== "consumed") {
+    throw invalidParams("A consumed master selection receipt is required before creating a council run.", {
+      reason: "MASTER_SELECTION_REQUIRED",
+    });
+  }
+  if (!Array.isArray(args.masters) || args.masters.length === 0) {
+    throw invalidParams("A confirmed council run must contain at least one selected master.", {
+      reason: "EMPTY_MASTER_SELECTION",
+    });
+  }
+  if (new Set(args.masters).size !== args.masters.length) {
+    throw invalidParams("Selected masters must be unique.", { reason: "DUPLICATE_MASTER_SELECTION" });
+  }
+  if (!Array.isArray(selection.selected_master_ids)
+    || JSON.stringify(selection.selected_master_ids) !== JSON.stringify(args.masters)) {
+    throw invalidParams("Selected masters do not match the consumed receipt.", {
+      reason: "MASTER_SELECTION_RECEIPT_MISMATCH",
+    });
+  }
+  const reg = registry();
+  const unknown = args.masters.filter((id) => reg.get(id)?.kind !== "master" || reg.get(id)?.enabled === false);
+  if (unknown.length) {
+    throw invalidParams(`Unknown or disabled selected master(s): ${unknown.join(", ")}`, {
+      reason: "UNKNOWN_MASTER_SELECTION",
+      unknown,
+    });
+  }
+  const currentPackHashes = Object.fromEntries(
+    councilOptions({ language: args.language }).masters.map((master) => [master.id, master.pack_hash]),
+  );
+  const receiptPackHashes = selection.selected_master_pack_hashes;
+  const mismatchedPackHashes = args.masters.filter((id) => (
+    typeof receiptPackHashes?.[id] !== "string"
+      || receiptPackHashes[id] !== currentPackHashes[id]
+  ));
+  if (mismatchedPackHashes.length) {
+    throw invalidParams("The selected persona pack changed after confirmation. Start a new selection.", {
+      reason: "MASTER_SELECTION_PACK_HASH_MISMATCH",
+      mismatched_master_ids: mismatchedPackHashes,
+    });
+  }
+  return {
+    masters: [...args.masters],
+    selection: {
+      ...selection,
+      selected_master_ids: [...args.masters],
+      selected_master_pack_hashes: Object.fromEntries(
+        args.masters.map((id) => [id, receiptPackHashes[id]]),
+      ),
+    },
+  };
+}
 
 export function visibleRun(args) {
   const symbol = safeSymbol(args.symbol);
@@ -21,6 +114,7 @@ export function visibleRun(args) {
   const id = args.run_id || runId(symbol);
   const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
   const language = resolveLanguage(args);
+  const frozen = frozenMasterSelection(args);
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
@@ -31,6 +125,7 @@ export function visibleRun(args) {
     language,
     dry_run: false,
     execution_mode: "visible_host_threads",
+    entry_tool: args.entry_tool || "plan_visible_run",
     visibility_required: true,
     started_at: startedAt,
     updated_at: startedAt,
@@ -41,11 +136,12 @@ export function visibleRun(args) {
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
     agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
     packets: [],
-    // Masters are an optional judgment layer. They are deliberately NOT part of the
-    // completeness gate: turning the bench on must not be able to mark a run incomplete.
-    masters_roster: typeof args.masters_roster === "string" ? args.masters_roster : undefined,
-    masters: Array.isArray(args.masters) ? args.masters : undefined,
+    // The receipt resolves the user's exact choice once. This frozen list, not a dynamic
+    // roster lookup, is the run truth and every seat is part of the completeness gate.
+    masters: frozen.masters,
+    master_selection: frozen.selection,
     master_opinions: [],
+    master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
     // Verifier outcomes, keyed to the seat that cited the claim. These drive the
     // down-weighting in weights.mjs.
     verifier_verdicts: [],
@@ -55,7 +151,13 @@ export function visibleRun(args) {
     seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
   };
   writeStatus(run);
-  appendEvent(run, "visible_run_planned", { tasks, masters: selectedMasters(run) });
+  appendEvent(run, "master_selection_consumed", {
+    selection_id: frozen.selection.selection_id,
+    catalog_hash: frozen.selection.catalog_hash,
+    selection_hash: frozen.selection.selection_hash,
+    selected_masters: frozen.masters,
+  });
+  appendEvent(run, "visible_run_planned", { tasks, masters: frozen.masters });
   writeJson(join(dir, "evidence.json"), run);
   writeSourceManifest(run);
   writeAllAgentsMarkdown(run);
@@ -84,11 +186,14 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   // The deterministic pass runs first and settles, for free, every seat whose method cannot
   // reach this security. Spawning an agent for a lens that has already declined is how the
   // previous design produced ten confident essays over a screen that computed nothing.
-  const plan = planMasters(run, selectedMasters(run));
+  const plan = planMasterSeats(run, selectedMasters(run));
+  run.master_decisions = plan.decisions;
+  run.fact_pack_hash = plan.shared_fact_pack_hash;
+  run.master_runtime_provenance = masterRuntimeProvenance(run, plan);
   const zh = isChineseLanguage(run.language);
-  const master_agents = plan.to_run.map(({ id, decision }) => ({
+  const master_agents = plan.to_run.map(({ id, decision, engine }) => ({
     role: id,
-    engine: decision ? "v2_method_model" : "v1_prompt",
+    engine: engine || (decision ? "v2_method_model" : "v1_prompt"),
     title: `AlphaCouncil Agent ${run.symbol} ${id}`,
     prompt_template: [
       masterPrompt(id, run),
@@ -108,11 +213,59 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   // ever spawned for a method that cannot look.
   if (plan.declined.length) {
     const byId = new Map((run.master_opinions || []).map((o) => [o.master, o]));
-    for (const { id, decision } of plan.declined) {
-      if (!byId.has(id)) byId.set(id, declinedOpinion(run, id, decision));
+    for (const item of plan.declined) {
+      if (!byId.has(item.id)) {
+        byId.set(item.id, attachMasterRuntimeProvenance(
+          run,
+          item.id,
+          declinedMasterOpinion(run, item),
+          item.engine,
+        ));
+      }
+      run.master_status[item.id] = {
+        ...(run.master_status[item.id] || {}),
+        master: item.id,
+        status: "completed",
+        engine: item.engine || "v2_method_model",
+        deterministic_decline: true,
+        completed_at: new Date().toISOString(),
+      };
     }
     run.master_opinions = selectedMasters(run).map((id) => byId.get(id)).filter(Boolean);
   }
+  if (plan.completed.length) {
+    const byId = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
+    for (const item of plan.completed) {
+      if (!byId.has(item.id)) {
+        byId.set(item.id, attachMasterRuntimeProvenance(
+          run,
+          item.id,
+          completedMasterOpinion(run, item),
+          item.engine,
+        ));
+      }
+      run.master_status[item.id] = {
+        ...(run.master_status[item.id] || {}),
+        master: item.id,
+        status: "completed",
+        engine: item.engine,
+        deterministic_execution: true,
+        completed_at: new Date().toISOString(),
+      };
+    }
+    run.master_opinions = selectedMasters(run).map((id) => byId.get(id)).filter(Boolean);
+  }
+  for (const item of plan.blocked) {
+    run.master_status[item.id] = {
+      ...(run.master_status[item.id] || {}),
+      master: item.id,
+      status: "failed",
+      engine: item.engine,
+      error: item.reason,
+      updated_at: new Date().toISOString(),
+    };
+  }
+  saveRun(run);
   return {
     evidence_agents,
     master_agents,
@@ -120,11 +273,31 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     // Recorded, not hidden: a reader must be able to tell a method that judged from a method
     // that could not look, and neither from a seat that was never offered.
     master_decisions: plan.decisions,
-    masters_declined: plan.declined.map(({ id, decision }) => ({
-      master: id,
-      stance: decision.stance,
-      reason: decision.reason,
-      unmet: decision.eligibility?.unmet || [],
+    masters_declined: plan.declined.map((item) => {
+      const opinion = declinedMasterOpinion(run, item);
+      return {
+        master: item.id,
+        engine: item.engine || opinion.engine,
+        stance: opinion.stance,
+        reason: opinion.decision_reason,
+        unmet: item.preDecision?.eligibility?.missing_required_fact_types
+          || item.decision?.eligibility?.unmet
+          || [],
+      };
+    }),
+    masters_completed: plan.completed.map((item) => ({
+      master: item.id,
+      engine: item.engine,
+      stance: item.decision.stance,
+      reason: item.decision.reason,
+      policy_execution_hash: item.decision.policy_execution_hash,
+      frozen_decision_hash: item.frozenDecision.frozen_decision_hash,
+    })),
+    masters_blocked: plan.blocked.map((item) => ({
+      master: item.id,
+      engine: item.engine,
+      reason: item.reason,
+      error: item.error || null,
     })),
   };
 }
@@ -178,10 +351,19 @@ export function recordMasterOpinion(args) {
   );
   // A narrated stance that disagrees with the arithmetic does not get to win quietly. The
   // deterministic verdict stands and the disagreement is preserved on the record.
-  const { opinion, overridden } = reconcileOpinion(run, args.master, normalized);
+  const reconciled = reconcileMasterOpinion(run, args.master, normalized);
+  const opinion = attachMasterRuntimeProvenance(run, args.master, reconciled.opinion, reconciled.engine);
+  const { overridden } = reconciled;
   const byId = new Map((run.master_opinions || []).map((item) => [item.master, item]));
   byId.set(args.master, opinion);
   run.master_opinions = allowed.map((id) => byId.get(id)).filter(Boolean);
+  run.master_status = run.master_status || {};
+  run.master_status[args.master] = {
+    ...(run.master_status[args.master] || {}),
+    master: args.master,
+    status: "completed",
+    completed_at: new Date().toISOString(),
+  };
   writeJson(join(dir, `${args.master}.json`), opinion);
   saveRun(run);
   writeJson(join(dir, "evidence.json"), run);
@@ -273,6 +455,7 @@ export function recordVisibleDecision(args) {
       appendEvent(run, "incomplete", {
         missing_evidence: completeness.missing_evidence,
         missing_debate: completeness.missing_debate,
+        missing_masters: completeness.missing_masters,
       });
     } else if (gate.verification === "needs_verification") {
       run.status = "needs_verification";
@@ -306,6 +489,28 @@ export function isDryRun(args = {}) {
   return args.dry_run === true;
 }
 
+/**
+ * A production headless run must not silently become a prompt-only council because its
+ * caller omitted `grounding`. Visible runs already collect it in rpc.mjs; this gives the
+ * headless path the same fact boundary. Dry runs remain network-free by design.
+ */
+export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun }, gather = gatherGrounding) {
+  if (grounding && typeof grounding === "object") return grounding;
+  if (dryRun) return null;
+  try {
+    return await gather({ symbol, asOf });
+  } catch (error) {
+    // A failed fact fetch is still an explicit grounding result. Keeping an object here
+    // makes deterministic methods decline on missing inputs instead of taking the v1 prompt
+    // fallback and filling the gap from model memory.
+    return {
+      as_of: asOf,
+      facts_unavailable: true,
+      unavailable: [`grounding failed: ${cleanLog(error?.message || error)}`],
+    };
+  }
+}
+
 export async function collectEvidence(args) {
   if (args.visibility_required) {
     throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-level multi_agent or codex_app threads first, then record_visible_packet/record_visible_decision.");
@@ -316,8 +521,15 @@ export async function collectEvidence(args) {
   const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
   const dryRun = isDryRun(args);
   const language = resolveLanguage(args);
+  const frozen = frozenMasterSelection(args);
   const timeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
   const maxConcurrency = Math.max(LIMITS.CONCURRENCY_MIN, Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || LIMITS.CONCURRENCY_DEFAULT)));
+  const grounding = await groundingForHeadlessRun({
+    symbol,
+    asOf: asOfDate,
+    grounding: args.grounding,
+    dryRun,
+  });
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
 
@@ -329,6 +541,7 @@ export async function collectEvidence(args) {
     language,
     dry_run: dryRun,
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
+    entry_tool: args.entry_tool || "collect_evidence",
     visibility_required: false,
     started_at: startedAt,
     updated_at: startedAt,
@@ -337,12 +550,29 @@ export async function collectEvidence(args) {
     phase: "evidence",
     tasks,
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
-    agent_status: {},
+    agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
     packets: [],
+    masters: frozen.masters,
+    master_selection: frozen.selection,
+    master_opinions: [],
+    master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
+    verifier_verdicts: [],
+    grounding,
+    seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
   };
   const packetsByTask = new Map();
   writeStatus(run);
-  appendEvent(run, "run_started", { tasks });
+  appendEvent(run, "master_selection_consumed", {
+    selection_id: frozen.selection.selection_id,
+    catalog_hash: frozen.selection.catalog_hash,
+    selection_hash: frozen.selection.selection_hash,
+    selected_masters: frozen.masters,
+  });
+  appendEvent(run, "run_started", {
+    tasks,
+    masters: frozen.masters,
+    grounding: grounding ? (grounding.facts_unavailable ? "unavailable" : "attached") : "dry_run_skipped",
+  });
   writeJson(join(dir, "evidence.json"), run);
   writeSourceManifest(run);
   writeAllAgentsMarkdown(run);
@@ -359,7 +589,7 @@ export async function collectEvidence(args) {
   };
 
   await mapLimit(tasks, maxConcurrency, async (task) => {
-    const prompt = taskPrompt(task, symbol, asOfDate, args.prompt || "", language);
+    const prompt = taskPrompt(task, symbol, asOfDate, args.prompt || "", language, run.grounding);
     updateTask(run, task, "running", { started_at: new Date().toISOString() });
     if (dryRun) {
       const packet = dryPacket(task, symbol, asOfDate, prompt, language);
@@ -424,6 +654,152 @@ export async function collectEvidence(args) {
   return run;
 }
 
+function updateMasterStatus(run, master, status, patch = {}) {
+  run.master_status = run.master_status || {};
+  run.master_status[master] = {
+    ...(run.master_status[master] || {}),
+    ...patch,
+    master,
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  writeStatus(run);
+  appendEvent(run, `master_${status}`, { master, ...patch });
+}
+
+/** Execute every selected master between evidence collection and the bull/bear debate. */
+export async function runHeadlessMasters(run, args = {}) {
+  const selected = selectedMasters(run);
+  const dir = runPath(run.run_id);
+  const timeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
+  const maxConcurrency = Math.max(
+    LIMITS.CONCURRENCY_MIN,
+    Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || LIMITS.CONCURRENCY_DEFAULT)),
+  );
+  const plan = planMasterSeats(run, selected);
+  const byId = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
+
+  run.phase = "masters";
+  run.status = "running";
+  run.completed_at = null;
+  run.master_decisions = plan.decisions;
+  run.fact_pack_hash = plan.shared_fact_pack_hash;
+  run.master_runtime_provenance = masterRuntimeProvenance(run, plan);
+  appendEvent(run, "masters_started", {
+    selected: selected.length,
+    to_run: plan.to_run.length,
+    declined: plan.declined.length,
+    completed: plan.completed.length,
+    blocked: plan.blocked.length,
+  });
+
+  for (const item of plan.declined) {
+    const opinion = attachMasterRuntimeProvenance(
+      run,
+      item.id,
+      declinedMasterOpinion(run, item),
+      item.engine,
+    );
+    byId.set(item.id, opinion);
+    writeJson(join(dir, `${item.id}.json`), opinion);
+    updateMasterStatus(run, item.id, "completed", {
+      engine: item.engine || opinion.engine,
+      deterministic_decline: true,
+      completed_at: new Date().toISOString(),
+    });
+  }
+
+  for (const item of plan.completed) {
+    const opinion = attachMasterRuntimeProvenance(
+      run,
+      item.id,
+      completedMasterOpinion(run, item),
+      item.engine,
+    );
+    byId.set(item.id, opinion);
+    writeJson(join(dir, `${item.id}.json`), opinion);
+    updateMasterStatus(run, item.id, "completed", {
+      engine: item.engine,
+      deterministic_execution: true,
+      policy_execution_hash: opinion.policy_execution_hash,
+      frozen_decision_hash: opinion.frozen_decision_hash,
+      completed_at: new Date().toISOString(),
+    });
+  }
+
+  for (const item of plan.blocked) {
+    updateMasterStatus(run, item.id, "failed", {
+      engine: item.engine,
+      error: item.reason,
+      output: item.error || undefined,
+    });
+  }
+
+  const outcomes = await mapLimit(plan.to_run, maxConcurrency, async ({ id, decision, engine }) => {
+    const prompt = [
+      masterPrompt(id, run),
+      decision ? deterministicVerdictBlock(decision, isChineseLanguage(run.language)) : "",
+    ].filter(Boolean).join("\n\n");
+    updateMasterStatus(run, id, "running", { started_at: new Date().toISOString() });
+
+    if (run.dry_run) {
+      const normalized = normalizeMasterOpinion({
+        verdict: "DRY_RUN",
+        stance: "out_of_scope",
+        summary: "Dry run: the master prompt was planned but no model judgment was executed.",
+        what_would_change_my_mind: ["Run without dry_run to obtain a method judgment."],
+        confidence: "low",
+      }, id, run, prompt);
+      const reconciled = reconcileMasterOpinion(run, id, normalized);
+      const resolvedEngine = engine || reconciled.engine || (decision ? "v2_method_model" : "v1_prompt");
+      return { id, opinion: attachMasterRuntimeProvenance(run, id, reconciled.opinion, resolvedEngine), engine: resolvedEngine };
+    }
+
+    const result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+      updateMasterStatus(run, id, "running", { pid, output });
+    }, ({ pid, output, elapsed_ms }) => {
+      updateMasterStatus(run, id, "running", { pid, output, elapsed_ms });
+    });
+    if (!result.ok) {
+      return {
+        id,
+        error: result.timedOut ? "timeout" : `exit code ${result.code}`,
+        raw: cleanLog(result.stderr || result.stdout || result.text || "master execution failed"),
+      };
+    }
+    try {
+      const normalized = normalizeMasterOpinion(extractJson(result.text), id, run, result.text);
+      const reconciled = reconcileMasterOpinion(run, id, normalized);
+      const resolvedEngine = engine || reconciled.engine || (decision ? "v2_method_model" : "v1_prompt");
+      return { id, opinion: attachMasterRuntimeProvenance(run, id, reconciled.opinion, resolvedEngine), engine: resolvedEngine };
+    } catch (error) {
+      return { id, error: "parse_failed", raw: cleanLog(result.text || String(error?.message || error)) };
+    }
+  });
+
+  for (const outcome of outcomes) {
+    if (!outcome.opinion) {
+      updateMasterStatus(run, outcome.id, "failed", { error: outcome.error, output: outcome.raw });
+      continue;
+    }
+    byId.set(outcome.id, outcome.opinion);
+    writeJson(join(dir, `${outcome.id}.json`), outcome.opinion);
+    updateMasterStatus(run, outcome.id, "completed", {
+      engine: outcome.opinion.engine || outcome.engine,
+      completed_at: new Date().toISOString(),
+      output: join(dir, `${outcome.id}.json`),
+    });
+  }
+
+  run.master_opinions = selected.map((id) => byId.get(id)).filter(Boolean);
+  const missing = selected.filter((id) => !byId.has(id));
+  run.phase = missing.length ? "masters_partial" : "masters_complete";
+  run.status = missing.length ? "partial" : "masters_complete";
+  saveRun(run);
+  appendEvent(run, "masters_complete", { completed: run.master_opinions.length, total: selected.length, missing });
+  return run;
+}
+
 export async function runDebateRole(run, role, context, timeoutMs) {
   const prompt = debatePrompt(role, run, context);
   updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round });
@@ -466,7 +842,11 @@ export async function synthesizeDecision(run, args) {
     if (dryCompleteness.completeness === "incomplete") {
       run.phase = "incomplete";
       run.status = "incomplete";
-      appendEvent(run, "incomplete", { missing_evidence: dryCompleteness.missing_evidence, missing_debate: dryCompleteness.missing_debate });
+      appendEvent(run, "incomplete", {
+        missing_evidence: dryCompleteness.missing_evidence,
+        missing_debate: dryCompleteness.missing_debate,
+        missing_masters: dryCompleteness.missing_masters,
+      });
     } else if (dryGate.verification === "needs_verification") {
       run.phase = "needs_verification";
       run.status = "needs_verification";
@@ -541,7 +921,11 @@ export async function synthesizeDecision(run, args) {
   if (completeness.completeness === "incomplete") {
     run.phase = "incomplete";
     run.status = "incomplete";
-    appendEvent(run, "incomplete", { missing_evidence: completeness.missing_evidence, missing_debate: completeness.missing_debate });
+    appendEvent(run, "incomplete", {
+      missing_evidence: completeness.missing_evidence,
+      missing_debate: completeness.missing_debate,
+      missing_masters: completeness.missing_masters,
+    });
   } else if (gate.verification === "needs_verification") {
     run.phase = "needs_verification";
     run.status = "needs_verification";
@@ -560,6 +944,7 @@ export async function synthesizeDecision(run, args) {
 
 export async function analyzeSymbol(args) {
   const run = await collectEvidence(args);
+  await runHeadlessMasters(run, args);
   const debate = await synthesizeDecision(run, args);
   return {
     run,

@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:1c40f8ff2cfa041ffca300488b153a04db3215431c683b215f8c4bafe6429482",
+    "derivation_spec_hash": "sha256:cbc66704abe50660a149b649d09b7897a5db8dac9b9c3d279be97908ae5e0620",
+    "derivation_spec_id": "master_ackman.power_map.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_ackman.power_map",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:d6d5421f4728b2bf2e735974a54ecccb10b243a3b74f7a2bb66238cef114aed2",
+    "inputs": [
+      {
+        "fact_id": "governance.voting_control"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "governance.voting_control",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:0d7a86f1c2399ef6c935d15b79aa2bfa1abefaa83dbea81f218c06256200258b",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:16fb57696593fc4dc"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:149e0f53f4a2834190696104b7172ff834fe2228817fa5681ef6e5b1641efd38",
+    "derivation_spec_hash": "sha256:5c14bdc63fe4980710f521bdcd091a3c9b40da37b67029fb191ed161480a0885",
+    "derivation_spec_id": "master_ackman.change_value_bridge.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_ackman.change_value_bridge",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:a6145cd3e1648def22c39da079f7324b23293116b851c6f32e54e84421dd3a8c",
+    "inputs": [
+      {
+        "fact_id": "valuation.standalone_value"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "valuation.standalone_value",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:32a524378b3639ca17788b585c900c96da5841c179dad80008c766a123bc4a8c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:16fb57696593fc4dc"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

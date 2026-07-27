@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:2ba3ac5b35cc5602ce88a5ba7571d134cec1d2e9390b0dab4f2a80b6bb9649b0",
+    "derivation_spec_hash": "sha256:a495305aa77816f76fc7d6abe38f8b8ff3a79c6d17b67b84a8ef7e2383adfeca",
+    "derivation_spec_id": "master_thorp.edge_recalculator.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_thorp.edge_recalculator",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:3c5f60644db4db6ee74254cf6078d73408e0390add348af4ab9d86a39f6c6ddd",
+    "inputs": [
+      {
+        "fact_id": "probability.outcome_distribution"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "trade.edge",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:f1212b5057a48fbc57f4c14f69c5b39c9eb37eadcf094116021ec58215bfd373",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_thorp.edge_recalculator.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:e480491cd694394c9708f3c551753d0d74282f724fdb03a57b1845f28ed63a80",
+    "derivation_spec_hash": "sha256:f8f0d4ff36cadb45ee57fd18d6b83145601ee86e19c1d10fd23a905283aaadbf",
+    "derivation_spec_id": "master_thorp.fractional_kelly.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_thorp.fractional_kelly",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:6d0533ff016072d0f863ca19905311240bb6fc61554ceeea5bb686832e02d1b7",
+    "inputs": [
+      {
+        "fact_id": "risk.ruin_probability"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "position.fraction",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:38381ae45c00286d05262d3458746edd6cd46cc637c3099692bfc345cbb2696b",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_thorp.fractional_kelly.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

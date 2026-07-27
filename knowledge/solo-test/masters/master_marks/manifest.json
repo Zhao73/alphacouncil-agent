@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "credit_cycles",
+      "distressed_value",
+      "market_psychology",
+      "risk_posture"
+    ],
+    "exclusions": [
+      "Oaktree private positions",
+      "precise cycle timing",
+      "generic volatility treated as permanent-loss risk",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "cycle_risk_posture_v1",
+    "optional_fact_types": [
+      "cycle.credit_conditions",
+      "cycle.investor_behavior",
+      "valuation.implied_expectations",
+      "risk.permanent_loss"
+    ],
+    "required_fact_types": [
+      "cycle.valuation_percentile",
+      "expectations.consensus"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_marks.cycle_temperature",
+      "master_marks.implied_expectations"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "cycle.valuation_percentile",
+      "expectations.consensus"
+    ],
+    "hard_vetoes": [
+      "master_marks.euphoria",
+      "master_marks.consensus_only",
+      "master_marks.unbounded_impairment"
+    ],
+    "native_output": "cycle_risk_posture_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Howard Marks Lens Provisional Operator Lens",
+      "zh": "霍华德·马克斯视角临时操作视角"
+    },
+    "persona_id": "master_marks",
+    "public_label": {
+      "en": "Howard Marks Lens Solo Test",
+      "zh": "霍华德·马克斯视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Block aggressive posture when reviewed credit and behavior evidence indicate euphoria.",
+      "Reject a thesis that does not differ from what price already implies.",
+      "Reject when a plausible path produces unbounded permanent capital loss."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in credit_cycles, distressed_value, market_psychology, risk_posture",
+      "zh": "用于测试确定性行为：credit_cycles、distressed_value、market_psychology、risk_posture"
+    },
+    "identity": {
+      "en": "Howard Marks Lens; project-derived and not human reviewed",
+      "zh": "霍华德·马克斯视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Calibrate aggressiveness to cycle temperature, consensus, price-implied expectations, credit conditions and permanent-loss risk rather than point forecasting.",
+      "zh": "Calibrate aggressiveness to cycle temperature, consensus, price-implied expectations, credit conditions and permanent-loss risk rather than point forecasting."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

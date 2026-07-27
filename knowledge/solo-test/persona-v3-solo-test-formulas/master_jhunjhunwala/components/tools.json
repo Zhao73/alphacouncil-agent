@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:a34e9d5dbabe64737a894da6a7362757e2f45d664806397bcc8fead300523fc4",
+    "derivation_spec_hash": "sha256:f86405ec457cc0dbe86e3605b0b833a53e3ec960ef16f2606ce3487209acbe8c",
+    "derivation_spec_id": "master_jhunjhunwala.promoter_governance.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_jhunjhunwala.promoter_governance",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:3e6956b4ceb31391aec08625cbc54a59d3a560d0cecd5f374b0bbaf7d93f0d6a",
+    "inputs": [
+      {
+        "fact_id": "governance.promoter_ownership"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "governance.promoter_ownership",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:5db524da3de4c237ebf524744f1a563f6cc53f746edbfe4978b88c6db9cefd3c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_jhunjhunwala.promoter_governance.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:5d8e4b6809b81c61455c6cdf62f58fc98ff5374b751dce9afa7dbfebbe765559",
+    "derivation_spec_hash": "sha256:5c50cce924daa2fb7aa8b43422b786bd46eda531677178a16cc905d6174e36dc",
+    "derivation_spec_id": "master_jhunjhunwala.penetration_liquidity.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_jhunjhunwala.penetration_liquidity",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:7c5c536704e9757823c9670512dded4e2a858a181ebb5de3cf764cd5d322e8ae",
+    "inputs": [
+      {
+        "fact_id": "india.industry_penetration"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "india.industry_penetration",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:4518726bdbcb7e7f3e8a9de3b906ee77b0d1b559146aa32ccbecf319d620af8c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_jhunjhunwala.penetration_liquidity.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

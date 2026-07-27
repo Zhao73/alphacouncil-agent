@@ -75,6 +75,20 @@ test("an elimination always names metric, value and threshold", () => {
   assert.match(explainResult(result, "X"), /measured .* against a threshold of/);
 });
 
+test("computed rules retain the filing dates and concept lineage used by the value", () => {
+  const result = evaluateRules(facts({
+    NetCashProvidedByUsedInOperatingActivities: [10, 20, 30],
+    NetIncomeLoss: [5, 10, 15],
+  }));
+  const conversion = rule(result, "ocf_over_ni");
+  assert.equal(conversion.public_at, "2019-02-15");
+  assert.equal(conversion.period_start, "2016-01-01");
+  assert.equal(conversion.period_end, "2018-12-31");
+  assert.equal(conversion.fiscal_year, 2018);
+  assert.ok(conversion.source_records.some((source) => source.tag === "NetCashProvidedByUsedInOperatingActivities"));
+  assert.ok(conversion.source_records.some((source) => source.tag === "NetIncomeLoss"));
+});
+
 // Exemptions are the only way past a failure, and they must be earned by the numbers.
 test("a heavy non-cash charge exempts a thin net margin", () => {
   const result = evaluateRules(facts({

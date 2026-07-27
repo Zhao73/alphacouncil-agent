@@ -1,0 +1,131 @@
+{
+  "artifact_hash": "sha256:92ef741a62be24a0ccbe6d637002ed625e0a59f3cf0ccfd6e9846e9dcc479be1",
+  "artifact_kind": "persona_v3_ai_source_prereview",
+  "assurance_class": "machine_pre_review_only",
+  "candidate_id": "pabrai_columbia_session_2024",
+  "disagreement": {
+    "explanation": "The roles have different scopes but agree that no source approval or method attribution is established.",
+    "present": false,
+    "role_verdicts": [
+      "archive_integrity_verified_semantics_unreviewed",
+      "production_approval_unsupported",
+      "requires_human_review"
+    ]
+  },
+  "human_claims": false,
+  "human_reviewed": false,
+  "machine_limitations": [
+    "This artifact is deterministic machine triage, not an independent human review.",
+    "It does not contain a verified semantic extraction or exact source locator.",
+    "It is unsigned, cannot enter a trusted reviewer registry, and cannot satisfy source-review quorum."
+  ],
+  "method_attribution_approved": false,
+  "open_questions": [
+    "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+    "Who is the verified author or speaker for that exact passage?",
+    "What published_at and public_at values are supported by the archived material?"
+  ],
+  "persona_id": "master_pabrai",
+  "pipeline_id": "alphacouncil_ai_source_prereview_v1",
+  "production_effect": "none",
+  "reviewer_kind": "ai",
+  "roles": [
+    {
+      "concerns": [
+        "Archive integrity alone does not establish method-defining evidence."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:63e2017cabf7e4a35176087a7096fde45eaf70fcff4f919789fa84989f7631d5",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The archived byte stream matches the acquisition record's content hash and byte length.",
+        "The declared content type is application/pdf; the deterministic format probe is pdf_magic.",
+        "This bootstrap pass did not extract or verify a semantic proposition, authorship claim, date, grade, or exact locator."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:b134ddfd386b3e4a8bf317567e9ee15bdb236b59231ffcad9bd7a04735a7cc75",
+      "prompt_hash": "sha256:3c5ed3beaa183923297e451df14c0f1fc2274478cad9d5a0b7309b2750da1e52",
+      "prompt_id": "alphacouncil.source-prereview.extractor.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "extractor",
+      "role_id": "ai_source_extractor_v1",
+      "verdict": "archive_integrity_verified_semantics_unreviewed"
+    },
+    {
+      "concerns": [
+        "No exact passage has been bound to a method proposition.",
+        "Authorship, publication timing, source grade, and scope remain unresolved in this pre-review."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:2a4a1b596a000b3afe32281f5568bc1f90e0189028392cff4157ecfa1b8649a9",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The acquisition remains retrieved_unadjudicated.",
+        "The acquisition's human_review.status remains not_requested.",
+        "The machine input contains no verified exact locator or proposition-to-passage binding."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:070c812bb68636d4caa30fb9471b24a4bfded4a17b465b405086d0d295abc2c6",
+      "prompt_hash": "sha256:d4564717eafa5f0448e3832a56c70da95358a164fe2fec01354887e071b75738",
+      "prompt_id": "alphacouncil.source-prereview.skeptic.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "skeptic",
+      "role_id": "ai_source_skeptic_v1",
+      "verdict": "production_approval_unsupported"
+    },
+    {
+      "concerns": [
+        "Promoting this artifact would confuse machine triage with trusted human source adjudication."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:c207ece6d86b002fa3392c528b4a15a3eada758f3a89a3df236f86aa538ec39f",
+      "input_role_output_hashes": [
+        "sha256:b134ddfd386b3e4a8bf317567e9ee15bdb236b59231ffcad9bd7a04735a7cc75",
+        "sha256:070c812bb68636d4caa30fb9471b24a4bfded4a17b465b405086d0d295abc2c6"
+      ],
+      "observations": [
+        "The extractor established archive integrity but explicitly performed no semantic review.",
+        "The skeptic found no verified proposition-to-locator binding for production use.",
+        "The two independent first-pass roles agree that machine pre-review cannot approve this source."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:3b638ed42649281c8f84d3c790181defe36c50b67d761689b31d7388683798a1",
+      "prompt_hash": "sha256:18d54becf6953007bfbab91bbb5955bcf9ffc0989a0948d0d27ab751fa0a82a6",
+      "prompt_id": "alphacouncil.source-prereview.adjudicator.v1",
+      "reads_other_role_outputs": true,
+      "reviewer_kind": "ai",
+      "role": "adjudicator",
+      "role_id": "ai_source_adjudicator_v1",
+      "verdict": "requires_human_review"
+    }
+  ],
+  "schema_version": 1,
+  "semantic_review_performed": false,
+  "source_binding": {
+    "archive_relative_path": "personas-v3/master_pabrai/acquisitions/candidates/pabrai_columbia_session_2024/source.bin",
+    "byte_length": 292154,
+    "content_hash": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+    "content_type": "application/pdf",
+    "final_url": "https://www.chaiwithpabrai.com/uploads/5/5/1/3/55139655/20240307_mohnish_pabrais_session_with_columbia_business_school__csima__on_february_14_2024.pdf",
+    "format_probe": "pdf_magic",
+    "record_hash": "sha256:f34464c4583e5e65b5d3bb5859ec6eeac9016c984d5f53b7c11d4fdc54b1ad12",
+    "record_relative_path": "personas-v3/master_pabrai/acquisitions/candidates/pabrai_columbia_session_2024/record.json",
+    "retrieved_at": "2026-07-27T06:23:31.231Z",
+    "source_bytes_reverified": true
+  },
+  "verdict": "requires_human_review"
+}

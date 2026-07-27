@@ -1,0 +1,106 @@
+{
+  "artifact_hash": "sha256:3be6e263dda4f1adbfa5010e9fea2d713266b10d006108a11c3368a1fc82b4cf",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "druckenmiller_econclubny_transcript_2019",
+  "concise_summary": "The interview discusses central-bank policy, liquidity, trade, disruption, portfolio positioning, and the difficulty of current macro markets.",
+  "contradictions_ambiguities": [
+    "The transcript is conversational and contains views tied to 2019 conditions rather than a complete repeatable process."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "liquidity is a moving animal. It’s things can be very liquid and then three weeks later there can be no liquidity whatsoever.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 29,
+        "section": "Audience question on liquidity",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "druckenmiller_econclubny_transcript_2019:p1",
+      "snippet_hash": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820",
+      "statement": "Treat market liquidity as state-dependent and capable of disappearing quickly rather than as a stable portfolio assumption.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "What position-sizing and exit rules operationalize the liquidity warning?"
+  ],
+  "persona_id": "master_druckenmiller",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The official event transcript is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 162239,
+    "content_hash": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+    "content_type": "application/pdf",
+    "extracted_character_count": 49074,
+    "extracted_text_hash": "sha256:c56c3dc4f68f65e6c7832571df83fed2d9bf0a1c2dd76d0a3b913815d2ba718b",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.econclubny.org/documents/10184/109144/2019DruckenmillerTranscript.pdf",
+    "page_character_counts": [
+      292,
+      1338,
+      1767,
+      1571,
+      1531,
+      1569,
+      1220,
+      1630,
+      1731,
+      1676,
+      1642,
+      1529,
+      1540,
+      1561,
+      1388,
+      1198,
+      1254,
+      1623,
+      1547,
+      1373,
+      1711,
+      1746,
+      1514,
+      1413,
+      1718,
+      1306,
+      1344,
+      1179,
+      1628,
+      1319,
+      1273,
+      1394,
+      1521,
+      1028
+    ],
+    "page_count": 34,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:2214d28093b5920de177a2cce3151260cad7dbefb9370b4d5f24f49120ad99e3",
+    "retrieved_at": "2026-07-27T06:24:10.855Z"
+  },
+  "source_type": "primary_interview_transcript"
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-ai-machine-simulation-v1.schema.json",
+  "title": "PersonaPack v3 AI-assisted deterministic machine simulation",
+  "description": "No-network synthetic execution evidence. It is not a formal council experiment, human reference, real-world outcome study, or GA artifact.",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/run" },
+    { "$ref": "#/$defs/neff_disclosure" },
+    { "$ref": "#/$defs/manifest" }
+  ],
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "boundary": {
+      "type": "object",
+      "properties": {
+        "evidence_class": { "const": "machine_simulation" },
+        "reviewer_kind": { "const": "ai" },
+        "network_allowed": { "const": false },
+        "human_reference": { "const": false },
+        "formal_h_satisfied": { "const": false },
+        "formal_experiment_effect": { "const": "none" },
+        "formal_ga_effect": { "const": "none" },
+        "production_effect": { "const": "none" }
+      }
+    },
+    "input": {
+      "allOf": [
+        { "$ref": "#/$defs/boundary" },
+        {
+          "type": "object",
+          "required": ["schema_version", "artifact_kind", "evidence_class", "reviewer_kind", "network_allowed", "human_reference", "formal_h_satisfied", "formal_experiment_effect", "formal_ga_effect", "production_effect", "as_of", "protocol_binding", "fixture_bindings", "runtime_bindings", "seat_inputs", "input_hash"],
+          "properties": {
+            "schema_version": { "const": 1 },
+            "artifact_kind": { "const": "persona_v3_ai_machine_simulation_input" },
+            "as_of": { "type": "string", "format": "date" },
+            "protocol_binding": { "type": "object" },
+            "fixture_bindings": { "type": "array", "minItems": 2 },
+            "runtime_bindings": { "type": "array", "minItems": 3 },
+            "seat_inputs": { "type": "array", "minItems": 26, "maxItems": 26 },
+            "input_hash": { "$ref": "#/$defs/hash" }
+          }
+        }
+      ]
+    },
+    "run": {
+      "allOf": [
+        { "$ref": "#/$defs/boundary" },
+        {
+          "type": "object",
+          "required": ["schema_version", "artifact_kind", "evidence_class", "reviewer_kind", "network_allowed", "human_reference", "formal_h_satisfied", "formal_experiment_effect", "formal_ga_effect", "production_effect", "run_id", "formal_arm_id", "formal_arm_satisfied", "simulation_scope", "input_binding", "configuration", "results", "result_hash", "run_artifact_hash"],
+          "properties": {
+            "schema_version": { "const": 1 },
+            "artifact_kind": { "const": "persona_v3_ai_machine_simulation_run" },
+            "run_id": { "enum": ["A", "B", "C", "D13", "D26", "E:D13", "E:D26", "H_ai_reference"] },
+            "formal_arm_id": { "enum": ["A", "B", "C", "D13", "D26", "E", "H"] },
+            "formal_arm_satisfied": { "const": false },
+            "simulation_scope": { "type": "string", "minLength": 1 },
+            "input_binding": { "type": "object" },
+            "configuration": { "type": "object" },
+            "results": { "type": "object" },
+            "result_hash": { "$ref": "#/$defs/hash" },
+            "run_artifact_hash": { "$ref": "#/$defs/hash" }
+          }
+        }
+      ]
+    },
+    "neff_disclosure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "artifact_kind", "evidence_class", "n_eff", "status", "reason", "resolved_outcome_count", "minimum_required", "formal_n_eff_effect", "formal_experiment_effect", "formal_ga_effect", "artifact_hash"],
+      "properties": {
+        "schema_version": { "const": 1 },
+        "artifact_kind": { "const": "persona_v3_ai_assisted_n_eff_disclosure" },
+        "evidence_class": { "const": "machine_simulation" },
+        "n_eff": { "const": null },
+        "status": { "const": "insufficient_resolved_outcomes" },
+        "reason": { "const": "insufficient_resolved_outcomes" },
+        "resolved_outcome_count": { "const": 0 },
+        "minimum_required": { "const": 36 },
+        "formal_n_eff_effect": { "const": "none" },
+        "formal_experiment_effect": { "const": "none" },
+        "formal_ga_effect": { "const": "none" },
+        "artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "manifest": {
+      "allOf": [
+        { "$ref": "#/$defs/boundary" },
+        {
+          "type": "object",
+          "required": ["schema_version", "artifact_kind", "evidence_class", "reviewer_kind", "network_allowed", "human_reference", "formal_h_satisfied", "formal_experiment_effect", "formal_ga_effect", "production_effect", "input_binding", "run_count", "required_run_ids", "run_bindings", "n_eff_disclosure_binding", "manifest_hash"],
+          "properties": {
+            "schema_version": { "const": 1 },
+            "artifact_kind": { "const": "persona_v3_ai_machine_simulation_manifest" },
+            "run_count": { "const": 8 },
+            "required_run_ids": { "const": ["A", "B", "C", "D13", "D26", "E:D13", "E:D26", "H_ai_reference"] },
+            "input_binding": { "type": "object" },
+            "run_bindings": { "type": "array", "minItems": 8, "maxItems": 8 },
+            "n_eff_disclosure_binding": { "type": "object" },
+            "manifest_hash": { "$ref": "#/$defs/hash" }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "artifact_hash": "sha256:61a023ca32578d9f7928253b5f095683c8059f8bf950adec51ae51942900307f",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "marks_oaktree_its_all_good_2007",
+  "concise_summary": "Marks's memo describes recurring market cycles and psychology swinging between valuation and risk-taking extremes.",
+  "contradictions_ambiguities": [
+    "Recognizing a cycle does not establish precise timing; the memo itself stresses preparation over prediction."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "between overpriced and underpriced.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 2,
+        "section": "Investment-market pendulum",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "marks_oaktree_its_all_good_2007:p1",
+      "snippet_hash": "sha256:bb8f3826009ee78e20ed69351d9c361bf323396b9fdf0cae7a923f73cc83581b",
+      "statement": "Use investor psychology and the price pendulum as cyclical risk indicators because markets repeatedly swing between overpricing and underpricing.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which observable measures map the pendulum description to position sizing without pretending to time turning points?"
+  ],
+  "persona_id": "master_marks",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The client memo is text-readable, with some watermark interleaving.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 80733,
+    "content_hash": "sha256:0d67e5c2f0a452c57acc629ae9337bcbd2eadaa99c3c946c8b5639a0d5c18de9",
+    "content_type": "application/pdf",
+    "extracted_character_count": 43391,
+    "extracted_text_hash": "sha256:050488eb0648094862d97dc9acb93e24acfeee956592b0e3fd59251f20e8fca9",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.oaktreecapital.com/docs/default-source/memos/2007-07-16-its-all-good.pdf?sfvrsn=8fbc0f65_6",
+    "page_character_counts": [
+      2776,
+      2475,
+      3024,
+      3339,
+      3233,
+      3475,
+      3645,
+      3219,
+      3133,
+      3592,
+      3296,
+      3140,
+      3459,
+      1585
+    ],
+    "page_count": 14,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:27bb3a95ecd83089b22c75adae4ea63f2a25363e17bbfe60c2f5222f7d3a46cb",
+    "retrieved_at": "2026-07-27T06:34:01.739Z"
+  },
+  "source_type": "primary_investment_memo"
+}

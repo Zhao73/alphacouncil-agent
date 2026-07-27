@@ -1,0 +1,159 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:a5b4703a7c07dc29eb5abb96b51a487471d698d1ae7a53fe498b35785e6b29f0",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_fat_tails_statistical_project",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:6a2d57a6a583c7e13cb332a466684703f8b73ff8e934796899a9aea8d3c17cd5",
+    "declared_artifact_hash": "sha256:668ee4f415b37a518d66e7078648421a94fa49453d3d48f9ee0b50e4c57fce19",
+    "recomputed_artifact_hash": "sha256:668ee4f415b37a518d66e7078648421a94fa49453d3d48f9ee0b50e4c57fce19",
+    "relative_path": "master_taleb/taleb_fat_tails_statistical_project.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Project background",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 470,
+          "text_start": 423
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Project background",
+          "text_end": 470,
+          "text_start": 423
+        },
+        "extractor_snippet_hash": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558",
+        "normalized_excerpt": "Conventional statistics fail to cover fat tails",
+        "skeptic_snippet_hash_claimed": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558",
+        "skeptic_snippet_hash_recomputed": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The page says conventional statistics fail under fat tails, but the proposed mandatory test-and-veto workflow is not stated in the exact excerpt.",
+      "final_verdict": "partial",
+      "proposition_id": "taleb_fat_tails_statistical_project:p1",
+      "review_hash": "sha256:ad06b1ce94cfee5cd07fe2b16469f194fc798ca4702bfeda860697607e9f1dce",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "A descriptive research-program statement is converted into a universal operational veto."
+        ],
+        "support_rationale": "The project page says conventional statistics fail to cover fat tails and seeks alternatives, but the proposed mandatory pre-test workflow is a prudent inference rather than an express instruction in the exact snippet.",
+        "support_verdict": "partial"
+      },
+      "statement": "Do not apply conventional thin-tailed statistics without testing tail behavior and estimator robustness.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:8db2c0714f21f4a3f9889456903b481b64a262edcee55967b18278ebc2d75fff",
+    "declared_artifact_hash": "sha256:7589b0b373b5d3363ca6ab05520705812838e5727cd63c2cd9e5d130cbb6be17",
+    "recomputed_artifact_hash": "sha256:7589b0b373b5d3363ca6ab05520705812838e5727cd63c2cd9e5d130cbb6be17",
+    "relative_path": "master_taleb/taleb_fat_tails_statistical_project.json"
+  },
+  "source_binding": {
+    "byte_length": 20417,
+    "content_hash": "sha256:2f623df2b5717b3313afca1109cf9c3ec4385c96467a4e77d8770f38a8da4701",
+    "extracted_character_count_recomputed": 7909,
+    "extracted_text_hash_recomputed": "sha256:a7817476d6a16288db70ee5e9c226565476197494c122f1993c626e7d6876225",
+    "page_character_counts_recomputed": [
+      7909
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:2f623df2b5717b3313afca1109cf9c3ec4385c96467a4e77d8770f38a8da4701",
+    "source_record_hash": "sha256:096b1e48f01f8ba72ae3b253b403e3f6a6331566b3de57a8a72ca7650452a0d6"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt."
+    ]
+  }
+}

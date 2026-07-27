@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject engagement when the existing business lacks a defensible downside case.",
+    "Reject a catalyst that no identified actor has legal power to cause.",
+    "Reject when implementation cost and time erase the reviewed value gap."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

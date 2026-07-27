@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when the company cannot be placed in a reviewed category.",
+    "Reject when the operating facts contradict the concise investment story.",
+    "Reject category opportunities with an adjudicated balance-sheet or inventory break."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

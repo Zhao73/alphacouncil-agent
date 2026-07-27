@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:7589b0b373b5d3363ca6ab05520705812838e5727cd63c2cd9e5d130cbb6be17",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_fat_tails_statistical_project",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:6a2d57a6a583c7e13cb332a466684703f8b73ff8e934796899a9aea8d3c17cd5",
+    "declared_artifact_hash": "sha256:668ee4f415b37a518d66e7078648421a94fa49453d3d48f9ee0b50e4c57fce19",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:668ee4f415b37a518d66e7078648421a94fa49453d3d48f9ee0b50e4c57fce19",
+    "relative_path": "master_taleb/taleb_fat_tails_statistical_project.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "A descriptive research-program statement is converted into a universal operational veto."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 470,
+        "actual_text_start": 423,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "What narrower wording would be fully entailed by the cited excerpt alone?"
+      ],
+      "proposed_evidence_excerpt": "Conventional statistics fail to cover fat tails",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Project background",
+        "text_end": 470,
+        "text_start": 423
+      },
+      "proposed_statement": "Do not apply conventional thin-tailed statistics without testing tail behavior and estimator robustness.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "taleb_fat_tails_statistical_project:p1",
+      "review_hash": "sha256:c1705b83354013fc027ff0a38eb9987620745ac336886d4a9d14656578dfc7c2",
+      "scope_ambiguity": {
+        "rationale": "The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt.",
+        "status": "material"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558",
+      "snippet_hash_recomputed": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558",
+      "support_rationale": "The project page says conventional statistics fail to cover fat tails and seeks alternatives, but the proposed mandatory pre-test workflow is a prudent inference rather than an express instruction in the exact snippet.",
+      "support_verdict": "partial"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 20417,
+    "content_hash": "sha256:2f623df2b5717b3313afca1109cf9c3ec4385c96467a4e77d8770f38a8da4701",
+    "extracted_text_hash": "sha256:a7817476d6a16288db70ee5e9c226565476197494c122f1993c626e7d6876225",
+    "extracted_text_hash_recomputed": "sha256:a7817476d6a16288db70ee5e9c226565476197494c122f1993c626e7d6876225",
+    "raw_bytes_hash_recomputed": "sha256:2f623df2b5717b3313afca1109cf9c3ec4385c96467a4e77d8770f38a8da4701",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:096b1e48f01f8ba72ae3b253b403e3f6a6331566b3de57a8a72ca7650452a0d6",
+    "source_record_hash_recomputed": "sha256:096b1e48f01f8ba72ae3b253b403e3f6a6331566b3de57a8a72ca7650452a0d6"
+  }
+}

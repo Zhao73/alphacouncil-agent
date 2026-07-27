@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject relative value when quotes are stale or timestamps are inconsistent.",
+    "Reject apparent mispricing that cannot clear the executable spread.",
+    "Reject a structure whose material Greek or payoff exposure is not computed."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

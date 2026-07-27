@@ -1,0 +1,131 @@
+{
+  "artifact_hash": "sha256:3439be6b2ab16b31f09b30cdcc5c942675772e05ba69e3b1bd7b635e3731fb5b",
+  "artifact_kind": "persona_v3_ai_source_prereview",
+  "assurance_class": "machine_pre_review_only",
+  "candidate_id": "asness_value_momentum_interaction",
+  "disagreement": {
+    "explanation": "The roles have different scopes but agree that no source approval or method attribution is established.",
+    "present": false,
+    "role_verdicts": [
+      "archive_integrity_verified_semantics_unreviewed",
+      "production_approval_unsupported",
+      "requires_human_review"
+    ]
+  },
+  "human_claims": false,
+  "human_reviewed": false,
+  "machine_limitations": [
+    "This artifact is deterministic machine triage, not an independent human review.",
+    "It does not contain a verified semantic extraction or exact source locator.",
+    "It is unsigned, cannot enter a trusted reviewer registry, and cannot satisfy source-review quorum."
+  ],
+  "method_attribution_approved": false,
+  "open_questions": [
+    "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+    "Who is the verified author or speaker for that exact passage?",
+    "What published_at and public_at values are supported by the archived material?"
+  ],
+  "persona_id": "master_asness",
+  "pipeline_id": "alphacouncil_ai_source_prereview_v1",
+  "production_effect": "none",
+  "reviewer_kind": "ai",
+  "roles": [
+    {
+      "concerns": [
+        "Archive integrity alone does not establish method-defining evidence."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:24c07a532e7222d5b1fda9035f273b6b4e8dbb18bc14776c7e833be39c1e12b3",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The archived byte stream matches the acquisition record's content hash and byte length.",
+        "The declared content type is application/pdf; the deterministic format probe is pdf_magic.",
+        "This bootstrap pass did not extract or verify a semantic proposition, authorship claim, date, grade, or exact locator."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:8f9b1f1a887fd26a31dc840c8ebc775635da15949f87e0bdb33c6f91f4ac5d0b",
+      "prompt_hash": "sha256:3c5ed3beaa183923297e451df14c0f1fc2274478cad9d5a0b7309b2750da1e52",
+      "prompt_id": "alphacouncil.source-prereview.extractor.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "extractor",
+      "role_id": "ai_source_extractor_v1",
+      "verdict": "archive_integrity_verified_semantics_unreviewed"
+    },
+    {
+      "concerns": [
+        "No exact passage has been bound to a method proposition.",
+        "Authorship, publication timing, source grade, and scope remain unresolved in this pre-review."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:b60913075777dcce77b47a603a17e1784a777c07a88cc69757480560359da9a2",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The acquisition remains retrieved_unadjudicated.",
+        "The acquisition's human_review.status remains not_requested.",
+        "The machine input contains no verified exact locator or proposition-to-passage binding."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:648186a67df662d3631402af865225d076846db456fac9b39ab78fe57bdd3c93",
+      "prompt_hash": "sha256:d4564717eafa5f0448e3832a56c70da95358a164fe2fec01354887e071b75738",
+      "prompt_id": "alphacouncil.source-prereview.skeptic.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "skeptic",
+      "role_id": "ai_source_skeptic_v1",
+      "verdict": "production_approval_unsupported"
+    },
+    {
+      "concerns": [
+        "Promoting this artifact would confuse machine triage with trusted human source adjudication."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:dad5df52a4a98ed3e4d39173c90ccca0ce512c01951564b5f56d3d3abeaa00f5",
+      "input_role_output_hashes": [
+        "sha256:8f9b1f1a887fd26a31dc840c8ebc775635da15949f87e0bdb33c6f91f4ac5d0b",
+        "sha256:648186a67df662d3631402af865225d076846db456fac9b39ab78fe57bdd3c93"
+      ],
+      "observations": [
+        "The extractor established archive integrity but explicitly performed no semantic review.",
+        "The skeptic found no verified proposition-to-locator binding for production use.",
+        "The two independent first-pass roles agree that machine pre-review cannot approve this source."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:95d90927c0441844a9c53e9e4a3e55f824c9d8930efbe6a10f2f292d7116a59f",
+      "prompt_hash": "sha256:18d54becf6953007bfbab91bbb5955bcf9ffc0989a0948d0d27ab751fa0a82a6",
+      "prompt_id": "alphacouncil.source-prereview.adjudicator.v1",
+      "reads_other_role_outputs": true,
+      "reviewer_kind": "ai",
+      "role": "adjudicator",
+      "role_id": "ai_source_adjudicator_v1",
+      "verdict": "requires_human_review"
+    }
+  ],
+  "schema_version": 1,
+  "semantic_review_performed": false,
+  "source_binding": {
+    "archive_relative_path": "personas-v3/master_asness/acquisitions/candidates/asness_value_momentum_interaction/source.bin",
+    "byte_length": 239181,
+    "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+    "content_type": "application/pdf",
+    "final_url": "https://www.aqr.com/-/media/AQR/Documents/Insights/Journal-Article/The-Interaction-of-Value-and-Momentum-Strategies.pdf",
+    "format_probe": "pdf_magic",
+    "record_hash": "sha256:f466154950663fe8a039f297f5bf49d348d9ace6754542cb8febbc55de8a3fef",
+    "record_relative_path": "personas-v3/master_asness/acquisitions/candidates/asness_value_momentum_interaction/record.json",
+    "retrieved_at": "2026-07-27T06:35:33.486Z",
+    "source_bytes_reverified": true
+  },
+  "verdict": "requires_human_review"
+}

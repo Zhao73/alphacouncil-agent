@@ -1,0 +1,84 @@
+{
+  "artifact_hash": "sha256:359a043cf674e79f4eda973091560a390bf08fd0f6781cce663de4acdba4839d",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "pabrai_columbia_session_2024",
+  "concise_summary": "The Columbia session discusses rapid rejection, competence boundaries, business-change observation, and examples of learning from other investors.",
+  "contradictions_ambiguities": [
+    "Rapid rejection is described conversationally; the transcript does not enumerate a complete reproducible first-minute checklist."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Most companies I look at, I reject in 60 seconds or less; sometimes in 10 seconds.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 5,
+        "section": "Circle of competence",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "pabrai_columbia_session_2024:p1",
+      "snippet_hash": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca",
+      "statement": "Use a strict circle-of-competence filter and reject most companies quickly rather than forcing analysis outside understood domains.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which exact disqualifiers drive the first 10-60 seconds of rejection?"
+  ],
+  "persona_id": "master_pabrai",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The session transcript is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 292154,
+    "content_hash": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+    "content_type": "application/pdf",
+    "extracted_character_count": 40500,
+    "extracted_text_hash": "sha256:639e2220b85d22ca5f619733458a7df96c57de5781c9bd73c001f900abfd9cfc",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.chaiwithpabrai.com/uploads/5/5/1/3/55139655/20240307_mohnish_pabrais_session_with_columbia_business_school__csima__on_february_14_2024.pdf",
+    "page_character_counts": [
+      3621,
+      3727,
+      3677,
+      3759,
+      3801,
+      3805,
+      3516,
+      3646,
+      3989,
+      3461,
+      2705,
+      793
+    ],
+    "page_count": 12,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:f34464c4583e5e65b5d3bb5859ec6eeac9016c984d5f53b7c11d4fdc54b1ad12",
+    "retrieved_at": "2026-07-27T06:23:31.231Z"
+  },
+  "source_type": "primary_session_transcript"
+}

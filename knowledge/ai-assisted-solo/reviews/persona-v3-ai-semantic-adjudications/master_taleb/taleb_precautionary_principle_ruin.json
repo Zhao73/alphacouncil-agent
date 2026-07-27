@@ -1,0 +1,184 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:b16e168893843bd9a5f24d1ce5c637648217b2f593d4467192ef1e5f0ab11e49",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_precautionary_principle_ruin",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:e36538ab56df75f179c5094a39d90b9cec60a7b9af4a446e535007eb5dac24d0",
+    "declared_artifact_hash": "sha256:60948dead3b794afd480d333284471f19dea3c3b1c3d8374aab083ebdf53d386",
+    "recomputed_artifact_hash": "sha256:60948dead3b794afd480d333284471f19dea3c3b1c3d8374aab083ebdf53d386",
+    "relative_path": "master_taleb/taleb_precautionary_principle_ruin.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 1,
+          "section_claimed": "Abstract",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 2618,
+          "text_start": 2585
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 1,
+          "section": "Abstract",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a",
+        "normalized_excerpt": "outcomes may have infinite costs.",
+        "skeptic_snippet_hash_claimed": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a",
+        "skeptic_snippet_hash_recomputed": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The short excerpt identifies infinite-cost outcomes but does not by itself state the full precautionary constraint and rejection of ordinary cost-benefit analysis.",
+      "final_verdict": "partial",
+      "proposition_id": "taleb_precautionary_principle_ruin:p1",
+      "review_hash": "sha256:d394423f1ed22473f97a42ffe6982e0f7ab5030200dc93557ee06a6b9ecc5408",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "The snippet is too narrow to support the full precautionary decision rule without its surrounding sentences."
+        ],
+        "support_rationale": "The same abstract rejects traditional cost-benefit analysis for infinite-cost ruin, but the bound excerpt alone is only the phrase that outcomes may have infinite costs.",
+        "support_verdict": "partial"
+      },
+      "statement": "When an action exposes a system to irreversible ruin, use a precautionary constraint rather than averaging the tail loss into ordinary cost-benefit analysis.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The page context supports the rule, but the exact evidence snippet does not."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:09077d5fd2d6f8b318493c76f5aaa07bf9d1a79cb5dbc345e14b1d86e8f3edc8",
+    "declared_artifact_hash": "sha256:328a904c5eae22ccfea0b2e6db6338943e15398b2f206eb3d6390bd129a42563",
+    "recomputed_artifact_hash": "sha256:328a904c5eae22ccfea0b2e6db6338943e15398b2f206eb3d6390bd129a42563",
+    "relative_path": "master_taleb/taleb_precautionary_principle_ruin.json"
+  },
+  "source_binding": {
+    "byte_length": 1245535,
+    "content_hash": "sha256:7ef0b4ea3f2e372701262e96fff7c492a48cefb9faebaf3849b5d20abb15f361",
+    "extracted_character_count_recomputed": 121837,
+    "extracted_text_hash_recomputed": "sha256:a81228f5003e3777781179c7f573ab0f3f101883287d7f829ac7a6e6ee1a5dde",
+    "page_character_counts_recomputed": [
+      4985,
+      4926,
+      5018,
+      4359,
+      5904,
+      4902,
+      5746,
+      4385,
+      5108,
+      6117,
+      5735,
+      5833,
+      5705,
+      5804,
+      4362,
+      2211,
+      5188,
+      5400,
+      4702,
+      3619,
+      4215,
+      2983,
+      5072,
+      3474,
+      4014,
+      2070
+    ],
+    "page_count_recomputed": 26,
+    "raw_bytes_hash_recomputed": "sha256:7ef0b4ea3f2e372701262e96fff7c492a48cefb9faebaf3849b5d20abb15f361",
+    "source_record_hash": "sha256:73c130cd84eee1b82b34c75c1d0d535d42d94456c27bc41b76ee48cdd4f48b71"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The page context supports the rule, but the exact evidence snippet does not."
+    ]
+  }
+}

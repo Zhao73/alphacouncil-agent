@@ -1,0 +1,14 @@
+{
+  "artifact_hash": "sha256:42ddb52fb8c5cc6335a0c90bbb4989fcfcc0a626ea1a32c87697ba4335ec94ab",
+  "artifact_kind": "persona_v3_ai_assisted_n_eff_disclosure",
+  "evidence_class": "machine_simulation",
+  "formal_experiment_effect": "none",
+  "formal_ga_effect": "none",
+  "formal_n_eff_effect": "none",
+  "minimum_required": 36,
+  "n_eff": null,
+  "reason": "insufficient_resolved_outcomes",
+  "resolved_outcome_count": 0,
+  "schema_version": 1,
+  "status": "insufficient_resolved_outcomes"
+}

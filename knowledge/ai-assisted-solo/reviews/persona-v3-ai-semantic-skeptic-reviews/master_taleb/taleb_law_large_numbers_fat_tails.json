@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:ea3fae11f1debb6d4b3feb89df662df00189943104fe9acae49bf30b6c63efed",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_law_large_numbers_fat_tails",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:0b79b237e6fe51cc409170960405c349f3b8ebb660b3c447c5dc8db1175a20a0",
+    "declared_artifact_hash": "sha256:1b284644dd666ae337bbc6dda4557bfbd62805e74542fd7886b7be3e072a4ca7",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:1b284644dd666ae337bbc6dda4557bfbd62805e74542fd7886b7be3e072a4ca7",
+    "relative_path": "master_taleb/taleb_law_large_numbers_fat_tails.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 1,
+        "actual_text_end": 608,
+        "actual_text_start": 499,
+        "declared_kind": "pdf_page",
+        "declared_page": 1,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Let us call \"sample equivalence\" the sample size that is needed to correspond to a Gaussian sample size of n.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 1,
+        "section": "Introduction",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Translate nominal sample size into tail-sensitive sample equivalence before treating an empirical mean as precise.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "taleb_law_large_numbers_fat_tails:p1",
+      "review_hash": "sha256:d393d109971efabd8af43993c0175005ef675192d090c437e361a22222dd826a",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22",
+      "snippet_hash_recomputed": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22",
+      "support_rationale": "The paper defines sample equivalence exactly as the fat-tail sample size corresponding to a Gaussian sample size and explains why nominal n can be misleading.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 427393,
+    "content_hash": "sha256:9fd0112a505073bc6dc4ad60b267cd2ffdb4fa86adefa7cb0a62a36d0b0409d0",
+    "extracted_text_hash": "sha256:4e74465a701625430f0a960853f9a6341151ec57c92e7f2ed1f1e27434a83636",
+    "extracted_text_hash_recomputed": "sha256:4e74465a701625430f0a960853f9a6341151ec57c92e7f2ed1f1e27434a83636",
+    "raw_bytes_hash_recomputed": "sha256:9fd0112a505073bc6dc4ad60b267cd2ffdb4fa86adefa7cb0a62a36d0b0409d0",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:cacac9f428477c68f73e49ecfe016c5986e4b383cf3f3ee80127cfc851c72b45",
+    "source_record_hash_recomputed": "sha256:cacac9f428477c68f73e49ecfe016c5986e4b383cf3f3ee80127cfc851c72b45"
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "dhandho_value",
+      "special_situations",
+      "downside_protection",
+      "concentrated_odds"
+    ],
+    "exclusions": [
+      "copied holdings treated as analysis",
+      "private fund positions",
+      "precise probabilities unsupported by frequencies or source evidence",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "dhandho_payoff_v1",
+    "optional_fact_types": [
+      "distress.recovery_waterfall",
+      "credit.financing_runway",
+      "scenario.outcome_tree",
+      "catalyst.path",
+      "valuation.ordinary_outcome_return",
+      "portfolio.concentration_limit"
+    ],
+    "required_fact_types": [
+      "valuation.downside_floor"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_pabrai.downside_floor",
+      "master_pabrai.discrete_payoff"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "valuation.downside_floor"
+    ],
+    "hard_vetoes": [
+      "master_pabrai.cloned_not_rebuilt",
+      "master_pabrai.no_downside_floor",
+      "master_pabrai.complex_success_path"
+    ],
+    "native_output": "dhandho_payoff_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Pabrai Dhandho Lens Provisional Operator Lens",
+      "zh": "Pabrai Dhandho 视角临时操作视角"
+    },
+    "persona_id": "master_pabrai",
+    "public_label": {
+      "en": "Pabrai Dhandho Lens Solo Test",
+      "zh": "Pabrai Dhandho 视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject a thesis copied from another investor without independent reconstruction.",
+      "Reject when conservative recovery and financing survival cannot be estimated.",
+      "Reject when upside needs many favorable events but one adverse event causes permanent loss."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in dhandho_value, special_situations, downside_protection, concentrated_odds",
+      "zh": "用于测试确定性行为：dhandho_value、special_situations、downside_protection、concentrated_odds"
+    },
+    "identity": {
+      "en": "Pabrai Dhandho Lens; project-derived and not human reviewed",
+      "zh": "Pabrai Dhandho 视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Separate uncertainty from permanent-loss risk and seek simple, independently rebuilt situations with a conservative downside floor and asymmetric ordinary outcomes.",
+      "zh": "Separate uncertainty from permanent-loss risk and seek simple, independently rebuilt situations with a conservative downside floor and asymmetric ordinary outcomes."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

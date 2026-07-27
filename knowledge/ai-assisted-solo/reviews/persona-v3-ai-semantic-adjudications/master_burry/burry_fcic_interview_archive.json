@@ -1,0 +1,93 @@
+{
+  "agreements": [],
+  "artifact_hash": "sha256:b4d46431a84c4383a056aa9fc62eee2060efdf92e11432eb78d9ff1416e113bd",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "burry_fcic_interview_archive",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:66508c081b517421982cc59c7a1b29e70461313f5de513a30ff1104414648b2c",
+    "declared_artifact_hash": "sha256:ab228204ed7a7a315b4662c08f435fd2285abe97b19212008f6257514ac74960",
+    "recomputed_artifact_hash": "sha256:ab228204ed7a7a315b4662c08f435fd2285abe97b19212008f6257514ac74960",
+    "relative_path": "master_burry/burry_fcic_interview_archive.json"
+  },
+  "final_overall_verdict": "unverifiable",
+  "final_rationale": "No source-bound method proposition exists in the extractor artifact, so this candidate remains semantically unverifiable.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_burry",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:8bdb43fab25df486827ff8b65ba1f873392af8e5ac94755d91532ec3c48debf1",
+    "declared_artifact_hash": "sha256:55f3a9f4ec6aa2e5b6e499c4230c0759ac64b2303e93f9b75c63634f376c64cb",
+    "recomputed_artifact_hash": "sha256:55f3a9f4ec6aa2e5b6e499c4230c0759ac64b2303e93f9b75c63634f376c64cb",
+    "relative_path": "master_burry/burry_fcic_interview_archive.json"
+  },
+  "source_binding": {
+    "byte_length": 6245,
+    "content_hash": "sha256:8176a20a17671c39b4252b212d19e69440fc05d4f9ada0a575077020db9583c6",
+    "extracted_character_count_recomputed": 316,
+    "extracted_text_hash_recomputed": "sha256:f1fa1350ff68299be3fec452b1f0dcf4ae65f44371f84bfc2ac683f300030bfd",
+    "page_character_counts_recomputed": [
+      316
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:8176a20a17671c39b4252b212d19e69440fc05d4f9ada0a575077020db9583c6",
+    "source_record_hash": "sha256:311b5a67f2f48ed19c4d24ffba9d3618243909d1c2e522f6304a039dd7bf8ee8"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "No readable proposition is available to resolve method authorship."
+    ],
+    "date": [
+      "No human-approved publication-date anchor is available in this machine lane."
+    ],
+    "scope": [
+      "No source-bound proposition is available to resolve method scope."
+    ]
+  }
+}

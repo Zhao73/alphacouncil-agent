@@ -1,0 +1,58 @@
+{
+  "artifact_hash": "sha256:1a8f5d6473be090bcd3a1789adcfedf6ce8a38147d87ee10e0d79c4b1a5efefe",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "simons_foundation_career_interview_2012",
+  "concise_summary": "The page provides a video description and chapter list about Simons's mathematical career, including financial-interest chapters, but no transcript.",
+  "contradictions_ambiguities": [
+    "Chapter titles are not evidence for a quantitative trading method or decision rule."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can an authorized transcript with timestamps be acquired and bound?"
+  ],
+  "persona_id": "master_simons",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "Only page metadata and chapter labels were extractable; semantic video speech is absent.",
+    "status": "partial"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 158742,
+    "content_hash": "sha256:12da8e935906a731f06fc3729449063ddcd212a17c25b14c8e17938df8be212c",
+    "content_type": "text/html; charset=UTF-8",
+    "extracted_character_count": 2014,
+    "extracted_text_hash": "sha256:fbb5828b6e8972f0600d65cd1a50060e267e545ce1ba034701d078c7a301fc96",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://www.simonsfoundation.org/2024/05/14/jim-simons-reflects-on-his-career-in-mathematics/",
+    "page_character_counts": [
+      2014
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:eaf3bf77397455f269da6da61a3bfe6f615140b4577b5c9599e4554eb7ce4477",
+    "retrieved_at": "2026-07-27T06:35:33.485Z"
+  },
+  "source_type": "video_landing_page"
+}

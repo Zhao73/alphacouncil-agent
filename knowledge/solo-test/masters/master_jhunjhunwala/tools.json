@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:a34e9d5dbabe64737a894da6a7362757e2f45d664806397bcc8fead300523fc4",
+    "derivation_spec_hash": "sha256:f86405ec457cc0dbe86e3605b0b833a53e3ec960ef16f2606ce3487209acbe8c",
+    "derivation_spec_id": "master_jhunjhunwala.promoter_governance.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_jhunjhunwala.promoter_governance",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:ab01c4ca3d7b4db29180fa036503a2001119e98d8f73f5c923915386a71a8194",
+    "inputs": [
+      {
+        "fact_id": "governance.promoter_ownership"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "governance.promoter_ownership",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:7c6b8fa4565751c9ae5ed60203fffbb21ef7bd09cc76c2607b798452cc53f13f",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:766b9b96aa87f12da"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:5d8e4b6809b81c61455c6cdf62f58fc98ff5374b751dce9afa7dbfebbe765559",
+    "derivation_spec_hash": "sha256:5c50cce924daa2fb7aa8b43422b786bd46eda531677178a16cc905d6174e36dc",
+    "derivation_spec_id": "master_jhunjhunwala.penetration_liquidity.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_jhunjhunwala.penetration_liquidity",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:22f06517c1b26fd65bd323eb4bb5a8a1ef99d8d322b308f6627eaf8ebf2b2f99",
+    "inputs": [
+      {
+        "fact_id": "india.industry_penetration"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "india.industry_penetration",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:27d770c51a5d192ca43e9d261d7f7871695204025aeb68dd88fcaf92074d4d15",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:766b9b96aa87f12da"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

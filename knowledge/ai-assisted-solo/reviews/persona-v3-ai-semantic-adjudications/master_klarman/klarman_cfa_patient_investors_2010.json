@@ -1,0 +1,93 @@
+{
+  "agreements": [],
+  "artifact_hash": "sha256:08ea5128dded23ff31cee646fdaee0beb7672e0ea74acb8f2e13d4e5a33c9247",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "klarman_cfa_patient_investors_2010",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:d381c4a50654ac65cf371b23c8adaef8a952f452c14eed17b0e3b4d04be73fc4",
+    "declared_artifact_hash": "sha256:8f9f0c83ecbff127c5e2f8ea051066b0a772153fe42add899aea2c5823cc2d71",
+    "recomputed_artifact_hash": "sha256:8f9f0c83ecbff127c5e2f8ea051066b0a772153fe42add899aea2c5823cc2d71",
+    "relative_path": "master_klarman/klarman_cfa_patient_investors_2010.json"
+  },
+  "final_overall_verdict": "unverifiable",
+  "final_rationale": "No source-bound method proposition exists in the extractor artifact, so this candidate remains semantically unverifiable.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_klarman",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:2b9cbe65f444d4a35fb3de00213a647bb1bd803d4cf856b23c929d15b8f268f1",
+    "declared_artifact_hash": "sha256:b448b689ebe77ad3a39b9c2fe19abe041b0a30b731d797bab7986932cfb83ea6",
+    "recomputed_artifact_hash": "sha256:b448b689ebe77ad3a39b9c2fe19abe041b0a30b731d797bab7986932cfb83ea6",
+    "relative_path": "master_klarman/klarman_cfa_patient_investors_2010.json"
+  },
+  "source_binding": {
+    "byte_length": 49983,
+    "content_hash": "sha256:48fbf1d4dda2df5b56d465f38332164d2edbd5f30b2a2222f46ff9617f7101d8",
+    "extracted_character_count_recomputed": 880,
+    "extracted_text_hash_recomputed": "sha256:3cb9155664a6c491d5ec16a5b4db58f141850f8bd1c50517501f553e4bc7e5b6",
+    "page_character_counts_recomputed": [
+      880
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:48fbf1d4dda2df5b56d465f38332164d2edbd5f30b2a2222f46ff9617f7101d8",
+    "source_record_hash": "sha256:d595b237acd1f6c42f890413da4826f1d12292c1a0a534ff71e4af9c3c95919d"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "No readable proposition is available to resolve method authorship."
+    ],
+    "date": [
+      "No human-approved publication-date anchor is available in this machine lane."
+    ],
+    "scope": [
+      "No source-bound proposition is available to resolve method scope."
+    ]
+  }
+}

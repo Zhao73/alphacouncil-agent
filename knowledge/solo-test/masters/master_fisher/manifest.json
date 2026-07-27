@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "growth_quality",
+      "scuttlebutt",
+      "research_productivity",
+      "management_depth"
+    ],
+    "exclusions": [
+      "private channel checks",
+      "unsourced supplier or customer claims",
+      "treating reputation as evidence of growth quality",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "scuttlebutt_quality_v1",
+    "optional_fact_types": [
+      "sales.organization_quality",
+      "supplier.relationships",
+      "management.depth",
+      "financial.reinvestment_runway"
+    ],
+    "required_fact_types": [
+      "customer.retention",
+      "research.productivity"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_fisher.scuttlebutt_graph",
+      "master_fisher.research_productivity"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "customer.retention",
+      "research.productivity"
+    ],
+    "hard_vetoes": [
+      "master_fisher.single_source_story",
+      "master_fisher.management_depth_gap",
+      "master_fisher.research_without_return"
+    ],
+    "native_output": "scuttlebutt_quality_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Fisher Lens Provisional Operator Lens",
+      "zh": "费雪视角临时操作视角"
+    },
+    "persona_id": "master_fisher",
+    "public_label": {
+      "en": "Fisher Lens Solo Test",
+      "zh": "费雪视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Decline when stakeholder claims do not have independent public corroboration.",
+      "Reject long-duration quality when management depth cannot be evidenced.",
+      "Reject growth quality when research spending lacks observable product or economic output."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in growth_quality, scuttlebutt, research_productivity, management_depth",
+      "zh": "用于测试确定性行为：growth_quality、scuttlebutt、research_productivity、management_depth"
+    },
+    "identity": {
+      "en": "Fisher Lens; project-derived and not human reviewed",
+      "zh": "费雪视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Assess long-duration growth quality through multi-party scuttlebutt, research productivity, sales capability, management depth and reinvestment runway.",
+      "zh": "Assess long-duration growth quality through multi-party scuttlebutt, research productivity, sales capability, management depth and reinvestment runway."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alphacouncil.local/schemas/persona-v3-ai-formula-cross-review-v1.schema.json",
+  "title": "PersonaPack v3 provisional AI formula cross-review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "assurance_class",
+    "reviewer_kind",
+    "execution_mode",
+    "human_reviewed",
+    "human_claims",
+    "production_effect",
+    "production_eligible",
+    "method_model_eligible",
+    "persona_id",
+    "tool_id",
+    "review_schema_hash",
+    "review_subject",
+    "review_subject_hash",
+    "role_sequence",
+    "roles",
+    "role_artifact_hashes",
+    "vector_summary",
+    "invariant_summary",
+    "disagreement",
+    "unknowns",
+    "adjudication_status",
+    "review_artifact_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_ai_formula_cross_review" },
+    "assurance_class": { "const": "provisional_ai_cross_review" },
+    "reviewer_kind": { "const": "ai" },
+    "execution_mode": { "const": "deterministic_review_harness" },
+    "human_reviewed": { "const": false },
+    "human_claims": { "const": false },
+    "production_effect": { "const": "none" },
+    "production_eligible": { "const": false },
+    "method_model_eligible": { "const": false },
+    "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "tool_id": { "type": "string", "pattern": "^master_[a-z0-9_]+\\.[a-z0-9_.-]+$" },
+    "review_schema_hash": { "$ref": "#/$defs/hash" },
+    "review_subject": { "type": "object" },
+    "review_subject_hash": { "$ref": "#/$defs/hash" },
+    "role_sequence": {
+      "const": ["deriver", "adversarial_checker", "adjudicator"]
+    },
+    "roles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deriver", "adversarial_checker", "adjudicator"],
+      "properties": {
+        "deriver": { "$ref": "#/$defs/role" },
+        "adversarial_checker": { "$ref": "#/$defs/role" },
+        "adjudicator": { "$ref": "#/$defs/role" }
+      }
+    },
+    "role_artifact_hashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deriver", "adversarial_checker", "adjudicator"],
+      "properties": {
+        "deriver": { "$ref": "#/$defs/hash" },
+        "adversarial_checker": { "$ref": "#/$defs/hash" },
+        "adjudicator": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "vector_summary": { "type": "object" },
+    "invariant_summary": { "type": "object" },
+    "disagreement": { "type": "object" },
+    "unknowns": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "adjudication_status": {
+      "enum": [
+        "machine_consistent_semantics_unknown",
+        "machine_disagreement",
+        "machine_unknown"
+      ]
+    },
+    "review_artifact_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_id",
+        "reviewer_kind",
+        "machine_actor_id",
+        "human_principal",
+        "prompt_id",
+        "prompt_text",
+        "prompt_hash",
+        "subject_hash",
+        "result",
+        "artifact_hash"
+      ],
+      "properties": {
+        "role_id": { "enum": ["deriver", "adversarial_checker", "adjudicator"] },
+        "reviewer_kind": { "const": "ai" },
+        "machine_actor_id": { "type": "string" },
+        "human_principal": { "const": false },
+        "prompt_id": { "type": "string" },
+        "prompt_text": { "type": "string" },
+        "prompt_hash": { "$ref": "#/$defs/hash" },
+        "subject_hash": { "$ref": "#/$defs/hash" },
+        "result": { "type": "object" },
+        "artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    }
+  }
+}

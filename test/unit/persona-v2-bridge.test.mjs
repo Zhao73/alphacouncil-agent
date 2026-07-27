@@ -1,18 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { declinedOpinion, factsFromRun, planMasters, reconcileOpinion } from "../../mcp/lib/personas-v2/bridge.mjs";
 
-/** NOK as the grounding block actually shaped it: a 20-F filer, 0/7 computable. */
+/** Frozen from the public-data shape that actually reached a NOK run; generated opinions removed. */
+const nokGrounding = JSON.parse(readFileSync(
+  new URL("../fixtures/nok-grounding-production-shape.json", import.meta.url),
+  "utf8",
+));
 const nokRun = {
   symbol: "NOK",
   as_of: "2026-07-26",
-  grounding: {
-    quote: { price: 9.1 },
-    filer: { cik: "0000924613", name: "NOKIA CORP" },
-    screen: { rules_computed: 0, rules_total: 7, metrics: [] },
-    options: { atm_iv: 0.688 },
-  },
+  grounding: nokGrounding,
 };
 
 test("grounding maps onto the fact paths the packs address", () => {
@@ -22,6 +22,8 @@ test("grounding maps onto the fact paths the packs address", () => {
   // rather than being asserted separately.
   assert.equal(facts.filer.structured_financials, false);
   assert.equal(facts.options.chain_available, true);
+  assert.equal(facts.options.atm_iv, 0.6878);
+  assert.equal(facts.options.skew_25d_points, 0.33);
   assert.equal(facts.quote.price, 9.1);
 });
 
@@ -37,7 +39,7 @@ test("a field the grounding does not carry stays absent rather than being invent
 // of its own rule set computable, because a chain snapshot carries no volatility history and
 // so no implied-versus-realized gap and no friction-adjusted edge. Under the old design both
 // would have written a confident essay.
-test("on the real NOK grounding, two methods stand down for different reasons", () => {
+test("on the frozen production-shaped NOK grounding, two methods stand down for different reasons", () => {
   const plan = planMasters(nokRun, ["master_buffett", "master_taleb"]);
   const reasons = Object.fromEntries(plan.declined.map((d) => [d.id, d.decision.reason]));
   assert.equal(reasons.master_buffett, "eligibility");
@@ -45,14 +47,13 @@ test("on the real NOK grounding, two methods stand down for different reasons", 
   assert.equal(plan.to_run.length, 0);
 });
 
-test("a chain that does carry its derived metrics lets the volatility method run", () => {
+test("a synthetic calculator result carrying derived metrics lets the volatility method run", () => {
   const richer = {
     ...nokRun,
     grounding: {
       ...nokRun.grounding,
       options: {
-        atm_iv: 0.688,
-        skew_25d_put_minus_call_points: 0.33,
+        ...nokRun.grounding.options,
         realized_minus_implied_vol_points: 8,
         net_edge_vol_points: 2,
         expiry_covers_next_event: false,

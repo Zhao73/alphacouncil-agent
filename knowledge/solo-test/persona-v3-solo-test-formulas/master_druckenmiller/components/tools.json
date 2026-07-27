@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:8bf90c3d3ea82c533da8255783967157d13f76178cf1cd45f179174b2cac6bda",
+    "derivation_spec_hash": "sha256:6e657cf2e0d3b6e16760345abdfdc92c19b019a1208c7a262811b720f3e5621d",
+    "derivation_spec_id": "master_druckenmiller.liquidity_revision_map.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_druckenmiller.liquidity_revision_map",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:926a47150b3d3ddaae5b8d71f956526e1c7af0b9d5abcc21e31867e274e3401a",
+    "inputs": [
+      {
+        "fact_id": "macro.liquidity_impulse"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "macro.liquidity_impulse",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:5aa45691b59af5795c1dce964f2c84eb8cbbd75107e1b31752de87e93cd73916",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_druckenmiller.liquidity_revision_map.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:8a1bccb57d5726bd0009c2f08492454a8bd1983f74a0371edc0f9d69f4aa0553",
+    "derivation_spec_hash": "sha256:4eeeea5baf92a4cc7968978257fcff4fbd81ea42062e390aaf6859c547223166",
+    "derivation_spec_id": "master_druckenmiller.inflection_payoff.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_druckenmiller.inflection_payoff",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:dcb4d33a98697c1535b6ce8227f6b2b833ce33da999b61a1fec6f61199efacfc",
+    "inputs": [
+      {
+        "fact_id": "macro.liquidity_impulse"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "macro.forward_inflection",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:53016eda518757ccf49402a00e386edfec401a1919ea84773878f11544cc712c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_druckenmiller.inflection_payoff.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when the long-run money-making mechanism cannot be explained.",
+    "Reject on a human-adjudicated material integrity breach.",
+    "Reject when revenue growth lacks public evidence of durable user value."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

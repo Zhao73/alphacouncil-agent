@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/registered-council-evaluation-protocol-v1.schema.json",
+  "title": "Registered AlphaCouncil evaluation promotion protocol",
+  "type": "object",
+  "required": ["schema_version", "artifact_kind", "protocol_id", "registered_at", "protocol_hash", "promotion_thresholds", "multiplicity_policy", "human_reference_boundary", "release_claims"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "alphacouncil_registered_evaluation_protocol" },
+    "protocol_id": { "type": "string", "minLength": 1 },
+    "registered_at": { "type": "string", "format": "date-time" },
+    "protocol_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "promotion_thresholds": { "type": "object", "minProperties": 1 },
+    "multiplicity_policy": { "type": "object", "minProperties": 1 },
+    "human_reference_boundary": { "$ref": "persona-v3-experiment-adjudication-v1.schema.json#/$defs/humanBoundary" },
+    "release_claims": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 8 } }
+  }
+}

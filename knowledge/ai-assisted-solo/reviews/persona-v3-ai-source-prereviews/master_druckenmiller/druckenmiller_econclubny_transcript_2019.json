@@ -1,0 +1,131 @@
+{
+  "artifact_hash": "sha256:31697e81531beadb0f35cc9719961403ad04ce062bcdcbc06483e521047980a6",
+  "artifact_kind": "persona_v3_ai_source_prereview",
+  "assurance_class": "machine_pre_review_only",
+  "candidate_id": "druckenmiller_econclubny_transcript_2019",
+  "disagreement": {
+    "explanation": "The roles have different scopes but agree that no source approval or method attribution is established.",
+    "present": false,
+    "role_verdicts": [
+      "archive_integrity_verified_semantics_unreviewed",
+      "production_approval_unsupported",
+      "requires_human_review"
+    ]
+  },
+  "human_claims": false,
+  "human_reviewed": false,
+  "machine_limitations": [
+    "This artifact is deterministic machine triage, not an independent human review.",
+    "It does not contain a verified semantic extraction or exact source locator.",
+    "It is unsigned, cannot enter a trusted reviewer registry, and cannot satisfy source-review quorum."
+  ],
+  "method_attribution_approved": false,
+  "open_questions": [
+    "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+    "Who is the verified author or speaker for that exact passage?",
+    "What published_at and public_at values are supported by the archived material?"
+  ],
+  "persona_id": "master_druckenmiller",
+  "pipeline_id": "alphacouncil_ai_source_prereview_v1",
+  "production_effect": "none",
+  "reviewer_kind": "ai",
+  "roles": [
+    {
+      "concerns": [
+        "Archive integrity alone does not establish method-defining evidence."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:6d22674075861b8d9ff14b70440b8edf6f282a11ed70942919e416d8ef1b1a50",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The archived byte stream matches the acquisition record's content hash and byte length.",
+        "The declared content type is application/pdf; the deterministic format probe is pdf_magic.",
+        "This bootstrap pass did not extract or verify a semantic proposition, authorship claim, date, grade, or exact locator."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:07c1ec1fb7e93307aedb557da57c971a3e77078c219d7bbbcd013cf3c292d9f1",
+      "prompt_hash": "sha256:3c5ed3beaa183923297e451df14c0f1fc2274478cad9d5a0b7309b2750da1e52",
+      "prompt_id": "alphacouncil.source-prereview.extractor.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "extractor",
+      "role_id": "ai_source_extractor_v1",
+      "verdict": "archive_integrity_verified_semantics_unreviewed"
+    },
+    {
+      "concerns": [
+        "No exact passage has been bound to a method proposition.",
+        "Authorship, publication timing, source grade, and scope remain unresolved in this pre-review."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:bfe6becbb435d433d47a92a512997b430a4a25350ecb031c64ffebc123996291",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The acquisition remains retrieved_unadjudicated.",
+        "The acquisition's human_review.status remains not_requested.",
+        "The machine input contains no verified exact locator or proposition-to-passage binding."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:de14309bfbf9a229f2e1afc20fc68988825660bfbb76235b55ec1380d13b6f3f",
+      "prompt_hash": "sha256:d4564717eafa5f0448e3832a56c70da95358a164fe2fec01354887e071b75738",
+      "prompt_id": "alphacouncil.source-prereview.skeptic.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "skeptic",
+      "role_id": "ai_source_skeptic_v1",
+      "verdict": "production_approval_unsupported"
+    },
+    {
+      "concerns": [
+        "Promoting this artifact would confuse machine triage with trusted human source adjudication."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:c050e3d4167c243d8433560445d34b08a2e27d8014e66d3268f56961705fcfbc",
+      "input_role_output_hashes": [
+        "sha256:07c1ec1fb7e93307aedb557da57c971a3e77078c219d7bbbcd013cf3c292d9f1",
+        "sha256:de14309bfbf9a229f2e1afc20fc68988825660bfbb76235b55ec1380d13b6f3f"
+      ],
+      "observations": [
+        "The extractor established archive integrity but explicitly performed no semantic review.",
+        "The skeptic found no verified proposition-to-locator binding for production use.",
+        "The two independent first-pass roles agree that machine pre-review cannot approve this source."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:ab3ee9d9af2a4a04c3744fbbb32b4babffd850ee1c46eeae924b15de43e4f95f",
+      "prompt_hash": "sha256:18d54becf6953007bfbab91bbb5955bcf9ffc0989a0948d0d27ab751fa0a82a6",
+      "prompt_id": "alphacouncil.source-prereview.adjudicator.v1",
+      "reads_other_role_outputs": true,
+      "reviewer_kind": "ai",
+      "role": "adjudicator",
+      "role_id": "ai_source_adjudicator_v1",
+      "verdict": "requires_human_review"
+    }
+  ],
+  "schema_version": 1,
+  "semantic_review_performed": false,
+  "source_binding": {
+    "archive_relative_path": "personas-v3/master_druckenmiller/acquisitions/candidates/druckenmiller_econclubny_transcript_2019/source.bin",
+    "byte_length": 162239,
+    "content_hash": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+    "content_type": "application/pdf",
+    "final_url": "https://www.econclubny.org/documents/10184/109144/2019DruckenmillerTranscript.pdf",
+    "format_probe": "pdf_magic",
+    "record_hash": "sha256:2214d28093b5920de177a2cce3151260cad7dbefb9370b4d5f24f49120ad99e3",
+    "record_relative_path": "personas-v3/master_druckenmiller/acquisitions/candidates/druckenmiller_econclubny_transcript_2019/record.json",
+    "retrieved_at": "2026-07-27T06:24:10.855Z",
+    "source_bytes_reverified": true
+  },
+  "verdict": "requires_human_review"
+}

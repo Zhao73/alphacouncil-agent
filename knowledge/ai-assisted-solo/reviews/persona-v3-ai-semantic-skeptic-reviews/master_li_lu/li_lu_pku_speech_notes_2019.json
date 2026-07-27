@@ -1,0 +1,176 @@
+{
+  "artifact_hash": "sha256:43eba9b74f99fe30701f1c4bdac9d748d40a9c96cc095a2164dee5542f779da8",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "li_lu_pku_speech_notes_2019",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:8a6dfa9214f176ff4ac0829ccfecfa16314883c32d6695b04bd1a9ecd8193eb9",
+    "declared_artifact_hash": "sha256:7ecc24947b9bf39035495d29c031c9032c3e4bc666316664a0efc8d612da257a",
+    "proposition_count": 2,
+    "recomputed_artifact_hash": "sha256:7ecc24947b9bf39035495d29c031c9032c3e4bc666316664a0efc8d612da257a",
+    "relative_path": "master_li_lu/li_lu_pku_speech_notes_2019.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_li_lu",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The page expressly identifies itself as notes from the speech, so exact wording and omissions cannot be attributed directly to Li Lu.",
+        "status": "material"
+      },
+      "challenges": [
+        "The wording may belong to the note author rather than Li Lu verbatim."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 834,
+        "actual_text_start": 732,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Is a primary recording or transcript available for this passage?"
+      ],
+      "proposed_evidence_excerpt": "Investors make money by participating in the long-term value creation of the companies they invest in.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Speculation and investing",
+        "text_end": 834,
+        "text_start": 732
+      },
+      "proposed_statement": "Define investing as participation in a company's long-term value creation rather than forecasting other market participants.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "li_lu_pku_speech_notes_2019:p1",
+      "review_hash": "sha256:09d9ba78deb0c087ef08cd031c6b158828d5409a54d1d394cdfb82e0343a6a8d",
+      "scope_ambiguity": {
+        "rationale": "The conceptual distinction is supported, but direct-persona attribution remains unresolved.",
+        "status": "limited"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:a03905bcebbe4db08db339d6825d6a1365c9b2e2ee20f472e480eeccba0dcfb2",
+      "snippet_hash_recomputed": "sha256:a03905bcebbe4db08db339d6825d6a1365c9b2e2ee20f472e480eeccba0dcfb2",
+      "support_rationale": "The archived notes state the investing-versus-speculation distinction, but they are a secondary summary rather than a verbatim speech transcript.",
+      "support_verdict": "partial"
+    },
+    {
+      "authorship_ambiguity": {
+        "rationale": "The page is a note author's summary of Li Lu's speech, not a verbatim primary record.",
+        "status": "material"
+      },
+      "challenges": [
+        "One historical example is combined with two separate principles.",
+        "The source is secondary notes rather than a transcript."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 1420,
+        "actual_text_start": 1346,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can each component be bound to a primary transcript and its own exact excerpt?"
+      ],
+      "proposed_evidence_excerpt": "Li bought cheap stocks with sufficient margins of safety (net-net stocks).",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Circle of competence and margin of safety",
+        "text_end": 1420,
+        "text_start": 1346
+      },
+      "proposed_statement": "Build competence and require sufficient margin of safety before treating a stock as business ownership.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "li_lu_pku_speech_notes_2019:p2",
+      "review_hash": "sha256:ce55349d4ee0cc81ec56cdcd99e1e4cc4b8d0752f5b3e1ceebb7ade0d4d821d1",
+      "scope_ambiguity": {
+        "rationale": "The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt.",
+        "status": "material"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:6efb028dd3c526b59861ad36ed2e42460f0a05df657fbb665deddc64b7de9cef",
+      "snippet_hash_recomputed": "sha256:6efb028dd3c526b59861ad36ed2e42460f0a05df657fbb665deddc64b7de9cef",
+      "support_rationale": "The excerpt supports an early net-net purchase with margin of safety; competence-building and the ownership mindset appear in adjacent notes, so the combined prescription exceeds the bound snippet.",
+      "support_verdict": "partial"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 33831,
+    "content_hash": "sha256:3dfe0c5406e3d76b69673b3377837816bad4feaeb8d7134c88be8d1413cdfa77",
+    "extracted_text_hash": "sha256:83a5ff0353dd013c72fd4466d2d30f12f882c487c6e6e2f7faad6f5ab710725a",
+    "extracted_text_hash_recomputed": "sha256:83a5ff0353dd013c72fd4466d2d30f12f882c487c6e6e2f7faad6f5ab710725a",
+    "raw_bytes_hash_recomputed": "sha256:3dfe0c5406e3d76b69673b3377837816bad4feaeb8d7134c88be8d1413cdfa77",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:2fa2cc980acd68f469c1a2a9fc733cf782ce7b4f148a25ef261988bc7b7e3ab5",
+    "source_record_hash_recomputed": "sha256:2fa2cc980acd68f469c1a2a9fc733cf782ce7b4f148a25ef261988bc7b7e3ab5"
+  }
+}

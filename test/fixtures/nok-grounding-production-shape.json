@@ -1,0 +1,38 @@
+{
+  "fixture_provenance": {
+    "source_run_shape": "NOK-20260726T122708Z",
+    "note": "Public market fields only; analyst packets and generated opinions removed. This preserves the field names that reached run.grounding."
+  },
+  "as_of": "2026-07-26",
+  "quote": {
+    "symbol": "NOK",
+    "price": 9.1,
+    "previous_close": 9.73,
+    "change_pct": -6.47,
+    "currency": "USD",
+    "quote_time": "2026-07-24T20:04:18.000Z",
+    "source": "yahoo delayed ~15m"
+  },
+  "filer": {
+    "cik": "0000924613",
+    "name": "NOKIA CORP",
+    "sic": "3663",
+    "exchanges": ["NYSE", "OTC"],
+    "note": "20-F foreign private issuer, IFRS"
+  },
+  "screen": {
+    "verdict": "survives",
+    "rules_computed": 0,
+    "rules_total": 7,
+    "metrics": [],
+    "skipped": ["roe_10y", "fcf_5y", "interest_cover", "gross_margin", "ocf_over_ni", "net_margin", "dilution"]
+  },
+  "options": {
+    "atm_iv_12d": 0.6878,
+    "term_structure_flat": true,
+    "skew_25d_put_minus_call": 0.0033,
+    "oi_put_call": 0.336,
+    "largest_oi_strikes": [15, 10, 20, 12, 25],
+    "iv_percentile": "unavailable"
+  }
+}

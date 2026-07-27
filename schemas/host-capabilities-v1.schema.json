@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/host-capabilities-v1.schema.json",
+  "title": "AlphaCouncil host capability and parity contract v1",
+  "type": "object",
+  "required": ["schema_version", "contract_id", "evidence_scope", "live_e2e_overall", "shared_selection_protocol", "hosts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "contract_id": { "const": "alphacouncil-host-capabilities-v1" },
+    "evidence_scope": { "const": "repository_static_contract_only" },
+    "live_e2e_overall": { "const": "not_run" },
+    "shared_selection_protocol": {
+      "type": "object",
+      "required": ["steps", "required_selector_fields", "numbered_inputs", "catalog_hash_semantics", "pack_hash_semantics", "receipt_semantics", "native_chooser_requirement", "numbered_fallback_requirement"],
+      "additionalProperties": false,
+      "properties": {
+        "steps": { "type": "array", "minItems": 5, "uniqueItems": true, "items": { "type": "string" } },
+        "required_selector_fields": { "type": "array", "minItems": 7, "uniqueItems": true, "items": { "type": "string" } },
+        "numbered_inputs": { "type": "array", "minItems": 5, "uniqueItems": true, "items": { "type": "string" } },
+        "catalog_hash_semantics": { "const": "sha256_of_frozen_language_catalog_snapshot" },
+        "pack_hash_semantics": { "const": "non_null_per_seat_hash_bound_into_selection_receipt" },
+        "receipt_semantics": { "const": "short_lived_one_run_symbol_intent_catalog_and_selected_pack_hash_binding" },
+        "native_chooser_requirement": { "const": "optional_ui_sugar_only" },
+        "numbered_fallback_requirement": { "const": "mandatory" }
+      }
+    },
+    "hosts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/host" }
+    }
+  },
+  "$defs": {
+    "path": { "type": "string", "minLength": 3, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "host": {
+      "type": "object",
+      "required": ["host_id", "display_name", "static_contract_status", "config_paths", "command_surface", "chooser", "visible_subagents", "parallelism", "model_mapping", "permissions", "resume", "degradation", "live_e2e"],
+      "additionalProperties": false,
+      "properties": {
+        "host_id": { "enum": ["claude_code", "codex", "opencode", "grok"] },
+        "display_name": { "type": "string", "minLength": 3 },
+        "static_contract_status": { "const": "shipped_not_live_verified" },
+        "config_paths": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+        "command_surface": {
+          "type": "object",
+          "required": ["canonical_source", "repository_adapters", "installation_scope", "freshness_contract"],
+          "additionalProperties": false,
+          "properties": {
+            "canonical_source": { "const": "commands/alpha.md" },
+            "repository_adapters": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/path" } },
+            "installation_scope": { "type": "string", "minLength": 3 },
+            "freshness_contract": { "enum": ["exact_copy", "compare_if_installed"] }
+          }
+        },
+        "chooser": {
+          "type": "object",
+          "required": ["native", "numbered_fallback"],
+          "additionalProperties": false,
+          "properties": {
+            "native": { "const": "optional_not_required_not_live_verified" },
+            "numbered_fallback": { "const": "required_shipped" }
+          }
+        },
+        "visible_subagents": {
+          "type": "object",
+          "required": ["support", "definition_surface", "live_status"],
+          "additionalProperties": false,
+          "properties": {
+            "support": { "enum": ["shipped_definitions_host_capability_required", "host_capability_dependent_no_shipped_agent_files"] },
+            "definition_surface": { "anyOf": [{ "$ref": "#/$defs/path" }, { "type": "null" }] },
+            "live_status": { "const": "not_run" }
+          }
+        },
+        "parallelism": {
+          "type": "object",
+          "required": ["support", "configured_limit", "live_status"],
+          "additionalProperties": false,
+          "properties": {
+            "support": { "const": "host_managed_best_effort" },
+            "configured_limit": { "type": "null" },
+            "live_status": { "const": "not_run" }
+          }
+        },
+        "model_mapping": {
+          "type": "object",
+          "required": ["policy", "fast", "standard", "deep"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": { "enum": ["generated_per_tier", "host_default"] },
+            "fast": { "type": ["string", "null"] },
+            "standard": { "type": ["string", "null"] },
+            "deep": { "type": ["string", "null"] }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "required": ["policy", "network", "edit", "shell"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": { "type": "string", "minLength": 3 },
+            "network": { "type": "string", "minLength": 3 },
+            "edit": { "type": "string", "minLength": 3 },
+            "shell": { "type": "string", "minLength": 3 }
+          }
+        },
+        "resume": {
+          "type": "object",
+          "required": ["saved_run_artifacts", "host_session_resume", "live_status"],
+          "additionalProperties": false,
+          "properties": {
+            "saved_run_artifacts": { "const": "server_supported" },
+            "host_session_resume": { "const": "not_live_verified" },
+            "live_status": { "const": "not_run" }
+          }
+        },
+        "degradation": { "type": "array", "minItems": 3, "uniqueItems": true, "items": { "type": "string", "minLength": 10 } },
+        "live_e2e": {
+          "type": "object",
+          "required": ["status", "artifact"],
+          "additionalProperties": false,
+          "properties": {
+            "status": { "const": "not_run" },
+            "artifact": { "type": "null" }
+          }
+        }
+      }
+    }
+  }
+}

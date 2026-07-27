@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:0230db4db9644c1e90ce8628cfcfdfb20ccca6e06c3c6be74095261040c1e2e9",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "damodaran_nyu_narrative_numbers",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:3eb5b36594e8d952da427b49f9550a1432d26a84f21146005a3df9be9cded9e3",
+    "declared_artifact_hash": "sha256:2fb96798fc07df60cf726665377230f111cf92d4c5a797a555f8902109130ab8",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:2fb96798fc07df60cf726665377230f111cf92d4c5a797a555f8902109130ab8",
+    "relative_path": "master_damodaran/damodaran_nyu_narrative_numbers.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 3,
+        "actual_text_end": 105,
+        "actual_text_start": 2,
+        "declared_kind": "pdf_page",
+        "declared_page": 3,
+        "occurrence_count": 2,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Every valuation starts with a narrative, a story that you see unfolding for your company in the future.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 3,
+        "section": "Every valuation starts with a narrative",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Begin valuation with a forward company narrative, then constrain it by products, market, competition, management, and macro conditions.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "damodaran_nyu_narrative_numbers:p1",
+      "review_hash": "sha256:83276597eef070d6751e36cceb046d3aab8a560829ee993003bc48b20ee9137e",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870",
+      "snippet_hash_recomputed": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870",
+      "support_rationale": "The cited slide begins with a forward narrative and immediately enumerates company, market, competition, and macro assessments that constrain it.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 3842989,
+    "content_hash": "sha256:d94466da9796eb9156a1d982d2b2a342fb8c21bc9af7867915c9ff9b12a46002",
+    "extracted_text_hash": "sha256:4f7a4bfb8ee93a1a84fb2324fecd5eec12b89d4fe4b9b61340c2d41e1d247544",
+    "extracted_text_hash_recomputed": "sha256:4f7a4bfb8ee93a1a84fb2324fecd5eec12b89d4fe4b9b61340c2d41e1d247544",
+    "raw_bytes_hash_recomputed": "sha256:d94466da9796eb9156a1d982d2b2a342fb8c21bc9af7867915c9ff9b12a46002",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:4b2227abd4457ba4b49b57d90875e94147e5df4f7da169d07a7a8ce3d5c7d399",
+    "source_record_hash_recomputed": "sha256:4b2227abd4457ba4b49b57d90875e94147e5df4f7da169d07a7a8ce3d5c7d399"
+  }
+}

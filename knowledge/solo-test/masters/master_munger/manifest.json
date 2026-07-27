@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "business_quality",
+      "incentives",
+      "failure_analysis",
+      "capital_allocation"
+    ],
+    "exclusions": [
+      "personality imitation",
+      "invented multidisciplinary analogies presented as doctrine",
+      "a directional rating when only a veto analysis is supported",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "failure_path_verdict_v1",
+    "optional_fact_types": [
+      "risk.permanent_loss",
+      "business.complexity",
+      "capital_allocation.history",
+      "decision.coupled_assumptions"
+    ],
+    "required_fact_types": [
+      "governance.incentive_structure",
+      "risk.failure_paths"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_munger.incentive_map",
+      "master_munger.failure_path_graph"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "governance.incentive_structure",
+      "risk.failure_paths"
+    ],
+    "hard_vetoes": [
+      "master_munger.fatal_incentive",
+      "master_munger.coupled_failure",
+      "master_munger.unbounded_permanent_loss"
+    ],
+    "native_output": "failure_path_verdict_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Munger Lens Provisional Operator Lens",
+      "zh": "芒格视角临时操作视角"
+    },
+    "persona_id": "master_munger",
+    "public_label": {
+      "en": "Munger Lens Solo Test",
+      "zh": "芒格视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject when incentives reward a documented path to permanent business damage.",
+      "Reject when several required assumptions fail through one shared cause.",
+      "Reject when a plausible failure path creates unbounded permanent loss."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in business_quality, incentives, failure_analysis, capital_allocation",
+      "zh": "用于测试确定性行为：business_quality、incentives、failure_analysis、capital_allocation"
+    },
+    "identity": {
+      "en": "Munger Lens; project-derived and not human reviewed",
+      "zh": "芒格视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Invert the thesis, map permanent-loss paths, audit incentives and test coupled risks using cross-disciplinary causal models.",
+      "zh": "Invert the thesis, map permanent-loss paths, audit incentives and test coupled risks using cross-disciplinary causal models."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

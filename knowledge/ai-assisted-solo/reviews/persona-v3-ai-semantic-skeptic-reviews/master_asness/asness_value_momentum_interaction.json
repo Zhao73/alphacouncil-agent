@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:d7a36064d969f68a79ca91b636c794c90ac383c82bf3acdafaf96acb678920ab",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "asness_value_momentum_interaction",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:bcfac9be194b1ade26d06da04dbc475237381dc2e7993b39f28834bdfbbf296c",
+    "declared_artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
+    "relative_path": "master_asness/asness_value_momentum_interaction.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_asness",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 1,
+        "actual_text_end": 358,
+        "actual_text_start": 209,
+        "declared_kind": "pdf_page",
+        "declared_page": 1,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Measures of momentum and value are negatively correlated across stocks, yet each is positively related to the cross-section of average stock returns.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 1,
+        "section": "Abstract",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Model value and momentum jointly: they are negatively correlated across stocks, yet both retain positive relationships with average returns.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "asness_value_momentum_interaction:p1",
+      "review_hash": "sha256:fccf6b263a291d89a7cd8da1493f970bafe5eca968961dcb66baeecb89c372a3",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70",
+      "snippet_hash_recomputed": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70",
+      "support_rationale": "The abstract expressly states both the negative cross-sectional correlation and each factor's positive relationship with average returns.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 239181,
+    "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+    "extracted_text_hash": "sha256:52f04b5f6ddcd732c67be485470e4fd963e9b518d36fc3a99d2a78b8da4a0133",
+    "extracted_text_hash_recomputed": "sha256:52f04b5f6ddcd732c67be485470e4fd963e9b518d36fc3a99d2a78b8da4a0133",
+    "raw_bytes_hash_recomputed": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:f466154950663fe8a039f297f5bf49d348d9ace6754542cb8febbc55de8a3fef",
+    "source_record_hash_recomputed": "sha256:f466154950663fe8a039f297f5bf49d348d9ace6754542cb8febbc55de8a3fef"
+  }
+}

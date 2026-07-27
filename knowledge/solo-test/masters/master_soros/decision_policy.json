@@ -1,0 +1,105 @@
+{
+  "abstention_policy": "fail_closed",
+  "dsl_version": "1.1",
+  "eligibility": {
+    "all": []
+  },
+  "fact_gate": {
+    "on_missing_critical": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_no_loop"
+    }
+  },
+  "hard_vetoes": [],
+  "native_decision_schema": "reflexive_loop_v1",
+  "native_output_fields": [
+    {
+      "field": "metric_1",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "reflexivity.loop_state"
+      }
+    },
+    {
+      "field": "metric_2",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "reflexivity.break_signals"
+      }
+    }
+  ],
+  "native_states": [
+    "provisional_no_loop",
+    "provisional_reinforcing",
+    "provisional_testing_reversal",
+    "provisional_broken"
+  ],
+  "schema_version": 1,
+  "score_bands": [
+    {
+      "decision": {
+        "common_stance": "opposed",
+        "native_state": "provisional_broken"
+      },
+      "min_ratio": 0
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_testing_reversal"
+      },
+      "min_ratio": 0.5
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_reinforcing"
+      },
+      "min_ratio": 1
+    }
+  ],
+  "scoring": {
+    "max_score": 2,
+    "min_coverage": 1,
+    "on_insufficient_coverage": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_no_loop"
+    },
+    "rules": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "reflexivity.loop_state"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_1",
+        "source_ids": [
+          "proxy:efa4c7a15523b575e"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "reflexivity.break_signals"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_2",
+        "source_ids": [
+          "proxy:efa4c7a15523b575e"
+        ]
+      }
+    ]
+  }
+}

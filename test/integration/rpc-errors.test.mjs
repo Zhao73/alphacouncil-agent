@@ -1,7 +1,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { startServer } from "../helpers/rpc-client.mjs";
+import { confirmMasterSelection, startServer } from "../helpers/rpc-client.mjs";
 import { RpcCode } from "../../mcp/lib/errors.mjs";
 
 // handleRequest used to map every thrown value to INVALID_PARAMS, so a missing run
@@ -27,13 +27,19 @@ test("an unknown tool is METHOD_NOT_FOUND, not INVALID_PARAMS", async () => {
 });
 
 test("a malformed symbol is INVALID_PARAMS", async () => {
-  const response = await server.callTool("analyze_symbol", { symbol: "not a ticker!!", dry_run: true });
+  const response = await server.callTool("begin_council_selection", { symbol: "not a ticker!!" });
   assert.equal(response.error?.code, RpcCode.INVALID_PARAMS);
   assert.match(response.error.message, /ticker-safe/);
 });
 
 test("an unknown role on a visible run is INVALID_PARAMS", async () => {
-  await server.callTool("plan_visible_run", { symbol: "NOK", run_id: "ERRTEST-ROLE", tasks: ["market_data"] });
+  const selection = await confirmMasterSelection(server, { symbol: "NOK" });
+  await server.callTool("plan_visible_run", {
+    symbol: "NOK",
+    run_id: "ERRTEST-ROLE",
+    tasks: ["market_data"],
+    selection_receipt: selection.selection_receipt,
+  });
   const response = await server.callTool("record_visible_decision", {
     run_id: "ERRTEST-ROLE",
     role: "chief_astrologer",

@@ -1,0 +1,87 @@
+{
+  "artifact_hash": "sha256:6837b358e0fa2983d2f99abdf1eaf5425602329ef00de098a7f9df5a8c3ed320",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "buffett_berkshire_letter_2024",
+  "concise_summary": "Berkshire's 2024 shareholder letter discusses owner communication, capital allocation, long holding periods, and selected operating lessons.",
+  "contradictions_ambiguities": [
+    "The cited passage concerns five specific Japanese holdings and should not be universalized into an unconditional holding rule."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Our holdings of the five are for the very long term, and we are committed to supporting their boards of directors.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 11,
+        "section": "Japanese trading-company holdings",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "buffett_berkshire_letter_2024:p1",
+      "snippet_hash": "sha256:b53ae3c75dac7a8e955d6d371f3d40e01ce12e0b77af8cf0b9460437297df3da",
+      "statement": "Prefer very long holding periods for businesses whose governance and capital allocation remain acceptable.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "What explicit sell, valuation, or governance conditions would override the stated long-term intent?"
+  ],
+  "persona_id": "master_buffett",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The shareholder letter is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 64860,
+    "content_hash": "sha256:ff21ab9407dec219757587b6ce6a1bf30e59cfff15bb21e81d1faaec7f97a8a7",
+    "content_type": "application/pdf",
+    "extracted_character_count": 39911,
+    "extracted_text_hash": "sha256:ec4ea26426b63b7b1756cdfd5d71267e84844e9f249363f966239ab8526e292d",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.berkshirehathaway.com/letters/2024ltr.pdf",
+    "page_character_counts": [
+      2148,
+      2826,
+      2094,
+      2342,
+      2564,
+      2573,
+      3032,
+      2809,
+      2675,
+      2328,
+      2540,
+      2659,
+      1915,
+      3667,
+      3739
+    ],
+    "page_count": 15,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:5a53b72e9270d858b6a397fa1216ca06656d4aef97e34dcf4a1f637b3e77befa",
+    "retrieved_at": "2026-07-27T06:24:10.856Z"
+  },
+  "source_type": "primary_shareholder_letter"
+}

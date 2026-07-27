@@ -1,0 +1,128 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "ai_infrastructure",
+      "semiconductors",
+      "power",
+      "technology_diffusion"
+    ],
+    "exclusions": [
+      "private laboratory roadmaps",
+      "classified national-security information",
+      "a claim to reproduce the named researcher's current view",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "ai_scaling_timeline_v1",
+    "optional_fact_types": [
+      "ai.compute.capex_commitments",
+      "ai.power.available_mw",
+      "ai.supply_chain.lead_time",
+      "ai.adoption.revenue",
+      "valuation.implied_growth"
+    ],
+    "required_fact_types": [
+      "ai.compute.installed_capacity"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_aschenbrenner.compute_power_bridge",
+      "master_aschenbrenner.timeline_reverse_valuation"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "ai.compute.installed_capacity"
+    ],
+    "hard_vetoes": [
+      "master_aschenbrenner.private_dependency",
+      "master_aschenbrenner.power_gap",
+      "master_aschenbrenner.supply_timeline_gap"
+    ],
+    "native_output": "ai_scaling_timeline_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Aschenbrenner Lens Provisional Operator Lens",
+      "zh": "Aschenbrenner 视角临时操作视角"
+    },
+    "persona_id": "master_aschenbrenner",
+    "public_label": {
+      "en": "Aschenbrenner Lens Solo Test",
+      "zh": "Aschenbrenner 视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject conclusions whose load-bearing input is private or classified.",
+      "Reject a scale scenario that lacks a dated, financeable power path.",
+      "Reject a timeline that ignores documented equipment and interconnect lead times."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in ai_infrastructure, semiconductors, power, technology_diffusion",
+      "zh": "用于测试确定性行为：ai_infrastructure、semiconductors、power、technology_diffusion"
+    },
+    "identity": {
+      "en": "Aschenbrenner Lens; project-derived and not human reviewed",
+      "zh": "Aschenbrenner 视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Test an AI-scaling thesis by linking compute, power, capital expenditure, supply constraints and adoption timelines to price-implied expectations.",
+      "zh": "Test an AI-scaling thesis by linking compute, power, capital expenditure, supply constraints and adoption timelines to price-implied expectations."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

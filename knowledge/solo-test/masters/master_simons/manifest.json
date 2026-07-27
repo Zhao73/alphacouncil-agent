@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "systematic_signals",
+      "statistical_arbitrage",
+      "portfolio_research",
+      "execution_costs"
+    ],
+    "exclusions": [
+      "Renaissance proprietary signals",
+      "reverse engineering secret production systems",
+      "narrative stock selection attributed to the named investor",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "out_of_sample_signal_v1",
+    "optional_fact_types": [
+      "quant.signal_values",
+      "quant.out_of_sample_returns",
+      "quant.multiple_test_count",
+      "execution.turnover",
+      "execution.total_cost",
+      "risk.drawdown"
+    ],
+    "required_fact_types": [
+      "quant.sample_definition"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_simons.leakage_audit",
+      "master_simons.oos_cost_test"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "quant.sample_definition"
+    ],
+    "hard_vetoes": [
+      "master_simons.lookahead",
+      "master_simons.no_holdout",
+      "master_simons.cost_erasure"
+    ],
+    "native_output": "out_of_sample_signal_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Simons Lens Provisional Operator Lens",
+      "zh": "西蒙斯视角临时操作视角"
+    },
+    "persona_id": "master_simons",
+    "public_label": {
+      "en": "Simons Lens Solo Test",
+      "zh": "西蒙斯视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject any result with unresolved future information in features or membership.",
+      "Reject a signal without a genuinely untouched evaluation partition.",
+      "Reject a signal whose estimated edge does not survive conservative execution costs."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in systematic_signals, statistical_arbitrage, portfolio_research, execution_costs",
+      "zh": "用于测试确定性行为：systematic_signals、statistical_arbitrage、portfolio_research、execution_costs"
+    },
+    "identity": {
+      "en": "Simons Lens; project-derived and not human reviewed",
+      "zh": "西蒙斯视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Admit only statistically testable signals that survive leakage controls, multiple testing, out-of-sample evaluation, turnover and trading costs.",
+      "zh": "Admit only statistically testable signals that survive leakage controls, multiple testing, out-of-sample evaluation, turnover and trading costs."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

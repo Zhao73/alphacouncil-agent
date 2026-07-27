@@ -1,0 +1,105 @@
+{
+  "abstention_policy": "fail_closed",
+  "dsl_version": "1.1",
+  "eligibility": {
+    "all": []
+  },
+  "fact_gate": {
+    "on_missing_critical": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_downside_unknown"
+    }
+  },
+  "hard_vetoes": [],
+  "native_decision_schema": "capital_preservation_v1",
+  "native_output_fields": [
+    {
+      "field": "metric_1",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "valuation.downside_asset_value"
+      }
+    },
+    {
+      "field": "metric_2",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "catalyst.path"
+      }
+    }
+  ],
+  "native_states": [
+    "provisional_downside_unknown",
+    "provisional_reject",
+    "provisional_wait_in_cash",
+    "provisional_absolute_return_candidate"
+  ],
+  "schema_version": 1,
+  "score_bands": [
+    {
+      "decision": {
+        "common_stance": "opposed",
+        "native_state": "provisional_reject"
+      },
+      "min_ratio": 0
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_wait_in_cash"
+      },
+      "min_ratio": 0.5
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_absolute_return_candidate"
+      },
+      "min_ratio": 1
+    }
+  ],
+  "scoring": {
+    "max_score": 2,
+    "min_coverage": 1,
+    "on_insufficient_coverage": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_downside_unknown"
+    },
+    "rules": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "valuation.downside_asset_value"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_1",
+        "source_ids": [
+          "proxy:da526f9405e598b38"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "catalyst.path"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_2",
+        "source_ids": [
+          "proxy:da526f9405e598b38"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "operating_businesses",
+      "business_quality",
+      "capital_allocation",
+      "intrinsic_value"
+    ],
+    "exclusions": [
+      "businesses outside demonstrable competence",
+      "an imitation of current Berkshire portfolio choices",
+      "unsourced numeric quality thresholds",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "ownership_candidate_v1",
+    "optional_fact_types": [
+      "business.model.explainability",
+      "financial.incremental_return_on_capital",
+      "financial.leverage",
+      "capital_allocation.share_count",
+      "valuation.expected_owner_return"
+    ],
+    "required_fact_types": [
+      "financial.owner_earnings"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_buffett.owner_earnings_rebuilder",
+      "master_buffett.incremental_returns"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "financial.owner_earnings"
+    ],
+    "hard_vetoes": [
+      "master_buffett.outside_competence",
+      "master_buffett.leverage_dependency",
+      "master_buffett.owner_earnings_unreliable"
+    ],
+    "native_output": "ownership_candidate_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Buffett Lens Provisional Operator Lens",
+      "zh": "巴菲特视角临时操作视角"
+    },
+    "persona_id": "master_buffett",
+    "public_label": {
+      "en": "Buffett Lens Solo Test",
+      "zh": "巴菲特视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Decline when the business economics cannot be stated and tested.",
+      "Reject quality claims that depend on leverage rather than operating economics.",
+      "Reject valuation when owner earnings cannot be reconstructed from sourced inputs."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in operating_businesses, business_quality, capital_allocation, intrinsic_value",
+      "zh": "用于测试确定性行为：operating_businesses、business_quality、capital_allocation、intrinsic_value"
+    },
+    "identity": {
+      "en": "Buffett Lens; project-derived and not human reviewed",
+      "zh": "巴菲特视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Evaluate understandable operating businesses through owner earnings, durable competitive advantage, capital allocation and price versus conservative business value.",
+      "zh": "Evaluate understandable operating businesses through owner earnings, durable competitive advantage, capital allocation and price versus conservative business value."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:e06a2a113049e93d257c31b641daaf156bbeccf342d6a429bc6510833e202a47",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "pabrai_columbia_session_2024",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:401aecea4b1d673c14cf459b18796c223bd2a5ec3f44782e8ddcd130b5edabcf",
+    "declared_artifact_hash": "sha256:359a043cf674e79f4eda973091560a390bf08fd0f6781cce663de4acdba4839d",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:359a043cf674e79f4eda973091560a390bf08fd0f6781cce663de4acdba4839d",
+    "relative_path": "master_pabrai/pabrai_columbia_session_2024.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_pabrai",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 5,
+        "actual_text_end": 3318,
+        "actual_text_start": 3236,
+        "declared_kind": "pdf_page",
+        "declared_page": 5,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Most companies I look at, I reject in 60 seconds or less; sometimes in 10 seconds.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 5,
+        "section": "Circle of competence",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Use a strict circle-of-competence filter and reject most companies quickly rather than forcing analysis outside understood domains.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "pabrai_columbia_session_2024:p1",
+      "review_hash": "sha256:262ec9f0daeb0c069d8e00090c2d64745fe124584546f0cd462ff6a8abf2c8ad",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca",
+      "snippet_hash_recomputed": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca",
+      "support_rationale": "The transcript directly describes rapid rejection, names entire sectors outside competence, and says to discard them rather than force analysis.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 292154,
+    "content_hash": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+    "extracted_text_hash": "sha256:639e2220b85d22ca5f619733458a7df96c57de5781c9bd73c001f900abfd9cfc",
+    "extracted_text_hash_recomputed": "sha256:639e2220b85d22ca5f619733458a7df96c57de5781c9bd73c001f900abfd9cfc",
+    "raw_bytes_hash_recomputed": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:f34464c4583e5e65b5d3bb5859ec6eeac9016c984d5f53b7c11d4fdc54b1ad12",
+    "source_record_hash_recomputed": "sha256:f34464c4583e5e65b5d3bb5859ec6eeac9016c984d5f53b7c11d4fdc54b1ad12"
+  }
+}

@@ -15,6 +15,7 @@ test("every manifest and the served VERSION agree with package.json", () => {
     ".codex-plugin/plugin.json": readJson(".codex-plugin/plugin.json").version,
     ".claude-plugin/marketplace.json metadata": marketplace.metadata.version,
     ".claude-plugin/marketplace.json plugins[0]": marketplace.plugins[0].version,
+    "data/build-profile.v1.json package_version": readJson("data/build-profile.v1.json").package_version,
   };
   for (const [where, version] of Object.entries(declared)) {
     assert.equal(version, expected, `${where} drifted from package.json`);

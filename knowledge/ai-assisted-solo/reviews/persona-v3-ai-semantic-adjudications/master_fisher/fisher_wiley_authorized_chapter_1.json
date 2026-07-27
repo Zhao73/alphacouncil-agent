@@ -1,0 +1,162 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:4ed32746caeef4f5fee3a0636cfbf3954aafc2243b8631bb8d6e46eb78c44dc1",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "fisher_wiley_authorized_chapter_1",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:6f3448f5a9e3365a9beb9859af87a8c19a45ebc621d515e24bd3b5b84fac6f0f",
+    "declared_artifact_hash": "sha256:6b603fafd704dca7cf8e2ba06a5e476fe58d7f8dee1dd0fc57dd0f07a55b0a96",
+    "recomputed_artifact_hash": "sha256:6b603fafd704dca7cf8e2ba06a5e476fe58d7f8dee1dd0fc57dd0f07a55b0a96",
+    "relative_path": "master_fisher/fisher_wiley_authorized_chapter_1.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_fisher",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 2,
+          "section_claimed": "Clues from the past",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 1026,
+          "text_start": 887
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 2,
+          "section": "Clues from the past",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77",
+        "normalized_excerpt": "finding the really outstanding companies and staying with them through all the fluctuations of a gyrating market proved far more profitable",
+        "skeptic_snippet_hash_claimed": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77",
+        "skeptic_snippet_hash_recomputed": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The authorized excerpt explicitly favors finding outstanding companies and holding through fluctuations over cycle trading.",
+      "final_verdict": "supported",
+      "proposition_id": "fisher_wiley_authorized_chapter_1:p1",
+      "review_hash": "sha256:29f4f832422f247e17b8337fdbf057eb58ee9797588aae4608cec6b93035d311",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The authorized excerpt explicitly says finding outstanding companies and staying through market fluctuations proved more profitable than cycle trading.",
+        "support_verdict": "supported"
+      },
+      "statement": "Seek outstanding companies and hold through market fluctuations rather than relying primarily on buying and selling the business cycle.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:b1cc5a2c2c461c48816c163f17023281d8fed0612f5753d3aebd78a38b65d7e1",
+    "declared_artifact_hash": "sha256:aec435c85e3b08eb92ac5a2bd0d43c85af5b838eade330ca70e8cb3e697f273a",
+    "recomputed_artifact_hash": "sha256:aec435c85e3b08eb92ac5a2bd0d43c85af5b838eade330ca70e8cb3e697f273a",
+    "relative_path": "master_fisher/fisher_wiley_authorized_chapter_1.json"
+  },
+  "source_binding": {
+    "byte_length": 68051,
+    "content_hash": "sha256:eb2709711d5e20893964141e04fb85f9b8402a6f02bb65457f38be928cd714ec",
+    "extracted_character_count_recomputed": 23799,
+    "extracted_text_hash_recomputed": "sha256:dbc94d3dabc451840948cd55b7c6b8dd7cbb8c71637063af9c42c4e5155b74ec",
+    "page_character_counts_recomputed": [
+      1658,
+      2687,
+      2719,
+      2629,
+      2676,
+      2563,
+      2720,
+      2686,
+      2698,
+      763
+    ],
+    "page_count_recomputed": 10,
+    "raw_bytes_hash_recomputed": "sha256:eb2709711d5e20893964141e04fb85f9b8402a6f02bb65457f38be928cd714ec",
+    "source_record_hash": "sha256:4776ed2a273da5532cce136ebcc5a34ba0e102250bed37680480e5ae58a45fba"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

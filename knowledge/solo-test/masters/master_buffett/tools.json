@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:781ec61b1bc0e350a48743c34adca2d24761e66dea143bea40cc9c5918bb5503",
+    "derivation_spec_hash": "sha256:176668e0b04779a82267e4098ff9d2c6ac61c2a3870fd360b426e29bd9302a5a",
+    "derivation_spec_id": "master_buffett.owner_earnings_rebuilder.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_buffett.owner_earnings_rebuilder",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:f4b8e10fc113ebfccf99899d9fe73e77c25f4f23069a0ec09b7dbe93d826ff21",
+    "inputs": [
+      {
+        "fact_id": "financial.owner_earnings"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "financial.owner_earnings",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:2d2c3c2b4462c741d08acbd351f5172f195574c785ad3eec88999dccd5cf3fb0",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:0098985e34825996c"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:67a62f019ec4312e86463e9d1858db99522c65611483c14eab284020249b09ca",
+    "derivation_spec_hash": "sha256:2847885226f0cbf39c4193b18dd17f2ba31fd407967d5a9d6fe7f8939df33421",
+    "derivation_spec_id": "master_buffett.incremental_returns.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_buffett.incremental_returns",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:e1d9e623ff7ad9a354ee28e0c24697aa8a3701cca837af59bc401fa3255f6727",
+    "inputs": [
+      {
+        "fact_id": "financial.owner_earnings"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "financial.incremental_return_on_capital",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:c181cfb5bbec7e26fcdd484415f827b1194a161ef406ab2c17cd4dca9e9e3744",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:0098985e34825996c"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

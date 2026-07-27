@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when the conservative downside cannot be reconstructed.",
+    "Reject when a plausible scenario causes unbounded permanent capital loss.",
+    "Reject when catalyst timing and liquidity cannot support an absolute-return position."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

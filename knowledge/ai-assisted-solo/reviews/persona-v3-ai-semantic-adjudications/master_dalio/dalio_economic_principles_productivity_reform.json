@@ -1,0 +1,262 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:04a2880d31e444f00e45e3e1ce3537f3da0934a3bf9c4c7fdc08556e32123439",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "dalio_economic_principles_productivity_reform",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:90018400e89743d772fa6cfa32e16ef793bba1049f213962ce3e51374ce8662a",
+    "declared_artifact_hash": "sha256:c217ca4ed23eb9b181858cb944ca3345b8fd5c1795a142a118654241bc53a20f",
+    "recomputed_artifact_hash": "sha256:c217ca4ed23eb9b181858cb944ca3345b8fd5c1795a142a118654241bc53a20f",
+    "relative_path": "master_dalio/dalio_economic_principles_productivity_reform.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_dalio",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 2,
+          "section_claimed": "The formula for economic success",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 313,
+          "text_start": 166
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:106f3af2cee9000eb21bc90cda00c1250f19db23d4b670a594ae5923747ba465",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 2,
+          "section": "The formula for economic success",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:106f3af2cee9000eb21bc90cda00c1250f19db23d4b670a594ae5923747ba465",
+        "normalized_excerpt": "For our investment purposes we look at relationships between causes and effects that we hope will be useful to others in answering these questions.",
+        "skeptic_snippet_hash_claimed": "sha256:106f3af2cee9000eb21bc90cda00c1250f19db23d4b670a594ae5923747ba465",
+        "skeptic_snippet_hash_recomputed": "sha256:106f3af2cee9000eb21bc90cda00c1250f19db23d4b670a594ae5923747ba465"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The passage expressly frames investment analysis through useful cause-effect relationships rather than unsupported opinion.",
+      "final_verdict": "supported",
+      "proposition_id": "dalio_economic_principles_productivity_reform:p1",
+      "review_hash": "sha256:4c2b50f1318f487e520b8f73ce0b5b20879fdefdd09736b253a9b6fa9775b7dc",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The passage explicitly contrasts cause-effect relationships used for investment purposes with opinions that lack demonstrated linkages.",
+        "support_verdict": "supported"
+      },
+      "statement": "For macro allocation, organize country analysis around tested cause-effect relationships rather than unsupported opinions.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:788c5710c78cc3db90097fe65fc4b02e5788b582b51ec88031e961a532333bcd",
+    "declared_artifact_hash": "sha256:be4a20ed316fd01f31b11508512a86e895b3552e4aeeee0035b55a5b9b3dfc36",
+    "recomputed_artifact_hash": "sha256:be4a20ed316fd01f31b11508512a86e895b3552e4aeeee0035b55a5b9b3dfc36",
+    "relative_path": "master_dalio/dalio_economic_principles_productivity_reform.json"
+  },
+  "source_binding": {
+    "byte_length": 1658914,
+    "content_hash": "sha256:8fa2d8f8783d2f31639da86cb206e8f9aeed0d924ebd413d5d1028e420630943",
+    "extracted_character_count_recomputed": 315123,
+    "extracted_text_hash_recomputed": "sha256:432a21c3f720a626533ee31cf2763ab3f2e3fc6715d85c83fb4356c484a634c8",
+    "page_character_counts_recomputed": [
+      3002,
+      4272,
+      4468,
+      4841,
+      4928,
+      1211,
+      4994,
+      2444,
+      1925,
+      2981,
+      2661,
+      712,
+      628,
+      1097,
+      3557,
+      3169,
+      2366,
+      1531,
+      3555,
+      593,
+      3065,
+      4287,
+      3056,
+      4268,
+      3063,
+      4290,
+      3133,
+      4333,
+      3158,
+      4341,
+      3033,
+      4346,
+      3047,
+      4280,
+      3059,
+      4315,
+      3071,
+      4316,
+      3066,
+      4299,
+      3039,
+      4298,
+      3023,
+      4364,
+      3054,
+      4322,
+      3062,
+      4284,
+      3064,
+      4323,
+      3018,
+      4347,
+      3016,
+      4326,
+      3058,
+      4331,
+      3058,
+      4277,
+      3176,
+      4314,
+      2827,
+      2421,
+      1185,
+      2952,
+      4472,
+      2046,
+      2025,
+      2357,
+      2522,
+      1802,
+      1875,
+      2626,
+      1362,
+      1466,
+      4347,
+      2112,
+      3204,
+      900,
+      3128,
+      1673,
+      1550,
+      816,
+      1142,
+      2812,
+      1353,
+      949,
+      2356,
+      934,
+      753,
+      741,
+      3262,
+      1210,
+      3149,
+      3075,
+      3040,
+      1783,
+      2804,
+      2441,
+      695,
+      2393,
+      1546,
+      2784,
+      2205,
+      2910,
+      1631,
+      3397,
+      2535,
+      3034,
+      1641,
+      6365
+    ],
+    "page_count_recomputed": 110,
+    "raw_bytes_hash_recomputed": "sha256:8fa2d8f8783d2f31639da86cb206e8f9aeed0d924ebd413d5d1028e420630943",
+    "source_record_hash": "sha256:93f45e2ad4eee5f259fe9232e468d6317acb33459d04b8c9381ff4f8f5823eeb"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

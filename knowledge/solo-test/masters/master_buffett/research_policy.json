@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when the business economics cannot be stated and tested.",
+    "Reject quality claims that depend on leverage rather than operating economics.",
+    "Reject valuation when owner earnings cannot be reconstructed from sourced inputs."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

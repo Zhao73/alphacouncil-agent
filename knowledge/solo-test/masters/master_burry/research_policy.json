@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject a load-bearing number that cannot be traced to an opened primary document.",
+    "Reject a trade when disagreement is subjective rather than mechanically testable.",
+    "Reject when carry, margin or borrow can force exit before intermediate signals resolve."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

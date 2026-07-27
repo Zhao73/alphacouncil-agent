@@ -1,0 +1,55 @@
+{
+  "data": {
+    "close": 100,
+    "options": [
+      {
+        "option": "XYZ260815C00100000",
+        "iv": 0.4,
+        "delta": 0.5,
+        "gamma": 0,
+        "theta": 0,
+        "vega": 0,
+        "open_interest": 100,
+        "volume": 10,
+        "bid": 1,
+        "ask": 1.1
+      },
+      {
+        "option": "XYZ260815P00100000",
+        "iv": 0.5,
+        "delta": -0.5,
+        "gamma": 0,
+        "theta": 0,
+        "vega": 0,
+        "open_interest": 100,
+        "volume": 10,
+        "bid": 1,
+        "ask": 1.1
+      },
+      {
+        "option": "XYZ260815P00090000",
+        "iv": 0.6,
+        "delta": -0.25,
+        "gamma": 0,
+        "theta": 0,
+        "vega": 0,
+        "open_interest": 5000,
+        "volume": 10,
+        "bid": 1,
+        "ask": 1.1
+      },
+      {
+        "option": "XYZ260815C00110000",
+        "iv": 0.35,
+        "delta": 0.25,
+        "gamma": 0,
+        "theta": 0,
+        "vega": 0,
+        "open_interest": 4000,
+        "volume": 10,
+        "bid": 1,
+        "ask": 1.1
+      }
+    ]
+  }
+}

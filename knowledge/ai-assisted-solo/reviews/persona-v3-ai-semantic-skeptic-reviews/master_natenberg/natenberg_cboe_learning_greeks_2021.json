@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:e2c0b9d865bcec7923f4b8e5b1f29a3dcc0811e568a940d8075a9716132daa57",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "natenberg_cboe_learning_greeks_2021",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:29324867c9d6afecedafbab859aeb7de079e1ca64210f6a6924db9dc402396cb",
+    "declared_artifact_hash": "sha256:f6d58efa8bbc1c64ba4423aa083a74a955322849e547f76cd775af9cdec8b37d",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:f6d58efa8bbc1c64ba4423aa083a74a955322849e547f76cd775af9cdec8b37d",
+    "relative_path": "master_natenberg/natenberg_cboe_learning_greeks_2021.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_natenberg",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The Cboe educational page is associated with Natenberg in the candidate catalog, but the bound passage does not establish that he authored the text.",
+        "status": "material"
+      },
+      "challenges": [
+        "Vega and the multiple-Greeks conclusion are outside the exact excerpt."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 3570,
+        "actual_text_start": 3471,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "What narrower wording would be fully entailed by the cited excerpt alone?"
+      ],
+      "proposed_evidence_excerpt": "The Delta of an option measures the sensitivity to changes in the price of the underlying security.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Delta is fundamental",
+        "text_end": 3570,
+        "text_start": 3471
+      },
+      "proposed_statement": "Represent option exposure with multiple Greeks rather than direction alone; Delta measures underlying-price sensitivity while Vega measures implied-volatility sensitivity.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "natenberg_cboe_learning_greeks_2021:p1",
+      "review_hash": "sha256:f6fa0b34c875bd63f85b442aa618a202f0cc71c9c9abf8fa69fbf969227ed2c8",
+      "scope_ambiguity": {
+        "rationale": "The broader article supports the topic, but the exact evidence unit only supports Delta sensitivity.",
+        "status": "limited"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4",
+      "snippet_hash_recomputed": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4",
+      "support_rationale": "The excerpt directly defines Delta, while the article page discusses multiple Greeks; the bound snippet does not define Vega or independently support the full multi-Greek prescription.",
+      "support_verdict": "partial"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 383122,
+    "content_hash": "sha256:6a46933f850c77eb4cb9e0e5d3d851916159d7db0b06450e3c30b938f5ba21db",
+    "extracted_text_hash": "sha256:7f022ef201844febd88ed2c7ee4c2529a6d32691f910ad0e08fe5d1e175ea2b9",
+    "extracted_text_hash_recomputed": "sha256:7f022ef201844febd88ed2c7ee4c2529a6d32691f910ad0e08fe5d1e175ea2b9",
+    "raw_bytes_hash_recomputed": "sha256:6a46933f850c77eb4cb9e0e5d3d851916159d7db0b06450e3c30b938f5ba21db",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:dbdbc50ba1f3a9b391bdee98fb060516a65770c2a8655fdf0b8e612517df9abd",
+    "source_record_hash_recomputed": "sha256:dbdbc50ba1f3a9b391bdee98fb060516a65770c2a8655fdf0b8e612517df9abd"
+  }
+}

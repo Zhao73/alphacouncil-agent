@@ -6,8 +6,8 @@ import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
 import { sweepStaleOutputs } from "./codex.mjs";
-import { sourceManifest } from "./gates.mjs";
-import { artifactPaths, runPath, saveRun } from "./run-store.mjs";
+import { completenessStatus, sourceManifest } from "./gates.mjs";
+import { artifactPaths, existingDebate, runId, runPath, safeSymbol, saveRun } from "./run-store.mjs";
 import { summaryModes } from "./output-modes.mjs";
 import { registry } from "./personas/registry.mjs";
 import { preflightNetworkPermissions } from "./preflight.mjs";
@@ -17,6 +17,8 @@ import { fetchOptionsChain } from "./options.mjs";
 import { getMarketNarrative } from "./narrative.mjs";
 import { getSocialPulse, verifyXPost } from "./social.mjs";
 import { councilOptions } from "./council-options.mjs";
+import { beginCouncilSelection, confirmCouncilSelection, consumeCouncilSelection, selectionRequiredError } from "./council-selection.mjs";
+import { cleanupSelectionStore } from "./selection-cleanup.mjs";
 import { fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
@@ -25,6 +27,8 @@ import { table, mark, metricValue, groundingDashboard, label, threshold, skipped
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
 import { analyzeSymbol, collectEvidence, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { acquireRunLock } from "./run-locks.mjs";
+import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 
 export function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -51,6 +55,8 @@ export function sendError(id, code, message, data) {
  * disk in status.json and is one read away for anyone who wants it.
  */
 export function recordAck(run, extra = {}) {
+  const gate = completenessStatus(run);
+  const pendingMasters = gate.missing_masters;
   return {
     run_id: run.run_id,
     symbol: run.symbol,
@@ -59,13 +65,49 @@ export function recordAck(run, extra = {}) {
     recorded_tasks: (run.packets || []).map((p) => p.task),
     pending_tasks: (run.tasks || []).filter((t) => !(run.packets || []).some((p) => p.task === t)),
     recorded_masters: (run.master_opinions || []).map((o) => o.master),
-    pending_masters: (run.masters || []).filter((m) => !(run.master_opinions || []).some((o) => o.master === m)),
-    completeness: run.completeness,
-    missing_evidence_count: run.missing_evidence_count,
-    missing_debate_count: run.missing_debate_count,
+    pending_masters: pendingMasters,
+    missing_master_count: pendingMasters.length,
+    completeness: gate.completeness,
+    missing_evidence_count: gate.missing_evidence_count,
+    missing_debate_count: gate.missing_debate_count,
     status_json: join(runPath(run.run_id), "status.json"),
     ...extra,
   };
+}
+
+function renderSelectionCatalog(data, zh) {
+  const preselected = new Set(data.preselected_master_ids || []);
+  // Some MCP hosts expose only text content even when the server also returns
+  // structuredContent. Keep the selection handshake usable on those hosts by
+  // mirroring the exact, non-secret session identifiers in a stable text block.
+  // This does not confirm or consume the selection; display_ack and the one-use
+  // receipt are still enforced by confirmCouncilSelection/consumeCouncilSelection.
+  const fallbackContext = `ALPHACOUNCIL_SELECTION_CONTEXT ${JSON.stringify({
+    selection_id: data.selection_id,
+    catalog_hash: data.catalog_hash,
+    intent_hash: data.intent_hash,
+    expires_at: data.expires_at,
+  })}`;
+  const cards = data.masters.map((master) => [
+    `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? (zh ? " [已预选]" : " [preselected]") : ""}`,
+    `${zh ? "身份" : "Identity"}: ${master.identity}`,
+    `${zh ? "方法" : "Method"}: ${master.method}`,
+    `${zh ? "适合" : "Best for"}: ${master.best_for}`,
+    `${zh ? "成熟度" : "Maturity"}: ${master.maturity}`,
+    `${zh ? "物理格式" : "Pack format"}: ${master.pack_format} (${master.admission_level})`,
+  ].join("\n   ")).join("\n\n");
+  const instructions = zh
+    ? `请选择 1 至 ${data.maximum} 位大师。回复编号、范围、稳定 ID，或 all 全选，例如：1 / 1,3,8 / 1-5 / master_buffett / all。`
+    : `Choose 1 to ${data.maximum} masters. Submit numbers, ranges, stable IDs, or all, for example: 1 / 1,3,8 / 1-5 / master_buffett / all.`;
+  return [
+    zh ? `大师选择（${data.maximum} 位可用）` : `Master selection (${data.maximum} available)`,
+    fallbackContext,
+    "",
+    cards,
+    "",
+    instructions,
+    zh ? "提交选择后才会开始研究。" : "Research starts only after this selection is submitted.",
+  ].join("\n");
 }
 
 export function jsonContent(text, structuredContent = {}) {
@@ -79,13 +121,140 @@ export function tool(name, description, inputSchema, annotations = {}) {
   return { name, description, inputSchema, annotations };
 }
 
+/**
+ * Validate and consume the one-run master selection before any run directory, network
+ * request or worker exists. A caller-provided masters list cannot override the receipt.
+ */
+function startValidation(args, entryTool) {
+  if ((entryTool === "collect_evidence" || entryTool === "analyze_symbol") && args.visibility_required === true) {
+    throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-visible agents or threads and plan_visible_run.", {
+      reason: "VISIBLE_EXECUTION_REQUIRED",
+    });
+  }
+  if (args.tasks !== undefined) {
+    if (!Array.isArray(args.tasks)) throw invalidParams("tasks must be an array of analyst IDs.");
+    const analysts = new Set(registry().ids("analyst"));
+    const unknown = args.tasks.filter((task) => typeof task !== "string" || !analysts.has(task));
+    if (unknown.length) {
+      throw invalidParams(`Unknown analyst task(s): ${unknown.join(", ")}`, {
+        reason: "UNKNOWN_ANALYST_TASK",
+        unknown,
+      });
+    }
+  }
+}
+
+function assertExistingRunMatches(existing, args, entryTool, id) {
+  if (existing.master_selection?.selection_receipt !== args.selection_receipt) {
+    throw invalidParams(`run_id already exists and belongs to another selection: ${id}`, {
+      reason: "RUN_ID_ALREADY_EXISTS",
+      run_id: id,
+    });
+  }
+  if (existing.entry_tool && existing.entry_tool !== entryTool) {
+    throw invalidParams(`Run ${id} was started by ${existing.entry_tool}, not ${entryTool}.`, {
+      reason: "RUN_ENTRY_TOOL_MISMATCH",
+      run_id: id,
+      entry_tool: existing.entry_tool,
+    });
+  }
+}
+
+function selectedRunArgs(args = {}, entryTool) {
+  if (!args.selection_receipt) throw selectionRequiredError();
+  if (args.masters !== undefined || args.masters_roster !== undefined) {
+    throw invalidParams("masters and masters_roster cannot override a confirmed selection receipt.", {
+      reason: "MASTER_SELECTION_OVERRIDE_FORBIDDEN",
+    });
+  }
+  startValidation(args, entryTool);
+  const symbol = safeSymbol(args.symbol);
+  const id = args.run_id || runId(symbol);
+  const dir = runPath(id); // validates the id without creating anything
+  const existingEvidence = join(dir, "evidence.json");
+
+  // Serialize both first-start and idempotent replay. The metadata lease recovers a
+  // same-host dead owner under the bounded run-lock policy; an active owner is never
+  // pre-empted merely because its advertised lease elapsed.
+  const runLock = acquireRunLock(id);
+  const releaseRunLock = () => runLock.release();
+  try {
+    let existing = existsSync(existingEvidence) ? readJson(existingEvidence) : null;
+    if (existing) assertExistingRunMatches(existing, args, entryTool, id);
+
+    const selection = consumeCouncilSelection({
+      selection_receipt: args.selection_receipt,
+      symbol,
+      run_id: id,
+      language: args.language || "English",
+      prompt: typeof args.prompt === "string" ? args.prompt : "",
+    });
+    return {
+      ...args,
+      run_id: id,
+      entry_tool: entryTool,
+      masters: selection.selected_master_ids,
+      master_selection: selection,
+      existing_run: existing,
+      release_run_lock: releaseRunLock,
+    };
+  } catch (error) {
+    releaseRunLock();
+    throw error;
+  }
+}
+
+function attachRunContext(error, runArgs) {
+  if (error && typeof error === "object") {
+    error.data = { ...(error.data || {}), run_id: runArgs.run_id };
+  }
+  return error;
+}
+
+async function withSelectedRun(args, entryTool, operation) {
+  const runArgs = selectedRunArgs(args, entryTool);
+  try {
+    return await operation(runArgs);
+  } catch (error) {
+    throw attachRunContext(error, runArgs);
+  } finally {
+    runArgs.release_run_lock();
+  }
+}
+
+function loadExistingAnalysis(run) {
+  const dir = runPath(run.run_id);
+  const decisionPath = join(dir, "decision.json");
+  if (!existsSync(decisionPath)) {
+    throw invalidParams(`Run ${run.run_id} already started but has no completed decision to replay.`, {
+      reason: "RUN_ALREADY_STARTED",
+      run_id: run.run_id,
+      status: run.status,
+      phase: run.phase,
+    });
+  }
+  const decision = readJson(decisionPath);
+  const finalReportPath = join(dir, "final_report.md");
+  const userResponsePath = join(dir, "user_response.md");
+  const qualityPath = join(dir, "report_quality.json");
+  return {
+    run,
+    debate: existingDebate(dir),
+    decision,
+    final_report_markdown: existsSync(finalReportPath) ? readFileSync(finalReportPath, "utf8") : "",
+    user_response_markdown: existsSync(userResponsePath) ? readFileSync(userResponsePath, "utf8") : "",
+    report_quality: existsSync(qualityPath) ? readJson(qualityPath) : null,
+    artifacts: artifactPaths(run),
+    idempotent_replay: true,
+  };
+}
+
 export function tools() {
   // Derived from personas/, not from a frozen list: adding a persona file makes the role
   // selectable through the tool schema with no code change.
   const analystIds = registry().ids("analyst");
   const debateIds = registry().ids("debate");
   const masterIds = registry().ids("master");
-  const masterRosters = [...new Set(registry().all().filter((p) => p.kind === "master" && p.enabled).flatMap((p) => p.rosters))].sort();
   const common = {
     symbol: { type: "string", description: "Exchange ticker. US, HK, JP, KR, CN and TW symbols all work, e.g. AAPL, 0700.HK, 7203.T, 005930.KS, 600519.SS." },
     as_of: { type: "string", description: "Analysis date YYYY-MM-DD. Defaults to today." },
@@ -98,13 +267,46 @@ export function tools() {
     synthesis: { type: "boolean", default: true, description: "Run bull, bear, and portfolio-manager synthesis after evidence collection." },
     synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
-    masters_roster: { type: "string", enum: masterRosters, description: "Master bench; masters-core is the recommended default with twelve seats spanning value, classic, adversarial and quant schools. Masters read the finished evidence through one philosophy each and run BETWEEN the evidence stage and the debate; their disagreements become inputs the bull and bear must answer. They never gather evidence and are not part of the completeness gate." },
+    selection_receipt: { type: "string", description: "One-run receipt returned by confirm_master_selection. Required for every council run and consumed exactly once." },
     seat_weights: { type: "object", description: "Override the declared weight of any seat, e.g. {\"master_buffett\": 2, \"master_soros\": 0}. Weights are an editable prior, not an optimum: a return backtest of LLM judgment would be invalidated by look-ahead bias." },
-    masters: { type: "array", items: { type: "string", enum: masterIds }, description: "Explicit master personas, overriding masters_roster." },
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
   return [
-    tool("plan_visible_run", "MANDATORY first step (not optional): create the visible-host-thread AlphaCouncil Agent run envelope and prompts. Does NOT execute. You MUST then run every planned evidence agent and record each via record_visible_packet, then record bull_researcher and bear_researcher, before recording the portfolio_manager decision.", {
+    tool("begin_council_selection", "MANDATORY first step for every council run. Creates a short-lived selection session and returns every enabled master with a stable number, identity, method, best-for description and maturity. It does not create a research run, fetch data or launch workers. Show this catalog to the user even when their request already names masters; named masters may be preselected but must still be submitted for this run.", {
+      type: "object",
+      properties: {
+        symbol: common.symbol,
+        prompt: common.prompt,
+        language: common.language,
+        host: { type: "string", description: "Calling host, e.g. codex, claude-code, opencode or grok-build." },
+        preselected_master_ids: {
+          type: "array",
+          minItems: 1,
+          uniqueItems: true,
+          items: { type: "string", enum: masterIds },
+          description: "Optional stable IDs inferred from masters explicitly named in the request. They are highlighted only; the user must still submit this run's selection.",
+        },
+      },
+      required: ["symbol"],
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
+    tool("confirm_master_selection", "Confirm the user's one-run master choice after the catalog was displayed. Choose exactly one input form: a non-empty array of stable IDs, select_all=true, or a text selection such as '1,4-6', 'master_buffett', or 'all'. Returns a one-time selection_receipt required by every council execution tool.", {
+      type: "object",
+      properties: {
+        selection_id: { type: "string" },
+        catalog_hash: { type: "string", description: "The catalog_hash returned by begin_council_selection." },
+        display_ack: { type: "boolean", description: "Must be true after the host displayed the catalog to the user." },
+        selected_master_ids: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: masterIds } },
+        select_all: { type: "boolean", const: true },
+        selection: { type: "string", minLength: 1, description: "Text fallback: stable numbers/ranges/IDs, or all." },
+      },
+      required: ["selection_id", "catalog_hash", "display_ack"],
+      oneOf: [
+        { required: ["selected_master_ids"], not: { anyOf: [{ required: ["select_all"] }, { required: ["selection"] }] } },
+        { required: ["select_all"], not: { anyOf: [{ required: ["selected_master_ids"] }, { required: ["selection"] }] } },
+        { required: ["selection"], not: { anyOf: [{ required: ["selected_master_ids"] }, { required: ["select_all"] }] } },
+      ],
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
+    tool("plan_visible_run", "Create the visible-host-thread AlphaCouncil run after a confirmed master selection. Requires a one-time selection_receipt. Does NOT execute. You MUST then run every planned evidence agent and every selected master, record bull_researcher and bear_researcher, and only then record the portfolio_manager decision.", {
       type: "object",
       properties: {
         symbol: common.symbol,
@@ -112,13 +314,12 @@ export function tools() {
         prompt: common.prompt,
         language: common.language,
         tasks: common.tasks,
-        masters_roster: common.masters_roster,
-        masters: common.masters,
+        selection_receipt: common.selection_receipt,
         seat_weights: common.seat_weights,
         grounding: { type: "object", description: "The `grounding` object from compose_research_brief. Injected into every analyst prompt." },
         run_id: { type: "string" },
       },
-      required: ["symbol"],
+      required: ["symbol", "selection_receipt"],
     }),
     tool("record_visible_packet", "MANDATORY sequential step (not optional): record one completed visible evidence agent packet into a planned visible run. Every planned evidence task MUST be recorded before the portfolio_manager decision; a run missing any planned packet will be marked incomplete.", {
       type: "object",
@@ -145,23 +346,44 @@ export function tools() {
     tool("collect_evidence", "Launch Codex subagents and save shared JSON evidence packets. Use dry_run=true only for planning/self-tests.", {
       type: "object",
       properties: common,
-      required: ["symbol"],
+      required: ["symbol", "selection_receipt"],
     }),
     tool("analyze_symbol", "Collect evidence and write a manager-style decision summary.", {
       type: "object",
       properties: common,
-      required: ["symbol"],
+      required: ["symbol", "selection_receipt"],
     }),
     tool("read_run", "Read a saved AlphaCouncil Agent run from the shared evidence store.", {
       type: "object",
       properties: { run_id: { type: "string" } },
       required: ["run_id"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
+    tool("council_diagnostics", "Measure descriptive seat agreement, unique cited-source contribution and repeated-input behavioural differentiation across saved runs. This tool never treats seat count or agreement as independent evidence: error N_eff remains null unless the separate preregistered signed resolved-outcome protocol is satisfied.", {
+      type: "object",
+      properties: {
+        run_ids: {
+          type: "array",
+          minItems: 1,
+          maxItems: 50,
+          uniqueItems: true,
+          items: { type: "string" },
+          description: "Saved run IDs. Repeated-input claims require hash-identical facts, selection and pack policies.",
+        },
+        minimum_cases: {
+          type: "integer",
+          minimum: 3,
+          maximum: 100,
+          default: 3,
+          description: "Minimum distinct hash-identical cases, each with at least two repetitions, before a behavioural-differentiation verdict is emitted.",
+        },
+      },
+      required: ["run_ids"],
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("compare_summary_modes", "Compare chat, PDF, presentation, document, and specialist plugin modes for final AlphaCouncil Agent synthesis.", {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("record_master_opinion", "Record one completed master-seat opinion into a planned visible run. Masters run AFTER every evidence packet is recorded and BEFORE the bull/bear debate, so the debate has their disagreements to argue with. A master may return stance=out_of_scope, which is a conclusion rather than an abstention. Masters are optional and never affect the completeness gate.", {
+    tool("record_master_opinion", "Record one completed selected master-seat opinion into a planned visible run. Masters run AFTER every evidence packet is recorded and BEFORE the bull/bear debate, so the debate has their disagreements to argue with. A master may return stance=out_of_scope, which is a recorded conclusion rather than an abstention. Every selected seat must either report or be settled deterministically before the run can be complete.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
@@ -185,7 +407,7 @@ export function tools() {
         },
       },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
-    tool("list_council_options", "The menu to show the user BEFORE a run starts: three presets (quick / standard / deep) with their seat counts and relative cost, every analyst seat, every master roster with its members, and the verifiers. A council can be four seats or thirty-eight, and that difference is the user's time and money -- so ask which they want rather than choosing for them. Skip the question only when they have already said (named a roster, said 'everything', said 'be quick').", {
+    tool("list_council_options", "Browse the current analysts, presets, master catalog, rosters and verifiers without opening a selection session. This is informational only and cannot authorize a run. Every council run must still call begin_council_selection, display that frozen catalog, and confirm_master_selection.", {
       type: "object",
       properties: { language: { type: "string", description: "Language for the labels. Defaults to English." } },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
@@ -347,43 +569,71 @@ export function tools() {
 export async function handleToolCall(id, params) {
   const name = params?.name;
   const args = params?.arguments || {};
-  if (name === "plan_visible_run") {
-    const run = visibleRun(args);
-    // Gather the established facts here rather than accepting them only when a host
-    // remembers to pass them. Without this the whole visible path -- which is the path
-    // Claude Code uses -- runs every analyst and every master with no filings, no quote and
-    // no macro, and nothing in the output says so. Same reasoning as the preflight below:
-    // the host that skips the optional step is exactly the host whose seats fail quietly.
-    if (!run.grounding) {
-      run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of })
-        .catch((error) => ({ error: String(error?.message || error), facts_unavailable: true }));
-      saveRun(run);
-    }
-    const specs = visibleAgentSpecs(run, args.prompt || "");
-    // Planning settles every seat whose method cannot reach this security, writing those
-    // opinions directly. They have to be persisted here or the completeness gate would keep
-    // waiting for a report from a seat that will never be spawned.
-    if (specs.masters_declined?.length) {
-      saveRun(run);
-      writeJson(join(runPath(run.run_id), "evidence.json"), run);
-    }
-    // Returned with the plan, not left to a separate opt-in call: a host that skips the
-    // preflight is exactly the host whose subagents will fail silently.
-    const preflight = preflightNetworkPermissions({ roster: args.roster || "default" });
+  if (name === "begin_council_selection") {
+    const data = beginCouncilSelection(args);
+    const zh = /中文|chinese|zh/i.test(String(data.language || ""));
+    sendResult(id, jsonContent(renderSelectionCatalog(data, zh), data));
+    return;
+  }
+  if (name === "confirm_master_selection") {
+    const data = confirmCouncilSelection(args);
+    const fallbackContext = `ALPHACOUNCIL_CONFIRMATION_CONTEXT ${JSON.stringify({
+      selection_id: data.selection_id,
+      selection_receipt: data.selection_receipt,
+      catalog_hash: data.catalog_hash,
+      intent_hash: data.intent_hash,
+    })}`;
     sendResult(id, jsonContent(
-      `Planned visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}. `
-      + `Network preflight: ${preflight.status}. `
-      + `Established facts: ${run.grounding && !run.grounding.facts_unavailable ? "attached to every seat" : "UNAVAILABLE -- seats will run without filings or quotes, say so in the report"}.`,
-      {
-      run,
-      preflight,
-      ...specs,
-      artifacts: {
-        all_agents_md: join(runPath(run.run_id), "all_agents.md"),
-        status_json: join(runPath(run.run_id), "status.json"),
-        events_jsonl: join(runPath(run.run_id), "events.jsonl"),
-      },
-    }));
+      `${fallbackContext}\nConfirmed ${data.selected_count} master seat(s) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "plan_visible_run") {
+    const result = await withSelectedRun(args, "plan_visible_run", async (runArgs) => {
+      const run = runArgs.existing_run || visibleRun(runArgs);
+      // Gather the established facts here rather than accepting them only when a host
+      // remembers to pass them. Without this the whole visible path -- which is the path
+      // Claude Code uses -- runs every analyst and every master with no filings, no quote and
+      // no macro, and nothing in the output says so. Same reasoning as the preflight below:
+      // the host that skips the optional step is exactly the host whose seats fail quietly.
+      if (!run.grounding) {
+        run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of })
+          .catch((error) => ({ error: String(error?.message || error), facts_unavailable: true }));
+        saveRun(run);
+      }
+      const specs = visibleAgentSpecs(run, runArgs.prompt || "");
+      // Planning settles every seat whose method cannot reach this security, writing those
+      // opinions directly. They have to be persisted here or the completeness gate would keep
+      // waiting for a report from a seat that will never be spawned.
+      if (specs.masters_declined?.length) {
+        saveRun(run);
+        writeJson(join(runPath(run.run_id), "evidence.json"), run);
+      }
+      // Returned with the plan, not left to a separate opt-in call: a host that skips the
+      // preflight is exactly the host whose subagents will fail silently.
+      const preflight = preflightNetworkPermissions({ roster: runArgs.roster || "default" });
+      return jsonContent(
+        `${runArgs.existing_run ? "Loaded" : "Planned"} visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}. `
+        + `Network preflight: ${preflight.status}. `
+        + `Established facts: ${run.grounding && !run.grounding.facts_unavailable ? "attached to every seat" : "UNAVAILABLE -- seats will run without filings or quotes, say so in the report"}.`,
+        {
+          run,
+          idempotent_replay: Boolean(runArgs.existing_run),
+          preflight,
+          ...specs,
+          artifacts: {
+            all_agents_md: join(runPath(run.run_id), "all_agents.md"),
+            status_json: join(runPath(run.run_id), "status.json"),
+            events_jsonl: join(runPath(run.run_id), "events.jsonl"),
+          },
+        },
+      );
+    });
+    // Do not publish a completed RPC response while the exclusive run lock still exists.
+    // A client is allowed to issue an immediate idempotent replay after receiving the
+    // response; sending inside withSelectedRun made that replay race its finally-release.
+    sendResult(id, result);
     return;
   }
   if (name === "record_visible_packet") {
@@ -639,8 +889,9 @@ export async function handleToolCall(id, params) {
     const analystRows = data.analysts.map((a) => [
       a.id, a.title, a.in_default ? (zh ? "默认" : "default") : (zh ? "可选" : "optional"), a.covers || "-",
     ]);
-    const masterRows = data.master_rosters.map((r) => [
-      r.roster, String(r.count), r.members.map((m) => m.id.replace("master_", "")).join(", "),
+    const masterRows = data.masters.map((m) => [
+      String(m.index), m.title, m.identity, m.method, m.best_for,
+      `${m.maturity} · ${m.pack_format} · ${m.admission_level}`,
     ]);
     const text = [
       table(
@@ -649,8 +900,8 @@ export async function handleToolCall(id, params) {
       ),
       "",
       table(
-        zh ? ["学派名册", "人数", "成员"] : ["School", "Count", "Members"],
-        masterRows, { title: zh ? `大师议席 — 共 ${data.all_masters_count} 位` : `Master bench — ${data.all_masters_count} lenses`, zh },
+        zh ? ["编号", "大师", "身份", "核心方法", "最适合", "成熟度"] : ["No.", "Master", "Identity", "Method", "Best for", "Maturity"],
+        masterRows, { title: zh ? `逐席大师目录 - 共 ${data.all_masters_count} 位` : `Individual master catalog - ${data.all_masters_count} lenses`, zh },
       ),
       "",
       table(
@@ -660,9 +911,8 @@ export async function handleToolCall(id, params) {
       ),
       "",
       zh
-        ? "把上面的名单给用户看，让他们**自己勾选**：可以按学派名册选、可以点名单个席位、也可以全选。预设只是快捷方式，不是唯一选项。用户已经说清楚要什么就别问。"
-        : "Show the user these lists and let them **pick**: by school, by individual seat, or all of them. "
-          + "The presets are shortcuts, not the only way to choose. Do not ask if they already said.",
+        ? "这是只读浏览。真正开始每一次委员会运行时，仍必须打开一次新的选择会话、展示被冻结的逐席名单，并让用户提交 1 位、任意多位或全选。用户已点名时只做预选，不能跳过本次提交。"
+        : "This is browse-only. Every actual council run still needs a fresh selection session, the frozen individual catalog displayed, and a submitted choice of one, any number, or all. Named masters may be preselected but do not skip submission.",
     ].join("\n");
     sendResult(id, jsonContent(text, data));
     return;
@@ -674,13 +924,25 @@ export async function handleToolCall(id, params) {
     return;
   }
   if (name === "collect_evidence") {
-    const run = await collectEvidence(args);
-    sendResult(id, jsonContent(`Saved ${run.packets.length} evidence packets for ${run.symbol}: ${run.run_id}`, run));
+    const result = await withSelectedRun(args, "collect_evidence", async (runArgs) => {
+      const run = runArgs.existing_run || await collectEvidence(runArgs);
+      return jsonContent(
+        `${runArgs.existing_run ? "Loaded" : "Saved"} ${run.packets.length} evidence packets for ${run.symbol}: ${run.run_id}`,
+        { ...run, idempotent_replay: Boolean(runArgs.existing_run) },
+      );
+    });
+    sendResult(id, result);
     return;
   }
   if (name === "analyze_symbol") {
-    const result = await analyzeSymbol(args);
-    sendResult(id, jsonContent(`Saved AlphaCouncil Agent analysis for ${result.run.symbol}: ${result.run.run_id}`, result));
+    const result = await withSelectedRun(args, "analyze_symbol", async (runArgs) => {
+      const result = runArgs.existing_run ? loadExistingAnalysis(runArgs.existing_run) : await analyzeSymbol(runArgs);
+      return jsonContent(
+        `${runArgs.existing_run ? "Loaded" : "Saved"} AlphaCouncil Agent analysis for ${result.run.symbol}: ${result.run.run_id}`,
+        result,
+      );
+    });
+    sendResult(id, result);
     return;
   }
   if (name === "read_run") {
@@ -718,6 +980,24 @@ export async function handleToolCall(id, params) {
       final_report_markdown: existsSync(finalReportPath) ? readFileSync(finalReportPath, "utf8") : "",
       user_response_markdown: existsSync(userResponsePath) ? readFileSync(userResponsePath, "utf8") : "",
     }));
+    return;
+  }
+  if (name === "council_diagnostics") {
+    if (!Array.isArray(args.run_ids) || args.run_ids.length < 1 || args.run_ids.length > 50
+      || new Set(args.run_ids).size !== args.run_ids.length) {
+      throw invalidParams("run_ids must contain 1-50 unique saved run IDs.");
+    }
+    const minimumCases = args.minimum_cases === undefined ? 3 : args.minimum_cases;
+    if (!Number.isInteger(minimumCases) || minimumCases < 3 || minimumCases > 100) {
+      throw invalidParams("minimum_cases must be an integer from 3 through 100.");
+    }
+    const runs = args.run_ids.map((runIdValue) => readJson(join(runPath(runIdValue), "evidence.json")));
+    const diagnostics = diagnoseCouncilRuns(runs, { minimumCases });
+    const verdict = diagnostics.behavioral_differentiation.verdict || "insufficient repeated cases";
+    sendResult(id, jsonContent(
+      `Council diagnostics: ${runs.length} run(s); behavioural differentiation ${verdict}; error N_eff unpublished (${diagnostics.independence.reason}).`,
+      diagnostics,
+    ));
     return;
   }
   if (name === "compare_summary_modes") {
@@ -782,6 +1062,16 @@ export function startStdioServer() {
     process.stderr.write(`[alphacouncil] unhandled rejection: ${reason?.stack || reason}\n`);
   });
   sweepStaleOutputs();
+  // Keep expired selection/receipt records and recoverable dead-owner leases bounded in
+  // real server operation, not only in unit tests. Cleanup itself is conservative: active,
+  // foreign-host, malformed and symlinked lock artifacts are never guessed safe to remove.
+  try {
+    cleanupSelectionStore();
+  } catch (error) {
+    // Maintenance must not corrupt the JSON-RPC frame channel. Subsequent selection calls
+    // still enforce their own locks and fail closed if the store is unsafe.
+    process.stderr.write(`[alphacouncil] selection cleanup skipped: ${error?.message || error}\n`);
+  }
   // Load personas eagerly. Lazy loading made `initialize` succeed against a missing or
   // malformed persona set, so the host believed the server was healthy and only found
   // out several tool calls later.

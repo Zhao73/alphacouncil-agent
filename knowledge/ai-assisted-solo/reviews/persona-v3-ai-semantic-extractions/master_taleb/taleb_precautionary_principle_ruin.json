@@ -1,0 +1,98 @@
+{
+  "artifact_hash": "sha256:60948dead3b794afd480d333284471f19dea3c3b1c3d8374aab083ebdf53d386",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "taleb_precautionary_principle_ruin",
+  "concise_summary": "The paper separates bounded/local risk from systemic irreversible ruin and rejects ordinary cost-benefit treatment for ruin exposure.",
+  "contradictions_ambiguities": [
+    "The paper's GMO application is contested and cannot be transferred automatically to every financial tail-risk claim."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "outcomes may have infinite costs.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 1,
+        "section": "Abstract",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "taleb_precautionary_principle_ruin:p1",
+      "snippet_hash": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a",
+      "statement": "When an action exposes a system to irreversible ruin, use a precautionary constraint rather than averaging the tail loss into ordinary cost-benefit analysis.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "What operational test establishes genuine systemic ruin rather than a bounded severe loss?"
+  ],
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The working paper is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1245535,
+    "content_hash": "sha256:7ef0b4ea3f2e372701262e96fff7c492a48cefb9faebaf3849b5d20abb15f361",
+    "content_type": "application/pdf",
+    "extracted_character_count": 121837,
+    "extracted_text_hash": "sha256:a81228f5003e3777781179c7f573ab0f3f101883287d7f829ac7a6e6ee1a5dde",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.fooledbyrandomness.com/pp2.pdf",
+    "page_character_counts": [
+      4985,
+      4926,
+      5018,
+      4359,
+      5904,
+      4902,
+      5746,
+      4385,
+      5108,
+      6117,
+      5735,
+      5833,
+      5705,
+      5804,
+      4362,
+      2211,
+      5188,
+      5400,
+      4702,
+      3619,
+      4215,
+      2983,
+      5072,
+      3474,
+      4014,
+      2070
+    ],
+    "page_count": 26,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:73c130cd84eee1b82b34c75c1d0d535d42d94456c27bc41b76ee48cdd4f48b71",
+    "retrieved_at": "2026-07-27T10:23:12.323Z"
+  },
+  "source_type": "technical_working_paper"
+}

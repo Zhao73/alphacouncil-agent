@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "disruptive_innovation",
+      "technology_adoption",
+      "platform_convergence",
+      "growth_valuation"
+    ],
+    "exclusions": [
+      "current ARK trades not established by dated public records",
+      "unbounded total-addressable-market narratives",
+      "single-path five-year price targets",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "innovation_adoption_scenario_v1",
+    "optional_fact_types": [
+      "technology.adoption_rate",
+      "market.addressable_units",
+      "economics.unit_margin",
+      "valuation.scenario_distribution"
+    ],
+    "required_fact_types": [
+      "technology.cost_curve",
+      "company.capture_rate"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_cathie_wood.cost_adoption_curve",
+      "master_cathie_wood.capture_valuation_bridge"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "technology.cost_curve",
+      "company.capture_rate"
+    ],
+    "hard_vetoes": [
+      "master_cathie_wood.theme_company_gap",
+      "master_cathie_wood.capital_need_gap",
+      "master_cathie_wood.adoption_already_priced"
+    ],
+    "native_output": "innovation_adoption_scenario_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Cathie Wood Innovation Lens Provisional Operator Lens",
+      "zh": "Cathie Wood 创新扩散视角临时操作视角"
+    },
+    "persona_id": "master_cathie_wood",
+    "public_label": {
+      "en": "Cathie Wood Innovation Lens Solo Test",
+      "zh": "Cathie Wood 创新扩散视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject when sector growth has no evidenced bridge to company cash flows.",
+      "Reject when required funding and dilution cannot be bounded.",
+      "Reject constructive output when price requires adoption beyond the reviewed scenario range."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in disruptive_innovation, technology_adoption, platform_convergence, growth_valuation",
+      "zh": "用于测试确定性行为：disruptive_innovation、technology_adoption、platform_convergence、growth_valuation"
+    },
+    "identity": {
+      "en": "Cathie Wood Innovation Lens; project-derived and not human reviewed",
+      "zh": "Cathie Wood 创新扩散视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Connect technology cost curves and adoption to addressable market, company capture, unit economics and an explicit five-year valuation distribution.",
+      "zh": "Connect technology cost curves and adoption to addressable market, company capture, unit economics and an explicit five-year valuation distribution."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

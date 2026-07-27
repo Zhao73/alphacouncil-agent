@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:a772ba094aa0fbddf2f4676f25b0e68beca1a5c6711df5420883b98212c80172",
+    "derivation_spec_hash": "sha256:86171a2c937dee1593df6104a8614714ed984a2b523134ce1612a3aa81002a3a",
+    "derivation_spec_id": "master_li_lu.promise_integrity_ledger.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_li_lu.promise_integrity_ledger",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:de42137aca86f8d6046ffeb3df95e608bd4aafa64d3e35bd5b6777ecb0b3ca90",
+    "inputs": [
+      {
+        "fact_id": "management.promise_record"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "management.promise_record",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:27eb67c1b62b7b0db8ccba20cbc7957456e0e3a7c6e4b45841da74795a7ddfdc",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_li_lu.promise_integrity_ledger.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:a4ee7b39b716052d982e2363fc9f9622e4bf5eb1111fa642c6c6fa58df7f69f7",
+    "derivation_spec_hash": "sha256:1c34350653b851ae614535df491bf3931f16b0adebdb00b0162fd170e821973a",
+    "derivation_spec_id": "master_li_lu.ten_year_return_bridge.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_li_lu.ten_year_return_bridge",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:c87cff0d17ea71a09ae898862c712818e479fb3cda43218d3a1e105ca6e00b88",
+    "inputs": [
+      {
+        "fact_id": "business.ten_year_durability"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "business.ten_year_durability",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:806578d05be32dbb98b8f82e3c2bfce3d3962fd67324c7468e8fb68b430a293a",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_li_lu.ten_year_return_bridge.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

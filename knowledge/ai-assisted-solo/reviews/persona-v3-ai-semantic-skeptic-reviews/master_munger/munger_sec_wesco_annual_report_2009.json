@@ -1,0 +1,81 @@
+{
+  "artifact_hash": "sha256:ec38923a47b4bfdb4cbc82766521af086d733eaf01ef229bcc8f602978256bac",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "munger_sec_wesco_annual_report_2009",
+  "challenges": [
+    "Poppler output is heavily corrupted OCR and does not reliably expose a method passage attributable to Munger.",
+    "No proposition may be reconstructed from model memory or adjacent sources."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:9b4e48662eb3e2cdc3a6ceeb4d506357ca3db6f53bc5ca720cdad4e77ccd18a5",
+    "declared_artifact_hash": "sha256:6191619120980b24cdfa8e3e83f05fd214fe20c95a6ee8bf6205be970adf7e24",
+    "proposition_count": 0,
+    "recomputed_artifact_hash": "sha256:6191619120980b24cdfa8e3e83f05fd214fe20c95a6ee8bf6205be970adf7e24",
+    "relative_path": "master_munger/munger_sec_wesco_annual_report_2009.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can the original transcript, audio, readable PDF, or unobstructed page be archived and reviewed?"
+  ],
+  "overall_verdict": "unverifiable",
+  "persona_id": "master_munger",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [],
+  "readability_recheck": {
+    "extractor_status": "partial",
+    "independent_status": "partial",
+    "reason": "Independent extraction produced some text but no safely reviewable method proposition.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 5702630,
+    "content_hash": "sha256:c1b4cb2bb06fc0ca8e58044dd42d0678cff39a981131e1cf7ce4964651c57b32",
+    "extracted_text_hash": "sha256:265c8acb762c3a50d44cffa806b003a3ce506b971aaefb724a58ebe6eb2f0a80",
+    "extracted_text_hash_recomputed": "sha256:265c8acb762c3a50d44cffa806b003a3ce506b971aaefb724a58ebe6eb2f0a80",
+    "raw_bytes_hash_recomputed": "sha256:c1b4cb2bb06fc0ca8e58044dd42d0678cff39a981131e1cf7ce4964651c57b32",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:6e8d62eca3098e3a99d5327799521767d23d675ce4c6bb81b17fcc512dc45b7c",
+    "source_record_hash_recomputed": "sha256:6e8d62eca3098e3a99d5327799521767d23d675ce4c6bb81b17fcc512dc45b7c"
+  }
+}

@@ -1,0 +1,200 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:c6f69ccf72c3c0b648795e9005c6a500cdd16150d0581478a8dd6e3b06dfb0c9",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "sec_gme_short_market_structure_2021",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:7d6faf647cfbf60f02e38e1727a5c2e6e82d0fa3c8be1a49eb01b0826bf905b5",
+    "declared_artifact_hash": "sha256:16f9718896dffcfaeb8418a248104433f6863a7d26482c199051ec70f6a565e9",
+    "recomputed_artifact_hash": "sha256:16f9718896dffcfaeb8418a248104433f6863a7d26482c199051ec70f6a565e9",
+    "relative_path": "master_forensic_short/sec_gme_short_market_structure_2021.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_forensic_short",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 31,
+          "section_claimed": "Conclusion",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 2228,
+          "text_start": 2160
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 31,
+          "section": "Conclusion",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29",
+        "normalized_excerpt": "While a short squeeze did not appear to be the main driver of events",
+        "skeptic_snippet_hash_claimed": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29",
+        "skeptic_snippet_hash_recomputed": "sha256:337fe72b3887e69e35efac64451ac3fd74f2f2c582863cc84a9da4d831caed29"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The exact sentence rejects a short squeeze as the main driver in one event, but it does not state the proposed participant-volume and persistence test.",
+      "final_verdict": "partial",
+      "proposition_id": "sec_gme_short_market_structure_2021:p1",
+      "review_hash": "sha256:7df30da169aaecb6b86b0df64261f470eee918b9710089f004d1304d9010cb28",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "A case conclusion is generalized into a reusable forensic procedure.",
+          "The exact snippet contains neither covering-volume nor persistence criteria."
+        ],
+        "support_rationale": "The excerpt supports rejecting a short squeeze as the main driver in this event, but it does not itself state the proposed general test using participant-level covering volume and persistent price behavior.",
+        "support_verdict": "partial"
+      },
+      "statement": "Test squeeze narratives against participant-level covering volume and persistent price behavior instead of inferring causation from high short interest alone.",
+      "unresolved_questions": {
+        "authorship": [],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:296fba765b940c94612f93d1e3f84b8176274bce22d893160d5b6f374487d46e",
+    "declared_artifact_hash": "sha256:8b2317d4cf45d777f2ba41116cb55a8de09248c5544ed61bd8ab04e184f6f458",
+    "recomputed_artifact_hash": "sha256:8b2317d4cf45d777f2ba41116cb55a8de09248c5544ed61bd8ab04e184f6f458",
+    "relative_path": "master_forensic_short/sec_gme_short_market_structure_2021.json"
+  },
+  "source_binding": {
+    "byte_length": 1231103,
+    "content_hash": "sha256:58405d94685361c221ec7898866689116e0d31e7dceb26ed356a61a523178322",
+    "extracted_character_count_recomputed": 108301,
+    "extracted_text_hash_recomputed": "sha256:59edc562c2c20c6a07327573514681a44fcd4d29018332b95c10941e97c46100",
+    "page_character_counts_recomputed": [
+      732,
+      2146,
+      3158,
+      2105,
+      3306,
+      3067,
+      3195,
+      3408,
+      3044,
+      3327,
+      2421,
+      2985,
+      3518,
+      3113,
+      3012,
+      2954,
+      3481,
+      2206,
+      1818,
+      595,
+      1229,
+      1529,
+      2752,
+      3120,
+      3283,
+      3432,
+      1432,
+      1799,
+      1287,
+      3505,
+      3587,
+      3044,
+      2350,
+      3223,
+      3400,
+      2556,
+      145,
+      2508,
+      1606,
+      2203,
+      802,
+      22,
+      1705,
+      2543,
+      1648
+    ],
+    "page_count_recomputed": 45,
+    "raw_bytes_hash_recomputed": "sha256:58405d94685361c221ec7898866689116e0d31e7dceb26ed356a61a523178322",
+    "source_record_hash": "sha256:0d4131236b5c5729bdecfd1a5490282c34683df4e96326a718014e0b065ce644"
+  },
+  "unresolved_questions": {
+    "authorship": [],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt."
+    ]
+  }
+}

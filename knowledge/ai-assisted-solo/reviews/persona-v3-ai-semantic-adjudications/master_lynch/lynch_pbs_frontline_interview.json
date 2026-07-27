@@ -1,0 +1,153 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:b77d24c1adc9ccdcc263b125794111d37a784919dcc0585d31995afb471a7a9d",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "lynch_pbs_frontline_interview",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:726303d3474b2659f164d8ab4567bd541b18abe587392528d7a761c71401439a",
+    "declared_artifact_hash": "sha256:a26ce50fcf90ad1ead37635e7d02a5d5aabb3dcb7cb4ecc3e22ee4d1b3b83191",
+    "recomputed_artifact_hash": "sha256:a26ce50fcf90ad1ead37635e7d02a5d5aabb3dcb7cb4ecc3e22ee4d1b3b83191",
+    "relative_path": "master_lynch/lynch_pbs_frontline_interview.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_lynch",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Small-investor stock selection",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 30290,
+          "text_start": 30210
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Small-investor stock selection",
+          "text_end": 30290,
+          "text_start": 30210
+        },
+        "extractor_snippet_hash": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef",
+        "normalized_excerpt": "I think the average person could know three or four or five companies very well.",
+        "skeptic_snippet_hash_claimed": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef",
+        "skeptic_snippet_hash_recomputed": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The interview limits direct selection to a few deeply understood companies and ties purchase to a known company becoming attractive.",
+      "final_verdict": "supported",
+      "proposition_id": "lynch_pbs_frontline_interview:p1",
+      "review_hash": "sha256:e7bdaedd8ff38664ed3a7c41700e4df5ab6b90013d4cf18230046b68df497abc",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The interview directly limits the average investor to a few deeply known companies and says to buy when one becomes attractive rather than select unknown names on market timing.",
+        "support_verdict": "supported"
+      },
+      "statement": "Limit direct stock selection to companies the investor can explain deeply, buying only when a known company becomes attractive.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:51b3b474679c02153066b83648f77db55da6e46ba9c8cf82bf4534528ed54169",
+    "declared_artifact_hash": "sha256:ccb4fd84f3860c1efc27f8a61a9492ead8fae38475574922c193cf77b891f585",
+    "recomputed_artifact_hash": "sha256:ccb4fd84f3860c1efc27f8a61a9492ead8fae38475574922c193cf77b891f585",
+    "relative_path": "master_lynch/lynch_pbs_frontline_interview.json"
+  },
+  "source_binding": {
+    "byte_length": 78449,
+    "content_hash": "sha256:12f5aa148da5c6d3902a7b2a7a399a026f3a0e2d116d722b278046aaa66bd977",
+    "extracted_character_count_recomputed": 51729,
+    "extracted_text_hash_recomputed": "sha256:fdcad32dd59ab4acc2909c4bb1d7d1bbe3a3142a93094b446c05e8415ff88a25",
+    "page_character_counts_recomputed": [
+      51729
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:12f5aa148da5c6d3902a7b2a7a399a026f3a0e2d116d722b278046aaa66bd977",
+    "source_record_hash": "sha256:618ff835e4556af9995c9228ba187ad2a965c5ef60b3c9d2125255f2429ca3ff"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

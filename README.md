@@ -32,7 +32,7 @@
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
   <a href="#-tools--27-all-keyless"><b>Tools</b></a> ·
-  <a href="#-the-bench--21-investor-lenses"><b>The bench</b></a> ·
+  <a href="#-the-bench--26-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
   <a href="#-disclaimer"><b>Disclaimer</b></a>
@@ -57,7 +57,7 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity rese
 | | |
 |---|---|
 | 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
-| 🎭 **21 investor lenses that disagree** | Buffett, Munger, Graham, Lynch, Marks, Klarman, Soros, Dalio, Burry, Simons, Thorp, Taleb and more read the **same facts** and reach different conclusions. Each names its own failure mode, because a seat that cannot say how it goes wrong will not flag it when it does. |
+| 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai and more read the **same facts** through different stated research priorities. Every council run shows the complete catalog and actual maturity before research and lets you select any `1..N` combination or `all`. |
 | 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio manager who issues an actual rating — and three verifiers that re-source, re-derive and attack every load-bearing claim. A failed check **down-weights the seat that made it**. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
@@ -65,6 +65,19 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity rese
 | 🖥️ **One council on four hosts** | Claude Code, Codex, OpenCode and Grok Build run the **same** workflow, the same bench and the same gates. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
+
+## Current 0.9.0 prerelease status: solo-test
+
+The package and plugin surfaces are version `0.9.0-solo-test.1`, but this is an explicitly isolated
+**solo-test** build, not formal production GA. It packages 26 physical PersonaPack v3 packs
+and 52 executable `provisional_derived_proxy` tools so the deterministic path can be tested
+end to end. All 26 seats remain provisional `operator_lens`; operational: **0**;
+`method_model`: **0**. Human source approvals: **0**; human formula approvals: **0**;
+human approval signatures: **0**.
+
+The production loader rejects this tree, and production assembly/cutover/GA stays
+fail-closed. See [docs/solo-test-0.9.0.md](docs/solo-test-0.9.0.md) for the exact commands and
+verified status.
 
 ## 📜 Disclaimer
 
@@ -130,8 +143,8 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Full council — asks which preset first | one subagent per seat |
-| `/alpha <ticker> quick` | 4 analysts + debate, no bench, no verification | 7 seats |
+| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs the full council | one subagent per selected seat |
+| `/alpha <ticker> quick` | Same mandatory master selection, then 4 analysts + selected masters + debate; no verification | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |
@@ -139,8 +152,10 @@ rather than four in a menu of a hundred.
 | `/alpha` | Lists the modes and stops | **none** |
 
 The four marked **none** call keyless data tools and spawn no subagents, so they cost
-nothing beyond the turn you type them in. The council modes spawn one subagent per seat, and
-that is the entire cost of running this.
+nothing beyond the turn you type them in. Full and quick first display every master with a
+number, identity, method and best-use case. A native multi-select may make that easier, but
+all four hosts support the same numbered text fallback. Even a request that already names a
+master must show the catalog and confirm a fresh one-run receipt before research starts.
 
 Any listed equity: `/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`.
 Filings-based modes need a US filer; other markets are reported through `market_coverage` rather than silently returning nothing.
@@ -161,7 +176,7 @@ Default stock-analysis runs are full runs, not lite summaries:
 - News, industry context, supply chain, and management's words checked against their actions
 - SEC filings, Form 4 insider transactions, buybacks, dilution, debt and capital allocation
 - Investment-banking event analysis for M&A, ECM, debt, buybacks and strategic transactions
-- A bench of 21 investor lenses reading the same facts independently
+- A selectable bench of 26 investor method lenses reading the same facts
 - Bull researcher, bear researcher and portfolio-manager synthesis
 
 The final report is readable directly in chat. It carries analyst work logs, data and filing
@@ -197,7 +212,7 @@ not only in the docs, because the payload is what gets quoted downstream:
   contracts — is dropped rather than averaged in, because a zero does not look like a gap,
   it looks like a calm stock.
 
-## 🏛️ The bench — 21 investor lenses
+## 🏛️ The bench — 26 investor method lenses
 
 Reconstructions of publicly documented methods, not anything the named people said. Each
 states how it thinks, what it notices first, its characteristic challenge, and **its own
@@ -211,6 +226,13 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Quant | Simons · Asness · Thorp |
 | Options | Taleb · Natenberg · Sinclair |
 | Modern | Aschenbrenner |
+| v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
+
+The 0.9.0 solo-test catalog has 26 selectable physical v3 packs, but **26 physical packs is
+not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
+project-derived proxy material; the 52 tools are executable test proxies, not human-approved
+formula attribution. Operational and `method_model` counts are both zero, and production GA
+remains fail-closed.
 
 Masters read the **same established facts** the analysts read — filings, quotes, financials,
 macro — and receive the analyst packets separately, labelled as other seats' readings rather
@@ -223,7 +245,7 @@ looks at incentives where an analyst looked at margins. See [docs/attribution.md
 flowchart TD
     U["@alphacouncil-agent<br/>ticker / question"] --> G[("Established facts<br/>filings · quotes · macro · options")]
     G --> AG{{"Analyst council"}}
-    G --> MS{{"Master bench<br/>21 lenses"}}
+    G --> MS{{"Master bench<br/>26 lenses"}}
     AG --> A1["📈 Market data"]
     AG --> A2["💰 Earnings"]
     AG --> A3["⚖️ Valuation"]
@@ -248,7 +270,7 @@ flowchart TD
     PM --> R[["final_report.md<br/>verdict + entry price bands"]]
 ```
 
-The masters branch off the facts, not off the packets. Feeding 21 lenses one analyst's
+The masters branch off the facts, not off the packets. Feeding 26 lenses one analyst's
 selection of what mattered would give them all the same blind spot — a large and perfectly
 correlated error — and would remove the reason for having a bench at all.
 

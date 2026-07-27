@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject a thesis copied from another investor without independent reconstruction.",
+    "Reject when conservative recovery and financing survival cannot be estimated.",
+    "Reject when upside needs many favorable events but one adverse event causes permanent loss."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

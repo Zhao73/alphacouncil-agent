@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/source-review-attestation-v2.schema.json",
+  "title": "AlphaCouncil cryptographically verified human source review attestation v2",
+  "description": "A human source review bound to archived bytes, the proposed anchor and a trusted Ed25519 reviewer principal.",
+  "type": "object",
+  "required": [
+    "schema_version", "artifact_kind", "reviewer_id", "signer_key_id", "decision",
+    "content_hash", "anchor_hash", "reviewed_at", "affirmations", "notes", "signature"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 2 },
+    "artifact_kind": { "const": "persona_v3_source_review_attestation" },
+    "reviewer_id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": ".*\\S.*" },
+    "signer_key_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" },
+    "decision": { "enum": ["approve", "reject"] },
+    "content_hash": { "$ref": "#/$defs/hash" },
+    "anchor_hash": { "$ref": "#/$defs/hash" },
+    "reviewed_at": { "type": "string", "format": "date-time" },
+    "affirmations": {
+      "type": "object",
+      "required": [
+        "reviewed_raw_archive_bytes", "verified_locator_against_raw_material",
+        "reviewer_is_human", "review_was_independent"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "reviewed_raw_archive_bytes": { "const": true },
+        "verified_locator_against_raw_material": { "const": true },
+        "reviewer_is_human": { "const": true },
+        "review_was_independent": { "const": true }
+      }
+    },
+    "notes": { "type": "string", "maxLength": 1200 },
+    "signature": { "type": "string", "pattern": "^ed25519:[A-Za-z0-9_-]{86}$" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

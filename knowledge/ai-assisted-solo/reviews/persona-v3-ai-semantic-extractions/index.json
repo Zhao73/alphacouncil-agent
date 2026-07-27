@@ -1,0 +1,310 @@
+{
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction_index",
+  "artifacts": [
+    {
+      "artifact_hash": "sha256:f0236690c0122716e8cbeb469b268fe3c0a782219592f76234027bd8b2f6b74b",
+      "candidate_id": "ackman_pershing_netflix_letter_2022",
+      "content_hash": "sha256:aa625f083463a1a98f529aaf6342e7dc1f2f2af2942536e34c9568d784dec854",
+      "persona_id": "master_ackman",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_ackman/ackman_pershing_netflix_letter_2022.json"
+    },
+    {
+      "artifact_hash": "sha256:9b5fdde9858915f150ba552b90759b2bff4b73d99c4e1db77e887183af1c3761",
+      "candidate_id": "aschenbrenner_situational_awareness_2024",
+      "content_hash": "sha256:68735f1b5a3d30fb276e42493389d016d4afb46fef922b44ed7ebf7ad55189d3",
+      "persona_id": "master_aschenbrenner",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_aschenbrenner/aschenbrenner_situational_awareness_2024.json"
+    },
+    {
+      "artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
+      "candidate_id": "asness_value_momentum_interaction",
+      "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+      "persona_id": "master_asness",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_asness/asness_value_momentum_interaction.json"
+    },
+    {
+      "artifact_hash": "sha256:6837b358e0fa2983d2f99abdf1eaf5425602329ef00de098a7f9df5a8c3ed320",
+      "candidate_id": "buffett_berkshire_letter_2024",
+      "content_hash": "sha256:ff21ab9407dec219757587b6ce6a1bf30e59cfff15bb21e81d1faaec7f97a8a7",
+      "persona_id": "master_buffett",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_buffett/buffett_berkshire_letter_2024.json"
+    },
+    {
+      "artifact_hash": "sha256:ab228204ed7a7a315b4662c08f435fd2285abe97b19212008f6257514ac74960",
+      "candidate_id": "burry_fcic_interview_archive",
+      "content_hash": "sha256:8176a20a17671c39b4252b212d19e69440fc05d4f9ada0a575077020db9583c6",
+      "persona_id": "master_burry",
+      "proposition_count": 0,
+      "readability": "partial",
+      "relative_path": "master_burry/burry_fcic_interview_archive.json"
+    },
+    {
+      "artifact_hash": "sha256:56b7a851b3d89378591bdc982a9fc2a62344c3b3d4ec300b2c7152b870cd0f1c",
+      "candidate_id": "cathie_wood_ark_disruptive_innovation_2017",
+      "content_hash": "sha256:77ae03debacf365576261d79eb25f97eeea89715f3a37021511ee4de789c9c51",
+      "persona_id": "master_cathie_wood",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_cathie_wood/cathie_wood_ark_disruptive_innovation_2017.json"
+    },
+    {
+      "artifact_hash": "sha256:c217ca4ed23eb9b181858cb944ca3345b8fd5c1795a142a118654241bc53a20f",
+      "candidate_id": "dalio_economic_principles_productivity_reform",
+      "content_hash": "sha256:8fa2d8f8783d2f31639da86cb206e8f9aeed0d924ebd413d5d1028e420630943",
+      "persona_id": "master_dalio",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_dalio/dalio_economic_principles_productivity_reform.json"
+    },
+    {
+      "artifact_hash": "sha256:1f32411f9fc8f8b811c7bcb0c76280c889edc34a402c6e115b1a8ec8177d2547",
+      "candidate_id": "damodaran_nyu_dcf_inputs",
+      "content_hash": "sha256:427a911e400cee02faeec04ab5cf91ab4cf45c9f54fc95d1b06082a4bff1db33",
+      "persona_id": "master_damodaran",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_damodaran/damodaran_nyu_dcf_inputs.json"
+    },
+    {
+      "artifact_hash": "sha256:2fb96798fc07df60cf726665377230f111cf92d4c5a797a555f8902109130ab8",
+      "candidate_id": "damodaran_nyu_narrative_numbers",
+      "content_hash": "sha256:d94466da9796eb9156a1d982d2b2a342fb8c21bc9af7867915c9ff9b12a46002",
+      "persona_id": "master_damodaran",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_damodaran/damodaran_nyu_narrative_numbers.json"
+    },
+    {
+      "artifact_hash": "sha256:f018c323b73ac7202dc8506246d1c6a6f8cd3b90c0c2b9d3adfc8f854d86df00",
+      "candidate_id": "damodaran_nyu_valuation_dubai_2026",
+      "content_hash": "sha256:95d6d0cb929ab8b0e41db213de6c3d817b5d199763edd76bfa7bbd4a3e810011",
+      "persona_id": "master_damodaran",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_damodaran/damodaran_nyu_valuation_dubai_2026.json"
+    },
+    {
+      "artifact_hash": "sha256:42246975739e0046027f4963ae81113796a98423be9e703cf413030ad36599d8",
+      "candidate_id": "damodaran_nyu_valuation_packet1",
+      "content_hash": "sha256:d41a00b21269aef32369e1e5d70ff530632db03ba440a79a3d4473edbb2a7cb2",
+      "persona_id": "master_damodaran",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_damodaran/damodaran_nyu_valuation_packet1.json"
+    },
+    {
+      "artifact_hash": "sha256:3be6e263dda4f1adbfa5010e9fea2d713266b10d006108a11c3368a1fc82b4cf",
+      "candidate_id": "druckenmiller_econclubny_transcript_2019",
+      "content_hash": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+      "persona_id": "master_druckenmiller",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_druckenmiller/druckenmiller_econclubny_transcript_2019.json"
+    },
+    {
+      "artifact_hash": "sha256:17e9b88cf74f76e1d5c0ce29e1d4412b662eb24ab4a1f7bcee1654195df53d77",
+      "candidate_id": "duan_yongping_xueqiu_business_culture_2023",
+      "content_hash": "sha256:eaece8af228fdc955eb8ef7d296a56e76a7693cbc0d3af7560f3df66bd459527",
+      "persona_id": "master_duan_yongping",
+      "proposition_count": 0,
+      "readability": "unreadable",
+      "relative_path": "master_duan_yongping/duan_yongping_xueqiu_business_culture_2023.json"
+    },
+    {
+      "artifact_hash": "sha256:6b603fafd704dca7cf8e2ba06a5e476fe58d7f8dee1dd0fc57dd0f07a55b0a96",
+      "candidate_id": "fisher_wiley_authorized_chapter_1",
+      "content_hash": "sha256:eb2709711d5e20893964141e04fb85f9b8402a6f02bb65457f38be928cd714ec",
+      "persona_id": "master_fisher",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_fisher/fisher_wiley_authorized_chapter_1.json"
+    },
+    {
+      "artifact_hash": "sha256:16f9718896dffcfaeb8418a248104433f6863a7d26482c199051ec70f6a565e9",
+      "candidate_id": "sec_gme_short_market_structure_2021",
+      "content_hash": "sha256:58405d94685361c221ec7898866689116e0d31e7dceb26ed356a61a523178322",
+      "persona_id": "master_forensic_short",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_forensic_short/sec_gme_short_market_structure_2021.json"
+    },
+    {
+      "artifact_hash": "sha256:18507a337ec9bd8960db3c6d411644eff51961da2712ee41ed24603f06477f22",
+      "candidate_id": "graham_columbia_security_analysis_lecture_1",
+      "content_hash": "sha256:17f6f0de56937f317e89412cfca03636c57d5c997104172662a904d8096e8dc6",
+      "persona_id": "master_graham",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_graham/graham_columbia_security_analysis_lecture_1.json"
+    },
+    {
+      "artifact_hash": "sha256:395837e0adf03d0689724ff017fa03d0db1a94f696cfa099198c31928305eb2d",
+      "candidate_id": "jhunjhunwala_flame_investing_presentation",
+      "content_hash": "sha256:2d213e7593783e08065920e2c90a7ef08cf2331c0dd11e30bc39ba43d145ae5b",
+      "persona_id": "master_jhunjhunwala",
+      "proposition_count": 2,
+      "readability": "readable",
+      "relative_path": "master_jhunjhunwala/jhunjhunwala_flame_investing_presentation.json"
+    },
+    {
+      "artifact_hash": "sha256:8f9f0c83ecbff127c5e2f8ea051066b0a772153fe42add899aea2c5823cc2d71",
+      "candidate_id": "klarman_cfa_patient_investors_2010",
+      "content_hash": "sha256:48fbf1d4dda2df5b56d465f38332164d2edbd5f30b2a2222f46ff9617f7101d8",
+      "persona_id": "master_klarman",
+      "proposition_count": 0,
+      "readability": "partial",
+      "relative_path": "master_klarman/klarman_cfa_patient_investors_2010.json"
+    },
+    {
+      "artifact_hash": "sha256:7ecc24947b9bf39035495d29c031c9032c3e4bc666316664a0efc8d612da257a",
+      "candidate_id": "li_lu_pku_speech_notes_2019",
+      "content_hash": "sha256:3dfe0c5406e3d76b69673b3377837816bad4feaeb8d7134c88be8d1413cdfa77",
+      "persona_id": "master_li_lu",
+      "proposition_count": 2,
+      "readability": "readable",
+      "relative_path": "master_li_lu/li_lu_pku_speech_notes_2019.json"
+    },
+    {
+      "artifact_hash": "sha256:a26ce50fcf90ad1ead37635e7d02a5d5aabb3dcb7cb4ecc3e22ee4d1b3b83191",
+      "candidate_id": "lynch_pbs_frontline_interview",
+      "content_hash": "sha256:12f5aa148da5c6d3902a7b2a7a399a026f3a0e2d116d722b278046aaa66bd977",
+      "persona_id": "master_lynch",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_lynch/lynch_pbs_frontline_interview.json"
+    },
+    {
+      "artifact_hash": "sha256:61a023ca32578d9f7928253b5f095683c8059f8bf950adec51ae51942900307f",
+      "candidate_id": "marks_oaktree_its_all_good_2007",
+      "content_hash": "sha256:0d67e5c2f0a452c57acc629ae9337bcbd2eadaa99c3c946c8b5639a0d5c18de9",
+      "persona_id": "master_marks",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_marks/marks_oaktree_its_all_good_2007.json"
+    },
+    {
+      "artifact_hash": "sha256:6191619120980b24cdfa8e3e83f05fd214fe20c95a6ee8bf6205be970adf7e24",
+      "candidate_id": "munger_sec_wesco_annual_report_2009",
+      "content_hash": "sha256:c1b4cb2bb06fc0ca8e58044dd42d0678cff39a981131e1cf7ce4964651c57b32",
+      "persona_id": "master_munger",
+      "proposition_count": 0,
+      "readability": "partial",
+      "relative_path": "master_munger/munger_sec_wesco_annual_report_2009.json"
+    },
+    {
+      "artifact_hash": "sha256:f6d58efa8bbc1c64ba4423aa083a74a955322849e547f76cd775af9cdec8b37d",
+      "candidate_id": "natenberg_cboe_learning_greeks_2021",
+      "content_hash": "sha256:6a46933f850c77eb4cb9e0e5d3d851916159d7db0b06450e3c30b938f5ba21db",
+      "persona_id": "master_natenberg",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_natenberg/natenberg_cboe_learning_greeks_2021.json"
+    },
+    {
+      "artifact_hash": "sha256:359a043cf674e79f4eda973091560a390bf08fd0f6781cce663de4acdba4839d",
+      "candidate_id": "pabrai_columbia_session_2024",
+      "content_hash": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+      "persona_id": "master_pabrai",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_pabrai/pabrai_columbia_session_2024.json"
+    },
+    {
+      "artifact_hash": "sha256:1a8f5d6473be090bcd3a1789adcfedf6ce8a38147d87ee10e0d79c4b1a5efefe",
+      "candidate_id": "simons_foundation_career_interview_2012",
+      "content_hash": "sha256:12da8e935906a731f06fc3729449063ddcd212a17c25b14c8e17938df8be212c",
+      "persona_id": "master_simons",
+      "proposition_count": 0,
+      "readability": "partial",
+      "relative_path": "master_simons/simons_foundation_career_interview_2012.json"
+    },
+    {
+      "artifact_hash": "sha256:b6fb5d93154835febc5a8aec5bc16929dccf8825f708ef71e8c4b023aaace6f5",
+      "candidate_id": "sinclair_cboe_risk_reversal_2026",
+      "content_hash": "sha256:396bea49e3e2c2c1a8ad627fb7df75c798dd58a8d1f6e9c5a005560e4d4366ca",
+      "persona_id": "master_sinclair",
+      "proposition_count": 2,
+      "readability": "readable",
+      "relative_path": "master_sinclair/sinclair_cboe_risk_reversal_2026.json"
+    },
+    {
+      "artifact_hash": "sha256:04de769b19d60363d2821f467ea79fcd16955b85a1fffc059e5828d0d6ef4c1b",
+      "candidate_id": "soros_reflexivity_uncertainty_2014",
+      "content_hash": "sha256:b741086183ff818ebd3a2c889b4d3ef8b977ce744e219033ebc7ca62576514cc",
+      "persona_id": "master_soros",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_soros/soros_reflexivity_uncertainty_2014.json"
+    },
+    {
+      "artifact_hash": "sha256:668ee4f415b37a518d66e7078648421a94fa49453d3d48f9ee0b50e4c57fce19",
+      "candidate_id": "taleb_fat_tails_statistical_project",
+      "content_hash": "sha256:2f623df2b5717b3313afca1109cf9c3ec4385c96467a4e77d8770f38a8da4701",
+      "persona_id": "master_taleb",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_taleb/taleb_fat_tails_statistical_project.json"
+    },
+    {
+      "artifact_hash": "sha256:1b284644dd666ae337bbc6dda4557bfbd62805e74542fd7886b7be3e072a4ca7",
+      "candidate_id": "taleb_law_large_numbers_fat_tails",
+      "content_hash": "sha256:9fd0112a505073bc6dc4ad60b267cd2ffdb4fa86adefa7cb0a62a36d0b0409d0",
+      "persona_id": "master_taleb",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_taleb/taleb_law_large_numbers_fat_tails.json"
+    },
+    {
+      "artifact_hash": "sha256:60948dead3b794afd480d333284471f19dea3c3b1c3d8374aab083ebdf53d386",
+      "candidate_id": "taleb_precautionary_principle_ruin",
+      "content_hash": "sha256:7ef0b4ea3f2e372701262e96fff7c492a48cefb9faebaf3849b5d20abb15f361",
+      "persona_id": "master_taleb",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_taleb/taleb_precautionary_principle_ruin.json"
+    },
+    {
+      "artifact_hash": "sha256:ce1b32eb3a2ada18310eb471044218378362ed9f3c50cd3e9a634a43fd9f350f",
+      "candidate_id": "taleb_statistical_consequences_arxiv",
+      "content_hash": "sha256:758e18b7337840104db93296144d67cf5514bf2de128fe557dc84bc32a0ad567",
+      "persona_id": "master_taleb",
+      "proposition_count": 1,
+      "readability": "readable",
+      "relative_path": "master_taleb/taleb_statistical_consequences_arxiv.json"
+    },
+    {
+      "artifact_hash": "sha256:e1b52c2f5982801245bb31db3cf915244e9a28328b10360499929f307de76c72",
+      "candidate_id": "thorp_kelly_stock_market",
+      "content_hash": "sha256:a37fe04e5f3cb53cb0c62b1bac2d95c876293c26406f2b23a0c0e61f788ea9ed",
+      "persona_id": "master_thorp",
+      "proposition_count": 0,
+      "readability": "unreadable",
+      "relative_path": "master_thorp/thorp_kelly_stock_market.json"
+    }
+  ],
+  "candidate_count": 32,
+  "canonical_master_count": 26,
+  "human_reviewed_count": 0,
+  "index_hash": "sha256:8d916ceda6c30bbcab86c5add14ef241fce640a7e2d5a4b0075cbe36aea1fec0",
+  "method_attribution_approved_count": 0,
+  "production_effect": "none",
+  "proposition_count": 29,
+  "readability_counts": {
+    "partial": 4,
+    "readable": 26,
+    "unreadable": 2
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "schema_version": 1,
+  "seats_with_candidates": 26
+}

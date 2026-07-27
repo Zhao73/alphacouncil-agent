@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:67426c788e6b046878ebbb3785695e3d6694891b5830d20a301bd7343e852146",
+    "derivation_spec_hash": "sha256:e037f2b6a618de250e7cdd947f5fb2e54de76605fdfafc89edb9624040033fbe",
+    "derivation_spec_id": "master_aschenbrenner.compute_power_bridge.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_aschenbrenner.compute_power_bridge",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:e8abdaf8f55dfea5addc53caaba43f7f471591318baadf7cbf4cc24b3010e58d",
+    "inputs": [
+      {
+        "fact_id": "ai.compute.installed_capacity"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "ai.power.required_mw",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:e12a6dbd1d6ac12a8bc327e049176a6540627f39fafdf141f6d0105551905972",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_aschenbrenner.compute_power_bridge.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:6dafb86e3f177bbaf5db0a663cb33080f3720a2973cedec48bb6698a6668e9a0",
+    "derivation_spec_hash": "sha256:9d12ff44cb0683d18b0960029e0a4e4cc0e85f5f5130d9d8d2f812dce48351f9",
+    "derivation_spec_id": "master_aschenbrenner.timeline_reverse_valuation.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_aschenbrenner.timeline_reverse_valuation",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:a56fce27a51d9d861fb4c942f4728ba47dad24229f18f33bc863cc1e0fad170f",
+    "inputs": [
+      {
+        "fact_id": "ai.compute.installed_capacity"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "valuation.implied_growth",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:97ce273559326b217e0fc81287a97d4136d021b4cb6297f7daa0ac7a470f0138",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_aschenbrenner.timeline_reverse_valuation.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

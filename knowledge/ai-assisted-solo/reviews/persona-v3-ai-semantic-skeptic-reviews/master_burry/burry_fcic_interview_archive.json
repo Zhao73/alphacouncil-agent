@@ -1,0 +1,81 @@
+{
+  "artifact_hash": "sha256:55f3a9f4ec6aa2e5b6e499c4230c0759ac64b2303e93f9b75c63634f376c64cb",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "burry_fcic_interview_archive",
+  "challenges": [
+    "The archive is only an audio landing page and contains neither playable audio bytes nor a transcript.",
+    "No proposition may be reconstructed from model memory or adjacent sources."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:66508c081b517421982cc59c7a1b29e70461313f5de513a30ff1104414648b2c",
+    "declared_artifact_hash": "sha256:ab228204ed7a7a315b4662c08f435fd2285abe97b19212008f6257514ac74960",
+    "proposition_count": 0,
+    "recomputed_artifact_hash": "sha256:ab228204ed7a7a315b4662c08f435fd2285abe97b19212008f6257514ac74960",
+    "relative_path": "master_burry/burry_fcic_interview_archive.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can the original transcript, audio, readable PDF, or unobstructed page be archived and reviewed?"
+  ],
+  "overall_verdict": "unverifiable",
+  "persona_id": "master_burry",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [],
+  "readability_recheck": {
+    "extractor_status": "partial",
+    "independent_status": "partial",
+    "reason": "Independent extraction produced some text but no safely reviewable method proposition.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 6245,
+    "content_hash": "sha256:8176a20a17671c39b4252b212d19e69440fc05d4f9ada0a575077020db9583c6",
+    "extracted_text_hash": "sha256:f1fa1350ff68299be3fec452b1f0dcf4ae65f44371f84bfc2ac683f300030bfd",
+    "extracted_text_hash_recomputed": "sha256:f1fa1350ff68299be3fec452b1f0dcf4ae65f44371f84bfc2ac683f300030bfd",
+    "raw_bytes_hash_recomputed": "sha256:8176a20a17671c39b4252b212d19e69440fc05d4f9ada0a575077020db9583c6",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:311b5a67f2f48ed19c4d24ffba9d3618243909d1c2e522f6304a039dd7bf8ee8",
+    "source_record_hash_recomputed": "sha256:311b5a67f2f48ed19c4d24ffba9d3618243909d1c2e522f6304a039dd7bf8ee8"
+  }
+}

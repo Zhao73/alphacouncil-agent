@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:6cdefe5b398a0d3f07ecde625c54b3c829d19ad7a564de8dc7339ffbc09ac1fe",
+    "derivation_spec_hash": "sha256:06eb2b7aa50fd446fcead03ecd9e3495f779f9e6f6f9b50250667833ed6bf950",
+    "derivation_spec_id": "master_burry.capital_structure_reader.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_burry.capital_structure_reader",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:3aa0d229014c57a2dabe7bcda80bf6cce519bf9c792b2d77c6dc8f4491dd366a",
+    "inputs": [
+      {
+        "fact_id": "capital_structure.seniority"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "capital_structure.seniority",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:7ff6fcfe1ea9831902ddc1d15e60aca9baec5998647426b82795bf8514813727",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_burry.capital_structure_reader.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:8523e508ca7228a643a4d2d190a0e2e638b9430c8d799f49939b400c46b3cf36",
+    "derivation_spec_hash": "sha256:c48f91bb43dde9875ad2b6f5a55ac287c0b0782b0d41466ec50b17d5f168fe90",
+    "derivation_spec_id": "master_burry.mispricing_carry.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_burry.mispricing_carry",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:df6d7511a21cb4ef948518e7590efc9f3eaac13bb01eddddd1c8e0a287e7b2ec",
+    "inputs": [
+      {
+        "fact_id": "mispricing.mechanism"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "mispricing.mechanism",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:7d603ea7ece68c0d6493144e686147ff546c770d298a2f4fa373390a71e49b5c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_burry.mispricing_carry.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

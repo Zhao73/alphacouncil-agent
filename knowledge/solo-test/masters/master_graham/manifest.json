@@ -1,0 +1,128 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "deep_value",
+      "asset_backed_securities",
+      "normalized_earnings",
+      "distressed_equity"
+    ],
+    "exclusions": [
+      "mechanical use of historical formulas without context",
+      "claims about modern securities absent source support",
+      "a fixed margin-of-safety percentage by editorial choice",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "margin_of_safety_v1",
+    "optional_fact_types": [
+      "financial.tangible_book_value",
+      "financial.normalized_earnings",
+      "financial.balance_sheet_claims",
+      "valuation.liquidation_range",
+      "market.price_to_floor"
+    ],
+    "required_fact_types": [
+      "financial.net_current_asset_value"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_graham.asset_floor",
+      "master_graham.normalized_earnings"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "financial.net_current_asset_value"
+    ],
+    "hard_vetoes": [
+      "master_graham.no_asset_floor",
+      "master_graham.margin_absent",
+      "master_graham.deteriorating_floor"
+    ],
+    "native_output": "margin_of_safety_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Graham Lens Provisional Operator Lens",
+      "zh": "格雷厄姆视角临时操作视角"
+    },
+    "persona_id": "master_graham",
+    "public_label": {
+      "en": "Graham Lens Solo Test",
+      "zh": "格雷厄姆视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Decline when assets and senior claims cannot be independently reconstructed.",
+      "Reject when price lacks a reviewed discount to the conservative floor.",
+      "Reject a static bargain whose realizable floor is demonstrably shrinking."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in deep_value, asset_backed_securities, normalized_earnings, distressed_equity",
+      "zh": "用于测试确定性行为：deep_value、asset_backed_securities、normalized_earnings、distressed_equity"
+    },
+    "identity": {
+      "en": "Graham Lens; project-derived and not human reviewed",
+      "zh": "格雷厄姆视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Establish an asset or normalized-earnings floor and require a human-adjudicated margin of safety before taking equity risk.",
+      "zh": "Establish an asset or normalized-earnings floor and require a human-adjudicated margin of safety before taking equity risk."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

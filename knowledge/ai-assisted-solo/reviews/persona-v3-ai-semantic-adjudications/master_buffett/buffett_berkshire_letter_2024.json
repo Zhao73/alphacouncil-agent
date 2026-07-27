@@ -1,0 +1,174 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:7761cad5b4a4a77e91af35baf19fe8a99b1c6a752ddf3c945c9ea493ad200b03",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "buffett_berkshire_letter_2024",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:28ff24afaf1e96d1d81bfb8c86d83e52eb084f49cf7ea799c2202441d4cf4265",
+    "declared_artifact_hash": "sha256:6837b358e0fa2983d2f99abdf1eaf5425602329ef00de098a7f9df5a8c3ed320",
+    "recomputed_artifact_hash": "sha256:6837b358e0fa2983d2f99abdf1eaf5425602329ef00de098a7f9df5a8c3ed320",
+    "relative_path": "master_buffett/buffett_berkshire_letter_2024.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_buffett",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 11,
+          "section_claimed": "Japanese trading-company holdings",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 777,
+          "text_start": 663
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:b53ae3c75dac7a8e955d6d371f3d40e01ce12e0b77af8cf0b9460437297df3da",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 11,
+          "section": "Japanese trading-company holdings",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:b53ae3c75dac7a8e955d6d371f3d40e01ce12e0b77af8cf0b9460437297df3da",
+        "normalized_excerpt": "Our holdings of the five are for the very long term, and we are committed to supporting their boards of directors.",
+        "skeptic_snippet_hash_claimed": "sha256:b53ae3c75dac7a8e955d6d371f3d40e01ce12e0b77af8cf0b9460437297df3da",
+        "skeptic_snippet_hash_recomputed": "sha256:b53ae3c75dac7a8e955d6d371f3d40e01ce12e0b77af8cf0b9460437297df3da"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The excerpt establishes a very-long-term intention for five named holdings, not a general conditional holding rule for all acceptable businesses.",
+      "final_verdict": "partial",
+      "proposition_id": "buffett_berkshire_letter_2024:p1",
+      "review_hash": "sha256:d7c83bc4292df6e03bf42be173a967282e473063c03b39d76c554fbcc380a819",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "The evidence concerns five Japanese trading companies, not all investments.",
+          "The word prefer and the ongoing acceptability condition are synthesized rather than quoted."
+        ],
+        "support_rationale": "The excerpt directly establishes very-long-term intent for five named holdings; nearby text praises their capital deployment and management, but the proposed general conditional holding rule is broader than this case-specific statement.",
+        "support_verdict": "partial"
+      },
+      "statement": "Prefer very long holding periods for businesses whose governance and capital allocation remain acceptable.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: A case-specific holding intention is generalized into a portfolio-wide rule."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:b3af1b6c3f60e9706bfeab5d4f50cb322a6beb80436ff852cc90b025b46f62db",
+    "declared_artifact_hash": "sha256:e7a692c2ed951139bc835a1f3660b561e8b193652332f9d4caf90739c3abf973",
+    "recomputed_artifact_hash": "sha256:e7a692c2ed951139bc835a1f3660b561e8b193652332f9d4caf90739c3abf973",
+    "relative_path": "master_buffett/buffett_berkshire_letter_2024.json"
+  },
+  "source_binding": {
+    "byte_length": 64860,
+    "content_hash": "sha256:ff21ab9407dec219757587b6ce6a1bf30e59cfff15bb21e81d1faaec7f97a8a7",
+    "extracted_character_count_recomputed": 39911,
+    "extracted_text_hash_recomputed": "sha256:ec4ea26426b63b7b1756cdfd5d71267e84844e9f249363f966239ab8526e292d",
+    "page_character_counts_recomputed": [
+      2148,
+      2826,
+      2094,
+      2342,
+      2564,
+      2573,
+      3032,
+      2809,
+      2675,
+      2328,
+      2540,
+      2659,
+      1915,
+      3667,
+      3739
+    ],
+    "page_count_recomputed": 15,
+    "raw_bytes_hash_recomputed": "sha256:ff21ab9407dec219757587b6ce6a1bf30e59cfff15bb21e81d1faaec7f97a8a7",
+    "source_record_hash": "sha256:5a53b72e9270d858b6a397fa1216ca06656d4aef97e34dcf4a1f637b3e77befa"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: A case-specific holding intention is generalized into a portfolio-wide rule."
+    ]
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "artifact_hash": "sha256:08f5ec4efa82bfa4054ebbeb1c51e3c9c24df82693a4bc596ca7167e90c95098",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "ackman_pershing_netflix_letter_2022",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:2e7e21c545734e2e58a6a2143f3615c392cc180d64667ec26b6068cb738b81e5",
+    "declared_artifact_hash": "sha256:f0236690c0122716e8cbeb469b268fe3c0a782219592f76234027bd8b2f6b74b",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:f0236690c0122716e8cbeb469b268fe3c0a782219592f76234027bd8b2f6b74b",
+    "relative_path": "master_ackman/ackman_pershing_netflix_letter_2022.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_ackman",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "The statement turns a described purchase into a general entry rule.",
+        "The excerpt does not itself say that durable economics remained intact."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 727,
+        "actual_text_start": 544,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "What narrower wording would be fully entailed by the cited excerpt alone?"
+      ],
+      "proposed_evidence_excerpt": "The opportunity to acquire Netflix at an attractive valuation emerged when investors reacted negatively to the recent quarter’s subscriber growth and management’s short-term guidance.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Netflix purchase rationale",
+        "text_end": 727,
+        "text_start": 544
+      },
+      "proposed_statement": "Treat a sharp reaction to short-term operating guidance as an entry candidate only when valuation becomes attractive and durable business economics remain intact.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "ackman_pershing_netflix_letter_2022:p1",
+      "review_hash": "sha256:874c1afba2e5aa85829f63c4b7d617d181b9877b9de28076352c2b81bb08a63e",
+      "scope_ambiguity": {
+        "rationale": "The proposition adds a condition, generalization, or method prescription not fully stated by the exact excerpt.",
+        "status": "material"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17",
+      "snippet_hash_recomputed": "sha256:b366f505eaa387b6c660a80b5ebf4b9d7541cbc6fbac4787bdaf4eaee9337d17",
+      "support_rationale": "The excerpt supports an attractive-valuation opportunity following a negative reaction to subscriber growth and guidance, but the strict only-when condition and durable-economics test come from surrounding rationale rather than the bound snippet.",
+      "support_verdict": "partial"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 95209,
+    "content_hash": "sha256:aa625f083463a1a98f529aaf6342e7dc1f2f2af2942536e34c9568d784dec854",
+    "extracted_text_hash": "sha256:eef88f488f82bc9a0030d6722ec4cf1079d33cebbc9e8b1671bf928af399b370",
+    "extracted_text_hash_recomputed": "sha256:eef88f488f82bc9a0030d6722ec4cf1079d33cebbc9e8b1671bf928af399b370",
+    "raw_bytes_hash_recomputed": "sha256:aa625f083463a1a98f529aaf6342e7dc1f2f2af2942536e34c9568d784dec854",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:63cd060bbf7cf11bc9288d72a27c5794cf7c515d32b7399bc352f591e079d11f",
+    "source_record_hash_recomputed": "sha256:63cd060bbf7cf11bc9288d72a27c5794cf7c515d32b7399bc352f591e079d11f"
+  }
+}

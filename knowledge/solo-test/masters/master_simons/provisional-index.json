@@ -1,0 +1,41 @@
+{
+  "artifact_kind": "persona_v3_solo_test_pack_index",
+  "assurance_class": "provisional_derived_proxy",
+  "build_profile": "solo_test",
+  "common_projection": {
+    "provisional_deployable_signal": "cautious",
+    "provisional_invalid_test": "out_of_scope",
+    "provisional_no_signal": "opposed",
+    "provisional_research_candidate": "cautious"
+  },
+  "declared_state_hypotheses": [
+    "invalid_test",
+    "no_signal",
+    "research_candidate",
+    "deployable_signal"
+  ],
+  "experiment_pass_count": 0,
+  "formula_approval_binding_count": 0,
+  "formula_compilation_manifest_hash": "sha256:7265b10a67bd0437af02572176793ef0b8529e48437edc5a2e0b1b1b9fbe73d0",
+  "method_model_eligible": false,
+  "native_states": [
+    "provisional_invalid_test",
+    "provisional_no_signal",
+    "provisional_research_candidate",
+    "provisional_deployable_signal"
+  ],
+  "persona_id": "master_simons",
+  "planned_tool_ids": [
+    "master_simons.leakage_audit",
+    "master_simons.oos_cost_test"
+  ],
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "source_adjudication_status": "pending",
+  "warnings": [
+    "Physical presence proves testability only; it does not prove source fidelity or method attribution.",
+    "Uncalibrated proxy scores never project to constructive; successful computation is capped at cautious.",
+    "The production loader, production registry, release assembler and GA must reject this pack."
+  ]
+}

@@ -32,11 +32,18 @@ export function scopedSourceId(task, id, index = 0) {
 export function sourceManifest(run) {
   const sources = [];
   const known = new Set();
+  const appendSource = (task, source) => {
+    const id = source?.id || source?.source_id;
+    if (!id || known.has(id)) return;
+    known.add(id);
+    sources.push({ task, id, ...source });
+  };
+  for (const source of run.grounding?.typed_fact_sources || []) {
+    appendSource("grounding", source);
+  }
   for (const packet of run.packets || []) {
     for (const source of packet.sources || []) {
-      if (!source?.id) continue;
-      known.add(source.id);
-      sources.push({ task: packet.task, ...source });
+      appendSource(packet.task, source);
     }
   }
   const missing_claim_source_ids = [];

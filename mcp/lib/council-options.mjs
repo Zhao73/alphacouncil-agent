@@ -1,5 +1,9 @@
 import { registry, selectRoster, personaTitle } from "./personas/registry.mjs";
 import { DEFAULT_TASKS } from "./constants.mjs";
+import { loadPacks } from "./personas-v2/loader.mjs";
+import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
+import { sha256 } from "./personas-v3/canonical.mjs";
+import { selectorCard } from "./master-catalog.mjs";
 
 /**
  * The menu a host shows before a run starts.
@@ -24,9 +28,24 @@ const estimate = ({ analysts = 0, masters = 0, verifiers = 0, debate = 3 }) => {
   return { seats, rough_minutes: Math.round(minutes) };
 };
 
+const estimateSelectionRange = ({ analysts = 0, allMasters = 1, verifiers = 0, debate = 3 }) => {
+  const minimum = estimate({ analysts, masters: 1, verifiers, debate });
+  const maximum = estimate({ analysts, masters: allMasters, verifiers, debate });
+  return {
+    seats: `${minimum.seats}-${maximum.seats}`,
+    rough_minutes: `${minimum.rough_minutes}-${maximum.rough_minutes}`,
+    seats_min: minimum.seats,
+    seats_max: maximum.seats,
+    rough_minutes_min: minimum.rough_minutes,
+    rough_minutes_max: maximum.rough_minutes,
+  };
+};
+
 export function councilOptions({ language = "English" } = {}) {
   const chinese = /中文|chinese|zh/i.test(String(language));
   const reg = registry();
+  const packs = loadPacks();
+  const v3Packs = compiledPersonaPacks();
 
   const allAnalysts = reg.ids("analyst").map((id) => reg.get(id)).filter((p) => p.enabled);
   const masterRosters = [...new Set(
@@ -49,39 +68,93 @@ export function councilOptions({ language = "English" } = {}) {
     };
   });
 
-  const allMasters = reg.ids("master").length;
+  // A flattened, stable-order catalog is the selection source of truth. Rosters remain
+  // useful shortcuts, but a user may choose any 1..N individual methods across schools.
+  const masterChoices = reg.ids("master").map((id, offset) => {
+    const persona = reg.get(id);
+    const pack = packs.get(id);
+    const v3 = v3Packs.get(id);
+    const v3Selection = v3?.manifest?.selection;
+    const v3Label = v3?.admitted_label;
+    const provisionalV3 = v3?.build_profile === "solo_test";
+    const localized = (value) => chinese ? value?.zh : value?.en;
+    // Until a physical v3 pack exists, bind the receipt to the exact v2 pack or prompt
+    // persona rather than publishing a null hash. A prompt edit must invalidate a catalog
+    // the user saw before that edit just as a v3 policy edit does.
+    const fallbackPackHash = pack
+      ? sha256({ schema_version: 2, persona_id: id, pack })
+      : sha256({
+        schema_version: 1,
+        persona_id: id,
+        title: persona.title,
+        philosophy_tags: persona.philosophy_tags,
+        disqualifiers: persona.disqualifiers,
+        bodies: persona.bodies,
+      });
+    return {
+      index: offset + 1,
+      id,
+      title: localized(v3Label) || personaTitle(persona, language),
+      ...(v3Selection ? {
+        identity: localized(v3Selection.identity),
+        method: localized(v3Selection.method),
+        best_for: localized(v3Selection.best_for),
+      } : selectorCard(persona, language)),
+      maturity: v3?.maturity || pack?.kind || "prompt_lens",
+      runtime_level: v3?.admission?.level || (pack ? "v2_operator" : "v1_prompt"),
+      admission_level: v3?.admission?.level || (pack ? "operator_lens" : "prompt_lens"),
+      pack_format: v3 ? provisionalV3 ? "schema_v3_solo_test" : "schema_v3_physical" : pack ? "schema_v2_legacy" : "prompt_v1_legacy",
+      schema_version: v3 ? 3 : pack ? 2 : 1,
+      legacy: !v3,
+      production_status: v3 ? provisionalV3 ? "solo_test_provisional" : "production_physical_v3" : pack ? "legacy_v2" : "legacy_prompt",
+      build_profile: v3?.build_profile || (pack ? "legacy_v2" : "legacy_prompt"),
+      provisional: provisionalV3,
+      pack_hash: v3?.pack_hash || fallbackPackHash,
+      ...(v3?.source_cutoff ? { knowledge_cutoff: v3.source_cutoff } : {}),
+      rosters: (persona.rosters || []).filter((r) => r !== "masters-core"),
+      method_tags: persona.philosophy_tags || persona.tags || [],
+      holding_period: persona.holding_period || "unspecified",
+      native_decision: v3?.manifest?.capability?.native_decision_schema || pack?.native_decision_schema || "master_opinion_v1",
+      relative_seat_cost: 1,
+    };
+  });
+
+  const allMasters = masterChoices.length;
   const verifiers = reg.ids("verifier");
 
   const presets = [
     {
       id: "quick",
-      label: chinese ? "快速：4 位分析师 + 辩论" : "Quick: 4 analysts + debate",
+      label: chinese ? "快速：4 位分析师 + 所选大师 + 辩论" : "Quick: 4 analysts + selected masters + debate",
       analysts: DEFAULT_TASKS.slice(0, 4),
-      masters_roster: null,
+      master_selection: "required_1_to_N",
+      suggested_masters_roster: null,
       verify: false,
-      ...estimate({ analysts: 4 }),
+      ...estimateSelectionRange({ analysts: 4, allMasters }),
       good_for: chinese
-        ? "只想要一个方向性看法，接受没有大师视角、没有交叉验证"
-        : "A directional read only. No master lenses and no cross-verification.",
+        ? "方向性初读；仍运行用户所选方法席，但不做交叉核验"
+        : "A directional first read with the selected methods, but no cross-verification.",
     },
     {
       id: "standard",
-      label: chinese ? "标准：8 位分析师 + 核心大师 + 辩论" : "Standard: 8 analysts + core bench + debate",
+      label: chinese ? "标准：8 位分析师 + 所选大师 + 辩论" : "Standard: 8 analysts + selected masters + debate",
       analysts: DEFAULT_TASKS,
-      masters_roster: "masters-core",
+      master_selection: "required_1_to_N",
+      suggested_masters_roster: "masters-core",
       verify: false,
-      ...estimate({ analysts: DEFAULT_TASKS.length, masters: allMasters }),
+      ...estimateSelectionRange({ analysts: DEFAULT_TASKS.length, allMasters }),
       good_for: chinese
-        ? "默认推荐。覆盖完整证据面并让全部大师议席发言"
-        : "The recommended default. Full evidence coverage with every master lens reporting.",
+        ? "默认推荐。覆盖完整证据面，并运行用户本次确认的方法席"
+        : "The recommended default: full evidence coverage plus this run's confirmed methods.",
     },
     {
       id: "deep",
-      label: chinese ? "深度：全部分析师 + 全部大师 + 交叉验证 + 辩论" : "Deep: every analyst + every master + verification + debate",
+      label: chinese ? "深度：全部分析师 + 所选大师 + 交叉验证 + 辩论" : "Deep: every analyst + selected masters + verification + debate",
       analysts: allAnalysts.map((p) => p.id),
-      masters_roster: "masters-core",
+      master_selection: "required_1_to_N",
+      suggested_masters_roster: "masters-core",
       verify: true,
-      ...estimate({ analysts: allAnalysts.length, masters: allMasters, verifiers: verifiers.length * 3 }),
+      ...estimateSelectionRange({ analysts: allAnalysts.length, allMasters, verifiers: verifiers.length * 3 }),
       good_for: chinese
         ? "要下真钱的时候用。每条承重论断都会被回源、独立重算和反面检索"
         : "For a decision with real money behind it. Every load-bearing claim is re-sourced, re-derived and attacked.",
@@ -94,18 +167,20 @@ export function councilOptions({ language = "English" } = {}) {
     analysts: analystChoices,
     default_analysts: DEFAULT_TASKS,
     master_rosters: rosterChoices,
+    masters: masterChoices,
+    all_master_ids: masterChoices.map((m) => m.id),
     all_masters_count: allMasters,
     verifiers: verifiers.map((id) => ({ id, title: personaTitle(reg.get(id), language) })),
     how_to_ask: chinese ? [
-      "开始跑之前，把上面的预设念给用户，让他们选一个，或者自己点名要哪些分析师和哪个大师名册。",
-      "用户已经说清楚要什么（点了名册、说了「全部」、或说了「快点」），就不要再问——重复确认是打扰。",
-      "预估时间是相对量级，不是承诺。说清楚「大师多一倍，时间大概多这些」，不要报一个精确分钟数。",
-      "用户说「全都要」时照做，但先说一句它会明显更慢，让他们知道自己在换什么。",
+      "每次新的委员会运行都先展示逐席名单，并要求用户选择至少 1 位大师；可以单选、任意多选或全选。",
+      "用户已经点名时，把这些席位预选出来，但仍要展示名单并让用户提交本次选择。旧运行的选择不能自动复用。",
+      "优先使用宿主原生多选；容纳不了完整名单时，展示固定编号表，并接受编号、稳定 ID 或 all。",
+      "选择提交本身就是确认。不要再追加第二个确认问题，但没有 selection receipt 就不能开始研究。",
     ] : [
-      "Before starting, read the presets to the user and let them pick one, or name analysts and a master roster themselves.",
-      "If the user already said what they want -- named a roster, said 'everything', said 'be quick' -- do not ask. A confirmation they did not need is an interruption.",
-      "The estimates are relative magnitudes, not promises. Say that twice the bench costs roughly this much more; do not quote an exact number of minutes.",
-      "If they say 'run everything', do it -- but say once that it will be noticeably slower, so they know what they are trading.",
+      "Before every new council run, show the individual catalog and require at least one master selection. The user may pick one, any combination, or all.",
+      "If the request already names masters, preselect them, but still show the catalog and require a submission for this run. Never reuse an old run's selection silently.",
+      "Prefer a host-native multi-select. If it cannot hold the full catalog, show the stable numbered table and accept numbers, stable IDs, or all.",
+      "Submitting the selection is the confirmation. Do not add another confirmation question, but do not start research without a selection receipt.",
     ],
   };
 }

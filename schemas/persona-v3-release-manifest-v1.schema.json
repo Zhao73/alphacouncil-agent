@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-release-manifest-v1.schema.json",
+  "title": "AlphaCouncil immutable 26-seat PersonaPack v3 release manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "release_id",
+    "release_status",
+    "assembled_at",
+    "canonical_master_count",
+    "canonical_master_ids",
+    "canonical_catalog_hash",
+    "source_inventory_hash",
+    "source_review_evidence",
+    "formula_review_evidence",
+    "masters_directory",
+    "packs"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_release_manifest" },
+    "release_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "release_status": { "const": "assembled_immutable" },
+    "assembled_at": { "type": "string", "format": "date-time" },
+    "canonical_master_count": { "const": 26 },
+    "canonical_master_ids": {
+      "type": "array",
+      "minItems": 26,
+      "maxItems": 26,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^master_[a-z0-9_]+$" }
+    },
+    "canonical_catalog_hash": { "$ref": "#/$defs/hash" },
+    "source_inventory_hash": { "$ref": "#/$defs/hash" },
+    "source_review_evidence": {
+      "description": "Hash binding for the complete source-review evidence bundle; runtime re-verifies the bundle with an external trusted source-review key registry.",
+      "type": "object",
+      "required": [
+        "relative_path", "evidence_hash", "trusted_key_registry_hash",
+        "ledger_inventory_hash", "method_defining_source_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": { "const": "source-review-evidence.json" },
+        "evidence_hash": { "$ref": "#/$defs/hash" },
+        "trusted_key_registry_hash": { "$ref": "#/$defs/hash" },
+        "ledger_inventory_hash": { "$ref": "#/$defs/hash" },
+        "method_defining_source_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "formula_review_evidence": {
+      "description": "Immutable binding to evidence for exactly 52 planned formula tools and dual-principal approval bundles. Its embedded public-key snapshot must be authorized by an external formula_review trust registry.",
+      "type": "object",
+      "required": [
+        "relative_path", "evidence_hash", "trusted_key_registry_hash",
+        "formula_binding_inventory_hash", "planned_tool_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": { "const": "formula-review-evidence.json" },
+        "evidence_hash": { "$ref": "#/$defs/hash" },
+        "trusted_key_registry_hash": { "$ref": "#/$defs/hash" },
+        "formula_binding_inventory_hash": { "$ref": "#/$defs/hash" },
+        "planned_tool_count": { "const": 52 }
+      }
+    },
+    "masters_directory": { "const": "masters" },
+    "packs": {
+      "type": "array",
+      "minItems": 26,
+      "maxItems": 26,
+      "items": { "$ref": "#/$defs/pack" }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "pack": {
+      "type": "object",
+      "required": [
+        "persona_id", "relative_path", "pack_version", "source_cutoff", "tree_hash",
+        "artifact_subject_hash", "pack_hash", "corpus_hash", "policy_hash",
+        "tool_graph_hash", "prompt_hash", "component_hashes", "admission"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+        "relative_path": { "type": "string", "pattern": "^masters/master_[a-z0-9_]+$" },
+        "pack_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "source_cutoff": { "type": "string", "minLength": 10 },
+        "tree_hash": { "$ref": "#/$defs/hash" },
+        "artifact_subject_hash": { "$ref": "#/$defs/hash" },
+        "pack_hash": { "$ref": "#/$defs/hash" },
+        "corpus_hash": { "$ref": "#/$defs/hash" },
+        "policy_hash": { "$ref": "#/$defs/hash" },
+        "tool_graph_hash": { "$ref": "#/$defs/hash" },
+        "prompt_hash": { "$ref": "#/$defs/hash" },
+        "component_hashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/hash" } },
+        "admission": {
+          "type": "object",
+          "required": [
+            "level", "operational_clear", "candidate_clear", "counts",
+            "delta_to_operational", "delta_to_candidate", "method_model_experiment_status"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "level": { "enum": ["operational", "candidate", "method_model"] },
+            "operational_clear": { "const": true },
+            "candidate_clear": { "type": "boolean" },
+            "counts": { "type": "object" },
+            "delta_to_operational": { "type": "object" },
+            "delta_to_candidate": { "type": "object" },
+            "method_model_experiment_status": { "type": "string", "minLength": 3 }
+          }
+        }
+      }
+    }
+  }
+}

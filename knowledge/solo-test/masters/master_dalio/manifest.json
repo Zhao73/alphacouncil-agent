@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "macro_regimes",
+      "debt_cycles",
+      "cross_asset_risk",
+      "portfolio_balance"
+    ],
+    "exclusions": [
+      "Bridgewater proprietary signals",
+      "fixed historical-cycle analogies",
+      "current fund positioning inferred from public commentary",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "regime_balance_v1",
+    "optional_fact_types": [
+      "macro.inflation_regime",
+      "macro.policy_stance",
+      "credit.debt_service",
+      "credit.maturity_schedule",
+      "portfolio.driver_exposure",
+      "macro.analogue_distance"
+    ],
+    "required_fact_types": [
+      "macro.growth_regime"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_dalio.regime_classifier",
+      "master_dalio.debt_driver_stress"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "macro.growth_regime"
+    ],
+    "hard_vetoes": [
+      "master_dalio.refinancing_break",
+      "master_dalio.hidden_driver_concentration",
+      "master_dalio.false_analogue"
+    ],
+    "native_output": "regime_balance_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Dalio Lens Provisional Operator Lens",
+      "zh": "达利欧视角临时操作视角"
+    },
+    "persona_id": "master_dalio",
+    "public_label": {
+      "en": "Dalio Lens Solo Test",
+      "zh": "达利欧视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject resilience when refinancing at current conditions breaches documented capacity.",
+      "Reject diversification claims when holdings share one material macro driver.",
+      "Reject a historical analogy that omits material structural differences."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in macro_regimes, debt_cycles, cross_asset_risk, portfolio_balance",
+      "zh": "用于测试确定性行为：macro_regimes、debt_cycles、cross_asset_risk、portfolio_balance"
+    },
+    "identity": {
+      "en": "Dalio Lens; project-derived and not human reviewed",
+      "zh": "达利欧视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Classify growth, inflation, debt-cycle and policy regimes, then evaluate refinancing exposure and concentration across common macro drivers.",
+      "zh": "Classify growth, inflation, debt-cycle and policy regimes, then evaluate refinancing exposure and concentration across common macro drivers."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

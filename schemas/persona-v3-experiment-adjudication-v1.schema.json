@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-experiment-adjudication-v1.schema.json",
+  "title": "Externally signed PersonaPack v3 experiment adjudication",
+  "type": "object",
+  "required": [
+    "schema_version", "artifact_kind", "release_id", "release_manifest_hash",
+    "adjudicated_at", "adjudicator_id", "registered_protocol", "case_freeze",
+    "result_manifest", "runs", "promotion_thresholds", "multiplicity_policy",
+    "human_reference_boundary", "release_claims", "decision", "attestation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_experiment_adjudication" },
+    "release_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
+    "release_manifest_hash": { "$ref": "#/$defs/hash" },
+    "adjudicated_at": { "type": "string", "format": "date-time" },
+    "adjudicator_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "registered_protocol": { "$ref": "#/$defs/protocolBinding" },
+    "case_freeze": { "$ref": "#/$defs/binding" },
+    "result_manifest": { "$ref": "#/$defs/binding" },
+    "runs": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/runBinding" }
+    },
+    "promotion_thresholds": { "type": "object", "minProperties": 1 },
+    "multiplicity_policy": { "type": "object", "minProperties": 1 },
+    "human_reference_boundary": { "$ref": "#/$defs/humanBoundary" },
+    "release_claims": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 8 } },
+    "decision": { "const": "passed" },
+    "attestation": { "$ref": "#/$defs/attestation" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "safePath": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "binding": {
+      "type": "object",
+      "required": ["relative_path", "file_hash", "artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": { "$ref": "#/$defs/safePath" },
+        "file_hash": { "$ref": "#/$defs/hash" },
+        "artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "protocolBinding": {
+      "type": "object",
+      "required": ["relative_path", "file_hash", "protocol_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": { "$ref": "#/$defs/safePath" },
+        "file_hash": { "$ref": "#/$defs/hash" },
+        "protocol_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "runBinding": {
+      "type": "object",
+      "required": ["run_key", "relative_path", "file_hash", "artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "run_key": { "enum": ["A", "B", "C", "D13", "D26", "E:D13", "E:D26", "H"] },
+        "relative_path": { "$ref": "#/$defs/safePath" },
+        "file_hash": { "$ref": "#/$defs/hash" },
+        "artifact_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "humanBoundary": {
+      "type": "object",
+      "required": ["independent_analyst_count_minimum", "independent_analyst_count_maximum", "independent_before_adjudication", "separate_named_human_adjudicator", "adjudicator_blinded_to_arm", "automated_vote"],
+      "additionalProperties": false,
+      "properties": {
+        "independent_analyst_count_minimum": { "const": 2 },
+        "independent_analyst_count_maximum": { "const": 3 },
+        "independent_before_adjudication": { "const": true },
+        "separate_named_human_adjudicator": { "const": true },
+        "adjudicator_blinded_to_arm": { "const": true },
+        "automated_vote": { "const": false }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "required": ["signer_key_id", "signed_at", "signature"],
+      "additionalProperties": false,
+      "properties": {
+        "signer_key_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" },
+        "signed_at": { "type": "string", "format": "date-time" },
+        "signature": { "type": "string", "pattern": "^ed25519:[A-Za-z0-9_-]{86}$" }
+      }
+    }
+  }
+}

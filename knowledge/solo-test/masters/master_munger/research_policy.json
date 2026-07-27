@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject when incentives reward a documented path to permanent business damage.",
+    "Reject when several required assumptions fail through one shared cause.",
+    "Reject when a plausible failure path creates unbounded permanent loss."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict.",
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:1c1529ce935466aaf5b50b65dc6504d321aaef06be0b47d1ccdeeae41973fad8",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "jhunjhunwala_flame_investing_presentation",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:9a2cec29acc64dadae1aa68278eda432cf8a22e805b66b736e111ea27dc24992",
+    "declared_artifact_hash": "sha256:395837e0adf03d0689724ff017fa03d0db1a94f696cfa099198c31928305eb2d",
+    "recomputed_artifact_hash": "sha256:395837e0adf03d0689724ff017fa03d0db1a94f696cfa099198c31928305eb2d",
+    "relative_path": "master_jhunjhunwala/jhunjhunwala_flame_investing_presentation.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_jhunjhunwala",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 19,
+          "section_claimed": "What to look for",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 99,
+          "text_start": 66
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 19,
+          "section": "What to look for",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565",
+        "normalized_excerpt": "Sustainable competitive advantage",
+        "skeptic_snippet_hash_claimed": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565",
+        "skeptic_snippet_hash_recomputed": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The bound excerpt contains only one checklist item and cannot alone support the six-part combined checklist.",
+      "final_verdict": "partial",
+      "proposition_id": "jhunjhunwala_flame_investing_presentation:p1",
+      "review_hash": "sha256:100ffc282cd877b23ee76dc06913db4be7e7227c160d2680ba373f89cfda9fa5",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "The snippet hash binds only Sustainable competitive advantage while the statement aggregates the whole slide."
+        ],
+        "support_rationale": "The cited page contains the full checklist, but the bound excerpt is only one checklist item and therefore cannot alone support the six-part proposition.",
+        "support_verdict": "partial"
+      },
+      "statement": "Look for addressable opportunity, sustainable competitive advantage, scalability, management integrity, economic value creation, and price-value divergence.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The page supports the list, but the exact evidence snippet under-specifies the claimed list."
+        ]
+      }
+    },
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 20,
+          "section_claimed": "Exiting an investment",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 702,
+          "text_start": 638
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 20,
+          "section": "Exiting an investment",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671",
+        "normalized_excerpt": "Make exit an independent decision, not driven by profit or loss.",
+        "skeptic_snippet_hash_claimed": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671",
+        "skeptic_snippet_hash_recomputed": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The exact slide text says exit must be an independent decision not driven by current profit or loss.",
+      "final_verdict": "supported",
+      "proposition_id": "jhunjhunwala_flame_investing_presentation:p2",
+      "review_hash": "sha256:56d6c1ca5af49f1bd7373a5fbb96ec917545dc1a78eafe1e55541b5336d91bcc",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The slide states the independent-exit rule directly and expressly rejects profit or loss as the driver.",
+        "support_verdict": "supported"
+      },
+      "statement": "Make the exit decision independently of whether the position currently shows a profit or loss.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:db4209c30cefc092c023379f5a88130e081ab98b8c9a711be70d7eb188566d0a",
+    "declared_artifact_hash": "sha256:c252ae256206f37e98deaf0978dcb815c572eea6eee3849ed857a5ca76bdaa1d",
+    "recomputed_artifact_hash": "sha256:c252ae256206f37e98deaf0978dcb815c572eea6eee3849ed857a5ca76bdaa1d",
+    "relative_path": "master_jhunjhunwala/jhunjhunwala_flame_investing_presentation.json"
+  },
+  "source_binding": {
+    "byte_length": 142921,
+    "content_hash": "sha256:2d213e7593783e08065920e2c90a7ef08cf2331c0dd11e30bc39ba43d145ae5b",
+    "extracted_character_count_recomputed": 8155,
+    "extracted_text_hash_recomputed": "sha256:0bc2a6d52266ca6771ff28c2fd64590e2c1e983b2575f25968bb41bf673f2f16",
+    "page_character_counts_recomputed": [
+      130,
+      277,
+      18,
+      173,
+      349,
+      419,
+      40,
+      160,
+      202,
+      37,
+      429,
+      224,
+      1035,
+      32,
+      124,
+      250,
+      307,
+      22,
+      244,
+      702,
+      21,
+      180,
+      16,
+      710,
+      286,
+      120,
+      207,
+      255,
+      220,
+      295,
+      205,
+      6,
+      450,
+      10
+    ],
+    "page_count_recomputed": 34,
+    "raw_bytes_hash_recomputed": "sha256:2d213e7593783e08065920e2c90a7ef08cf2331c0dd11e30bc39ba43d145ae5b",
+    "source_record_hash": "sha256:1422977018a0e3138153c0d521871ca1e911b2342e69cc56ef5e3d2908f8cd81"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The page supports the list, but the exact evidence snippet under-specifies the claimed list."
+    ]
+  }
+}

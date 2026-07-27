@@ -1,0 +1,105 @@
+{
+  "abstention_policy": "fail_closed",
+  "dsl_version": "1.1",
+  "eligibility": {
+    "all": []
+  },
+  "fact_gate": {
+    "on_missing_critical": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_unsupported_theme"
+    }
+  },
+  "hard_vetoes": [],
+  "native_decision_schema": "innovation_adoption_scenario_v1",
+  "native_output_fields": [
+    {
+      "field": "metric_1",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "technology.cost_curve"
+      }
+    },
+    {
+      "field": "metric_2",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "company.capture_rate"
+      }
+    }
+  ],
+  "native_states": [
+    "provisional_unsupported_theme",
+    "provisional_overpriced_adoption",
+    "provisional_watch",
+    "provisional_asymmetric_innovation"
+  ],
+  "schema_version": 1,
+  "score_bands": [
+    {
+      "decision": {
+        "common_stance": "opposed",
+        "native_state": "provisional_overpriced_adoption"
+      },
+      "min_ratio": 0
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_watch"
+      },
+      "min_ratio": 0.5
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_asymmetric_innovation"
+      },
+      "min_ratio": 1
+    }
+  ],
+  "scoring": {
+    "max_score": 2,
+    "min_coverage": 1,
+    "on_insufficient_coverage": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_unsupported_theme"
+    },
+    "rules": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "technology.cost_curve"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_1",
+        "source_ids": [
+          "proxy:fee6f8a0c78b363b9"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "company.capture_rate"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_2",
+        "source_ids": [
+          "proxy:fee6f8a0c78b363b9"
+        ]
+      }
+    ]
+  }
+}

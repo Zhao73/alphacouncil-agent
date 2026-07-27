@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:ec8059d59b7430391aeb4e5942bf4f5ff41cc30edeeab5834e61494ca18404f3",
+    "derivation_spec_hash": "sha256:aa0c1ec29f8a57137dedde34a35ed0ecd9336ec63cfdabcfd8cda7b8ee605b9c",
+    "derivation_spec_id": "master_lynch.category_classifier.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_lynch.category_classifier",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:bd86de9662d08c01c5988eb526311498f7c259badea351656bd1bc11e7fcbf66",
+    "inputs": [
+      {
+        "fact_id": "company.category"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "company.category",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:8385c51ab77e7a41ae74e6696068151b54587f546060803e6bd570af9f6d0eb1",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_lynch.category_classifier.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:16444f202d22db621380b6fe236bbeb096f5e509c3004039203efa787795e0ba",
+    "derivation_spec_hash": "sha256:d5e0f9448a65eaaeafb4e6666b4b847eb405674d42c509def6da97ff84f681f6",
+    "derivation_spec_id": "master_lynch.story_numbers_check.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_lynch.story_numbers_check",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:aad60434babe9009cea1312063397c0228b2f997045e0774185152e67dea8b90",
+    "inputs": [
+      {
+        "fact_id": "business.two_minute_story"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "business.two_minute_story",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:a2e5e8cda201f6b57f97adf88b310d687f2d79b206b39265cfc95cb1b3813d6f",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_lynch.story_numbers_check.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

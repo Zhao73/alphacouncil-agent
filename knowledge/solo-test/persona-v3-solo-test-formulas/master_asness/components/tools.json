@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:98e274dd74d5d074be39602d3263ebcc8da02b25e13b8ec4feca3dc207383a03",
+    "derivation_spec_hash": "sha256:319e46ff64092fb9577cba1ea97fc65ac74fb7021373aba0c7ec4111945f3712",
+    "derivation_spec_id": "master_asness.factor_decomposer.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_asness.factor_decomposer",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:4d384bb1cd5cff6b8fdd73a7c3c0bafed0062947690eb3b22ee3b255781644f0",
+    "inputs": [
+      {
+        "fact_id": "factor.value_exposure"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "factor.value_exposure",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:2b1892d96b0adfc083555870ed3c35de5e50cdf55fd2204a84bd09ea454282bb",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_asness.factor_decomposer.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:a5b1fe7376f9e07ba6c320d915420933c5b0e92c3732380d5690ad7b6825d30a",
+    "derivation_spec_hash": "sha256:d9453ef6c6b917dca3aa0208f13087cf6f4607951985bfd495b5ce00d85beee1",
+    "derivation_spec_id": "master_asness.crowding_cost_stress.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_asness.crowding_cost_stress",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:ff254ddc04c9bf35579c0926f3104757a685909ccd7cbbc6ac1c8986540932e9",
+    "inputs": [
+      {
+        "fact_id": "factor.value_exposure"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "factor.crowding",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:3408f3c219a1aee002e8a9f3948ba7693fccbd7cebff73882d39c43a8f6cffd7",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_asness.crowding_cost_stress.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

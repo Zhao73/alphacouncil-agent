@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/external-host-e2e-result-v1.schema.json",
+  "title": "AlphaCouncil external host CLI E2E result",
+  "description": "Import-only, unsigned evidence from one physical external-host run. A not_run artifact is valid evidence of a blocker, not a pass.",
+  "type": "object",
+  "required": ["schema_version", "artifact_kind", "host_id", "collected_at", "status", "executable", "package", "catalog", "selection_receipt", "result_bindings", "preconditions", "capabilities", "degradation", "blockers", "collector_initiated_paid_calls", "artifact_hash", "attestations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "alphacouncil_external_host_e2e_result" },
+    "host_id": { "enum": ["claude_code", "codex", "opencode", "grok"] },
+    "collected_at": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["passed", "failed", "not_run"] },
+    "executable": { "$ref": "#/$defs/executable" },
+    "package": {
+      "type": "object",
+      "required": ["name", "version", "physical_artifact_path", "physical_artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": ["string", "null"], "minLength": 1 },
+        "physical_artifact_path": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^/" }] },
+        "physical_artifact_hash": { "$ref": "#/$defs/nullableHash" }
+      }
+    },
+    "catalog": {
+      "type": "object",
+      "required": ["catalog_hash", "catalog_order_hash", "selected_master_ids", "selected_pack_hashes"],
+      "additionalProperties": false,
+      "properties": {
+        "catalog_hash": { "$ref": "#/$defs/nullableHash" },
+        "catalog_order_hash": { "$ref": "#/$defs/nullableHash" },
+        "selected_master_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "selected_pack_hashes": { "type": "array", "items": { "$ref": "#/$defs/hash" } }
+      }
+    },
+    "selection_receipt": {
+      "type": "object",
+      "required": ["receipt_binding_hash", "confirmed", "consumed_once", "replay_rejected"],
+      "additionalProperties": false,
+      "properties": {
+        "receipt_binding_hash": { "$ref": "#/$defs/nullableHash" },
+        "confirmed": { "type": "boolean" },
+        "consumed_once": { "type": "boolean" },
+        "replay_rejected": { "type": "boolean" }
+      }
+    },
+    "result_bindings": {
+      "type": "object",
+      "required": ["fact_artifact", "deterministic_decision", "report", "report_quality"],
+      "additionalProperties": false,
+      "properties": {
+        "fact_artifact": { "$ref": "#/$defs/physicalBinding" },
+        "deterministic_decision": { "$ref": "#/$defs/physicalBinding" },
+        "report": { "$ref": "#/$defs/physicalBinding" },
+        "report_quality": { "$ref": "#/$defs/physicalBinding" }
+      }
+    },
+    "preconditions": {
+      "type": "object",
+      "required": ["credentials", "repository_trust", "external_run_authorization"],
+      "additionalProperties": false,
+      "properties": {
+        "credentials": { "$ref": "#/$defs/precondition" },
+        "repository_trust": { "$ref": "#/$defs/precondition" },
+        "external_run_authorization": {
+          "type": "object",
+          "required": ["status", "reference_hash"],
+          "additionalProperties": false,
+          "properties": {
+            "status": { "$ref": "#/$defs/precondition" },
+            "reference_hash": { "$ref": "#/$defs/nullableHash" }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "required": ["mcp_handshake", "complete_catalog_display", "visible_subagents", "parallelism", "permissions", "resume"],
+      "additionalProperties": false,
+      "properties": {
+        "mcp_handshake": { "$ref": "#/$defs/capability" },
+        "complete_catalog_display": { "$ref": "#/$defs/capability" },
+        "visible_subagents": { "$ref": "#/$defs/capability" },
+        "parallelism": { "$ref": "#/$defs/capability" },
+        "permissions": { "$ref": "#/$defs/capability" },
+        "resume": { "$ref": "#/$defs/capability" }
+      }
+    },
+    "degradation": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "blockers": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "collector_initiated_paid_calls": { "const": false },
+    "artifact_hash": { "$ref": "#/$defs/hash" },
+    "attestations": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "nullableHash": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }] },
+    "physicalBinding": {
+      "type": "object",
+      "required": ["physical_artifact_path", "physical_artifact_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "physical_artifact_path": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "pattern": "^(?:/|(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$))).+$" }
+          ]
+        },
+        "physical_artifact_hash": { "$ref": "#/$defs/nullableHash" }
+      }
+    },
+    "capability": { "enum": ["passed", "failed", "not_run", "degraded"] },
+    "precondition": { "enum": ["verified", "missing", "not_checked"] },
+    "executable": {
+      "type": "object",
+      "required": ["requested_name", "resolved_path", "file_hash", "version", "version_output_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "requested_name": { "type": "string", "minLength": 1 },
+        "resolved_path": { "type": ["string", "null"] },
+        "file_hash": { "$ref": "#/$defs/nullableHash" },
+        "version": { "type": ["string", "null"] },
+        "version_output_hash": { "$ref": "#/$defs/nullableHash" }
+      }
+    }
+  }
+}

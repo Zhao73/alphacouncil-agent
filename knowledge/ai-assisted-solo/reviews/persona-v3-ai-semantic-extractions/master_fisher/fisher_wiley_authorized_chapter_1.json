@@ -1,0 +1,82 @@
+{
+  "artifact_hash": "sha256:6b603fafd704dca7cf8e2ba06a5e476fe58d7f8dee1dd0fc57dd0f07a55b0a96",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "fisher_wiley_authorized_chapter_1",
+  "concise_summary": "The authorized chapter argues that finding outstanding companies and holding through market fluctuations historically outperformed cycle trading.",
+  "contradictions_ambiguities": [
+    "This is an introductory historical argument; Fisher's detailed scuttlebutt checklist is not fully contained in this chapter excerpt."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "finding the really outstanding companies and staying with them through all the fluctuations of a gyrating market proved far more profitable",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 2,
+        "section": "Clues from the past",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "fisher_wiley_authorized_chapter_1:p1",
+      "snippet_hash": "sha256:79cd8986b373c7a9b311f9a99e0415823e236bafff2b5aa6a0347c27b8b26f77",
+      "statement": "Seek outstanding companies and hold through market fluctuations rather than relying primarily on buying and selling the business cycle.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which authorized primary pages support each specific qualitative research criterion?"
+  ],
+  "persona_id": "master_fisher",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The ten-page authorized excerpt is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 68051,
+    "content_hash": "sha256:eb2709711d5e20893964141e04fb85f9b8402a6f02bb65457f38be928cd714ec",
+    "content_type": "application/pdf",
+    "extracted_character_count": 23799,
+    "extracted_text_hash": "sha256:dbc94d3dabc451840948cd55b7c6b8dd7cbb8c71637063af9c42c4e5155b74ec",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://media.wiley.com/product_data/excerpt/09/04714455/0471445509.pdf",
+    "page_character_counts": [
+      1658,
+      2687,
+      2719,
+      2629,
+      2676,
+      2563,
+      2720,
+      2686,
+      2698,
+      763
+    ],
+    "page_count": 10,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:4776ed2a273da5532cce136ebcc5a34ba0e102250bed37680480e5ae58a45fba",
+    "retrieved_at": "2026-07-27T06:36:59.269Z"
+  },
+  "source_type": "authorized_book_excerpt"
+}

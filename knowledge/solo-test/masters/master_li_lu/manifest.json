@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "long_duration_quality",
+      "management_integrity",
+      "structural_growth",
+      "capital_preservation"
+    ],
+    "exclusions": [
+      "Himalaya private portfolio reasoning",
+      "holdings treated as proof of motive",
+      "binary integrity labels without reviewed evidence",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "ten_year_certainty_decision_v1",
+    "optional_fact_types": [
+      "industry.structural_direction",
+      "governance.integrity_events",
+      "capital_allocation.history",
+      "valuation.long_run_return"
+    ],
+    "required_fact_types": [
+      "management.promise_record",
+      "business.ten_year_durability"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_li_lu.promise_integrity_ledger",
+      "master_li_lu.ten_year_return_bridge"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "management.promise_record",
+      "business.ten_year_durability"
+    ],
+    "hard_vetoes": [
+      "master_li_lu.integrity_breach",
+      "master_li_lu.structural_decline",
+      "master_li_lu.ten_year_unknowable"
+    ],
+    "native_output": "ten_year_certainty_decision_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Li Lu Lens Provisional Operator Lens",
+      "zh": "李录视角临时操作视角"
+    },
+    "persona_id": "master_li_lu",
+    "public_label": {
+      "en": "Li Lu Lens Solo Test",
+      "zh": "李录视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject only after human adjudication of a material management integrity breach.",
+      "Reject a low price when the reviewed industry path is structural decline rather than a cycle.",
+      "Decline when the business depends on a technology or policy path the pack cannot assess."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in long_duration_quality, management_integrity, structural_growth, capital_preservation",
+      "zh": "用于测试确定性行为：long_duration_quality、management_integrity、structural_growth、capital_preservation"
+    },
+    "identity": {
+      "en": "Li Lu Lens; project-derived and not human reviewed",
+      "zh": "李录视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Judge ten-year business certainty, management integrity, structural social value, permanent-loss risk and price-implied long-run return.",
+      "zh": "Judge ten-year business certainty, management integrity, structural social value, permanent-loss risk and price-implied long-run return."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

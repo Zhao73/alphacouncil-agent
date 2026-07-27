@@ -1,0 +1,79 @@
+{
+  "artifact_hash": "sha256:1b284644dd666ae337bbc6dda4557bfbd62805e74542fd7886b7be3e072a4ca7",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "taleb_law_large_numbers_fat_tails",
+  "concise_summary": "The paper studies sample equivalence and slow convergence of means under fat-tailed distributions.",
+  "contradictions_ambiguities": [
+    "Practical application depends on uncertain tail-exponent estimation and the paper's assumptions."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Let us call \"sample equivalence\" the sample size that is needed to correspond to a Gaussian sample size of n.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 1,
+        "section": "Introduction",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "taleb_law_large_numbers_fat_tails:p1",
+      "snippet_hash": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22",
+      "statement": "Translate nominal sample size into tail-sensitive sample equivalence before treating an empirical mean as precise.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "What confidence bounds remain after tail-exponent uncertainty and finite-sample bias?"
+  ],
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The technical paper is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 427393,
+    "content_hash": "sha256:9fd0112a505073bc6dc4ad60b267cd2ffdb4fa86adefa7cb0a62a36d0b0409d0",
+    "content_type": "application/pdf",
+    "extracted_character_count": 20589,
+    "extracted_text_hash": "sha256:4e74465a701625430f0a960853f9a6341151ec57c92e7f2ed1f1e27434a83636",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.fooledbyrandomness.com/LargeN.pdf",
+    "page_character_counts": [
+      3462,
+      3773,
+      4444,
+      2786,
+      2270,
+      1422,
+      2432
+    ],
+    "page_count": 7,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:cacac9f428477c68f73e49ecfe016c5986e4b383cf3f3ee80127cfc851c72b45",
+    "retrieved_at": "2026-07-27T10:23:12.354Z"
+  },
+  "source_type": "technical_paper"
+}

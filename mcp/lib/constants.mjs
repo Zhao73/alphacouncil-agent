@@ -4,6 +4,7 @@ import os from "node:os";
 
 export const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(os.homedir(), ".alphacouncil-agent");
 export const RUNS_DIR = join(DATA_DIR, "runs");
+export const SELECTIONS_DIR = join(DATA_DIR, "selections");
 export const SERVER_NAME = "alphacouncil-agent";
 // Single source of truth for the version. Resolved from import.meta.url, never process.cwd(),
 // because hosts launch this server from arbitrary working directories.
@@ -131,6 +132,16 @@ export const LIMITS = Object.freeze({
   CONCURRENCY_MIN: 1,
   CONCURRENCY_MAX: 6,
   CONCURRENCY_DEFAULT: Number(process.env.ALPHACOUNCIL_AGENT_CONCURRENCY) || 3,
+  /** A selection is deliberately short-lived and may create exactly one council run. */
+  SELECTION_TTL_MS: Number(process.env.ALPHACOUNCIL_SELECTION_TTL_MS) || 60 * 60 * 1000,
+  /** Selection lock metadata advertises this lease, but a live owner is never pre-empted. */
+  SELECTION_LOCK_LEASE_MS: 2 * 60 * 1000,
+  /** A same-host dead PID must remain dead for this minimum lock age before recovery. */
+  SELECTION_LOCK_DEAD_GRACE_MS: 5 * 1000,
+  /** Keep expired selection/receipt records briefly so callers receive an expiry reason. */
+  SELECTION_EXPIRED_RETENTION_MS: 24 * 60 * 60 * 1000,
+  /** Bound one cleanup pass; a corrupt directory cannot turn begin-selection into a sweep. */
+  SELECTION_CLEANUP_MAX_FILES: 2000,
   /** Minimum non-space characters before a final report is considered a real report. */
   REPORT_MIN_CHARS: 1600,
   REPORT_MIN_CHARS_DRY: 600,

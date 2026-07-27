@@ -1,0 +1,41 @@
+{
+  "artifact_kind": "persona_v3_solo_test_pack_index",
+  "assurance_class": "provisional_derived_proxy",
+  "build_profile": "solo_test",
+  "common_projection": {
+    "provisional_insufficient_floor": "out_of_scope",
+    "provisional_margin_of_safety": "cautious",
+    "provisional_reject": "opposed",
+    "provisional_watch": "cautious"
+  },
+  "declared_state_hypotheses": [
+    "insufficient_floor",
+    "reject",
+    "watch",
+    "margin_of_safety"
+  ],
+  "experiment_pass_count": 0,
+  "formula_approval_binding_count": 0,
+  "formula_compilation_manifest_hash": "sha256:7265b10a67bd0437af02572176793ef0b8529e48437edc5a2e0b1b1b9fbe73d0",
+  "method_model_eligible": false,
+  "native_states": [
+    "provisional_insufficient_floor",
+    "provisional_reject",
+    "provisional_watch",
+    "provisional_margin_of_safety"
+  ],
+  "persona_id": "master_graham",
+  "planned_tool_ids": [
+    "master_graham.asset_floor",
+    "master_graham.normalized_earnings"
+  ],
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "source_adjudication_status": "pending",
+  "warnings": [
+    "Physical presence proves testability only; it does not prove source fidelity or method attribution.",
+    "Uncalibrated proxy scores never project to constructive; successful computation is capped at cautious.",
+    "The production loader, production registry, release assembler and GA must reject this pack."
+  ]
+}

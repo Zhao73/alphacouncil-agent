@@ -15,51 +15,76 @@ Also apply `../agent-skills-governance/SKILL.md` before planning, running, synth
 
 You MUST run the full multi-agent council before giving any final answer. This is not optional and cannot be shortcut.
 
-- You MUST run ALL 11 evidence roles (`market_data`, `earnings_deep_dive`, `forward_expectations`, `sell_side_revisions`, `earnings_call_transcript`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `management_industry_voices`, `insider_sec`, `ib_event_analysis`), THEN `bull_researcher`, THEN `bear_researcher`, THEN `portfolio_manager` — in that order.
-- You MUST NOT answer single-pass from your own model knowledge. You MUST NOT skip analysts, and you MUST NOT call `plan_visible_run` and then immediately record a `portfolio_manager` decision without first recording every planned evidence packet and both debate researchers.
-- A run is "complete" ONLY when every planned evidence task is recorded/completed AND `bull_researcher` and `bear_researcher` and `portfolio_manager` are all recorded. Anything less is INCOMPLETE.
-- The MCP server enforces this. If you record the `portfolio_manager` decision while any planned evidence packet or either debate researcher is missing, the server marks the run `status=incomplete` (NOT `complete`) and prepends a visible INCOMPLETE banner to `final_report.md`. Do not present an incomplete run as a finished investment decision.
+- By default you MUST run all 8 planned evidence roles (`market_data`, `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `insider_sec`, `ib_event_analysis`), THEN every selected master, THEN `bull_researcher`, THEN `bear_researcher`, THEN `portfolio_manager` - in that order. When the plan explicitly adds optional analyst seats, every added seat is equally mandatory.
+- You MUST NOT answer single-pass from your own model knowledge. You MUST NOT skip analysts or selected masters, and you MUST NOT call `plan_visible_run` and then immediately record a `portfolio_manager` decision without first recording every planned evidence packet, every selected master, and both debate researchers.
+- A run is "complete" ONLY when every planned evidence task, every selected master (including deterministic `out_of_scope` decisions), `bull_researcher`, `bear_researcher`, and `portfolio_manager` are all recorded. Anything less is INCOMPLETE.
+- The MCP server enforces this. If you record the `portfolio_manager` decision while any planned evidence packet, selected master, or debate researcher is missing, the server marks the run `status=incomplete` (NOT `complete`) and prepends a visible INCOMPLETE banner to `final_report.md`. Do not present an incomplete run as a finished investment decision.
 
 ## Preflight Interaction
 
-Do not ask startup option questions by default. For underspecified requests such as `@alphacouncil-agent 帮我看看 NOK`, infer:
+Infer these fields rather than asking separate startup questions:
 
 - language: user's apparent language
 - goal: entry/actionability judgment
 - horizon: include short-term 1-4 weeks, medium-term 3-6 months, and long-term 12 months in the final report
 
-Ask only when the user explicitly requests option selection before launch. Use the inferred language for visible main-thread preflight/progress updates, visible agent prompts, evidence packets, debate packets, and final synthesis unless the user explicitly requests another language. Always pass the original user request in `prompt`, and pass the inferred language as `language` to AlphaCouncil Agent MCP tools.
+Every council judgment still has one mandatory preflight: the per-run master selection in
+Stage 0. This applies to both full and quick council modes. It is not an optional preference
+question and it cannot be inferred, silently reused or skipped because the request already
+named a master. Data-only `screen`, `options`, `news` and `market` calls do not enter the
+council and skip Stage 0.
 
-## Stage 0 — Ask which masters, then run
+Use the inferred language for the Stage 0 catalog, visible progress, agent prompts, evidence
+packets, debate packets and final synthesis unless the user explicitly requests another
+language. Always pass the original user request in `prompt` and the inferred language in
+`language`.
 
-**One question, about the master bench only. Then start.**
+## Stage 0 — Display, confirm and receipt-gate the master selection
+
+**No research, run envelope, network request or subagent may start before this gate passes.**
+
+`list_council_options` remains a read-only discovery view for users who ask what the system
+can do. It does **not** create a selection session, prove that the individual catalog was
+displayed, or issue a receipt, so it never substitutes for the steps below.
 
 The analysts have a sensible default -- the eight-seat fan-out -- and asking about them every
-time is a question with an obvious answer. The bench is the part a user actually has a view
-on, and it is where the cost varies most: 21 lenses or 4 is a real difference.
+time is a question with an obvious answer. Master selection is the one configuration decision:
 
-1. Call `list_council_options`.
-2. Ask **once**: which master schools? Offer the six by name with their members, plus "all"
-   and "none".
-   - **Claude Code** — `AskUserQuestion` with `multiSelect: true`, one option per school,
-     each naming its members.
-   - **Codex, OpenCode, Grok Build** — print the school table and take a plain reply.
+1. Call `begin_council_selection` with `symbol`, the original `prompt`, inferred `language`
+   and the calling `host`. If the request explicitly names masters, resolve their stable IDs
+   and pass them as `preselected_master_ids`; preselection highlights only and never confirms.
+2. Display **every returned master individually in the returned order**. Preserve the stable
+   number and show `identity`, `method`, `best_for` and `maturity` for every row. A school
+   summary, preset or seat count does not satisfy this step.
+3. Take one submission. The universal fallback is a numbered text reply: one index in
+   `1..N`, any comma/space-separated combination, ranges such as `1-4` or `1..4`, stable
+   IDs/names, or `all`.
+   - **Claude Code, Codex, OpenCode and Grok Build** may use a native multi-select when it can
+     display the complete catalog without truncation.
+   - Native UI is an enhancement, never the protocol. If unavailable, print the same numbered
+     table and accept the same text grammar on every host.
+4. If the original request already named masters or said `all`, mark those entries as a
+   prefill, but still display the complete catalog and require a submission for this run.
+   Never reuse a prior run's selection. The submission itself is confirmation; do not add a
+   second confirmation question.
+   The obsolete rule **"Skip the question entirely"** is prohibited for council runs: a
+   prefill reduces typing but never replaces this run's displayed catalog and receipt.
+5. Call `confirm_master_selection` with the exact `selection_id`, `catalog_hash`,
+   `display_ack: true`, and exactly one of:
+   - `selected_master_ids: [...]` for a native multi-select;
+   - `select_all: true` for all;
+   - `selection: "1,4-6"` (or another supported text selection) for the fallback.
+6. Retain the returned one-use `selection_receipt`. Only after that may the host call
+   `plan_visible_run`, `collect_evidence` or `analyze_symbol`, and each call must include the
+   receipt. Never also pass `masters` or `masters_roster`; the confirmed receipt is
+   authoritative. Missing, expired, stale or consumed receipts restart at step 1.
 
-   Naming each host is not redundancy. Leaving it implicit is exactly how the master bench
-   ended up never running on Codex and OpenCode: the instruction existed, in a section only
-   one host read.
-3. **Then run.** Do not ask about analysts, presets, or confirmation. The answer to "which
-   masters" is the whole configuration decision.
+Do not ask about analysts: they default to the eight-seat fan-out. Use all eleven only if
+the user asked for breadth, and say so in the report rather than asking first.
 
-Analysts default to the eight-seat fan-out. Use all eleven only if the user asked for
-breadth, and say so in the report rather than asking first.
-
-**Skip the question entirely when the request already answered it** — a named school,
-"everything", "no masters", "be quick", or a repeat of a run with the same shape. A
-confirmation nobody needed is an interruption.
-
-Say the cost once, in the same message as the question: each master is one subagent, so the
-bench is the difference between roughly 11 seats and roughly 32. Do not quote minutes.
+Quick mode uses four analysts and omits verifier fan-out, but it remains a council judgment
+and must pass the same selection gate. The selected master count is part of its cost. Say
+that once beside the catalog; do not quote precise time or cost.
 
 ## Visible-First Workflow
 
@@ -86,8 +111,12 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
 <!-- generated:roster end -->
 2. Give each visible agent a narrow prompt and require JSON evidence or debate output. Tell each agent not to call `alphacouncil-agent` recursively.
 3. Use the selected or inferred language for visible agent prompts, evidence packets, debate packets, and final synthesis. Keep JSON field names in English.
-4. **Master bench — runs on every host, not only Claude Code.** After the evidence agents finish and before the debate, pass `masters_roster` or `masters` to `plan_visible_run` and run each selected lens. Each master reads the SAME established facts the analysts read plus the analyst packets, and returns one JSON opinion recorded with `record_master_opinion(run_id, master, packet)`.
-   - Default roster when the user does not choose: `masters-core`.
+4. **Master bench — runs on every host, not only Claude Code.** After Stage 0, pass its
+   `selection_receipt` to `plan_visible_run`; the run envelope resolves the exact selected
+   master IDs. After the evidence agents finish and before the debate, run each selected lens.
+   Each master reads the SAME established facts the analysts read plus the analyst packets,
+   and returns one JSON opinion recorded with `record_master_opinion(run_id, master, packet)`.
+   - There is no silent default roster. At least one method or `all` is confirmed per run.
    - A master whose method cannot judge this name returns `stance: "out_of_scope"`. That is a conclusion, not an abstention, and it carries zero weight rather than being coerced into a view.
    - **The run is `incomplete` until every selected master has reported.** A bench nobody consulted is worse than no bench: the reader believes the verdict survived every lens when it survived none.
    - Feed the masters' disagreements into the bull and bear prompts. Their disagreement is the point; a bench that agrees with the analysts has added nothing.
@@ -145,8 +174,12 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
 1. Call `collect_evidence` when the request needs source gathering and file artifacts.
 2. Call `analyze_symbol` when the user wants a complete long/short or portfolio decision saved under `~/.alphacouncil-agent/runs/`.
 3. Call `read_run` to inspect a saved evidence run.
-4. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
-5. Do not describe MCP `codex exec` workers as visible chat subagents. They are background workers with `status.json`, `events.jsonl`, and `all_agents.md`.
+4. Call `council_diagnostics` over saved run IDs to measure descriptive agreement, unique
+   cited-source contribution, and repeated-input behavioural differentiation. Do not turn
+   its seat count or agreement into `N_eff`; that remains `null` without the separately
+   preregistered, signed, resolved-outcome ledger.
+5. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
+6. Do not describe MCP `codex exec` workers as visible chat subagents. They are background workers with `status.json`, `events.jsonl`, and `all_agents.md`.
 
 ## Claude Code Parallel Path
 
@@ -169,17 +202,17 @@ Detect the user's language from their request and propagate it to EVERY subagent
 
 
 ### Stage 0 — Plan (envelope only)
-Call `plan_visible_run` with `symbol`, `prompt` (original user request), `as_of`, and inferred `language`. It returns `run_id`, the 11 evidence agent specs, the 3 debate agent specs, and artifact paths. This is planning only (SKILL step 7); do not treat it as execution.
+Call `plan_visible_run` with `symbol`, `prompt` (original user request), `as_of`, inferred `language`, and the Stage 0 `selection_receipt`. It returns `run_id`, the planned evidence agent specs, the selected master specs, the 3 debate agent specs, and artifact paths. This is planning only (SKILL step 9); do not treat it as execution.
 
 ### Stage 1 — Evidence fan-out (one turn, isolated context)
-In a SINGLE assistant turn, emit 11 `Task` (subagent_type: general-purpose) calls, one per evidence role: `market_data`, `earnings_deep_dive`, `forward_expectations`, `sell_side_revisions`, `earnings_call_transcript`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `management_industry_voices`, `insider_sec`, `ib_event_analysis`. Each subagent:
+In a SINGLE assistant turn, emit one `Task` (subagent_type: general-purpose) call for every evidence role returned by the plan. The default eight are `market_data`, `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `insider_sec`, and `ib_event_analysis`. Each subagent:
 - May use ONLY `WebSearch` + `WebFetch`. It must NOT call `@alphacouncil-agent`, `collect_evidence`, `analyze_symbol`, or `read_run` (leaf-worker rule, Boundaries).
 - Runs a query ladder: a primary-locator search (use `allowed_domains` such as `sec.gov` and the company IR/exchange domain), a dated recency search, and one mandatory disconfirming search (e.g. `<ticker> guidance cut`, `downgrade`, `accounting concern`).
-- WebFetches the actual primary doc where one exists (insider_sec -> EDGAR full-text + Form 4; earnings_deep_dive / earnings_call_transcript -> 8-K Ex-99.1 / IR transcript; ib_event_analysis -> 8-K / 424B / deal release; market_data -> exchange/quote page) and quotes exact figures with real dates.
+- WebFetches the actual primary doc where one exists (`insider_sec` -> EDGAR full-text + Form 4; `earnings_deep_dive` -> 8-K Ex-99.1 plus the IR transcript; `ib_event_analysis` -> 8-K / 424B / deal release; `market_data` -> exchange/quote page) and quotes exact figures with real dates.
 - Returns exactly one JSON evidence packet matching the Agent Output Contract, with a real `url` and `published_at` on every source and every paywalled/missing/stale item routed into `open_questions`.
 
 ### Stage 2 — Collect + barrier
-As each Task returns, call `record_visible_packet(run_id, task, packet, thread_id=<subagent id>)`. The server upserts by `task`, rescopes sources to `<task>:S1`, rewrites `source_manifest.json` + `all_agents.md`, and flips the run phase toward `visible_debate`. HARD GATE: do not start debate until all 11 packets are recorded (assert each `task` is completed or explicitly degraded; poll `status.json` if needed). Proceeding with k<11 violates the barrier.
+As each Task returns, call `record_visible_packet(run_id, task, packet, thread_id=<subagent id>)`. The server upserts by `task`, rescopes sources to `<task>:S1`, rewrites `source_manifest.json` + `all_agents.md`, and flips the run phase toward `visible_debate`. HARD GATE: do not start the master stage or debate until every task returned by the plan is recorded (assert each `task` is completed or explicitly degraded; poll `status.json` if needed). Proceeding with fewer than the planned count violates the barrier.
 
 ### Stage 2b — Adversarial verify + repair (loop-until-dry, max 2 rounds)
 Build a claim ledger from the merged packets (only non-low / thesis-bearing claims are "material"). For each material claim, fan out up to 3 verifier `Task` subagents in one turn, each with fresh context and seeing only the bare claim + ticker:
@@ -187,6 +220,10 @@ Build a claim ledger from the merged packets (only non-low / thesis-bearing clai
 - rederivation: find the fact fresh from OTHER sources; return agree | disagree | cannot_confirm with a new source.
 - refuter: search for disconfirming / newer evidence respecting `as_of` (newer truth that supersedes is a data gap, not a contradiction).
 Compute per-claim survived-confidence: keep `high` only if source_fidelity != contradicted AND >=2/3 verifiers confirm; force DISPUTED on any contradiction; force UNVERIFIABLE if >=2 cannot_confirm/unreachable. Re-dispatch ONLY analysts with remaining `missing_claim_source_ids`, parse failures, or DISPUTED claims, with a stricter prompt; re-`record_visible_packet` (idempotent). Cap at 2 rounds; log residual gaps for the PM to report honestly. Verifiers also obey the leaf-worker rule.
+
+### Stage 2c - Selected master methods
+
+Run every `master_agent` returned by `plan_visible_run` after the evidence and verification barrier, and before the bull/bear debate. Record each result with `record_master_opinion`. A deterministic `masters_declined` entry is already recorded as `out_of_scope` and must not be spawned again. HARD GATE: `status.json.pending_masters` must be empty before Stage 3.
 
 ### Stage 3 — Debate pipeline (3 rounds, parallel per round)
 Run the documented rounds, each as a parallel fan-out of `bull_researcher` + `bear_researcher` fed the verified evidence:

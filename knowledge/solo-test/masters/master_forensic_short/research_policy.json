@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject any allegation not anchored in an opened primary document.",
+    "Reject a short recommendation that cannot be borrowed on modeled terms.",
+    "Reject a costly structural short without an observable resolution path."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

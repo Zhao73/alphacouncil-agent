@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject when sector growth has no evidenced bridge to company cash flows.",
+    "Reject when required funding and dilution cannot be bounded.",
+    "Reject constructive output when price requires adoption beyond the reviewed scenario range."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

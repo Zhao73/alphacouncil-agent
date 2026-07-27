@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:89b911ac98e5547f6d58b673dbd1ba740d144b77be30f296c4c8696efe8210f2",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "soros_reflexivity_uncertainty_2014",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:01275b662d2a3d543389a380790a7773a044a8e3299f10eccabfb64b485c8844",
+    "declared_artifact_hash": "sha256:04de769b19d60363d2821f467ea79fcd16955b85a1fffc059e5828d0d6ef4c1b",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:04de769b19d60363d2821f467ea79fcd16955b85a1fffc059e5828d0d6ef4c1b",
+    "relative_path": "master_soros/soros_reflexivity_uncertainty_2014.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_soros",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 13970,
+        "actual_text_start": 13855,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Reflexive feedback loops between the cognitive and manipulative functions connect the realms of beliefs and events.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Reflexive feedback loops",
+        "text_end": 13970,
+        "text_start": 13855
+      },
+      "proposed_statement": "Analyze beliefs and fundamentals as a two-way feedback process rather than assuming participant views only passively reflect events.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "soros_reflexivity_uncertainty_2014:p1",
+      "review_hash": "sha256:e2d199e2779b9aa9829f8ee89e608de41489c7924fff809265e8bccccaa7cdcb",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec",
+      "snippet_hash_recomputed": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec",
+      "support_rationale": "The essay explicitly describes continuous circular influence between participant views and events in both directions.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 111016,
+    "content_hash": "sha256:b741086183ff818ebd3a2c889b4d3ef8b977ce744e219033ebc7ca62576514cc",
+    "extracted_text_hash": "sha256:2d47e82e6e81bf936a48aa863a244756db430e3163fe9a157adc492a4ed86a69",
+    "extracted_text_hash_recomputed": "sha256:2d47e82e6e81bf936a48aa863a244756db430e3163fe9a157adc492a4ed86a69",
+    "raw_bytes_hash_recomputed": "sha256:b741086183ff818ebd3a2c889b4d3ef8b977ce744e219033ebc7ca62576514cc",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:2250b98e026098f05c4620f63deb201d340b3a0e616a2c537b09c62584a6adfb",
+    "source_record_hash_recomputed": "sha256:2250b98e026098f05c4620f63deb201d340b3a0e616a2c537b09c62584a6adfb"
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "artifact_hash": "sha256:2fb96798fc07df60cf726665377230f111cf92d4c5a797a555f8902109130ab8",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "damodaran_nyu_narrative_numbers",
+  "concise_summary": "The slides require a company narrative to be translated into valuation inputs while staying simple, focused, and reality-grounded.",
+  "contradictions_ambiguities": [
+    "Narrative construction is inherently judgmental and can rationalize a desired value unless forecasts are falsifiable."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Every valuation starts with a narrative, a story that you see unfolding for your company in the future.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 3,
+        "section": "Every valuation starts with a narrative",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "damodaran_nyu_narrative_numbers:p1",
+      "snippet_hash": "sha256:2e608ebcd140fe772a1365d33c4651188014603941bf47c986b8ea181ce43870",
+      "statement": "Begin valuation with a forward company narrative, then constrain it by products, market, competition, management, and macro conditions.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which observable milestones would invalidate each narrative assumption?"
+  ],
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The slide deck is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 3842989,
+    "content_hash": "sha256:d94466da9796eb9156a1d982d2b2a342fb8c21bc9af7867915c9ff9b12a46002",
+    "content_type": "application/pdf",
+    "extracted_character_count": 6401,
+    "extracted_text_hash": "sha256:4f7a4bfb8ee93a1a84fb2324fecd5eec12b89d4fe4b9b61340c2d41e1d247544",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://pages.stern.nyu.edu/~adamodar/pdfiles/eqnotes/narrativeandnumbers.pdf",
+    "page_character_counts": [
+      38,
+      51,
+      600,
+      20,
+      463,
+      699,
+      24,
+      24,
+      20,
+      678,
+      91,
+      646,
+      61,
+      51,
+      1477,
+      24,
+      559,
+      20,
+      20,
+      835
+    ],
+    "page_count": 20,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:4b2227abd4457ba4b49b57d90875e94147e5df4f7da169d07a7a8ce3d5c7d399",
+    "retrieved_at": "2026-07-27T06:22:37.037Z"
+  },
+  "source_type": "valuation_lecture_slides"
+}

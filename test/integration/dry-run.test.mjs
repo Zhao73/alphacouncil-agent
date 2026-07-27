@@ -3,12 +3,14 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { startServer, structured } from "../helpers/rpc-client.mjs";
+import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
 let dataDir;
 let server;
 let toolsList;
 let analysis;
+let replay;
+let replayEventsUnchanged;
 let runDir;
 
 before(async () => {
@@ -19,13 +21,25 @@ before(async () => {
   const list = await server.request("tools/list", {});
   toolsList = list.result?.tools || [];
 
+  const selection = await confirmMasterSelection(server, { symbol: "AAPL", selected_master_ids: ["master_buffett"] });
   const response = await server.callTool("analyze_symbol", {
     symbol: "AAPL",
     dry_run: true,
     tasks: ["market_data", "valuation_long_short"],
+    selection_receipt: selection.selection_receipt,
   });
   analysis = structured(response);
   runDir = join(dataDir, "runs", analysis.run.run_id);
+
+  const eventsBeforeReplay = readFileSync(join(runDir, "events.jsonl"), "utf8");
+  replay = structured(await server.callTool("analyze_symbol", {
+    symbol: "AAPL",
+    run_id: analysis.run.run_id,
+    dry_run: true,
+    tasks: ["market_data", "valuation_long_short"],
+    selection_receipt: selection.selection_receipt,
+  }));
+  replayEventsUnchanged = readFileSync(join(runDir, "events.jsonl"), "utf8") === eventsBeforeReplay;
 
   await server.close();
 });
@@ -39,6 +53,7 @@ test("tools/list exposes a coherent tool surface", () => {
   // Assert the invariants, not a hardcoded list: the surface grows, and a frozen array
   // just means every new tool arrives with a failing test that says nothing useful.
   const mustHave = [
+    "begin_council_selection", "confirm_master_selection",
     "plan_visible_run", "record_visible_packet", "record_visible_decision",
     "collect_evidence", "analyze_symbol", "read_run",
   ];
@@ -69,6 +84,12 @@ test("a dry run returns a DRY_RUN decision with both markdown payloads", () => {
   assert.ok(analysis.final_report_markdown, "final_report_markdown must be returned");
   assert.ok(analysis.user_response_markdown, "user_response_markdown must be returned");
   assert.equal(analysis.report_quality?.status, "passed");
+});
+
+test("replaying analyze_symbol returns the existing analysis without spending the council again", () => {
+  assert.equal(replay.idempotent_replay, true);
+  assert.deepEqual(replay.decision, analysis.decision);
+  assert.equal(replayEventsUnchanged, true, "an idempotent replay must not append a second lifecycle");
 });
 
 test("a dry run writes every promised artifact", () => {
@@ -123,6 +144,10 @@ test("status.json surfaces completion, quality, and verification", () => {
   assert.equal(status.report_quality, "passed");
   assert.equal(status.verification, "passed");
   assert.equal(status.missing_source_count, 0);
+  assert.equal(status.selected_master_count, 1);
+  assert.equal(status.recorded_master_count, 1);
+  assert.equal(status.missing_master_count, 0);
+  assert.equal(status.master_selection_status, "consumed");
 
   const quality = JSON.parse(readFileSync(join(runDir, "report_quality.json"), "utf8"));
   assert.equal(quality.status, "passed");

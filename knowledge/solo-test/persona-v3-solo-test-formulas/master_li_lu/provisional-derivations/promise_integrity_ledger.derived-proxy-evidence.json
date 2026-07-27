@@ -1,0 +1,64 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:0385b26cc04e04024df79b363823d8793d2d3a3a5bb7a7dbfcd016341a98d0c8",
+    "derivation_policy": "first_declared_input_to_first_declared_output_identity_v1",
+    "derivation_spec_id": "master_li_lu.promise_integrity_ledger.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "management.promise_record"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "transform",
+      "on_missing": "fail",
+      "operation": "identity",
+      "output": {
+        "output_id": "management.promise_record",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      },
+      "version": "0.1.0"
+    },
+    "input_contract_source": "unknown_fact_fail_closed_proxy_scalar_v1",
+    "persona_id": "master_li_lu",
+    "prototype_content_hash": "sha256:9761cc3e29aa54a3c5c580e5cb833b8d043baf6be5a47dd946ffbef3e69fc940",
+    "prototype_id": "master_li_lu.promise_integrity_ledger.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_li_lu.promise_integrity_ledger"
+  },
+  "derivation_spec_hash": "sha256:86171a2c937dee1593df6104a8614714ed984a2b523134ce1612a3aa81002a3a",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "mechanical_identity_proxy_not_the_named_investor_method",
+    "first_declared_input_and_output_are_test_contract_choices_not_human_adjudication",
+    "unknown_fact_proxy_scalar_unit_requires_a_local_test_adapter",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

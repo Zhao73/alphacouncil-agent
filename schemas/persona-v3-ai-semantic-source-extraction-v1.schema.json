@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-ai-semantic-source-extraction-v1.schema.json",
+  "title": "AlphaCouncil round-1 AI semantic source extraction",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "artifact_kind", "pipeline_id", "review_stage", "reviewer_kind", "role", "role_id", "prompt_identity", "model_identity", "reviewed_on", "human_reviewed", "method_attribution_approved", "production_effect", "persona_id", "candidate_id", "source_binding", "readability", "language", "source_type", "concise_summary", "method_propositions", "contradictions_ambiguities", "open_questions", "artifact_hash"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_ai_semantic_source_extraction" },
+    "pipeline_id": { "const": "alphacouncil_ai_semantic_source_extractor_v1" },
+    "review_stage": { "const": "round_1_semantic_extraction" },
+    "reviewer_kind": { "const": "ai" },
+    "role": { "const": "extractor" },
+    "role_id": { "const": "ai_semantic_source_extractor_v1" },
+    "prompt_identity": { "type": "object", "required": ["prompt_id", "prompt_hash"], "properties": { "prompt_id": { "const": "alphacouncil.source-semantic-extractor.round1.v1" }, "prompt_hash": { "$ref": "#/$defs/hash" } }, "additionalProperties": false },
+    "model_identity": { "type": "object", "required": ["provider", "product", "model_family", "exact_deployment_id", "agent_task_id"], "additionalProperties": { "type": "string" } },
+    "reviewed_on": { "type": "string", "format": "date" },
+    "human_reviewed": { "const": false },
+    "method_attribution_approved": { "const": false },
+    "production_effect": { "const": "none" },
+    "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "candidate_id": { "type": "string", "minLength": 3 },
+    "source_binding": { "type": "object", "required": ["content_hash", "byte_length", "record_hash", "content_type", "final_url", "retrieved_at", "raw_bytes_reverified", "extraction_tool", "extraction_error", "extracted_text_hash", "extracted_character_count", "page_count", "page_character_counts"], "properties": { "content_hash": { "$ref": "#/$defs/hash" }, "record_hash": { "$ref": "#/$defs/hash" }, "extracted_text_hash": { "$ref": "#/$defs/hash" }, "raw_bytes_reverified": { "const": true }, "byte_length": { "type": "integer", "minimum": 1 }, "content_type": { "type": ["string", "null"] }, "final_url": { "type": "string" }, "retrieved_at": { "type": "string" }, "extraction_tool": { "type": "string" }, "extraction_error": { "type": ["string", "null"] }, "extracted_character_count": { "type": "integer", "minimum": 0 }, "page_count": { "type": "integer", "minimum": 0 }, "page_character_counts": { "type": "array", "items": { "type": "integer", "minimum": 0 } } }, "additionalProperties": false },
+    "readability": { "type": "object", "required": ["status", "reason"], "properties": { "status": { "enum": ["readable", "partial", "unreadable"] }, "reason": { "type": "string", "minLength": 1 } }, "additionalProperties": false },
+    "language": { "type": "string", "minLength": 2 },
+    "source_type": { "type": "string", "minLength": 1 },
+    "concise_summary": { "type": "string", "minLength": 1 },
+    "method_propositions": { "type": "array", "items": { "$ref": "#/$defs/proposition" } },
+    "contradictions_ambiguities": { "$ref": "#/$defs/strings" },
+    "open_questions": { "$ref": "#/$defs/strings" },
+    "artifact_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "strings": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "proposition": { "type": "object", "additionalProperties": false, "required": ["proposition_id", "statement", "support_strength", "locator", "evidence_excerpt", "snippet_hash"], "properties": { "proposition_id": { "type": "string" }, "statement": { "type": "string", "minLength": 1 }, "support_strength": { "enum": ["direct", "partial", "contextual"] }, "locator": { "type": "object", "required": ["kind", "page", "section", "text_start", "text_end"], "properties": { "kind": { "enum": ["pdf_page", "html_text_offset"] }, "page": { "type": ["integer", "null"] }, "section": { "type": ["string", "null"] }, "text_start": { "type": ["integer", "null"] }, "text_end": { "type": ["integer", "null"] } }, "additionalProperties": false }, "evidence_excerpt": { "type": "string", "minLength": 1 }, "snippet_hash": { "$ref": "#/$defs/hash" } } }
+  }
+}

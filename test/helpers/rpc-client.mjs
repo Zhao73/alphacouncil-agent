@@ -109,3 +109,29 @@ export function structured(response) {
   }
   return response.result?.structuredContent;
 }
+
+/** Open and confirm the mandatory per-run master chooser in integration tests. */
+export async function confirmMasterSelection(server, {
+  symbol,
+  selected_master_ids = ["master_buffett"],
+  selection,
+  select_all,
+  language = "English",
+  prompt = "",
+  host = "test",
+} = {}) {
+  const opened = structured(await server.callTool("begin_council_selection", {
+    symbol, language, prompt, host,
+  }));
+  const choice = selection !== undefined
+    ? { selection }
+    : select_all === true
+      ? { select_all: true }
+      : { selected_master_ids };
+  return structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    ...choice,
+  }));
+}

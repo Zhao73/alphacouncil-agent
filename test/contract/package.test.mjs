@@ -56,6 +56,10 @@ test("prepublishOnly runs the checks so a broken package cannot be published", (
   assert.match(pkg.scripts.prepublishOnly, /npm run check/);
 });
 
+test("the non-GA 0.9.0 package cannot silently replace npm latest", () => {
+  assert.deepEqual(pkg.publishConfig, { access: "public", tag: "next" });
+});
+
 test("no dependencies, so an install is the download and nothing else", () => {
   assert.ok(!pkg.dependencies || Object.keys(pkg.dependencies).length === 0);
   assert.ok(!existsSync(join(repoRoot, "node_modules")) || true);

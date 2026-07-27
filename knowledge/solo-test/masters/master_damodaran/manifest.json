@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "intrinsic_valuation",
+      "story_to_numbers",
+      "young_companies",
+      "reverse_valuation"
+    ],
+    "exclusions": [
+      "single-point precision",
+      "borrowed spreadsheets with hidden assumptions",
+      "narratives not mapped to valuation variables",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "valuation_distribution_v1",
+    "optional_fact_types": [
+      "valuation.target_margin",
+      "valuation.reinvestment_rate",
+      "valuation.cost_of_capital",
+      "valuation.failure_probability",
+      "valuation.cash_flow",
+      "valuation.implied_story"
+    ],
+    "required_fact_types": [
+      "valuation.revenue_growth"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_damodaran.story_dcf",
+      "master_damodaran.reverse_valuation"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "valuation.revenue_growth"
+    ],
+    "hard_vetoes": [
+      "master_damodaran.story_number_gap",
+      "master_damodaran.reinvestment_inconsistency",
+      "master_damodaran.terminal_inconsistency"
+    ],
+    "native_output": "valuation_distribution_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Damodaran Valuation Lens Provisional Operator Lens",
+      "zh": "达莫达兰估值视角临时操作视角"
+    },
+    "persona_id": "master_damodaran",
+    "public_label": {
+      "en": "Damodaran Valuation Lens Solo Test",
+      "zh": "达莫达兰估值视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Decline when a load-bearing narrative claim has no mapped valuation variable.",
+      "Reject a growth scenario whose required reinvestment is omitted or internally inconsistent.",
+      "Reject a terminal state incompatible with mature growth, margin and risk assumptions."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in intrinsic_valuation, story_to_numbers, young_companies, reverse_valuation",
+      "zh": "用于测试确定性行为：intrinsic_valuation、story_to_numbers、young_companies、reverse_valuation"
+    },
+    "identity": {
+      "en": "Damodaran Valuation Lens; project-derived and not human reviewed",
+      "zh": "达莫达兰估值视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Translate a testable business story into growth, margins, reinvestment, risk and cash flow, then expose the value distribution and price-implied story.",
+      "zh": "Translate a testable business story into growth, margins, reinvestment, risk and cash flow, then expose the value distribution and price-implied story."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

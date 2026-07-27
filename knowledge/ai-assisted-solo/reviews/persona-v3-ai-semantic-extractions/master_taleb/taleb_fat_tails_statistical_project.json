@@ -1,0 +1,73 @@
+{
+  "artifact_hash": "sha256:668ee4f415b37a518d66e7078648421a94fa49453d3d48f9ee0b50e4c57fce19",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "taleb_fat_tails_statistical_project",
+  "concise_summary": "The project page frames conventional estimators as unreliable under fat tails and links technical work on alternative methods.",
+  "contradictions_ambiguities": [
+    "The page is an index and manifesto; exact estimators live in linked papers and require separate review."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Conventional statistics fail to cover fat tails",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Project background",
+        "text_end": 470,
+        "text_start": 423
+      },
+      "proposition_id": "taleb_fat_tails_statistical_project:p1",
+      "snippet_hash": "sha256:f55b94412b1a3f62aa6deea9e7ea092fdc9dc3b4ad3c9a23791a6f6d890b3558",
+      "statement": "Do not apply conventional thin-tailed statistics without testing tail behavior and estimator robustness.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which linked paper supplies the estimator needed for each production metric?"
+  ],
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The project page is readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 20417,
+    "content_hash": "sha256:2f623df2b5717b3313afca1109cf9c3ec4385c96467a4e77d8770f38a8da4701",
+    "content_type": "text/html",
+    "extracted_character_count": 7909,
+    "extracted_text_hash": "sha256:a7817476d6a16288db70ee5e9c226565476197494c122f1993c626e7d6876225",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://www.fooledbyrandomness.com/FatTails.html",
+    "page_character_counts": [
+      7909
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:096b1e48f01f8ba72ae3b253b403e3f6a6331566b3de57a8a72ca7650452a0d6",
+    "retrieved_at": "2026-07-27T06:23:31.293Z"
+  },
+  "source_type": "research_project_index"
+}

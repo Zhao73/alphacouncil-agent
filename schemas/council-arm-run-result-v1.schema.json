@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/council-arm-run-result-v1.schema.json",
+  "title": "AlphaCouncil canonical arm run result",
+  "description": "Unsigned, hash-bound physical run result. Validation is not an experiment pass or release claim.",
+  "type": "object",
+  "required": ["schema_version", "artifact_kind", "run_id", "arm_id", "arm_variant", "protocol_hash", "case_freeze_hash", "frozen_inputs_hash", "arm_configuration_hash", "runner_hash", "model_matrix_hash", "prompt_bundle_hash", "host_matrix_hash", "status", "artifact_directory", "result_bindings", "metrics", "degradation", "human_boundary", "artifact_hash", "attestations"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "alphacouncil_arm_run_result" },
+    "run_id": { "type": "string", "minLength": 1 },
+    "arm_id": { "enum": ["A", "B", "C", "D13", "D26", "E", "H"] },
+    "arm_variant": { "enum": [null, "D13", "D26"] },
+    "protocol_hash": { "$ref": "#/$defs/hash" },
+    "case_freeze_hash": { "$ref": "#/$defs/hash" },
+    "frozen_inputs_hash": { "$ref": "#/$defs/hash" },
+    "arm_configuration_hash": { "$ref": "#/$defs/hash" },
+    "runner_hash": { "$ref": "#/$defs/hash" },
+    "model_matrix_hash": { "$ref": "#/$defs/hash" },
+    "prompt_bundle_hash": { "$ref": "#/$defs/hash" },
+    "host_matrix_hash": { "$ref": "#/$defs/hash" },
+    "status": { "enum": ["completed", "failed", "not_run"] },
+    "artifact_directory": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "minLength": 1, "pattern": "^(?:/|(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$))).+$" }
+      ]
+    },
+    "result_bindings": {
+      "type": "object",
+      "required": ["raw_result", "fact_clusters", "native_decisions", "common_projection"],
+      "additionalProperties": false,
+      "properties": {
+        "raw_result": { "$ref": "#/$defs/resultBinding" },
+        "fact_clusters": { "$ref": "#/$defs/resultBinding" },
+        "native_decisions": { "$ref": "#/$defs/resultBinding" },
+        "common_projection": { "$ref": "#/$defs/resultBinding" }
+      }
+    },
+    "metrics": { "$ref": "#/$defs/metrics" },
+    "degradation": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "human_boundary": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/human" }] },
+    "artifact_hash": { "$ref": "#/$defs/hash" },
+    "attestations": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "nullableHash": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/hash" }] },
+    "resultBinding": {
+      "type": "object",
+      "required": ["relative_path", "file_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*(?:^|[\\\\/])\\.\\.(?:[\\\\/]|$)).+$" }
+          ]
+        },
+        "file_hash": { "$ref": "#/$defs/nullableHash" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["cost", "latency", "sources"],
+      "additionalProperties": false,
+      "properties": {
+        "cost": {
+          "type": "object",
+          "required": ["currency", "provider_billed_cost", "input_tokens", "output_tokens", "tool_calls", "network_requests", "failed_attempts", "retry_attempts"],
+          "additionalProperties": false,
+          "properties": {
+            "currency": { "const": "USD" },
+            "provider_billed_cost": { "type": ["number", "null"], "minimum": 0 },
+            "input_tokens": { "type": "integer", "minimum": 0 },
+            "output_tokens": { "type": "integer", "minimum": 0 },
+            "tool_calls": { "type": "integer", "minimum": 0 },
+            "network_requests": { "type": "integer", "minimum": 0 },
+            "failed_attempts": { "type": "integer", "minimum": 0 },
+            "retry_attempts": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "latency": {
+          "type": "object",
+          "required": ["started_at", "completed_at", "critical_path_ms", "timed_out"],
+          "additionalProperties": false,
+          "properties": {
+            "started_at": { "type": "string", "format": "date-time" },
+            "completed_at": { "type": "string", "format": "date-time" },
+            "critical_path_ms": { "type": "integer", "minimum": 0 },
+            "timed_out": { "type": "boolean" }
+          }
+        },
+        "sources": {
+          "type": "object",
+          "required": ["retrieval_count", "material_claim_count", "citation_count", "source_manifest_hash"],
+          "additionalProperties": false,
+          "properties": {
+            "retrieval_count": { "type": "integer", "minimum": 0 },
+            "material_claim_count": { "type": "integer", "minimum": 0 },
+            "citation_count": { "type": "integer", "minimum": 0 },
+            "source_manifest_hash": { "$ref": "#/$defs/hash" }
+          }
+        }
+      }
+    },
+    "human": {
+      "type": "object",
+      "required": ["blind_label", "independent_analyst_count", "independent_before_adjudication", "separate_adjudicator", "adjudicator_blinded_to_arm", "automated_vote", "adjudication_packet_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "blind_label": { "type": "string", "minLength": 1 },
+        "independent_analyst_count": { "enum": [2, 3] },
+        "independent_before_adjudication": { "const": true },
+        "separate_adjudicator": { "const": true },
+        "adjudicator_blinded_to_arm": { "const": true },
+        "automated_vote": { "const": false },
+        "adjudication_packet_hash": { "$ref": "#/$defs/hash" }
+      }
+    }
+  }
+}

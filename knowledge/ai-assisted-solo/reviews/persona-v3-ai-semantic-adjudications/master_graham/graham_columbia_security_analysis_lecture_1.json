@@ -1,0 +1,161 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:e06093ac5113243919d096e71760314f368e7b5dfe70556e3eb7d13db09dd66a",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "graham_columbia_security_analysis_lecture_1",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:6580e373255110ca963e91a195c61fd74c0154b5defde3f3699a8502d7d49cba",
+    "declared_artifact_hash": "sha256:18507a337ec9bd8960db3c6d411644eff51961da2712ee41ed24603f06477f22",
+    "recomputed_artifact_hash": "sha256:18507a337ec9bd8960db3c6d411644eff51961da2712ee41ed24603f06477f22",
+    "relative_path": "master_graham/graham_columbia_security_analysis_lecture_1.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_graham",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 5,
+          "section_claimed": "Lecture one: selectivity",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 1157,
+          "text_start": 1044
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 5,
+          "section": "Lecture one: selectivity",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56",
+        "normalized_excerpt": "The method of selectivity which I believe does work well is one that is based on demonstrated value differentials",
+        "skeptic_snippet_hash_claimed": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56",
+        "skeptic_snippet_hash_recomputed": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The lecture rejects obvious industry-prospect selection and directly endorses demonstrated comparative value differentials.",
+      "final_verdict": "supported",
+      "proposition_id": "graham_columbia_security_analysis_lecture_1:p1",
+      "review_hash": "sha256:8abb090f4373ece1cf572cc8394ecf39b9273655cd8414bc964434594bb3f7fc",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The lecture directly rejects obvious industry-prospect selection and endorses demonstrated comparative value differentials from tested security-analysis techniques.",
+        "support_verdict": "supported"
+      },
+      "statement": "Prefer tested comparative value differentials over selecting companies merely because their industry prospects appear obviously good.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:385d4c608e38718a74139db73519d07ea13ceb83773c70109a4598e51176aaf1",
+    "declared_artifact_hash": "sha256:f4e370cb28186d2039bc4b17be975faa484a64f68dd3e785a0f1b9306c99a729",
+    "recomputed_artifact_hash": "sha256:f4e370cb28186d2039bc4b17be975faa484a64f68dd3e785a0f1b9306c99a729",
+    "relative_path": "master_graham/graham_columbia_security_analysis_lecture_1.json"
+  },
+  "source_binding": {
+    "byte_length": 92422,
+    "content_hash": "sha256:17f6f0de56937f317e89412cfca03636c57d5c997104172662a904d8096e8dc6",
+    "extracted_character_count_recomputed": 27736,
+    "extracted_text_hash_recomputed": "sha256:c8b3542eeaabd57c307ba8e6ef361ad263f8d1278bf87318470c37d6a8a7dc31",
+    "page_character_counts_recomputed": [
+      471,
+      3355,
+      3649,
+      3578,
+      3290,
+      3683,
+      3406,
+      3404,
+      2900
+    ],
+    "page_count_recomputed": 9,
+    "raw_bytes_hash_recomputed": "sha256:17f6f0de56937f317e89412cfca03636c57d5c997104172662a904d8096e8dc6",
+    "source_record_hash": "sha256:3f9ba5091fdab437da554a736cee5ee2221ee445748f1e82dcc4181ceac6d398"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

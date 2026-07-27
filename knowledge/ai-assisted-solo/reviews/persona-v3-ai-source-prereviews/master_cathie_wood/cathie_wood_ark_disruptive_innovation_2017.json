@@ -1,0 +1,131 @@
+{
+  "artifact_hash": "sha256:b26f05bf712449d8dab71e78d62f55a7ef277831fde2af81d17c49a964bd8e2e",
+  "artifact_kind": "persona_v3_ai_source_prereview",
+  "assurance_class": "machine_pre_review_only",
+  "candidate_id": "cathie_wood_ark_disruptive_innovation_2017",
+  "disagreement": {
+    "explanation": "The roles have different scopes but agree that no source approval or method attribution is established.",
+    "present": false,
+    "role_verdicts": [
+      "archive_integrity_verified_semantics_unreviewed",
+      "production_approval_unsupported",
+      "requires_human_review"
+    ]
+  },
+  "human_claims": false,
+  "human_reviewed": false,
+  "machine_limitations": [
+    "This artifact is deterministic machine triage, not an independent human review.",
+    "It does not contain a verified semantic extraction or exact source locator.",
+    "It is unsigned, cannot enter a trusted reviewer registry, and cannot satisfy source-review quorum."
+  ],
+  "method_attribution_approved": false,
+  "open_questions": [
+    "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+    "Who is the verified author or speaker for that exact passage?",
+    "What published_at and public_at values are supported by the archived material?"
+  ],
+  "persona_id": "master_cathie_wood",
+  "pipeline_id": "alphacouncil_ai_source_prereview_v1",
+  "production_effect": "none",
+  "reviewer_kind": "ai",
+  "roles": [
+    {
+      "concerns": [
+        "Archive integrity alone does not establish method-defining evidence."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:4402c93914dd605ddca1edd25c13b59bf46edf1e14b49fecd43e0ca63f134070",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The archived byte stream matches the acquisition record's content hash and byte length.",
+        "The declared content type is application/pdf; the deterministic format probe is pdf_magic.",
+        "This bootstrap pass did not extract or verify a semantic proposition, authorship claim, date, grade, or exact locator."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:d502938916d148d1abba9c93d1c7ed66c2886753f75487a0e0cb558fc70222b9",
+      "prompt_hash": "sha256:3c5ed3beaa183923297e451df14c0f1fc2274478cad9d5a0b7309b2750da1e52",
+      "prompt_id": "alphacouncil.source-prereview.extractor.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "extractor",
+      "role_id": "ai_source_extractor_v1",
+      "verdict": "archive_integrity_verified_semantics_unreviewed"
+    },
+    {
+      "concerns": [
+        "No exact passage has been bound to a method proposition.",
+        "Authorship, publication timing, source grade, and scope remain unresolved in this pre-review."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:a0b7266061538faa8b92dbcdecbf28f6ce17c76771d1eacfdb718e80bd3d6486",
+      "input_role_output_hashes": [],
+      "observations": [
+        "The acquisition remains retrieved_unadjudicated.",
+        "The acquisition's human_review.status remains not_requested.",
+        "The machine input contains no verified exact locator or proposition-to-passage binding."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:a727f610e1c6538ef5bd9b8703c45fd6ac11125dd3ff87e6d03825d7aacda3dd",
+      "prompt_hash": "sha256:d4564717eafa5f0448e3832a56c70da95358a164fe2fec01354887e071b75738",
+      "prompt_id": "alphacouncil.source-prereview.skeptic.v1",
+      "reads_other_role_outputs": false,
+      "reviewer_kind": "ai",
+      "role": "skeptic",
+      "role_id": "ai_source_skeptic_v1",
+      "verdict": "production_approval_unsupported"
+    },
+    {
+      "concerns": [
+        "Promoting this artifact would confuse machine triage with trusted human source adjudication."
+      ],
+      "execution_mode": "deterministic_machine_preflight",
+      "input_binding_hash": "sha256:defb53a6d8f35c340875d9abd62d8e6600c1ff337e5116e9eb965bef6bb0635e",
+      "input_role_output_hashes": [
+        "sha256:d502938916d148d1abba9c93d1c7ed66c2886753f75487a0e0cb558fc70222b9",
+        "sha256:a727f610e1c6538ef5bd9b8703c45fd6ac11125dd3ff87e6d03825d7aacda3dd"
+      ],
+      "observations": [
+        "The extractor established archive integrity but explicitly performed no semantic review.",
+        "The skeptic found no verified proposition-to-locator binding for production use.",
+        "The two independent first-pass roles agree that machine pre-review cannot approve this source."
+      ],
+      "open_questions": [
+        "Which exact page, section, filing item, or timestamp supports a proposed method proposition?",
+        "Who is the verified author or speaker for that exact passage?",
+        "What published_at and public_at values are supported by the archived material?"
+      ],
+      "output_hash": "sha256:0907231a949c13c39346962fc8a30af78ceca362c50172eb268dc5f1d6558d42",
+      "prompt_hash": "sha256:18d54becf6953007bfbab91bbb5955bcf9ffc0989a0948d0d27ab751fa0a82a6",
+      "prompt_id": "alphacouncil.source-prereview.adjudicator.v1",
+      "reads_other_role_outputs": true,
+      "reviewer_kind": "ai",
+      "role": "adjudicator",
+      "role_id": "ai_source_adjudicator_v1",
+      "verdict": "requires_human_review"
+    }
+  ],
+  "schema_version": 1,
+  "semantic_review_performed": false,
+  "source_binding": {
+    "archive_relative_path": "personas-v3/master_cathie_wood/acquisitions/candidates/cathie_wood_ark_disruptive_innovation_2017/source.bin",
+    "byte_length": 350855,
+    "content_hash": "sha256:77ae03debacf365576261d79eb25f97eeea89715f3a37021511ee4de789c9c51",
+    "content_type": "application/pdf",
+    "final_url": "https://research.ark-invest.com/hubfs/1_Download_Files_ARK-Invest/Cathie%20Market%20Reviews/Starting%202017%20On%20The%20Right%20Side%20Of%20Disruptive%20Innovation.pdf",
+    "format_probe": "pdf_magic",
+    "record_hash": "sha256:cd374a21db25778783efba68862aa0d81ce911938f19a55606f2cb555480311c",
+    "record_relative_path": "personas-v3/master_cathie_wood/acquisitions/candidates/cathie_wood_ark_disruptive_innovation_2017/record.json",
+    "retrieved_at": "2026-07-27T06:24:10.855Z",
+    "source_bytes_reverified": true
+  },
+  "verdict": "requires_human_review"
+}

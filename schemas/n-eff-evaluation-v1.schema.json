@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/n-eff-evaluation-v1.schema.json",
+  "title": "AlphaCouncil ledger-bound error N_eff evaluation v1",
+  "description": "A preregistered, resolved-outcome error-correlation estimate recomputed from point-in-time ledgers. Submitted agreement/correlation/bootstrap values are not accepted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "estimator_version",
+    "preregistered_at",
+    "evaluated_at",
+    "metric",
+    "scoring_rule",
+    "matrix_kind",
+    "resolved_outcomes",
+    "case_unit",
+    "horizon",
+    "minimum_joint_cases",
+    "cluster_keys",
+    "bootstrap_cluster_key",
+    "abstention_policy",
+    "seat_ids",
+    "weights",
+    "shrinkage_alpha",
+    "bootstrap_iterations",
+    "bootstrap_seed",
+    "maximum_ci_width",
+    "prediction_ledger_hash",
+    "outcome_ledger_hash",
+    "prediction_ledger",
+    "outcome_ledger",
+    "attestation"
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "prediction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id", "seat_id", "status", "value", "as_of", "prediction_at",
+        "pack_hash", "model_hash", "prompt_hash", "runner_hash",
+        "case_manifest_hash", "clusters"
+      ],
+      "properties": {
+        "case_id": { "type": "string", "minLength": 1 },
+        "seat_id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["scored", "abstain"] },
+        "value": { "type": ["number", "null"] },
+        "as_of": { "$ref": "#/$defs/timestamp" },
+        "prediction_at": { "$ref": "#/$defs/timestamp" },
+        "pack_hash": { "$ref": "#/$defs/sha256" },
+        "model_hash": { "$ref": "#/$defs/sha256" },
+        "prompt_hash": { "$ref": "#/$defs/sha256" },
+        "runner_hash": { "$ref": "#/$defs/sha256" },
+        "case_manifest_hash": { "$ref": "#/$defs/sha256" },
+        "clusters": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case_id", "value", "outcome_public_at", "evaluated_at", "source_hash"],
+      "properties": {
+        "case_id": { "type": "string", "minLength": 1 },
+        "value": { "type": "number" },
+        "outcome_public_at": { "$ref": "#/$defs/timestamp" },
+        "evaluated_at": { "$ref": "#/$defs/timestamp" },
+        "source_hash": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "estimator_version": { "const": "ledger-error-correlation-v1" },
+    "preregistered_at": { "$ref": "#/$defs/timestamp" },
+    "evaluated_at": { "$ref": "#/$defs/timestamp" },
+    "metric": { "type": "string", "minLength": 3 },
+    "scoring_rule": { "const": "signed_residual" },
+    "matrix_kind": { "const": "error_correlation" },
+    "resolved_outcomes": { "const": true },
+    "case_unit": { "type": "string", "minLength": 3 },
+    "horizon": { "type": "string", "minLength": 1 },
+    "minimum_joint_cases": { "type": "integer", "minimum": 36 },
+    "cluster_keys": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "bootstrap_cluster_key": { "type": "string", "minLength": 1 },
+    "abstention_policy": { "const": "joint_complete_only" },
+    "seat_ids": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 2,
+      "uniqueItems": true
+    },
+    "weights": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 2
+    },
+    "shrinkage_alpha": { "type": "number", "minimum": 0, "maximum": 1 },
+    "bootstrap_iterations": { "type": "integer", "minimum": 200 },
+    "bootstrap_seed": { "type": "integer", "minimum": 0 },
+    "maximum_ci_width": { "type": "number", "exclusiveMinimum": 0 },
+    "prediction_ledger_hash": { "$ref": "#/$defs/sha256" },
+    "outcome_ledger_hash": { "$ref": "#/$defs/sha256" },
+    "prediction_ledger": { "type": "array", "items": { "$ref": "#/$defs/prediction" } },
+    "outcome_ledger": { "type": "array", "items": { "$ref": "#/$defs/outcome" } },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signer_id", "payload_hash", "signature"],
+      "properties": {
+        "signer_id": { "type": "string", "minLength": 1 },
+        "payload_hash": { "$ref": "#/$defs/sha256" },
+        "signature": { "type": "string", "pattern": "^hmac-sha256:[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

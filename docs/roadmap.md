@@ -4,6 +4,19 @@ Where this plugin is going, and the reasoning that decides it. Dated entries, ne
 Anything here is a statement of intent, not a shipped feature. Shipped work lives in
 `CHANGELOG.md`.
 
+## 0.9.0 solo-test - all 26 seats become physically testable v3 operator lenses
+
+0.9.0 is the declared **solo-test** package channel. It adds a mandatory per-run individual
+master selector and an isolated, physically testable tree of 26 v3 packs with 52 executable
+`provisional_derived_proxy` tools. Every pack remains a provisional `operator_lens`;
+operational = 0, `method_model` = 0, human source/formula approvals and approval signatures
+= 0. The chooser and executable proxies do not make any seat an approved named method.
+
+Formal production GA remains fail-closed until the source, formula, experiment, host,
+release-operation and admission gates in `docs/plans/0.9.0-personapack-v3.md` pass. No seat
+count is reported as a count of independent information sources. Exact solo-test verification
+is recorded in `docs/solo-test-0.9.0.md`.
+
 ## The problem that shapes everything after 0.6.0
 
 A user asked why the master bench never appears in the report. Answering it surfaced a

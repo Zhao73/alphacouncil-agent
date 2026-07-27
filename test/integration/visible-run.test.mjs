@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { startServer, structured } from "../helpers/rpc-client.mjs";
+import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 import { completeReport } from "../helpers/fixtures.mjs";
 
 let dataDir;
@@ -27,6 +27,29 @@ const packet = (summary, extra = {}) => ({
   ...extra,
 });
 
+const selectedMaster = "master_simons";
+
+async function selectionReceipt(server, symbol) {
+  const selection = await confirmMasterSelection(server, {
+    symbol,
+    selected_master_ids: [selectedMaster],
+  });
+  return selection.selection_receipt;
+}
+
+async function recordSelectedMaster(server, run_id) {
+  await server.callTool("record_master_opinion", {
+    run_id,
+    master: selectedMaster,
+    packet: {
+      verdict: "No dry-run master view is asserted by this fixture.",
+      stance: "out_of_scope",
+      summary: "Integration fixture records the selected seat without adding an investment claim.",
+      confidence: "low",
+    },
+  });
+}
+
 before(async () => {
   dataDir = makeDataDir();
   visibleDir = join(dataDir, "runs", visibleRunId);
@@ -36,7 +59,10 @@ before(async () => {
   const server = startServer({ dataDir });
 
   // A complete visible run: plan, record evidence, both researchers, then the PM.
-  await server.callTool("plan_visible_run", { symbol: "NOK", run_id: visibleRunId, tasks: ["market_data"] });
+  await server.callTool("plan_visible_run", {
+    symbol: "NOK", run_id: visibleRunId, tasks: ["market_data"],
+    selection_receipt: await selectionReceipt(server, "NOK"),
+  });
   await server.callTool("record_visible_packet", {
     run_id: visibleRunId,
     task: "market_data",
@@ -44,6 +70,7 @@ before(async () => {
     thread_title: "AlphaCouncil Agent NOK market_data",
     packet: packet("visible packet"),
   });
+  await recordSelectedMaster(server, visibleRunId);
   await server.callTool("record_visible_decision", {
     run_id: visibleRunId,
     role: "bull_researcher",
@@ -94,6 +121,7 @@ before(async () => {
     symbol: "NOK",
     run_id: incompleteRunId,
     tasks: ["market_data", "valuation_long_short"],
+    selection_receipt: await selectionReceipt(server, "NOK"),
   });
   await server.callTool("record_visible_packet", {
     run_id: incompleteRunId,
@@ -102,6 +130,7 @@ before(async () => {
     thread_title: "AlphaCouncil Agent NOK market_data",
     packet: packet("only evidence packet"),
   });
+  await recordSelectedMaster(server, incompleteRunId);
   recorded.shortcut = structured(await server.callTool("record_visible_decision", {
     run_id: incompleteRunId,
     role: "portfolio_manager",
@@ -119,13 +148,17 @@ before(async () => {
 
   // Full evidence + both researchers, but the PM is never recorded. This is the case
   // the old gate reported as complete.
-  await server.callTool("plan_visible_run", { symbol: "NOK", run_id: noPmRunId, tasks: ["market_data"] });
+  await server.callTool("plan_visible_run", {
+    symbol: "NOK", run_id: noPmRunId, tasks: ["market_data"],
+    selection_receipt: await selectionReceipt(server, "NOK"),
+  });
   await server.callTool("record_visible_packet", {
     run_id: noPmRunId,
     task: "market_data",
     thread_id: "thread-nopm-market",
     packet: packet("evidence without a PM"),
   });
+  await recordSelectedMaster(server, noPmRunId);
   for (const role of ["bull_researcher", "bear_researcher"]) {
     recorded[role] = structured(await server.callTool("record_visible_decision", {
       run_id: noPmRunId,
@@ -138,13 +171,17 @@ before(async () => {
   // The PM is the final call and nothing follows it. The visible run above is repaired
   // by its trailing late-packet calls, which masks an ordering bug in the gate; here
   // there is nothing to repair it.
-  await server.callTool("plan_visible_run", { symbol: "NOK", run_id: pmLastRunId, tasks: ["market_data"] });
+  await server.callTool("plan_visible_run", {
+    symbol: "NOK", run_id: pmLastRunId, tasks: ["market_data"],
+    selection_receipt: await selectionReceipt(server, "NOK"),
+  });
   await server.callTool("record_visible_packet", {
     run_id: pmLastRunId,
     task: "market_data",
     thread_id: "thread-pmlast-market",
     packet: packet("evidence"),
   });
+  await recordSelectedMaster(server, pmLastRunId);
   for (const role of ["bull_researcher", "bear_researcher"]) {
     await server.callTool("record_visible_decision", {
       run_id: pmLastRunId,

@@ -1,0 +1,41 @@
+{
+  "artifact_kind": "persona_v3_solo_test_pack_index",
+  "assurance_class": "provisional_derived_proxy",
+  "build_profile": "solo_test",
+  "common_projection": {
+    "provisional_forensic_short_candidate": "cautious",
+    "provisional_red_flags_no_trade": "opposed",
+    "provisional_unsupported_allegation": "out_of_scope",
+    "provisional_watch": "cautious"
+  },
+  "declared_state_hypotheses": [
+    "unsupported_allegation",
+    "red_flags_no_trade",
+    "watch",
+    "forensic_short_candidate"
+  ],
+  "experiment_pass_count": 0,
+  "formula_approval_binding_count": 0,
+  "formula_compilation_manifest_hash": "sha256:7265b10a67bd0437af02572176793ef0b8529e48437edc5a2e0b1b1b9fbe73d0",
+  "method_model_eligible": false,
+  "native_states": [
+    "provisional_unsupported_allegation",
+    "provisional_red_flags_no_trade",
+    "provisional_watch",
+    "provisional_forensic_short_candidate"
+  ],
+  "persona_id": "master_forensic_short",
+  "planned_tool_ids": [
+    "master_forensic_short.accounting_rebuilder",
+    "master_forensic_short.borrow_catalyst"
+  ],
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "source_adjudication_status": "pending",
+  "warnings": [
+    "Physical presence proves testability only; it does not prove source fidelity or method attribution.",
+    "Uncalibrated proxy scores never project to constructive; successful computation is capped at cautious.",
+    "The production loader, production registry, release assembler and GA must reject this pack."
+  ]
+}

@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:de418868aa52986d83974fb4fef71fd43f74f7e78f9a3bced9a3148c96e41769",
+    "derivation_spec_hash": "sha256:85f32673f7ac8a67766e38d7c57381907ff937ee49a98c9f63ae96f2c89a2816",
+    "derivation_spec_id": "master_klarman.recovery_waterfall.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_klarman.recovery_waterfall",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:f16ad434db5cd1fd1b8bdaa1afa61784e5ce7e0cc093bc4e281b6070ec91ae69",
+    "inputs": [
+      {
+        "fact_id": "valuation.downside_asset_value"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "valuation.downside_asset_value",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:8dabcdb3794a7396883df33646043f1472185f858e01b287ff56bf67eb54cc86",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:da526f9405e598b38"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:d9bc815aac9edee9a6cc1224f2c933806179682c406be44a18e809880ba0fa97",
+    "derivation_spec_hash": "sha256:2bb21dec76ea432c1417dad3759c9a541d5cf69ffcda93a867fcd47bdbc8b4ff",
+    "derivation_spec_id": "master_klarman.cash_catalyst_compare.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_klarman.cash_catalyst_compare",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:07d65cb004c334fb15116157c0c2cac6bede3688045e79b3d15aaa66443621b2",
+    "inputs": [
+      {
+        "fact_id": "valuation.downside_asset_value"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "catalyst.path",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:61c3cd763c927219f6c7fbe0d6fa0518f40fa99b2749eaf3214b95b9696adc3e",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:da526f9405e598b38"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

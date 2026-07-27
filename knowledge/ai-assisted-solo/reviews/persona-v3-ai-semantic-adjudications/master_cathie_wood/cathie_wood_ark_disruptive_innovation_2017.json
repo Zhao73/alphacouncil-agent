@@ -1,0 +1,155 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:5583455896bc7409de35ee9179fea9a515110381f637e7b354742c97f82a987b",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "cathie_wood_ark_disruptive_innovation_2017",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:3d926ea429be47e8bf2dc60dc9a276f434d7211823debe446bff0a4c2312e696",
+    "declared_artifact_hash": "sha256:56b7a851b3d89378591bdc982a9fc2a62344c3b3d4ec300b2c7152b870cd0f1c",
+    "recomputed_artifact_hash": "sha256:56b7a851b3d89378591bdc982a9fc2a62344c3b3d4ec300b2c7152b870cd0f1c",
+    "relative_path": "master_cathie_wood/cathie_wood_ark_disruptive_innovation_2017.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_cathie_wood",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 3,
+          "section_claimed": "On the right side of disruptive innovation",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 879,
+          "text_start": 750
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:ec06c29ee87838b75a4358e764636aebbbf2a3471b4773e31892652152529080",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 3,
+          "section": "On the right side of disruptive innovation",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:ec06c29ee87838b75a4358e764636aebbbf2a3471b4773e31892652152529080",
+        "normalized_excerpt": "Companies just have to be on the right side of disruptive innovation to enjoy them. If not, they probably will become value traps",
+        "skeptic_snippet_hash_claimed": "sha256:ec06c29ee87838b75a4358e764636aebbbf2a3471b4773e31892652152529080",
+        "skeptic_snippet_hash_recomputed": "sha256:ec06c29ee87838b75a4358e764636aebbbf2a3471b4773e31892652152529080"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The bound passage and its heading directly contrast cost-curve beneficiaries with incumbents at risk of becoming value traps.",
+      "final_verdict": "supported",
+      "proposition_id": "cathie_wood_ark_disruptive_innovation_2017:p1",
+      "review_hash": "sha256:ce31d8b6902b58782f1d9b6e126f9398c5220f5bd0ede05163629777a12ac5a2",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The passage and immediate heading explicitly contrast beneficiaries of declining innovation cost curves with companies that may become value traps.",
+        "support_verdict": "supported"
+      },
+      "statement": "Evaluate companies by whether they benefit from declining technology cost curves or risk becoming incumbent value traps.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The PDF is an ARK publication associated with Cathie Wood, but the excerpt itself does not carry a personal signature."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:a77a58853ce89580a12d6ed6d29b102981a27ee10844adaf3ecd405557fa4fc1",
+    "declared_artifact_hash": "sha256:4e78163469fe3deccd073ee75c0792c57c60cae630f80643ea209b4e05d8ba1b",
+    "recomputed_artifact_hash": "sha256:4e78163469fe3deccd073ee75c0792c57c60cae630f80643ea209b4e05d8ba1b",
+    "relative_path": "master_cathie_wood/cathie_wood_ark_disruptive_innovation_2017.json"
+  },
+  "source_binding": {
+    "byte_length": 350855,
+    "content_hash": "sha256:77ae03debacf365576261d79eb25f97eeea89715f3a37021511ee4de789c9c51",
+    "extracted_character_count_recomputed": 8259,
+    "extracted_text_hash_recomputed": "sha256:1ed2dde2b3a084bab1aba64be7bfdc8ba6cdf6e520dc5144bfb10ae56b4511a8",
+    "page_character_counts_recomputed": [
+      2258,
+      3214,
+      2787
+    ],
+    "page_count_recomputed": 3,
+    "raw_bytes_hash_recomputed": "sha256:77ae03debacf365576261d79eb25f97eeea89715f3a37021511ee4de789c9c51",
+    "source_record_hash": "sha256:cd374a21db25778783efba68862aa0d81ce911938f19a55606f2cb555480311c"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The PDF is an ARK publication associated with Cathie Wood, but the excerpt itself does not carry a personal signature."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

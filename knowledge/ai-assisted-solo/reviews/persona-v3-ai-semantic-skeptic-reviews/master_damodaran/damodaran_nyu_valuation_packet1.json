@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:4075fd1730cc790532400eec18582fe50c48b2801f54eb1d9ca0afc31cd3f0f0",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "damodaran_nyu_valuation_packet1",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:fff73222be5611ecccae9e9a58fea57be5a7926ad85ced30eb16921ab6a6f60e",
+    "declared_artifact_hash": "sha256:42246975739e0046027f4963ae81113796a98423be9e703cf413030ad36599d8",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:42246975739e0046027f4963ae81113796a98423be9e703cf413030ad36599d8",
+    "relative_path": "master_damodaran/damodaran_nyu_valuation_packet1.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 2,
+        "actual_text_end": 320,
+        "actual_text_start": 153,
+        "declared_kind": "pdf_page",
+        "declared_page": 2,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "the intrinsic value will be a function of the magnitude of the expected cash flows on the asset over its lifetime and the uncertainty about receiving those cash flows.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 2,
+        "section": "The essence of intrinsic value",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Estimate intrinsic value from expected lifetime cash flows and uncertainty, using consistent cash-flow and discount-rate treatment.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "damodaran_nyu_valuation_packet1:p1",
+      "review_hash": "sha256:18b98c5caa836f3d208ce8b420ecc612ee810321ec404cc8accb696fca3fee19",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:19f0f487281940effa36d3e185864f41b418ce8c47a85476693ebda5d7375be5",
+      "snippet_hash_recomputed": "sha256:19f0f487281940effa36d3e185864f41b418ce8c47a85476693ebda5d7375be5",
+      "support_rationale": "The slide directly makes intrinsic value a function of lifetime expected cash flows and uncertainty and describes consistent risk adjustment through cash flows or discount rates.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 4197917,
+    "content_hash": "sha256:d41a00b21269aef32369e1e5d70ff530632db03ba440a79a3d4473edbb2a7cb2",
+    "extracted_text_hash": "sha256:3baf2f3f5b2226746e8344ff1526fa93b956d1e1e04af240ee7ea95c267b6c17",
+    "extracted_text_hash_recomputed": "sha256:3baf2f3f5b2226746e8344ff1526fa93b956d1e1e04af240ee7ea95c267b6c17",
+    "raw_bytes_hash_recomputed": "sha256:d41a00b21269aef32369e1e5d70ff530632db03ba440a79a3d4473edbb2a7cb2",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:f8741956cd36775238b754b1a2989f9fda5f6cdc119a24c6b0689d362f285589",
+    "source_record_hash_recomputed": "sha256:f8741956cd36775238b754b1a2989f9fda5f6cdc119a24c6b0689d362f285589"
+  }
+}

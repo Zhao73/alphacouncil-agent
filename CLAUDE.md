@@ -6,14 +6,24 @@ You are working on `alphacouncil-agent`, a Codex plugin for public-equity resear
 
 The plugin turns `@alphacouncil-agent <ticker/request>` into a full equity-research workflow:
 
-1. Spawn or plan specialized analyst workers.
-2. Produce JSON evidence packets with sourced claims.
-3. Merge packets into a shared evidence base.
-4. Run bull and bear researchers.
-5. Run a portfolio manager to decide Buy / Overweight / Hold / Underweight / Sell.
-6. Write a complete final report directly in chat and to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`.
+1. Display every available master method and confirm a one-run selection receipt.
+2. Spawn or plan specialized analyst workers.
+3. Produce JSON evidence packets with sourced claims.
+4. Merge packets into a shared evidence base and run every selected master.
+5. Run bull and bear researchers.
+6. Run a portfolio manager to decide Buy / Overweight / Hold / Underweight / Sell.
+7. Write a complete final report directly in chat and to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`.
 
 Default behavior is full workflow. Do not downgrade to lite, smoke-test, or debug output unless the user explicitly asks for it.
+
+## Current Build Profile
+
+The declared package/plugin version is `0.9.0-solo-test.1`, channel `solo_test`. The isolated packaged
+tree contains 26 physical v3 packs and 52 executable `provisional_derived_proxy` tools.
+Every seat is still a provisional `operator_lens`: operational = 0, `method_model` = 0,
+human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
+The production loader rejects these packs and formal production GA remains fail-closed.
+See `docs/solo-test-0.9.0.md`.
 
 ## Agent-Skills Governance
 
@@ -24,6 +34,16 @@ Also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with this p
 `/alpha <ticker>` runs the council; `/alpha` with no arguments lists its modes and stops.
 `quick`, `screen`, `options`, `news` and `market` select narrower modes, and the last four
 spawn no subagents at all.
+
+Every full or quick council run must first call `begin_council_selection`, display each
+returned master with its stable number, identity, method and `best_for`, and obtain a
+submission. A native multi-select is optional; the common fallback accepts numbered choices,
+ranges and `all` in plain text on every host. Even if the request already names masters,
+show the complete catalog and treat those names only as a prefill. Call
+`confirm_master_selection(selection_id, catalog_hash, display_ack: true, ...)`, then pass its
+one-use `selection_receipt` to `plan_visible_run`, `collect_evidence` or `analyze_symbol`.
+No research, run directory or worker may start before that receipt exists. Data-only
+`screen`, `options`, `news` and `market` modes skip the selection gate.
 
 ## Analyst Roles
 
@@ -44,9 +64,14 @@ Optional analysts, on the `full` roster rather than the default:
 - `market_narrative`
 - `social_pulse`
 
-Master bench: 21 lenses across six rosters, run between evidence and debate on **every**
-host. Verifiers: `source_fidelity`, `rederivation`, `refuter`. See `skills/alphacouncil-agent/SKILL.md`
-for the workflow and `docs/personas.md` for the full roster.
+Master bench: the complete generated catalog (26 selectable lenses for the 0.9.0 roster), selectable
+one by one or with `all`, and run between evidence and debate on **every** host. Verifiers:
+`source_fidelity`, `rederivation`, `refuter`. See `skills/alphacouncil-agent/SKILL.md` for the
+workflow and `docs/personas.md` for the generated roster.
+
+Do not call the 26 solo-test packs approved method models. The explicit solo-test loader
+exposes 26 provisional `operator_lens` packs and 52 executable derived-proxy tools; none is
+operational or `method_model`, and none has human source/formula approval or signature.
 
 Debate roles:
 

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/source-candidate-acquisition-v1.schema.json",
+  "title": "AlphaCouncil raw source-candidate acquisition v1",
+  "description": "Exact raw retrieval metadata for an unadjudicated staging candidate. This artifact cannot grade, approve or promote a source.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "status",
+    "persona_id",
+    "candidate_id",
+    "requested_url",
+    "final_url",
+    "redirect_chain",
+    "network_trace",
+    "retrieved_at",
+    "retrieval_protocol",
+    "http_status",
+    "content_type",
+    "content_encoding",
+    "byte_length",
+    "content_hash",
+    "archive_path",
+    "limits",
+    "human_review"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_source_acquisition" },
+    "status": { "const": "retrieved_unadjudicated" },
+    "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "candidate_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]$" },
+    "requested_url": { "type": "string", "pattern": "^https?://" },
+    "final_url": { "type": "string", "pattern": "^https?://" },
+    "redirect_chain": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^https?://" }
+    },
+    "network_trace": {
+      "description": "One DNS-validated and request-pinned public destination for every requested/redirect URL.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["url", "hostname", "address", "family"],
+        "additionalProperties": false,
+        "properties": {
+          "url": { "type": "string", "pattern": "^https?://" },
+          "hostname": { "type": "string", "minLength": 1 },
+          "address": { "type": "string", "minLength": 2 },
+          "family": { "enum": [4, 6] }
+        }
+      }
+    },
+    "retrieved_at": { "type": "string", "format": "date-time" },
+    "retrieval_protocol": { "const": "http_raw_response_bytes_v1" },
+    "http_status": { "type": "integer", "minimum": 200, "maximum": 299 },
+    "content_type": { "type": ["string", "null"], "minLength": 1 },
+    "content_encoding": { "type": ["string", "null"], "minLength": 1 },
+    "byte_length": { "type": "integer", "minimum": 1, "maximum": 52428800 },
+    "content_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "archive_path": { "type": "string", "pattern": "^acquisitions/candidates/[a-z0-9][a-z0-9_-]{1,62}[a-z0-9]/source\\.bin$" },
+    "limits": {
+      "type": "object",
+      "required": ["timeout_ms", "max_bytes", "max_redirects"],
+      "additionalProperties": false,
+      "properties": {
+        "timeout_ms": { "type": "integer", "minimum": 100, "maximum": 60000 },
+        "max_bytes": { "type": "integer", "minimum": 1, "maximum": 52428800 },
+        "max_redirects": { "type": "integer", "minimum": 0, "maximum": 5 }
+      }
+    },
+    "human_review": {
+      "type": "object",
+      "required": ["status", "reviewer_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "const": "not_requested" },
+        "reviewer_ids": { "type": "array", "maxItems": 0 }
+      }
+    }
+  }
+}

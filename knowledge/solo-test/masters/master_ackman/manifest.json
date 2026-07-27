@@ -1,0 +1,130 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "activism",
+      "governance",
+      "capital_allocation",
+      "corporate_change"
+    ],
+    "exclusions": [
+      "private campaign strategy",
+      "management motives inferred from filings",
+      "wish lists presented as executable catalysts",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "engagement_feasibility_v1",
+    "optional_fact_types": [
+      "valuation.improvement_value",
+      "governance.board_rights",
+      "catalyst.change_levers",
+      "catalyst.implementation_cost",
+      "catalyst.timeline"
+    ],
+    "required_fact_types": [
+      "governance.voting_control",
+      "valuation.standalone_value"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_ackman.power_map",
+      "master_ackman.change_value_bridge"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "governance.voting_control",
+      "valuation.standalone_value"
+    ],
+    "hard_vetoes": [
+      "master_ackman.no_standalone_downside",
+      "master_ackman.no_power_path",
+      "master_ackman.cost_time_erasure"
+    ],
+    "native_output": "engagement_feasibility_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Ackman Activist Lens Provisional Operator Lens",
+      "zh": "阿克曼激进投资视角临时操作视角"
+    },
+    "persona_id": "master_ackman",
+    "public_label": {
+      "en": "Ackman Activist Lens Solo Test",
+      "zh": "阿克曼激进投资视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject engagement when the existing business lacks a defensible downside case.",
+      "Reject a catalyst that no identified actor has legal power to cause.",
+      "Reject when implementation cost and time erase the reviewed value gap."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in activism, governance, capital_allocation, corporate_change",
+      "zh": "用于测试确定性行为：activism、governance、capital_allocation、corporate_change"
+    },
+    "identity": {
+      "en": "Ackman Activist Lens; project-derived and not human reviewed",
+      "zh": "阿克曼激进投资视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Separate standalone value from improvement value, then test whether a legal, financeable and time-bounded actor can execute the change path.",
+      "zh": "Separate standalone value from improvement value, then test whether a legal, financeable and time-bounded actor can execute the change path."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

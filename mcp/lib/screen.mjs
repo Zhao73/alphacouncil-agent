@@ -27,7 +27,41 @@ const UNIT_BY_CONCEPT = { sharesOutstanding: "shares" };
 
 function values(facts, key, asOf) {
   const found = annualSeries(facts, CONCEPTS[key], { asOf, unit: UNIT_BY_CONCEPT[key] || "USD" });
-  return found ? found.series.map((e) => ({ end: e.end, filed: e.filed, val: e.val })) : [];
+  return found ? found.series.map((e) => ({
+    start: e.start || null,
+    end: e.end,
+    filed: e.filed,
+    val: e.val,
+    accn: e.accn || null,
+    tag: e.tag || found.tag,
+  })) : [];
+}
+
+function ruleProvenance(series) {
+  const rows = series.flat().filter((entry) => entry?.filed && entry?.end);
+  const starts = rows.map((entry) => entry.start).filter(Boolean).sort();
+  const ends = rows.map((entry) => entry.end).filter(Boolean).sort();
+  const filed = rows.map((entry) => entry.filed).filter(Boolean).sort();
+  const sourceRecords = [];
+  const seen = new Set();
+  for (const entry of rows) {
+    const key = `${entry.tag}:${entry.accn || "no-accn"}:${entry.filed}:${entry.end}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sourceRecords.push({
+      tag: entry.tag,
+      accession: entry.accn,
+      filed: entry.filed,
+      period_end: entry.end,
+    });
+  }
+  return {
+    period_start: starts[0] || null,
+    period_end: ends.at(-1) || null,
+    fiscal_year: ends.length ? Number(ends.at(-1).slice(0, 4)) : null,
+    public_at: filed.at(-1) || null,
+    source_records: sourceRecords,
+  };
 }
 
 /**
@@ -68,7 +102,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     }
     if (roes.length < 5) return null;
     const avg = sum(roes) / roes.length;
-    return { passed: avg >= 0.08, value: pct(avg), unit: "%", threshold: 8, direction: "min", years: roes.length };
+    return {
+      passed: avg >= 0.08, value: pct(avg), unit: "%", threshold: 8, direction: "min", years: roes.length,
+      ...ruleProvenance([ni.slice(-n), eq.slice(-n)]),
+    };
   });
 
   add("fcf_5y", { en: "5-year cumulative free cash flow", zh: "5年累计自由现金流" }, () => {
@@ -79,7 +116,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const total = sum(o.slice(-n).map((x) => x.val)) - sum(c.slice(-n).map((x) => x.val));
     // Raw dollars, not billions rounded to two places: rounding erased the entire figure
     // for anything below ~$5m, which is most of the small-cap universe.
-    return { passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, direction: "min", years: n };
+    return {
+      passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, direction: "min", years: n,
+      ...ruleProvenance([o.slice(-n), c.slice(-n)]),
+    };
   });
 
   add("interest_cover", { en: "EBIT / interest cover", zh: "利息保障倍数" }, () => {
@@ -87,7 +127,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const int = last(interest, 1)[0];
     if (!ebit || !int || int.val === 0) return null;
     const cover = ebit.val / Math.abs(int.val);
-    return { passed: cover >= 2, value: Number(cover.toFixed(2)), unit: "x", threshold: 2, direction: "min" };
+    return {
+      passed: cover >= 2, value: Number(cover.toFixed(2)), unit: "x", threshold: 2, direction: "min",
+      ...ruleProvenance([[ebit, int]]),
+    };
   });
 
   add("gross_margin", { en: "long-run gross margin", zh: "长期毛利率" }, () => {
@@ -102,7 +145,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     }
     if (!margins.length) return null;
     const avg = sum(margins) / margins.length;
-    return { passed: avg >= 0.15, value: pct(avg), unit: "%", threshold: 15, direction: "min", years: margins.length };
+    return {
+      passed: avg >= 0.15, value: pct(avg), unit: "%", threshold: 15, direction: "min", years: margins.length,
+      ...ruleProvenance([gp.slice(-n), rev.slice(-n)]),
+    };
   });
 
   add("ocf_over_ni", { en: "5-year OCF / net income", zh: "5年经营现金流/净利" }, () => {
@@ -113,7 +159,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const totalNi = sum(ni.slice(-n).map((x) => x.val));
     if (totalNi <= 0) return null;
     const ratio = sum(o.slice(-n).map((x) => x.val)) / totalNi;
-    return { passed: ratio >= 0.7, value: Number(ratio.toFixed(2)), unit: "x", threshold: 0.7, direction: "min", years: n };
+    return {
+      passed: ratio >= 0.7, value: Number(ratio.toFixed(2)), unit: "x", threshold: 0.7, direction: "min", years: n,
+      ...ruleProvenance([o.slice(-n), ni.slice(-n)]),
+    };
   });
 
   add("net_margin", { en: "long-run net margin", zh: "长期净利率" }, () => {
@@ -124,7 +173,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const totalRev = sum(rev.slice(-n).map((x) => x.val));
     if (totalRev <= 0) return null;
     const margin = sum(ni.slice(-n).map((x) => x.val)) / totalRev;
-    return { passed: margin >= 0.05, value: pct(margin), unit: "%", threshold: 5, direction: "min", years: n };
+    return {
+      passed: margin >= 0.05, value: pct(margin), unit: "%", threshold: 5, direction: "min", years: n,
+      ...ruleProvenance([ni.slice(-n), rev.slice(-n)]),
+    };
   });
 
   add("dilution", { en: "5-year share dilution", zh: "5年股本稀释" }, () => {
@@ -134,7 +186,10 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     const latest = s[s.length - 1].val;
     if (!(first > 0)) return null;
     const change = latest / first - 1;
-    return { passed: change <= 0.20, value: pct(change), unit: "%", threshold: 20, direction: "max", years: s.length };
+    return {
+      passed: change <= 0.20, value: pct(change), unit: "%", threshold: 20, direction: "max", years: s.length,
+      ...ruleProvenance([s]),
+    };
   });
 
   // Exemptions. These are the only legitimate way past a failed rule -- a good story is

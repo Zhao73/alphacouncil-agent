@@ -2,6 +2,89 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.0-solo-test.1] — 2026-07-27
+
+This package is the first **0.9.0 solo-test prerelease**, not a formal production-GA release.
+`package.json`, the Claude/Codex plugin surfaces, marketplace metadata and
+`data/build-profile.v1.json` all declare `0.9.0-solo-test.1`.
+
+The public package uses npm's `next` dist-tag and the GitHub release is marked as a
+pre-release. Exact `0.9.0-solo-test.1` installation is supported while `latest` stays on the
+production-facing 0.8.0 line and the stable `0.9.0` version remains unoccupied until the
+formal GA gates pass.
+
+### Solo-test assurance boundary
+
+- Exactly 26 physical PersonaPack v3 packs are packaged under the isolated solo-test root.
+- Exactly 52 executable tools are present, all marked `provisional_derived_proxy`.
+- All 26 seats remain provisional `operator_lens`; operational seats: **0**;
+  `method_model` seats: **0**.
+- Human source approvals: **0**; human formula approvals: **0**; human approval signatures:
+  **0**. Project-derived proxies are test fixtures, not named-investor method attribution.
+- All 32 archived source candidates now have hash-bound machine pre-review artifacts. Three
+  isolated AI roles produce 96 deterministic triage outputs with explicit questions and
+  verdicts, while `human_reviewed=false` and `production_effect=none` keep the trusted
+  human-review quorum and production gate fail-closed.
+- The production loader rejects all 26 solo-test packs. Formal production assembly,
+  cutover, rollback evidence and GA remain fail-closed until the outstanding human-review,
+  experiment, host and release gates pass.
+- Source and installed-package validation are now separated: a source checkout verifies its
+  private/raw staging tree when present, while an installed package runs a real MCP selection
+  and receipt-replay smoke instead of reporting a misleading zero-test pass.
+
+Exact verification commands and the observed status are recorded in
+`docs/solo-test-0.9.0.md`.
+
+### Added in the first 0.9.0 increment
+
+- **A mandatory per-run master chooser.** `begin_council_selection` freezes the current
+  catalog and returns every seat with a stable number, identity, method, best-use case and
+  maturity. `confirm_master_selection` accepts one seat, any combination, ranges, stable IDs
+  or `all`, then issues a short-lived one-run receipt.
+- **Server-side enforcement rather than prompt etiquette.** `plan_visible_run`,
+  `collect_evidence` and `analyze_symbol` reject an absent, stale, replayed, cross-symbol or
+  cross-intent receipt before creating a run or fetching data. Confirm and consume operations
+  use exclusive file locks so separate host processes cannot spend the same selection twice.
+  Run starts also hold an exclusive lock: concurrent retries create one lifecycle, while a
+  completed same-receipt retry loads existing state instead of erasing packets or paying for
+  the council again.
+- **Text-complete four-host interaction.** Claude Code, Codex, OpenCode and Grok may enhance
+  the chooser with native multi-select, but all share the numbered text grammar and the same
+  MCP receipt. A named master is only preselected; the catalog is still displayed and the
+  user still submits this run's choice.
+- **Headless master execution.** The one-call analysis path now actually runs the selected
+  masters between evidence and debate. A failed selected seat stays missing and prevents a
+  false `complete` status.
+- **Selection audit fields.** `status.json` records the catalog/selection hashes, selected,
+  completed and pending masters, counts, per-seat state and the consumed selection ID.
+- **The five missing requested seats are now selectable.** Damodaran, Ackman, Cathie Wood,
+  Pabrai and Jhunjhunwala expand the active catalog from 21 to exactly 26. The complete
+  26-seat solo-test tree now loads only through the explicit provisional path as
+  `operator_lens`; none is mislabeled as operational or as a completed v3 method model.
+- **Cryptographic PersonaPack admission and release foundations.** Experiment results now use
+  Ed25519 attestations bound to the exact artifact/corpus/policy/tool/prompt hashes;
+  `method_model` promotion stays fused closed until explicitly enabled after all gates pass.
+  Source review and release operations each require two distinct trusted principals, so
+  repeated keys or copied reviewer names cannot manufacture independence.
+- **Immutable 26-pack publication and rollback.** The assembler accepts only one complete
+  operational-or-higher 26-seat tree, verifies signed source-adjudication ledgers, embeds and
+  hashes their evidence, then publishes by same-filesystem fsync and atomic rename. Signed
+  cutover/rollback approvals produce immutable versioned pointer history.
+- **A fail-closed GA verifier.** The real immutable release manifest is checked against the
+  production pack hashes. A separate signed evidence document must cover Claude Code,
+  Codex, OpenCode, Grok, the installed package, cutover and rollback. The previous unsigned
+  combined-JSON shape is rejected rather than accepted as self-certification.
+
+### In progress, not yet a production-GA claim
+
+- Migrate all 26 seats to PersonaPack v3 with sourced doctrine, private research plans,
+  typed computations, native decisions, hard vetoes, calibration and ablation tests.
+- Pass the A-E comparison ladder: single-agent baseline; 8 analysts; 8 analysts plus selected
+  masters; verifier-enabled council; and blinded human reference answers. Seat count is never
+  treated as independent sample count.
+
+Implementation tracker: `docs/plans/0.9.0-personapack-v3.md`.
+
 ## [0.8.0] — 2026-07-27
 
 Minor rather than patch: **the master bench changes from prompt voices to method models,

@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "options_pricing",
+      "volatility_surface",
+      "greeks",
+      "relative_value"
+    ],
+    "exclusions": [
+      "private market-making books",
+      "stale mid-prices treated as executable",
+      "directional equity judgments outside an option structure",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "options_relative_value_v1",
+    "optional_fact_types": [
+      "options.skew_surface",
+      "options.term_structure",
+      "options.greeks",
+      "options.payoff",
+      "execution.bid_ask",
+      "execution.liquidity"
+    ],
+    "required_fact_types": [
+      "options.implied_volatility"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_natenberg.surface_builder",
+      "master_natenberg.greeks_payoff"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "options.implied_volatility"
+    ],
+    "hard_vetoes": [
+      "master_natenberg.stale_chain",
+      "master_natenberg.untradeable_spread",
+      "master_natenberg.undefined_exposure"
+    ],
+    "native_output": "options_relative_value_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Natenberg Lens (Volatility Pricing) Provisional Operator Lens",
+      "zh": "纳坦伯格视角（波动率定价）临时操作视角"
+    },
+    "persona_id": "master_natenberg",
+    "public_label": {
+      "en": "Natenberg Lens (Volatility Pricing) Solo Test",
+      "zh": "纳坦伯格视角（波动率定价）单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject relative value when quotes are stale or timestamps are inconsistent.",
+      "Reject apparent mispricing that cannot clear the executable spread.",
+      "Reject a structure whose material Greek or payoff exposure is not computed."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in options_pricing, volatility_surface, greeks, relative_value",
+      "zh": "用于测试确定性行为：options_pricing、volatility_surface、greeks、relative_value"
+    },
+    "identity": {
+      "en": "Natenberg Lens (Volatility Pricing); project-derived and not human reviewed",
+      "zh": "纳坦伯格视角（波动率定价）；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Evaluate option relative value through implied volatility, skew, term structure, Greeks, payoff structure and executable market-making constraints.",
+      "zh": "Evaluate option relative value through implied volatility, skew, term structure, Greeks, payoff structure and executable market-making constraints."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

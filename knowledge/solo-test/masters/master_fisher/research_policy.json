@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when stakeholder claims do not have independent public corroboration.",
+    "Reject long-duration quality when management depth cannot be evidenced.",
+    "Reject growth quality when research spending lacks observable product or economic output."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

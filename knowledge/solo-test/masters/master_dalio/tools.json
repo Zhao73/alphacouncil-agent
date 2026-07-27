@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:89b860b69b24b05f1aa7f52fd59ac650b71b92e5ba3c239bc02514a1d70f71a0",
+    "derivation_spec_hash": "sha256:b8b6f23a565660f04631006b564a85d23c8b76ad48cecaae235c3cca0d074daa",
+    "derivation_spec_id": "master_dalio.regime_classifier.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_dalio.regime_classifier",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:b1a35868965749e95efe34f6f95b84d632729bed866e17e0fe699bd8757824ad",
+    "inputs": [
+      {
+        "fact_id": "macro.growth_regime"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "macro.growth_regime",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:a362f447b36b2ee7135461fa632263a44a39adcb3dcfd4a34f96fb1f547f02a5",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:89c1ba22ac2965e32"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:9562819a0d26ff184b7888914f9efd3355f853a3af752c3a2f9943c3e522d0a4",
+    "derivation_spec_hash": "sha256:c08ce7f44b55e8191541b5b4ac350c9d2e37405f61a7ed0f4e4b056585df91ce",
+    "derivation_spec_id": "master_dalio.debt_driver_stress.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_dalio.debt_driver_stress",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:f6314d9460fc29333f05c0b84f233d1aa747052e63359f58397d98b16cb36b98",
+    "inputs": [
+      {
+        "fact_id": "macro.growth_regime"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "credit.debt_service",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:64023fe51634160d0e494c807e520b13846450b93aa9f8b5a62c269faf4d815d",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:89c1ba22ac2965e32"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

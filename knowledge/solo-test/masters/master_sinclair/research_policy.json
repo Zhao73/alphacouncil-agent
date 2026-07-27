@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject an edge based on an unvalidated realized-volatility forecast.",
+    "Reject when spread and slippage erase the gross volatility difference.",
+    "Reject when forecast error is material relative to estimated net edge."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

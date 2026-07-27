@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject any result with unresolved future information in features or membership.",
+    "Reject a signal without a genuinely untouched evaluation partition.",
+    "Reject a signal whose estimated edge does not survive conservative execution costs."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

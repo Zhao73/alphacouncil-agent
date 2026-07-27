@@ -1,0 +1,172 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:9d079cf841bf628d1d7c5c833eb271c365bc1048baea5262976bb3b2ef14bdff",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "marks_oaktree_its_all_good_2007",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:1cb5a5464151dce854042d963a3b60ccce7ef586b8eca7fe9a7461379bff5930",
+    "declared_artifact_hash": "sha256:61a023ca32578d9f7928253b5f095683c8059f8bf950adec51ae51942900307f",
+    "recomputed_artifact_hash": "sha256:61a023ca32578d9f7928253b5f095683c8059f8bf950adec51ae51942900307f",
+    "relative_path": "master_marks/marks_oaktree_its_all_good_2007.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_marks",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 2,
+          "section_claimed": "Investment-market pendulum",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 209,
+          "text_start": 174
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:bb8f3826009ee78e20ed69351d9c361bf323396b9fdf0cae7a923f73cc83581b",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 2,
+          "section": "Investment-market pendulum",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:bb8f3826009ee78e20ed69351d9c361bf323396b9fdf0cae7a923f73cc83581b",
+        "normalized_excerpt": "between overpriced and underpriced.",
+        "skeptic_snippet_hash_claimed": "sha256:bb8f3826009ee78e20ed69351d9c361bf323396b9fdf0cae7a923f73cc83581b",
+        "skeptic_snippet_hash_recomputed": "sha256:bb8f3826009ee78e20ed69351d9c361bf323396b9fdf0cae7a923f73cc83581b"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The two-word bound excerpt establishes only the pricing endpoints and not the full psychology-and-pendulum indicator rule.",
+      "final_verdict": "partial",
+      "proposition_id": "marks_oaktree_its_all_good_2007:p1",
+      "review_hash": "sha256:93cd5279c83a56dd9a078d7e97fec9cd15c76e666f002368a53d9f8e9e0ec69d",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "The snippet is too short for the complete two-cause cyclical indicator claim."
+        ],
+        "support_rationale": "The page supports the pendulum between psychology and over/underpricing, but the exact excerpt binds only the pricing endpoints and not the reliability or psychology components of the proposition.",
+        "support_verdict": "partial"
+      },
+      "statement": "Use investor psychology and the price pendulum as cyclical risk indicators because markets repeatedly swing between overpricing and underpricing.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The surrounding page supports more than the exact excerpt, so the proposition needs a broader bound snippet."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:ce2d1ffc50aa4f44a72016d73b083eeaf3aa53a86a10fc0d4d70534cee08e00e",
+    "declared_artifact_hash": "sha256:2c6f6902c1630cc45d17e38fcc4c6033e9bcaf92c684af3608c40968ac08bb11",
+    "recomputed_artifact_hash": "sha256:2c6f6902c1630cc45d17e38fcc4c6033e9bcaf92c684af3608c40968ac08bb11",
+    "relative_path": "master_marks/marks_oaktree_its_all_good_2007.json"
+  },
+  "source_binding": {
+    "byte_length": 80733,
+    "content_hash": "sha256:0d67e5c2f0a452c57acc629ae9337bcbd2eadaa99c3c946c8b5639a0d5c18de9",
+    "extracted_character_count_recomputed": 43391,
+    "extracted_text_hash_recomputed": "sha256:050488eb0648094862d97dc9acb93e24acfeee956592b0e3fd59251f20e8fca9",
+    "page_character_counts_recomputed": [
+      2776,
+      2475,
+      3024,
+      3339,
+      3233,
+      3475,
+      3645,
+      3219,
+      3133,
+      3592,
+      3296,
+      3140,
+      3459,
+      1585
+    ],
+    "page_count_recomputed": 14,
+    "raw_bytes_hash_recomputed": "sha256:0d67e5c2f0a452c57acc629ae9337bcbd2eadaa99c3c946c8b5639a0d5c18de9",
+    "source_record_hash": "sha256:27bb3a95ecd83089b22c75adae4ea63f2a25363e17bbfe60c2f5222f7d3a46cb"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The surrounding page supports more than the exact excerpt, so the proposition needs a broader bound snippet."
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject conclusions whose load-bearing input is private or classified.",
+    "Reject a scale scenario that lacks a dated, financeable power path.",
+    "Reject a timeline that ignores documented equipment and interconnect lead times."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:2ba6d8664c94945e112791082951fdde19102770106c8c3b89f0c41aca4dfd06",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "druckenmiller_econclubny_transcript_2019",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:74eab452a11c5bddd9642d266b9142175e269ea321f3c8fac995811c1e2feb16",
+    "declared_artifact_hash": "sha256:3be6e263dda4f1adbfa5010e9fea2d713266b10d006108a11c3368a1fc82b4cf",
+    "recomputed_artifact_hash": "sha256:3be6e263dda4f1adbfa5010e9fea2d713266b10d006108a11c3368a1fc82b4cf",
+    "relative_path": "master_druckenmiller/druckenmiller_econclubny_transcript_2019.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_druckenmiller",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 29,
+          "section_claimed": "Audience question on liquidity",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 1586,
+          "text_start": 1461
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 29,
+          "section": "Audience question on liquidity",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820",
+        "normalized_excerpt": "liquidity is a moving animal. It’s things can be very liquid and then three weeks later there can be no liquidity whatsoever.",
+        "skeptic_snippet_hash_claimed": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820",
+        "skeptic_snippet_hash_recomputed": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The answer directly characterizes liquidity as changing, side-dependent, and capable of disappearing within weeks.",
+      "final_verdict": "supported",
+      "proposition_id": "druckenmiller_econclubny_transcript_2019:p1",
+      "review_hash": "sha256:ec9a43849003d49a3bbd01e07f51a11549a629832044e849d842660dfcdb6b92",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The interview answer expressly describes liquidity as spotty, side-dependent, and capable of disappearing within weeks.",
+        "support_verdict": "supported"
+      },
+      "statement": "Treat market liquidity as state-dependent and capable of disappearing quickly rather than as a stable portfolio assumption.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:1386228278812bc741511369c004677a418c722cab02ba47f2a58358b8b31cb2",
+    "declared_artifact_hash": "sha256:459ec42e575b8a90766d126501dbdd9af5febdc2fbd6250d7678943b0cf9f3bc",
+    "recomputed_artifact_hash": "sha256:459ec42e575b8a90766d126501dbdd9af5febdc2fbd6250d7678943b0cf9f3bc",
+    "relative_path": "master_druckenmiller/druckenmiller_econclubny_transcript_2019.json"
+  },
+  "source_binding": {
+    "byte_length": 162239,
+    "content_hash": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+    "extracted_character_count_recomputed": 49074,
+    "extracted_text_hash_recomputed": "sha256:c56c3dc4f68f65e6c7832571df83fed2d9bf0a1c2dd76d0a3b913815d2ba718b",
+    "page_character_counts_recomputed": [
+      292,
+      1338,
+      1767,
+      1571,
+      1531,
+      1569,
+      1220,
+      1630,
+      1731,
+      1676,
+      1642,
+      1529,
+      1540,
+      1561,
+      1388,
+      1198,
+      1254,
+      1623,
+      1547,
+      1373,
+      1711,
+      1746,
+      1514,
+      1413,
+      1718,
+      1306,
+      1344,
+      1179,
+      1628,
+      1319,
+      1273,
+      1394,
+      1521,
+      1028
+    ],
+    "page_count_recomputed": 34,
+    "raw_bytes_hash_recomputed": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+    "source_record_hash": "sha256:2214d28093b5920de177a2cce3151260cad7dbefb9370b4d5f24f49120ad99e3"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

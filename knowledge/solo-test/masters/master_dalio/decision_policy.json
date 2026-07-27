@@ -1,0 +1,105 @@
+{
+  "abstention_policy": "fail_closed",
+  "dsl_version": "1.1",
+  "eligibility": {
+    "all": []
+  },
+  "fact_gate": {
+    "on_missing_critical": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_regime_unknown"
+    }
+  },
+  "hard_vetoes": [],
+  "native_decision_schema": "regime_balance_v1",
+  "native_output_fields": [
+    {
+      "field": "metric_1",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "macro.growth_regime"
+      }
+    },
+    {
+      "field": "metric_2",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "credit.debt_service"
+      }
+    }
+  ],
+  "native_states": [
+    "provisional_regime_unknown",
+    "provisional_fragile",
+    "provisional_unbalanced",
+    "provisional_regime_resilient"
+  ],
+  "schema_version": 1,
+  "score_bands": [
+    {
+      "decision": {
+        "common_stance": "opposed",
+        "native_state": "provisional_fragile"
+      },
+      "min_ratio": 0
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_unbalanced"
+      },
+      "min_ratio": 0.5
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_regime_resilient"
+      },
+      "min_ratio": 1
+    }
+  ],
+  "scoring": {
+    "max_score": 2,
+    "min_coverage": 1,
+    "on_insufficient_coverage": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_regime_unknown"
+    },
+    "rules": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "macro.growth_regime"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_1",
+        "source_ids": [
+          "proxy:89c1ba22ac2965e32"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "credit.debt_service"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "proxy_score_2",
+        "source_ids": [
+          "proxy:89c1ba22ac2965e32"
+        ]
+      }
+    ]
+  }
+}

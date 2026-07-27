@@ -1,0 +1,129 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "global_macro",
+      "reflexivity",
+      "boom_bust",
+      "crowded_trades"
+    ],
+    "exclusions": [
+      "private Quantum Fund positioning",
+      "current political or market opinions not in public sources",
+      "point forecasts presented as method doctrine",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "reflexive_loop_v1",
+    "optional_fact_types": [
+      "macro.policy_path",
+      "market.price_trend",
+      "credit.financing_conditions",
+      "fundamental.response_to_price"
+    ],
+    "required_fact_types": [
+      "reflexivity.loop_state",
+      "positioning.crowding"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_soros.reflexivity_graph",
+      "master_soros.reversal_monitor"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "reflexivity.loop_state",
+      "positioning.crowding"
+    ],
+    "hard_vetoes": [
+      "master_soros.no_reflexive_link",
+      "master_soros.unfinanceable_timing",
+      "master_soros.no_reversal_signal"
+    ],
+    "native_output": "reflexive_loop_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Soros Lens Provisional Operator Lens",
+      "zh": "索罗斯视角临时操作视角"
+    },
+    "persona_id": "master_soros",
+    "public_label": {
+      "en": "Soros Lens Solo Test",
+      "zh": "索罗斯视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject a reflexivity thesis that cannot show feedback from price to fundamentals.",
+      "Reject a position that cannot survive before the loop is expected to break.",
+      "Reject a trade thesis with no observable condition for admitting the loop changed."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in global_macro, reflexivity, boom_bust, crowded_trades",
+      "zh": "用于测试确定性行为：global_macro、reflexivity、boom_bust、crowded_trades"
+    },
+    "identity": {
+      "en": "Soros Lens; project-derived and not human reviewed",
+      "zh": "索罗斯视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Map reflexive feedback among price, financing, fundamentals, policy and participant beliefs, then identify the observable break condition.",
+      "zh": "Map reflexive feedback among price, financing, fundamentals, policy and participant beliefs, then identify the observable break condition."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

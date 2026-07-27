@@ -1,0 +1,73 @@
+{
+  "artifact_hash": "sha256:04de769b19d60363d2821f467ea79fcd16955b85a1fffc059e5828d0d6ef4c1b",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "soros_reflexivity_uncertainty_2014",
+  "concise_summary": "Soros formalizes fallibility and reflexive feedback between participant beliefs and events, emphasizing indeterminacy under human uncertainty.",
+  "contradictions_ambiguities": [
+    "The essay is methodological philosophy, not a security-specific entry, exit, or sizing algorithm."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Reflexive feedback loops between the cognitive and manipulative functions connect the realms of beliefs and events.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Reflexive feedback loops",
+        "text_end": 13970,
+        "text_start": 13855
+      },
+      "proposition_id": "soros_reflexivity_uncertainty_2014:p1",
+      "snippet_hash": "sha256:fc08c08cc327a79af139146754bb767ba60df1e49b8442d7da03419923389cec",
+      "statement": "Analyze beliefs and fundamentals as a two-way feedback process rather than assuming participant views only passively reflect events.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which measurable proxies distinguish a reinforcing reflexive loop from ordinary correlated expectations?"
+  ],
+  "persona_id": "master_soros",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The essay text is readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 111016,
+    "content_hash": "sha256:b741086183ff818ebd3a2c889b4d3ef8b977ce744e219033ebc7ca62576514cc",
+    "content_type": "text/html; charset=UTF-8",
+    "extracted_character_count": 73039,
+    "extracted_text_hash": "sha256:2d47e82e6e81bf936a48aa863a244756db430e3163fe9a157adc492a4ed86a69",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://www.georgesoros.com/2014/01/13/fallibility-reflexivity-and-the-human-uncertainty-principle-2/",
+    "page_character_counts": [
+      73039
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:2250b98e026098f05c4620f63deb201d340b3a0e616a2c537b09c62584a6adfb",
+    "retrieved_at": "2026-07-27T06:35:33.485Z"
+  },
+  "source_type": "primary_essay"
+}

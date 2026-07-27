@@ -1,0 +1,159 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:7196928fafbcb5cc755b35913ebe91a471e92f8a4c975fbbad047a0434f4fe43",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_law_large_numbers_fat_tails",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:0b79b237e6fe51cc409170960405c349f3b8ebb660b3c447c5dc8db1175a20a0",
+    "declared_artifact_hash": "sha256:1b284644dd666ae337bbc6dda4557bfbd62805e74542fd7886b7be3e072a4ca7",
+    "recomputed_artifact_hash": "sha256:1b284644dd666ae337bbc6dda4557bfbd62805e74542fd7886b7be3e072a4ca7",
+    "relative_path": "master_taleb/taleb_law_large_numbers_fat_tails.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 1,
+          "section_claimed": "Introduction",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 608,
+          "text_start": 499
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 1,
+          "section": "Introduction",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22",
+        "normalized_excerpt": "Let us call \"sample equivalence\" the sample size that is needed to correspond to a Gaussian sample size of n.",
+        "skeptic_snippet_hash_claimed": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22",
+        "skeptic_snippet_hash_recomputed": "sha256:243655b7645ad09f9e5231c9cf158ba9edff541e37105f32b33b0bebc9844c22"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The paper directly defines sample equivalence as the fat-tail sample size corresponding to a Gaussian sample size.",
+      "final_verdict": "supported",
+      "proposition_id": "taleb_law_large_numbers_fat_tails:p1",
+      "review_hash": "sha256:7ec4c75681d1cec053d7b032a412b1ff19f6551f35a64da5d8b5e5eeb05531b0",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The paper defines sample equivalence exactly as the fat-tail sample size corresponding to a Gaussian sample size and explains why nominal n can be misleading.",
+        "support_verdict": "supported"
+      },
+      "statement": "Translate nominal sample size into tail-sensitive sample equivalence before treating an empirical mean as precise.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:d49ccbcbb56eb7bd46cc767819e3b356a7a8b301e3e0287828ee71fa7e4f436e",
+    "declared_artifact_hash": "sha256:ea3fae11f1debb6d4b3feb89df662df00189943104fe9acae49bf30b6c63efed",
+    "recomputed_artifact_hash": "sha256:ea3fae11f1debb6d4b3feb89df662df00189943104fe9acae49bf30b6c63efed",
+    "relative_path": "master_taleb/taleb_law_large_numbers_fat_tails.json"
+  },
+  "source_binding": {
+    "byte_length": 427393,
+    "content_hash": "sha256:9fd0112a505073bc6dc4ad60b267cd2ffdb4fa86adefa7cb0a62a36d0b0409d0",
+    "extracted_character_count_recomputed": 20589,
+    "extracted_text_hash_recomputed": "sha256:4e74465a701625430f0a960853f9a6341151ec57c92e7f2ed1f1e27434a83636",
+    "page_character_counts_recomputed": [
+      3462,
+      3773,
+      4444,
+      2786,
+      2270,
+      1422,
+      2432
+    ],
+    "page_count_recomputed": 7,
+    "raw_bytes_hash_recomputed": "sha256:9fd0112a505073bc6dc4ad60b267cd2ffdb4fa86adefa7cb0a62a36d0b0409d0",
+    "source_record_hash": "sha256:cacac9f428477c68f73e49ecfe016c5986e4b383cf3f3ee80127cfc851c72b45"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

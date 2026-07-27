@@ -13,6 +13,16 @@ Run `npm run check` after any code or prompt change.
 The MCP server is the load-bearing integration on every host: it reads `personas/` directly,
 so a host that ignores the generated agent files still gets correct prompts.
 
+Every host also follows the same mandatory master-selection protocol for a full or quick
+council. Call `begin_council_selection`, display every returned entry with its number,
+identity, method and `best_for`, collect a numbered/range/ID/`all` submission, then call
+`confirm_master_selection` with `display_ack: true`. Existing names in the request are only
+a prefill; the full catalog is still shown. Only the returned one-use `selection_receipt`
+may authorize `plan_visible_run`, `collect_evidence` or `analyze_symbol`. A host-native
+multi-select is optional UI sugar; the numbered text fallback is mandatory on Claude Code,
+Codex, OpenCode and Grok Build. Data-only `screen`, `options`, `news` and `market` modes are
+the only `/alpha` routes that skip this gate.
+
 | Host | Config | Agents | Skills |
 |---|---|---|---|
 | Claude Code | `.claude-plugin/plugin.json`, `.mcp.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
@@ -76,8 +86,8 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Full council — asks which preset first | one subagent per seat |
-| `/alpha <ticker> quick` | 4 analysts + debate, no bench, no verification | 7 seats |
+| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs the full council | one subagent per selected seat |
+| `/alpha <ticker> quick` | Same mandatory master selection, then 4 analysts + selected masters + debate; no verification | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |
@@ -85,8 +95,8 @@ rather than four in a menu of a hundred.
 | `/alpha` | Lists the modes and stops | **none** |
 
 The four marked **none** call keyless data tools and spawn no subagents, so they cost
-nothing beyond the turn you type them in. The council modes spawn one subagent per seat, and
-that is the entire cost of running this.
+nothing beyond the turn you type them in. Full and quick are council modes: both require a
+fresh selection receipt, and their cost varies with the selected master count.
 
 | Host | Where it reads them |
 |---|---|

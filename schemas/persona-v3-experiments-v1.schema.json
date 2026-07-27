@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-experiments-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 experiment attestations",
+  "description": "Ed25519-signed, reproducible production-workflow experiment results bound to the exact non-circular artifact subject. Legacy sha256 pseudo-signatures remain structurally readable for migration but are never admission evidence.",
+  "type": "object",
+  "required": ["schema_version", "persona_id", "experiments"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "persona_id": { "type": "string", "pattern": "^[a-z0-9_]{2,48}$" },
+    "experiments": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "source_fidelity",
+          "policy_adherence",
+          "host_parity",
+          "name_invariance",
+          "voice_invariance",
+          "policy_swap",
+          "counterfactual_direction",
+          "citation_support",
+          "pairwise_differentiation",
+          "blind_method_identification",
+          "leave_one_out",
+          "matched_cost"
+        ]
+      },
+      "additionalProperties": { "$ref": "#/$defs/experiment" }
+    }
+  },
+  "$defs": {
+    "hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "threshold": {
+      "type": "object",
+      "required": ["operator", "value", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "operator": { "enum": [">", ">=", "<", "<=", "==", "!="] },
+        "value": { "type": "number" },
+        "unit": { "type": ["string", "null"] }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "required": ["value", "unit", "sample_size", "threshold_id", "passed"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "type": ["string", "null"] },
+        "sample_size": { "type": "integer", "minimum": 1 },
+        "threshold_id": { "type": "string", "minLength": 1 },
+        "passed": { "type": "boolean" }
+      }
+    },
+    "experiment": {
+      "type": "object",
+      "required": [
+        "experiment_id",
+        "status",
+        "dataset_hash",
+        "case_ledger_hash",
+        "model_hash",
+        "prompt_hash",
+        "runner_hash",
+        "host_hash",
+        "thresholds",
+        "metrics",
+        "started_at",
+        "evaluated_at",
+        "signer_key_id",
+        "signature"
+      ],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "title": "Current Ed25519 attestation",
+          "required": [
+            "artifact_subject_hash",
+            "corpus_hash",
+            "policy_hash",
+            "tool_graph_hash",
+            "signature_algorithm"
+          ],
+          "properties": {
+            "signature_algorithm": { "const": "ed25519" },
+            "signature": { "$ref": "#/$defs/ed25519Signature" }
+          }
+        },
+        {
+          "title": "Legacy non-cryptographic migration record",
+          "deprecated": true,
+          "required": ["pack_hash", "policy_hash"],
+          "not": { "required": ["signature_algorithm"] },
+          "properties": {
+            "signature": { "$ref": "#/$defs/legacySignature" }
+          }
+        }
+      ],
+      "properties": {
+        "experiment_id": { "type": "string", "minLength": 3 },
+        "status": { "enum": ["passed", "failed"] },
+        "dataset_hash": { "$ref": "#/$defs/hash" },
+        "case_ledger_hash": { "$ref": "#/$defs/hash" },
+        "artifact_subject_hash": { "$ref": "#/$defs/hash" },
+        "corpus_hash": { "$ref": "#/$defs/hash" },
+        "tool_graph_hash": { "$ref": "#/$defs/hash" },
+        "pack_hash": {
+          "description": "Deprecated final-pack hash. It cannot safely bind experiments because experiments are part of that final pack.",
+          "deprecated": true,
+          "$ref": "#/$defs/hash"
+        },
+        "policy_hash": { "$ref": "#/$defs/hash" },
+        "model_hash": { "$ref": "#/$defs/hash" },
+        "prompt_hash": { "$ref": "#/$defs/hash" },
+        "runner_hash": { "$ref": "#/$defs/hash" },
+        "host_hash": { "$ref": "#/$defs/hash" },
+        "thresholds": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/threshold" }
+        },
+        "metrics": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/metric" }
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "evaluated_at": { "type": "string", "format": "date-time" },
+        "signer_key_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" },
+        "signature_algorithm": { "const": "ed25519" },
+        "signature": {
+          "oneOf": [
+            { "$ref": "#/$defs/ed25519Signature" },
+            { "$ref": "#/$defs/legacySignature" }
+          ]
+        }
+      }
+    },
+    "ed25519Signature": {
+      "type": "string",
+      "pattern": "^ed25519:[A-Za-z0-9_-]{86}$"
+    },
+    "legacySignature": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

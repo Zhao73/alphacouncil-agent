@@ -10,6 +10,9 @@ The market_data analyst produced a visible packet. This section names the planne
 ## Bull/Bear Debate Record
 The bull researcher argued for upside, the bear researcher argued for downside, and the portfolio manager balanced both sides.
 
+## Master Bench
+The selected master seat returned a recorded method opinion before the bull/bear debate. Its stance, limits, and counter-evidence are preserved in the run artifacts.
+
 ## Long Thesis
 The long thesis is present for report-contract coverage.
 

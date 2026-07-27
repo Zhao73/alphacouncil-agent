@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:f05c53064213d82908514be6909726fa7353df2f1320b5d01dfc80079a306e67",
+    "derivation_spec_hash": "sha256:149d3d3b9e0b2a3c7402bf8f228267112fd1ee604991ad773302c5c87c0e308c",
+    "derivation_spec_id": "master_taleb.payoff_ruin.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_taleb.payoff_ruin",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:12fb560fd63cc244e30ade64d5cb0d65e74a6d4d01b4f16f8e33cb4ba21cc188",
+    "inputs": [
+      {
+        "fact_id": "risk.ruin_possible"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "risk.ruin_possible",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:52eebed527c01c6979b45d06879ddc98fedc159a459bb3b097fa6e6823bb6abd",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:678e17ab8610dd057"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:c52d6265a127d5f7bafdd20680860021f11203211e924642508f34c7a11e02e8",
+    "derivation_spec_hash": "sha256:4cc0fc13ae85ded9e8d4d8df020da285f5c03ccd03b070e813f0c55a7d2b3a5a",
+    "derivation_spec_id": "master_taleb.tail_friction.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_taleb.tail_friction",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_annualized_volatility",
+        "value_kind": "ratio"
+      }
+    ],
+    "input_schema_hash": "sha256:afa118abfc7dda071b0644ad6132f728554053e467d9444e9f7e08d3e6d43716",
+    "inputs": [
+      {
+        "fact_id": "options.implied_volatility"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "options.realized_volatility",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:35a126af9ea890b3f07c5d48600324007e53d980e9530198346c9749c391aef8",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:678e17ab8610dd057"
+    ],
+    "unit": "decimal_annualized_volatility",
+    "value_kind": "ratio",
+    "version": "0.1.0"
+  }
+]

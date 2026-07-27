@@ -1,0 +1,131 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "tail_risk",
+      "convexity",
+      "options",
+      "fragility"
+    ],
+    "exclusions": [
+      "directional target prices attributed to the named author",
+      "missing volatility facts filled by model memory",
+      "private trading positions",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "convexity_ruin_v1",
+    "optional_fact_types": [
+      "risk.hidden_leverage",
+      "payoff.convexity",
+      "options.realized_volatility",
+      "options.skew_25d",
+      "execution.round_trip_cost",
+      "event.expiry_coverage"
+    ],
+    "required_fact_types": [
+      "risk.ruin_possible",
+      "options.implied_volatility"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_taleb.payoff_ruin",
+      "master_taleb.tail_friction"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "risk.ruin_possible",
+      "options.implied_volatility"
+    ],
+    "hard_vetoes": [
+      "master_taleb.ruin",
+      "master_taleb.negative_convexity",
+      "master_taleb.friction_erases_edge"
+    ],
+    "native_output": "convexity_ruin_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Taleb Lens (Convexity and Tails) Provisional Operator Lens",
+      "zh": "塔勒布视角（凸性与尾部）临时操作视角"
+    },
+    "persona_id": "master_taleb",
+    "public_label": {
+      "en": "Taleb Lens (Convexity and Tails) Solo Test",
+      "zh": "塔勒布视角（凸性与尾部）单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject any return thesis with an unresolved absorbing loss state.",
+      "Reject hidden concavity whose tail loss is not strictly bounded.",
+      "Reject an options edge that does not survive executable round-trip costs."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in tail_risk, convexity, options, fragility",
+      "zh": "用于测试确定性行为：tail_risk、convexity、options、fragility"
+    },
+    "identity": {
+      "en": "Taleb Lens (Convexity and Tails); project-derived and not human reviewed",
+      "zh": "塔勒布视角（凸性与尾部）；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Reject ruin and hidden concavity first, then evaluate whether a payoff is robust or positively convex after liquidity, tail pricing and execution friction.",
+      "zh": "Reject ruin and hidden concavity first, then evaluate whether a payoff is robust or positively convex after liquidity, tail pricing and execution friction."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

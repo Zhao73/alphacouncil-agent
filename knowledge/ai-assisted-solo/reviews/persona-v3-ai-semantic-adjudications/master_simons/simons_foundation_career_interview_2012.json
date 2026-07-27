@@ -1,0 +1,93 @@
+{
+  "agreements": [],
+  "artifact_hash": "sha256:9a8e372bcaad130ca970c20c3245b47dcfcbc9cb94e55d00b68ce6eafae71595",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "simons_foundation_career_interview_2012",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:9a2fd5fe68b9423245daf9c9a508affc77e34b11e709e5a79eef4a3241422d99",
+    "declared_artifact_hash": "sha256:1a8f5d6473be090bcd3a1789adcfedf6ce8a38147d87ee10e0d79c4b1a5efefe",
+    "recomputed_artifact_hash": "sha256:1a8f5d6473be090bcd3a1789adcfedf6ce8a38147d87ee10e0d79c4b1a5efefe",
+    "relative_path": "master_simons/simons_foundation_career_interview_2012.json"
+  },
+  "final_overall_verdict": "unverifiable",
+  "final_rationale": "No source-bound method proposition exists in the extractor artifact, so this candidate remains semantically unverifiable.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_simons",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:2b0b60565fa58a805b25751be5a2fcec67d8e70c4cd4fbd76192a969d5c01ec6",
+    "declared_artifact_hash": "sha256:d1a0893535907e5f8ce583c3749957586f1a0e72429e39b8c2807202adc8a6b3",
+    "recomputed_artifact_hash": "sha256:d1a0893535907e5f8ce583c3749957586f1a0e72429e39b8c2807202adc8a6b3",
+    "relative_path": "master_simons/simons_foundation_career_interview_2012.json"
+  },
+  "source_binding": {
+    "byte_length": 158742,
+    "content_hash": "sha256:12da8e935906a731f06fc3729449063ddcd212a17c25b14c8e17938df8be212c",
+    "extracted_character_count_recomputed": 2014,
+    "extracted_text_hash_recomputed": "sha256:fbb5828b6e8972f0600d65cd1a50060e267e545ce1ba034701d078c7a301fc96",
+    "page_character_counts_recomputed": [
+      2014
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:12da8e935906a731f06fc3729449063ddcd212a17c25b14c8e17938df8be212c",
+    "source_record_hash": "sha256:eaf3bf77397455f269da6da61a3bfe6f615140b4577b5c9599e4554eb7ce4477"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "No readable proposition is available to resolve method authorship."
+    ],
+    "date": [
+      "No human-approved publication-date anchor is available in this machine lane."
+    ],
+    "scope": [
+      "No source-bound proposition is available to resolve method scope."
+    ]
+  }
+}

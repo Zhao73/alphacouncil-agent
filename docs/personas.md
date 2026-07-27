@@ -31,6 +31,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `master_graham` | master | yes | masters-value-classic, masters-core | deep | Graham Lens | margin-of-safety, balance-sheet, mr-market | original |
 | `master_simons` | master | yes | masters-quant, masters-core | deep | Simons Lens | signal-vs-noise, no-narrative, sample-size | original |
 | `master_soros` | master | yes | masters-adversarial, masters-core | deep | Soros Lens | reflexivity, boom-bust, test-the-thesis | original |
+| `master_cathie_wood` | master | yes | masters-modern, masters-core | deep | Cathie Wood Innovation Lens | disruptive-innovation, learning-curves, adoption, five-year-scenarios | original |
 | `master_druckenmiller` | master | yes | masters-adversarial, masters-core | deep | Druckenmiller Lens | liquidity, concentration, eighteen-months-ahead | original |
 | `master_fisher` | master | yes | masters-value-classic, masters-core | deep | Fisher Lens | scuttlebutt, growth-quality, r-and-d | original |
 | `master_munger` | master | yes | masters-value, masters-core | deep | Munger Lens | inversion, mental-models, failure-paths | ai-berkshire (MIT) |
@@ -38,12 +39,16 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `master_asness` | master | yes | masters-quant, masters-core | deep | Asness Factor Lens | factor-exposure, value-momentum-quality, is-it-just-beta | original |
 | `master_dalio` | master | yes | masters-adversarial, masters-core | deep | Dalio Lens | debt-cycle, machine-view, regime | original |
 | `master_duan_yongping` | master | yes | masters-value, masters-core | deep | Duan Yongping Lens | business-model, stop-doing-list, corporate-culture | ai-berkshire (MIT) |
+| `master_jhunjhunwala` | master | yes | masters-modern, masters-core | deep | Jhunjhunwala India Growth Lens | india-growth, promoter-governance, scaling, concentration | original |
 | `master_lynch` | master | yes | masters-value-classic, masters-core | deep | Peter Lynch Lens | category-first, peg, story-in-two-minutes | original |
 | `master_forensic_short` | master | yes | masters-adversarial, masters-core | deep | Forensic Short Seller Lens | forensic-accounting, crowding, borrow | original |
 | `master_li_lu` | master | yes | masters-value, masters-core | deep | Li Lu Lens | ten-year-certainty, civilization-trend, management-integrity | ai-berkshire (MIT) |
 | `master_marks` | master | yes | masters-value-classic, masters-core | deep | Howard Marks Lens | second-level-thinking, cycle-position, risk-is-permanent-loss | original |
 | `master_burry` | master | yes | masters-adversarial, masters-core | deep | Michael Burry Lens | primary-documents, contrarian, structural-short | original |
 | `master_klarman` | master | yes | masters-value-classic, masters-core | deep | Klarman Lens | absolute-return, cash-as-option, bottom-up | original |
+| `master_pabrai` | master | yes | masters-value, masters-core | deep | Pabrai Dhandho Lens | dhandho, asymmetric-payoff, cloning, downside-first | original |
+| `master_ackman` | master | yes | masters-adversarial, masters-core | deep | Ackman Activist Lens | activism, governance, capital-allocation, catalyst-path | original |
+| `master_damodaran` | master | yes | masters-value-classic, masters-core | deep | Damodaran Valuation Lens | story-to-numbers, intrinsic-valuation, reverse-valuation, life-cycle | original |
 | `master_taleb` | master | yes | masters-options, masters-core | deep | Taleb Lens (Convexity and Tails) | tail-risk, convexity, options | original |
 | `master_natenberg` | master | yes | masters-options, masters-core | deep | Natenberg Lens (Volatility Pricing) | implied-volatility, options-pricing, market-making | original |
 | `master_sinclair` | master | yes | masters-options, masters-core | deep | Sinclair Lens (Volatility Trading and Execution) | volatility-forecasting, edge-measurement, position-sizing, options | original |
@@ -51,7 +56,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 21 masters, 41 files.
+Totals: 11 evidence analysts, 3 debate roles, 26 masters, 46 files.
 
 ## Provenance
 

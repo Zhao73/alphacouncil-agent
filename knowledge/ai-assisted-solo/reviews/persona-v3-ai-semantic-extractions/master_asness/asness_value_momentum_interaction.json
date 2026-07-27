@@ -1,0 +1,80 @@
+{
+  "artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "asness_value_momentum_interaction",
+  "concise_summary": "The paper tests value and momentum jointly and reports conditional return relationships rather than treating either factor in isolation.",
+  "contradictions_ambiguities": [
+    "The study is historical and factor definitions, transaction costs, and sample-period stability require separate replication."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "Measures of momentum and value are negatively correlated across stocks, yet each is positively related to the cross-section of average stock returns.",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 1,
+        "section": "Abstract",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "asness_value_momentum_interaction:p1",
+      "snippet_hash": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70",
+      "statement": "Model value and momentum jointly: they are negatively correlated across stocks, yet both retain positive relationships with average returns.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Do the reported interactions survive current data, realistic turnover, and non-US out-of-sample tests?"
+  ],
+  "persona_id": "master_asness",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The eight-page paper is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 239181,
+    "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+    "content_type": "application/pdf",
+    "extracted_character_count": 32778,
+    "extracted_text_hash": "sha256:52f04b5f6ddcd732c67be485470e4fd963e9b518d36fc3a99d2a78b8da4a0133",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.aqr.com/-/media/AQR/Documents/Insights/Journal-Article/The-Interaction-of-Value-and-Momentum-Strategies.pdf",
+    "page_character_counts": [
+      4171,
+      4406,
+      4070,
+      3902,
+      2294,
+      4948,
+      3796,
+      5191
+    ],
+    "page_count": 8,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:f466154950663fe8a039f297f5bf49d348d9ace6754542cb8febbc55de8a3fef",
+    "retrieved_at": "2026-07-27T06:35:33.486Z"
+  },
+  "source_type": "academic_paper"
+}

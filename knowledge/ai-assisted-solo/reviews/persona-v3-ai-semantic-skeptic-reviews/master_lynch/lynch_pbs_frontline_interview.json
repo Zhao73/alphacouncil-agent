@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:ccb4fd84f3860c1efc27f8a61a9492ead8fae38475574922c193cf77b891f585",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "lynch_pbs_frontline_interview",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:726303d3474b2659f164d8ab4567bd541b18abe587392528d7a761c71401439a",
+    "declared_artifact_hash": "sha256:a26ce50fcf90ad1ead37635e7d02a5d5aabb3dcb7cb4ecc3e22ee4d1b3b83191",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:a26ce50fcf90ad1ead37635e7d02a5d5aabb3dcb7cb4ecc3e22ee4d1b3b83191",
+    "relative_path": "master_lynch/lynch_pbs_frontline_interview.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_lynch",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": null,
+        "actual_text_end": 30290,
+        "actual_text_start": 30210,
+        "declared_kind": "html_text_offset",
+        "declared_page": null,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "I think the average person could know three or four or five companies very well.",
+      "proposed_locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Small-investor stock selection",
+        "text_end": 30290,
+        "text_start": 30210
+      },
+      "proposed_statement": "Limit direct stock selection to companies the investor can explain deeply, buying only when a known company becomes attractive.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "lynch_pbs_frontline_interview:p1",
+      "review_hash": "sha256:76c99e828200a1e26ca5ee22ba1028c07bf3cc019f15401e3d4272a636eca44e",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef",
+      "snippet_hash_recomputed": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef",
+      "support_rationale": "The interview directly limits the average investor to a few deeply known companies and says to buy when one becomes attractive rather than select unknown names on market timing.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 78449,
+    "content_hash": "sha256:12f5aa148da5c6d3902a7b2a7a399a026f3a0e2d116d722b278046aaa66bd977",
+    "extracted_text_hash": "sha256:fdcad32dd59ab4acc2909c4bb1d7d1bbe3a3142a93094b446c05e8415ff88a25",
+    "extracted_text_hash_recomputed": "sha256:fdcad32dd59ab4acc2909c4bb1d7d1bbe3a3142a93094b446c05e8415ff88a25",
+    "raw_bytes_hash_recomputed": "sha256:12f5aa148da5c6d3902a7b2a7a399a026f3a0e2d116d722b278046aaa66bd977",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:618ff835e4556af9995c9228ba187ad2a965c5ef60b3c9d2125255f2429ca3ff",
+    "source_record_hash_recomputed": "sha256:618ff835e4556af9995c9228ba187ad2a965c5ef60b3c9d2125255f2429ca3ff"
+  }
+}

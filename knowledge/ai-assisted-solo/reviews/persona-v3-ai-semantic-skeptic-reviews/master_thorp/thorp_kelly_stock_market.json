@@ -1,0 +1,81 @@
+{
+  "artifact_hash": "sha256:8a553c450254820499489a8beaec005b4686cf4f3784d0a09a7607d59b3a2c7f",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "thorp_kelly_stock_market",
+  "challenges": [
+    "The archived PDF yields zero extracted characters with the available independent Poppler pass.",
+    "No proposition may be reconstructed from model memory or adjacent sources."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:b5dc0cf4d0d9b748b4948e279504ae274ebd86fde8aae9192e4eae77df6c2a26",
+    "declared_artifact_hash": "sha256:e1b52c2f5982801245bb31db3cf915244e9a28328b10360499929f307de76c72",
+    "proposition_count": 0,
+    "recomputed_artifact_hash": "sha256:e1b52c2f5982801245bb31db3cf915244e9a28328b10360499929f307de76c72",
+    "relative_path": "master_thorp/thorp_kelly_stock_market.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can the original transcript, audio, readable PDF, or unobstructed page be archived and reviewed?"
+  ],
+  "overall_verdict": "unverifiable",
+  "persona_id": "master_thorp",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [],
+  "readability_recheck": {
+    "extractor_status": "unreadable",
+    "independent_status": "unreadable",
+    "reason": "Independent byte reopening produced no usable prose or an opaque WAF payload.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1740396,
+    "content_hash": "sha256:a37fe04e5f3cb53cb0c62b1bac2d95c876293c26406f2b23a0c0e61f788ea9ed",
+    "extracted_text_hash": "sha256:95e25e30cc197f9fce583bfe1c2620507eea3c0446b7c0919ce4e0896d16a7b9",
+    "extracted_text_hash_recomputed": "sha256:95e25e30cc197f9fce583bfe1c2620507eea3c0446b7c0919ce4e0896d16a7b9",
+    "raw_bytes_hash_recomputed": "sha256:a37fe04e5f3cb53cb0c62b1bac2d95c876293c26406f2b23a0c0e61f788ea9ed",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:d0558125da0beb02b1a4efa6fe5beaa4f1bbdf12b5fb69960d6d1cc9fb57837d",
+    "source_record_hash_recomputed": "sha256:d0558125da0beb02b1a4efa6fe5beaa4f1bbdf12b5fb69960d6d1cc9fb57837d"
+  }
+}

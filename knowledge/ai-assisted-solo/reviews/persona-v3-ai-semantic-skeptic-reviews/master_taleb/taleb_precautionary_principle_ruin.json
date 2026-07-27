@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:328a904c5eae22ccfea0b2e6db6338943e15398b2f206eb3d6390bd129a42563",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "taleb_precautionary_principle_ruin",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:e36538ab56df75f179c5094a39d90b9cec60a7b9af4a446e535007eb5dac24d0",
+    "declared_artifact_hash": "sha256:60948dead3b794afd480d333284471f19dea3c3b1c3d8374aab083ebdf53d386",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:60948dead3b794afd480d333284471f19dea3c3b1c3d8374aab083ebdf53d386",
+    "relative_path": "master_taleb/taleb_precautionary_principle_ruin.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_taleb",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "The snippet is too narrow to support the full precautionary decision rule without its surrounding sentences."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 1,
+        "actual_text_end": 2618,
+        "actual_text_start": 2585,
+        "declared_kind": "pdf_page",
+        "declared_page": 1,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "What narrower wording would be fully entailed by the cited excerpt alone?"
+      ],
+      "proposed_evidence_excerpt": "outcomes may have infinite costs.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 1,
+        "section": "Abstract",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "When an action exposes a system to irreversible ruin, use a precautionary constraint rather than averaging the tail loss into ordinary cost-benefit analysis.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "taleb_precautionary_principle_ruin:p1",
+      "review_hash": "sha256:8441035db68d377bed8066e04eff3a50a97869bc1bde2eb82999870103b3c14e",
+      "scope_ambiguity": {
+        "rationale": "The page context supports the rule, but the exact evidence snippet does not.",
+        "status": "limited"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a",
+      "snippet_hash_recomputed": "sha256:e1c82dd2aca98794f4489caf1f9898d9b5d1f36ff8de100b2f5aa8f01f88c29a",
+      "support_rationale": "The same abstract rejects traditional cost-benefit analysis for infinite-cost ruin, but the bound excerpt alone is only the phrase that outcomes may have infinite costs.",
+      "support_verdict": "partial"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1245535,
+    "content_hash": "sha256:7ef0b4ea3f2e372701262e96fff7c492a48cefb9faebaf3849b5d20abb15f361",
+    "extracted_text_hash": "sha256:a81228f5003e3777781179c7f573ab0f3f101883287d7f829ac7a6e6ee1a5dde",
+    "extracted_text_hash_recomputed": "sha256:a81228f5003e3777781179c7f573ab0f3f101883287d7f829ac7a6e6ee1a5dde",
+    "raw_bytes_hash_recomputed": "sha256:7ef0b4ea3f2e372701262e96fff7c492a48cefb9faebaf3849b5d20abb15f361",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:73c130cd84eee1b82b34c75c1d0d535d42d94456c27bc41b76ee48cdd4f48b71",
+    "source_record_hash_recomputed": "sha256:73c130cd84eee1b82b34c75c1d0d535d42d94456c27bc41b76ee48cdd4f48b71"
+  }
+}

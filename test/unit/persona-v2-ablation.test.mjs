@@ -12,7 +12,11 @@ const taleb = reg.get("master_taleb");
 const marks = reg.get("master_marks");
 const packs = [buffett, duan, taleb, marks];
 
-/** NOK exactly as the council actually received it. */
+/**
+ * Synthetic NOK-shaped ablation case. It deliberately includes calculator outputs that the
+ * stored production grounding did not carry, so it tests policy differentiation rather than
+ * claiming to reproduce a historical run.
+ */
 const NOK = {
   filer: { structured_financials: false },
   screen: { rules_computed: 0, metrics: {} },
@@ -67,7 +71,7 @@ test("all four pilot packs load and none is allowed to claim a person's name", (
 });
 
 // The claim this whole release rests on: different methods see different securities.
-test("on the real NOK facts, Buffett cannot look and Taleb can", () => {
+test("on the synthetic NOK-shaped facts, Buffett cannot look and Taleb can", () => {
   const b = decide(buffett, NOK);
   const t = decide(taleb, NOK);
   assert.equal(b.stance, "out_of_scope");

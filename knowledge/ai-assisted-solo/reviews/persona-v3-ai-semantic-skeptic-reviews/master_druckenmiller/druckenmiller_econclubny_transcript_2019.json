@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:459ec42e575b8a90766d126501dbdd9af5febdc2fbd6250d7678943b0cf9f3bc",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "druckenmiller_econclubny_transcript_2019",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:74eab452a11c5bddd9642d266b9142175e269ea321f3c8fac995811c1e2feb16",
+    "declared_artifact_hash": "sha256:3be6e263dda4f1adbfa5010e9fea2d713266b10d006108a11c3368a1fc82b4cf",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:3be6e263dda4f1adbfa5010e9fea2d713266b10d006108a11c3368a1fc82b4cf",
+    "relative_path": "master_druckenmiller/druckenmiller_econclubny_transcript_2019.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_druckenmiller",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 29,
+        "actual_text_end": 1586,
+        "actual_text_start": 1461,
+        "declared_kind": "pdf_page",
+        "declared_page": 29,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "liquidity is a moving animal. It’s things can be very liquid and then three weeks later there can be no liquidity whatsoever.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 29,
+        "section": "Audience question on liquidity",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Treat market liquidity as state-dependent and capable of disappearing quickly rather than as a stable portfolio assumption.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "druckenmiller_econclubny_transcript_2019:p1",
+      "review_hash": "sha256:7235993dd5b5b3dce81364f7f99a27280a8a6293d852a637cc30743ecb178252",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820",
+      "snippet_hash_recomputed": "sha256:10e43b60ad4aae5f34fceefc3b90329a340d03a1a6753c4dd4febff06a75f820",
+      "support_rationale": "The interview answer expressly describes liquidity as spotty, side-dependent, and capable of disappearing within weeks.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 162239,
+    "content_hash": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+    "extracted_text_hash": "sha256:c56c3dc4f68f65e6c7832571df83fed2d9bf0a1c2dd76d0a3b913815d2ba718b",
+    "extracted_text_hash_recomputed": "sha256:c56c3dc4f68f65e6c7832571df83fed2d9bf0a1c2dd76d0a3b913815d2ba718b",
+    "raw_bytes_hash_recomputed": "sha256:c60f5f8146aca18a2d6cc1053a9cbb87be7b1314664ddb70c9c7c0a8d7c85128",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:2214d28093b5920de177a2cce3151260cad7dbefb9370b4d5f24f49120ad99e3",
+    "source_record_hash_recomputed": "sha256:2214d28093b5920de177a2cce3151260cad7dbefb9370b4d5f24f49120ad99e3"
+  }
+}

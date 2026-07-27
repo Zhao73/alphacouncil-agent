@@ -1,0 +1,130 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "india_equities",
+      "structural_penetration",
+      "promoter_governance",
+      "concentrated_growth"
+    ],
+    "exclusions": [
+      "private promoter conversations",
+      "current views after the investor's death",
+      "holding disclosures treated as complete investment rationales",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "india_growth_governance_v1",
+    "optional_fact_types": [
+      "governance.related_party_transactions",
+      "financial.cash_conversion",
+      "business.scaling_economics",
+      "market.liquidity",
+      "valuation.expected_return"
+    ],
+    "required_fact_types": [
+      "governance.promoter_ownership",
+      "india.industry_penetration"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_jhunjhunwala.promoter_governance",
+      "master_jhunjhunwala.penetration_liquidity"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "governance.promoter_ownership",
+      "india.industry_penetration"
+    ],
+    "hard_vetoes": [
+      "master_jhunjhunwala.promoter_integrity",
+      "master_jhunjhunwala.cash_conversion",
+      "master_jhunjhunwala.liquidity_limit"
+    ],
+    "native_output": "india_growth_governance_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Jhunjhunwala India Growth Lens Provisional Operator Lens",
+      "zh": "Jhunjhunwala 印度结构成长视角临时操作视角"
+    },
+    "persona_id": "master_jhunjhunwala",
+    "public_label": {
+      "en": "Jhunjhunwala India Growth Lens Solo Test",
+      "zh": "Jhunjhunwala 印度结构成长视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject on a reviewed material promoter-governance breach.",
+      "Reject scaling claims not supported by cycle-aware cash conversion.",
+      "Reject concentration that cannot be exited under stressed Indian-market liquidity."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in india_equities, structural_penetration, promoter_governance, concentrated_growth",
+      "zh": "用于测试确定性行为：india_equities、structural_penetration、promoter_governance、concentrated_growth"
+    },
+    "identity": {
+      "en": "Jhunjhunwala India Growth Lens; project-derived and not human reviewed",
+      "zh": "Jhunjhunwala 印度结构成长视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Evaluate Indian structural growth through promoter governance, cash quality, addressable penetration, scaling economics, valuation and liquidity.",
+      "zh": "Evaluate Indian structural growth through promoter governance, cash quality, addressable penetration, scaling economics, valuation and liquidity."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

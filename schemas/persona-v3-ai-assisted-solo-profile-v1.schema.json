@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-ai-assisted-solo-profile-v1.schema.json",
+  "title": "PersonaPack v3 AI-assisted solo assurance profile",
+  "description": "A non-production machine-review profile. It cannot satisfy human review or affect formal PersonaPack v3 GA.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "package_channel",
+    "assurance_class",
+    "human_review_satisfied",
+    "human_claims_allowed",
+    "formal_ga_effect",
+    "production_effect",
+    "production_eligible",
+    "method_model_eligible",
+    "requirements",
+    "artifact_paths"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile_id": { "const": "ai_assisted_solo" },
+    "package_channel": { "const": "solo_test" },
+    "assurance_class": { "const": "machine_cross_review_only" },
+    "human_review_satisfied": { "const": false },
+    "human_claims_allowed": { "const": false },
+    "formal_ga_effect": { "const": "none" },
+    "production_effect": { "const": "none" },
+    "production_eligible": { "const": false },
+    "method_model_eligible": { "const": false },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "physical_solo_packs",
+        "ai_source_prereviews",
+        "ai_semantic_extractions",
+        "ai_semantic_skeptic_reviews",
+        "ai_semantic_adjudications",
+        "ai_formula_cross_reviews",
+        "independent_roles_per_review",
+        "automated_experiment_runs",
+        "live_hosts",
+        "packaged_review_verification",
+        "n_eff_disclosure"
+      ],
+      "properties": {
+        "physical_solo_packs": { "const": 26 },
+        "ai_source_prereviews": { "const": 32 },
+        "ai_semantic_extractions": { "const": 32 },
+        "ai_semantic_skeptic_reviews": { "const": 32 },
+        "ai_semantic_adjudications": { "const": 32 },
+        "ai_formula_cross_reviews": { "const": 52 },
+        "independent_roles_per_review": { "const": 3 },
+        "automated_experiment_runs": { "const": 8 },
+        "live_hosts": { "const": 4 },
+        "packaged_review_verification": { "const": "artifact_and_index_hashes_without_raw_sources" },
+        "n_eff_disclosure": { "const": "null_with_insufficient_resolved_outcomes_or_publishable" }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solo_pack_root",
+        "source_acquisition_root",
+        "source_review_root",
+        "semantic_extraction_root",
+        "semantic_skeptic_root",
+        "semantic_adjudication_root",
+        "formula_review_root",
+        "experiment_root",
+        "host_e2e_root",
+        "n_eff_file"
+      ],
+      "properties": {
+        "solo_pack_root": { "const": "knowledge/solo-test/masters" },
+        "source_acquisition_root": { "const": "knowledge/staging" },
+        "source_review_root": { "const": "knowledge/ai-assisted-solo/reviews/persona-v3-ai-source-prereviews" },
+        "semantic_extraction_root": { "const": "knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-extractions" },
+        "semantic_skeptic_root": { "const": "knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-skeptic-reviews" },
+        "semantic_adjudication_root": { "const": "knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-adjudications" },
+        "formula_review_root": { "const": "knowledge/ai-assisted-solo/reviews/persona-v3-ai-formula-reviews" },
+        "experiment_root": { "const": "knowledge/ai-assisted-solo/experiments" },
+        "host_e2e_root": { "const": "knowledge/ai-assisted-solo/host-e2e" },
+        "n_eff_file": { "const": "knowledge/ai-assisted-solo/experiments/n-eff-disclosure.json" }
+      }
+    }
+  }
+}

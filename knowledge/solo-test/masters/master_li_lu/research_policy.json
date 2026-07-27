@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject only after human adjudication of a material management integrity breach.",
+    "Reject a low price when the reviewed industry path is structural decline rather than a cycle.",
+    "Decline when the business depends on a technology or policy path the pack cannot assess."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "artifact_hash": "sha256:a26ce50fcf90ad1ead37635e7d02a5d5aabb3dcb7cb4ecc3e22ee4d1b3b83191",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "lynch_pbs_frontline_interview",
+  "concise_summary": "The PBS interview emphasizes investor homework, knowing a small number of companies deeply, and accepting recurring market declines.",
+  "contradictions_ambiguities": [
+    "The interview is conversational and does not turn 'attractive' into a quantitative valuation threshold."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "I think the average person could know three or four or five companies very well.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Small-investor stock selection",
+        "text_end": 30290,
+        "text_start": 30210
+      },
+      "proposition_id": "lynch_pbs_frontline_interview:p1",
+      "snippet_hash": "sha256:8fb513b4a3bbe2e615061413f4ee5659bf16fb520e19864881fe624a08ee27ef",
+      "statement": "Limit direct stock selection to companies the investor can explain deeply, buying only when a known company becomes attractive.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "What financial and business evidence must be known before a company enters the investable set?"
+  ],
+  "persona_id": "master_lynch",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The archived PBS page contains the interview transcript amid substantial navigation text.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 78449,
+    "content_hash": "sha256:12f5aa148da5c6d3902a7b2a7a399a026f3a0e2d116d722b278046aaa66bd977",
+    "content_type": "text/html; charset=utf-8",
+    "extracted_character_count": 51729,
+    "extracted_text_hash": "sha256:fdcad32dd59ab4acc2909c4bb1d7d1bbe3a3142a93094b446c05e8415ff88a25",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://www.pbs.org/wgbh/pages/frontline/shows/betting/pros/lynch.html",
+    "page_character_counts": [
+      51729
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:618ff835e4556af9995c9228ba187ad2a965c5ef60b3c9d2125255f2429ca3ff",
+    "retrieved_at": "2026-07-27T06:24:10.855Z"
+  },
+  "source_type": "primary_interview_transcript"
+}

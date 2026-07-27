@@ -1,0 +1,130 @@
+{
+  "build_profile": "solo_test",
+  "capability": {
+    "domains": [
+      "primary_document_research",
+      "capital_structure",
+      "accounting_forensics",
+      "structural_mispricing"
+    ],
+    "exclusions": [
+      "private current positions",
+      "social posts without authenticated archives",
+      "opinion-level shorts lacking a mechanical mispricing",
+      "production decisions",
+      "method attribution"
+    ],
+    "native_decision_schema": "structural_mispricing_v1",
+    "optional_fact_types": [
+      "credit.maturity_schedule",
+      "accounting.policy_choices",
+      "accounting.off_balance_sheet",
+      "trade.carry",
+      "short.borrow_availability"
+    ],
+    "required_fact_types": [
+      "capital_structure.seniority",
+      "mispricing.mechanism"
+    ]
+  },
+  "components": {
+    "calibration_cases": "evaluation/calibration_cases.jsonl",
+    "counterfactuals": "counterfactuals.jsonl",
+    "decision_cases": "decision_cases.jsonl",
+    "decision_policy": "decision_policy.json",
+    "doctrine": "doctrine.jsonl",
+    "experiments": "evaluation/experiments.json",
+    "failures": "failures.jsonl",
+    "golden_cases": "evaluation/golden_cases.jsonl",
+    "memory_policy": "memory_policy.json",
+    "pairwise_cases": "evaluation/pairwise_cases.jsonl",
+    "research_policy": "research_policy.json",
+    "sources": "sources.jsonl",
+    "tools": "tools.json"
+  },
+  "computation": {
+    "dsl_version": "1.1",
+    "pipeline": [
+      "master_burry.capital_structure_reader",
+      "master_burry.mispricing_carry"
+    ]
+  },
+  "decision": {
+    "abstention_policy": "fail_closed",
+    "common_projection": "common_stance_v1",
+    "confidence_calibrator": null,
+    "eligibility": [
+      "capital_structure.seniority",
+      "mispricing.mechanism"
+    ],
+    "hard_vetoes": [
+      "master_burry.secondary_only",
+      "master_burry.opinion_not_structure",
+      "master_burry.cannot_survive_early"
+    ],
+    "native_output": "structural_mispricing_v1"
+  },
+  "evaluation": {
+    "required_ablations": [
+      "name",
+      "voice",
+      "policy",
+      "evidence",
+      "memory",
+      "model"
+    ]
+  },
+  "identity": {
+    "maturity": "operator_lens",
+    "operator_label": {
+      "en": "Michael Burry Lens Provisional Operator Lens",
+      "zh": "迈克尔·伯里视角临时操作视角"
+    },
+    "persona_id": "master_burry",
+    "public_label": {
+      "en": "Michael Burry Lens Solo Test",
+      "zh": "迈克尔·伯里视角单人测试"
+    },
+    "source_cutoff": "2026-07-27"
+  },
+  "memory": {
+    "belief_updates": "evidence_required",
+    "episodic": false,
+    "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
+    "postmortem_horizon_days": 90
+  },
+  "pack_version": "0.9.0-solo-test.1",
+  "research": {
+    "mandatory_disconfirming_queries": [
+      "Reject a load-bearing number that cannot be traced to an opened primary document.",
+      "Reject a trade when disagreement is subjective rather than mechanically testable.",
+      "Reject when carry, margin or borrow can force exit before intermediate signals resolve."
+    ],
+    "planner": "solo_test_public_fact_planner_v1",
+    "private_budget": {
+      "fetches": 3,
+      "queries": 3
+    },
+    "source_policy": "public_point_in_time_only_provisional_v1"
+  },
+  "schema_version": 3,
+  "selection": {
+    "best_for": {
+      "en": "Testing deterministic behavior in primary_document_research, capital_structure, accounting_forensics, structural_mispricing",
+      "zh": "用于测试确定性行为：primary_document_research、capital_structure、accounting_forensics、structural_mispricing"
+    },
+    "identity": {
+      "en": "Michael Burry Lens; project-derived and not human reviewed",
+      "zh": "迈克尔·伯里视角；项目派生、未经人工审定"
+    },
+    "method": {
+      "en": "Start from primary documents and capital structure to find structural, mechanically verifiable mispricing and test whether the position can survive being early.",
+      "zh": "Start from primary documents and capital structure to find structural, mechanically verifiable mispricing and test whether the position can survive being early."
+    }
+  },
+  "voice": {
+    "en": "voice.en.md",
+    "load_after_decision_freeze": true,
+    "zh": "voice.zh.md"
+  }
+}

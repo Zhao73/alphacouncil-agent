@@ -1,0 +1,160 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:84cd5bfc1ed32dc941d4f9f593036ab3fbab8186153692a7515ac633f043b692",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "asness_value_momentum_interaction",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:bcfac9be194b1ade26d06da04dbc475237381dc2e7993b39f28834bdfbbf296c",
+    "declared_artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
+    "recomputed_artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
+    "relative_path": "master_asness/asness_value_momentum_interaction.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_asness",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 1,
+          "section_claimed": "Abstract",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 358,
+          "text_start": 209
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 1,
+          "section": "Abstract",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70",
+        "normalized_excerpt": "Measures of momentum and value are negatively correlated across stocks, yet each is positively related to the cross-section of average stock returns.",
+        "skeptic_snippet_hash_claimed": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70",
+        "skeptic_snippet_hash_recomputed": "sha256:aea4ac79396d70a20871b7e001ea6aca12c0808eb200653adb854d65dfb91c70"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The exact passage states both the negative value-momentum correlation and each factor's positive relation with average returns.",
+      "final_verdict": "supported",
+      "proposition_id": "asness_value_momentum_interaction:p1",
+      "review_hash": "sha256:b1cfd4de4ce2df2ea40cb2ba323277707774d4200f637a40d1f34d4939d58329",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The abstract expressly states both the negative cross-sectional correlation and each factor's positive relationship with average returns.",
+        "support_verdict": "supported"
+      },
+      "statement": "Model value and momentum jointly: they are negatively correlated across stocks, yet both retain positive relationships with average returns.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:a7891b91f1a226a20d004afad0ffb910e563f4b0a6d875e6306570f79bdd0449",
+    "declared_artifact_hash": "sha256:d7a36064d969f68a79ca91b636c794c90ac383c82bf3acdafaf96acb678920ab",
+    "recomputed_artifact_hash": "sha256:d7a36064d969f68a79ca91b636c794c90ac383c82bf3acdafaf96acb678920ab",
+    "relative_path": "master_asness/asness_value_momentum_interaction.json"
+  },
+  "source_binding": {
+    "byte_length": 239181,
+    "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+    "extracted_character_count_recomputed": 32778,
+    "extracted_text_hash_recomputed": "sha256:52f04b5f6ddcd732c67be485470e4fd963e9b518d36fc3a99d2a78b8da4a0133",
+    "page_character_counts_recomputed": [
+      4171,
+      4406,
+      4070,
+      3902,
+      2294,
+      4948,
+      3796,
+      5191
+    ],
+    "page_count_recomputed": 8,
+    "raw_bytes_hash_recomputed": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
+    "source_record_hash": "sha256:f466154950663fe8a039f297f5bf49d348d9ace6754542cb8febbc55de8a3fef"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

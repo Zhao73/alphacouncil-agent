@@ -1,0 +1,73 @@
+{
+  "artifact_hash": "sha256:f6d58efa8bbc1c64ba4423aa083a74a955322849e547f76cd775af9cdec8b37d",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "natenberg_cboe_learning_greeks_2021",
+  "concise_summary": "The Cboe article introduces Delta, Gamma, Theta, Vega, and Rho as option sensitivity and risk-management measures.",
+  "contradictions_ambiguities": [
+    "The article is introductory promotional education and does not supply a complete Natenberg trading or valuation system."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "The Delta of an option measures the sensitivity to changes in the price of the underlying security.",
+      "locator": {
+        "kind": "html_text_offset",
+        "page": null,
+        "section": "Delta is fundamental",
+        "text_end": 3570,
+        "text_start": 3471
+      },
+      "proposition_id": "natenberg_cboe_learning_greeks_2021:p1",
+      "snippet_hash": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4",
+      "statement": "Represent option exposure with multiple Greeks rather than direction alone; Delta measures underlying-price sensitivity while Vega measures implied-volatility sensitivity.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which primary Natenberg source defines portfolio aggregation, hedging bands, and volatility-surface assumptions?"
+  ],
+  "persona_id": "master_natenberg",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The article body is readable after navigation removal.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 383122,
+    "content_hash": "sha256:6a46933f850c77eb4cb9e0e5d3d851916159d7db0b06450e3c30b938f5ba21db",
+    "content_type": "text/html; charset=utf-8",
+    "extracted_character_count": 7412,
+    "extracted_text_hash": "sha256:7f022ef201844febd88ed2c7ee4c2529a6d32691f910ad0e08fe5d1e175ea2b9",
+    "extraction_error": null,
+    "extraction_tool": "alphacouncil_html_visible_text_v1",
+    "final_url": "https://www.cboe.com/insights/posts/learning-the-greeks-an-experts-perspective",
+    "page_character_counts": [
+      7412
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:dbdbc50ba1f3a9b391bdee98fb060516a65770c2a8655fdf0b8e612517df9abd",
+    "retrieved_at": "2026-07-27T06:36:23.635Z"
+  },
+  "source_type": "educational_article"
+}

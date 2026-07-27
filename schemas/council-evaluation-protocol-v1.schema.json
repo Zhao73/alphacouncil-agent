@@ -1,0 +1,352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/council-evaluation-protocol-v1.schema.json",
+  "title": "AlphaCouncil canonical-arm evaluation protocol draft v1",
+  "description": "A non-result draft. This schema intentionally cannot represent registration, signatures, experiment results, passed claims or release promotion.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "protocol_status",
+    "purpose",
+    "canonical_arm_order",
+    "registry_snapshot",
+    "registration",
+    "case_design",
+    "point_in_time_controls",
+    "anti_leakage_controls",
+    "resource_accounting",
+    "adjudication",
+    "metrics",
+    "arms",
+    "comparison_policy"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "protocol_id": { "const": "alphacouncil_canonical_arm_comparison_v1" },
+    "protocol_status": { "const": "draft_unregistered" },
+    "purpose": { "type": "string", "minLength": 40 },
+    "canonical_arm_order": {
+      "const": ["A", "B", "C", "D13", "D26", "E", "H"]
+    },
+    "registry_snapshot": {
+      "type": "object",
+      "required": ["default_analyst_ids", "verifier_ids", "priority_13_master_ids", "canonical_26_master_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "default_analyst_ids": { "$ref": "#/$defs/idArray" },
+        "verifier_ids": { "$ref": "#/$defs/idArray" },
+        "priority_13_master_ids": { "$ref": "#/$defs/idArray" },
+        "canonical_26_master_ids": { "$ref": "#/$defs/idArray" }
+      }
+    },
+    "registration": {
+      "type": "object",
+      "required": [
+        "registered_at",
+        "registration_hash",
+        "dataset_hash",
+        "case_ledger_hash",
+        "model_matrix_hash",
+        "prompt_bundle_hash",
+        "runner_hash",
+        "host_matrix_hash",
+        "randomization_hash",
+        "adjudication_rubric_hash",
+        "signer_key_id",
+        "signature"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "registered_at": { "const": null },
+        "registration_hash": { "const": null },
+        "dataset_hash": { "const": null },
+        "case_ledger_hash": { "const": null },
+        "model_matrix_hash": { "const": null },
+        "prompt_bundle_hash": { "const": null },
+        "runner_hash": { "const": null },
+        "host_matrix_hash": { "const": null },
+        "randomization_hash": { "const": null },
+        "adjudication_rubric_hash": { "const": null },
+        "signer_key_id": { "const": null },
+        "signature": { "const": null }
+      }
+    },
+    "case_design": {
+      "type": "object",
+      "required": [
+        "case_unit",
+        "minimum_shared_cases",
+        "minimum_historical_clusters",
+        "cluster_keys",
+        "same_frozen_cases_across_machine_arms",
+        "human_arm_receives_same_case_question",
+        "prospective_shadow_cases_required",
+        "shadow_beta_interpretation",
+        "returns_role"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "case_unit": { "const": "company_x_as_of_x_event" },
+        "minimum_shared_cases": { "type": "integer", "minimum": 48 },
+        "minimum_historical_clusters": { "type": "integer", "minimum": 36 },
+        "cluster_keys": { "const": ["issuer", "event", "market_regime"] },
+        "same_frozen_cases_across_machine_arms": { "const": true },
+        "human_arm_receives_same_case_question": { "const": true },
+        "prospective_shadow_cases_required": { "const": true },
+        "shadow_beta_interpretation": { "const": "operational_only_not_outcome_validation" },
+        "returns_role": { "const": "recorded_lagging_outcome_never_a_standalone_promotion_gate" }
+      }
+    },
+    "point_in_time_controls": {
+      "type": "object",
+      "required": [
+        "fact_visibility_rule",
+        "filing_visibility_rule",
+        "memory_visibility_rule",
+        "prediction_freeze_rule",
+        "outcome_visibility",
+        "restatement_rule",
+        "source_retrieval_log_required"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fact_visibility_rule": { "const": "public_at <= as_of AND known_at <= as_of" },
+        "filing_visibility_rule": { "const": "filed_at <= as_of" },
+        "memory_visibility_rule": { "const": "public_at <= as_of AND memory_created_at <= as_of" },
+        "prediction_freeze_rule": { "const": "all_arm_predictions_frozen_before_outcome_or_adjudication_access" },
+        "outcome_visibility": { "const": "withheld_until_prediction_freeze" },
+        "restatement_rule": { "const": "use_only_restatements_public_by_as_of" },
+        "source_retrieval_log_required": { "const": true }
+      }
+    },
+    "anti_leakage_controls": {
+      "type": "object",
+      "required": [
+        "frozen_case_membership_before_execution",
+        "frozen_arm_order_before_execution",
+        "survivorship_universe_as_of_required",
+        "prompt_model_runner_host_hashes_required",
+        "post_as_of_search_results_forbidden",
+        "cross_arm_context_sharing_forbidden",
+        "human_adjudicators_blinded_to_arm",
+        "case_outcomes_hidden_from_models",
+        "known_training_contamination_recorded_not_self_cleared",
+        "threshold_tuning_on_shadow_beta_forbidden"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "frozen_case_membership_before_execution": { "const": true },
+        "frozen_arm_order_before_execution": { "const": true },
+        "survivorship_universe_as_of_required": { "const": true },
+        "prompt_model_runner_host_hashes_required": { "const": true },
+        "post_as_of_search_results_forbidden": { "const": true },
+        "cross_arm_context_sharing_forbidden": { "const": true },
+        "human_adjudicators_blinded_to_arm": { "const": true },
+        "case_outcomes_hidden_from_models": { "const": true },
+        "known_training_contamination_recorded_not_self_cleared": { "const": true },
+        "threshold_tuning_on_shadow_beta_forbidden": { "const": true }
+      }
+    },
+    "resource_accounting": {
+      "type": "object",
+      "required": [
+        "record_wall_clock_critical_path",
+        "record_cpu_time_when_available",
+        "record_model_input_tokens",
+        "record_model_output_tokens",
+        "record_tool_calls",
+        "record_network_requests",
+        "record_provider_billed_cost",
+        "record_failed_and_retried_work",
+        "matched_cost_secondary_analysis_required",
+        "unmatched_quality_and_cost_reported_together"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "record_wall_clock_critical_path": { "const": true },
+        "record_cpu_time_when_available": { "const": true },
+        "record_model_input_tokens": { "const": true },
+        "record_model_output_tokens": { "const": true },
+        "record_tool_calls": { "const": true },
+        "record_network_requests": { "const": true },
+        "record_provider_billed_cost": { "const": true },
+        "record_failed_and_retried_work": { "const": true },
+        "matched_cost_secondary_analysis_required": { "const": true },
+        "unmatched_quality_and_cost_reported_together": { "const": true }
+      }
+    },
+    "adjudication": {
+      "type": "object",
+      "required": [
+        "material_claim_unit",
+        "fact_adjudicators_minimum",
+        "disagreement_adjudicator_count",
+        "arm_identity_blinded",
+        "source_documents_visible_to_adjudicators",
+        "native_decisions_scored_before_common_projection",
+        "agreement_reported_separately_from_independence",
+        "n_eff_policy"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "material_claim_unit": { "const": "normalized_claim_cluster" },
+        "fact_adjudicators_minimum": { "type": "integer", "minimum": 2 },
+        "disagreement_adjudicator_count": { "const": 1 },
+        "arm_identity_blinded": { "const": true },
+        "source_documents_visible_to_adjudicators": { "const": true },
+        "native_decisions_scored_before_common_projection": { "const": true },
+        "agreement_reported_separately_from_independence": { "const": true },
+        "n_eff_policy": { "const": "separate_preregistered_resolved_outcome_protocol_or_null" }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": { "$ref": "#/$defs/metric" }
+    },
+    "arms": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": { "$ref": "#/$defs/arm" }
+    },
+    "comparison_policy": {
+      "type": "object",
+      "required": [
+        "primary_pairs",
+        "matched_cost_pairs_required",
+        "human_reference_role",
+        "agreement_is_not_independence",
+        "seat_count_is_not_sample_size",
+        "promotion_thresholds",
+        "multiplicity_policy",
+        "release_claims",
+        "promotion_effect"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "primary_pairs": { "$ref": "#/$defs/nonEmptyStrings" },
+        "matched_cost_pairs_required": { "$ref": "#/$defs/nonEmptyStrings" },
+        "human_reference_role": { "const": "blinded_quality_reference_not_vote_or_ground_truth_by_authority" },
+        "agreement_is_not_independence": { "const": true },
+        "seat_count_is_not_sample_size": { "const": true },
+        "promotion_thresholds": { "const": null },
+        "multiplicity_policy": { "const": null },
+        "release_claims": { "type": "array", "maxItems": 0 },
+        "promotion_effect": { "const": "none" }
+      }
+    }
+  },
+  "$defs": {
+    "idArray": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9_]{1,64}$" }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "metric_id",
+        "family",
+        "estimand",
+        "unit",
+        "direction",
+        "aggregation",
+        "reported_statistics",
+        "requires_blind_adjudication",
+        "result"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "metric_id": { "enum": ["fact_accuracy", "citation_validity", "calibration", "abstention_quality", "unique_information_contribution", "cost", "latency"] },
+        "family": { "enum": ["fact", "citation", "calibration", "abstention", "unique_contribution", "cost", "latency"] },
+        "estimand": { "type": "string", "minLength": 24 },
+        "unit": { "type": "string", "minLength": 3 },
+        "direction": { "enum": ["higher_is_better", "lower_is_better"] },
+        "aggregation": { "type": "string", "minLength": 12 },
+        "reported_statistics": { "$ref": "#/$defs/nonEmptyStrings" },
+        "requires_blind_adjudication": { "type": "boolean" },
+        "result": { "const": null }
+      }
+    },
+    "arm": {
+      "type": "object",
+      "required": [
+        "arm_id",
+        "description",
+        "execution_mode",
+        "analyst_ids",
+        "master_ids",
+        "verifier_ids",
+        "base_arm_ids",
+        "master_execution_mode",
+        "bounded_repair",
+        "human_reference",
+        "result_status",
+        "results",
+        "signatures",
+        "passed_claims"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "arm_id": { "enum": ["A", "B", "C", "D13", "D26", "E", "H"] },
+        "description": { "type": "string", "minLength": 24 },
+        "execution_mode": { "enum": ["single_agent_baseline", "machine_council", "machine_council_verified_variants", "human_reference"] },
+        "analyst_ids": { "$ref": "#/$defs/idArray" },
+        "master_ids": { "$ref": "#/$defs/idArray" },
+        "verifier_ids": { "$ref": "#/$defs/idArray" },
+        "base_arm_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["A", "B", "C", "D13", "D26", "E", "H"] }
+        },
+        "master_execution_mode": { "enum": ["none", "legacy_prompt_snapshot", "persona_v3_deterministic", "inherited_persona_v3_deterministic"] },
+        "bounded_repair": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["maximum_rounds", "redispatch_scope", "residual_gaps_must_be_reported"],
+              "additionalProperties": false,
+              "properties": {
+                "maximum_rounds": { "const": 2 },
+                "redispatch_scope": { "const": "only_agents_with_parse_failure_missing_sources_or_disputed_material_claims" },
+                "residual_gaps_must_be_reported": { "const": true }
+              }
+            }
+          ]
+        },
+        "human_reference": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "required": ["minimum_independent_analysts", "maximum_independent_analysts", "blinded_adjudicator_count", "automated_vote", "independent_before_adjudication"],
+              "additionalProperties": false,
+              "properties": {
+                "minimum_independent_analysts": { "const": 2 },
+                "maximum_independent_analysts": { "const": 3 },
+                "blinded_adjudicator_count": { "const": 1 },
+                "automated_vote": { "const": false },
+                "independent_before_adjudication": { "const": true }
+              }
+            }
+          ]
+        },
+        "result_status": { "const": "not_run" },
+        "results": { "const": null },
+        "signatures": { "type": "array", "maxItems": 0 },
+        "passed_claims": { "type": "array", "maxItems": 0 }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject any return thesis with an unresolved absorbing loss state.",
+    "Reject hidden concavity whose tail loss is not strictly bounded.",
+    "Reject an options edge that does not survive executable round-trip costs."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

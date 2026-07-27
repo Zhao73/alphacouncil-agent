@@ -22,6 +22,55 @@ export function packs() {
 }
 export function resetPacks() { cached = null; }
 
+const finite = (value) => {
+  if (value === null || value === undefined || value === "" || typeof value === "boolean") return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
+
+const firstFinite = (...values) => values.map(finite).find((value) => value !== undefined);
+
+/**
+ * Map the option-chain digest stored in grounding onto the deterministic policy contract.
+ *
+ * The canonical fields come directly from `summarizeChain`: reference_expiry.atm_iv and
+ * skew_25delta.put_minus_call are decimal volatility values. The older NOK run artifact used
+ * atm_iv_12d and skew_25d_put_minus_call, also decimals, so those aliases remain readable.
+ * Fields suffixed `_points` are already volatility points and must not be multiplied again.
+ *
+ * Realised volatility, net edge after friction and event coverage are intentionally only
+ * passed through when an upstream calculator explicitly supplied them. A chain snapshot does
+ * not contain enough history or event data to derive any of the three.
+ */
+export function optionsFactsFromGrounding(raw = {}) {
+  const termAtm = Array.isArray(raw.term_structure)
+    ? raw.term_structure.map((entry) => entry?.atm_iv).find((value) => finite(value) !== undefined)
+    : undefined;
+  const atmIv = firstFinite(raw.reference_expiry?.atm_iv, raw.atm_iv, raw.atm_iv_12d, termAtm);
+  const skewAlreadyPoints = firstFinite(raw.skew_25d_put_minus_call_points, raw.skew_25d_points);
+  const skewDecimal = firstFinite(raw.skew_25delta?.put_minus_call, raw.skew_25d_put_minus_call);
+  const chainAvailable = raw.available === false ? false : Boolean(
+    raw.available === true
+      || atmIv !== undefined
+      || (Array.isArray(raw.term_structure) && raw.term_structure.length > 0)
+      || (Array.isArray(raw.expiries) && raw.expiries.length > 0),
+  );
+
+  return {
+    chain_available: chainAvailable,
+    ...(atmIv !== undefined ? { atm_iv: atmIv } : {}),
+    ...(skewAlreadyPoints !== undefined
+      ? { skew_25d_points: skewAlreadyPoints }
+      : skewDecimal !== undefined ? { skew_25d_points: skewDecimal * 100 } : {}),
+    ...(finite(raw.realized_minus_implied_vol_points) !== undefined
+      ? { realized_minus_implied_vol_points: finite(raw.realized_minus_implied_vol_points) } : {}),
+    ...(finite(raw.net_edge_vol_points) !== undefined
+      ? { net_edge_vol_points: finite(raw.net_edge_vol_points) } : {}),
+    ...(typeof raw.expiry_covers_next_event === "boolean"
+      ? { expiry_covers_next_event: raw.expiry_covers_next_event } : {}),
+  };
+}
+
 /**
  * Grounding -> the fact shape packs address.
  *
@@ -35,7 +84,7 @@ export function factsFromRun(run) {
   for (const metric of screen.metrics || []) {
     if (metric && typeof metric.rule === "string" && metric.value !== undefined) metrics[metric.rule] = metric.value;
   }
-  const options = g.options || {};
+  const options = optionsFactsFromGrounding(g.options || {});
   return {
     symbol: run?.symbol,
     as_of: run?.as_of,
@@ -50,19 +99,7 @@ export function factsFromRun(run) {
       rules_total: Number(screen.rules_total || 0),
       metrics,
     },
-    options: {
-      chain_available: Boolean(options.atm_iv || options.term_structure || options.expiries),
-      atm_iv: options.atm_iv,
-      // Mapped only where the snapshot genuinely carries them. Realized volatility, and so
-      // the implied-versus-realized gap and any friction-adjusted edge, need a history the
-      // chain does not have -- which is why IV percentile is uncomputable too. Those paths
-      // stay absent, the rules that read them score as uncomputable, and a volatility method
-      // handed a bare snapshot correctly finds too little of itself to run.
-      skew_25d_points: options.skew_25d_put_minus_call_points ?? options.skew_25d_points,
-      expiry_covers_next_event: options.expiry_covers_next_event,
-      realized_minus_implied_vol_points: options.realized_minus_implied_vol_points,
-      net_edge_vol_points: options.net_edge_vol_points,
-    },
+    options,
     macro: g.macro || {},
   };
 }

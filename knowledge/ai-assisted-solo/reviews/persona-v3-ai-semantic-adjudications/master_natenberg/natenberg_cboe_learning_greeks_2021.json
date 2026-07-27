@@ -1,0 +1,159 @@
+{
+  "agreements": [
+    "The adjudicator agrees with the skeptic's partial verdict."
+  ],
+  "artifact_hash": "sha256:1a112780bbc4792f8fe7b4f98e13f638cda54b178a7c7948c0239e4ad5a99ab0",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "natenberg_cboe_learning_greeks_2021",
+  "disagreements": [
+    "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:29324867c9d6afecedafbab859aeb7de079e1ca64210f6a6924db9dc402396cb",
+    "declared_artifact_hash": "sha256:f6d58efa8bbc1c64ba4423aa083a74a955322849e547f76cd775af9cdec8b37d",
+    "recomputed_artifact_hash": "sha256:f6d58efa8bbc1c64ba4423aa083a74a955322849e547f76cd775af9cdec8b37d",
+    "relative_path": "master_natenberg/natenberg_cboe_learning_greeks_2021.json"
+  },
+  "final_overall_verdict": "partial",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_natenberg",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The adjudicator agrees with the skeptic's partial verdict."
+      ],
+      "disagreements": [
+        "The extractor's support-strength claim is narrowed to partial support after the skeptic challenge."
+      ],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "html_text_offset",
+          "occurrence_count": 1,
+          "page": null,
+          "section_claimed": "Delta is fundamental",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 3570,
+          "text_start": 3471
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "html_text_offset",
+          "page": null,
+          "section": "Delta is fundamental",
+          "text_end": 3570,
+          "text_start": 3471
+        },
+        "extractor_snippet_hash": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4",
+        "normalized_excerpt": "The Delta of an option measures the sensitivity to changes in the price of the underlying security.",
+        "skeptic_snippet_hash_claimed": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4",
+        "skeptic_snippet_hash_recomputed": "sha256:5f3685da0a08cd40dd5b97e2cd5346c4941beba18bcc26226251aecc58ecd1f4"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "qualified",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The exact snippet defines Delta only; Vega and the broader multiple-Greeks prescription are outside that binding.",
+      "final_verdict": "partial",
+      "proposition_id": "natenberg_cboe_learning_greeks_2021:p1",
+      "review_hash": "sha256:5d604c865ab2372da9f72675e49be3310f350ef67cb1e5bad85d22bb0c085b51",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Vega and the multiple-Greeks conclusion are outside the exact excerpt."
+        ],
+        "support_rationale": "The excerpt directly defines Delta, while the article page discusses multiple Greeks; the bound snippet does not define Vega or independently support the full multi-Greek prescription.",
+        "support_verdict": "partial"
+      },
+      "statement": "Represent option exposure with multiple Greeks rather than direction alone; Delta measures underlying-price sensitivity while Vega measures implied-volatility sensitivity.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The Cboe educational page is associated with Natenberg in the candidate catalog, but the bound passage does not establish that he authored the text."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": [
+          "Scope remains unresolved: The broader article supports the topic, but the exact evidence unit only supports Delta sensitivity."
+        ]
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:3a66207c3f41660e480a820c52012f7e68d08432ff3efe0e67816b191a1b72f5",
+    "declared_artifact_hash": "sha256:e2c0b9d865bcec7923f4b8e5b1f29a3dcc0811e568a940d8075a9716132daa57",
+    "recomputed_artifact_hash": "sha256:e2c0b9d865bcec7923f4b8e5b1f29a3dcc0811e568a940d8075a9716132daa57",
+    "relative_path": "master_natenberg/natenberg_cboe_learning_greeks_2021.json"
+  },
+  "source_binding": {
+    "byte_length": 383122,
+    "content_hash": "sha256:6a46933f850c77eb4cb9e0e5d3d851916159d7db0b06450e3c30b938f5ba21db",
+    "extracted_character_count_recomputed": 7412,
+    "extracted_text_hash_recomputed": "sha256:7f022ef201844febd88ed2c7ee4c2529a6d32691f910ad0e08fe5d1e175ea2b9",
+    "page_character_counts_recomputed": [
+      7412
+    ],
+    "page_count_recomputed": 1,
+    "raw_bytes_hash_recomputed": "sha256:6a46933f850c77eb4cb9e0e5d3d851916159d7db0b06450e3c30b938f5ba21db",
+    "source_record_hash": "sha256:dbdbc50ba1f3a9b391bdee98fb060516a65770c2a8655fdf0b8e612517df9abd"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The Cboe educational page is associated with Natenberg in the candidate catalog, but the bound passage does not establish that he authored the text."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": [
+      "Scope remains unresolved: The broader article supports the topic, but the exact evidence unit only supports Delta sensitivity."
+    ]
+  }
+}

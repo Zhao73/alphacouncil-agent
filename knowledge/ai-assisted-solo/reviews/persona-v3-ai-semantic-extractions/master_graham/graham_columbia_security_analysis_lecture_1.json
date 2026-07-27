@@ -1,0 +1,81 @@
+{
+  "artifact_hash": "sha256:18507a337ec9bd8960db3c6d411644eff51961da2712ee41ed24603f06477f22",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "graham_columbia_security_analysis_lecture_1",
+  "concise_summary": "Graham's lecture contrasts obvious growth-prospect selection with tested comparative security-analysis techniques and value differentials.",
+  "contradictions_ambiguities": [
+    "Lecture one does not by itself define a numeric margin-of-safety threshold."
+  ],
+  "human_reviewed": false,
+  "language": "en",
+  "method_attribution_approved": false,
+  "method_propositions": [
+    {
+      "evidence_excerpt": "The method of selectivity which I believe does work well is one that is based on demonstrated value differentials",
+      "locator": {
+        "kind": "pdf_page",
+        "page": 5,
+        "section": "Lecture one: selectivity",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposition_id": "graham_columbia_security_analysis_lecture_1:p1",
+      "snippet_hash": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56",
+      "statement": "Prefer tested comparative value differentials over selecting companies merely because their industry prospects appear obviously good.",
+      "support_strength": "direct"
+    }
+  ],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Which later lecture supplies exact balance-sheet and earnings tests for the comparative method?"
+  ],
+  "persona_id": "master_graham",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "The lecture transcript is text-readable.",
+    "status": "readable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 92422,
+    "content_hash": "sha256:17f6f0de56937f317e89412cfca03636c57d5c997104172662a904d8096e8dc6",
+    "content_type": "application/pdf",
+    "extracted_character_count": 27736,
+    "extracted_text_hash": "sha256:c8b3542eeaabd57c307ba8e6ef361ad263f8d1278bf87318470c37d6a8a7dc31",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://business.columbia.edu/sites/default/files-efs/imce-uploads/Graham_Sept1946Feb1947_CurrentProblemsinSecurityAnalysis_Lecture1.pdf",
+    "page_character_counts": [
+      471,
+      3355,
+      3649,
+      3578,
+      3290,
+      3683,
+      3406,
+      3404,
+      2900
+    ],
+    "page_count": 9,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:3f9ba5091fdab437da554a736cee5ee2221ee445748f1e82dcc4181ceac6d398",
+    "retrieved_at": "2026-07-27T06:22:37.037Z"
+  },
+  "source_type": "primary_lecture_transcript"
+}

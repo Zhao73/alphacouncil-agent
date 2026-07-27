@@ -1,0 +1,58 @@
+{
+  "artifact_hash": "sha256:e1b52c2f5982801245bb31db3cf915244e9a28328b10360499929f307de76c72",
+  "artifact_kind": "persona_v3_ai_semantic_source_extraction",
+  "candidate_id": "thorp_kelly_stock_market",
+  "concise_summary": "The archived PDF produced no text with the available Poppler extractor, so no Kelly or stock-market proposition was extracted.",
+  "contradictions_ambiguities": [
+    "The filename and URL imply a topic but are not semantic evidence."
+  ],
+  "human_reviewed": false,
+  "language": "und",
+  "method_attribution_approved": false,
+  "method_propositions": [],
+  "model_identity": {
+    "agent_task_id": "/root/ai_source_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can OCR produce a page-bound transcript with independently checked equations and symbols?"
+  ],
+  "persona_id": "master_thorp",
+  "pipeline_id": "alphacouncil_ai_semantic_source_extractor_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:4bc23b5351eefff5ecefd6b9725e4e541468be23e29d35a2aac222828f22a448",
+    "prompt_id": "alphacouncil.source-semantic-extractor.round1.v1"
+  },
+  "readability": {
+    "reason": "Poppler returned zero extracted characters.",
+    "status": "unreadable"
+  },
+  "review_stage": "round_1_semantic_extraction",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "extractor",
+  "role_id": "ai_semantic_source_extractor_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 1740396,
+    "content_hash": "sha256:a37fe04e5f3cb53cb0c62b1bac2d95c876293c26406f2b23a0c0e61f788ea9ed",
+    "content_type": "application/pdf",
+    "extracted_character_count": 0,
+    "extracted_text_hash": "sha256:95e25e30cc197f9fce583bfe1c2620507eea3c0446b7c0919ce4e0896d16a7b9",
+    "extraction_error": null,
+    "extraction_tool": "poppler_pdftotext_layout_utf8",
+    "final_url": "https://www.edwardothorp.com/wp-content/uploads/2016/11/TheKellyCriterionAndTheStockMarket.pdf",
+    "page_character_counts": [
+      0
+    ],
+    "page_count": 1,
+    "raw_bytes_reverified": true,
+    "record_hash": "sha256:d0558125da0beb02b1a4efa6fe5beaa4f1bbdf12b5fb69960d6d1cc9fb57837d",
+    "retrieved_at": "2026-07-27T06:36:23.602Z"
+  },
+  "source_type": "image_only_or_unextractable_pdf"
+}

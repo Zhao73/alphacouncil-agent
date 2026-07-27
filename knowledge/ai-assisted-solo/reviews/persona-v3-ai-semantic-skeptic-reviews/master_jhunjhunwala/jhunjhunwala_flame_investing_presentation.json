@@ -1,0 +1,175 @@
+{
+  "artifact_hash": "sha256:c252ae256206f37e98deaf0978dcb815c572eea6eee3849ed857a5ca76bdaa1d",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "jhunjhunwala_flame_investing_presentation",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:9a2cec29acc64dadae1aa68278eda432cf8a22e805b66b736e111ea27dc24992",
+    "declared_artifact_hash": "sha256:395837e0adf03d0689724ff017fa03d0db1a94f696cfa099198c31928305eb2d",
+    "proposition_count": 2,
+    "recomputed_artifact_hash": "sha256:395837e0adf03d0689724ff017fa03d0db1a94f696cfa099198c31928305eb2d",
+    "relative_path": "master_jhunjhunwala/jhunjhunwala_flame_investing_presentation.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "partial",
+  "persona_id": "master_jhunjhunwala",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "The snippet hash binds only Sustainable competitive advantage while the statement aggregates the whole slide."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 19,
+        "actual_text_end": 99,
+        "actual_text_start": 66,
+        "declared_kind": "pdf_page",
+        "declared_page": 19,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "What narrower wording would be fully entailed by the cited excerpt alone?"
+      ],
+      "proposed_evidence_excerpt": "Sustainable competitive advantage",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 19,
+        "section": "What to look for",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Look for addressable opportunity, sustainable competitive advantage, scalability, management integrity, economic value creation, and price-value divergence.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "jhunjhunwala_flame_investing_presentation:p1",
+      "review_hash": "sha256:57425e9a40a8218b1d2124ddba8bbbf419e894b9f985687016ef3caa9fcda6a9",
+      "scope_ambiguity": {
+        "rationale": "The page supports the list, but the exact evidence snippet under-specifies the claimed list.",
+        "status": "limited"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565",
+      "snippet_hash_recomputed": "sha256:97bfdf92a8875a06d1b86f6df24157deab4306f66b0f32ad63bda6d99ceeb565",
+      "support_rationale": "The cited page contains the full checklist, but the bound excerpt is only one checklist item and therefore cannot alone support the six-part proposition.",
+      "support_verdict": "partial"
+    },
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 20,
+        "actual_text_end": 702,
+        "actual_text_start": 638,
+        "declared_kind": "pdf_page",
+        "declared_page": 20,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "Make exit an independent decision, not driven by profit or loss.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 20,
+        "section": "Exiting an investment",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Make the exit decision independently of whether the position currently shows a profit or loss.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "jhunjhunwala_flame_investing_presentation:p2",
+      "review_hash": "sha256:346e19d752ba5596fc988b5edeb144d5e264cab758c8eb26c8c0b6d124f7ffb5",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671",
+      "snippet_hash_recomputed": "sha256:e2e2dcc6e5b8de690fef8be8f49b740f6b01be2d8e81485990334d68b1678671",
+      "support_rationale": "The slide states the independent-exit rule directly and expressly rejects profit or loss as the driver.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 142921,
+    "content_hash": "sha256:2d213e7593783e08065920e2c90a7ef08cf2331c0dd11e30bc39ba43d145ae5b",
+    "extracted_text_hash": "sha256:0bc2a6d52266ca6771ff28c2fd64590e2c1e983b2575f25968bb41bf673f2f16",
+    "extracted_text_hash_recomputed": "sha256:0bc2a6d52266ca6771ff28c2fd64590e2c1e983b2575f25968bb41bf673f2f16",
+    "raw_bytes_hash_recomputed": "sha256:2d213e7593783e08065920e2c90a7ef08cf2331c0dd11e30bc39ba43d145ae5b",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:1422977018a0e3138153c0d521871ca1e911b2342e69cc56ef5e3d2908f8cd81",
+    "source_record_hash_recomputed": "sha256:1422977018a0e3138153c0d521871ca1e911b2342e69cc56ef5e3d2908f8cd81"
+  }
+}

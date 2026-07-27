@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:a900ed0f54e1f4bd095b9ffae85c323d144ea1fa4a01e1d9470d4816e7e36308",
+    "derivation_spec_hash": "sha256:0c451ec63612421c6fe99842f7626637dd90e3b3e8619257f60f4fca21bdc4e2",
+    "derivation_spec_id": "master_simons.leakage_audit.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_simons.leakage_audit",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:7138ac57d87fa971d158e0f540c0daa61b1dea01c0db86c597f8dae268e54602",
+    "inputs": [
+      {
+        "fact_id": "quant.sample_definition"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "quant.leakage_flags",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:397d1471f41eb4c6e8f2407be6850bd6075974fbe3b34db32f072adb3602d48c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_simons.leakage_audit.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:078e355a7a7a7055a4bd6cbcd40853664e7d740e556e803012e2f0e5ab65b3bf",
+    "derivation_spec_hash": "sha256:50ebe908b77b3ed2e0cfd7664189a2fd5cfffb1d267a07e186d9da1baf450dc5",
+    "derivation_spec_id": "master_simons.oos_cost_test.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_simons.oos_cost_test",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:94124d9f3a8d1ae22574f34bd1b8df793da06ba24bcf769f646ff8d8d9b9d435",
+    "inputs": [
+      {
+        "fact_id": "quant.sample_definition"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "quant.out_of_sample_returns",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:f169b7819d68e0656a39fa3bba7c13cdb95fe020a0e8b5e9a69aa1b450ed8801",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_simons.oos_cost_test.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

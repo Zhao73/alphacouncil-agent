@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/source-anchor-v1.schema.json",
+  "title": "AlphaCouncil source anchor v1",
+  "description": "An exact, reviewable anchor for a doctrine rule, threshold, case or qualitative feature. Counts and author labels never substitute for this record.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source_id",
+    "source_kind",
+    "grade",
+    "author",
+    "title",
+    "url",
+    "published_at",
+    "public_at",
+    "retrieved_at",
+    "locator",
+    "summary",
+    "content_hash",
+    "adjudication"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source_id": { "type": "string", "pattern": "^[a-z0-9_:-]{3,128}$" },
+    "source_kind": {
+      "enum": [
+        "primary_text",
+        "primary_behavior",
+        "derived_proxy",
+        "empirical_calibration",
+        "editorial_choice"
+      ]
+    },
+    "grade": { "enum": ["A", "B", "C", "D", "E"] },
+    "author": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "url": { "type": "string", "pattern": "^https?://" },
+    "published_at": { "type": "string", "minLength": 10 },
+    "public_at": { "type": "string", "minLength": 10 },
+    "known_at": { "type": ["string", "null"] },
+    "retrieved_at": { "type": "string", "minLength": 10 },
+    "locator": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "page": { "type": ["string", "integer"] },
+        "chapter": { "type": "string" },
+        "section": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "filing_item": { "type": "string" }
+      }
+    },
+    "summary": { "type": "string", "minLength": 8, "maxLength": 1200 },
+    "excerpt": { "type": "string", "maxLength": 400 },
+    "content_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "supports": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "adjudication": {
+      "type": "object",
+      "required": ["status", "reviewer_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["pending", "approved", "rejected"] },
+        "reviewer_ids": {
+          "description": "Runtime normalizes each case-sensitive reviewer ID with Unicode NFKC plus trim and then enforces uniqueness.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+          "uniqueItems": true
+        },
+        "reviewed_at": { "type": ["string", "null"] },
+        "notes": { "type": "string", "maxLength": 1200 }
+      }
+    }
+  }
+}

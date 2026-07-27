@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/source-adjudication-queue-v1.schema.json",
+  "title": "AlphaCouncil source-adjudication queue v1",
+  "description": "A staging queue of real source anchors. An empty queue makes no evidence or review claim.",
+  "type": "object",
+  "required": ["schema_version", "artifact_kind", "persona_id", "records"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "source_adjudication_queue" },
+    "persona_id": { "type": "string", "pattern": "^[a-z0-9_]{2,48}$" },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "source-anchor-v1.schema.json" }
+    }
+  }
+}

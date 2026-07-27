@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:b76392a7ae4c08885cc465f8c5717a357e5f75cd8d978e720f4345313cad3716",
+    "derivation_spec_hash": "sha256:3536e8779c6955b0d9935822b7d4b54548a3f4235956348443cd884892d649cf",
+    "derivation_spec_id": "master_soros.reflexivity_graph.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_soros.reflexivity_graph",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:3da573dbc3650b9510ed735b03f3624e46c5befead08cef8ccb238789beda343",
+    "inputs": [
+      {
+        "fact_id": "reflexivity.loop_state"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "reflexivity.loop_state",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:7c8ae56f7b5e8b7e81adb54f7f1c04cb015452f4f9d0eb77c4159d02e7358223",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:efa4c7a15523b575e"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:ecdd895a6e939f6b154f9087f5418ea9bfabde100d00ec2934bcc14389ad1acf",
+    "derivation_spec_hash": "sha256:8ad58c927a80c9973257e5e5c0b35e294cf300cbbaaf5e8f7ed789e53565fac8",
+    "derivation_spec_id": "master_soros.reversal_monitor.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_soros.reversal_monitor",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:f99a30105bf69e0265ad701b79694ed68fb7b60934f89ebf85b2a2797552f5cb",
+    "inputs": [
+      {
+        "fact_id": "positioning.crowding"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "reflexivity.break_signals",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:7e3a9d132800b1808aab0bed4c173ee57f2893a97a9e2723bc64fe6f659dbc35",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:efa4c7a15523b575e"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

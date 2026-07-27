@@ -1,0 +1,164 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:29d4ee01dfb633d049d83b4d2aab197dcbb338035d68a4abd58ebc15b851d97d",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "pabrai_columbia_session_2024",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:401aecea4b1d673c14cf459b18796c223bd2a5ec3f44782e8ddcd130b5edabcf",
+    "declared_artifact_hash": "sha256:359a043cf674e79f4eda973091560a390bf08fd0f6781cce663de4acdba4839d",
+    "recomputed_artifact_hash": "sha256:359a043cf674e79f4eda973091560a390bf08fd0f6781cce663de4acdba4839d",
+    "relative_path": "master_pabrai/pabrai_columbia_session_2024.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_pabrai",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 5,
+          "section_claimed": "Circle of competence",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 3318,
+          "text_start": 3236
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 5,
+          "section": "Circle of competence",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca",
+        "normalized_excerpt": "Most companies I look at, I reject in 60 seconds or less; sometimes in 10 seconds.",
+        "skeptic_snippet_hash_claimed": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca",
+        "skeptic_snippet_hash_recomputed": "sha256:a53e1a5daed167c2c377b0d96b12e4f0099a430a129b38943ebd847e909757ca"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The transcript directly describes rapid rejection and names sectors discarded because they fall outside the speaker's competence.",
+      "final_verdict": "supported",
+      "proposition_id": "pabrai_columbia_session_2024:p1",
+      "review_hash": "sha256:125855107aef54bbc235dc05dc151e9b3fce1e71acc4b5ca691ba11ead5cab5b",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The transcript directly describes rapid rejection, names entire sectors outside competence, and says to discard them rather than force analysis.",
+        "support_verdict": "supported"
+      },
+      "statement": "Use a strict circle-of-competence filter and reject most companies quickly rather than forcing analysis outside understood domains.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:f54a5deb04abd4c12f52ef978a3a1c0752ab4a99279249ea74a0daac2156a4ac",
+    "declared_artifact_hash": "sha256:e06a2a113049e93d257c31b641daaf156bbeccf342d6a429bc6510833e202a47",
+    "recomputed_artifact_hash": "sha256:e06a2a113049e93d257c31b641daaf156bbeccf342d6a429bc6510833e202a47",
+    "relative_path": "master_pabrai/pabrai_columbia_session_2024.json"
+  },
+  "source_binding": {
+    "byte_length": 292154,
+    "content_hash": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+    "extracted_character_count_recomputed": 40500,
+    "extracted_text_hash_recomputed": "sha256:639e2220b85d22ca5f619733458a7df96c57de5781c9bd73c001f900abfd9cfc",
+    "page_character_counts_recomputed": [
+      3621,
+      3727,
+      3677,
+      3759,
+      3801,
+      3805,
+      3516,
+      3646,
+      3989,
+      3461,
+      2705,
+      793
+    ],
+    "page_count_recomputed": 12,
+    "raw_bytes_hash_recomputed": "sha256:497f54617ef250007730ecbd2637fb80d52fc2dd2ad9e8256b9dabfaf0e69ce7",
+    "source_record_hash": "sha256:f34464c4583e5e65b5d3bb5859ec6eeac9016c984d5f53b7c11d4fdc54b1ad12"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

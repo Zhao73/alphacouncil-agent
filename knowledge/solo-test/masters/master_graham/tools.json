@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:ab278afe4a2667e545e3530a45b7ecd01c975b84107509da7154d2632d4b95e3",
+    "derivation_spec_hash": "sha256:39b4f21e95e0e5c177f8d31ca6d2278269e2d61ecdb9e88a412490ee7dbafb50",
+    "derivation_spec_id": "master_graham.asset_floor.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_graham.asset_floor",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:26d982760423c7f0b54dd2922f5be604d57ff626de6da213f24e0179d8f2d932",
+    "inputs": [
+      {
+        "fact_id": "financial.net_current_asset_value"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "financial.net_current_asset_value",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:d00d30510fab2092d78e440726cb377ad180331fbeac2852a4c58ee0de94817c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:efc142652d20dd68c"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:61e7b2bfcef7c29c74becce76fe2b7d61b8a5043a507aec5eac2c8eb51de053c",
+    "derivation_spec_hash": "sha256:e7cfcc32bfbec92faf3af85e147bbab990cad07bb977f211a7aeeeb0b47aeac3",
+    "derivation_spec_id": "master_graham.normalized_earnings.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_graham.normalized_earnings",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:842d3cf2cea0077712f30abcdbd92f98bcf90606da23edfd03b7c2e1372bb379",
+    "inputs": [
+      {
+        "fact_id": "financial.net_current_asset_value"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "financial.normalized_earnings",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:32753ad8f7abd76ef6dc8cb087ad0097aecdd55fc8eb45374211ce1385a42a9e",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:efc142652d20dd68c"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

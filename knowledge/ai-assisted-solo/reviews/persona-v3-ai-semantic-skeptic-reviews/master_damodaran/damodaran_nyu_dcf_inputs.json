@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:49b19b228b2aff98fe6f3377ccfd1dda9f403463a51246e1caec571bc956afa5",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "damodaran_nyu_dcf_inputs",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:0655d8a52a4fbd02bd913af858fa241360fa9f22247bfb4b4a5398be42020f51",
+    "declared_artifact_hash": "sha256:1f32411f9fc8f8b811c7bcb0c76280c889edc34a402c6e115b1a8ec8177d2547",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:1f32411f9fc8f8b811c7bcb0c76280c889edc34a402c6e115b1a8ec8177d2547",
+    "relative_path": "master_damodaran/damodaran_nyu_dcf_inputs.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 4,
+        "actual_text_end": 349,
+        "actual_text_start": 239,
+        "declared_kind": "pdf_page",
+        "declared_page": 4,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "the discount rate used should be consistent with both the riskiness and the type of cashflow being discounted.",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 4,
+        "section": "Estimating inputs: discount rates",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Match the discount rate to both the riskiness and the type of cash flow being discounted.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "damodaran_nyu_dcf_inputs:p1",
+      "review_hash": "sha256:8217cc7f2c8a52b2da6178ef296d418b22cbaa60312ee11d0fa46deb9cc3f7d1",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:07d3d5778f5c17215f88aaf77f36f2b4619a6a33f521be41f21e5bf6afdeffc6",
+      "snippet_hash_recomputed": "sha256:07d3d5778f5c17215f88aaf77f36f2b4619a6a33f521be41f21e5bf6afdeffc6",
+      "support_rationale": "The slide states verbatim that discount rates must match both riskiness and cash-flow type, then gives equity, firm, currency, and nominal/real examples.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 764156,
+    "content_hash": "sha256:427a911e400cee02faeec04ab5cf91ab4cf45c9f54fc95d1b06082a4bff1db33",
+    "extracted_text_hash": "sha256:81e34517e6e0210edb07ab6369bd70be7df2e58ab51ea6e76ed5637db75464de",
+    "extracted_text_hash_recomputed": "sha256:81e34517e6e0210edb07ab6369bd70be7df2e58ab51ea6e76ed5637db75464de",
+    "raw_bytes_hash_recomputed": "sha256:427a911e400cee02faeec04ab5cf91ab4cf45c9f54fc95d1b06082a4bff1db33",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:b9b1b95573237525999774730a90d62438f1e013aa37d00482c4957ec1e2ba5a",
+    "source_record_hash_recomputed": "sha256:b9b1b95573237525999774730a90d62438f1e013aa37d00482c4957ec1e2ba5a"
+  }
+}

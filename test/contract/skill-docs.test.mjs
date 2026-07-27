@@ -178,3 +178,24 @@ test("every consumer-facing tracked file is in the npm package", () => {
   assert.deepEqual(missing, [],
     `these ship in the repo but not to anyone who installs it: ${missing.join(", ")}`);
 });
+
+test("the npm tarball excludes PersonaPack staging and every raw acquisition artifact", () => {
+  const packed = JSON.parse(execSync("npm pack --dry-run --json", {
+    encoding: "utf8", cwd: repoFile("."), stdio: ["pipe", "pipe", "ignore"],
+  }))[0].files.map((file) => file.path);
+
+  const leaked = packed.filter((path) =>
+    path.startsWith("knowledge/staging/")
+    || path.includes("/acquisitions/")
+    || /(?:^|\/)source\.bin$/u.test(path));
+  assert.deepEqual(leaked, [],
+    `raw PersonaPack staging/acquisition artifacts leaked into npm: ${leaked.join(", ")}`);
+  assert.ok(packed.some((path) => path.startsWith("knowledge/masters/")),
+    "the package must still ship admitted production master manifests");
+  assert.ok(packed.includes("docs/persona-v3-deterministic-policy.md"),
+    "the package must ship the PersonaPack v3 deterministic policy consumed by operators");
+  const reviewJson = packed.filter((path) => path.startsWith("knowledge/ai-assisted-solo/reviews/") && path.endsWith(".json"));
+  assert.equal(reviewJson.length, 185, "the package must ship the complete hash-verifiable AI review capsule");
+  assert.equal(packed.some((path) => path.startsWith("knowledge/ai-assisted-solo/host-e2e/")), false,
+    "machine-local host failure evidence with workstation paths must not ship");
+});

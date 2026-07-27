@@ -82,12 +82,14 @@ export async function fetchQuote(input) {
   const sym = resolveMarketSymbol(input);
   if (!sym) return { query: input, error: "empty symbol" };
   try {
-    const txt = await fetchText(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=1d`);
-    return parseYahooChart(JSON.parse(txt), sym);
+    const sourceUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=1d`;
+    const txt = await fetchText(sourceUrl);
+    return { ...parseYahooChart(JSON.parse(txt), sym), source_url: sourceUrl };
   } catch (e1) {
     try {
-      const txt = await fetchText(`https://stooq.com/q/l/?s=${encodeURIComponent(sym.toLowerCase())}&f=sd2t2ohlcv&h&e=csv`);
-      return parseStooqCsv(txt, sym);
+      const sourceUrl = `https://stooq.com/q/l/?s=${encodeURIComponent(sym.toLowerCase())}&f=sd2t2ohlcv&h&e=csv`;
+      const txt = await fetchText(sourceUrl);
+      return { ...parseStooqCsv(txt, sym), source_url: sourceUrl };
     } catch (e2) {
       return { query: input, symbol: sym, error: `live data unavailable (${e1.message}; ${e2.message})`, note: "fall back to WebSearch and mark open_questions" };
     }

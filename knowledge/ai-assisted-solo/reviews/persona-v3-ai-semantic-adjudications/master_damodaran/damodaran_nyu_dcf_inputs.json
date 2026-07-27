@@ -1,0 +1,297 @@
+{
+  "agreements": [
+    "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+    "The adjudicator agrees with the skeptic's supported verdict."
+  ],
+  "artifact_hash": "sha256:1aca7c764bf0cfebf4ade0af8317aa9b1f1c68c4c284e59bf4b7e679f2a82362",
+  "artifact_kind": "persona_v3_ai_semantic_source_adjudication",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "acquisition, extractor, and skeptic candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "third-process extracted-text hash must match both prior lanes",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor structure and domain hash must validate",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin bytes and declared content hashes must match",
+      "status": "pass"
+    },
+    "skeptic_artifact": {
+      "detail": "skeptic structure and domain hash must validate",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "canonical acquisition record hashes must match",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "damodaran_nyu_dcf_inputs",
+  "disagreements": [],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:0655d8a52a4fbd02bd913af858fa241360fa9f22247bfb4b4a5398be42020f51",
+    "declared_artifact_hash": "sha256:1f32411f9fc8f8b811c7bcb0c76280c889edc34a402c6e115b1a8ec8177d2547",
+    "recomputed_artifact_hash": "sha256:1f32411f9fc8f8b811c7bcb0c76280c889edc34a402c6e115b1a8ec8177d2547",
+    "relative_path": "master_damodaran/damodaran_nyu_dcf_inputs.json"
+  },
+  "final_overall_verdict": "supported",
+  "final_rationale": "Every proposition was independently rebound to source bytes and adjudicated after comparing the extractor claim with the skeptic challenge.",
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane/source_semantic_adjudicator",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "persona_id": "master_damodaran",
+  "pipeline_id": "alphacouncil_ai_semantic_source_adjudicator_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:1e42809ef3e72e1a88d15e2883e8504144507d6cace7a6e822777c00cefee135",
+    "prompt_id": "alphacouncil.source-semantic-adjudicator.round3.v1"
+  },
+  "proposition_adjudications": [
+    {
+      "agreements": [
+        "The final adjudicator accepts the extractor proposition at its claimed semantic strength.",
+        "The adjudicator agrees with the skeptic's supported verdict."
+      ],
+      "disagreements": [],
+      "exact_content_binding": {
+        "adjudicator_locator_recomputed": {
+          "kind": "pdf_page",
+          "occurrence_count": 1,
+          "page": 4,
+          "section_claimed": "Estimating inputs: discount rates",
+          "section_independently_bound": false,
+          "status": "exact",
+          "text_end": 349,
+          "text_start": 239
+        },
+        "adjudicator_snippet_hash_recomputed": "sha256:07d3d5778f5c17215f88aaf77f36f2b4619a6a33f521be41f21e5bf6afdeffc6",
+        "binding_status": "exact",
+        "extractor_locator": {
+          "kind": "pdf_page",
+          "page": 4,
+          "section": "Estimating inputs: discount rates",
+          "text_end": null,
+          "text_start": null
+        },
+        "extractor_snippet_hash": "sha256:07d3d5778f5c17215f88aaf77f36f2b4619a6a33f521be41f21e5bf6afdeffc6",
+        "normalized_excerpt": "the discount rate used should be consistent with both the riskiness and the type of cashflow being discounted.",
+        "skeptic_snippet_hash_claimed": "sha256:07d3d5778f5c17215f88aaf77f36f2b4619a6a33f521be41f21e5bf6afdeffc6",
+        "skeptic_snippet_hash_recomputed": "sha256:07d3d5778f5c17215f88aaf77f36f2b4619a6a33f521be41f21e5bf6afdeffc6"
+      },
+      "extractor_claim": {
+        "adjudicator_relation": "agree",
+        "support_strength": "direct"
+      },
+      "final_rationale": "The exact slide text requires discount-rate consistency with both cash-flow risk and cash-flow type.",
+      "final_verdict": "supported",
+      "proposition_id": "damodaran_nyu_dcf_inputs:p1",
+      "review_hash": "sha256:ccbfd6a1b90430c56782d82982ab03e2ed3b89d0e5cbcc9b9a3aee51042d244d",
+      "skeptic_claim": {
+        "adjudicator_relation": "agree",
+        "challenges": [
+          "Machine support classification is not a method-attribution approval."
+        ],
+        "support_rationale": "The slide states verbatim that discount rates must match both riskiness and cash-flow type, then gives equity, firm, currency, and nominal/real examples.",
+        "support_verdict": "supported"
+      },
+      "statement": "Match the discount rate to both the riskiness and the type of cash flow being discounted.",
+      "unresolved_questions": {
+        "authorship": [
+          "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+        ],
+        "date": [
+          "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+        ],
+        "scope": []
+      }
+    }
+  ],
+  "review_stage": "round_3_semantic_adjudication",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "adjudicator",
+  "role_id": "ai_semantic_source_adjudicator_v1",
+  "schema_version": 1,
+  "skeptic_binding": {
+    "artifact_content_hash": "sha256:c8d88bf489721dcb9a54b324004b496b4e1ac0714daac159a30b5698b2a3c248",
+    "declared_artifact_hash": "sha256:49b19b228b2aff98fe6f3377ccfd1dda9f403463a51246e1caec571bc956afa5",
+    "recomputed_artifact_hash": "sha256:49b19b228b2aff98fe6f3377ccfd1dda9f403463a51246e1caec571bc956afa5",
+    "relative_path": "master_damodaran/damodaran_nyu_dcf_inputs.json"
+  },
+  "source_binding": {
+    "byte_length": 764156,
+    "content_hash": "sha256:427a911e400cee02faeec04ab5cf91ab4cf45c9f54fc95d1b06082a4bff1db33",
+    "extracted_character_count_recomputed": 67589,
+    "extracted_text_hash_recomputed": "sha256:81e34517e6e0210edb07ab6369bd70be7df2e58ab51ea6e76ed5637db75464de",
+    "page_character_counts_recomputed": [
+      61,
+      290,
+      44,
+      870,
+      709,
+      349,
+      1945,
+      466,
+      247,
+      584,
+      157,
+      281,
+      632,
+      553,
+      656,
+      363,
+      366,
+      474,
+      320,
+      574,
+      831,
+      256,
+      586,
+      308,
+      414,
+      805,
+      238,
+      363,
+      315,
+      30,
+      235,
+      521,
+      448,
+      299,
+      35,
+      506,
+      29,
+      31,
+      35,
+      23,
+      334,
+      768,
+      711,
+      833,
+      486,
+      637,
+      555,
+      615,
+      396,
+      653,
+      416,
+      412,
+      169,
+      264,
+      346,
+      816,
+      232,
+      484,
+      398,
+      274,
+      435,
+      530,
+      222,
+      293,
+      482,
+      732,
+      400,
+      430,
+      246,
+      679,
+      374,
+      289,
+      235,
+      340,
+      693,
+      637,
+      407,
+      510,
+      482,
+      700,
+      321,
+      273,
+      372,
+      241,
+      436,
+      723,
+      832,
+      42,
+      680,
+      833,
+      522,
+      685,
+      911,
+      956,
+      792,
+      351,
+      317,
+      399,
+      164,
+      163,
+      790,
+      488,
+      441,
+      345,
+      300,
+      418,
+      227,
+      40,
+      511,
+      406,
+      426,
+      352,
+      411,
+      290,
+      584,
+      233,
+      281,
+      508,
+      677,
+      768,
+      1089,
+      752,
+      895,
+      517,
+      776,
+      528,
+      295,
+      381,
+      670,
+      437,
+      311,
+      373,
+      277,
+      714,
+      550,
+      137,
+      363,
+      475,
+      53,
+      707,
+      579,
+      866,
+      662,
+      679,
+      830
+    ],
+    "page_count_recomputed": 145,
+    "raw_bytes_hash_recomputed": "sha256:427a911e400cee02faeec04ab5cf91ab4cf45c9f54fc95d1b06082a4bff1db33",
+    "source_record_hash": "sha256:b9b1b95573237525999774730a90d62438f1e013aa37d00482c4957ec1e2ba5a"
+  },
+  "unresolved_questions": {
+    "authorship": [
+      "Authorship remains unresolved: The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship."
+    ],
+    "date": [
+      "Publication date remains unresolved: The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane."
+    ],
+    "scope": []
+  }
+}

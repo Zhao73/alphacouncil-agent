@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-release-formula-review-evidence-v1.schema.json",
+  "title": "AlphaCouncil immutable 52-tool formula review evidence",
+  "description": "Contains an audit snapshot of formula-review public keys and exactly 52 bindings. The embedded keys are not authority; verification requires identical matching descriptors in an external formula_review trust registry.",
+  "type": "object",
+  "required": [
+    "schema_version", "artifact_kind", "verified_at", "canonical_master_count",
+    "planned_tool_count", "trusted_formula_reviewer_keys", "trusted_key_registry_hash",
+    "formula_binding_inventory_hash", "verified_bindings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_release_formula_review_evidence" },
+    "verified_at": { "type": "string", "format": "date-time" },
+    "canonical_master_count": { "const": 26 },
+    "planned_tool_count": { "const": 52 },
+    "trusted_formula_reviewer_keys": {
+      "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/trustedKey" }
+    },
+    "trusted_key_registry_hash": { "$ref": "#/$defs/hash" },
+    "formula_binding_inventory_hash": { "$ref": "#/$defs/hash" },
+    "verified_bindings": {
+      "type": "array", "minItems": 52, "maxItems": 52,
+      "items": { "$ref": "#/$defs/binding" }
+    }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "trustedKey": {
+      "type": "object",
+      "required": ["key_id", "public_key", "principal_id", "revoked", "not_before", "not_after", "purposes"],
+      "additionalProperties": false,
+      "properties": {
+        "key_id": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{3,128}$" },
+        "public_key": { "type": "string", "pattern": "^-----BEGIN PUBLIC KEY-----" },
+        "principal_id": { "type": "string", "minLength": 1 },
+        "revoked": { "type": "boolean" },
+        "not_before": { "type": ["string", "null"] },
+        "not_after": { "type": ["string", "null"] },
+        "purposes": { "type": "array", "contains": { "const": "formula_review" } }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "required": [
+        "persona_id", "tool_id", "formula_spec_id", "formula_spec_hash",
+        "formula_review_subject_hash", "approval_bundle_hash", "prototype_content_hash",
+        "source_ids", "reviewer_principal_ids", "signer_key_ids", "latest_reviewed_at"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "persona_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+        "tool_id": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,159}$" },
+        "formula_spec_id": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,159}$" },
+        "formula_spec_hash": { "$ref": "#/$defs/hash" },
+        "formula_review_subject_hash": { "$ref": "#/$defs/hash" },
+        "approval_bundle_hash": { "$ref": "#/$defs/hash" },
+        "prototype_content_hash": { "$ref": "#/$defs/hash" },
+        "source_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "reviewer_principal_ids": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "signer_key_ids": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "minLength": 3 } },
+        "latest_reviewed_at": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

@@ -49,6 +49,10 @@ export function richnessSummary(run) {
 export function statusSnapshot(run) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
+  const selectedMasters = Array.isArray(run.masters) ? run.masters : [];
+  const recordedMasters = (run.master_opinions || []).map((opinion) => opinion.master);
+  const recordedSet = new Set(recordedMasters);
+  const pendingMasters = selectedMasters.filter((master) => !recordedSet.has(master));
   return {
     run_id: run.run_id,
     symbol: run.symbol,
@@ -64,6 +68,18 @@ export function statusSnapshot(run) {
     completeness: completeness.completeness,
     missing_evidence_count: completeness.missing_evidence_count,
     missing_debate_count: completeness.missing_debate_count,
+    missing_master_count: pendingMasters.length,
+    selected_master_count: selectedMasters.length,
+    recorded_master_count: recordedMasters.length,
+    selected_masters: selectedMasters,
+    recorded_masters: recordedMasters,
+    pending_masters: pendingMasters,
+    master_selection_status: run.master_selection?.status || "missing",
+    selection_id: run.master_selection?.selection_id || null,
+    catalog_hash: run.master_selection?.catalog_hash || null,
+    selection_hash: run.master_selection?.selection_hash || null,
+    fact_pack_hash: run.fact_pack_hash || run.grounding?.typed_fact_pack?.fact_pack_hash || null,
+    typed_fact_count: run.grounding?.typed_fact_pack?.facts?.length || 0,
     information_richness: richnessSummary(run),
     report_quality: run.report_quality?.status || "not_checked",
     missing_report_items_count: run.report_quality?.missing?.length || 0,
@@ -72,6 +88,7 @@ export function statusSnapshot(run) {
     completed_at: run.completed_at,
     tasks: run.tasks.map((task) => taskState(run, task)),
     agents: DEBATE_ROLES.map((role) => agentState(run, role)),
+    masters: selectedMasters.map((master) => run.master_status?.[master] || { master, status: "pending" }),
   };
 }
 

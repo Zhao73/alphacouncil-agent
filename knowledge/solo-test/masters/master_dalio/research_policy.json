@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject resilience when refinancing at current conditions breaches documented capacity.",
+    "Reject diversification claims when holdings share one material macro driver.",
+    "Reject a historical analogy that omits material structural differences."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

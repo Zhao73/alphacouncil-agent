@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:746946b414d40302649355c79824292af90a8d8b822cdc3a95259e231f1fec48",
+    "derivation_spec_hash": "sha256:b6e067dd554fa9ddceedd494aaa97bb73b6d810a25d3f9e776ab0c45e759eef7",
+    "derivation_spec_id": "master_fisher.scuttlebutt_graph.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_fisher.scuttlebutt_graph",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:48e95dce27931114a24607167ef7afdbedf871a34842f191eaad789e67d36790",
+    "inputs": [
+      {
+        "fact_id": "customer.retention"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "scuttlebutt.source_independence",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:02355d7de530a39f31ec3514091e72c5e6b0bc1f18085be0a9606cf5b92c6a59",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_fisher.scuttlebutt_graph.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:dafd91e14d7dad56e88957c9d88e75438d3590b0729898af7398976db4ccea77",
+    "derivation_spec_hash": "sha256:0bf3b0980d8508c6b87bb6a05bc87403a8a279a7dbc0580bf0601be3e3ea3d91",
+    "derivation_spec_id": "master_fisher.research_productivity.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_fisher.research_productivity",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:110e98d375a8eec4a4fa4dbd5a28585ff755a367ff9d91ef5bc65d6c8f4495fe",
+    "inputs": [
+      {
+        "fact_id": "research.productivity"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "research.productivity",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:513d2276631906aba45c7f3e767f5c01a64aba8add34fe9f2473aadf91d944dd",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_fisher.research_productivity.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

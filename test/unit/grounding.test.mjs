@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { groundingBlock } from "../../mcp/lib/grounding.mjs";
+import { gatherGrounding, groundingBlock, liveSnapshotPolicy } from "../../mcp/lib/grounding.mjs";
+import { groundingForHeadlessRun } from "../../mcp/lib/orchestrator.mjs";
 import { taskPrompt } from "../../mcp/lib/prompts.mjs";
 
 const sample = {
@@ -16,9 +17,69 @@ const sample = {
   unavailable: [],
 };
 
+test("historical cutoffs refuse current-only snapshots instead of relabelling them", () => {
+  const now = new Date("2026-07-27T12:00:00.000Z");
+  assert.deepEqual(liveSnapshotPolicy("2026-07-26", { now }), {
+    allowed: false,
+    reason: "historical_cutoff_requires_archived_fact_pack",
+    cutoff_time: "2026-07-26T23:59:59.999Z",
+  });
+  assert.equal(liveSnapshotPolicy("2026-07-27", { now }).allowed, true);
+  assert.equal(liveSnapshotPolicy("2026-07-27T11:59:59.999Z", { now }).allowed, false);
+  assert.equal(liveSnapshotPolicy("2026-07-27T12:00:00.000Z", { now }).allowed, true);
+  assert.throws(() => liveSnapshotPolicy("2026-07-27T12:00:00", { now }), /as_of must be/);
+});
+
+test("historical grounding stays network-free without an explicit point-in-time CIK", async () => {
+  const grounding = await gatherGrounding({
+    symbol: "NOK",
+    asOf: "2026-07-26",
+    now: new Date("2026-07-27T12:00:00.000Z"),
+  });
+  assert.equal(grounding.quote, undefined);
+  assert.equal(grounding.options, undefined);
+  assert.equal(grounding.macro, undefined);
+  assert.equal(grounding.screen, undefined);
+  assert.equal(grounding.typed_fact_pack.facts.length, 0);
+  assert.ok(grounding.unavailable.some((item) => /explicit point-in-time CIK/.test(item)));
+  assert.ok(grounding.unavailable.some((item) => /archived chain/.test(item)));
+  assert.ok(grounding.unavailable.some((item) => /archived observations/.test(item)));
+});
+
 test("an empty grounding renders nothing rather than an empty heading", () => {
   assert.equal(groundingBlock(null), "");
   assert.equal(groundingBlock({ unavailable: [] }), "");
+});
+
+test("headless production gathers grounding instead of taking the prompt fallback", async () => {
+  let calls = 0;
+  const result = await groundingForHeadlessRun(
+    { symbol: "TEST", asOf: "2026-07-27", grounding: null, dryRun: false },
+    async (args) => {
+      calls += 1;
+      assert.deepEqual(args, { symbol: "TEST", asOf: "2026-07-27" });
+      return { quote: { price: 10 } };
+    },
+  );
+  assert.equal(calls, 1);
+  assert.deepEqual(result, { quote: { price: 10 } });
+});
+
+test("headless grounding failure becomes explicit missing facts, never model-memory permission", async () => {
+  const result = await groundingForHeadlessRun(
+    { symbol: "TEST", asOf: "2026-07-27", grounding: null, dryRun: false },
+    async () => { throw new Error("feed unavailable"); },
+  );
+  assert.equal(result.facts_unavailable, true);
+  assert.match(result.unavailable[0], /feed unavailable/);
+});
+
+test("dry runs stay network-free", async () => {
+  const result = await groundingForHeadlessRun(
+    { symbol: "TEST", asOf: "2026-07-27", grounding: null, dryRun: true },
+    async () => { throw new Error("must not be called"); },
+  );
+  assert.equal(result, null);
 });
 
 test("the block carries the actual figures, not a summary of them", () => {
@@ -52,6 +113,21 @@ test("retrieval failures are surfaced and marked un-fillable from memory", () =>
   const block = groundingBlock({ ...sample, unavailable: ["quote: HTTP 500"] }, "English");
   assert.match(block, /quote: HTTP 500/);
   assert.match(block, /must NOT be filled from memory/);
+});
+
+test("the canonical option-chain digest is rendered with its explicit data gaps", () => {
+  const block = groundingBlock({
+    options: {
+      available: true,
+      source: "CBOE delayed quotes",
+      reference_expiry: { expiry: "2026-08-15", atm_iv: 0.45 },
+      skew_25delta: { put_minus_call: 0.0033 },
+      unavailable: ["realised volatility: not in this feed"],
+    },
+  }, "English");
+  assert.match(block, /ATM IV 45\.0%/);
+  assert.match(block, /skew 0\.33 vol points/);
+  assert.match(block, /realised volatility: not in this feed/);
 });
 
 test("grounding reaches the analyst prompt and stays after the role brief", () => {

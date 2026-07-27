@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "AlphaCouncil plugins for public-equity research.",
-    "version": "0.8.0"
+    "version": "0.9.0-solo-test.1"
   },
   "plugins": [
     {
       "name": "alphacouncil-agent",
       "source": "./",
       "description": "Multi-agent equity research: evidence packets, bull/bear debate, portfolio-manager decision.",
-      "version": "0.8.0",
+      "version": "0.9.0-solo-test.1",
       "author": {
         "name": "Zhao73"
       },

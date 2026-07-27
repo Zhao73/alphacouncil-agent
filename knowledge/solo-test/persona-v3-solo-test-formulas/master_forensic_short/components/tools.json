@@ -1,0 +1,94 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:d974229c5ee51962401acaeba1c3eac6085494be27a08cf1890cd563c882c12f",
+    "derivation_spec_hash": "sha256:f3bf762b47078a2d4dcd185fe472d22ddf655ec80907c4271da872a558424ba8",
+    "derivation_spec_id": "master_forensic_short.accounting_rebuilder.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_forensic_short.accounting_rebuilder",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      }
+    ],
+    "input_schema_hash": "sha256:4c446e97ca70074a686e1683fab6a74b4356accf11fb810b8a367761d3e95aa7",
+    "inputs": [
+      {
+        "fact_id": "accounting.cash_conversion"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "accounting.cash_conversion",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:8624217294519049a9889d1300af37ef53fa4feeeee73205a99f31000cb7d651",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_forensic_short.accounting_rebuilder.prototype_v1"
+    ],
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.1.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:41c563b6ab37f5f691c67ca99c9a88622734ff891206d51eb0d02985ddedce0b",
+    "derivation_spec_hash": "sha256:5500e93ba960c4d2f1e3a3152df8184b463cd75a5a89be41627e0826a811c7ac",
+    "derivation_spec_id": "master_forensic_short.borrow_catalyst.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_forensic_short.borrow_catalyst",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
+      }
+    ],
+    "input_schema_hash": "sha256:4762fc24f2bb850aa306c2389878dd6bd78f77c4e38aba6be4315a6defe883b9",
+    "inputs": [
+      {
+        "fact_id": "short.borrow_cost"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "transform",
+    "on_missing": "fail",
+    "operation": "identity",
+    "output_id": "short.borrow_cost",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:c82d5b82708524d49e9a8f6ab901ee7fdf572f4331eba4d712e109c5123ba76c",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_forensic_short.borrow_catalyst.prototype_v1"
+    ],
+    "unit": "derived_proxy_scalar",
+    "value_kind": "scalar",
+    "version": "0.1.0"
+  }
+]

@@ -1,0 +1,128 @@
+{
+  "artifact_hash": "sha256:f4e370cb28186d2039bc4b17be975faa484a64f68dd3e785a0f1b9306c99a729",
+  "artifact_kind": "persona_v3_ai_semantic_source_skeptic_review",
+  "binding_checks": {
+    "candidate_persona": {
+      "detail": "extractor, acquisition, and skeptic catalog candidate/persona identities must match",
+      "status": "pass"
+    },
+    "extracted_text": {
+      "detail": "independent extraction hash, length, and page counts must match",
+      "status": "pass"
+    },
+    "extractor_artifact": {
+      "detail": "extractor artifact domain hash and structural validation must pass",
+      "status": "pass"
+    },
+    "raw_bytes": {
+      "detail": "source.bin byte length and SHA-256 must match acquisition and extractor bindings",
+      "status": "pass"
+    },
+    "source_record": {
+      "detail": "acquisition record canonical hash must match the extractor binding",
+      "status": "pass"
+    }
+  },
+  "candidate_id": "graham_columbia_security_analysis_lecture_1",
+  "challenges": [
+    "A machine semantic pass cannot establish method attribution or source grade."
+  ],
+  "extractor_binding": {
+    "artifact_content_hash": "sha256:6580e373255110ca963e91a195c61fd74c0154b5defde3f3699a8502d7d49cba",
+    "declared_artifact_hash": "sha256:18507a337ec9bd8960db3c6d411644eff51961da2712ee41ed24603f06477f22",
+    "proposition_count": 1,
+    "recomputed_artifact_hash": "sha256:18507a337ec9bd8960db3c6d411644eff51961da2712ee41ed24603f06477f22",
+    "relative_path": "master_graham/graham_columbia_security_analysis_lecture_1.json"
+  },
+  "human_reviewed": false,
+  "method_attribution_approved": false,
+  "model_identity": {
+    "agent_task_id": "/root/ai_formula_review_lane",
+    "exact_deployment_id": "not_exposed_to_agent",
+    "model_family": "GPT-5",
+    "product": "Codex collaborating agent",
+    "provider": "OpenAI"
+  },
+  "open_questions": [
+    "Can independent human reviewers validate this source against the full method corpus?"
+  ],
+  "overall_verdict": "supported",
+  "persona_id": "master_graham",
+  "pipeline_id": "alphacouncil_ai_semantic_source_skeptic_v1",
+  "production_effect": "none",
+  "prompt_identity": {
+    "prompt_hash": "sha256:d24de73d6ec2305258b443de11570d1bd1feea4f15cdd0e21aa63c2a652539b9",
+    "prompt_id": "alphacouncil.source-semantic-skeptic.round2.v1"
+  },
+  "proposition_reviews": [
+    {
+      "authorship_ambiguity": {
+        "rationale": "The archived publication context is consistent with the proposed author, but this machine pass does not establish legal or editorial authorship.",
+        "status": "limited"
+      },
+      "challenges": [
+        "Machine support classification is not a method-attribution approval."
+      ],
+      "date_ambiguity": {
+        "rationale": "The archive binds retrieval time and exact bytes, but no human-approved publication-date anchor is present in this lane.",
+        "status": "limited"
+      },
+      "locator_verification": {
+        "actual_page": 5,
+        "actual_text_end": 1157,
+        "actual_text_start": 1044,
+        "declared_kind": "pdf_page",
+        "declared_page": 5,
+        "occurrence_count": 1,
+        "section_label_status": "extractor_label_not_independently_bound",
+        "status": "exact"
+      },
+      "open_questions": [
+        "Can a human reviewer confirm authorship, publication date, and method-level representativeness?"
+      ],
+      "proposed_evidence_excerpt": "The method of selectivity which I believe does work well is one that is based on demonstrated value differentials",
+      "proposed_locator": {
+        "kind": "pdf_page",
+        "page": 5,
+        "section": "Lecture one: selectivity",
+        "text_end": null,
+        "text_start": null
+      },
+      "proposed_statement": "Prefer tested comparative value differentials over selecting companies merely because their industry prospects appear obviously good.",
+      "proposed_support_strength": "direct",
+      "proposition_id": "graham_columbia_security_analysis_lecture_1:p1",
+      "review_hash": "sha256:f84a51b367de0b22483fbf5148db7f1802575be363df151d5560a05d2079bab5",
+      "scope_ambiguity": {
+        "rationale": "The proposed statement stays within the operative scope of the cited passage.",
+        "status": "none_detected"
+      },
+      "snippet_binding_status": "exact",
+      "snippet_hash_claimed": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56",
+      "snippet_hash_recomputed": "sha256:3e1e47c294b439ba63de6dd6aa8dec5053410aba30d0b17aef2af419278b2e56",
+      "support_rationale": "The lecture directly rejects obvious industry-prospect selection and endorses demonstrated comparative value differentials from tested security-analysis techniques.",
+      "support_verdict": "supported"
+    }
+  ],
+  "readability_recheck": {
+    "extractor_status": "readable",
+    "independent_status": "readable",
+    "reason": "Independent extraction located every proposed evidence excerpt in readable text.",
+    "status_match": true
+  },
+  "review_stage": "round_2_semantic_skeptic",
+  "reviewed_on": "2026-07-27",
+  "reviewer_kind": "ai",
+  "role": "skeptic",
+  "role_id": "ai_semantic_source_skeptic_v1",
+  "schema_version": 1,
+  "source_binding": {
+    "byte_length": 92422,
+    "content_hash": "sha256:17f6f0de56937f317e89412cfca03636c57d5c997104172662a904d8096e8dc6",
+    "extracted_text_hash": "sha256:c8b3542eeaabd57c307ba8e6ef361ad263f8d1278bf87318470c37d6a8a7dc31",
+    "extracted_text_hash_recomputed": "sha256:c8b3542eeaabd57c307ba8e6ef361ad263f8d1278bf87318470c37d6a8a7dc31",
+    "raw_bytes_hash_recomputed": "sha256:17f6f0de56937f317e89412cfca03636c57d5c997104172662a904d8096e8dc6",
+    "raw_bytes_reverified": true,
+    "source_record_hash": "sha256:3f9ba5091fdab437da554a736cee5ee2221ee445748f1e82dcc4181ceac6d398",
+    "source_record_hash_recomputed": "sha256:3f9ba5091fdab437da554a736cee5ee2221ee445748f1e82dcc4181ceac6d398"
+  }
+}

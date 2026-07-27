@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Decline when a load-bearing narrative claim has no mapped valuation variable.",
+    "Reject a growth scenario whose required reinvestment is omitted or internally inconsistent.",
+    "Reject a terminal state incompatible with mature growth, margin and risk assumptions."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

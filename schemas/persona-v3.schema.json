@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 manifest",
+  "description": "A physical, source-backed method pack. The declared maturity is advisory; admission code derives the displayed maturity from corpus and evaluation artifacts.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "pack_version",
+    "identity",
+    "selection",
+    "capability",
+    "research",
+    "computation",
+    "decision",
+    "memory",
+    "voice",
+    "evaluation",
+    "components"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 3 },
+    "build_profile": {
+      "enum": ["production", "solo_test"],
+      "description": "Optional build path marker. solo_test remains provisional and requires the explicit solo-test loader; it is rejected by the production loader and GA."
+    },
+    "pack_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "identity": {
+      "type": "object",
+      "required": ["persona_id", "public_label", "operator_label", "maturity", "source_cutoff"],
+      "additionalProperties": false,
+      "properties": {
+        "persona_id": { "type": "string", "pattern": "^[a-z0-9_]{2,48}$" },
+        "public_label": {
+          "type": "object",
+          "required": ["en", "zh"],
+          "additionalProperties": false,
+          "properties": {
+            "en": { "type": "string", "minLength": 3 },
+            "zh": { "type": "string", "minLength": 2 }
+          }
+        },
+        "operator_label": {
+          "description": "Neutral label used whenever admission does not support a named candidate or method model.",
+          "$ref": "#/$defs/localizedText"
+        },
+        "maturity": { "enum": ["operator_lens", "candidate", "method_model"] },
+        "source_cutoff": { "type": "string", "minLength": 10 }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "required": ["identity", "method", "best_for"],
+      "additionalProperties": false,
+      "properties": {
+        "identity": { "$ref": "#/$defs/localizedText" },
+        "method": { "$ref": "#/$defs/localizedText" },
+        "best_for": { "$ref": "#/$defs/localizedText" }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "required": ["domains", "exclusions", "required_fact_types", "optional_fact_types", "native_decision_schema"],
+      "additionalProperties": false,
+      "anyOf": [
+        { "properties": { "required_fact_types": { "minItems": 1 } } },
+        { "properties": { "optional_fact_types": { "minItems": 1 } } }
+      ],
+      "properties": {
+        "domains": { "$ref": "#/$defs/nonEmptyStrings" },
+        "exclusions": { "$ref": "#/$defs/strings" },
+        "required_fact_types": { "$ref": "#/$defs/strings" },
+        "optional_fact_types": { "$ref": "#/$defs/strings" },
+        "native_decision_schema": { "type": "string", "minLength": 3 }
+      }
+    },
+    "research": {
+      "type": "object",
+      "required": ["planner", "private_budget", "mandatory_disconfirming_queries", "source_policy"],
+      "additionalProperties": false,
+      "properties": {
+        "planner": { "type": "string", "minLength": 3 },
+        "private_budget": {
+          "type": "object",
+          "required": ["queries", "fetches"],
+          "additionalProperties": false,
+          "properties": {
+            "queries": { "type": "integer", "minimum": 1 },
+            "fetches": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "mandatory_disconfirming_queries": { "$ref": "#/$defs/nonEmptyStrings" },
+        "source_policy": { "type": "string", "minLength": 3 }
+      }
+    },
+    "computation": {
+      "type": "object",
+      "required": ["dsl_version", "pipeline"],
+      "additionalProperties": false,
+      "properties": {
+        "dsl_version": { "const": "1.1" },
+        "pipeline": { "$ref": "#/$defs/nonEmptyStrings" }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["eligibility", "hard_vetoes", "native_output", "common_projection", "abstention_policy"],
+      "additionalProperties": false,
+      "properties": {
+        "eligibility": { "$ref": "#/$defs/nonEmptyStrings" },
+        "hard_vetoes": { "$ref": "#/$defs/nonEmptyStrings" },
+        "native_output": { "type": "string", "minLength": 3 },
+        "common_projection": { "type": "string", "minLength": 3 },
+        "abstention_policy": { "const": "fail_closed" },
+        "confidence_calibrator": { "type": ["string", "null"] }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "required": ["episodic", "belief_updates", "postmortem_horizon_days", "leak_rule"],
+      "additionalProperties": false,
+      "properties": {
+        "episodic": { "type": "boolean" },
+        "belief_updates": { "const": "evidence_required" },
+        "postmortem_horizon_days": { "type": "integer", "minimum": 1 },
+        "leak_rule": { "const": "public_at <= as_of AND memory_created_at <= as_of" }
+      }
+    },
+    "voice": {
+      "type": "object",
+      "required": ["load_after_decision_freeze", "en", "zh"],
+      "additionalProperties": false,
+      "properties": {
+        "load_after_decision_freeze": { "const": true },
+        "en": { "type": "string", "minLength": 3 },
+        "zh": { "type": "string", "minLength": 3 }
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "required": ["required_ablations"],
+      "additionalProperties": false,
+      "properties": {
+        "required_ablations": {
+          "type": "array",
+          "items": { "enum": ["name", "voice", "policy", "evidence", "memory", "model"] },
+          "minItems": 6,
+          "uniqueItems": true
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "required": [
+        "sources",
+        "doctrine",
+        "decision_cases",
+        "failures",
+        "counterfactuals",
+        "research_policy",
+        "decision_policy",
+        "tools",
+        "memory_policy",
+        "golden_cases",
+        "pairwise_cases",
+        "calibration_cases",
+        "experiments"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "sources": { "$ref": "#/$defs/safePath" },
+        "doctrine": { "$ref": "#/$defs/safePath" },
+        "decision_cases": { "$ref": "#/$defs/safePath" },
+        "failures": { "$ref": "#/$defs/safePath" },
+        "counterfactuals": { "$ref": "#/$defs/safePath" },
+        "research_policy": { "$ref": "#/$defs/safePath" },
+        "decision_policy": { "$ref": "#/$defs/safePath" },
+        "tools": { "$ref": "#/$defs/safePath" },
+        "memory_policy": { "$ref": "#/$defs/safePath" },
+        "golden_cases": { "$ref": "#/$defs/safePath" },
+        "pairwise_cases": { "$ref": "#/$defs/safePath" },
+        "calibration_cases": { "$ref": "#/$defs/safePath" },
+        "experiments": { "$ref": "#/$defs/safePath" }
+      }
+    }
+  },
+  "$defs": {
+    "localizedText": {
+      "type": "object",
+      "required": ["en", "zh"],
+      "additionalProperties": false,
+      "properties": {
+        "en": { "type": "string", "minLength": 3 },
+        "zh": { "type": "string", "minLength": 2 }
+      }
+    },
+    "strings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "safePath": {
+      "type": "string",
+      "minLength": 3,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    }
+  }
+}
