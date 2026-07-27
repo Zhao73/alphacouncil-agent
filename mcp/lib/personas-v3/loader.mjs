@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { basename, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { canDefineMethodRule, inclusiveCutoffTime, validateSourceAnchor } from "./source-anchor.mjs";
-import { canonicalValue } from "./canonical.mjs";
+import { canonicalValue, portableRelativePath } from "./canonical.mjs";
 import { validateExperimentDocument } from "./admission.mjs";
 import { validateDeterministicPolicyArtifacts } from "./deterministic-executor.mjs";
 import { resolveActivePersonaKnowledgeDir } from "./production-root.mjs";
@@ -295,7 +295,8 @@ function loadV3PackForProfile(packDir, expectedBuildProfile) {
     manifest,
     components,
     voice,
-    component_files: Object.fromEntries(Object.entries(files).map(([key, file]) => [key, relative(realpathSync(packDir), file)])),
+    component_files: Object.fromEntries(Object.entries(files)
+      .map(([key, file]) => [key, portableRelativePath(realpathSync(packDir), file)])),
   });
   return deepFreeze(snapshot);
 }

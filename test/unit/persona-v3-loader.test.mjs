@@ -237,9 +237,11 @@ function makePack(t, {
 test("a physical v3 pack loads and a self-declared method model stays an operator until admitted", (t) => {
   const pack = loadV3Pack(makePack(t));
   const compiled = compilePersonaPack(pack);
+  assert.equal(pack.component_files.golden_cases, "eval/golden_cases.jsonl");
   assert.equal(compiled.persona_id, "master_test");
   assert.equal(compiled.dsl_version, "1.1");
   assert.equal(compiled.maturity, "operator_lens");
+  assert.equal(compiled.admission.method_model_experiment_status.file, "eval/experiments.json");
   assert.equal(compiled.admitted_label.en, "Test-inspired Operator Lens");
   assert.match(compiled.pack_hash, /^sha256:[a-f0-9]{64}$/);
   assert.match(compiled.corpus_hash, /^sha256:[a-f0-9]{64}$/);

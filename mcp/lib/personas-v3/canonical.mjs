@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { relative, sep } from "node:path";
 
 const SUBJECT_COMPONENTS = Object.freeze([
   "sources",
@@ -34,6 +35,14 @@ function normalize(value, path = "$") {
 
 export function canonicalValue(value) {
   return normalize(value);
+}
+
+/** Normalize an on-disk relative path before it enters a hash-bound artifact. */
+export function portableRelativePath(root, file, {
+  relativePath = relative,
+  separator = sep,
+} = {}) {
+  return relativePath(root, file).split(separator).join("/");
 }
 
 export function canonicalJson(value) {

@@ -20,6 +20,7 @@ import {
   canonicalJson,
   canonicalValue,
   computePersonaArtifactHashes,
+  portableRelativePath,
   sha256,
 } from "./canonical.mjs";
 import {
@@ -635,7 +636,7 @@ function loadV3Corpus(packDir, manifest) {
     artifact_hashes: artifactHashes,
     missing_artifacts: missing,
     component_files: Object.fromEntries(Object.entries(files)
-      .map(([key, value]) => [key, value ? relative(realpathSync(packDir), value) : null])),
+      .map(([key, value]) => [key, value ? portableRelativePath(realpathSync(packDir), value) : null])),
   };
 }
 

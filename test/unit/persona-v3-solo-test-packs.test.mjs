@@ -13,10 +13,10 @@ import {
 } from "../../mcp/lib/personas-v3/registry.mjs";
 import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
+import { portableRelativePath } from "../../mcp/lib/personas-v3/canonical.mjs";
 import {
   DEFAULT_SOLO_TEST_PACK_ROOT,
   inspectPersonaV3SoloTestPacks,
-  portableRelativePath,
 } from "../../scripts/lib/persona-v3-solo-test-packs.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));

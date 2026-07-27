@@ -22,7 +22,11 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 
 import buildInventory from "../../data/persona-v3-build-specs.v1.mjs";
 import { inspectPersonaAdmission } from "../../mcp/lib/personas-v3/admission.mjs";
-import { canonicalValue, sha256 } from "../../mcp/lib/personas-v3/canonical.mjs";
+import {
+  canonicalValue,
+  portableRelativePath,
+  sha256,
+} from "../../mcp/lib/personas-v3/canonical.mjs";
 import { compilePersonaPack } from "../../mcp/lib/personas-v3/compiler.mjs";
 import {
   deterministicToolSchemaHashes,
@@ -551,16 +555,6 @@ export function writePersonaV3SoloTestPacks(options = {}) {
 
 function expectedFilesInSeat(documents) {
   return new Set(Object.keys(documents));
-}
-
-// The generated document keys are repository paths and deliberately use `/`.
-// `path.relative` returns `\\` on Windows, so normalize before comparing the
-// physical inventory to those canonical keys.
-export function portableRelativePath(root, file, {
-  relativePath = relative,
-  separator = sep,
-} = {}) {
-  return relativePath(root, file).split(separator).join("/");
 }
 
 function actualFiles(root, current = root, out = []) {
