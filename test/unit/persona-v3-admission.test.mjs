@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   CANDIDATE_BAR,
   CANDIDATE_EXPERIMENTS,
@@ -24,7 +25,7 @@ import {
 } from "../../mcp/lib/personas-v3/admission.mjs";
 import { withTestFormulaApprovalBinding } from "../helpers/persona-v3-deterministic-tool.mjs";
 
-const ROOT = new URL("../..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const TEST_SIGNER = "ci:test-key-v1";
 const TEST_HASH = `sha256:${"a".repeat(64)}`;
 const { privateKey: TEST_PRIVATE_KEY, publicKey: TEST_PUBLIC_KEY } = generateKeyPairSync("ed25519");
