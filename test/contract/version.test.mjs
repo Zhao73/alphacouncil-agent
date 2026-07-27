@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { __test__ } from "../../mcp/server.mjs";
 import { repoFile } from "../helpers/paths.mjs";
 
@@ -19,5 +19,28 @@ test("every manifest and the served VERSION agree with package.json", () => {
   };
   for (const [where, version] of Object.entries(declared)) {
     assert.equal(version, expected, `${where} drifted from package.json`);
+  }
+});
+
+test("the solo-test channel uses one explicit prerelease across all 26 physical packs", () => {
+  const expected = readJson("package.json").version;
+  const profile = readJson("data/build-profile.v1.json");
+  const schema = readJson("schemas/persona-v3.schema.json");
+  assert.equal(profile.channel, "solo_test");
+  assert.match(expected, /^0\.9\.0-solo-test\.[1-9]\d*$/u);
+  assert.equal(new RegExp(schema.properties.pack_version.pattern, "u").test(expected), true);
+
+  const root = repoFile("knowledge/solo-test/masters");
+  const personaIds = readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  assert.equal(personaIds.length, 26);
+  for (const personaId of personaIds) {
+    assert.equal(
+      readJson(`knowledge/solo-test/masters/${personaId}/manifest.json`).pack_version,
+      expected,
+      `${personaId} pack version drifted from package.json`,
+    );
   }
 });

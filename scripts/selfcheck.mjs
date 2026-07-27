@@ -63,7 +63,7 @@ export function buildCheckPlan(root = repoRoot) {
     steps: Object.freeze([
       ...PORTABLE_STEPS,
       ...(staging === "present" ? PRIVATE_STAGING_STEPS : []),
-      Object.freeze(tests ? ["--test"] : ["scripts/package-smoke.mjs"]),
+      Object.freeze(["scripts/run-tests.mjs"]),
     ]),
   });
 }

@@ -1,0 +1,44 @@
+{
+  "artifact_kind": "persona_v3_ai_machine_simulation_run",
+  "configuration": {
+    "deterministic_runtime_only": true,
+    "formal_analyst_outputs_simulated": false,
+    "formal_human_outputs_simulated": false,
+    "selected_master_count": 0,
+    "selected_master_ids": [],
+    "simulated_verifier_checks": false
+  },
+  "evidence_class": "machine_simulation",
+  "formal_arm_id": "B",
+  "formal_arm_satisfied": false,
+  "formal_experiment_effect": "none",
+  "formal_ga_effect": "none",
+  "formal_h_satisfied": false,
+  "human_reference": false,
+  "input_binding": {
+    "input_hash": "sha256:fac572d11624e9ce86f4be1b7aae7f93b6e8ca0ca0d29ffee82ea2076d6d1ed2",
+    "path": "simulation-input.json"
+  },
+  "network_allowed": false,
+  "production_effect": "none",
+  "result_hash": "sha256:35bc6cc6e39405a0eecae6f869eb8b29e4753f41cc665836bd94d072c8eccffe",
+  "results": {
+    "blocked_fail_closed_count": 0,
+    "completion_status": "completed_machine_simulation",
+    "decisions": [],
+    "deterministic_execution_count": 0,
+    "executed_count": 0,
+    "formal_results": null,
+    "machine_reference_digest": null,
+    "metric_claims": [],
+    "network_call_count": 0,
+    "provider_cost_usd": 0,
+    "runtime_findings": [],
+    "verifier_checks": []
+  },
+  "reviewer_kind": "ai",
+  "run_artifact_hash": "sha256:2070551acde338918d70039b8e45f2959f19b127b887d5f0e9b6c5cd23e55f87",
+  "run_id": "B",
+  "schema_version": 1,
+  "simulation_scope": "frozen-input control digest only; eight LLM analyst outputs are not simulated"
+}

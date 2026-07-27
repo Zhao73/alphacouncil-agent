@@ -3,7 +3,7 @@ node_modules/
 *.log
 .env
 .env.*
-runs/
+/runs/
 .alphacouncil-agent/
 
 # Private/raw PersonaPack authoring workspace. The publishable review capsules and

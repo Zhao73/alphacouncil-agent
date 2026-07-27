@@ -67,7 +67,7 @@ export function main(argv = process.argv.slice(2)) {
       "  --root PATH          override the isolated solo-test/masters output root",
       "  --formula-root PATH  override the 52-tool provisional formula staging tree",
       "  --persona-dir PATH   override the canonical persona registry",
-      "  --pack-version X.Y.Z override package-derived pack version",
+      "  --pack-version X.Y.Z[-PRERELEASE] override package-derived pack version",
       "  --json               emit a machine-readable report",
       "",
       "This command never creates source approvals, human signatures, experiment passes,",

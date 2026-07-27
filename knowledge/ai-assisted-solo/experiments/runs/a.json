@@ -1,0 +1,61 @@
+{
+  "artifact_kind": "persona_v3_ai_machine_simulation_run",
+  "configuration": {
+    "deterministic_runtime_only": true,
+    "formal_analyst_outputs_simulated": false,
+    "formal_human_outputs_simulated": false,
+    "selected_master_count": 1,
+    "selected_master_ids": [
+      "master_buffett"
+    ],
+    "simulated_verifier_checks": false
+  },
+  "evidence_class": "machine_simulation",
+  "formal_arm_id": "A",
+  "formal_arm_satisfied": false,
+  "formal_experiment_effect": "none",
+  "formal_ga_effect": "none",
+  "formal_h_satisfied": false,
+  "human_reference": false,
+  "input_binding": {
+    "input_hash": "sha256:fac572d11624e9ce86f4be1b7aae7f93b6e8ca0ca0d29ffee82ea2076d6d1ed2",
+    "path": "simulation-input.json"
+  },
+  "network_allowed": false,
+  "production_effect": "none",
+  "result_hash": "sha256:dd95e006bf1184003f108b7dda034bc5c2102938ca9c868e6d69ef567217d6e1",
+  "results": {
+    "blocked_fail_closed_count": 0,
+    "completion_status": "completed_machine_simulation",
+    "decisions": [
+      {
+        "anonymous_method_hash": "sha256:c617108770534f6c0299a134d0014838c4d9dc8a8e96496563e557063e6cfd25",
+        "deterministic_core_hash": "sha256:a67003279083423cab89962354372c6a19f16e5260579000816a8fcc39ed5a38",
+        "fact_pack_hash": "sha256:0adab0b69b1e8ba756deaeac3c457e044dd5a7195b1847893db0953772220e41",
+        "frozen_decision_hash": "sha256:ddfd120be4926ef3b400a07f8af44c277d170f4c8f48364579b5b21ae48fa661",
+        "native_state": "provisional_own_at_price",
+        "pack_hash": "sha256:34a0bdbce9df38d8ffd9fe67437af8295cd5636f41ce94e16569b9a3a0cdd492",
+        "persona_id": "master_buffett",
+        "policy_execution_hash": "sha256:5e853405b4dd96e4760f842c0726e26bf7f87e9e3cc79a6b90e3ceb58a2211a5",
+        "score_ratio": 1,
+        "stance": "cautious",
+        "status": "executed",
+        "structured_decision_hash": "sha256:4dd09d873884782402697e0ac7ef70fc61ab76440f221274b7a16c13a1b66e3c"
+      }
+    ],
+    "deterministic_execution_count": 1,
+    "executed_count": 1,
+    "formal_results": null,
+    "machine_reference_digest": null,
+    "metric_claims": [],
+    "network_call_count": 0,
+    "provider_cost_usd": 0,
+    "runtime_findings": [],
+    "verifier_checks": []
+  },
+  "reviewer_kind": "ai",
+  "run_artifact_hash": "sha256:b1aa1528c4fe37e1b8f3c5fb5aa0425678639d7da78a2911ab75d558241b02b2",
+  "run_id": "A",
+  "schema_version": 1,
+  "simulation_scope": "single deterministic seat surrogate; formal single-model answer is not simulated"
+}
