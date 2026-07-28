@@ -1,6 +1,6 @@
 # PersonaPack v3 GA release evidence
 
-Status: package/plugin version `0.9.0-solo-test.3`, channel `solo_test`; verifier contracts implemented,
+Status: package/plugin version `0.9.2`, channel `solo_test`; verifier contracts implemented,
 but no production pass, approval artifact or signature claim is included in this repository.
 
 ## Solo-test boundary
@@ -119,5 +119,5 @@ node scripts/check-persona-v3-ga.mjs \
 ```
 
 `--release-manifest` remains only as a migration diagnostic and always blocks GA. The
-current worktree is version 0.9.0-solo-test.3 and has no approved physical production release
+current worktree is version 0.9.2 and has no approved physical production release
 or signed GA evidence set, so the default production-GA command must fail.
