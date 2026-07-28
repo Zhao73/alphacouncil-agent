@@ -124,15 +124,41 @@ export function compactEvidence(run) {
     run_id: run.run_id,
     symbol: run.symbol,
     as_of: run.as_of,
-    packets: run.packets.map((packet) => ({
-      task: packet.task,
-      summary: packet.summary,
-      claims: packet.claims,
-      metrics: packet.metrics,
-      sources: packet.sources,
-      open_questions: packet.open_questions,
-      confidence: packet.confidence,
-    })),
+    context_contract: "bounded_full_v1",
+    packets: (run.packets || []).map((packet) => {
+      const claims = (packet.claims || []).slice(0, 8);
+      const sourceById = new Map((packet.sources || []).map((source) => [source?.id, source]));
+      const referenced = [...new Set(claims.flatMap((claim) => claim?.source_ids || []))];
+      const selectedIds = referenced.filter((id) => sourceById.has(id)).slice(0, 12);
+      for (const source of packet.sources || []) {
+        if (selectedIds.length >= 12) break;
+        if (source?.id && !selectedIds.includes(source.id)) selectedIds.push(source.id);
+      }
+      const included = new Set(selectedIds);
+      return {
+        task: packet.task,
+        summary: clip(packet.summary || "", 1_800),
+        claims: claims.map((claim) => ({
+          claim: clip(claim?.claim || "", 700),
+          evidence: clip(claim?.evidence || "", 700),
+          confidence: claim?.confidence || "low",
+          source_ids: (claim?.source_ids || []).filter((id) => included.has(id)),
+        })),
+        metrics: compactValue(packet.metrics || {}),
+        sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
+          id: source?.id,
+          title: clip(source?.title || "", 260),
+          url: source?.url || "",
+          published_at: source?.published_at || "unknown",
+          retrieved_at: source?.retrieved_at || run.as_of,
+        })),
+        omitted_claim_count: Math.max(0, (packet.claims || []).length - claims.length),
+        omitted_source_count: Math.max(0, (packet.sources || []).length - selectedIds.length),
+        open_questions: (packet.open_questions || []).slice(0, 8).map((item) => clip(item, 650)),
+        confidence: packet.confidence,
+        information_richness: packet.information_richness,
+      };
+    }),
   };
 }
 
@@ -438,6 +464,35 @@ export function normalizeMasterOpinion(packet, masterId, run, raw = "") {
     source_ids: list(packet?.source_ids),
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
+    raw_text: raw,
+  };
+}
+
+/**
+ * A dedicated v3 method worker explains an already frozen decision; it never gets to
+ * choose or rewrite the stance. Keeping this packet separate from normalizeMasterOpinion
+ * makes a persuasive narrative incapable of overriding deterministic policy output.
+ */
+export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw = "") {
+  const list = (value) => (Array.isArray(value) ? value.filter((x) => typeof x === "string" && x.trim()) : []);
+  if (packet?.master !== masterId) throw internalError(`dedicated method worker returned the wrong master id for ${masterId}`);
+  if (packet?.acknowledged_stance !== frozenOpinion?.stance) {
+    throw internalError(`dedicated method worker attempted to change frozen stance for ${masterId}`);
+  }
+  const statement = typeof packet?.statement === "string" ? packet.statement.trim() : "";
+  if (!statement) throw internalError(`dedicated method worker returned no statement for ${masterId}`);
+  return {
+    master: masterId,
+    symbol: run.symbol,
+    as_of: run.as_of,
+    acknowledged_stance: frozenOpinion.stance,
+    statement,
+    key_findings: list(packet?.key_findings),
+    disagreements: list(packet?.disagreements),
+    what_would_change_my_mind: list(packet?.what_would_change_my_mind),
+    source_ids: list(packet?.source_ids),
+    confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : frozenOpinion.confidence || "low",
+    language: run.language,
     raw_text: raw,
   };
 }

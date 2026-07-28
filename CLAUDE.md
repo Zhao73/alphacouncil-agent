@@ -8,7 +8,10 @@ The plugin turns `@alphacouncil-agent <ticker/request>` into one of two explicit
 
 - `full_v2` is the default: display and confirm the method catalog, run all eight mandatory
   evidence roles, run every selected method, complete the three-round Bull/Bear cross-exam,
-  run the PM, and write the complete report. If mandatory evidence still fails after its one
+  run the PM, and write the complete report. Plugin-managed headless full starts all eight
+  evidence workers in one parallel wave, gives every selected v3 method one isolated voice
+  worker after its deterministic stance is frozen, and runs Bull/Bear in parallel within
+  each round with barriers between rounds. If mandatory evidence still fails after its one
   bounded parse-only repair, persist the failure package, skip method/debate/PM model calls,
   and terminate `incomplete` before downstream synthesis.
 - `quick_v1` runs only when explicitly requested and only through plugin-managed headless
@@ -22,14 +25,14 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `0.9.2`. It is published to npm's `next` dist-tag and
-as a GitHub prerelease: a non-GA quick-council preview. The build channel remains
+The declared package/plugin version is `0.9.3`. It is a non-GA GitHub prerelease; this
+acceptance release does not publish npm or change its dist-tags. The build channel remains
 `solo_test`. The isolated packaged tree contains 26 physical v3 packs and 52 executable
 `provisional_derived_proxy` tools.
 Every seat is still a provisional `operator_lens`: operational = 0, `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
 The production loader rejects these packs and formal production GA remains fail-closed.
-See `docs/releases/v0.9.2.md` and `docs/report-contract.md`.
+See `docs/releases/v0.9.3.md` and `docs/report-contract.md`.
 
 ## Agent-Skills Governance
 
@@ -53,6 +56,29 @@ one-use, mode-bound `selection_receipt` with the same symbol, prompt, language a
 `analyze_symbol`; quick must use `analyze_symbol`, and `plan_visible_run` rejects it.
 No research, run directory or worker may start before that receipt exists. Data-only
 `screen`, `options`, `news` and `market` modes skip the selection gate.
+
+## Full v2 Runtime Contract
+
+- Plugin-managed headless `analyze_symbol(council_mode="full")` has a hard 1800000 ms
+  queue-to-terminal-persistence ceiling. Queueing, grounding, bounded repair, all workers,
+  synthesis and artifact persistence share that clock. A caller or environment may lower
+  the limit, never raise it.
+- Start the eight mandatory evidence workers in one parallel wave. A failed mandatory role
+  after its single bounded parse-only repair closes the evidence barrier and terminates
+  `incomplete`; never refill the result from memory.
+- For each selected physical v3 seat, execute the deterministic policy first and freeze its
+  stance. Then run exactly one isolated explanation worker for that stable ID. The worker
+  may make the method-seat result readable but cannot alter the stance or invent missing
+  typed facts. Its text is a recorded provisional lens explanation, not the named person's
+  words, endorsement or current opinion.
+- Run Bull and Bear in parallel within Round 1, wait for both, then repeat for Round 2 and
+  Round 3. Preserve the exact Round-2-question to Round-3-answer binding. Start the PM only
+  after both Round-3 sides pass.
+- On global expiry, stop new downstream work and persist a terminal fail-closed `incomplete`
+  run naming every timed-out, failed and skipped role. The ceiling guarantees a terminal
+  artifact, not that external search/model/data services will let all seats succeed.
+- The plugin cannot enforce this deadline on `plan_visible_run` host subagents. Visible full
+  runs retain the same evidence/report gates but must not be described as 30-minute bounded.
 
 ## Quick v1 Fixed Contract
 
@@ -98,7 +124,10 @@ parallel wave.
 
 Master Bench: the complete generated catalog has 26 selectable lenses. Both modes display
 all 26. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
-methods run between evidence and debate; quick runs them in one parallel wave. Full/deep
+methods run between evidence and debate. In plugin-managed headless mode, each selected v3
+seat is a frozen deterministic stance plus its own isolated voice worker; this is a
+process-isolated worker, not a persistent sidebar agent and not the real person. Quick runs
+its 1-4 seats in one parallel wave. Full/deep
 verifiers are `source_fidelity`, `rederivation`, and `refuter`; quick does not run this
 adversarial fan-out. See `skills/alphacouncil-agent/SKILL.md` and `docs/personas.md`.
 
@@ -155,8 +184,13 @@ report, and a passing quick report must never be presented as full-equivalent.
 The final chat handoff may be concise, but it must not replace the saved report. Terminal runs
 must write mode-appropriate `final_report.md`, `user_response.md`, `artifact_index.md`,
 `report_quality.json`, per-seat Markdown, and Bull/Bear/PM output or explicit failure records.
-Tell the user the terminal status, report contract and file locations. `degraded` is a real
-quick-only terminal state, never a synonym for complete.
+A full handoff must list all eight mandatory analyst statuses and summaries, every selected
+stable master ID with frozen stance and isolated-worker explanation/status, and one
+system-owned price snapshot with currency/time/source or an explicit unavailable-data gap.
+Tell the user the terminal status, report contract, elapsed/deadline state and file locations.
+System-owned labels and failure text support `zh-CN`, `en`, `ja` and `ko`; propagate the
+request language to every worker. `degraded` is a real quick-only terminal state, never a
+synonym for complete.
 
 Never hide missing data. If a source is unavailable, say so in `open_questions` and in the final report's data-gap section. If no critical data is missing, explicitly state that no critical data gaps were found.
 

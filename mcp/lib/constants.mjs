@@ -59,37 +59,37 @@ export const OUTPUT_MODES = [
  * several legitimately terse sections ("## Confidence\nmedium").
  */
 export const REPORT_SECTIONS = [
-  { id: "conclusion", aliases: ["结论", "conclusion"], min_body: 6 },
-  { id: "analyst_work_log", aliases: ["分析师工作记录", "analyst work log"], min_body: 12, per_task: true },
-  { id: "debate_record", aliases: ["多空辩论记录", "bull bear debate", "debate record"], min_body: 20 },
+  { id: "conclusion", aliases: ["结论", "conclusion", "結論", "결론"], min_body: 6 },
+  { id: "analyst_work_log", aliases: ["分析师工作记录", "analyst work log", "アナリスト作業記録", "分析担当作業記録", "분석가 작업 기록"], min_body: 12, per_task: true },
+  { id: "debate_record", aliases: ["多空辩论记录", "bull bear debate", "debate record", "強気弱気討論記録", "多空討論記録", "롱 숏 토론 기록", "강세 약세 토론 기록"], min_body: 20 },
   // Required only when a bench actually ran. A report that spends ten master seats and
   // then mentions none of them is the defect this entry exists to catch; a screen-only
   // run that never selected one must not be failed for omitting it.
-  { id: "master_bench", aliases: ["大师席", "master席位", "master bench", "master lens"], min_body: 20, when_masters: true },
-  { id: "market_expectations", aliases: ["市场预期", "market expectations"], min_body: 8 },
-  { id: "analyst_rating", aliases: ["分析师评级", "analyst rating", "target price"], min_body: 8 },
-  { id: "earnings_call", aliases: ["电话会", "earnings call"], min_body: 8 },
-  { id: "quant", aliases: ["量化", "quant"], min_body: 8 },
-  { id: "news", aliases: ["新闻", "news"], min_body: 8 },
-  { id: "short_interest", aliases: ["short interest", "borrow"], min_body: 8 },
-  { id: "strategic_transaction", aliases: ["战略交易", "strategic transaction", "banking event"], min_body: 8 },
-  { id: "valuation", aliases: ["估值", "valuation"], min_body: 8 },
+  { id: "master_bench", aliases: ["大师席", "master席位", "master bench", "master lens", "マスターベンチ", "メソッド席", "마스터 벤치", "방법론 좌석"], min_body: 20, when_masters: true },
+  { id: "market_expectations", aliases: ["市场预期", "market expectations", "市場予想", "市場期待", "시장 기대"], min_body: 8 },
+  { id: "analyst_rating", aliases: ["分析师评级", "analyst rating", "target price", "アナリスト評価", "目標株価", "애널리스트 등급", "목표가"], min_body: 8 },
+  { id: "earnings_call", aliases: ["电话会", "earnings call", "決算説明会", "실적 발표 콜"], min_body: 8 },
+  { id: "quant", aliases: ["量化", "quant", "クオンツ", "定量", "퀀트", "정량"], min_body: 8 },
+  { id: "news", aliases: ["新闻", "news", "ニュース", "뉴스"], min_body: 8 },
+  { id: "short_interest", aliases: ["short interest", "borrow", "空売り", "貸株", "공매도", "대차"], min_body: 8 },
+  { id: "strategic_transaction", aliases: ["战略交易", "strategic transaction", "banking event", "戦略取引", "銀行イベント", "전략적 거래", "금융 이벤트"], min_body: 8 },
+  { id: "valuation", aliases: ["估值", "valuation", "バリュエーション", "企業価値評価", "가치평가"], min_body: 8 },
   // Required, and deliberately not called "target price". A single number pretends to a
   // precision nobody has; what a reader needs is the price at which the case changes.
   // Three master lenses already demand this -- Marks asks at what price it stops being
   // "leave it", Graham asks for a calculable floor, Thorp asks for a size -- and the PM
   // used to be able to skip it with "the cycle position is undetermined".
-  { id: "price_levels", aliases: ["价位", "入场价位", "price levels", "entry level", "价格条件"], min_body: 30 },
-  { id: "catalysts", aliases: ["催化剂", "catalyst", "catalysts"], min_body: 8 },
-  { id: "risks", aliases: ["风险", "risk", "risks"], min_body: 8 },
-  { id: "position", aliases: ["仓位", "position"], min_body: 8 },
-  { id: "short_term", aliases: ["短线", "short term"], min_body: 6 },
-  { id: "medium_term", aliases: ["中期", "medium term"], min_body: 6 },
-  { id: "long_term", aliases: ["长期", "long term"], min_body: 6 },
-  { id: "data_gaps", aliases: ["数据缺口", "data gaps", "unavailable data"], min_body: 8 },
-  { id: "invalidation", aliases: ["反证", "invalidation"], min_body: 8 },
-  { id: "confidence", aliases: ["置信", "confidence"], min_body: 3 },
-  { id: "source_table", aliases: ["来源表", "source table"], min_body: 6 },
+  { id: "price_levels", aliases: ["价位", "入场价位", "price levels", "entry level", "价格条件", "価格条件", "エントリー価格", "가격 조건", "진입 가격"], min_body: 30 },
+  { id: "catalysts", aliases: ["催化剂", "catalyst", "catalysts", "カタリスト", "材料", "촉매"], min_body: 8 },
+  { id: "risks", aliases: ["风险", "risk", "risks", "リスク", "위험"], min_body: 8 },
+  { id: "position", aliases: ["仓位", "position", "ポジション", "配分", "포지션"], min_body: 8 },
+  { id: "short_term", aliases: ["短线", "short term", "短期", "단기"], min_body: 6 },
+  { id: "medium_term", aliases: ["中期", "medium term", "중기"], min_body: 6 },
+  { id: "long_term", aliases: ["长期", "long term", "長期", "장기"], min_body: 6 },
+  { id: "data_gaps", aliases: ["数据缺口", "data gaps", "unavailable data", "データ欠落", "利用不可データ", "데이터 공백", "사용 불가 데이터"], min_body: 8 },
+  { id: "invalidation", aliases: ["反证", "invalidation", "無効化条件", "反証条件", "무효화 조건", "반증 조건"], min_body: 8 },
+  { id: "confidence", aliases: ["置信", "confidence", "信頼度", "신뢰도"], min_body: 3 },
+  { id: "source_table", aliases: ["来源表", "source table", "出典表", "ソース表", "출처 표"], min_body: 6 },
 ];
 
 // Quick reports are deliberately a different publication scope. Requiring the full
@@ -159,6 +159,42 @@ export const LIMITS = Object.freeze({
   SIGKILL_GRACE_MS: 5000,
   /** Default per-subagent Codex timeout. */
   CODEX_TIMEOUT_MS: Number(process.env.ALPHACOUNCIL_AGENT_TIMEOUT_MS) || 600000,
+  /** Non-overridable public ceiling for a plugin-managed full council. */
+  FULL_HARD_MAX_MS: 30 * 60 * 1000,
+  /** Default full-council queue-to-persistence budget. Operators may only lower it. */
+  FULL_TOTAL_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_FULL_TOTAL_MS) || 30 * 60 * 1000,
+    30 * 60 * 1000,
+  )),
+  /** Deterministic grounding is useful, but it may not hold the whole run hostage. */
+  FULL_GROUNDING_MS: 30 * 1000,
+  /** All eight full evidence seats launch in one wave under this per-seat cap. */
+  FULL_EVIDENCE_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_FULL_EVIDENCE_MS) || 6 * 60 * 1000,
+    6 * 60 * 1000,
+  )),
+  /** Every selected method gets one isolated explanation worker after its decision freezes. */
+  FULL_MASTER_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_FULL_MASTER_MS) || 2 * 60 * 1000,
+    2 * 60 * 1000,
+  )),
+  /** Bull and bear run together inside each of the three full-council rounds. */
+  FULL_DEBATE_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_FULL_DEBATE_MS) || 150 * 1000,
+    150 * 1000,
+  )),
+  /** The PM is the final model call and receives its own bounded slice. */
+  FULL_PM_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_FULL_PM_MS) || 180 * 1000,
+    180 * 1000,
+  )),
+  /** Reserved for forced child settlement, deterministic assembly and atomic persistence. */
+  FULL_FINALIZE_RESERVE_MS: 45 * 1000,
+  /** A malformed response gets one short, no-search transport-only repair. */
+  PARSE_REPAIR_MS: 30 * 1000,
+  PARSE_REPAIR_INPUT_CHARS: 80 * 1000,
+  FULL_EVIDENCE_CONCURRENCY: 8,
+  FULL_MASTER_CONCURRENCY: 13,
   /** Non-overridable public ceiling for a quick council, including retries and synthesis. */
   QUICK_HARD_MAX_MS: 10 * 60 * 1000,
   /** Default quick budget. Operators may lower it for stricter environments, never raise it. */
@@ -191,8 +227,8 @@ export const LIMITS = Object.freeze({
     Math.trunc(Number(process.env.ALPHACOUNCIL_QUICK_MIN_SUCCESSFUL_TASKS) || 2),
   )),
   CONCURRENCY_MIN: 1,
-  CONCURRENCY_MAX: 6,
-  CONCURRENCY_DEFAULT: Number(process.env.ALPHACOUNCIL_AGENT_CONCURRENCY) || 3,
+  CONCURRENCY_MAX: 26,
+  CONCURRENCY_DEFAULT: Number(process.env.ALPHACOUNCIL_AGENT_CONCURRENCY) || 8,
   /** A selection is deliberately short-lived and may create exactly one council run. */
   SELECTION_TTL_MS: Number(process.env.ALPHACOUNCIL_SELECTION_TTL_MS) || 60 * 60 * 1000,
   /** Selection lock metadata advertises this lease, but a live owner is never pre-empted. */

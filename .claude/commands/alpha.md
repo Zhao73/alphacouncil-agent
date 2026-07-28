@@ -12,7 +12,7 @@ Request: **$ARGUMENTS**
 | `$ARGUMENTS` looks like | Do this |
 |---|---|
 | *(empty)* | Print the mode table below and stop. Do not start a run. |
-| a ticker alone, or a question | **Full council.** Go to "Full council" below. |
+| a ticker alone, or a question | **Full council.** Go to "Full council" below. Plugin-managed headless has a hard 30-minute queue-to-terminal bound; visible-host execution does not. |
 | ticker + `quick` | The plugin-managed headless `quick_v1` council: 4 fixed analysts, 1-4 selected methods, one parallel bull/bear round and a short PM inside a hard 10-minute ceiling. |
 | ticker + `screen` | `screen_ticker` only. No language-model judgment, no subagents. |
 | ticker + `options` | `get_options_chain` only. |
@@ -22,7 +22,7 @@ Request: **$ARGUMENTS**
 When `$ARGUMENTS` is empty, print exactly this and stop:
 
 ```
-/alpha <TICKER>          full council — shows every master, then asks which to run
+/alpha <TICKER>          full council — shows every master; headless run is bounded <=30m
 /alpha <TICKER> quick    quick_v1: 4 analysts incl. news + 1-4 masters + 1 parallel debate round (<=10m)
 /alpha <TICKER> screen   mechanical filings screen only        (no model spend)
 /alpha <TICKER> options  IV term structure, skew, positioning  (no model spend)
@@ -39,7 +39,9 @@ is and use `market_coverage`, rather than returning nothing.
 
 Say plainly that the four marked modes call keyless data tools and spawn no subagents, so
 they cost nothing beyond this turn. Council modes can launch model workers; selected method
-seats may instead complete deterministically or return a recorded `out_of_scope` result.
+seats first complete deterministically (including recorded `out_of_scope`) and, on the
+plugin-managed headless path, each selected v3 seat then gets one isolated voice worker that
+may explain but cannot change the frozen stance. This is not the named person's real speech.
 
 ## Council selection gate — mandatory for full and quick
 
@@ -94,6 +96,23 @@ master-selection contract.
 6. Full mode fails closed at the evidence barrier. If any mandatory evidence role still
    fails after its bounded parse repair, do not spend more model calls on masters, bull/bear
    or PM. Persist an `incomplete` run naming the failed evidence and skipped downstream roles.
+7. For the hard runtime contract, call plugin-managed headless `analyze_symbol` once with
+   `council_mode:"full"`, `wait_for_completion:false`, the full-mode receipt and optionally
+   `total_timeout_ms` no greater than `1800000`. Poll the same durable `run_id` to terminal.
+   All eight mandatory evidence roles start in one wave; every selected v3 method gets a
+   frozen deterministic stance plus its own isolated voice worker; Bull/Bear run in parallel
+   within each of three rounds with a barrier between rounds; then the PM runs. Queueing,
+   retries and final persistence share the 30-minute clock. At expiry the saved run is
+   `incomplete`, never silently shortened or relabeled complete. This guarantees terminal
+   persistence, not all-seat success during search/model/data-provider degradation.
+8. `plan_visible_run` is owned by the external host. The plugin cannot force-stop its Task
+   agents, so visible-host full must not be advertised as meeting the 30-minute deadline.
+9. The terminal full handoff must include the system price snapshot (or explicit unavailable
+   gap), every selected stable master ID/stance/voice-worker explanation or failure, and all
+   eight analyst statuses and summaries. A method-seat explanation is a recorded provisional
+   lens output, never a quotation, endorsement or current statement by the named person.
+   System-owned labels support `zh-CN`, `en`, `ja` and `ko`; propagate the request language
+   to every worker.
 
 ## Quick mode — plugin-managed headless quick_v1
 

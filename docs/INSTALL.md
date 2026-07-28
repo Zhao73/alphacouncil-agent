@@ -10,14 +10,24 @@ plain MCP server in the Claude desktop app.
 ---
 
 
-## npm
+## GitHub v0.9.3 prerelease
+
+This acceptance release is GitHub-only:
+
+```bash
+npm install -g github:Zhao73/alphacouncil-agent#v0.9.3
+```
+
+## npm channel
 
 ```bash
 npm install -g alphacouncil-agent@next
 ```
 
-`0.9.2` is intentionally on `next`; unqualified `alphacouncil-agent` follows the stable
-`latest` tag and does not install this non-GA preview.
+The GitHub-only 0.9.3 acceptance does not run `npm publish` or change npm dist-tags.
+`alphacouncil-agent@next` installs whichever preview npm currently serves; verify it with
+`npm view alphacouncil-agent dist-tags --json` rather than assuming it is 0.9.3. The
+unqualified package follows the stable `latest` tag.
 
 Then point any MCP host at the `alphacouncil-agent` binary. For Claude Code:
 
@@ -57,7 +67,7 @@ persona set loads, and what the data directory holds.
 One command, `/alpha`. Modes are arguments.
 
 ```text
-/alpha <ticker>              full council — displays all methods and confirms this run's selection
+/alpha <ticker>              full council — displays all methods; headless run is bounded <=30m
 /alpha <ticker> quick        quick_v1 — 4 analysts incl. news + 1-4 methods + one parallel debate round (<=10m)
 /alpha <ticker> screen       mechanical filings screen only        (no model spend)
 /alpha <ticker> options      IV term structure, skew, positioning  (no model spend)
@@ -69,8 +79,35 @@ One command, `/alpha`. Modes are arguments.
 The four marked *no model spend* call keyless data tools and spawn no subagents. **Start
 there** — they show real data at no cost, so you can see the shape of the thing before
 committing a fan-out. Full and quick both require a fresh method selection receipt. Model
-spend is not a fixed seat count: selected method seats may execute deterministically or be
-recorded `out_of_scope`, while evidence and debate workers are model calls.
+spend is not a fixed seat count. In plugin-managed headless mode every selected v3 seat runs
+its deterministic policy (which may return `out_of_scope`) and then one isolated voice
+worker explains that frozen result; evidence and debate seats are also model workers. The
+voice is a recorded provisional method result, not the named person's words.
+
+### What full headless means
+
+Full remains `full_v2`. When launched through plugin-managed headless
+`analyze_symbol(council_mode="full")`, it has a hard maximum of 1800000 ms from durable
+queueing through terminal artifact persistence:
+
+- all eight mandatory evidence workers start in one parallel wave;
+- after the fail-closed evidence barrier, each selected physical v3 method freezes its
+  deterministic stance and gets one isolated voice worker that cannot alter it;
+- Bull and Bear start in parallel within each of three rounds, with a barrier between rounds
+  and exact Round-2-question to Round-3-answer binding;
+- the PM and deterministic report persistence use the same global clock.
+
+Callers and `ALPHACOUNCIL_FULL_TOTAL_MS` may lower the deadline, never raise it. At expiry
+the server saves a terminal `incomplete` run naming failed/timed-out/skipped seats. The
+30-minute bound guarantees terminal persistence, not complete results when search, model
+transport or data providers are unavailable. `plan_visible_run` has no such enforceable
+deadline because the external host owns and schedules its subagents.
+
+A full `user_response.md` lists all eight analyst statuses and summaries, every selected
+stable master ID with its stance and isolated-worker output/status, and a system-owned price
+snapshot with currency/time/source or an explicit quote-data gap. System-owned labels are
+localized for Chinese (`zh-CN`), English, Japanese and Korean, and worker prompts carry the
+run language.
 
 ### What `quick` means
 

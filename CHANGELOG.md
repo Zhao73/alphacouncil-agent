@@ -2,6 +2,39 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.3] — 2026-07-28
+
+This is a **non-GA full-council runtime and reporting correction** on the `solo_test`
+channel. It retains the `full_v2`/`quick_v1` contracts and all PersonaPack maturity gates.
+
+### Added
+
+- Plugin-managed headless full now has a hard 1,800,000 ms queue-to-terminal-persistence
+  ceiling. Deadline expiry persists a fail-closed `incomplete` run with every affected role;
+  it does not claim all-seat success under external provider degradation.
+- Every selected physical v3 method now freezes its deterministic stance and then launches
+  one isolated voice worker for that stable ID. The worker can explain but cannot alter the
+  stance or manufacture missing typed facts. Output is explicitly a provisional method-seat
+  result, not the named person's words or endorsement.
+- Full handoff now lists all selected master IDs/stances/worker statuses, all eight mandatory
+  analyst statuses/summaries, and a system-owned price snapshot or explicit quote-data gap.
+- System-owned labels and failure text support Chinese (`zh-CN`), English, Japanese and
+  Korean, while stable IDs and JSON keys stay unchanged.
+
+### Changed
+
+- The eight mandatory full evidence workers start in one parallel wave.
+- Bull and Bear start in parallel inside each full debate round, while inter-round barriers
+  and exact Round-2-to-Round-3 Q&A binding remain mandatory.
+- Parse-only repair receives a separate bounded conversion budget and does not repeat the
+  original evidence web research.
+- Documentation now separates the enforceable plugin-managed headless deadline from visible
+  host orchestration, whose external subagents the plugin cannot force-stop.
+
+The ten-minute `quick_v1` contract is unchanged. Build channel remains `solo_test`;
+`production_eligible=false`, `method_model_eligible=false`, operational seats = 0 and
+validated `method_model` seats = 0. Formal production GA remains fail-closed.
+
 ## [0.9.2] — 2026-07-28
 
 This is a **non-GA hotfix** for the bounded quick-council preview. `0.9.1` passed the

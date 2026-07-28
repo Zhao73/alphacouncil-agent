@@ -159,7 +159,7 @@ test("a run that selected no masters is unaffected by the bench gate", () => {
   assert.deepEqual(status.missing_masters, []);
 });
 
-test("the incomplete banner names the skipped master seats", () => {
+test("the incomplete banner names the skipped method seats", () => {
   const status = completenessStatus({
     tasks: [],
     agent_status: Object.fromEntries(DEBATE_ROLES.map((r) => [r, { role: r, status: "completed" }])),
@@ -167,8 +167,8 @@ test("the incomplete banner names the skipped master seats", () => {
     master_opinions: [],
   });
   const zh = withCompletenessBanner("body", status, "中文");
-  assert.match(zh, /未给出意见的大师席位/);
+  assert.match(zh, /未给出意见的方法席/);
   assert.match(zh, /master_marks/);
   const en = withCompletenessBanner("body", status, "English");
-  assert.match(en, /Master seats that gave no opinion/);
+  assert.match(en, /Method seats that gave no opinion/);
 });

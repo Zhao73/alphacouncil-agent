@@ -10,11 +10,12 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `0.9.2` is a non-GA preview published to npm's `next` dist-tag and
-marked as a GitHub prerelease. Its build channel remains `solo_test`: 26 physical provisional
+Package/plugin version `0.9.3` is a non-GA GitHub prerelease. This acceptance release does
+not mutate npm dist-tags; verify npm independently before claiming `next` serves 0.9.3. Its
+build channel remains `solo_test`: 26 physical provisional
 PersonaPack v3 packs, 26 `operator_lens` seats, 52 `provisional_derived_proxy` tools,
 0 operational seats and 0 validated `method_model` seats. Do not present this feature
-release, a passing quick report or a packaged smoke as PersonaPack production GA.
+release, a passing full/quick report or a packaged smoke as PersonaPack production GA.
 
 ## Council Modes
 
@@ -23,6 +24,21 @@ evidence roles, every selected method, the three-round Bull/Bear cross-exam and 
 mandatory evidence role still fails after its one bounded parse-only repair, persist the
 failure/diagnostic artifacts, skip method/debate/PM model calls and terminate `incomplete`
 before downstream synthesis. Never auto-downgrade that run to quick.
+
+Plugin-managed headless full runs launched with `analyze_symbol` have a hard
+queue-to-terminal-persistence ceiling of 1800000 ms. The eight mandatory evidence workers
+start in one parallel wave. Each selected v3 method first produces a deterministic, frozen
+stance and then gets one isolated voice worker that may explain, but never change, that
+stance. Bull and Bear run in parallel within each of the three rounds, with a hard barrier
+between rounds, followed by the PM. Retries, queueing and persistence consume the same
+deadline; callers and environment variables may lower it, never raise it. At expiry, persist
+a terminal fail-closed `incomplete` run and name every missing/skipped seat. The clock
+guarantees terminal persistence, not successful completion when data providers, search or
+model transport deteriorates.
+
+This 30-minute enforcement belongs only to plugin-managed headless `analyze_symbol`. A
+visible-host full run is scheduled by the external host, so the plugin cannot force-stop its
+subagents or promise the same deadline. Do not advertise a visible run as SLA-bound.
 
 `quick` is explicit and uses `quick_v1`. It can run only through plugin-managed headless
 `analyze_symbol`; `plan_visible_run` rejects it. Quick launches the fixed four evidence roles
@@ -42,6 +58,13 @@ system-owned idempotent degraded ledger. `report_quality=passed` validates `quic
 structure only; it does not turn degraded into complete or imply full-council equivalence.
 Method-seat output is a recorded provisional lens result, never a quotation from the named
 person.
+
+Every terminal full handoff must show a system-owned price snapshot (price, currency,
+timestamp and source when available, otherwise an explicit unavailable-data record), every
+selected stable master ID with its frozen stance and isolated-worker explanation/status, and
+all eight mandatory analyst statuses and summaries. System-owned report/handoff prose is
+localized for `zh-CN`, `en`, `ja` and `ko`; workers receive the run language. Never present a
+method-seat explanation as the real person's current words, quote or endorsement.
 
 ## Hosts
 
@@ -126,7 +149,7 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs the full council | one subagent per selected seat |
+| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs full; plugin-managed headless is ≤30m | deterministic stance + one isolated voice worker per selected v3 seat |
 | `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |

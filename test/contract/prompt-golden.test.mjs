@@ -6,9 +6,9 @@ import { DEFAULT_TASKS, DEBATE_ROLES } from "../../mcp/lib/constants.mjs";
 import { repoFile } from "../helpers/paths.mjs";
 
 /**
- * Golden snapshot captured from the implementation that had every prompt inlined in
- * mcp/lib/prompts.mjs, before the persona files existed. Moving prompt text out of code
- * must not change a single byte of what a subagent receives.
+ * Reviewed prompt snapshot. The evidence prompts were captured before the persona files
+ * existed; debate entries are regenerated only when the runtime context contract changes
+ * deliberately (for example the bounded full-context marker in full_v2).
  *
  * Editing a persona body is a deliberate act: regenerate this file and review the diff.
  *
@@ -36,7 +36,7 @@ test("every evidence prompt matches the pre-refactor golden", () => {
   }
 });
 
-test("every debate prompt matches the pre-refactor golden", () => {
+test("every debate prompt matches the reviewed runtime-contract golden", () => {
   const run = { run_id: "GOLDEN", symbol: "NOK", as_of: "2026-06-22", packets: [] };
   for (const role of DEBATE_ROLES) {
     for (const language of ["中文", "English"]) {

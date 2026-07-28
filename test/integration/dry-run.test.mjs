@@ -113,7 +113,7 @@ test("a dry run writes every promised artifact", () => {
 
 test("the agent trace names the evidence subagents and the portfolio manager", () => {
   const trace = readFileSync(join(runDir, "all_agents.md"), "utf8");
-  assert.match(trace, /Evidence Subagent/);
+  assert.match(trace, /Evidence Analyst Subagent/);
   assert.match(trace, /portfolio_manager/);
 });
 

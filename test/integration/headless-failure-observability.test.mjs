@@ -23,6 +23,9 @@ function scriptedCodexCommand(dataDir, {
     confidence: "low",
     information_richness: "C",
   });
+  // Pre-create the counter so a heavily loaded test runner reports an informative 0/1
+  // attempt mismatch instead of ENOENT if process startup itself exceeds the fixture cap.
+  writeFileSync(counter, "0");
   writeFileSync(driver, `#!/usr/bin/env node
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 const args = process.argv.slice(2);
@@ -247,7 +250,7 @@ test("a worker that exits zero with valid JSON after its timeout is still reject
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 800,
+      timeout_ms: 5_000,
     });
     const run = structured(response);
     const runDir = join(dataDir, "runs", runId);

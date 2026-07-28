@@ -22,3 +22,16 @@ export function resolveLanguage(args = {}) {
 export function isChineseLanguage(language) {
   return /中文|chinese|zh/i.test(String(language || ""));
 }
+
+export function languageKey(language) {
+  const text = String(language || "");
+  if (/中文|chinese|zh/i.test(text)) return "zh";
+  if (/日本語|japanese|ja/i.test(text)) return "ja";
+  if (/한국어|korean|ko/i.test(text)) return "ko";
+  return "en";
+}
+
+export function localized(language, messages) {
+  const key = languageKey(language);
+  return messages?.[key] ?? messages?.en ?? "";
+}

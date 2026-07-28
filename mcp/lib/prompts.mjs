@@ -156,6 +156,39 @@ export function masterPrompt(masterId, run) {
   ].filter(Boolean).join("\n\n");
 }
 
+/**
+ * One isolated worker per selected physical v3 method, after its structured decision is
+ * frozen. The worker may explain and challenge the evidence, but it cannot vote again.
+ */
+export function masterVoicePrompt(masterId, run, frozenOpinion) {
+  const reg = registry();
+  const persona = reg.get(masterId);
+  if (!persona || persona.kind !== "master") throw new Error(`unknown master persona: ${masterId}`);
+  const language = run.language || "English";
+  const values = { symbol: run.symbol, as_of: run.as_of, language };
+  const evidence = JSON.stringify(run.council_mode === "quick" ? compactQuickEvidence(run) : compactEvidence(run));
+  return [
+    `You are the dedicated, isolated method-seat explanation worker for ${personaTitle(persona, language)} (${masterId}) in the ${run.symbol} council.`,
+    `Write every reader-facing field in ${language}. Keep stable IDs, tickers and source IDs unchanged.`,
+    "This is a project-derived provisional method lens, not the named person's current statement, endorsement, or quotation.",
+    "The structured method decision below is already frozen. You MUST NOT change, soften, strengthen or reinterpret its stance. Explain why that frozen result follows, identify the highest-information facts or missing facts, state any disagreement with analyst interpretation, and say what evidence would change the method result. Do not browse or add facts.",
+    `Frozen method result JSON: ${JSON.stringify({
+      master: masterId,
+      stance: frozenOpinion?.stance,
+      verdict: frozenOpinion?.verdict,
+      summary: frozenOpinion?.summary,
+      disqualifiers_triggered: frozenOpinion?.disqualifiers_triggered || [],
+      what_would_change_my_mind: frozenOpinion?.what_would_change_my_mind || [],
+      source_ids: frozenOpinion?.source_ids || [],
+      deterministic_core_hash: frozenOpinion?.deterministic_core_hash || null,
+      frozen_decision_hash: frozenOpinion?.frozen_decision_hash || null,
+    })}`,
+    `Method instructions (for explanation only):\n${render(personaPrompt(persona, language), values)}`,
+    "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"statement\":\"reader-facing explanation\",\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
+    `Bounded shared evidence JSON: ${evidence}`,
+  ].join("\n\n");
+}
+
 /** The master ids a run has selected, from an explicit list or a roster name. */
 export function selectedMasters(run) {
   const reg = registry();

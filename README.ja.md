@@ -49,6 +49,7 @@ AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex
 |---|---|
 | 🏛️ **一人の意見ではなく、委員会** | フルは既定 8 根拠席（最大 11）、quick は固定 4 根拠席を並列実行。どちらも調査前に 26 メソッド席をすべて表示。 |
 | 🐂🐻 **設計からして対立的** | フルは 3 ラウンドの強気/弱気クロス審問。quick は強気・弱気を 1 回だけ並列実行して短い PM に渡し、敵対的 verifier を実行したとは主張しません。 |
+| ⏱️ **フル headless にハード上限** | プラグイン管理の full は 8 アナリストを同時に開始し、各ラウンドの Bull/Bear も並列実行して、30 分以内に終端状態を保存。外部障害は明示的な `incomplete` となり、席を黙って省略しません。 |
 | 🔍 **監査可能、幻覚なし** | すべての主張が source ID に紐づく。欠落データは「データ欠落」セクションに明示し、決して隠さない。 |
 | ⏱️ **マルチ期間の判定** | 買い/中立/売りに加え、1〜4週・3〜6か月・12か月の見通しを個別に提示。 |
 | 🔑 **データベンダー不要・APIキー不要** | 金融データ API・マーケットデータフィード・証券口座ログインは一切不要。アナリストはエージェント自身のウェブ検索(**Codex のウェブ検索** / **Claude Code の WebSearch + WebFetch**)で根拠をリアルタイムに収集 —— 課金は既存の Codex / Claude Code サブスクのみ。MIT ライセンス。 |
@@ -57,16 +58,17 @@ AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex
 
 このリポジトリはアップロード用のソースコピーです。実行成果物はリポジトリの外、`~/.alphacouncil-agent/runs/<run_id>/` に書き出されます。
 
-## 現在の 0.9.2 プレビュー：non-GA solo-test
+## 現在の 0.9.3 プレビュー：non-GA solo-test
 
-`0.9.2` は npm の `next` dist-tag で公開され、GitHub では prerelease として扱われます。
-これは時間制限付き `quick_v1` の機能プレビューであり、正式な production GA ではありません。
+`0.9.3` は GitHub prerelease です。この受け入れリリースでは npm publish や
+dist-tag の変更を行いません。独立に確認せず `@next` が 0.9.3 を指すと説明してはいけません。
+これは時間制限付き council runtime のプレビューであり、正式な production GA ではありません。
 build channel は引き続き `solo_test` です。物理 PersonaPack v3 は 26、実行可能な
 `provisional_derived_proxy` ツールは 52、provisional `operator_lens` は 26。
 `operational`：**0**、検証済み `method_model`：**0**、人間によるソース/数式承認と承認署名：**0**です。
 
 production loader はこのツリーを引き続き拒否し、production assembly、cutover、GA は
-fail-closed のままです。quick の正確な境界は [v0.9.2 リリース契約](docs/releases/v0.9.2.md)、
+fail-closed のままです。full/quick の正確な境界は [v0.9.3 リリース契約](docs/releases/v0.9.3.md)、
 `quick_v1` と `full_v2` の違いは [レポート契約](docs/report-contract.md) を参照してください。
 
 ## 📜 免責事項
@@ -117,7 +119,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 簡潔なユーザー向け要約は `~/.alphacouncil-agent/runs/<run_id>/user_response.md` に書き出されます。
 完全なレポートは `~/.alphacouncil-agent/runs/<run_id>/final_report.md` に書き出され、
-同じディレクトリに各アナリストの Markdown ファイルと `artifact_index.md` も保存されます。
+同じディレクトリに各アナリストの Markdown ファイルと `artifact_index.md` も保存されます。フルの要約には、システム価格（または明示的な価格データ欠落）、8 アナリスト全員の状態/要約、選択した各メソッド席の凍結 stance と独立 worker の説明/状態が表示されます。
 
 ### スラッシュコマンド
 
@@ -125,7 +127,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 | 入力 | 実行内容 | モデル消費 |
 |---|---|---|
-| `/alpha <ticker>` | 全マスターを個別表示し、`1..N`／範囲／`all` を確認してフル委員会を実行 | 選択した席ごとに 1 サブエージェント |
+| `/alpha <ticker>` | 全マスターを個別表示して full を実行；プラグイン管理 headless は ≤30分 | 選択した v3 席ごとに決定論的 stance + 独立 voice worker 1つ |
 | `/alpha <ticker> quick` | 全 26 席を表示し、1-4 席を確認（`all` 禁止）後、プラグイン管理の `quick_v1`（≤10分）を実行 | 選択数により変動 |
 | `/alpha <ticker> screen` | 機械的スクリーニングのみ | **なし** |
 | `/alpha <ticker> options` | IV ターム構造、スキュー、建玉分布 | **なし** |
@@ -137,6 +139,14 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 上場銘柄なら何でも：`/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`。
 提出書類ベースのモードは米国登録企業が必要です。他市場は黙って空を返すのではなく `market_coverage` で対応状況を示します。
+
+### Full v2 — プラグイン管理の 30 分ハード上限
+
+プラグイン管理 headless `analyze_symbol(council_mode="full")` は、durable queue から終端成果物の永続化まで **1800000 ms** が上限です。必須 8 根拠席を 1 波で並列開始します。根拠 barrier 通過後、選択した各物理 v3 メソッドは決定論的 policy で stance を凍結し、その stable ID 専用の独立 voice worker を 1 つ起動します。この worker は説明だけを行い、stance の変更や typed fact の捏造はできません。3 ラウンドの各ラウンドで Bull/Bear を並列開始し、両方が終了してから次へ進み、最後に PM を実行します。
+
+期限に達した場合は `incomplete` の終端状態を保存し、timeout・失敗・skip の全席を明示します。30 分が保証するのは監査可能な終端保存であり、検索・モデル transport・データ提供元の悪化時にも全席成功するという意味ではありません。visible-host の `plan_visible_run` は外部ホストが管理するため、プラグインはそのサブエージェントを強制停止できず、この上限を保証しません。
+
+full の引き渡しは、選択した stable master ID 全件、必須 8 アナリスト全件、システム価格スナップショットまたは明示的な取得不能を列挙します。メソッド席の voice は provisional lens の記録された説明であり、**本人の発言・支持・現在の見解ではありません**。システム文言は中国語 (`zh-CN`)・英語・日本語・韓国語に対応し、各 worker に実行言語を渡します。
 
 ### Quick v1 — 時間制限付きであり、フルではない
 
@@ -226,7 +236,7 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 | 現代 | アッシェンブレナー |
 | v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ジュンジュンワラ |
 
-0.9.2 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
+0.9.3 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
 **26 パックは 26 個の承認済みメソッドモデルを意味しません**。全 26 席は provisional
 `operator_lens` のままです。52 個のツールは実行可能な
 `provisional_derived_proxy` テスト代理であり、人間が承認した数式帰属ではありません。
@@ -286,15 +296,15 @@ flowchart TD
 
 | | Codex 版 | Claude Code 版 |
 |---|---|---|
-| 委員会の実行 | `codex exec` ワーカー、同時実行に上限 | 11 アナリストを並列 `Task` サブエージェントとして一括起動 |
+| 委員会の実行 | プラグイン管理 `codex exec` worker；full headless ≤30分 | ホスト管理 `Task` サブエージェント；プラグインの強制期限なし |
 | アナリストごとの文脈 | 別プロセス | 別サブエージェント、それぞれ独立した完全な文脈ウィンドウ |
 | 取証 | `codex exec --search` | 各アナリスト自身の文脈で `WebSearch` + `WebFetch` |
-| 根拠 → ディベート | 逐次 | 実行フェーズマシンによるハードバリア |
-| ディベートの深さ | 3 ラウンド(主張/反論/Q&A)、server 実行 | 3 ラウンド、各ラウンドで強気・弱気を並列 |
+| 根拠 → ディベート | 8 席を同時開始し、その後ハードバリア | 実行フェーズマシンによるハードバリア |
+| ディベートの深さ | 3 ラウンド(主張/反論/Q&A)、各ラウンドで強気・弱気を並列 | 3 ラウンド、各ラウンドで強気・弱気を並列 |
 | 主張の検証 | 欠落ソースゲート(実行にフラグ + レポートにバナー) | + 主張ごとの敵対的検証:引用 URL の再取得・再導出・反証 *(ホスト駆動)* |
 | 完全実行の強制 | 不完全な実行を `incomplete` とマーク(server ゲート) | 同ゲート + ディベート前のハードバリア |
 | モデルとコスト | 単一モデル | **役割ごとに選択** — 取証は Sonnet、ディベート/判定は Opus 4.8(全 Opus / 全 Sonnet も可) |
-| 言語 | ユーザーの言語 | 全サブエージェント + ライブ workflow を通じてユーザーの言語 |
+| 言語 | 中/英/日/韓のシステム文言；worker は実行言語 | 全サブエージェント + ライブ workflow を通じてユーザーの言語 |
 
 **正直なスコープ:** 同じモデルファミリー・同じプロンプト・同じ監査契約 —— 強みは文脈の分離、常時並列ファンアウト、決定的ゲートであり、より賢いモデルではありません。**v0.3.0** 以降、共有 server は 3 ラウンドのディベート、「欠落ソース / 完全実行 / レポート品質」のゲート、簡潔な引き渡し要約、完全レポート、ファイル索引、Windows ネイティブ Codex CLI 起動を提供します。**v0.3.1** 以降、`addyosmani/agent-skills` スタイルの停止ゲートと完了基準を持つ `agent-skills-governance` skill も同梱します。Claude Code 版はさらにラウンドごとの並列実行とホスト駆動の主張ごと検証を追加します。ライブ Web の鮮度とペイウォールは両版に等しく当てはまります。
 

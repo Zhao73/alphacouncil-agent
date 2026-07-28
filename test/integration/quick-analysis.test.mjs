@@ -62,10 +62,11 @@ const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 const task = (${JSON.stringify(QUICK_TASKS)}).find((id) => prompt.includes("Task: " + id));
+const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
 const role = /You are the portfolio_manager/i.test(prompt) ? "portfolio_manager"
   : /You are the bull_researcher/i.test(prompt) ? "bull_researcher"
   : /You are the bear_researcher/i.test(prompt) ? "bear_researcher"
-  : task || "unknown";
+  : master || task || "unknown";
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, at: Date.now(), prompt_chars: prompt.length }) + "\\n");
 if (task && task === ${JSON.stringify(failedTask)}) process.exit(17);
 if (role === ${JSON.stringify(failedRole)}) process.exit(19);
@@ -85,6 +86,16 @@ if (task) {
       ] : []),
     ],
     open_questions: [], confidence: "medium", information_richness: "B"
+  };
+} else if (master) {
+  const frozenLine = prompt.split("\\n").find((item) => item.startsWith("Frozen method result JSON: "));
+  const frozen = JSON.parse(frozenLine.slice("Frozen method result JSON: ".length));
+  packet = {
+    master,
+    acknowledged_stance: frozen.stance,
+    statement: "QUICK_MASTER_SENTINEL_" + master + " explains the frozen " + frozen.stance + " result.",
+    key_findings: ["bounded quick finding"], disagreements: ["bounded quick disagreement"],
+    what_would_change_my_mind: ["new primary evidence"], source_ids: ["market_data:S1"], confidence: "medium"
   };
 } else if (role === "portfolio_manager") {
   packet = {
@@ -151,12 +162,12 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
     const runId = `QUICK-ANALYSIS-${process.pid}`;
     const response = await server.callTool("analyze_symbol", {
       symbol: "RKLB", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 5_000,
-      timeout_ms: 1_500, synthesis_timeout_ms: 1_500,
+      council_mode: "quick", total_timeout_ms: 30_000,
+      timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 15_000 });
+    }, { timeoutMs: 45_000 });
     const result = structured(response);
     assert.equal(result.run.council_mode, "quick");
     assert.deepEqual(result.run.tasks, QUICK_TASKS);
@@ -174,7 +185,7 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
     assert.match(result.user_response_markdown, /Recent Company and Industry News/);
     assert.match(result.user_response_markdown, /not quotes from the named people/);
     assert.doesNotMatch(result.user_response_markdown, /UNDATED_SENTINEL|STALE_SENTINEL|FUTURE_SENTINEL/);
-    assert.match(result.user_response_markdown, /excluded 3 source\(s\): 1 undated, 1 after as_of, 1 older than 120 days/);
+    assert.match(result.user_response_markdown, /Recent-news gate excluded 3: undated=1, after_as_of=1, older_than_120d=1/);
 
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
@@ -226,12 +237,12 @@ test("quick delivers an explicit degraded terminal run when one evidence seat fa
     const runId = `QUICK-DEGRADED-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "RKLB", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 5_000,
-      timeout_ms: 1_500, synthesis_timeout_ms: 1_500,
+      council_mode: "quick", total_timeout_ms: 30_000,
+      timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 15_000 }));
+    }, { timeoutMs: 45_000 }));
 
     assert.equal(result.run.status, "degraded");
     assert.equal(result.run.task_status.valuation_long_short.status, "degraded");
@@ -241,7 +252,7 @@ test("quick delivers an explicit degraded terminal run when one evidence seat fa
     assert.deepEqual(result.report_quality.degraded_evidence, ["valuation_long_short"]);
     assert.match(result.final_report_markdown, /DEGRADED QUICK RUN/);
     assert.match(result.final_report_markdown, /valuation_long_short: degraded; exit code 17/);
-    assert.match(result.user_response_markdown, /Run status: degraded/);
+    assert.match(result.user_response_markdown, /- Status: degraded/);
 
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
@@ -273,12 +284,12 @@ test("quick PM transport failure writes standard artifacts and no synthetic Hold
     const runId = `QUICK-PM-FAILURE-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "RKLB", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 5_000,
-      timeout_ms: 1_500, synthesis_timeout_ms: 1_500,
+      council_mode: "quick", total_timeout_ms: 30_000,
+      timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 15_000 }));
+    }, { timeoutMs: 45_000 }));
     const dir = join(dataDir, "runs", runId);
     assert.equal(result.run.status, "incomplete");
     assert.equal(result.run.agent_status.portfolio_manager.status, "failed");

@@ -49,6 +49,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 |---|---|
 | 🏛️ **是委员会,不是一家之言** | 完整模式默认 8 个证据席、最多 11 个；quick 固定 4 个并行证据席。两者都在研究前完整展示 26 个方法席。 |
 | 🐂🐻 **天生对抗式** | 完整模式跑三轮多空交叉质询；quick 只跑一轮并行 Bull/Bear 陈述和短 PM，且明确不声称完成对抗 verifier。 |
+| ⏱️ **完整 headless 有硬时限** | 插件托管 full 将 8 个分析师同波启动、每轮 Bull/Bear 同时启动，并在 30 分钟内保存终态；外部服务故障会明确 `incomplete`，不会静默漏席。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
 | 🔑 **不依赖金融 API,无需任何密钥** | 不需要金融数据 API、行情源或券商账号。分析师通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
@@ -57,16 +58,17 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
-## 当前 0.9.2 预览状态：non-GA solo-test
+## 当前 0.9.3 预览状态：non-GA solo-test
 
-`0.9.2` 发布在 npm 的 `next` dist-tag，并在 GitHub 标记为 prerelease。它是有界
-`quick_v1` 功能预览，**不是**正式生产 GA。构建渠道仍是 `solo_test`：26 个物理
+`0.9.3` 是 GitHub prerelease；本次验收发布不执行 npm publish，也不改变 npm
+dist-tag。不要在未独立核验时声称 `@next` 已包含 0.9.3。它是有界议会运行时预览，
+**不是**正式生产 GA。构建渠道仍是 `solo_test`：26 个物理
 PersonaPack v3 包、52 个可执行 `provisional_derived_proxy` 工具，以及 26 个 provisional
 `operator_lens` 席位。`operational`：**0**；已验证 `method_model`：**0**；人工来源/公式
 审批与审批签名仍为 **0**。
 
 生产 loader 仍拒绝这套树，production assembly、cutover 与 GA 继续 fail-closed。精确的
-quick 边界见 [v0.9.2 发布合同](docs/releases/v0.9.2.md)，`quick_v1` 与 `full_v2` 的报告差异见
+full/quick 边界见 [v0.9.3 发布合同](docs/releases/v0.9.3.md)，`quick_v1` 与 `full_v2` 的报告差异见
 [报告合同](docs/report-contract.md)。
 
 ## 📜 免责声明
@@ -117,7 +119,9 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 简洁交付摘要写入 `~/.alphacouncil-agent/runs/<run_id>/user_response.md`。
 完整报告写入 `~/.alphacouncil-agent/runs/<run_id>/final_report.md`。
-同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。
+同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。完整模式的摘要
+会显示系统价格（或明确的行情缺口）、8 个分析师的状态/摘要，以及每个所选方法席冻结的立场
+和独立 worker 的解释/状态。
 
 ### 斜杠命令
 
@@ -125,7 +129,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 | 输入 | 跑什么 | 额度消耗 |
 |---|---|---|
-| `/alpha <ticker>` | 逐人展示全部大师，确认 `1..N`/区间/`all` 后运行完整议会 | 每个所选席位一个子代理 |
+| `/alpha <ticker>` | 逐人展示全部大师，确认后运行 full；插件托管 headless ≤30 分钟 | 每个所选 v3 席为确定性立场 + 一个独立 voice worker |
 | `/alpha <ticker> quick` | 展示全部 26 席，确认 1-4 席（禁用 `all`），再跑插件托管 `quick_v1`（≤10 分钟） | 随选择数量变化 |
 | `/alpha <ticker> screen` | 只跑机械筛选 | **零** |
 | `/alpha <ticker> options` | 隐含波动率期限结构、偏斜、持仓分布 | **零** |
@@ -137,6 +141,22 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 任何上市股票：`/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`。
 基于申报的模式需要美国申报主体；其他市场会通过 `market_coverage` 说明覆盖情况，而不是静默返回空结果。
+
+### Full v2 —— 插件托管 30 分钟硬上限
+
+插件托管 headless `analyze_symbol(council_mode="full")` 从持久化 queued 状态到终态工件落盘，
+全局硬上限为 **1800000 ms**。8 个必需证据席同波并行。证据门禁通过后，每个所选物理 v3
+方法先运行确定性政策并冻结立场，再启动一个只属于该 stable ID 的独立 voice worker；它可以
+解释立场，但不能改立场或补造 typed fact。三轮中每轮 Bull/Bear 同时启动，二者都完成后才
+进入下一轮，最后才运行 PM。
+
+时限到达时，系统以 `incomplete` 保存终态，并逐项列出超时、失败和跳过的席位。30 分钟保证
+的是“必有可审计终态”，不是搜索、模型传输或数据源恶化时仍保证全席成功。visible-host 的
+`plan_visible_run` 由外部宿主调度，插件无法强制终止其子代理，因此不享有这个硬时限。
+
+full 的交付摘要必须列出全部所选 stable master ID、全部 8 个分析师，以及系统行情快照或
+明确的不可用缺口。方法席 voice 是本次运行记录的 provisional lens 解释，**不是真人原话、
+背书或当前观点**。系统文案支持中文 (`zh-CN`)、英文、日文、韩文，每个 worker 也接收本轮语言。
 
 ### Quick v1 —— 有界，但不等于完整议会
 
@@ -224,7 +244,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 现代 | Aschenbrenner |
 | v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
 
-0.9.2 `solo_test` 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
+0.9.3 `solo_test` 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
 方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。
@@ -282,15 +302,15 @@ flowchart TD
 
 | | Codex 版 | Claude Code 版 |
 |---|---|---|
-| 委员会执行 | `codex exec` worker,有并发上限 | 11 个分析师作为并行 `Task` 子代理,一次性展开 |
+| 委员会执行 | 插件托管 `codex exec` worker；full headless ≤30 分钟 | 宿主调度 `Task` 子代理；插件无法强制时限 |
 | 每个分析师上下文 | 独立进程 | 独立子代理,各自完整独立上下文窗口 |
 | 取证 | `codex exec --search` | 每个分析师在自己上下文里用 `WebSearch` + `WebFetch` |
-| 证据 → 辩论 | 串行 | 基于运行相位机的硬性 barrier 门控 |
-| 辩论深度 | 3 轮(立论/反驳/问答),server 执行 | 3 轮,每轮多空并行 |
+| 证据 → 辩论 | 8 席同波并行后经过硬 barrier | 基于运行相位机的硬性 barrier 门控 |
+| 辩论深度 | 3 轮(立论/反驳/问答)，每轮多空并行 | 3 轮,每轮多空并行 |
 | claim 验证 | 缺失来源门禁(运行被标记 + 报告横幅) | + 逐条对抗式验证:重抓引用 URL + 独立复核 + 反驳 *(宿主驱动)* |
 | 完整度强制 | 残缺运行标 `incomplete`(server 门禁) | 同门禁,外加辩论前硬 barrier |
 | 模型与成本 | 单一模型 | **按角色选** —— 取证用 Sonnet,辩论/裁决用 Opus 4.8(也可全 Opus / 全 Sonnet) |
-| 语言 | 用户语言 | 每个子代理 + 实时 workflow 全程用户语言 |
+| 语言 | 中/英/日/韩系统文案；worker 使用本轮语言 | 每个子代理 + 实时 workflow 全程用户语言 |
 
 **诚实边界:** 同模型家族、同提示词、同审计契约 —— 优势在于上下文隔离、始终并行展开、确定性门禁,**不是**更聪明的模型。自 **v0.3.0** 起,共享 server 会执行 3 轮辩论,强制执行「缺失来源 / 完整流程 / 报告质量」门禁,写出简洁交付摘要、完整报告和文件索引,并支持 Windows 原生 Codex CLI 启动。自 **v0.3.1** 起,插件内置 `agent-skills-governance`,提供 `addyosmani/agent-skills` 风格的防偷懒停止门禁和完成标准。Claude Code 版额外提供每轮并行执行和宿主驱动的逐条 claim 验证。联网数据的时效性与付费墙对两版限制相同。
 

@@ -64,10 +64,22 @@ export function statusSnapshot(run) {
     debate_format: run.debate_format || "three_round_cross_exam",
     report_contract: run.council_mode === "quick" ? "quick_v1" : "full_v2",
     full_council_equivalent: run.council_mode !== "quick",
+    master_worker_contract: run.execution_mode === "background_codex_exec"
+      ? "one_isolated_worker_per_selected_method_v1"
+      : run.execution_mode === "dry_run"
+        ? "planned_not_executed"
+        : "host_managed_not_plugin_enforced",
+    deadline_enforced: run.deadline_enforced === true,
     time_budget_ms: run.time_budget_ms || null,
     deadline_at: run.deadline_at || null,
     remaining_budget_ms: run.deadline_at
       ? Math.max(0, Date.parse(run.deadline_at) - Date.now())
+      : null,
+    elapsed_ms: run.started_at
+      ? Math.max(0, Date.parse(run.completed_at || new Date().toISOString()) - Date.parse(run.started_at))
+      : null,
+    deadline_met: run.deadline_at && run.completed_at
+      ? Date.parse(run.completed_at) <= Date.parse(run.deadline_at)
       : null,
     visibility_required: run.visibility_required,
     dry_run: run.dry_run,

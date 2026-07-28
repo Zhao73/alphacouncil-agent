@@ -51,9 +51,9 @@ export function stopChild(child, force = false) {
  * second Codex-backed search bridge, creating recursive workers and multi-minute nested
  * timeouts. Authentication still comes from CODEX_HOME according to the Codex CLI contract.
  */
-export function codexWorkerArgs(outFile, dataDir = DATA_DIR) {
+export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true } = {}) {
   return [
-    "--search",
+    ...(search ? ["--search"] : []),
     "-s",
     "read-only",
     "-a",
@@ -73,7 +73,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
   return new Promise((resolvePromise) => {
     mkdirSync(DATA_DIR, { recursive: true });
     const outFile = join(DATA_DIR, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
-    const args = codexWorkerArgs(outFile);
+    const args = codexWorkerArgs(outFile, DATA_DIR, { search: runtime.search !== false });
     const invocation = codexInvocation(args);
     const spawnWorker = runtime.spawn || spawn;
     const stopWorker = runtime.stopChild || stopChild;
