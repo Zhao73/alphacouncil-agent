@@ -266,7 +266,12 @@ test("solo-test compilation derives 52 executable proxies without inventing form
   assert.equal(optionProxy.input_contracts[0].value_kind, "ratio");
   assert.equal(optionProxy.input_contracts[0].unit, "decimal_annualized_volatility");
   assert.deepEqual(optionProxy.output_period, { basis: "instant", window: null, alignment: "as_of" });
-  const unknownProxy = plan.tools.find((tool) => tool.id === "master_buffett.owner_earnings_rebuilder");
+  // A fact the grounding adapter now produces binds to its real contract; only a fact nothing
+  // generates still falls back to the fail-closed proxy scalar.
+  const knownProxy = plan.tools.find((tool) => tool.id === "master_buffett.owner_earnings_rebuilder");
+  assert.equal(knownProxy.input_contracts[0].value_kind, "monetary");
+  assert.equal(knownProxy.input_contracts[0].unit, "currency_units");
+  const unknownProxy = plan.tools.find((tool) => tool.id === "master_aschenbrenner.compute_power_bridge");
   assert.equal(unknownProxy.input_contracts[0].unit, "derived_proxy_scalar");
   for (const evidence of plan.evidence) {
     assert.equal(evidence.human_reviewer_ids.length, 0);

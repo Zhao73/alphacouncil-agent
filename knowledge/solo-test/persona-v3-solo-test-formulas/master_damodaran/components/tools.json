@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:20a49da931137ded2f83e9f19eb5e65f0d6c96a87081a8ce374686794f16d993",
-    "derivation_spec_hash": "sha256:268384e9ee8d0ae670940b1cf22d7da283ecede6a558d17733c1fedc33fcef9d",
+    "derivation_evidence_hash": "sha256:9d75640e817714a0f4e5a12c1b17f1d8c04aca144815fe2978096e787f35b6a3",
+    "derivation_spec_hash": "sha256:c2f7f571b6433796f49ec7ac917f5ce6e66ec49e593f7da0aa6dd103315328d6",
     "derivation_spec_id": "master_damodaran.story_dcf.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_damodaran.story_dcf",
@@ -14,11 +14,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:a30001aeec5fa5932708d321edf06eb14e0db89317f13b32bb54fec6f0b52a92",
+    "input_schema_hash": "sha256:112c59df05b0a1e4d467b9d8d0aa817cdd640cb372c2dbe8448c7a79a46aae4a",
     "inputs": [
       {
         "fact_id": "valuation.revenue_growth"
@@ -34,21 +34,21 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:f17fac8ab851f7ce4212f85283e3b0d09e36b2a77854125555d2aa3dcfcebfda",
+    "output_schema_hash": "sha256:0bd6e7cb187403dd0d8cafd52b5320f02ae8bd1681c44cd62ede5686a7b826e2",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "derived_proxy:master_damodaran.story_dcf.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "decimal",
+    "value_kind": "ratio",
     "version": "0.1.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:e96f75523bce99c9b7958de400ccc61e126595c5377cecd5ce62f099c8ce6737",
-    "derivation_spec_hash": "sha256:803aa6175d8b89b67d5927c43a0c72f9915aa6411d2bd0457f5e97be4e0d8586",
+    "derivation_evidence_hash": "sha256:d2136add3478895d7fed562ababbf06b661b1960a08e1fb5a30d04f51979bef7",
+    "derivation_spec_hash": "sha256:5123c4120f1b4f0ad88740df3ccb9d98301ed55a7db64c3befac9883dd6651d1",
     "derivation_spec_id": "master_damodaran.reverse_valuation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_damodaran.reverse_valuation",
@@ -60,11 +60,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:5d60c6be076dec8a126b47ff170e9ead1aeffd4e85e743afba50d3161833d5da",
+    "input_schema_hash": "sha256:a4a0ad51dd6ec173c053c38f52b3542287da441486ddf1bcf3f3a9f1bc3d2b3b",
     "inputs": [
       {
         "fact_id": "valuation.revenue_growth"
@@ -80,15 +80,15 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:0c2c1baab03ae30c02bf77d1b999c68719b524fb6e9fe0402f0d1400387a7ad9",
+    "output_schema_hash": "sha256:5d972450add5079fed781eb5abd6765deed7285750de28977396c7091b23ab7e",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "derived_proxy:master_damodaran.reverse_valuation.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "decimal",
+    "value_kind": "ratio",
     "version": "0.1.0"
   }
 ]

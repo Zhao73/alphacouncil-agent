@@ -1,5 +1,6 @@
 /** Round-1, machine-labelled semantic extraction from archived source bytes. */
 
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 import { spawnSync } from "node:child_process";
 import {
   existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync,

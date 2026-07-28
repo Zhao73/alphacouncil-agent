@@ -1,5 +1,11 @@
 /** Self-contained, immutable release evidence for all 52 deterministic formula tools. */
 
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
+
+// Two planned tools per canonical seat; the seat count is the single source of truth.
+// Evaluated lazily: this module participates in an import cycle with the staging roster, so a
+// module-level constant reads the binding before it is initialised.
+const plannedToolCount = () => CANONICAL_MASTER_COUNT * 2;
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
@@ -76,7 +82,7 @@ function expectedToolMap() {
     seat.planned_dedicated_tools.map((tool) => tool.tool_id),
   ]));
   const count = [...byPersona.values()].reduce((total, ids) => total + ids.length, 0);
-  if (count !== PLANNED_TOOL_COUNT) fail(`release formula inventory must contain exactly ${PLANNED_TOOL_COUNT} planned tools, found ${count}`);
+  if (count !== plannedToolCount()) fail(`release formula inventory must contain exactly ${plannedToolCount()} planned tools, found ${count}`);
   return byPersona;
 }
 
@@ -147,8 +153,8 @@ function bindingsFromPacks({ packsRoot, trustedKeys, verifiedAt }) {
       bindings.push(verifyToolBinding({ tool, bundle, personaId, trustedKeys, now: verifiedAt }));
     }
   }
-  if (bindings.length !== PLANNED_TOOL_COUNT || new Set(bindings.map((binding) => binding.tool_id)).size !== PLANNED_TOOL_COUNT) {
-    fail(`release formula evidence must contain exactly ${PLANNED_TOOL_COUNT} unique bindings`);
+  if (bindings.length !== plannedToolCount() || new Set(bindings.map((binding) => binding.tool_id)).size !== plannedToolCount()) {
+    fail(`release formula evidence must contain exactly ${plannedToolCount()} unique bindings`);
   }
   return canonicalValue(bindings);
 }
@@ -169,7 +175,7 @@ function buildDocument({ packsRoot, trustedFormulaReviewerKeys, verifiedAt }) {
     artifact_kind: "persona_v3_release_formula_review_evidence",
     verified_at: verifiedDate.toISOString(),
     canonical_master_count: CANONICAL_MASTER_IDS.length,
-    planned_tool_count: PLANNED_TOOL_COUNT,
+    planned_tool_count: plannedToolCount(),
     trusted_formula_reviewer_keys: publicKeys,
     trusted_key_registry_hash: sha256(publicKeys),
     formula_binding_inventory_hash: sha256(bindings),
@@ -220,7 +226,7 @@ export function verifyReleaseFormulaReviewEvidence({
   const expected = [...EVIDENCE_FIELDS].sort();
   if (canonicalJson(actual) !== canonicalJson(expected)) fail("formula-review evidence bundle fields are invalid", { actual, expected });
   if (evidence.schema_version !== 1 || evidence.artifact_kind !== "persona_v3_release_formula_review_evidence") fail("formula-review evidence bundle header is invalid");
-  if (evidence.canonical_master_count !== CANONICAL_MASTER_COUNT || evidence.planned_tool_count !== PLANNED_TOOL_COUNT) fail("formula-review evidence coverage is not exact");
+  if (evidence.canonical_master_count !== CANONICAL_MASTER_COUNT || evidence.planned_tool_count !== plannedToolCount()) fail("formula-review evidence coverage is not exact");
   for (const field of ["trusted_key_registry_hash", "formula_binding_inventory_hash"]) {
     if (!HASH.test(evidence[field] || "")) fail(`formula-review evidence ${field} is invalid`);
   }

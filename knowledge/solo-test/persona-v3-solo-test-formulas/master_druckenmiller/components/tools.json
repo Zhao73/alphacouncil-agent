@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:8bf90c3d3ea82c533da8255783967157d13f76178cf1cd45f179174b2cac6bda",
-    "derivation_spec_hash": "sha256:6e657cf2e0d3b6e16760345abdfdc92c19b019a1208c7a262811b720f3e5621d",
+    "derivation_evidence_hash": "sha256:4ce23cf615fb1cfc3ad066d0d20e2b5e83da97b8b67fb903a7c8d5c1714c2b6c",
+    "derivation_spec_hash": "sha256:cbf1a3eb204cc69acb1b622f7fd924db218ee465a0316f752c6dcce39d782a79",
     "derivation_spec_id": "master_druckenmiller.liquidity_revision_map.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_druckenmiller.liquidity_revision_map",
@@ -14,11 +14,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:926a47150b3d3ddaae5b8d71f956526e1c7af0b9d5abcc21e31867e274e3401a",
+    "input_schema_hash": "sha256:6101e05b8633a77f4634074835db1d56ce392073e61ed466421f5b94b5160717",
     "inputs": [
       {
         "fact_id": "macro.liquidity_impulse"
@@ -34,21 +34,21 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:5aa45691b59af5795c1dce964f2c84eb8cbbd75107e1b31752de87e93cd73916",
+    "output_schema_hash": "sha256:df041693a2dcbc782ab1d826d7d71b53c8c729a1a964fb7562e316f0458d9e11",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "derived_proxy:master_druckenmiller.liquidity_revision_map.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "decimal",
+    "value_kind": "ratio",
     "version": "0.1.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:8a1bccb57d5726bd0009c2f08492454a8bd1983f74a0371edc0f9d69f4aa0553",
-    "derivation_spec_hash": "sha256:4eeeea5baf92a4cc7968978257fcff4fbd81ea42062e390aaf6859c547223166",
+    "derivation_evidence_hash": "sha256:68bcf6a98d7712f2175ddad2dde6abee8552f89fe2687d47bbb47e8148bf8034",
+    "derivation_spec_hash": "sha256:9b79f261ce3b8a63a8bd432a18b948eb8a7bd198ca5585952b912c3f862a240d",
     "derivation_spec_id": "master_druckenmiller.inflection_payoff.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_druckenmiller.inflection_payoff",
@@ -60,11 +60,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:dcb4d33a98697c1535b6ce8227f6b2b833ce33da999b61a1fec6f61199efacfc",
+    "input_schema_hash": "sha256:776d6b7c4fcee09cb94b3bfac7e257997580d3389e7dd50fdc83546259c782d0",
     "inputs": [
       {
         "fact_id": "macro.liquidity_impulse"
@@ -80,15 +80,15 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:53016eda518757ccf49402a00e386edfec401a1919ea84773878f11544cc712c",
+    "output_schema_hash": "sha256:98da13328608d97a75ab56c3044c87c4eb83861224b7244c6172a1ae1c6b289b",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "derived_proxy:master_druckenmiller.inflection_payoff.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "decimal",
+    "value_kind": "ratio",
     "version": "0.1.0"
   }
 ]

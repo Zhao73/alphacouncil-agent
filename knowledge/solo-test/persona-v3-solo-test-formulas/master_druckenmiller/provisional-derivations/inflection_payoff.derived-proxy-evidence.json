@@ -19,8 +19,8 @@
             "basis": "instant",
             "window": null
           },
-          "unit": "derived_proxy_scalar",
-          "value_kind": "scalar"
+          "unit": "decimal",
+          "value_kind": "ratio"
         }
       ],
       "kind": "transform",
@@ -33,25 +33,24 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       },
       "version": "0.1.0"
     },
-    "input_contract_source": "unknown_fact_fail_closed_proxy_scalar_v1",
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
     "persona_id": "master_druckenmiller",
     "prototype_content_hash": "sha256:baf8a2498fcf13235b2c589382291f616239130a33d868b2c02cb9351582ae8d",
     "prototype_id": "master_druckenmiller.inflection_payoff.prototype_v1",
     "schema_version": 1,
     "tool_id": "master_druckenmiller.inflection_payoff"
   },
-  "derivation_spec_hash": "sha256:4eeeea5baf92a4cc7968978257fcff4fbd81ea42062e390aaf6859c547223166",
+  "derivation_spec_hash": "sha256:9b79f261ce3b8a63a8bd432a18b948eb8a7bd198ca5585952b912c3f862a240d",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [
     "mechanical_identity_proxy_not_the_named_investor_method",
     "first_declared_input_and_output_are_test_contract_choices_not_human_adjudication",
-    "unknown_fact_proxy_scalar_unit_requires_a_local_test_adapter",
     "no_human_formula_review_or_cryptographic_approval_exists",
     "must_not_be_used_for_production_admission_release_or_method_model_claims"
   ],

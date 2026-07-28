@@ -7,6 +7,7 @@
  * self-contained bundle is copied into the release and hash-bound by release-manifest.json.
  */
 
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 import {
   existsSync,
   lstatSync,

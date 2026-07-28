@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:3e3ba26efc5e2b26c1f7549c845af116b7a07b9b8814cb16bd0bbf633289d3eb",
+  "input_hash": "sha256:82af2f8c1febf7a4e1ed91a45ab2d3c7af323f8b47755e1c2b65b415d7292c54",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -100,12 +100,12 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:0adab0b69b1e8ba756deaeac3c457e044dd5a7195b1847893db0953772220e41",
+        "fact_pack_hash": "sha256:7e51d82fd38de876332a9268f4c89cd46a3a6e110ba108d58c52eedd84587721",
         "facts": [
           {
             "as_of": "2026-07-27",
             "confidence": 1,
-            "currency": null,
+            "currency": "USD",
             "derivation": "reported",
             "fact_id": "financial.owner_earnings",
             "fiscal_year": null,
@@ -119,21 +119,21 @@
             "period_start": null,
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
+            "scale": 1,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "derived_proxy_scalar",
+            "unit": "currency_units",
             "value": 1,
-            "value_kind": "scalar"
+            "value_kind": "monetary"
           }
         ],
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:0adab0b69b1e8ba756deaeac3c457e044dd5a7195b1847893db0953772220e41",
-      "pack_hash": "sha256:acd69a6e493f5b1faa050d3266d12ed6d97a7e698daeba073727c085ff5c63dd",
+      "fact_pack_hash": "sha256:7e51d82fd38de876332a9268f4c89cd46a3a6e110ba108d58c52eedd84587721",
+      "pack_hash": "sha256:6a5429b83d0be798910813a5dd0c0ff8ecc8e2be18d09f9ff151de52a2195e0c",
       "pack_manifest_binding": {
         "byte_length": 5189,
         "path": "knowledge/solo-test/masters/master_buffett/manifest.json",
@@ -144,12 +144,12 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:76cca34c2e39ea5898330406a49612004eb5ac6f5a9fc3bac57c06f72bce028f",
+        "fact_pack_hash": "sha256:2dc8edc31666920d40cb239ee31185b769cb7804a2ed3ca315d23ec96a885c2c",
         "facts": [
           {
             "as_of": "2026-07-27",
             "confidence": 1,
-            "currency": null,
+            "currency": "USD",
             "derivation": "reported",
             "fact_id": "financial.net_current_asset_value",
             "fiscal_year": null,
@@ -163,21 +163,21 @@
             "period_start": null,
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
+            "scale": 1,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "derived_proxy_scalar",
+            "unit": "currency_units",
             "value": 1,
-            "value_kind": "scalar"
+            "value_kind": "monetary"
           }
         ],
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:76cca34c2e39ea5898330406a49612004eb5ac6f5a9fc3bac57c06f72bce028f",
-      "pack_hash": "sha256:4f8bb4a076bccf522315beac6725dcbb34c8a96cc5911e6a0ac4ae915a9e893b",
+      "fact_pack_hash": "sha256:2dc8edc31666920d40cb239ee31185b769cb7804a2ed3ca315d23ec96a885c2c",
+      "pack_hash": "sha256:8e0775d8c34ba69ad19049705d174523e99a1715e70e5a7aa0c73913207021fa",
       "pack_manifest_binding": {
         "byte_length": 5160,
         "path": "knowledge/solo-test/masters/master_graham/manifest.json",
@@ -372,7 +372,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:6110836b4444c3976467c4ab707a8f6e38c6cc19a1c5dc41a53884a03066fb6d",
+        "fact_pack_hash": "sha256:fb8e0d16e59fd70b10887236f1ea5255a4f9916b8fb81877a7d814ef4b52de4d",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -390,22 +390,23 @@
             "period_end": null,
             "period_start": null,
             "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "derived_proxy_scalar",
+            "unit": "decimal",
             "value": 1,
-            "value_kind": "scalar"
+            "value_kind": "ratio"
           }
         ],
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:6110836b4444c3976467c4ab707a8f6e38c6cc19a1c5dc41a53884a03066fb6d",
-      "pack_hash": "sha256:aca213dba751fa47c4ecf572690981190ca78bd28a83d1fd8d5c0f3648253050",
+      "fact_pack_hash": "sha256:fb8e0d16e59fd70b10887236f1ea5255a4f9916b8fb81877a7d814ef4b52de4d",
+      "pack_hash": "sha256:34081132692088bc1e9ccc150b01a1289c3a2b45cf97b5bc75b7d65e2572c670",
       "pack_manifest_binding": {
         "byte_length": 5244,
         "path": "knowledge/solo-test/masters/master_druckenmiller/manifest.json",
@@ -1363,7 +1364,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:702d4dbd2513e429997e9e77b69f8f5dd924bf4c01d8c7accf11645f2a39664c",
+        "fact_pack_hash": "sha256:34f2c427abb4708df3866bf47d7b766bbdd967b2274e465214d3e870bf90163c",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -1381,22 +1382,23 @@
             "period_end": null,
             "period_start": null,
             "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "derived_proxy_scalar",
+            "unit": "decimal",
             "value": 1,
-            "value_kind": "scalar"
+            "value_kind": "ratio"
           }
         ],
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:702d4dbd2513e429997e9e77b69f8f5dd924bf4c01d8c7accf11645f2a39664c",
-      "pack_hash": "sha256:31a3466e5ad820f398e87bf81c7e04d94d66442029993d519333d817c01f9100",
+      "fact_pack_hash": "sha256:34f2c427abb4708df3866bf47d7b766bbdd967b2274e465214d3e870bf90163c",
+      "pack_hash": "sha256:cb47452ff753b25ae6b27d7f2308293b61c51c8eef41b67084f08bd28f52de95",
       "pack_manifest_binding": {
         "byte_length": 5451,
         "path": "knowledge/solo-test/masters/master_damodaran/manifest.json",

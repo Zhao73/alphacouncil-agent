@@ -50,8 +50,10 @@ function positiveFactPack(pack) {
     value_kind: contract.value_kind,
     value: 1,
     unit: contract.unit,
-    currency: null,
-    scale: null,
+    // A monetary contract carries a currency and a scale; the tools that read filing amounts
+    // declare one now that those facts have real contracts instead of a proxy scalar.
+    currency: contract.value_kind === "monetary" ? "USD" : null,
+    scale: contract.value_kind === "monetary" ? 1 : null,
     period_start: null,
     period_end: null,
     fiscal_year: null,

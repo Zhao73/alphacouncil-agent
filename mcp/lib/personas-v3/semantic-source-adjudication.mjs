@@ -1,5 +1,6 @@
 /** Round-3, machine-only adjudication of extractor and skeptic semantic source reviews. */
 
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 import {
   existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync,
 } from "node:fs";

@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:781ec61b1bc0e350a48743c34adca2d24761e66dea143bea40cc9c5918bb5503",
-    "derivation_spec_hash": "sha256:176668e0b04779a82267e4098ff9d2c6ac61c2a3870fd360b426e29bd9302a5a",
+    "derivation_evidence_hash": "sha256:388459b0eff6dbd6898d189c73b2aaa39e69e4b123b02dfea16b53b7f0f0327c",
+    "derivation_spec_hash": "sha256:fbaac3af8c2d46e622c7a4e79e3afa0f990674f02fb6b635911c09b7be155665",
     "derivation_spec_id": "master_buffett.owner_earnings_rebuilder.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_buffett.owner_earnings_rebuilder",
@@ -14,11 +14,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:8a8fba6502a21d42c08564cbd1b8283cdb0c5c93508c140f0976e1133fde9faa",
+    "input_schema_hash": "sha256:d57d05417ddfbb3f6aa6022a5d4b1baf383dca83f6ec7c550b212a059363fcbb",
     "inputs": [
       {
         "fact_id": "financial.owner_earnings"
@@ -34,21 +34,21 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:0a1987647c30583b0c81bde44acaed498988dec756e3e32b3bcfdb444db81ee6",
+    "output_schema_hash": "sha256:554eba18ac20254fd4e23c62ebce4eedfc8b353df5512741a980e1fe1934a3c0",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "derived_proxy:master_buffett.owner_earnings_rebuilder.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "currency_units",
+    "value_kind": "monetary",
     "version": "0.1.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:67a62f019ec4312e86463e9d1858db99522c65611483c14eab284020249b09ca",
-    "derivation_spec_hash": "sha256:2847885226f0cbf39c4193b18dd17f2ba31fd407967d5a9d6fe7f8939df33421",
+    "derivation_evidence_hash": "sha256:9bc4f69144dbd0b09f08bf87e360c55f3e58151c610d36e3fa55b8e5b511faa9",
+    "derivation_spec_hash": "sha256:9b4a2f365ccbd0631fa1067dbeb3730d8b5a0f204bc97dfae22bf15f18c6273d",
     "derivation_spec_id": "master_buffett.incremental_returns.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_buffett.incremental_returns",
@@ -60,11 +60,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:fdea378453c413904b6782b7fd8ddfc255c11b17223df71933b7ed359a4ba6a6",
+    "input_schema_hash": "sha256:6059c2777d2e827c98703d5f4013a2d059f8361a638178d38937c7297357aed3",
     "inputs": [
       {
         "fact_id": "financial.owner_earnings"
@@ -80,15 +80,15 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:8ca2a4bc15a1cfaffec7e07d39c92b922571e32cdb38f402c99d45204305aae4",
+    "output_schema_hash": "sha256:10f8b47f803c060832289dfb8e5e1281da7ece33d7838299872162fd73ea1e1e",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "derived_proxy:master_buffett.incremental_returns.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "currency_units",
+    "value_kind": "monetary",
     "version": "0.1.0"
   }
 ]

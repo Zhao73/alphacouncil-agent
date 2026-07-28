@@ -81,7 +81,9 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "macro.aaa_corporate_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "macro.credit_spread": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "macro.liquidity_impulse": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "macro.growth_regime": Object.freeze({ value_kind: "text", unit: null, period: INSTANT_AS_OF }),
+  // macro.growth_regime is deliberately absent. A tool contract accepts only monetary, ratio,
+  // count or scalar, so a text-valued fact cannot flow through the computation layer at all.
+  // It reaches a policy the other way: a condition compares it with `eq` against a state name.
 
   // Company fundamentals derived from filings, beyond the seven the mechanical screen computes.
   "financial.owner_earnings": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
