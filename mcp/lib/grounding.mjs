@@ -2,6 +2,8 @@ import { fetchQuote } from "./quotes.mjs";
 import { invalidParams } from "./errors.mjs";
 import { getMacroSnapshot } from "./macro.mjs";
 import { fetchMacroSeries } from "./fred.mjs";
+import { fetchFundamentals } from "./fundamentals.mjs";
+import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
 import { resolveIndustry, industryCoverage } from "./industry.mjs";
@@ -189,6 +191,18 @@ export async function gatherGrounding({
     } else {
       out.unavailable.push("filer profile: SEC submissions metadata is current, not point-in-time versioned; it was excluded from the historical information set");
     }
+    // The mechanical screen answers "is this worth research time"; the derived fundamentals
+    // answer "what do the method seats need". Both read the same Company Facts document, so
+    // they share one classification gate and run together.
+    if (out.instrument.sec_companyfacts_applicable && snapshotPolicy.allowed) {
+      jobs.push(safely("fundamentals", () => fetchFundamentals({ cik, ticker: symbol, asOf, signal })).then((r) => {
+        if (!r.ok) { out.unavailable.push(r.error); return; }
+        out.fundamentals = r.value;
+        out.unavailable.push(...(r.value.unavailable || []).map((gap) => (
+          typeof gap === "string" ? gap : `fundamentals ${gap.metric}: ${gap.code}${gap.detail ? ` (${gap.detail})` : ""}`
+        )));
+      }));
+    }
     if (out.instrument.sec_companyfacts_applicable) jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf, signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }
       const s = r.value;
@@ -249,7 +263,25 @@ export async function gatherGrounding({
     }));
   } else if (symbol && symbolMarket && symbolMarket.id !== "US" && !isFundOrIndex(out.instrument)) {
     out.unavailable.push(`structured financials for ${symbol}: this adapter is not point-in-time versioned; current data was not fetched for a historical cutoff`);
-  } else if (symbol && isFundOrIndex(out.instrument)) {
+  }
+
+  // A fund or index has no issuer financials, so this is where its evidence comes from
+  // instead: published holdings, index-level valuation and the look-through aggregates that
+  // let an operating-company method run against a basket at all.
+  if (symbol && isFundOrIndex(out.instrument) && snapshotPolicy.allowed) {
+    jobs.push(safely("instrument aggregate", () => gatherInstrumentFacts({
+      symbol, instrument: out.instrument, asOf, signal,
+      // The operating-company facts a basket can supply at all: everything the method seats
+      // ask of a company, aggregated by weight across the constituents that publish it.
+      lookThroughFactIds: LOOK_THROUGH_FACT_IDS,
+    })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      out.instrument_aggregate = r.value;
+      out.unavailable.push(...(r.value.unavailable || []));
+    }));
+  }
+
+  if (symbol && isFundOrIndex(out.instrument)) {
     out.not_applicable.push(localizedText(language, {
       en: `operating-company structured financials: not applicable to ${out.instrument.asset_type}; use look-through or aggregate index evidence`,
       zh: `经营公司结构化财报：不适用于 ${out.instrument.asset_type}；请使用持仓穿透或指数聚合证据。`,

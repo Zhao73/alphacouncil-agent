@@ -467,6 +467,130 @@ function macroSeriesFacts(grounding, context) {
   }
 }
 
+/**
+ * Company fundamentals derived from XBRL, already shaped as typed-fact candidates.
+ *
+ * `deriveFundamentals` computes the period, the filing date and the source records, so this
+ * function's only job is registration and unit passthrough. It deliberately does not repair
+ * anything: a metric that arrives null arrived null for a reason the deriver already named.
+ */
+function fundamentalFacts(grounding, context) {
+  const metrics = grounding?.fundamentals?.metrics;
+  if (!metrics || typeof metrics !== "object") return;
+  const cik = grounding.fundamentals.cik || grounding.screen?.cik;
+  const digits = String(cik || "").replace(/\D/gu, "");
+  const companyFactsUrl = digits
+    ? `https://data.sec.gov/api/xbrl/companyfacts/CIK${digits.padStart(10, "0")}.json`
+    : null;
+  for (const [factId, metric] of Object.entries(metrics)) {
+    if (!metric || !finite(metric.value)) continue;
+    const publicAt = timestampAtOrBefore(metric.public_at, context.cutoff);
+    const sources = Array.isArray(metric.source_ids) ? metric.source_ids.filter(Boolean) : [];
+    if (!publicAt || !sources.length) {
+      context.diagnostics.push({ code: "missing_source_lineage", source: `fundamentals.${factId}`, action: "not_converted" });
+      continue;
+    }
+    // Register each filing record from ITS OWN filing date, not from the date of whichever
+    // metric happens to consume it. Several metrics legitimately share one XBRL record, and
+    // stamping the consumer's period onto the shared source made the second registration
+    // collide with the first -- which silently dropped the fact rather than the duplicate.
+    // Match on the identity the id already encodes rather than rebuilding the id, so a change
+    // in CIK zero-padding cannot quietly break the lookup and reintroduce the collision.
+    const recordFor = (id) => {
+      const [, , , tag, accession, periodEnd] = String(id).split(":");
+      return (metric.source_records || []).find((record) => (
+        record?.tag === tag && record?.accession === accession && record?.period_end === periodEnd
+      ));
+    };
+    const registered = sources.every((id) => {
+      // The mechanical screen reads the same filings and may already have registered this
+      // record. First registration wins: both paths describe the same SEC document, and
+      // re-asserting it under a second consumer's period is what produced the collision that
+      // silently dropped every fundamentals fact sharing a record with the screen.
+      if (context.sourceRecords.has(id)) return true;
+      const identity = secCompanyFactsIdentity(id);
+      const record = recordFor(id);
+      const filedAt = record?.filed ? `${record.filed}T00:00:00.000Z` : publicAt;
+      return registerSource(context, {
+        source_id: id,
+        source_kind: "regulatory_filing_data",
+        title: identity.title,
+        url: companyFactsUrl,
+        public_at: filedAt,
+        retrieved_at: grounding.gathered_at || context.asOf,
+        locator: identity.locator,
+      });
+    });
+    if (!registered) continue;
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId,
+      valueKind: metric.value_kind,
+      value: metric.value,
+      unit: metric.unit,
+      currency: metric.currency ?? null,
+      scale: metric.scale ?? null,
+      ratioDenominator: metric.ratio_denominator,
+      periodStart: metric.period_start || null,
+      periodEnd: metric.period_end || null,
+      fiscalYear: Number.isInteger(metric.fiscal_year) ? metric.fiscal_year : null,
+      asOf: context.asOf,
+      publicAt,
+      sources,
+      confidence: finite(metric.confidence) ? metric.confidence : 0.85,
+      derivation: metric.derivation || "rederived",
+      derivationToolId: `${ADAPTER_ID}:fundamentals:${factId}`,
+      // The maintenance-capex split is an assumption, so it travels with the fact rather
+      // than living only in a comment nobody reads at decision time.
+      derivationInput: metric.assumptions?.length ? { assumptions: metric.assumptions } : null,
+    }));
+  }
+}
+
+/**
+ * Fund and index aggregates, including the look-through metrics that let an operating-company
+ * method run against a basket. Coverage weight is carried on every look-through fact: a
+ * portfolio number computed over 8% of the weights is not the same claim as one over 95%.
+ */
+function instrumentAggregateFacts(grounding, context) {
+  const aggregates = grounding?.instrument_aggregate?.facts;
+  if (!Array.isArray(aggregates)) return;
+  for (const entry of aggregates) {
+    if (!entry?.fact_id || !finite(entry.value)) continue;
+    const publicAt = timestampAtOrBefore(entry.public_at, context.cutoff);
+    if (!publicAt || !/^https?:\/\//u.test(entry.source_url || "")) {
+      context.diagnostics.push({ code: "missing_source_lineage", source: `instrument.${entry.fact_id}`, action: "not_converted" });
+      continue;
+    }
+    const sourceIdValue = sourceId(entry.source_kind || "instrument", entry.fact_id, entry.observation_date || publicAt.slice(0, 10));
+    if (!registerSource(context, {
+      source_id: sourceIdValue,
+      source_kind: entry.source_kind || "market_snapshot",
+      title: entry.title || `instrument aggregate ${entry.fact_id}`,
+      url: entry.source_url,
+      public_at: publicAt,
+      retrieved_at: grounding.gathered_at || publicAt,
+      locator: entry.locator || { fact_id: entry.fact_id },
+    })) continue;
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId: entry.fact_id,
+      valueKind: entry.value_kind || "ratio",
+      value: entry.value,
+      unit: entry.unit || "decimal",
+      ratioDenominator: entry.ratio_denominator,
+      periodEnd: entry.observation_date || null,
+      asOf: context.asOf,
+      publicAt,
+      sources: [sourceIdValue],
+      confidence: finite(entry.confidence) ? entry.confidence : 0.75,
+      derivation: entry.derivation || "rederived",
+      derivationToolId: `${ADAPTER_ID}:instrument:${entry.fact_id}`,
+      derivationInput: entry.method
+        ? { method: entry.method, coverage_weight: entry.coverage_weight ?? null, basis: entry.basis ?? null }
+        : null,
+    }));
+  }
+}
+
 /** Return both the immutable pack and an explicit list of fields skipped for missing lineage. */
 export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = asOf } = {}) {
   const resolvedAsOf = asOf || grounding?.as_of || grounding?.gathered_at;
@@ -483,6 +607,8 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   optionsFacts(grounding, context);
   screenFacts(grounding, context);
   macroSeriesFacts(grounding, context);
+  fundamentalFacts(grounding, context);
+  instrumentAggregateFacts(grounding, context);
   for (const family of ["screen", "macro", "market"]) {
     if (grounding?.[family] && !grounding[family].public_at) {
       if (family === "screen" && context.diagnostics.some((item) => String(item.source || "").startsWith("screen."))) continue;
