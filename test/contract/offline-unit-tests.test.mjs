@@ -5,10 +5,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { repoRoot } from "../helpers/paths.mjs";
-import { buildTestPlan, sourceTestFiles } from "../../scripts/run-tests.mjs";
+import { buildTestPlan, sourceTestConcurrencyArg, sourceTestFiles } from "../../scripts/run-tests.mjs";
 
-function portableUnitTestFiles(root) {
-  const plan = buildTestPlan(root);
+function portableUnitTestFiles(root, plan = buildTestPlan(root)) {
   const allUnitFiles = sourceTestFiles(root).filter((file) => file.startsWith("test/unit/") && file.endsWith(".test.mjs"));
   assert.ok(allUnitFiles.length > 5, "expected a non-empty unit-test suite");
 
@@ -37,7 +36,13 @@ function portableUnitTestFiles(root) {
  * in manual verification; unit tests assert the mapping, not the round trip.
  */
 test("every unit test runs with the network disabled", () => {
-  const files = portableUnitTestFiles(repoRoot);
+  const plan = buildTestPlan(repoRoot);
+  const files = portableUnitTestFiles(repoRoot, plan);
+  // The private authoring audit has several long critical-path files and benefits
+  // from a wider bounded inner queue. The public portable suite stays at four so
+  // low-core CI hosts are not oversubscribed.
+  const innerConcurrency = plan.mode === "source_with_staging" ? 8 : 4;
+  const timeoutMs = plan.mode === "source_with_staging" ? 420_000 : 300_000;
   const dataDir = mkdtempSync(join(tmpdir(), "alphacouncil-offline-check-"));
   const { NODE_TEST_CONTEXT: _nodeTestContext, ...parentEnv } = process.env;
   const env = {
@@ -57,13 +62,14 @@ test("every unit test runs with the network disabled", () => {
   assert.equal(Object.hasOwn(env, "NODE_TEST_CONTEXT"), false, "nested unit suite must not inherit Node test context");
 
   try {
-    const result = spawnSync(process.execPath, ["--test", ...files], {
+    const result = spawnSync(process.execPath, [
+      "--test",
+      ...[sourceTestConcurrencyArg(innerConcurrency)].filter(Boolean),
+      ...files,
+    ], {
       cwd: repoRoot,
       encoding: "utf8",
-      // The source_with_staging suite performs the complete hash-bound persona review
-      // audit. Under a saturated release check that audit can legitimately exceed three
-      // minutes even though every child test is still making forward progress.
-      timeout: 300000,
+      timeout: timeoutMs,
       env,
     });
     assert.equal(

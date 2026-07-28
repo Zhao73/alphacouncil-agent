@@ -346,6 +346,8 @@ test("atomic candidate publication removes staged bytes when record writing fail
 
 test("the raw HTTP retriever enforces timeout and declared Content-Length without live network", async () => {
   const publicLookup = async () => [{ address: "93.184.216.34", family: 4 }];
+  let clockTick = 0;
+  const advancingClock = () => ++clockTick;
   const hangingRequest = () => {
     const request = new EventEmitter();
     request.end = () => {};
@@ -356,6 +358,7 @@ test("the raw HTTP retriever enforces timeout and declared Content-Length withou
     limits: { timeout_ms: 100, max_bytes: 16, max_redirects: 0 },
     requestImpl: hangingRequest,
     lookupImpl: publicLookup,
+    clock: advancingClock,
   }), /timed out after 100ms/);
 
   const oversizedRequest = (_url, _options, callback) => {
