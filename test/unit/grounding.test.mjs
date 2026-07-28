@@ -104,6 +104,53 @@ test("the block carries the actual figures, not a summary of them", () => {
   assert.match(block, /YMTC \(unlisted\)/, "an unlisted participant must still be named");
 });
 
+test("ETF grounding exposes the look-through route and Company Facts as not applicable", () => {
+  const grounding = {
+    instrument: {
+      asset_type: "etf",
+      research_model: "fund_lookthrough",
+      classification_source: "yahoo_chart_metadata",
+      fund_like: true,
+    },
+    quote: { symbol: "QQQ", price: 600, currency: "USD", source: "yahoo" },
+    not_applicable: ["operating-company SEC Company Facts screen: not applicable to etf"],
+  };
+  const block = groundingBlock(grounding, "English");
+  assert.match(block, /Instrument: etf \| research model fund_lookthrough/);
+  assert.match(block, /Company Facts screen: not applicable to etf/);
+  assert.match(block, /ETF\/fund-specific research contract/);
+  assert.match(block, /never add them into ETF revenue or EPS/i);
+  const prompt = taskPrompt("earnings_deep_dive", "QQQ", "2026-07-28", "", "English", grounding);
+  assert.match(prompt, /dated holdings\/weights/);
+  assert.match(prompt, /do not seek fund revenue/i);
+});
+
+test("every full-council evidence role receives an ETF-specific assignment", () => {
+  const grounding = {
+    instrument: {
+      asset_type: "etf",
+      research_model: "fund_lookthrough",
+      classification_source: "yahoo_chart_metadata",
+      fund_like: true,
+    },
+  };
+  const expected = {
+    market_data: /top-ten and sector concentration/i,
+    earnings_deep_dive: /holdings-level earnings look-through/i,
+    forward_expectations: /coverage percentage/i,
+    quant_factor: /Distinguish the tradable fund from the cash index/i,
+    valuation_long_short: /Never add a handful of constituent financial statements/i,
+    news_industry_management: /sponsor and index-provider changes/i,
+    insider_sec: /Constituent Form 4 filings are issuer activity/i,
+    ib_event_analysis: /reconstitution, rebalances/i,
+  };
+  for (const [task, pattern] of Object.entries(expected)) {
+    const prompt = taskPrompt(task, "QQQ", "2026-07-28", "", "English", grounding);
+    assert.match(prompt, pattern, task);
+    assert.match(prompt, /## etf task override/);
+  }
+});
+
 // The rules are the point of the block; facts alone would just be more context to
 // paraphrase.
 test("the block forbids a searched number overwriting a filed one", () => {

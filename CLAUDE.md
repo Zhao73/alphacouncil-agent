@@ -25,14 +25,14 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `0.9.4`. It is a non-GA GitHub prerelease; this
-acceptance release does not publish npm or change its dist-tags. The build channel remains
+The declared package/plugin version is `0.9.5`. It is a non-GA GitHub preview; this source
+upgrade does not publish npm or change its dist-tags. The build channel remains
 `solo_test`. The isolated packaged tree contains 26 physical v3 packs and 52 executable
 `provisional_derived_proxy` tools.
 Every seat is still a provisional `operator_lens`: operational = 0, `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
 The production loader rejects these packs and formal production GA remains fail-closed.
-See `docs/releases/v0.9.4.md` and `docs/report-contract.md`.
+See `docs/releases/v0.9.5.md` and `docs/report-contract.md`.
 
 ## Agent-Skills Governance
 
@@ -79,6 +79,8 @@ No research, run directory or worker may start before that receipt exists. Data-
   artifact, not that external search/model/data services will let all seats succeed.
 - The plugin cannot enforce this deadline on `plan_visible_run` host subagents. Visible full
   runs retain the same evidence/report gates but must not be described as 30-minute bounded.
+  Run every returned post-evidence v3 explanation worker, including a frozen
+  `out_of_scope` seat, and record its `acknowledged_stance` before debate.
 
 ## Quick v1 Fixed Contract
 
@@ -99,6 +101,22 @@ No research, run directory or worker may start before that receipt exists. Data-
   changes degraded to complete or makes `full_council_equivalent=true`.
 - A selected method result is a recorded provisional lens output, never a quotation from the
   named person.
+
+## Instrument Routing Contract
+
+- Classify the symbol before selecting financial-data routes. Operating companies use
+  `operating_company`; ETFs and mutual funds use `fund_lookthrough`; cash indices use
+  `index_aggregate`.
+- Do not call operating-company Company Facts or structured issuer financials for a fund or
+  index. Record those paths as not applicable, then research dated holdings/constituents and
+  weights, methodology, concentration, fees or index rules, liquidity/tracking/flows,
+  rebalances and same-date aggregate valuation with explicit coverage weight.
+- Never create fund/index revenue, company EPS, management guidance, fund-insider Form 4
+  activity, or a portfolio financial statement by adding a few constituents.
+- Every selected physical v3 method gets a readable final statement, including deterministic
+  `out_of_scope` results. Full handoff ends with the exact selected-seat count and all of
+  those statements. Visible PM completion returns `user_response_markdown`; use it as the
+  final response body rather than reducing it to an ACK.
 
 ## Analyst Roles
 

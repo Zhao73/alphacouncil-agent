@@ -53,7 +53,10 @@ export function statusSnapshot(run) {
   const selectedMasters = Array.isArray(run.masters) ? run.masters : [];
   const recordedMasters = (run.master_opinions || []).map((opinion) => opinion.master);
   const recordedSet = new Set(recordedMasters);
-  const pendingMasters = selectedMasters.filter((master) => !recordedSet.has(master));
+  const pendingMasters = selectedMasters.filter((master) => (
+    !recordedSet.has(master)
+      || (run.master_status?.[master] && run.master_status[master].status !== "completed")
+  ));
   const visibleDebate = run.execution_mode === "visible_host_threads" ? run.visible_debate : null;
   const visibleDebateRounds = visibleDebate
     ? Object.fromEntries(["bull_researcher", "bear_researcher"].map((role) => [
@@ -64,6 +67,9 @@ export function statusSnapshot(run) {
   return {
     run_id: run.run_id,
     symbol: run.symbol,
+    asset_type: run.grounding?.instrument?.asset_type || "unknown",
+    research_model: run.grounding?.instrument?.research_model || "unknown",
+    instrument_classification_source: run.grounding?.instrument?.classification_source || "unknown",
     as_of: run.as_of,
     language: run.language,
     execution_mode: run.execution_mode,

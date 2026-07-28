@@ -214,6 +214,7 @@ const JAPANESE_HEADINGS = {
   analyst_work_log: "アナリスト作業記録",
   debate_record: "強気弱気討論記録",
   master_bench: "マスターベンチ",
+  instrument_structure: "ファンドと指数の構造",
   market_expectations: "市場予想",
   analyst_rating: "アナリスト評価",
   earnings_call: "決算説明会",
@@ -240,6 +241,7 @@ const CHINESE_HEADINGS = {
   analyst_work_log: "分析师工作记录",
   debate_record: "多空辩论记录",
   master_bench: "大师席",
+  instrument_structure: "基金与指数结构",
   market_expectations: "市场预期",
   analyst_rating: "分析师评级",
   earnings_call: "电话会",
@@ -274,12 +276,13 @@ function fullyLocalizedReport(language) {
         : JAPANESE_HEADINGS[section.id];
       assert.ok(heading, `missing ${language} heading fixture for ${section.id}`);
       const task = section.id === "analyst_work_log" ? "market_data " : "";
+      const master = section.id === "master_bench" ? "master_buffett " : "";
       const source = section.id === "source_table" ? " market_data:S1 https://example.com/source " : "";
       const body = chinese
-        ? `${task}${section.id} 本节把已核验事实、推断和未知信息明确分开记录。${source}`.repeat(5)
+        ? `${task}${master}${section.id} 本节把已核验事实、推断和未知信息明确分开记录。${source}`.repeat(5)
         : korean
-        ? `${task}${section.id} 항목은 검증된 사실과 추론 및 알려지지 않은 정보를 분리하여 기록합니다.${source}`.repeat(5)
-        : `${task}${section.id} は検証済みの事実、推論、未知の情報を分けて記録します。${source}`.repeat(5);
+        ? `${task}${master}${section.id} 항목은 검증된 사실과 추론 및 알려지지 않은 정보를 분리하여 기록합니다.${source}`.repeat(5)
+        : `${task}${master}${section.id} は検証済みの事実、推論、未知の情報を分けて記録します。${source}`.repeat(5);
       return [`## ${heading}`, body];
     }),
   ].join("\n\n");
@@ -292,7 +295,7 @@ for (const language of ["日本語", "한국어"]) {
       ...run,
       language,
       masters: ["master_buffett"],
-      master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
+      master_opinions: [{ master: "master_buffett", stance: "out_of_scope", voice_statement: language === "日本語" ? "必要な時点整合データが不足しているため、この方法では方向判断を出しません。" : "필요한 시점 일치 데이터가 부족하여 이 방법은 방향성 판단을 내리지 않습니다." }],
     });
     assert.equal(result.status, "passed", result.missing.join("; "));
     assert.equal(result.language_status, "passed");
@@ -307,7 +310,7 @@ for (const language of ["日本語", "한국어"]) {
       ...run,
       language,
       masters: ["master_buffett"],
-      master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
+      master_opinions: [{ master: "master_buffett", stance: "out_of_scope", voice_statement: "The method withholds a directional view because the required point-in-time evidence is missing." }],
     });
     assert.equal(result.status, "needs_revision");
     assert.equal(result.language_status, "failed");
@@ -324,7 +327,7 @@ test("a Han-only Japanese finance section is accepted in an otherwise Japanese r
     ...run,
     language: "日本語",
     masters: ["master_buffett"],
-    master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
+    master_opinions: [{ master: "master_buffett", stance: "out_of_scope", voice_statement: "必要な時点整合データが不足しているため、この方法では方向判断を出しません。" }],
   });
   assert.equal(result.status, "passed", result.missing.join("; "));
   assert.equal(result.observed_locale, "ja");

@@ -1,4 +1,5 @@
 import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, QUICK_REPORT_SECTIONS, REPORT_SECTIONS } from "./constants.mjs";
+import { isFundOrIndex } from "./instruments.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, readerLanguageStatus } from "./lang.mjs";
 
@@ -116,7 +117,10 @@ export function completenessStatus(run) {
   // because the reader believes the verdict survived twenty-one lenses.
   const selected = Array.isArray(run.masters) ? run.masters : [];
   const recorded = new Set((run.master_opinions || []).map((o) => o.master));
-  const missing_masters = selected.filter((id) => !recorded.has(id));
+  const missing_masters = selected.filter((id) => (
+    !recorded.has(id)
+      || (run.master_status?.[id] && run.master_status[id].status !== "completed")
+  ));
   const complete = missing_evidence.length === 0 && missing_debate.length === 0 && missing_masters.length === 0;
   return {
     completeness: complete ? "complete" : "incomplete",
@@ -249,8 +253,10 @@ export function validateFinalReport(markdown, run) {
   const contractSections = quick ? QUICK_REPORT_SECTIONS : REPORT_SECTIONS;
 
   const benchRan = ((run?.masters || []).length > 0) || ((run?.master_opinions || []).length > 0);
+  const fundOrIndex = isFundOrIndex(run?.grounding?.instrument);
   for (const section of contractSections) {
     if (section.when_masters && !benchRan) continue;
+    if (section.when_fund_or_index && !fundOrIndex) continue;
     const heading = assigned.get(section.id);
     if (!heading) {
       missing.push(`missing section: ${section.id}`);
@@ -279,6 +285,31 @@ export function validateFinalReport(markdown, run) {
     if (!workLogBody.includes(String(task).toLowerCase())) {
       missing.push(`missing analyst work log entry: ${task}`);
     }
+  }
+
+  // A bench heading is not evidence that every selected method is readable. The previous
+  // gate passed a report containing only a generic bench paragraph even when twenty-five
+  // selected seats had no statement at all. Require both the frozen record and its exact
+  // stable ID in the system-owned publication section.
+  const selectedMethodSeats = [...new Set(
+    (run?.masters?.length ? run.masters : (run?.master_opinions || []).map((opinion) => opinion.master))
+      .filter((id) => typeof id === "string" && id.length),
+  )];
+  const opinionsByMaster = new Map((run?.master_opinions || []).map((opinion) => [opinion.master, opinion]));
+  const benchBody = assigned.get("master_bench")?.body || "";
+  const readableMethodStatements = [];
+  const renderedMethodStatements = [];
+  for (const id of selectedMethodSeats) {
+    const opinion = opinionsByMaster.get(id);
+    if (!opinion) {
+      missing.push(`missing recorded method-seat opinion: ${id}`);
+    } else if (denseLength(opinion.voice_statement) < 20) {
+      missing.push(`missing readable method-seat statement: ${id}`);
+    } else {
+      readableMethodStatements.push(id);
+    }
+    if (!benchBody.includes(id)) missing.push(`method-seat statement not rendered in Master Bench: ${id}`);
+    else renderedMethodStatements.push(id);
   }
 
   const sourceCount = (run.packets || []).reduce((sum, packet) => sum + (packet.sources?.length || 0), 0);
@@ -330,10 +361,24 @@ export function validateFinalReport(markdown, run) {
     language_mismatched_sections: languageAudit.mismatched_sections,
     target_script_characters: languageAudit.target_script_characters,
     reader_characters_checked: languageAudit.reader_characters_checked,
+    method_statement_coverage: {
+      selected_count: selectedMethodSeats.length,
+      readable_count: readableMethodStatements.length,
+      rendered_count: renderedMethodStatements.length,
+      readable_master_ids: readableMethodStatements,
+      rendered_master_ids: renderedMethodStatements,
+      status: readableMethodStatements.length === selectedMethodSeats.length
+        && renderedMethodStatements.length === selectedMethodSeats.length
+        ? "passed"
+        : "failed",
+    },
     status: missing.length ? "needs_revision" : "passed",
     missing,
     sections,
     checked_at: new Date().toISOString(),
-    required_sections: contractSections.filter((s) => !s.when_masters || benchRan).map((section) => section.id),
+    required_sections: contractSections
+      .filter((section) => (!section.when_masters || benchRan)
+        && (!section.when_fund_or_index || fundOrIndex))
+      .map((section) => section.id),
   };
 }

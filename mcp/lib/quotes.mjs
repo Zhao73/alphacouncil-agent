@@ -45,6 +45,10 @@ export function parseYahooChart(json, requested) {
     change_pct: changePct != null ? Number(changePct.toFixed(2)) : null,
     currency: meta.currency || null,
     exchange: meta.exchangeName || null,
+    instrument_type: meta.instrumentType || null,
+    short_name: meta.shortName || null,
+    long_name: meta.longName || null,
+    exchange_timezone: meta.exchangeTimezoneName || null,
     market_state: meta.marketState || null,
     quote_time: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : null,
     source: "yahoo",
@@ -62,6 +66,7 @@ export function parseStooqCsv(csv, requested) {
     query: requested, symbol: cols[0] || requested, price: close,
     previous_close: null, change: null, change_pct: null,
     currency: null, exchange: "stooq", market_state: null,
+    instrument_type: null, short_name: null, long_name: null, exchange_timezone: null,
     quote_time: (cols[1] && cols[2]) ? `${cols[1]}T${cols[2]}` : null,
     source: "stooq", note: "delayed / EOD fallback, not real-time",
   };

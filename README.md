@@ -61,24 +61,29 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
 | ⏱️ **Bounded full headless run** | Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run within 30 minutes. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
+| 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
 | 🔑 **31 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
 | 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## Current 0.9.4 preview status: non-GA solo-test
+## Current 0.9.5 preview status: non-GA solo-test
 
-Version `0.9.4` is a GitHub prerelease. This acceptance release does not publish npm or
-change npm dist-tags; verify npm separately before assuming `@next` contains 0.9.4. It is a
+Version `0.9.5` is a GitHub preview. This source upgrade does not publish npm or
+change npm dist-tags; verify npm separately before assuming `@next` contains 0.9.5. It is a
 bounded council-runtime preview, **not** formal production GA. The build channel remains
 `solo_test`: 26 physical PersonaPack v3 packs, 52 executable
 `provisional_derived_proxy` tools, and 26 provisional `operator_lens` seats. Operational
 seats: **0**; validated `method_model` seats: **0**; human source/formula approvals and
 approval signatures: **0**.
 
+This runtime/reporting release keeps the unchanged `persona_pack_version=0.9.4`, so the 26
+pack hashes and their existing simulation evidence do not drift merely because plugin code
+moved to 0.9.5.
+
 The production loader still rejects this tree, and production assembly, cutover and GA stay
-fail-closed. See [the v0.9.4 release contract](docs/releases/v0.9.4.md) for the exact full/quick
+fail-closed. See [the v0.9.5 release contract](docs/releases/v0.9.5.md) for the exact ETF/index and full/quick
 boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
 
 ## 📜 Disclaimer
@@ -138,7 +143,10 @@ The concise handoff is written to `~/.alphacouncil-agent/runs/<run_id>/user_resp
 The full report is written to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`,
 with analyst Markdown files and `artifact_index.md` in the same run directory. Full handoff
 shows the system quote (or an explicit quote-data gap), all eight analyst statuses/summaries,
-and every selected method seat's frozen stance plus isolated-worker explanation/status.
+and every selected method seat's frozen stance plus readable explanation/status. Its final
+section contains the exact selected-seat count and one statement per stable ID; `all` ends
+with all 26 statements. These are provisional method-seat outputs, never quotes from the
+named people.
 
 ### Slash commands
 
@@ -244,7 +252,7 @@ Nothing below needs an API key, an account, or a config file. Install and run.
 
 | Area | Tools | Source |
 |---|---|---|
-| **Filings** | `screen_ticker` `screen_candidates` `list_us_universe` `compose_research_brief` | SEC EDGAR XBRL |
+| **Instrument + filings** | `compose_research_brief` `screen_ticker` `screen_candidates` `list_us_universe` | Company/ETF/index classification; SEC EDGAR XBRL only where applicable |
 | **Non-US filings** | `market_financials` `market_coverage` | TWSE keyless; DART/EDINET on a free key; HK/CN documents only |
 | **Market data** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq, 21 macro series + 5 derived |
 | **Options** | `get_options_chain` | CBOE delayed quotes — IV term structure, 25-delta skew, open interest, Greeks |
@@ -283,7 +291,7 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
 
-The 0.9.4 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
+The 0.9.5 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
 not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
 project-derived proxy material; the 52 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA

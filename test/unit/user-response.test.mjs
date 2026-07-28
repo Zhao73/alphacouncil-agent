@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { userResponseMarkdown } from "../../mcp/lib/markdown.mjs";
+import { compiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
 
 function run(language, summary) {
   return {
@@ -74,6 +75,11 @@ function localizedRun(language, analystWord, masterWord) {
     completed_at: "2026-07-28T00:10:00.000Z",
     deadline_at: "2026-07-28T00:30:00.000Z",
     grounding: {
+      instrument: {
+        asset_type: "etf",
+        research_model: "fund_lookthrough",
+        classification_source: "yahoo_chart_metadata",
+      },
       quote: {
         price: 512.34,
         currency: "USD",
@@ -108,9 +114,9 @@ test("Chinese handoff keeps the price, every analyst seat, recent-news boundary 
   assert.match(markdown, /AlphaCouncil 运行摘要/);
   assert.match(markdown, /## 系统记录价格/);
   assert.match(markdown, /512\.34 USD/);
-  assert.match(markdown, /## 逐席大神方法输出/);
+  assert.match(markdown, /## 结尾：逐席方法陈词（不是本人引语） — 1/);
   assert.match(markdown, /中文专属方法席发言/);
-  assert.match(markdown, /\[证据范围外\/中; 专属代理=已完成\]/);
+  assert.match(markdown, /\[冻结记录: 证据范围外\/中; 陈词来源: 已完成; recorded\]/);
   assert.match(markdown, /\[已完成\/中\]/);
   assert.match(markdown, /## 分析师逐席内容/);
   assert.match(markdown, /## 近期公司与行业新闻/);
@@ -123,9 +129,9 @@ test("Japanese handoff keeps the price, every analyst seat and the dedicated mas
   assert.match(markdown, /AlphaCouncil 実行サマリー/);
   assert.match(markdown, /## システム記録価格/);
   assert.match(markdown, /512\.34 USD/);
-  assert.match(markdown, /## メソッド席ごとの記録/);
+  assert.match(markdown, /## 最後：メソッド席ごとの最終見解（本人の発言・引用ではありません） — 1/);
   assert.match(markdown, /日本語の専用メソッド席発言/);
-  assert.match(markdown, /\[証拠範囲外\/中; 専用ワーカー=完了\]/);
+  assert.match(markdown, /\[凍結済み記録: 証拠範囲外\/中; 見解の生成元: 完了; recorded\]/);
   assert.match(markdown, /## 分析担当ごとの内容/);
   assert.match(markdown, /## 直近の企業・業界ニュース/);
   assert.match(markdown, /as_of までの120日間にある日付付きニュース出典を取得できませんでした/);
@@ -141,9 +147,9 @@ test("Korean handoff keeps the price, every analyst seat and the dedicated maste
   assert.match(markdown, /AlphaCouncil 실행 요약/);
   assert.match(markdown, /## 시스템 기록 가격/);
   assert.match(markdown, /512\.34 USD/);
-  assert.match(markdown, /## 방법론 좌석별 기록/);
+  assert.match(markdown, /## 마지막: 방법론 좌석별 최종 발언\(본인의 실제 발언이나 인용이 아님\) — 1/);
   assert.match(markdown, /한국어 전용 방법론 좌석 발언/);
-  assert.match(markdown, /\[증거 범위 밖\/중간; 전용 워커=완료\]/);
+  assert.match(markdown, /\[동결 기록: 증거 범위 밖\/중간; 발언 출처: 완료; recorded\]/);
   assert.match(markdown, /## 분석가 좌석별 내용/);
   assert.match(markdown, /## 최근 기업 및 산업 뉴스/);
   assert.match(markdown, /as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다/);
@@ -152,4 +158,27 @@ test("Korean handoff keeps the price, every analyst seat and the dedicated maste
     assert.match(markdown, new RegExp(`한국어분석_${task}`));
   }
   assert.doesNotMatch(markdown, /## Analyst Views by Seat|## System-Recorded Price/);
+});
+
+test("a full 26-seat handoff ends with one readable statement for every selected method", () => {
+  const ids = compiledPersonaPacks().ids();
+  assert.equal(ids.length, 26);
+  const fixture = localizedRun("zh-CN", "中文分析", "unused");
+  fixture.masters = ids;
+  fixture.master_status = Object.fromEntries(ids.map((id) => [id, { master: id, status: "completed" }]));
+  fixture.master_opinions = ids.map((id, index) => ({
+    master: id,
+    stance: "out_of_scope",
+    confidence: "low",
+    voice_status: "deterministic_fallback",
+    statement_origin: "deterministic_scope_fallback",
+    voice_statement: `第 ${index + 1} 席按自己的方法审视 QQQ；因缺少方法关键的时点一致事实，本轮不作方向判断。`,
+  }));
+  const markdown = userResponseMarkdown(fixture, manager("中文最终判断"));
+  const heading = "## 结尾：逐席方法陈词（不是本人引语） — 26";
+  assert.ok(markdown.includes(heading));
+  const tail = markdown.slice(markdown.indexOf(heading));
+  assert.equal((tail.match(/^-/gmu) || []).length, 26);
+  for (const id of ids) assert.equal((tail.match(new RegExp(`\\b${id}\\b`, "gu")) || []).length, 1, id);
+  assert.ok(markdown.trimEnd().endsWith(tail.trimEnd()), "the per-seat statements must be the final handoff section");
 });

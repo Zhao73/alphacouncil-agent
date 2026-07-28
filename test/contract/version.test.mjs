@@ -22,12 +22,13 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the 0.9.4 preview stays non-GA across all 26 physical packs", () => {
+test("the 0.9.5 runtime keeps the reviewed 0.9.4 PersonaPack snapshot non-GA", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "0.9.4");
+  assert.equal(expected, "0.9.5");
+  assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "next");
   assert.equal(profile.channel, "solo_test");
   assert.equal(profile.production_eligible, false);
@@ -43,7 +44,7 @@ test("the 0.9.4 preview stays non-GA across all 26 physical packs", () => {
   for (const personaId of personaIds) {
     assert.equal(
       readJson(`knowledge/solo-test/masters/${personaId}/manifest.json`).pack_version,
-      expected,
+      profile.persona_pack_version,
       `${personaId} pack version drifted from package.json`,
     );
   }

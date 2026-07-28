@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /** Build or verify the packaged 26-seat provisional solo-test PersonaPack v3 tree. */
 
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -12,12 +11,10 @@ import {
   renderPersonaV3SoloTestPackReport,
   writePersonaV3SoloTestPacks,
 } from "./lib/persona-v3-solo-test-packs.mjs";
+import { resolvePersonaPackVersion } from "./lib/build-profile.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
 
-function packageVersion() {
-  return JSON.parse(readFileSync(resolve(REPO_ROOT, "package.json"), "utf8")).version;
-}
 export function parseArgs(argv) {
   const args = {
     write: false,
@@ -26,7 +23,7 @@ export function parseArgs(argv) {
     root: DEFAULT_SOLO_TEST_PACK_ROOT,
     formulaRoot: DEFAULT_SOLO_TEST_FORMULA_ROOT,
     personaDir: undefined,
-    packVersion: packageVersion(),
+    packVersion: resolvePersonaPackVersion(REPO_ROOT),
   };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];

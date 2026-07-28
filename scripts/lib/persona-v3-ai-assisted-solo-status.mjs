@@ -28,6 +28,7 @@ import {
 } from "../../mcp/lib/personas-v3/ai-source-pre-review.mjs";
 import { assessErrorNeff } from "../../mcp/lib/personas-v3/n-eff.mjs";
 import { inspectPersonaV3SoloTestPacks } from "./persona-v3-solo-test-packs.mjs";
+import { resolvePersonaPackVersion } from "./build-profile.mjs";
 import {
   AI_MACHINE_SIMULATION_RUN_IDS,
   verifyAIMachineSimulationTree,
@@ -775,12 +776,11 @@ export function inspectAiAssistedSoloStatus(options = {}) {
 
   let packReport = null;
   try {
-    const packageVersion = physicalJson(resolve(repoRoot, "package.json"), "package metadata").value.version;
     const packOptions = Object.fromEntries(Object.entries({
       root: options.packRoot || paths.solo_pack_root,
       formulaRoot: options.formulaRoot,
       personaDir: options.personaDir,
-      packVersion: options.packVersion || packageVersion,
+      packVersion: options.packVersion || resolvePersonaPackVersion(repoRoot),
     }).filter(([, value]) => value !== undefined));
     packReport = inspectPersonaV3SoloTestPacks(packOptions);
   } catch (error) { integrityErrors.push(`solo packs: ${error.message}`); }

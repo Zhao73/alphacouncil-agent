@@ -8,6 +8,7 @@ import { sha256 } from "./personas-v3/canonical.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
+import { isFundOrIndex } from "./instruments.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 
@@ -72,10 +73,10 @@ export function renderMasterMarkdown(opinion, lang) {
   if (!opinion) return "";
   const title = masterTitle(opinion.master, lang);
   const labels = {
-    zh: { statement: "本轮专属方法席发言（不是大师本人引语）", stance: "立场", verdict: "冻结判断", confidence: "置信度", worker: "专属 worker", summary: "方法席说明", findings: "关键发现", disagreements: "与分析师的分歧", disqualifiers: "触发的排除条件", change: "改变判断所需证据", sources: "来源" },
-    en: { statement: "Dedicated Method-Seat Statement (not a quote from the named person)", stance: "Stance", verdict: "Frozen verdict", confidence: "Confidence", worker: "Dedicated worker", summary: "Method-seat explanation", findings: "Key Findings", disagreements: "Disagreements With The Analysts", disqualifiers: "Disqualifiers Triggered", change: "What Would Change The View", sources: "Sources" },
-    ja: { statement: "専用メソッド席の発言（本人の発言・引用ではありません）", stance: "スタンス", verdict: "凍結済み判定", confidence: "信頼度", worker: "専用ワーカー", summary: "メソッド席の説明", findings: "主な所見", disagreements: "分析担当との相違", disqualifiers: "発動した除外条件", change: "判断が変わる条件", sources: "出典" },
-    ko: { statement: "전용 방법론 좌석 발언(본인의 실제 발언이나 인용이 아님)", stance: "입장", verdict: "동결된 판단", confidence: "신뢰도", worker: "전용 워커", summary: "방법론 좌석 설명", findings: "핵심 발견", disagreements: "분석가와의 이견", disqualifiers: "발동된 제외 조건", change: "판단 변경 조건", sources: "출처" },
+    zh: { statement: "本轮方法席终局陈词（不是大师本人引语）", stance: "立场", verdict: "冻结判断", confidence: "置信度", worker: "陈词来源", summary: "方法席说明", findings: "关键发现", disagreements: "与分析师的分歧", disqualifiers: "触发的排除条件", change: "改变判断所需证据", sources: "来源" },
+    en: { statement: "Final Method-Seat Statement (not a quote from the named person)", stance: "Stance", verdict: "Frozen verdict", confidence: "Confidence", worker: "Statement source", summary: "Method-seat explanation", findings: "Key Findings", disagreements: "Disagreements With The Analysts", disqualifiers: "Disqualifiers Triggered", change: "What Would Change The View", sources: "Sources" },
+    ja: { statement: "メソッド席の最終見解（本人の発言・引用ではありません）", stance: "スタンス", verdict: "凍結済み判定", confidence: "信頼度", worker: "見解の生成元", summary: "メソッド席の説明", findings: "主な所見", disagreements: "分析担当との相違", disqualifiers: "発動した除外条件", change: "判断が変わる条件", sources: "出典" },
+    ko: { statement: "방법론 좌석 최종 발언(본인의 실제 발언이나 인용이 아님)", stance: "입장", verdict: "동결된 판단", confidence: "신뢰도", worker: "발언 출처", summary: "방법론 좌석 설명", findings: "핵심 발견", disagreements: "분석가와의 이견", disqualifiers: "발동된 제외 조건", change: "판단 변경 조건", sources: "출처" },
   }[languageKey(lang)];
   return [
     `## ${title}`,
@@ -123,7 +124,7 @@ function renderMasterStatements(run) {
   const items = voiced.map((opinion) => [
     `### ${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`)`,
     `- ${key === "zh" ? "立场" : key === "ja" ? "スタンス" : key === "ko" ? "입장" : "Stance"}: ${opinion.stance || "unknown"}`,
-    `- ${key === "zh" ? "专属 worker" : key === "ja" ? "専用ワーカー" : key === "ko" ? "전용 워커" : "Dedicated worker"}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}`,
+    `- ${key === "zh" ? "陈词来源" : key === "ja" ? "見解の生成元" : key === "ko" ? "발언 출처" : "Statement source"}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}`,
     `- ${statementLabel}: ${opinion.voice_statement || opinion.verdict || opinion.summary || ""}`,
     `- ${findingsLabel}: ${(opinion.key_findings || []).slice(0, 4).join("；") || "—"}`,
     `- ${disagreementsLabel}: ${(opinion.disagreements || []).slice(0, 3).join("；") || "—"}`,
@@ -272,10 +273,10 @@ function masterTitle(id, lang) {
   try {
     const v3 = compiledPersonaPacks().get(id);
     const v3Title = v3?.admitted_label?.[languageKey(lang)];
-    if (v3Title) return `${v3Title} (${id})`;
+    if (v3Title) return v3Title;
     const persona = registry().get(id);
     const title = personaTitle(persona, lang);
-    return title && title !== id ? `${title} (${id})` : id;
+    return title && title !== id ? title : id;
   } catch {
     return id;
   }
@@ -470,6 +471,7 @@ export function writeReportQuality(run, markdown) {
 }
 
 const RECORDED_BENCH_MARKER_PREFIX = "alphacouncil:recorded-master-bench:v1:";
+const RECORDED_INSTRUMENT_MARKER_PREFIX = "alphacouncil:recorded-instrument-structure:v1:";
 
 function recordedBenchMarker(run) {
   const subject = (run?.master_opinions || []).map((opinion) => ({
@@ -488,6 +490,91 @@ function isMasterBenchHeading(title) {
   const normalized = normalizeHeading(title);
   const section = REPORT_SECTIONS.find(({ id }) => id === "master_bench");
   return Boolean(normalized && section?.aliases.some((alias) => headingIncludesAlias(title, alias)));
+}
+
+function isInstrumentStructureHeading(title) {
+  const normalized = normalizeHeading(title);
+  const section = REPORT_SECTIONS.find(({ id }) => id === "instrument_structure");
+  return Boolean(normalized && section?.aliases.some((alias) => headingIncludesAlias(title, alias)));
+}
+
+/**
+ * Own the ETF/index structure section at the deterministic system boundary.
+ *
+ * PM prose may discuss a fund, but it cannot turn a fund into an operating company. The
+ * classifier owns the research route and any PM-authored section is retained as commentary.
+ */
+function withRecordedInstrumentStructure(run, markdown) {
+  const instrument = run?.grounding?.instrument;
+  if (!isFundOrIndex(instrument)) return String(markdown || "");
+  const body = String(markdown || "");
+  const lines = body.split(/\r?\n/);
+  const headings = parseHeadings(body);
+  const removals = [];
+  const commentaryTitle = localized(run.language, {
+    zh: "PM 对资产研究路径的叙述（非系统记录）",
+    en: "PM Commentary on the Instrument Research Path (non-authoritative)",
+    ja: "PMによる銘柄調査経路の説明（非公式記録）",
+    ko: "PM의 종목 조사 경로 설명(비공식 기록)",
+  });
+  for (const [index, heading] of headings.entries()) {
+    if (heading.level > 2 || !isInstrumentStructureHeading(heading.title)) continue;
+    const next = headings.slice(index + 1).find((candidate) => candidate.level <= heading.level);
+    const start = heading.line - 1;
+    const end = next ? next.line - 1 : lines.length;
+    if (heading.body.includes(`<!-- ${RECORDED_INSTRUMENT_MARKER_PREFIX}`)) removals.push([start, end]);
+    else lines[start] = `${"#".repeat(heading.level)} ${commentaryTitle}`;
+  }
+  for (const [start, end] of removals.sort((left, right) => right[0] - left[0])) {
+    lines.splice(start, end - start);
+  }
+
+  const copy = {
+    zh: {
+      heading: "## 基金与指数结构", asset: "资产类型", model: "研究模型", source: "分类依据", raw: "数据源原始类型", company: "经营公司财务路径", noCompany: "不适用；不得把基金或指数当作经营公司读取营收、公司 EPS、管理层指引或 Form 4", required: "强制研究项目", requirements: instrument.index_like
+        ? "指数方法、带时点的成分与权重、集中度、行业/因子暴露、广度、再平衡、聚合盈利与估值口径、宏观敏感度，以及可用的衍生品定位"
+        : "跟踪指数与方法、带时点的持仓和权重、前十大及行业集中度、费用率、规模、流动性、溢折价或跟踪差、资金流、借贷/衍生品、再平衡、税务结构与持仓穿透基本面",
+      aggregation: "聚合纪律", aggregationRule: "必须披露同日口径和覆盖权重；不得把少数成分股相加成基金或指数自身的营收、EPS或现金流", notApplicable: "明确不适用项",
+    },
+    en: {
+      heading: "## Fund and Index Structure", asset: "Asset type", model: "Research model", source: "Classification source", raw: "Raw feed type", company: "Operating-company financial route", noCompany: "not applicable; do not treat a fund or index as a company with its own revenue, company EPS, management guidance or Form 4 activity", required: "Required research", requirements: instrument.index_like
+        ? "index methodology, dated constituents and weights, concentration, sector/factor exposures, breadth, rebalances, aggregate earnings and valuation methodology, macro sensitivity, and listed-derivative positioning when available"
+        : "tracked index and methodology, dated holdings and weights, top-ten and sector concentration, fee, AUM, liquidity, premium/discount or tracking difference, flows, lending/derivatives, rebalances, tax structure, and holdings-level fundamental look-through",
+      aggregation: "Aggregation discipline", aggregationRule: "state one-date methodology and coverage weight; never add a few constituents into fund or index revenue, EPS, or cash flow", notApplicable: "Explicitly not applicable",
+    },
+    ja: {
+      heading: "## ファンドと指数の構造", asset: "資産タイプ", model: "調査モデル", source: "分類根拠", raw: "データ源の原分類", company: "事業会社の財務経路", noCompany: "適用外。ファンドや指数を、固有の売上高・企業EPS・経営陣ガイダンス・Form 4を持つ事業会社として扱わない", required: "必須調査項目", requirements: instrument.index_like
+        ? "指数算出方法、基準日付き構成銘柄とウェイト、集中度、業種・ファクター、ブレッドス、リバランス、集計利益・評価方法、マクロ感応度、利用可能なデリバティブ需給"
+        : "連動指数と方法、基準日付き保有銘柄とウェイト、上位10銘柄・業種集中度、経費率、純資産、流動性、乖離・トラッキング差、資金フロー、貸株・デリバティブ、リバランス、税制、保有銘柄ルックスルー",
+      aggregation: "集計規律", aggregationRule: "同一基準日の方法とカバーウェイトを明記し、一部構成銘柄を足してファンド・指数固有の売上高、EPS、CFにしない", notApplicable: "明示的な適用外項目",
+    },
+    ko: {
+      heading: "## 펀드와 지수 구조", asset: "자산 유형", model: "조사 모델", source: "분류 근거", raw: "데이터 소스 원본 유형", company: "영업회사 재무 경로", noCompany: "적용되지 않음. 펀드나 지수를 자체 매출, 기업 EPS, 경영진 가이던스 또는 Form 4가 있는 영업회사로 취급하지 않음", required: "필수 조사 항목", requirements: instrument.index_like
+        ? "지수 방법론, 기준일이 있는 구성 종목과 비중, 집중도, 섹터·팩터 노출, 시장 폭, 리밸런싱, 집계 이익·밸류에이션 방법, 거시 민감도 및 가능한 파생상품 포지셔닝"
+        : "추종 지수와 방법론, 기준일이 있는 보유 종목과 비중, 상위 10개·섹터 집중도, 보수, AUM, 유동성, 괴리율·추적 차이, 자금 흐름, 대차·파생상품, 리밸런싱, 세금 구조 및 보유 종목 룩스루",
+      aggregation: "집계 원칙", aggregationRule: "동일 기준일 방법론과 커버 비중을 밝히며 일부 구성 종목을 더해 펀드·지수 자체 매출, EPS 또는 현금흐름으로 만들지 않음", notApplicable: "명시적 적용 제외",
+    },
+  }[languageKey(run.language)];
+  const notApplicable = (run?.grounding?.not_applicable || []).length
+    ? run.grounding.not_applicable.map((item) => `  - ${item}`).join("\n")
+    : "  - —";
+  const marker = `<!-- ${RECORDED_INSTRUMENT_MARKER_PREFIX}${sha256({ instrument, not_applicable: run?.grounding?.not_applicable || [] })} -->`;
+  const systemSection = [
+    copy.heading,
+    "",
+    marker,
+    `- ${copy.asset}: ${instrument.asset_type}`,
+    `- ${copy.model}: ${instrument.research_model}`,
+    `- ${copy.source}: ${instrument.classification_source}`,
+    `- ${copy.raw}: ${instrument.raw_instrument_type || "unknown"}`,
+    `- ${copy.company}: ${copy.noCompany}`,
+    `- ${copy.required}: ${copy.requirements}`,
+    `- ${copy.aggregation}: ${copy.aggregationRule}`,
+    `- ${copy.notApplicable}:`,
+    notApplicable,
+  ].join("\n");
+  const cleaned = lines.join("\n").trimEnd();
+  return `${cleaned ? `${cleaned}\n\n` : ""}${systemSection}\n`;
 }
 
 /**
@@ -641,9 +728,12 @@ function withQuickScope(run, markdown) {
 export function finalReportMarkdown(run, manager) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
-  const reportBody = withRecordedPriceSnapshot(
+  const reportBody = withRecordedMasterBench(
     run,
-    withRecordedMasterBench(run, manager.report_markdown || manager.summary),
+    withRecordedInstrumentStructure(
+      run,
+      withRecordedPriceSnapshot(run, manager.report_markdown || manager.summary),
+    ),
   );
   return withDisclaimer(
     withCompletenessBanner(
@@ -886,21 +976,21 @@ function handoffCopy(language) {
   return {
     zh: {
       title: "AlphaCouncil 运行摘要", status: "运行状态与时限", statusLabel: "状态", contract: "报告契约", scope: "执行范围", elapsed: "耗时", deadline: "硬截止时间", deadlineMet: "是否在截止前落盘",
-      fullScope: "full_v2：8 个证据席、每个已选方法席的专属 worker、三轮多空交叉问答和 PM；插件托管运行硬上限 30 分钟。", quickScope: "quick_v1：4 个证据席、1–4 个方法席、单轮多空和短 PM；不等同 full council。",
-      price: "系统记录价格", noPrice: "未取得可验证报价；没有补造价格。", delayed: "延迟行情", conclusion: "结论", rating: "评级", winner: "多空胜负", confidence: "置信度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW；工具或 PM 失败不能转换成投资评级。",
-      masters: "逐席大神方法输出（不是本人引语）", analysts: "分析师逐席内容", worker: "专属代理", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
+      fullScope: "full_v2：8 个证据席、全部已选方法席的可审计终局陈词、三轮多空交叉问答和 PM；插件托管运行硬上限 30 分钟。", quickScope: "quick_v1：4 个证据席、1–4 个方法席、单轮多空和短 PM；不等同 full council。",
+      price: "系统记录价格", noPrice: "未取得可验证报价；没有补造价格。", delayed: "延迟行情", instrument: "资产识别与研究路径", assetType: "资产类型", researchModel: "研究模型", classifiedBy: "识别来源", conclusion: "结论", rating: "评级", winner: "多空胜负", confidence: "置信度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW；工具或 PM 失败不能转换成投资评级。",
+      masters: "结尾：逐席方法陈词（不是本人引语）", analysts: "分析师逐席内容", worker: "陈词来源", record: "冻结记录", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
     },
     en: {
       title: "AlphaCouncil Run Summary", status: "Run Status and Deadline", statusLabel: "Status", contract: "Report contract", scope: "Execution scope", elapsed: "Elapsed", deadline: "Hard deadline", deadlineMet: "Persisted before deadline",
-      fullScope: "full_v2: eight evidence seats, one dedicated worker per selected method, three-round cross-examination and PM; plugin-managed runs have a hard thirty-minute ceiling.", quickScope: "quick_v1: four evidence seats, one to four method seats, one debate round and short PM; not equivalent to full council.",
-      price: "System-Recorded Price", noPrice: "No verifiable quote was retrieved; no price was invented.", delayed: "delayed quote", conclusion: "Conclusion", rating: "Rating", winner: "Debate winner", confidence: "Confidence", judgment: "Judgment", noDecision: "NEEDS_MANAGER_REVIEW; a tool or PM failure cannot be converted into an investment rating.",
-      masters: "Recorded Method-Seat Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", worker: "dedicated worker", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
+      fullScope: "full_v2: eight evidence seats, an auditable final statement for every selected method seat, three-round cross-examination and PM; plugin-managed runs have a hard thirty-minute ceiling.", quickScope: "quick_v1: four evidence seats, one to four method seats, one debate round and short PM; not equivalent to full council.",
+      price: "System-Recorded Price", noPrice: "No verifiable quote was retrieved; no price was invented.", delayed: "delayed quote", instrument: "Instrument Classification and Research Path", assetType: "Asset type", researchModel: "Research model", classifiedBy: "Classified by", conclusion: "Conclusion", rating: "Rating", winner: "Debate winner", confidence: "Confidence", judgment: "Judgment", noDecision: "NEEDS_MANAGER_REVIEW; a tool or PM failure cannot be converted into an investment rating.",
+      masters: "Final Per-Seat Method Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", worker: "statement source", record: "Frozen record", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
     },
     ja: {
-      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: "full_v2：8つの証拠席、選択した各メソッド専用ワーカー、3ラウンドの多空質疑、PM。プラグイン管理実行は30分で必ず終端状態になります。", quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "メソッド席ごとの記録（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "専用ワーカー", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", index: "代理成果物一覧", trace: "全代理トレース", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
+      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: "full_v2：8つの証拠席、選択された全メソッド席の監査可能な最終見解、3ラウンドの多空質疑、PM。プラグイン管理実行は30分で必ず終端状態になります。", quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", instrument: "銘柄分類と調査経路", assetType: "資産タイプ", researchModel: "調査モデル", classifiedBy: "分類根拠", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "最後：メソッド席ごとの最終見解（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "見解の生成元", record: "凍結済み記録", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", index: "代理成果物一覧", trace: "全代理トレース", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
     },
     ko: {
-      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: "full_v2: 8개 증거 좌석, 선택된 각 방법론 전용 워커, 3라운드 롱/숏 질의응답, PM. 플러그인 관리 실행은 30분 안에 반드시 종단 상태가 됩니다.", quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "방법론 좌석별 기록(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "전용 워커", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
+      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: "full_v2: 8개 증거 좌석, 선택된 모든 방법론 좌석의 감사 가능한 최종 발언, 3라운드 롱/숏 질의응답, PM. 플러그인 관리 실행은 30분 안에 반드시 종단 상태가 됩니다.", quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", instrument: "종목 분류 및 조사 경로", assetType: "자산 유형", researchModel: "조사 모델", classifiedBy: "분류 근거", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "마지막: 방법론 좌석별 최종 발언(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "발언 출처", record: "동결 기록", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
     },
   }[languageKey(language)];
 }
@@ -948,10 +1038,10 @@ function localizedDisplayValue(value, language) {
   const key = languageKey(language);
   const token = value === true ? "true" : value === false ? "false" : String(value || "unknown");
   const maps = {
-    zh: { unknown: "未知", unavailable: "不可用", true: "是", false: "否", pending: "待运行", running: "运行中", waiting: "等待中", completed: "已完成", complete: "完整", failed: "失败", degraded: "降级", incomplete: "不完整", skipped: "未运行", declined: "不适用", constructive: "建设性", cautious: "谨慎", opposed: "反对", out_of_scope: "证据范围外", high: "高", medium: "中", low: "低", Buy: "买入", Overweight: "增持", Hold: "持有", Underweight: "减持", Sell: "卖出", bull: "多方", bear: "空方", balanced: "平衡" },
-    en: { unknown: "unknown", unavailable: "unavailable", true: "yes", false: "no" },
-    ja: { unknown: "不明", unavailable: "取得不可", true: "はい", false: "いいえ", pending: "待機中", running: "実行中", waiting: "待機中", completed: "完了", complete: "完了", failed: "失敗", degraded: "縮退", incomplete: "不完全", skipped: "未実行", declined: "適用外", constructive: "前向き", cautious: "慎重", opposed: "反対", out_of_scope: "証拠範囲外", high: "高", medium: "中", low: "低", Buy: "買い", Overweight: "オーバーウェイト", Hold: "中立", Underweight: "アンダーウェイト", Sell: "売り", bull: "強気", bear: "弱気", balanced: "均衡" },
-    ko: { unknown: "알 수 없음", unavailable: "확인 불가", true: "예", false: "아니요", pending: "대기 중", running: "실행 중", waiting: "대기 중", completed: "완료", complete: "완료", failed: "실패", degraded: "성능 저하", incomplete: "불완전", skipped: "미실행", declined: "적용 범위 밖", constructive: "긍정적", cautious: "신중", opposed: "반대", out_of_scope: "증거 범위 밖", high: "높음", medium: "중간", low: "낮음", Buy: "매수", Overweight: "비중 확대", Hold: "보유", Underweight: "비중 축소", Sell: "매도", bull: "강세", bear: "약세", balanced: "균형" },
+    zh: { unknown: "未知", unavailable: "不可用", true: "是", false: "否", pending: "待运行", running: "运行中", waiting: "等待中", completed: "已完成", complete: "完整", failed: "失败", degraded: "降级", incomplete: "不完整", skipped: "未运行", declined: "不适用", constructive: "建设性", cautious: "谨慎", opposed: "反对", out_of_scope: "证据范围外", deterministic_fallback: "确定性方法规则", completed_worker: "隔离方法席代理", recorded: "已记录", high: "高", medium: "中", low: "低", Buy: "买入", Overweight: "增持", Hold: "持有", Underweight: "减持", Sell: "卖出", bull: "多方", bear: "空方", balanced: "平衡" },
+    en: { unknown: "unknown", unavailable: "unavailable", true: "yes", false: "no", deterministic_fallback: "deterministic method policy", completed_worker: "isolated method-seat worker", recorded: "recorded" },
+    ja: { unknown: "不明", unavailable: "取得不可", true: "はい", false: "いいえ", pending: "待機中", running: "実行中", waiting: "待機中", completed: "完了", complete: "完了", failed: "失敗", degraded: "縮退", incomplete: "不完全", skipped: "未実行", declined: "適用外", constructive: "前向き", cautious: "慎重", opposed: "反対", out_of_scope: "証拠範囲外", deterministic_fallback: "決定論的メソッド規則", completed_worker: "分離メソッド席ワーカー", recorded: "記録済み", high: "高", medium: "中", low: "低", Buy: "買い", Overweight: "オーバーウェイト", Hold: "中立", Underweight: "アンダーウェイト", Sell: "売り", bull: "強気", bear: "弱気", balanced: "均衡" },
+    ko: { unknown: "알 수 없음", unavailable: "확인 불가", true: "예", false: "아니요", pending: "대기 중", running: "실행 중", waiting: "대기 중", completed: "완료", complete: "완료", failed: "실패", degraded: "성능 저하", incomplete: "불완전", skipped: "미실행", declined: "적용 범위 밖", constructive: "긍정적", cautious: "신중", opposed: "반대", out_of_scope: "증거 범위 밖", deterministic_fallback: "결정론적 방법 규칙", completed_worker: "격리 방법론 좌석 워커", recorded: "기록됨", high: "높음", medium: "중간", low: "낮음", Buy: "매수", Overweight: "비중 확대", Hold: "보유", Underweight: "비중 축소", Sell: "매도", bull: "강세", bear: "약세", balanced: "균형" },
   };
   return maps[key]?.[token] || token;
 }
@@ -969,7 +1059,9 @@ export function userResponseMarkdown(run, manager) {
     const opinion = (run.master_opinions || []).find((item) => item.master === id);
     const state = run.master_status?.[id] || { status: "pending" };
     if (!opinion) return `- ${masterTitle(id, run.language)} (\`${id}\`) [${localizedDisplayValue(state.status, run.language)}]: ${localizedFailure(state.error, run.language) || copy.missing}`;
-    return `- ${masterTitle(id, run.language)} (\`${id}\`) [${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}=${localizedDisplayValue(opinion.dedicated_worker?.status || opinion.voice_status || "unknown", run.language)}]: ${clipAtBoundary(opinion.voice_statement || opinion.summary || opinion.verdict, 520)}`;
+    const statementSource = opinion.dedicated_worker?.status || opinion.voice_status || "unknown";
+    const frozenRecord = opinion.statement_origin || opinion.reason || opinion.engine || "recorded";
+    return `- ${masterTitle(id, run.language)} (\`${id}\`) — ${clipAtBoundary(opinion.voice_statement || opinion.summary || opinion.verdict, 520)} [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${frozenRecord}]`;
   }).join("\n") || `- ${copy.missing}`;
   const analystLines = (run.tasks || []).map((task) => {
     const packet = (run.packets || []).find((item) => item.task === task);
@@ -1003,14 +1095,16 @@ export function userResponseMarkdown(run, manager) {
     `## ${copy.price}`,
     `- ${priceLine}`,
     "",
+    `## ${copy.instrument}`,
+    `- ${copy.assetType}: ${run?.grounding?.instrument?.asset_type || localizedDisplayValue("unknown", run.language)}`,
+    `- ${copy.researchModel}: ${run?.grounding?.instrument?.research_model || localizedDisplayValue("unknown", run.language)}`,
+    `- ${copy.classifiedBy}: ${run?.grounding?.instrument?.classification_source || localizedDisplayValue("unknown", run.language)}`,
+    "",
     `## ${copy.conclusion}`,
     `- ${copy.rating}: ${localizedDisplayValue(decisionAvailable ? manager.rating : "unavailable", run.language)}`,
     `- ${copy.winner}: ${localizedDisplayValue(decisionAvailable ? (manager.winner || "unknown") : "unavailable", run.language)}`,
     `- ${copy.confidence}: ${localizedDisplayValue(decisionAvailable ? (manager.confidence || "low") : "unavailable", run.language)}`,
     `- ${copy.judgment}: ${decisionAvailable ? clipAtBoundary(manager.verdict || manager.summary, 720) : copy.noDecision}`,
-    "",
-    `## ${copy.masters}`,
-    masterLines,
     "",
     `## ${copy.analysts}`,
     analystLines,
@@ -1038,6 +1132,9 @@ export function userResponseMarkdown(run, manager) {
     `- ${copy.index}: ${artifacts.artifact_index_md}`,
     `- ${copy.trace}: ${artifacts.all_agents_md}`,
     `- ${copy.quality}: ${artifacts.report_quality_json}`,
+    "",
+    `## ${copy.masters} — ${(run.masters || []).length}`,
+    masterLines,
   ].join("\n");
 }
 

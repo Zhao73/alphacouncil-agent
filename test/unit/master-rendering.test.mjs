@@ -14,6 +14,8 @@ const opinion = (over = {}) => ({
   stance: "avoid",
   verdict: "outside the circle of competence",
   summary: "Ten-year quality metrics are uncomputable for this filer.",
+  voice_statement: "Ten-year quality metrics are uncomputable for this filer, so this method withholds a directional view.",
+  voice_status: "deterministic_fallback",
   key_findings: ["0/7 mechanical rules computable", "GAAP net income near zero"],
   disagreements: ["sell-side treats backlog as revenue"],
   disqualifiers_triggered: ["no durable advantage identifiable ten years out"],
@@ -116,8 +118,66 @@ test("final report assembly restores a missing master bench from recorded opinio
   const markdown = finalReportMarkdown(run, { report_markdown: reportWithout("master_bench") });
   const quality = validateFinalReport(markdown, run);
   assert.equal(quality.sections.find((section) => section.id === "master_bench")?.status, "ok");
+  assert.equal(quality.method_statement_coverage.status, "passed", quality.missing.join("; "));
   assert.match(markdown, /## 大师席位/);
   assert.match(markdown, /out_of_scope/);
+});
+
+test("report quality fails when a selected method has no readable final statement", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett"],
+    master_opinions: [opinion({ voice_statement: "" })],
+    tasks: [],
+    packets: [],
+  };
+  const markdown = finalReportMarkdown(run, { report_markdown: reportWithout("master_bench") });
+  const quality = validateFinalReport(markdown, run);
+  assert.equal(quality.method_statement_coverage.status, "failed");
+  assert.ok(quality.missing.includes("missing readable method-seat statement: master_buffett"));
+});
+
+test("report quality requires every selected stable ID inside the published Master Bench", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett"],
+    master_opinions: [opinion()],
+    tasks: [],
+    packets: [],
+  };
+  const quality = validateFinalReport(reportWithout(null), run);
+  assert.equal(quality.method_statement_coverage.status, "failed");
+  assert.ok(quality.missing.includes("method-seat statement not rendered in Master Bench: master_buffett"));
+});
+
+test("ETF final-report assembly owns an idempotent structure and look-through section", () => {
+  const run = {
+    language: "English",
+    grounding: {
+      instrument: {
+        asset_type: "etf",
+        research_model: "fund_lookthrough",
+        classification_source: "yahoo_chart_metadata",
+        raw_instrument_type: "ETF",
+        fund_like: true,
+        index_like: false,
+      },
+      not_applicable: ["operating-company SEC Company Facts screen: not applicable to etf"],
+    },
+    masters: [],
+    master_opinions: [],
+    tasks: [],
+    packets: [],
+  };
+  const once = finalReportMarkdown(run, { report_markdown: reportWithout("instrument_structure") });
+  const twice = finalReportMarkdown(run, { report_markdown: once });
+  assert.equal((twice.match(/alphacouncil:recorded-instrument-structure:v1:/g) || []).length, 1);
+  assert.match(twice, /## Fund and Index Structure/);
+  assert.match(twice, /Asset type: etf/);
+  assert.match(twice, /never add a few constituents into fund or index revenue, EPS, or cash flow/);
+  const quality = validateFinalReport(twice, run);
+  assert.equal(quality.sections.find((section) => section.id === "instrument_structure")?.status, "ok");
+  assert.equal(quality.status, "passed", quality.missing.join("; "));
 });
 
 function benchHeadings(markdown) {

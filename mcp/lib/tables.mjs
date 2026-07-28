@@ -93,6 +93,12 @@ export function groundingDashboard(g, language = "English") {
   out.push(`# ${t("Research dashboard", "研究总览")}${g.quote?.symbol ? ` — ${g.quote.symbol}` : ""}`);
 
   const facts = [];
+  if (g.instrument) facts.push([
+    t("Instrument", "资产类型"),
+    g.instrument.asset_type,
+    g.instrument.research_model,
+    g.instrument.classification_source,
+  ]);
   if (g.filer) facts.push([t("Filer", "主体"), `${g.filer.name} (SIC ${g.filer.sic ?? "?"})`, g.filer.sic_description ?? "-", "SEC"]);
   if (g.quote) {
     facts.push([t("Quote", "行情"), `${g.quote.price}${g.quote.currency ? " " + g.quote.currency : ""}`,
@@ -144,6 +150,11 @@ export function groundingDashboard(g, language = "English") {
   if (g.unavailable?.length) {
     out.push("", `**${t("Data gaps — do not fill these from memory", "数据缺口 — 禁止用记忆填补")}**`, "",
       ...g.unavailable.map((u) => `- ${u}`));
+  }
+
+  if (g.not_applicable?.length) {
+    out.push("", `**${t("Not applicable for this instrument", "本资产不适用项")}**`, "",
+      ...g.not_applicable.map((item) => `- ${item}`));
   }
 
   return out.join("\n");

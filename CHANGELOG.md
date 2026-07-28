@@ -2,6 +2,38 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.5] — 2026-07-28
+
+### Fixed
+
+- Preserved Yahoo instrument metadata and classified operating companies, ETFs, mutual
+  funds, cash indices and other market instruments before choosing a research route.
+  SEC ticker/registrant names provide a fallback when quote metadata is unavailable.
+- Stopped ETF/fund/index runs from invoking operating-company Company Facts or structured
+  issuer financials. Those routes are now explicit `not_applicable` records rather than
+  false research failures.
+- Added role-specific ETF/index assignments for all eight evidence seats and a system-owned
+  fund/index report section covering methodology, dated holdings/weights, concentration,
+  fees/rules, liquidity/tracking/flows and disciplined aggregate valuation.
+- Added readable deterministic statements for every completed or `out_of_scope` physical
+  v3 seat. The full handoff ends with the exact selected-seat count and one statement per
+  stable ID; an `all` selection therefore ends with all 26 method-seat statements.
+- Returned the saved handoff inline from visible portfolio-manager completion and replay
+  (`inline_user_response_v1`) so hosts do not replace it with an ACK-only recap.
+- Strengthened `report_quality` from a Master Bench heading check to per-selected-seat
+  readable and rendered statement coverage. Missing text or IDs now force
+  `needs_revision`.
+- Decoupled runtime package version from the unchanged PersonaPack snapshot. `0.9.5` keeps
+  `persona_pack_version=0.9.4`, preserving existing pack hashes and simulation evidence
+  instead of rerunning method validation for a routing-only release.
+
+### Acceptance boundary
+
+- Still `solo_test`, non-GA, `production_eligible=false`, `method_model_eligible=false`,
+  with 26 provisional `operator_lens` packs and zero approved method models.
+- This source change does not publish npm or mutate dist-tags. See
+  `docs/releases/v0.9.5.md` for the full routing and delivery contract.
+
 ## [0.9.4] — 2026-07-28
 
 ### Fixed

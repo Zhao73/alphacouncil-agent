@@ -181,6 +181,26 @@ test("a physical v3 seat with no typed facts declines and never reaches legacy p
   assert.match(korean.summary, /서술형 판단 계층은 호출하지 않았습니다/);
 });
 
+test("an ETF deterministic decline explains look-through instead of sounding bearish", () => {
+  const run = {
+    symbol: "QQQ",
+    as_of: AS_OF,
+    language: "中文",
+    grounding: {
+      instrument: {
+        asset_type: "etf",
+        research_model: "fund_lookthrough",
+        fund_like: true,
+      },
+    },
+  };
+  const plan = planMasterSeats(run, ["master_taleb"], { v3Registry: registry() });
+  const opinion = declinedMasterOpinion(run, plan.declined[0]);
+  assert.match(opinion.voice_statement, /QQQ 已识别为 etf/);
+  assert.match(opinion.voice_statement, /持仓穿透或指数聚合证据/);
+  assert.match(opinion.voice_statement, /这不是看空，也不是一张反对票/);
+});
+
 test("a ready v3 seat executes the deterministic DSL without entering the legacy planner", () => {
   const facts = buildFactPack([{
     schema_version: 1, fact_id: "options.skew", value_kind: "scalar", value: 0.33,

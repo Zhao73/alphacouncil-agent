@@ -56,6 +56,16 @@ before(async () => {
     tasks: ["market_data"],
     selection_receipt: productionSelectionReceipt,
   }));
+  for (const [targetServer, targetRunId] of [[server, runId], [productionServer, productionRunId]]) {
+    structured(await targetServer.callTool("record_visible_packet", {
+      run_id: targetRunId,
+      task: "market_data",
+      packet: {
+        summary: "The market-data fixture records sufficient English evidence for the visible method-stage barrier.",
+        claims: [], metrics: {}, sources: [], open_questions: [], confidence: "medium",
+      },
+    }));
+  }
 });
 
 after(async () => {
@@ -68,12 +78,13 @@ after(async () => {
 // 0700.HK is a Hong Kong listing, so the SEC screen computes nothing. Methods that need a
 // long-run financial series genuinely cannot evaluate it, and spawning an agent to write an
 // essay about numbers that do not exist is the waste this release removes. Every selected
-// seat is still accounted for: those that can look get an agent, those that cannot are
-// settled deterministically and recorded as out_of_scope.
-test("a roster accounts for every seat, by agent or by deterministic decline", () => {
+// seat is still accounted for: the deterministic decline freezes the stance and the
+// returned visible worker explains it without voting again.
+test("a roster returns one explanation agent and one frozen record for every v3 seat", () => {
   const spawned = plan.master_agents.map((a) => a.role);
   const declined = plan.masters_declined.map((d) => d.master);
-  assert.deepEqual([...spawned, ...declined].sort(), [...selectedMasters].sort());
+  assert.deepEqual(spawned.sort(), [...selectedMasters].sort());
+  assert.deepEqual(declined.sort(), [...selectedMasters].sort());
   assert.ok(declined.length > 0, "a HK filer with no computable screen must decline somewhere");
   for (const d of plan.masters_declined) {
     assert.equal(d.stance, "out_of_scope");
@@ -81,19 +92,26 @@ test("a roster accounts for every seat, by agent or by deterministic decline", (
   }
 });
 
-test("a declined seat costs no agent but still reports", () => {
+test("a declined v3 seat has a fallback record but waits for its visible explanation worker", () => {
   const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
   for (const { master } of plan.masters_declined) {
-    assert.ok(!plan.master_agents.some((a) => a.role === master), `${master} must not be spawned`);
+    const agent = plan.master_agents.find((candidate) => candidate.role === master);
+    assert.equal(agent?.worker_kind, "visible_method_voice");
+    assert.equal(agent?.frozen_stance, "out_of_scope");
     const opinion = (run.master_opinions || []).find((o) => o.master === master);
     assert.ok(opinion, `${master} must still be recorded or the completeness gate can never pass`);
     assert.equal(opinion.stance, "out_of_scope");
     assert.equal(opinion.engine, "v3_method_runtime");
+    assert.ok(opinion.voice_statement.length > 20);
+    assert.equal(run.master_status[master].status, "waiting");
+    assert.equal(run.master_status[master].voice_required, true);
   }
 });
 
-test("solo-test v3 seats never fall back to a legacy narrative master agent", () => {
-  assert.deepEqual(plan.master_agents, []);
+test("solo-test v3 seats use frozen explanation workers, never legacy judgment agents", () => {
+  assert.deepEqual(plan.master_agents.map((agent) => agent.role).sort(), [...selectedMasters].sort());
+  assert.ok(plan.master_agents.every((agent) => agent.engine === "v3_method_runtime"));
+  assert.ok(plan.master_agents.every((agent) => agent.worker_kind === "visible_method_voice"));
   assert.equal(plan.masters_declined.length, selectedMasters.length);
   assert.ok(plan.masters_declined.every((seat) => seat.engine === "v3_method_runtime"));
 });
@@ -188,7 +206,7 @@ test("stances a caller plausibly writes are mapped rather than discarded", async
 
 // A provisional v3 seat is settled only by its deterministic path. Narrative writes cannot
 // replace it, and an idempotent re-plan must retain the already recorded v3 opinion.
-test("legacy narrative writes are rejected while deterministic v3 opinions survive replanning", async () => {
+test("legacy narrative writes cannot replace a frozen v3 opinion", async () => {
   const legacyWrite = await server.callTool("record_master_opinion", {
     run_id: runId,
     master: "master_li_lu",
@@ -200,8 +218,8 @@ test("legacy narrative writes are rejected while deterministic v3 opinions survi
       confidence: "high",
     },
   });
-  assert.equal(legacyWrite.error?.code, RpcCode.INTERNAL_ERROR);
-  assert.match(legacyWrite.error?.message || "", /cannot be recorded through the legacy narrative opinion path/u);
+  assert.equal(legacyWrite.error?.code, RpcCode.INVALID_PARAMS);
+  assert.equal(legacyWrite.error?.data?.reason, "VISIBLE_MASTER_FROZEN_STANCE_MISMATCH");
   const replan = structured(await server.callTool("plan_visible_run", {
     symbol: "0700.HK",
     run_id: runId,
@@ -211,16 +229,43 @@ test("legacy narrative writes are rejected while deterministic v3 opinions survi
   // An idempotent re-plan returns the existing envelope; it must not erase opinions.
   const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
   assert.ok(Array.isArray(run.master_opinions));
-  assert.equal(replan.master_agents.length + replan.masters_declined.length, 4);
+  assert.deepEqual(replan.master_agents.map((agent) => agent.role).sort(), [...selectedMasters].sort());
+  assert.equal(replan.masters_declined.length, 4);
   assert.ok(run.master_opinions.some((opinion) => opinion.master === "master_li_lu"));
 });
 
-test("every selected master is frozen into the run and affects the completeness gate", () => {
+test("every returned v3 explanation worker is required by the completeness gate", async () => {
+  const beforeStatus = JSON.parse(readFileSync(join(runDir, "status.json"), "utf8"));
+  assert.equal(beforeStatus.missing_evidence_count, 0);
+  assert.equal(beforeStatus.missing_master_count, selectedMasters.length);
+  assert.deepEqual(beforeStatus.pending_masters.sort(), [...selectedMasters].sort());
+
+  for (const agent of plan.master_agents) {
+    const result = structured(await server.callTool("record_master_opinion", {
+      run_id: runId,
+      master: agent.role,
+      thread_id: `thread-${agent.role}`,
+      packet: {
+        master: agent.role,
+        acknowledged_stance: agent.frozen_stance,
+        statement: `The ${agent.role} visible explanation preserves its frozen stance and explains the missing method-critical evidence without manufacturing a vote.`,
+        key_findings: ["The deterministic typed-fact gate did not have the required method input."],
+        disagreements: [],
+        what_would_change_my_mind: ["Provide the missing fact from a dated primary source."],
+        source_ids: [],
+        confidence: "low",
+      },
+    }));
+    assert.equal(result.opinion.statement_origin, "visible_method_voice_worker");
+  }
+  const replan = structured(await server.callTool("plan_visible_run", {
+    symbol: "0700.HK", run_id: runId, tasks: ["market_data"], selection_receipt: selectionReceipt,
+  }));
+  assert.equal(replan.master_agents.length, 0, "completed visible voices must not be respawned on replay");
   const status = JSON.parse(readFileSync(join(runDir, "status.json"), "utf8"));
-  assert.equal(status.missing_evidence_count, 1);
   assert.equal(status.missing_debate_count, 3);
   assert.equal(status.selected_master_count, selectedMasters.length);
-  assert.equal(status.missing_master_count, 0, "the idempotent re-plan must preserve every recorded or declined seat");
+  assert.equal(status.missing_master_count, 0);
   assert.deepEqual(status.pending_masters, []);
   assert.equal(status.master_selection_status, "consumed");
 });

@@ -10,8 +10,8 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `0.9.4` is a non-GA GitHub prerelease. This acceptance release does
-not mutate npm dist-tags; verify npm independently before claiming `next` serves 0.9.4. Its
+Package/plugin version `0.9.5` is a non-GA GitHub preview. This source upgrade does
+not mutate npm dist-tags; verify npm independently before claiming `next` serves 0.9.5. Its
 build channel remains `solo_test`: 26 physical provisional
 PersonaPack v3 packs, 26 `operator_lens` seats, 52 `provisional_derived_proxy` tools,
 0 operational seats and 0 validated `method_model` seats. Do not present this feature
@@ -38,7 +38,10 @@ model transport deteriorates.
 
 This 30-minute enforcement belongs only to plugin-managed headless `analyze_symbol`. A
 visible-host full run is scheduled by the external host, so the plugin cannot force-stop its
-subagents or promise the same deadline. Do not advertise a visible run as SLA-bound.
+subagents or promise the same deadline. It still returns one post-evidence explanation
+worker per non-blocked selected physical v3 seat, including deterministic `out_of_scope`
+seats, and the PM waits for every returned worker. Do not advertise a visible run as
+SLA-bound.
 
 `quick` is explicit and uses `quick_v1`. It can run only through plugin-managed headless
 `analyze_symbol`; `plan_visible_run` rejects it. Quick launches the fixed four evidence roles
@@ -59,12 +62,24 @@ structure only; it does not turn degraded into complete or imply full-council eq
 Method-seat output is a recorded provisional lens result, never a quotation from the named
 person.
 
+Classify the instrument before choosing evidence routes. Operating companies may use SEC
+Company Facts or local structured issuer financials; ETFs and mutual funds use
+`fund_lookthrough`; cash indices use `index_aggregate`. Fund/index work must cover dated
+holdings or constituents and weights, methodology, concentration, fee or index rules,
+liquidity/tracking/flows and same-date aggregate valuation with disclosed coverage. Never
+create fund/index revenue, company EPS, management guidance, fund-insider Form 4 activity or
+portfolio financials made by adding a few constituents. Company-style data routes must be
+recorded as not applicable for funds and indices, not as research failures.
+
 Every terminal full handoff must show a system-owned price snapshot (price, currency,
 timestamp and source when available, otherwise an explicit unavailable-data record), every
-selected stable master ID with its frozen stance and isolated-worker explanation/status, and
-all eight mandatory analyst statuses and summaries. System-owned report/handoff prose is
-localized for `zh-CN`, `en`, `ja` and `ko`; workers receive the run language. Never present a
-method-seat explanation as the real person's current words, quote or endorsement.
+selected stable master ID with its frozen stance and readable explanation/status, and all
+eight mandatory analyst statuses and summaries. The handoff's final section carries the
+exact selected-seat count and one statement per selected ID. Visible PM completion returns
+`handoff_contract=inline_user_response_v1`; deliver its `user_response_markdown` instead of
+an ACK-only recap. System-owned report/handoff prose is localized for `zh-CN`, `en`, `ja`
+and `ko`; workers receive the run language. Never present a method-seat explanation as the
+real person's current words, quote or endorsement.
 
 ## Hosts
 

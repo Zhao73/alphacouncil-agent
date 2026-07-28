@@ -27,6 +27,8 @@ function quickRun(over = {}) {
     master_opinions: [{
       master: "master_buffett", stance: "out_of_scope", confidence: "low",
       verdict: "Recorded method could not judge the missing fact.",
+      voice_statement: "This recorded method could not judge the missing typed fact and therefore withheld a directional view.",
+      voice_status: "deterministic_fallback",
     }],
     packets: QUICK_TASKS.map((task) => ({
       task,

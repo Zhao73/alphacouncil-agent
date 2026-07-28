@@ -82,3 +82,20 @@ test("debate rounds make the Q&A dependency executable", async () => {
   assert.match(roundThree, new RegExp(JSON.stringify(asked).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(roundThree, new RegExp(JSON.stringify(received).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 });
+
+test("an ETF portfolio-manager prompt requires the fund structure section and aggregation discipline", async () => {
+  const { debatePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const prompt = debatePrompt("portfolio_manager", {
+    run_id: "QQQ-PM",
+    symbol: "QQQ",
+    as_of: "2026-07-28",
+    language: "English",
+    tasks: [], packets: [], masters: [], master_opinions: [],
+    grounding: {
+      instrument: { asset_type: "etf", research_model: "fund_lookthrough", fund_like: true },
+    },
+  });
+  assert.match(prompt, /## Fund and Index Structure/);
+  assert.match(prompt, /dated holdings\/constituent weights/);
+  assert.match(prompt, /never add a few constituents into portfolio financials/i);
+});

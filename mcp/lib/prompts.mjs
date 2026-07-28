@@ -1,10 +1,11 @@
 import { join } from "node:path";
-import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
+import { isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
 import { compactDebateContext, compactEvidence, compactMasterOpinions, compactQuickEvidence } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
 import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { groundingBlock } from "./grounding.mjs";
+import { isFundOrIndex } from "./instruments.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 
 /**
@@ -20,6 +21,73 @@ import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/
 function render(template, values) {
   return String(template || "").replace(/\{\{(\w+)\}\}/g, (match, key) =>
     (Object.prototype.hasOwnProperty.call(values, key) ? String(values[key] ?? "") : match));
+}
+
+function fundOrIndexTaskInstruction(task, instrument, language) {
+  if (!isFundOrIndex(instrument)) return "";
+  const type = instrument.asset_type || "fund_or_index";
+  const details = {
+    market_data: {
+      en: "Establish the tracked index or calculation methodology, holdings/constituent as-of date, weights, top-ten and sector concentration, fee or index rules, AUM where applicable, liquidity/spread, premium-discount or tracking difference, and dated flows. Separate missing fields.",
+      zh: "查清跟踪指数或计算方法、持仓/成分时点、权重、前十大和行业集中度、费率或指数规则、适用时的规模、流动性/点差、溢折价或跟踪差及带日期资金流；逐项列出缺失数据。",
+      ja: "連動指数または算出方法、保有銘柄・構成銘柄の基準日とウェイト、上位10銘柄・業種集中度、経費率または指数ルール、該当する純資産、流動性・スプレッド、乖離・トラッキング差、日付付き資金フローを確認し、欠落項目を分けて示す。",
+      ko: "추종 지수 또는 산출 방법, 보유·구성 종목 기준일과 비중, 상위 10개·섹터 집중도, 보수 또는 지수 규칙, 해당 시 AUM, 유동성·스프레드, 괴리율·추적 차이, 날짜가 있는 자금 흐름을 확인하고 누락 항목을 분리해 기록한다.",
+    },
+    earnings_deep_dive: {
+      en: "Perform holdings-level earnings look-through. State the covered portfolio weight and one-date aggregation method; keep issuer results separate. Never report fund/index revenue, EPS, cash flow, or an earnings call as though the instrument were an operating company.",
+      zh: "做持仓层盈利穿透，披露覆盖的组合权重与同日聚合方法，并分开记录各发行人结果。不得编造基金/指数自身营收、EPS、现金流或把成分公司电话会写成基金电话会。",
+      ja: "保有銘柄レベルの利益ルックスルーを行い、カバーしたポートフォリオウェイトと同一基準日の集計方法を示し、発行体ごとの結果を分離する。ファンド・指数固有の売上高、EPS、CF、決算説明会を作らない。",
+      ko: "보유 종목 수준 이익 룩스루를 수행하고 커버한 포트폴리오 비중과 동일 기준일 집계 방법을 밝히며 발행사 결과를 분리한다. 펀드·지수 자체 매출, EPS, 현금흐름 또는 실적 발표 콜을 만들지 않는다.",
+    },
+    forward_expectations: {
+      en: "Use weighted constituent or provider-published aggregate expectations with one date and a coverage percentage. Analyse top-constituent, sector, factor and macro expectation changes; never label a few issuer estimates as the fund's own guidance.",
+      zh: "只使用同一时点、披露覆盖权重的加权成分预期或指数提供方聚合预期；分析头部成分、行业、因子与宏观预期变化，不得把少数公司预测称为基金自身指引。",
+      ja: "同一基準日とカバーウェイトを示す加重構成銘柄予想または提供者公表の集計予想を使い、上位銘柄・業種・ファクター・マクロ予想の変化を分析する。一部発行体予想をファンド固有ガイダンスと呼ばない。",
+      ko: "동일 기준일과 커버 비중을 밝힌 가중 구성 종목 전망 또는 제공자 공개 집계 전망을 사용하고 상위 종목·섹터·팩터·거시 전망 변화를 분석한다. 일부 발행사 전망을 펀드 자체 가이던스로 부르지 않는다.",
+    },
+    quant_factor: {
+      en: "Measure total and relative return, breadth, factor/sector exposure, volatility, correlation, drawdown, tracking behaviour, liquidity and flows where available. Distinguish the tradable fund from the cash index and from any derivative proxy.",
+      zh: "衡量总收益与相对收益、市场广度、因子/行业暴露、波动、相关性、回撤、跟踪表现、流动性及可得的资金流；分开可交易基金、现金指数与衍生品代理。",
+      ja: "トータル・相対リターン、ブレッドス、ファクター・業種エクスポージャー、ボラティリティ、相関、ドローダウン、トラッキング、流動性、利用可能な資金フローを測り、上場ファンド、現物指数、デリバティブ代理を分ける。",
+      ko: "총수익·상대수익, 시장 폭, 팩터·섹터 노출, 변동성, 상관, 낙폭, 추적 성과, 유동성 및 가능한 자금 흐름을 측정하고 거래 펀드, 현물 지수, 파생상품 대용물을 구분한다.",
+    },
+    valuation_long_short: {
+      en: "Use same-date aggregate P/E, P/B, cash-flow yield or other portfolio metrics only with the provider/methodology and covered weight. Compare concentration and factor exposures. Never add a handful of constituent financial statements into portfolio financials.",
+      zh: "聚合 P/E、P/B、现金流收益率等组合指标必须同日、说明数据提供方/方法及覆盖权重，并比较集中度与因子暴露；不得把少数成分财报相加成组合财报。",
+      ja: "集計P/E、P/B、CF利回り等は同一基準日、提供者・方法、カバーウェイトを示し、集中度とファクターを比較する。一部構成銘柄の財務諸表を足してポートフォリオ財務にしない。",
+      ko: "집계 P/E, P/B, 현금흐름 수익률 등은 동일 기준일, 제공자·방법, 커버 비중을 밝히고 집중도와 팩터 노출을 비교한다. 일부 구성 종목 재무제표를 더해 포트폴리오 재무로 만들지 않는다.",
+    },
+    news_industry_management: {
+      en: "Cover sponsor and index-provider changes, methodology/rebalance notices, regulation and market-structure news, plus material dated news from top holdings and dominant sectors. Do not invent fund management guidance.",
+      zh: "覆盖基金管理人/指数提供方变化、方法与再平衡公告、监管和市场结构新闻，以及头部持仓和主导行业的重大带日期新闻；不得编造基金经营层指引。",
+      ja: "運用会社・指数提供者の変更、方法・リバランス通知、規制・市場構造ニュース、上位保有銘柄と主要業種の重要な日付付きニュースを扱い、ファンド経営ガイダンスを作らない。",
+      ko: "운용사·지수 제공자 변경, 방법론·리밸런싱 공지, 규제·시장 구조 뉴스와 상위 보유 종목·주요 섹터의 중요한 날짜가 있는 뉴스를 다루며 펀드 경영진 가이던스를 만들지 않는다.",
+    },
+    insider_sec: {
+      en: "Review applicable fund/index filings, prospectus and methodology changes, holdings reports, lending/derivative disclosures and sponsor conflicts. Constituent Form 4 filings are issuer activity, not fund insider trading.",
+      zh: "检查适用的基金/指数申报、招募说明书和方法变更、持仓报告、证券出借/衍生品披露及管理人冲突；成分股 Form 4 属于发行人活动，不是基金内部人交易。",
+      ja: "適用するファンド・指数届出、目論見書・方法変更、保有報告、貸株・デリバティブ開示、運用会社の利益相反を確認する。構成銘柄のForm 4は発行体の活動であり、ファンドの内部者取引ではない。",
+      ko: "적용 가능한 펀드·지수 신고, 투자설명서·방법론 변경, 보유 보고, 대차·파생상품 공시, 운용사 이해상충을 검토한다. 구성 종목 Form 4는 발행사 활동이지 펀드 내부자 거래가 아니다.",
+    },
+    ib_event_analysis: {
+      en: "Treat reconstitution, rebalances, methodology/provider changes, fee or sponsor changes, closures/mergers/splits and capital-market plumbing as instrument events. Constituent M&A matters only through explicit weight, replacement and flow effects.",
+      zh: "把指数重构/再平衡、方法或提供方变化、费率或管理人变化、清盘/合并/拆分及资本市场机制视为资产事件；成分股并购只通过明确的权重、替换与资金流影响纳入。",
+      ja: "入替・リバランス、方法・提供者変更、経費率・運用会社変更、償還・合併・分割、資本市場の仕組みを銘柄イベントとして扱う。構成銘柄M&Aは明示したウェイト、置換、フロー効果だけで反映する。",
+      ko: "지수 재구성·리밸런싱, 방법론·제공자 변경, 보수·운용사 변경, 청산·합병·분할 및 자본시장 구조를 종목 이벤트로 다룬다. 구성 종목 M&A는 명시한 비중·교체·자금 흐름 효과로만 반영한다.",
+    },
+  }[task];
+  const generic = {
+    en: "Use the fund/index research contract and record unavailable fields explicitly.",
+    zh: "使用基金/指数研究合同，并逐项记录不可得数据。",
+    ja: "ファンド・指数調査契約を使い、取得できない項目を明記する。",
+    ko: "펀드·지수 조사 계약을 사용하고 확보하지 못한 항목을 명시한다.",
+  };
+  return localized(language, {
+    en: `## ${type} task override\n${(details || generic).en}`,
+    zh: `## ${type} 专用任务改写\n${(details || generic).zh}`,
+    ja: `## ${type} 専用タスク\n${(details || generic).ja}`,
+    ko: `## ${type} 전용 작업\n${(details || generic).ko}`,
+  });
 }
 
 export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "auto", grounding = null) {
@@ -41,8 +109,9 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
 
   // Grounding goes AFTER the role brief: the analyst must know its job before it is told
   // which facts are already settled, or it reads them as the whole assignment.
+  const instrumentOverride = fundOrIndexTaskInstruction(task, grounding?.instrument, resolvedLanguage);
   const grounded = groundingBlock(grounding, resolvedLanguage);
-  return [`${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`, grounded].filter(Boolean).join("\n\n");
+  return [`${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`, instrumentOverride, grounded].filter(Boolean).join("\n\n");
 }
 
 export function debatePrompt(role, run, context = {}) {
@@ -83,6 +152,11 @@ export function debatePrompt(role, run, context = {}) {
           ? "这是快速委员会的唯一多空陈述轮。只给最有信息量的 4–6 条论点，使用已提供来源 ID，明确回应方法席分歧；不要生成第二/第三轮问题，也不要写长报告。"
           : "This is the quick council's only bull/bear statement round. Give only the 4-6 highest-information arguments, use supplied source IDs, and engage with method-seat disagreements. Do not create round-2/3 questions or a long report.")
     : "";
+  const instrumentReportInstruction = role === "portfolio_manager" && isFundOrIndex(run?.grounding?.instrument)
+    ? (chinese
+        ? "这是ETF、基金或大盘指数研究。报告必须新增真实 Markdown 标题 `## 基金与指数结构`，明确资产类型、跟踪方法、持仓/成分权重时点、集中度、费用或指数规则、流动性/溢折价/跟踪差/资金流（适用时）、聚合盈利与估值口径，以及每项未取得的数据。不得写基金或指数自身营收/EPS，也不得把少数成分股相加成组合财报。"
+        : "This is ETF, fund or broad-index research. Add a real Markdown heading `## Fund and Index Structure` covering asset type, tracking methodology, dated holdings/constituent weights, concentration, fee or index rules, liquidity/premium-discount/tracking difference/flows when applicable, aggregate earnings and valuation methodology, and every unavailable item. Do not invent fund/index revenue or EPS and never add a few constituents into portfolio financials.")
+    : "";
 
   return [
     // The original spread the preamble's lines as separate array elements, so they are
@@ -90,6 +164,7 @@ export function debatePrompt(role, run, context = {}) {
     ...base.split("\n"),
     roleText,
     quickInstruction,
+    instrumentReportInstruction,
     roundTwoInstruction,
     roundThreeInstruction,
     context.round ? `Debate round: ${context.round}` : "",

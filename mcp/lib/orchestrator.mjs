@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
@@ -290,9 +290,9 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     ].filter(Boolean).join("\n"),
     output_contract: localized(run.language, { en: `Return one JSON debate packet with reader-facing fields in ${run.language}.`, zh: "只返回一个 JSON debate packet。", ja: "読者向けフィールドを日本語にした JSON debate packet を1つだけ返してください。", ko: "독자용 필드를 한국어로 작성한 JSON debate packet 하나만 반환하십시오." }),
   }));
-  // The deterministic pass runs first and settles, for free, every seat whose method cannot
-  // reach this security. Spawning an agent for a lens that has already declined is how the
-  // previous design produced ten confident essays over a screen that computed nothing.
+  // The deterministic pass freezes every physical v3 stance before language generation.
+  // Visible v3 workers below may explain that frozen result after evidence completes, but
+  // cannot turn an out_of_scope method into a directional vote.
   const plan = planMasterSeats(run, selectedMasters(run));
   run.master_decisions = plan.decisions;
   run.fact_pack_hash = plan.shared_fact_pack_hash;
@@ -321,27 +321,39 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       ko: "독자용 필드를 한국어로 작성한 JSON master opinion 하나만 반환하십시오.",
     }),
   }));
-  // A declined seat is settled here rather than skipped: it is written straight into the
-  // run as an out_of_scope opinion, so the completeness gate is satisfied and no agent is
-  // ever spawned for a method that cannot look.
+  // Persist the deterministic fallback before the visible worker runs. It remains auditable
+  // if the host fails, but a full visible PM now waits for the returned explanation worker.
   if (plan.declined.length) {
     const byId = new Map((run.master_opinions || []).map((o) => [o.master, o]));
     for (const item of plan.declined) {
       if (!byId.has(item.id)) {
+        const fallback = declinedMasterOpinion(run, item);
         byId.set(item.id, attachMasterRuntimeProvenance(
           run,
           item.id,
-          declinedMasterOpinion(run, item),
+          {
+            ...fallback,
+            voice_statement: fallback.voice_statement || fallback.summary || fallback.verdict,
+            voice_status: fallback.voice_status || "deterministic_fallback",
+            statement_origin: fallback.statement_origin || "deterministic_scope_fallback",
+          },
           item.engine,
         ));
       }
+      const requiresVisibleVoice = item.engine === "v3_method_runtime";
+      const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
+        && byId.get(item.id)?.voice_status === "completed";
+      const completed = alreadyVoiced || !requiresVisibleVoice;
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
         master: item.id,
-        status: "completed",
+        status: completed ? "completed" : "waiting",
         engine: item.engine || "v2_method_model",
         deterministic_decline: true,
-        completed_at: new Date().toISOString(),
+        voice_required: requiresVisibleVoice,
+        completed_at: completed
+          ? (run.master_status[item.id]?.completed_at || new Date().toISOString())
+          : null,
       };
     }
     run.master_opinions = selectedMasters(run).map((id) => byId.get(id)).filter(Boolean);
@@ -357,13 +369,16 @@ export function visibleAgentSpecs(run, userPrompt = "") {
           item.engine,
         ));
       }
+      const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
+        && byId.get(item.id)?.voice_status === "completed";
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
         master: item.id,
-        status: "completed",
+        status: alreadyVoiced ? "completed" : "waiting",
         engine: item.engine,
         deterministic_execution: true,
-        completed_at: new Date().toISOString(),
+        voice_required: true,
+        completed_at: alreadyVoiced ? run.master_status[item.id].completed_at : null,
       };
     }
     run.master_opinions = selectedMasters(run).map((id) => byId.get(id)).filter(Boolean);
@@ -378,10 +393,43 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       updated_at: new Date().toISOString(),
     };
   }
+  const frozenById = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
+  const v3VoiceAgents = [...plan.declined, ...plan.completed]
+    .filter((item) => item.engine === "v3_method_runtime")
+    .filter((item) => run.master_status?.[item.id]?.status !== "completed")
+    .map((item) => {
+      const frozenOpinion = frozenById.get(item.id);
+      return {
+        role: item.id,
+        engine: "v3_method_runtime",
+        worker_kind: "visible_method_voice",
+        frozen_stance: frozenOpinion?.stance || "out_of_scope",
+        title: `AlphaCouncil Agent ${run.symbol} ${item.id} method-seat explanation`,
+        prompt_template: [
+          masterVoicePrompt(item.id, run, frozenOpinion),
+          localized(run.language, {
+            en: "The main thread MUST append the completed Evidence JSON before launching this visible worker. Use it only to explain or challenge analyst interpretation; never change the frozen stance or add a fact.",
+            zh: "主线程必须在启动这个可见方法席前附上已完成的 Evidence JSON。它只能用于解释或质疑分析师解读；不得改变冻结立场，也不得新增事实。",
+            ja: "メインスレッドは、この可視メソッド席を起動する前に完成済み Evidence JSON を追加してください。分析担当の解釈を説明・検討する目的だけに使い、凍結済みスタンスの変更や事実追加は禁止です。",
+            ko: "메인 스레드는 이 표시형 방법론 좌석을 시작하기 전에 완료된 Evidence JSON을 추가해야 합니다. 분석가 해석을 설명·검토하는 데만 사용하고 동결된 입장을 바꾸거나 사실을 추가하지 마십시오.",
+          }),
+        ].join("\n\n"),
+        output_contract: localized(run.language, {
+          en: "Return one JSON method voice: master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids, confidence. acknowledged_stance must equal frozen_stance.",
+          zh: "只返回一个 JSON 方法席陈词：master、acknowledged_stance、statement、key_findings、disagreements、what_would_change_my_mind、source_ids、confidence；acknowledged_stance 必须等于冻结立场。",
+          ja: "master、acknowledged_stance、statement、key_findings、disagreements、what_would_change_my_mind、source_ids、confidence を持つ JSON を1つだけ返し、acknowledged_stance は凍結済みスタンスと一致させてください。",
+          ko: "master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids, confidence를 가진 JSON 하나만 반환하고 acknowledged_stance는 동결된 입장과 같아야 합니다.",
+        }),
+      };
+    });
+  master_agents.push(...v3VoiceAgents);
+  const orderedMasterAgents = selectedMasters(run)
+    .map((id) => master_agents.find((agent) => agent.role === id))
+    .filter(Boolean);
   saveRun(run);
   return {
     evidence_agents,
-    master_agents,
+    master_agents: orderedMasterAgents,
     debate_agents,
     // Recorded, not hidden: a reader must be able to tell a method that judged from a method
     // that could not look, and neither from a seat that was never offered.
@@ -455,19 +503,90 @@ export function recordMasterOpinion(args) {
   if (!allowed.includes(args.master)) {
     throw invalidParams(`master ${args.master} was not selected for this run. Selected: ${allowed.join(", ") || "none"}`);
   }
+  const missingEvidence = (run.tasks || []).filter((task) => taskState(run, task).status !== "completed");
+  if (missingEvidence.length) {
+    throw invalidParams("record_master_opinion rejected: every planned evidence packet must complete first.", {
+      reason: "VISIBLE_MASTER_EVIDENCE_INCOMPLETE",
+      run_id: run.run_id,
+      missing_evidence: missingEvidence,
+    });
+  }
   const dir = runPath(run.run_id);
-  const normalized = normalizeMasterOpinion(
-    { ...(args.packet || {}), thread_id: args.thread_id },
-    args.master,
-    run,
-    rawRecordText(args.packet),
-  );
-  assertVisibleReaderLanguage(masterReaderText(normalized), run, `visible master ${args.master}`);
-  // A narrated stance that disagrees with the arithmetic does not get to win quietly. The
-  // deterministic verdict stands and the disagreement is preserved on the record.
-  const reconciled = reconcileMasterOpinion(run, args.master, normalized);
-  const opinion = attachMasterRuntimeProvenance(run, args.master, reconciled.opinion, reconciled.engine);
-  const { overridden } = reconciled;
+  const frozenOpinion = (run.master_opinions || []).find((item) => item.master === args.master);
+  const v3Voice = frozenOpinion?.engine === "v3_method_runtime"
+    || run.master_runtime_provenance?.[args.master]?.engine === "v3_method_runtime";
+  let opinion;
+  let overridden = false;
+  if (v3Voice) {
+    if (!frozenOpinion) throw invalidParams(`v3 master ${args.master} has no frozen deterministic opinion.`);
+    if (args.packet?.master !== args.master || args.packet?.acknowledged_stance !== frozenOpinion.stance) {
+      throw invalidParams("visible v3 method voice must acknowledge the exact frozen master and stance.", {
+        reason: "VISIBLE_MASTER_FROZEN_STANCE_MISMATCH",
+        run_id: run.run_id,
+        master: args.master,
+        expected_stance: frozenOpinion.stance,
+        supplied_master: args.packet?.master || null,
+        supplied_stance: args.packet?.acknowledged_stance || null,
+      });
+    }
+    const voice = normalizeMasterVoice(
+      args.packet,
+      args.master,
+      run,
+      frozenOpinion,
+      rawRecordText(args.packet),
+    );
+    assertVisibleReaderLanguage([
+      voice.statement,
+      ...(voice.key_findings || []),
+      ...(voice.disagreements || []),
+      ...(voice.what_would_change_my_mind || []),
+    ].filter(Boolean).join("\n"), run, `visible master voice ${args.master}`);
+    opinion = attachMasterRuntimeProvenance(run, args.master, {
+      ...frozenOpinion,
+      deterministic_summary: frozenOpinion.deterministic_summary || frozenOpinion.summary,
+      summary: voice.statement,
+      voice_statement: voice.statement,
+      voice_status: "completed",
+      voice_language: run.language,
+      statement_origin: "visible_method_voice_worker",
+      key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
+      disagreements: voice.disagreements,
+      what_would_change_my_mind: voice.what_would_change_my_mind.length
+        ? voice.what_would_change_my_mind
+        : frozenOpinion.what_would_change_my_mind,
+      source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
+      confidence: voice.confidence,
+      thread_id: args.thread_id,
+      dedicated_worker: {
+        status: "completed",
+        language: run.language,
+        execution_mode: "visible_host_thread",
+        thread_id: args.thread_id,
+      },
+    }, "v3_method_runtime");
+  } else {
+    const normalized = normalizeMasterOpinion(
+      { ...(args.packet || {}), thread_id: args.thread_id },
+      args.master,
+      run,
+      rawRecordText(args.packet),
+    );
+    assertVisibleReaderLanguage(masterReaderText(normalized), run, `visible master ${args.master}`);
+    // A narrated stance that disagrees with the arithmetic does not get to win quietly. The
+    // deterministic verdict stands and the disagreement is preserved on the record.
+    const reconciled = reconcileMasterOpinion(run, args.master, normalized);
+    opinion = attachMasterRuntimeProvenance(run, args.master, {
+      ...reconciled.opinion,
+      voice_statement: reconciled.opinion.voice_statement
+        || reconciled.opinion.summary
+        || reconciled.opinion.verdict,
+      voice_status: "completed",
+      voice_language: run.language,
+      statement_origin: "visible_legacy_method_worker",
+    }, reconciled.engine);
+    overridden = reconciled.overridden;
+  }
   const byId = new Map((run.master_opinions || []).map((item) => [item.master, item]));
   byId.set(args.master, opinion);
   run.master_opinions = allowed.map((id) => byId.get(id)).filter(Boolean);
@@ -654,6 +773,16 @@ function visibleRoundAgentPatch(run, state, role) {
 
 function recordVisibleDebateRound(run, args) {
   const role = args.role;
+  const missingEvidence = (run.tasks || []).filter((task) => taskState(run, task).status !== "completed");
+  const missingMasters = selectedMasters(run).filter((master) => run.master_status?.[master]?.status !== "completed");
+  if (missingEvidence.length || missingMasters.length) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_DEBATE_PREREQUISITES_INCOMPLETE",
+      "Bull/Bear debate rejected: complete every evidence packet and returned method-seat worker first.",
+      { missing_evidence: missingEvidence, missing_masters: missingMasters },
+    );
+  }
   const expected = run.council_mode === "quick" ? [1] : [1, 2, 3];
   if (!Number.isInteger(args.round) || !expected.includes(args.round)) {
     rejectVisibleDecision(
@@ -768,7 +897,9 @@ function visiblePmPrerequisites(run, state) {
   const missingEvidence = (run.tasks || [])
     .filter((task) => taskState(run, task).status !== "completed");
   const recordedMasters = new Set((run.master_opinions || []).map((opinion) => opinion.master));
-  const missingMasters = selectedMasters(run).filter((master) => !recordedMasters.has(master));
+  const missingMasters = selectedMasters(run).filter((master) => (
+    !recordedMasters.has(master) || run.master_status?.[master]?.status !== "completed"
+  ));
   const expected = run.council_mode === "quick" ? [1] : [1, 2, 3];
   const missingRounds = ["bull_researcher", "bear_researcher"].flatMap((role) => (
     expected.filter((round) => !visibleRoundEntry(state, role, round)).map((round) => `${role}:${round}`)
@@ -816,7 +947,18 @@ function recordVisiblePortfolioManager(run, args) {
         submitted_content_hash: contentHash,
       });
     }
-    return { run, decision: state.portfolio_manager.packet, idempotent_replay: true };
+    const handoffPath = join(dir, "user_response.md");
+    const reportPath = join(dir, "final_report.md");
+    const qualityPath = join(dir, "report_quality.json");
+    return {
+      run,
+      decision: state.portfolio_manager.packet,
+      idempotent_replay: true,
+      user_response_markdown: existsSync(handoffPath) ? readFileSync(handoffPath, "utf8") : "",
+      final_report_markdown: existsSync(reportPath) ? readFileSync(reportPath, "utf8") : "",
+      report_quality: existsSync(qualityPath) ? readJson(qualityPath) : null,
+      artifacts: artifactPaths(run),
+    };
   }
 
   const prerequisites = visiblePmPrerequisites(run, state);

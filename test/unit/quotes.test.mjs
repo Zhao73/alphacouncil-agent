@@ -23,6 +23,10 @@ test("parseYahooChart computes price/change/change_pct from chart meta", () => {
           currency: "KRW",
           marketState: "POST",
           regularMarketTime: 1700000000,
+          instrumentType: "INDEX",
+          shortName: "KOSPI Composite Index",
+          longName: "Korea Composite Stock Price Index",
+          exchangeTimezoneName: "Asia/Seoul",
         },
       }],
     },
@@ -32,6 +36,10 @@ test("parseYahooChart computes price/change/change_pct from chart meta", () => {
   assert.equal(quote.change, 50);
   assert.equal(quote.change_pct, 2.04);
   assert.equal(quote.source, "yahoo");
+  assert.equal(quote.instrument_type, "INDEX");
+  assert.equal(quote.short_name, "KOSPI Composite Index");
+  assert.equal(quote.long_name, "Korea Composite Stock Price Index");
+  assert.equal(quote.exchange_timezone, "Asia/Seoul");
 });
 
 test("parseYahooChart throws when no price is present", () => {

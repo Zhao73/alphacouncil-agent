@@ -19,9 +19,10 @@ import {
   DEFAULT_SOLO_TEST_PACK_ROOT,
   inspectPersonaV3SoloTestPacks,
 } from "../../scripts/lib/persona-v3-solo-test-packs.mjs";
+import { resolvePersonaPackVersion } from "../../scripts/lib/build-profile.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const PACKAGE_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")).version;
+const PERSONA_PACK_VERSION = resolvePersonaPackVersion(REPO_ROOT);
 const AS_OF = "2026-07-27";
 
 test("physical pack inventories use canonical slash paths on Windows and POSIX", () => {
@@ -66,7 +67,7 @@ function positiveFactPack(pack) {
 }
 
 test("the packaged solo-test tree is exactly 26 physical operator lenses and 52 provisional tools", () => {
-  const report = inspectPersonaV3SoloTestPacks({ packVersion: PACKAGE_VERSION });
+  const report = inspectPersonaV3SoloTestPacks({ packVersion: PERSONA_PACK_VERSION });
   assert.equal(report.summary.ready_for_solo_testing, true);
   assert.equal(report.summary.physical_pack_count, 26);
   assert.equal(report.summary.solo_loader_valid_count, 26);

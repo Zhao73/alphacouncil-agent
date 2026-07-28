@@ -48,6 +48,23 @@ Contract). Keep JSON field names in English; write prose in the user's language.
   vs media interpretation; never imply non-public information.
 - `insider_sec` — Form 4 insider transactions, buybacks, dilution, debt, capital allocation.
 
+## ETF, fund and broad-index routing
+
+Classify the instrument before applying the company role list above.
+
+- **ETF/fund:** establish tracked index/methodology, dated holdings and weights, top-ten and
+  sector concentration, fee, AUM, liquidity/spread, premium-discount or tracking difference,
+  flows, lending/derivatives, rebalances and tax structure. Fundamentals are holdings-level
+  look-through with the covered weight stated.
+- **Cash index:** establish calculation methodology, dated constituents/weights, concentration,
+  sector/factor exposures, breadth, reconstitution/rebalances, aggregate earnings and
+  valuation methodology, macro sensitivity and any explicitly named derivative proxy.
+- **Aggregation discipline:** use one date and disclose the provider/method and coverage
+  weight. Never add a few constituents into ETF/index revenue, EPS, cash flow or guidance.
+- **Filings discipline:** a constituent Form 4 is issuer activity, not fund insider trading.
+  Operating-company Company Facts and issuer financial screens are `not_applicable` for the
+  fund/index itself, not failed evidence.
+
 ## Valuation frameworks (valuation_long_short)
 
 Use at least two, and state assumptions explicitly:
