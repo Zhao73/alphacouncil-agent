@@ -9,6 +9,7 @@ import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
+import { intentLabel, VOICE_FIELDS, voiceDisclaimer, voiceFieldLabel } from "./voice.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 
@@ -111,27 +112,85 @@ export function renderMasterMarkdown(opinion, lang) {
   ].filter((line) => line !== "").join("\n");
 }
 
+/** Reader-facing labels for the method-seat section, one entry per supported run language. */
+const MASTER_STATEMENT_COPY = Object.freeze({
+  zh: {
+    heading: "\u9010\u5e2d\u65b9\u6cd5\u8f93\u51fa", acted: "\u6709\u5224\u65ad\u7684\u5e2d\u4f4d", abstained: "\u8bf4\u8fd9\u4e0d\u5f52\u5b83\u7ba1\u7684\u5e2d\u4f4d",
+    stance: "\u7acb\u573a", intent: "\u610f\u5411", origin: "\u9648\u8bcd\u6765\u6e90", statement: "\u672c\u8f6e\u53d1\u8a00\uff08\u4e0d\u662f\u672c\u4eba\u5f15\u8bed\uff09",
+    findings: "\u5173\u952e\u53d1\u73b0", disagreements: "\u4e0e\u5206\u6790\u5e08\u5206\u6b67", change: "\u6539\u53d8\u5224\u65ad\u6761\u4ef6", sources: "\u6765\u6e90\u6216\u660e\u786e\u7f3a\u53e3",
+    abstainLead: (n) => `\u53e6\u6709 ${n} \u5e2d\u5728\u672c\u8f6e\u4e0d\u7ed9\u65b9\u5411\uff0c\u5404\u81ea\u7f3a\u7684\u662f\u65b9\u6cd5\u5fc5\u9700\u7684\u8f93\u5165\uff0c\u8fd9\u4e0d\u662f\u770b\u7a7a\u7968\uff1a`,
+  },
+  en: {
+    heading: "Method-Seat Outputs", acted: "Seats with a view", abstained: "Seats that say this is not theirs to call",
+    stance: "Stance", intent: "Intent", origin: "Statement source", statement: "Recorded statement (not a quote)",
+    findings: "Key findings", disagreements: "Disagreements", change: "What would change the view", sources: "Sources or explicit gaps",
+    abstainLead: (n) => `A further ${n} seat(s) issue no direction this round, each missing a method-critical input. These are not bearish votes:`,
+  },
+  ja: {
+    heading: "\u30e1\u30bd\u30c3\u30c9\u5e2d\u3054\u3068\u306e\u51fa\u529b", acted: "\u5224\u65ad\u3092\u793a\u3057\u305f\u5e2d", abstained: "\u81ea\u5206\u306e\u62c5\u5f53\u3067\u306f\u306a\u3044\u3068\u3057\u305f\u5e2d",
+    stance: "\u30b9\u30bf\u30f3\u30b9", intent: "\u610f\u5411", origin: "\u898b\u89e3\u306e\u751f\u6210\u5143", statement: "\u4eca\u56de\u306e\u767a\u8a00\uff08\u672c\u4eba\u306e\u5f15\u7528\u3067\u306f\u3042\u308a\u307e\u305b\u3093\uff09",
+    findings: "\u4e3b\u306a\u6240\u898b", disagreements: "\u5206\u6790\u62c5\u5f53\u3068\u306e\u76f8\u9055", change: "\u5224\u65ad\u304c\u5909\u308f\u308b\u6761\u4ef6", sources: "\u51fa\u5178\u307e\u305f\u306f\u660e\u793a\u7684\u306a\u6b20\u843d",
+    abstainLead: (n) => `\u4ed6\u306b ${n} \u5e2d\u306f\u4eca\u56de\u65b9\u5411\u6027\u3092\u793a\u3057\u307e\u305b\u3093\u3002\u3044\u305a\u308c\u3082\u30e1\u30bd\u30c3\u30c9\u306b\u5fc5\u8981\u306a\u5165\u529b\u3092\u6b20\u3044\u3066\u304a\u308a\u3001\u5f31\u6c17\u7968\u3067\u306f\u3042\u308a\u307e\u305b\u3093\uff1a`,
+  },
+  ko: {
+    heading: "\ubc29\ubc95\ub860 \uc88c\uc11d\ubcc4 \ucd9c\ub825", acted: "\ud310\ub2e8\uc744 \ub0b8 \uc88c\uc11d", abstained: "\uc790\uae30 \uc18c\uad00\uc774 \uc544\ub2c8\ub77c\uace0 \ubc1d\ud78c \uc88c\uc11d",
+    stance: "\uc785\uc7a5", intent: "\uc758\ud5a5", origin: "\ubc1c\uc5b8 \ucd9c\ucc98", statement: "\uc774\ubc88 \ubc1c\uc5b8(\ubcf8\uc778 \uc778\uc6a9\uc774 \uc544\ub2d8)",
+    findings: "\ud575\uc2ec \ubc1c\uacac", disagreements: "\ubd84\uc11d\uac00\uc640\uc758 \uc774\uacac", change: "\ud310\ub2e8 \ubcc0\uacbd \uc870\uac74", sources: "\ucd9c\ucc98 \ub610\ub294 \uba85\uc2dc\uc801 \ub370\uc774\ud130 \uacf5\ubc31",
+    abstainLead: (n) => `\uadf8 \uc678 ${n}\uac1c \uc88c\uc11d\uc740 \uc774\ubc88 \ud68c\ucc28\uc5d0 \ubc29\ud5a5\uc744 \uc81c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \uac01\uac01 \ubc29\ubc95\ub860\uc5d0 \ud544\uc694\ud55c \uc785\ub825\uc774 \uc5c6\uc73c\uba70 \uc57d\uc138 \ud22c\ud45c\uac00 \uc544\ub2d9\ub2c8\ub2e4:`,
+  },
+});
+
+/**
+ * Seats that reached a decision are what a reader came for; seats that could not are context.
+ *
+ * The previous layout gave both the same weight, so a run where twenty-five seats abstained
+ * printed twenty-five near-identical rows and buried the one seat that had a view. Deciding
+ * seats now get room to speak and abstaining seats collapse into one readable paragraph.
+ * Every selected stable ID still appears in this section: the publication gate checks for
+ * exactly that, and it is also the honest requirement -- no seat may quietly vanish.
+ */
 function renderMasterStatements(run) {
   const key = languageKey(run?.language);
-  const heading = { zh: "逐席专属方法输出", en: "Dedicated Method-Seat Outputs", ja: "専用メソッド席ごとの出力", ko: "전용 방법론 좌석별 출력" }[key];
-  const statementLabel = { zh: "本轮发言（不是本人引语）", en: "Recorded statement (not a quote)", ja: "今回の発言（本人の引用ではありません）", ko: "이번 발언(본인 인용이 아님)" }[key];
-  const findingsLabel = { zh: "关键发现", en: "Key findings", ja: "主な所見", ko: "핵심 발견" }[key];
-  const disagreementsLabel = { zh: "与分析师分歧", en: "Disagreements", ja: "分析担当との相違", ko: "분석가와의 이견" }[key];
-  const changeLabel = { zh: "改变判断条件", en: "What would change the view", ja: "判断が変わる条件", ko: "판단 변경 조건" }[key];
-  const sourcesLabel = { zh: "来源或明确缺口", en: "Sources or explicit gaps", ja: "出典または明示的な欠落", ko: "출처 또는 명시적 데이터 공백" }[key];
+  const copy = MASTER_STATEMENT_COPY[key] || MASTER_STATEMENT_COPY.en;
   const voiced = (run?.master_opinions || []).filter((opinion) => Boolean(opinion.voice_statement));
   if (!voiced.length) return "";
-  const items = voiced.map((opinion) => [
-    `### ${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`)`,
-    `- ${key === "zh" ? "立场" : key === "ja" ? "スタンス" : key === "ko" ? "입장" : "Stance"}: ${opinion.stance || "unknown"}`,
-    `- ${key === "zh" ? "陈词来源" : key === "ja" ? "見解の生成元" : key === "ko" ? "발언 출처" : "Statement source"}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}`,
-    `- ${statementLabel}: ${opinion.voice_statement || opinion.verdict || opinion.summary || ""}`,
-    `- ${findingsLabel}: ${(opinion.key_findings || []).slice(0, 4).join("；") || "—"}`,
-    `- ${disagreementsLabel}: ${(opinion.disagreements || []).slice(0, 3).join("；") || "—"}`,
-    `- ${changeLabel}: ${(opinion.what_would_change_my_mind || []).slice(0, 3).join("；") || "—"}`,
-    `- ${sourcesLabel}: ${(opinion.source_ids || []).join(", ") || (opinion.disqualifiers_triggered || []).join(", ") || "—"}`,
-  ].join("\n")).join("\n\n");
-  return `### ${heading}\n\n${items}`;
+  const acted = voiced.filter((opinion) => opinion.stance && opinion.stance !== "out_of_scope");
+  const abstained = voiced.filter((opinion) => !opinion.stance || opinion.stance === "out_of_scope");
+
+  const seatBlock = (opinion) => {
+    const intent = opinion.position_intent ? intentLabel(opinion.position_intent, run.language) : null;
+    const lines = [
+      `##### ${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`)`,
+      `- ${copy.stance}: ${opinion.stance || "unknown"}${intent ? ` \u2014 ${copy.intent}: *${intent}*` : ""}`,
+      `- ${copy.origin}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}`,
+    ];
+    // The five-field voice reads as prose; a legacy flat statement keeps its single line.
+    if (opinion.voice && typeof opinion.voice === "object") {
+      for (const field of VOICE_FIELDS) {
+        const text = String(opinion.voice[field] ?? "").trim();
+        if (text) lines.push(`- **${voiceFieldLabel(field, run.language)}**: ${text}`);
+      }
+    } else {
+      lines.push(`- ${copy.statement}: ${opinion.voice_statement || opinion.verdict || opinion.summary || ""}`);
+    }
+    lines.push(`- ${copy.findings}: ${(opinion.key_findings || []).slice(0, 4).join("\uFF1B") || "\u2014"}`);
+    lines.push(`- ${copy.disagreements}: ${(opinion.disagreements || []).slice(0, 3).join("\uFF1B") || "\u2014"}`);
+    lines.push(`- ${copy.change}: ${(opinion.what_would_change_my_mind || []).slice(0, 3).join("\uFF1B") || "\u2014"}`);
+    lines.push(`- ${copy.sources}: ${(opinion.source_ids || []).join(", ") || (opinion.disqualifiers_triggered || []).join(", ") || "\u2014"}`);
+    return lines.join("\n");
+  };
+
+  const sections = [`### ${copy.heading}`, voiceDisclaimer(run.language)];
+  if (acted.length) sections.push(`#### ${copy.acted}`, acted.map(seatBlock).join("\n\n"));
+  if (abstained.length) {
+    // One paragraph, not one row per seat. The stable IDs stay visible so the gate and the
+    // reader can both account for every selected seat without twenty-five identical lines.
+    const merged = abstained
+      .map((opinion) => `${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`) \u2014 ${opinion.voice_statement}`)
+      .join(" ");
+    sections.push(`#### ${copy.abstained}`, `${copy.abstainLead(abstained.length)}\n\n${merged}`);
+  }
+  return sections.join("\n\n");
 }
 
 /**
@@ -268,12 +327,29 @@ export function renderDecisionTable(decisions, lang) {
 }
 
 /** Registry title when the persona resolves, the raw id when it does not. */
+/**
+ * Maturity vocabulary belongs in metadata, not in a heading a reader has to parse.
+ *
+ * `admitted_label` carries the governance suffix ("... Provisional Operator Lens") so that an
+ * internal artifact can never be mistaken for a validated method model. A reader scanning a
+ * report does not need that phrase repeated on all twenty-six headings; the section already
+ * carries a disclaimer and the admission level travels with the pack. Strip it for display
+ * only -- the label itself, and every hash over it, is untouched.
+ */
+const MATURITY_SUFFIX = /[\s\u3000]*(provisional operator lens|\u4e34\u65f6\u64cd\u4f5c\u89c6\u89d2|\u66ab\u5b9a\u30aa\u30da\u30ec\u30fc\u30bf\u30fc\u30ec\u30f3\u30ba|\uc784\uc2dc \uc624\ud37c\ub808\uc774\ud130 \ub80c\uc988)[\s\u3000]*$/iu;
+
+export function displayMasterLabel(label) {
+  const text = String(label || "").trim();
+  const stripped = text.replace(MATURITY_SUFFIX, "").trim();
+  return stripped || text;
+}
+
 function masterTitle(id, lang) {
   if (!id) return "Master";
   try {
     const v3 = compiledPersonaPacks().get(id);
     const v3Title = v3?.admitted_label?.[languageKey(lang)];
-    if (v3Title) return v3Title;
+    if (v3Title) return displayMasterLabel(v3Title);
     const persona = registry().get(id);
     const title = personaTitle(persona, lang);
     return title && title !== id ? title : id;

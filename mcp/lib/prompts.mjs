@@ -7,6 +7,7 @@ import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { groundingBlock } from "./grounding.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
+import { intentsForStance } from "./voice.mjs";
 
 /**
  * Prompt text lives in personas/, not here.
@@ -259,7 +260,15 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
       frozen_decision_hash: frozenOpinion?.frozen_decision_hash || null,
     })}`,
     `Method instructions (for explanation only):\n${render(personaPrompt(persona, language), values)}`,
-    "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"statement\":\"reader-facing explanation\",\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
+    [
+      "Write the five `voice` fields in the first person, as the METHOD speaks -- \"I look for X, here the number is Y, so I would Z\".",
+      "First person is the voice of the method, never a claim about what the living person currently thinks: write \"this standard asks for...\", never \"he now believes...\".",
+      "Every figure you cite must already appear in the evidence or the frozen result, with its source ID. Cite the number, not an adjective about the number.",
+      "`what_changes_my_mind` must name a threshold or an observation that would flip the reading, not a wish for more research.",
+      "If the frozen stance is out_of_scope, say plainly and in the method's own voice which input it needs and why its absence is not a bearish view.",
+    ].join(" "),
+    `\`position_intent\` MUST be one of: ${intentsForStance(frozenOpinion?.stance).join(" | ")}. Those are the only intents the frozen stance admits; anything else is rejected without changing run state.`,
+    "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"position_intent\":\"one of the allowed intents above\",\"voice\":{\"what_i_see\":\"string\",\"how_my_method_reads_it\":\"string\",\"would_i_act\":\"string\",\"what_changes_my_mind\":\"string\",\"where_i_disagree\":\"string\"},\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
     `Bounded shared evidence JSON: ${evidence}`,
   ].join("\n\n");
 }

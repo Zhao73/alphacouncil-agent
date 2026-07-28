@@ -5,6 +5,13 @@ import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
 // correctly raised -32602.
 import { internalError, invalidParams } from "./errors.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
+import {
+  composeVoiceStatement,
+  defaultIntentForStance,
+  intentsForStance,
+  isIntentAllowed,
+  VOICE_FIELDS,
+} from "./voice.mjs";
 import { cleanLog, clip } from "./text.mjs";
 import { scopedSourceId } from "./gates.mjs";
 import { runPath } from "./run-store.mjs";
@@ -603,13 +610,33 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
   if (packet?.acknowledged_stance !== frozenOpinion?.stance) {
     throw invalidParams(`dedicated method worker attempted to change frozen stance for ${masterId}`);
   }
-  const statement = sanitizeStatementMarkdown(packet?.statement);
+  // The five-field voice is the current contract; a flat `statement` remains accepted so a
+  // legacy worker, or one that answered before the contract moved, is not a hard failure.
+  const voice = Object.fromEntries(VOICE_FIELDS
+    .map((field) => [field, sanitizeStatementMarkdown(packet?.voice?.[field])])
+    .filter(([, text]) => text));
+  const statement = Object.keys(voice).length
+    ? composeVoiceStatement(voice, run.language)
+    : sanitizeStatementMarkdown(packet?.statement);
   if (!statement) throw invalidParams(`dedicated method worker returned no statement for ${masterId}`);
+
+  // Intent narrows the frozen stance; it never reopens it. Rejected the same way a changed
+  // stance is, so a worker cannot turn `opposed` into `would_buy` by choosing a label.
+  const requested = packet?.position_intent;
+  if (requested !== undefined && !isIntentAllowed(requested, frozenOpinion.stance)) {
+    throw invalidParams(
+      `dedicated method worker returned an intent outside the frozen stance for ${masterId}: `
+      + `${JSON.stringify(requested)} is not one of ${intentsForStance(frozenOpinion.stance).join(", ")}`,
+    );
+  }
+
   return {
     master: masterId,
     symbol: run.symbol,
     as_of: run.as_of,
     acknowledged_stance: frozenOpinion.stance,
+    position_intent: requested ?? defaultIntentForStance(frozenOpinion.stance),
+    voice: Object.keys(voice).length ? voice : null,
     statement,
     key_findings: list(packet?.key_findings),
     disagreements: list(packet?.disagreements),
