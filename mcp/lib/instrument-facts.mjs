@@ -279,15 +279,13 @@ export function lookThroughFacts({ holdings, perHoldingFacts, factIds, holdingsM
       unavailable.push(`look-through ${factId}: ${LOOK_THROUGH_BLOCKED[factId] || "no aggregation rule is defined for this fact"}`);
       continue;
     }
-    // Restate the constituent facts under the rule name the aggregator recognises, so the
-    // shape of the metric decides how it is combined while the pack still gets its own id.
-    const byRule = new Map([...perHoldingFacts].map(([ticker, facts]) => [
-      ticker,
-      Number.isFinite(facts?.[factId]) ? { [rule]: facts[factId] } : {},
-    ]));
+    // The aggregator reads one number per ticker; the rule name selects how it is combined.
+    const byTicker = new Map([...perHoldingFacts]
+      .filter(([, facts]) => Number.isFinite(facts?.[factId]))
+      .map(([ticker, facts]) => [ticker, facts[factId]]));
     const aggregate = lookThroughAggregate({
       holdings: coverage.holdings,
-      perHoldingFacts: byRule,
+      perHoldingFacts: byTicker,
       factId: rule,
       coverageWeight: coverage.coverage_weight,
     });

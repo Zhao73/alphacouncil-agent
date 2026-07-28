@@ -29,6 +29,7 @@ import {
   CANONICAL_MASTER_IDS,
   defaultStagingRoot,
 } from "../../mcp/lib/personas-v3/staging.mjs";
+import { personaV3AuthoredMethods as authoredMethods } from "../../data/persona-v3-authored-methods.v1.mjs";
 import {
   DEFAULT_FORMULA_CANDIDATE_ROOT,
   FORMULA_AUTHORING_STATUS,
@@ -69,6 +70,35 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "options.implied_volatility": Object.freeze({ value_kind: "ratio", unit: "decimal_annualized_volatility", period: INSTANT_AS_OF }),
   "options.skew_25d": Object.freeze({ value_kind: "ratio", unit: "decimal_volatility_difference", period: INSTANT_AS_OF }),
   "execution.bid_ask": Object.freeze({ value_kind: "ratio", unit: "decimal_of_mid", period: INSTANT_AS_OF }),
+
+  // Dated official series. These are what let a macro or cycle method have a direction at all,
+  // and their units are decimal fractions rather than the percent the sources publish.
+  "macro.long_bond_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.short_bond_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.term_structure_slope": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.real_rate": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.breakeven_inflation": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.aaa_corporate_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.credit_spread": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.liquidity_impulse": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.growth_regime": Object.freeze({ value_kind: "text", unit: null, period: INSTANT_AS_OF }),
+
+  // Company fundamentals derived from filings, beyond the seven the mechanical screen computes.
+  "financial.owner_earnings": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "financial.net_current_asset_value": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "financial.incremental_return_on_capital": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "financial.leverage": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "valuation.revenue_growth": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "capital_allocation.share_count": Object.freeze({ value_kind: "count", unit: "shares", period: INSTANT_AS_OF }),
+
+  // Basket-level facts. Without these an index or fund method has nothing to reason about,
+  // which is why every seat abstained on an ETF regardless of how well it was written.
+  "index.aggregate_pe_ttm": Object.freeze({ value_kind: "ratio", unit: "multiple", period: INSTANT_AS_OF }),
+  "index.aggregate_pe_forward": Object.freeze({ value_kind: "ratio", unit: "multiple", period: INSTANT_AS_OF }),
+  "index.aggregate_earnings_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "index.dividend_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "fund.top_ten_weight": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "fund.concentration_hhi": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
 });
 
 const ID = /^[a-z][a-z0-9_.:-]{1,159}$/u;
@@ -153,6 +183,69 @@ function exactPendingCandidate(entry, candidateRoot) {
   return spec;
 }
 
+/**
+ * The formula a seat's method actually needs, when one has been authored for it.
+ *
+ * Everything else in this module derives an identity proxy, which is executable and
+ * deliberately meaningless: it exists so the pipeline can be exercised before any method has
+ * been written. An authored formula replaces that with the seat's real arithmetic, still
+ * unreviewed and still barred from production, but no longer a placeholder pretending to be a
+ * computation. Both paths are validated identically downstream.
+ */
+function authoredFormula(spec, authored) {
+  const tool = (authored?.tools || []).find((candidate) => candidate.tool_id === spec.tool_id);
+  if (!tool) return null;
+  const declaredInputs = spec.authorship_request.candidate_input_fact_types;
+  const declaredOutputs = spec.authorship_request.candidate_output_fact_types;
+  // An authored tool may only consume facts and produce an output the build spec already
+  // declared. Without this the authoring file could quietly widen a seat's contract, and the
+  // build spec would stop describing what the seat actually reads.
+  for (const operand of tool.inputs || []) {
+    if (operand?.fact_id && !declaredInputs.includes(operand.fact_id)) {
+      fail(`${spec.tool_id}: authored input ${operand.fact_id} is outside the declared fact contract`, {
+        declared: declaredInputs,
+      });
+    }
+  }
+  if (!declaredOutputs.includes(tool.output_id)) {
+    fail(`${spec.tool_id}: authored output ${tool.output_id} is outside the declared output contract`, {
+      declared: declaredOutputs,
+    });
+  }
+  const contractFor = (operand) => {
+    if (operand?.literal !== undefined) {
+      return { value_kind: "scalar", unit: SOLO_TEST_PROXY_UNIT, period: INSTANT_AS_OF };
+    }
+    if (operand?.fact_id) {
+      return CANONICAL_SOLO_TEST_FACT_CONTRACTS[operand.fact_id]
+        || { value_kind: "scalar", unit: SOLO_TEST_PROXY_UNIT, period: INSTANT_AS_OF };
+    }
+    return { value_kind: tool.value_kind, unit: tool.unit, period: INSTANT_AS_OF };
+  };
+  return canonicalValue({
+    version: "0.2.0",
+    kind: "recomputation",
+    operation: tool.operation,
+    on_missing: "fail",
+    inputs: (tool.inputs || []).map((operand) => {
+      const contract = contractFor(operand);
+      return {
+        operand,
+        value_kind: contract.value_kind,
+        unit: contract.unit,
+        period: contract.period,
+        on_missing: "fail",
+      };
+    }),
+    output: {
+      output_id: tool.output_id,
+      value_kind: tool.value_kind,
+      unit: tool.unit,
+      period: INSTANT_AS_OF,
+    },
+  });
+}
+
 function proxyFormula(spec) {
   const inputFactId = spec.authorship_request.candidate_input_fact_types[0];
   const outputId = spec.authorship_request.candidate_output_fact_types[0];
@@ -186,11 +279,12 @@ function proxyFormula(spec) {
 }
 
 /** Create one explicitly non-reviewed derived proxy and its immutable local-test evidence. */
-export function deriveSoloTestFormula(entry, physicalCandidate) {
+export function deriveSoloTestFormula(entry, physicalCandidate, authored = null) {
   if (physicalCandidate.formula_spec_id !== entry.formula_spec.formula_spec_id) {
     fail(`${entry.tool_id}: physical candidate identity does not match the current queue`);
   }
-  const formula = proxyFormula(physicalCandidate);
+  const written = authoredFormula(physicalCandidate, authored);
+  const formula = written || proxyFormula(physicalCandidate);
   const derivationSpec = canonicalValue({
     schema_version: 1,
     artifact_kind: "persona_v3_provisional_formula_derivation_spec",
@@ -201,7 +295,9 @@ export function deriveSoloTestFormula(entry, physicalCandidate) {
     prototype_id: entry.prototype_id,
     prototype_content_hash: entry.source_prototype.content_hash,
     authoring_candidate_hash: sha256(physicalCandidate),
-    derivation_policy: "first_declared_input_to_first_declared_output_identity_v1",
+    derivation_policy: written
+      ? "ai_authored_method_formula_v1"
+      : "first_declared_input_to_first_declared_output_identity_v1",
     input_contract_source: CANONICAL_SOLO_TEST_FACT_CONTRACTS[formula.inputs[0].operand.fact_id]
       ? "grounding_adapter_canonical_contract_v1"
       : "unknown_fact_fail_closed_proxy_scalar_v1",
@@ -222,8 +318,15 @@ export function deriveSoloTestFormula(entry, physicalCandidate) {
     derivation_spec: derivationSpec,
     derivation_spec_hash: derivationSpecHash,
     limitations: [
-      "mechanical_identity_proxy_not_the_named_investor_method",
-      "first_declared_input_and_output_are_test_contract_choices_not_human_adjudication",
+      ...(written
+        ? [
+          "ai_authored_candidate_formula_not_human_reviewed",
+          "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+        ]
+        : [
+          "mechanical_identity_proxy_not_the_named_investor_method",
+          "first_declared_input_and_output_are_test_contract_choices_not_human_adjudication",
+        ]),
       ...(derivationSpec.input_contract_source === "unknown_fact_fail_closed_proxy_scalar_v1"
         ? ["unknown_fact_proxy_scalar_unit_requires_a_local_test_adapter"]
         : []),
@@ -294,14 +397,21 @@ export function planSoloTestFormulaCompilation({
 
   const records = authoring.inventory.entries.map((entry) => {
     const spec = exactPendingCandidate(entry, candidate);
-    const derived = deriveSoloTestFormula(entry, spec);
+    const derived = deriveSoloTestFormula(entry, spec, authoredMethods[entry.persona_id] || null);
     return { entry, ...derived };
   });
   const tools = records.map((record) => record.tool);
   const ids = tools.map((tool) => tool.id);
   const outputs = tools.map((tool) => tool.output_id);
-  if (tools.length !== 52 || new Set(ids).size !== 52 || new Set(outputs).size !== 52) {
-    fail("solo formula compilation must produce 52 unique tools and outputs", {
+  // Derived from the authoring inventory rather than hardcoded, so a seat may declare a third
+  // tool without the guard reading it as drift. The property that matters is unchanged: one
+  // tool per planned entry, no id or output silently collapsing into another.
+  const expectedToolCount = authoring.inventory.entries.length;
+  if (tools.length !== expectedToolCount
+    || new Set(ids).size !== expectedToolCount
+    || new Set(outputs).size !== expectedToolCount) {
+    fail("solo formula compilation must produce one unique tool and output per planned entry", {
+      expected: expectedToolCount,
       tool_count: tools.length,
       unique_tool_count: new Set(ids).size,
       unique_output_count: new Set(outputs).size,

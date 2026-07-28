@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import buildInventory from "../../data/persona-v3-build-specs.v1.mjs";
+import { personaV3AuthoredMethods as authoredMethods } from "../../data/persona-v3-authored-methods.v1.mjs";
 import {
   selectorBestForLocale,
   selectorMethodLocale,
@@ -296,6 +297,77 @@ function bindProxySource(tools, sourceId) {
   });
 }
 
+/**
+ * A seat's real decision logic, when it has been authored.
+ *
+ * The generated fallback below scores every tool output against zero, which is executable and
+ * says nothing: it exists so the pipeline runs before a method is written. An authored policy
+ * replaces it with the seat's own judgement -- what it needs before it will speak at all
+ * (eligibility), what disqualifies a candidate outright (hard vetoes), and what it actually
+ * measures (scoring).
+ *
+ * The distinction between eligibility and scoring matters more than it looks. `min_coverage`
+ * is 1, so ONE uncomputable scoring rule collapses the whole seat to out_of_scope. That is
+ * precisely why twenty-five seats abstained on every symbol. A "can this method speak at all"
+ * test therefore belongs in eligibility, which has its own exit and its own explanation.
+ */
+function authoredDecisionPolicy(seat, tools, authored) {
+  if (!authored?.scoring?.length || !authored?.bands?.length) return null;
+  const declaredStates = new Set(seat.native_decision_contract.states.map(executableNativeState));
+  const state = (value) => {
+    const resolved = executableNativeState(value);
+    if (!declaredStates.has(resolved)) {
+      fail(`${seat.persona_id}: authored policy uses undeclared native state ${JSON.stringify(value)}`, {
+        declared: [...declaredStates],
+      });
+    }
+    return resolved;
+  };
+  const outOfScopeHypothesis = seat.native_decision_contract.states
+    .find((candidate) => stanceForState(candidate) === "out_of_scope") || seat.native_decision_contract.states[0];
+  const outOfScope = executableNativeState(outOfScopeHypothesis);
+  const maxScore = authored.scoring.reduce((sum, rule) => sum + (rule.points || 0), 0);
+  return canonicalValue({
+    schema_version: 1,
+    dsl_version: "1.1",
+    native_decision_schema: seat.native_decision_contract.schema_id,
+    native_states: seat.native_decision_contract.states.map(executableNativeState),
+    abstention_policy: "fail_closed",
+    fact_gate: { on_missing_critical: { native_state: outOfScope, common_stance: "out_of_scope" } },
+    eligibility: authored.eligibility || { all: [] },
+    hard_vetoes: (authored.hard_vetoes || []).map((veto) => ({
+      veto_id: veto.veto_id,
+      condition: veto.condition,
+      on_trigger: {
+        native_state: state(veto.on_trigger.native_state),
+        common_stance: veto.on_trigger.common_stance,
+      },
+      source_ids: [authored.source_id],
+    })),
+    scoring: {
+      max_score: maxScore,
+      min_coverage: 1,
+      on_insufficient_coverage: { native_state: outOfScope, common_stance: "out_of_scope" },
+      rules: authored.scoring.map((rule) => ({
+        rule_id: rule.rule_id,
+        condition: rule.condition,
+        points: rule.points,
+        coverage_weight: rule.coverage_weight ?? 1,
+        source_ids: [authored.source_id],
+      })),
+    },
+    score_bands: authored.bands.map((band) => ({
+      min_ratio: band.min_ratio,
+      decision: { native_state: state(band.native_state), common_stance: band.common_stance },
+    })),
+    native_output_fields: tools.map((tool, index) => ({
+      field: `metric_${index + 1}`,
+      value: { output_id: tool.output_id },
+      on_missing: "fail",
+    })),
+  });
+}
+
 function buildDecisionPolicy(seat, tools, sourceId) {
   const stateHypotheses = seat.native_decision_contract.states;
   const states = stateHypotheses.map(executableNativeState);
@@ -373,7 +445,9 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
   const required = referencedFacts;
   const optional = seat.required_fact_types.filter((fact) => !required.includes(fact));
   if (!required.length) fail(`${seat.persona_id}: formula tools have no physical fact inputs`);
-  const policy = buildDecisionPolicy(seat, tools, source.source_id);
+  const authored = authoredMethods[seat.persona_id] || null;
+  const policy = authoredDecisionPolicy(seat, tools, authored ? { ...authored, source_id: source.source_id } : null)
+    || buildDecisionPolicy(seat, tools, source.source_id);
   const policyErrors = validateDeterministicPolicyArtifacts({
     policy,
     tools,
