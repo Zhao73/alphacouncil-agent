@@ -773,7 +773,7 @@ export async function handleToolCall(id, params) {
       // no macro, and nothing in the output says so. Same reasoning as the preflight below:
       // the host that skips the optional step is exactly the host whose seats fail quietly.
       if (!run.grounding) {
-        run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of })
+        run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of, language: run.language })
           .catch((error) => ({ error: String(error?.message || error), facts_unavailable: true }));
         saveRun(run);
       }
@@ -902,7 +902,7 @@ export async function handleToolCall(id, params) {
   if (name === "compose_research_brief") {
     const grounding = await gatherGrounding({
       symbol: args.symbol, cik: args.cik, industry: args.industry,
-      macro: args.macro !== false, asOf: args.as_of,
+      macro: args.macro !== false, asOf: args.as_of, language: resolveLanguage(args),
     });
     const block = groundingBlock(grounding, resolveLanguage(args));
     const facts = [

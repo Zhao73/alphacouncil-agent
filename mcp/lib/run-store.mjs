@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { DEBATE_ROLES, RUNS_DIR } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
-import { agentState, completenessStatus, sourceManifest, taskState, verificationStatus } from "./gates.mjs";
+import { agentState, completenessStatus, masterSeatIncomplete, sourceManifest, taskState, verificationStatus } from "./gates.mjs";
 
 export { agentState, taskState };
 
@@ -52,11 +52,7 @@ export function statusSnapshot(run) {
   const verifierVerdicts = Array.isArray(run.verifier_verdicts) ? run.verifier_verdicts : [];
   const selectedMasters = Array.isArray(run.masters) ? run.masters : [];
   const recordedMasters = (run.master_opinions || []).map((opinion) => opinion.master);
-  const recordedSet = new Set(recordedMasters);
-  const pendingMasters = selectedMasters.filter((master) => (
-    !recordedSet.has(master)
-      || (run.master_status?.[master] && run.master_status[master].status !== "completed")
-  ));
+  const pendingMasters = selectedMasters.filter((master) => masterSeatIncomplete(run, master));
   const visibleDebate = run.execution_mode === "visible_host_threads" ? run.visible_debate : null;
   const visibleDebateRounds = visibleDebate
     ? Object.fromEntries(["bull_researcher", "bear_researcher"].map((role) => [

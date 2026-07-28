@@ -58,6 +58,19 @@ export const OUTPUT_MODES = [
  * section body must carry, calibrated against the manager fallback report, which emits
  * several legitimately terse sections ("## Confidence\nmedium").
  */
+/**
+ * Anchors for the system-owned publication sections.
+ *
+ * The quality gate must never locate these by heading text. A PM-authored section is
+ * relabelled rather than deleted, and several of those localized commentary titles legally
+ * contain a section alias -- the Japanese label "PMによるメソッド席の説明" contains the
+ * `master_bench` alias "メソッド席". Heading assignment keeps the richest body, so the
+ * commentary could win the assignment and every per-seat coverage check would then fail
+ * against PM prose, leaving the report permanently unpublishable in ja/ko.
+ */
+export const RECORDED_BENCH_MARKER_PREFIX = "alphacouncil:recorded-master-bench:v1:";
+export const RECORDED_INSTRUMENT_MARKER_PREFIX = "alphacouncil:recorded-instrument-structure:v1:";
+
 export const REPORT_SECTIONS = [
   { id: "conclusion", aliases: ["结论", "conclusion", "結論", "결론"], min_body: 6 },
   { id: "analyst_work_log", aliases: ["分析师工作记录", "analyst work log", "アナリスト作業記録", "分析担当作業記録", "분석가 작업 기록"], min_body: 12, per_task: true },

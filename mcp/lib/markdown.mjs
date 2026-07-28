@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEBATE_ROLES, REPORT_SECTIONS } from "./constants.mjs";
+import { DEBATE_ROLES, RECORDED_BENCH_MARKER_PREFIX, RECORDED_INSTRUMENT_MARKER_PREFIX, REPORT_SECTIONS } from "./constants.mjs";
 import { writeJson } from "./fsutil.mjs";
 import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
@@ -470,8 +470,8 @@ export function writeReportQuality(run, markdown) {
   return quality;
 }
 
-const RECORDED_BENCH_MARKER_PREFIX = "alphacouncil:recorded-master-bench:v1:";
-const RECORDED_INSTRUMENT_MARKER_PREFIX = "alphacouncil:recorded-instrument-structure:v1:";
+// Shared with the quality gate through constants so the gate can find the system-owned
+// section by anchor instead of by heading text. See the note next to the constants.
 
 function recordedBenchMarker(run) {
   const subject = (run?.master_opinions || []).map((opinion) => ({

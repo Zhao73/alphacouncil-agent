@@ -249,12 +249,12 @@ test("full visible completion requires the persisted three-round exact-Q&A chain
   }
 });
 
-test("visible planning returns a frozen v3 explanation worker for every selected seat", () => {
-  assert.equal(recorded.plan.master_agents.length, 1);
-  assert.equal(recorded.plan.master_agents[0].role, selectedMaster);
-  assert.equal(recorded.plan.master_agents[0].engine, "v3_method_runtime");
-  assert.equal(recorded.plan.master_agents[0].frozen_stance, "out_of_scope");
-  assert.match(recorded.plan.master_agents[0].output_contract, /acknowledged_stance/);
+test("a declined seat is planned as a settled record, not as an explanation worker", () => {
+  assert.deepEqual(recorded.plan.master_agents, []);
+  const declined = recorded.plan.masters_declined.find((seat) => seat.master === selectedMaster);
+  assert.ok(declined, "the seat must still appear in the plan as an explicit decline");
+  assert.equal(declined.stance, "out_of_scope");
+  assert.equal(declined.engine, "v3_method_runtime");
 });
 
 test("round ordering, exact questions, and conflicting replay fail closed", () => {
@@ -264,10 +264,11 @@ test("round ordering, exact questions, and conflicting replay fail closed", () =
   assert.equal(recorded.conflict.error?.data?.reason, "VISIBLE_DEBATE_ROUND_CONFLICT");
 });
 
-test("visible evidence and method barriers are enforced server-side", () => {
+// The method barrier itself is covered by gates.test.mjs against a `waiting` seat. It cannot
+// be exercised from this fixture any more: its only seat declines deterministically, so it is
+// settled before the debate opens and there is nothing left for the barrier to hold back.
+test("visible evidence and frozen-stance barriers are enforced server-side", () => {
   assert.equal(recorded.earlyMaster.error?.data?.reason, "VISIBLE_MASTER_EVIDENCE_INCOMPLETE");
-  assert.equal(recorded.earlyDebate.error?.data?.reason, "VISIBLE_DEBATE_PREREQUISITES_INCOMPLETE");
-  assert.deepEqual(recorded.earlyDebate.error?.data?.missing_masters, [selectedMaster]);
   assert.equal(recorded.wrongFrozenStance.error?.data?.reason, "VISIBLE_MASTER_FROZEN_STANCE_MISMATCH");
 });
 

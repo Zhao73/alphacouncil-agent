@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { __test__ } from "../../mcp/server.mjs";
 import { completeReport, completeRun, scopedPacket } from "../helpers/fixtures.mjs";
 import { DEBATE_ROLES } from "../../mcp/lib/constants.mjs";
+import { masterSeatIncomplete } from "../../mcp/lib/gates.mjs";
 
 const {
   verificationStatus,
@@ -171,4 +172,38 @@ test("the incomplete banner names the skipped method seats", () => {
   assert.match(zh, /master_marks/);
   const en = withCompletenessBanner("body", status, "English");
   assert.match(en, /Method seats that gave no opinion/);
+});
+
+// A seat that actually decided still owes the run its explanation worker, and the shared
+// reading must hold it back until that worker reports. Integration coverage for this moved
+// here when declined seats stopped scheduling workers: an all-declined fixture settles before
+// the debate opens, so it can no longer exercise the barrier.
+test("a seat waiting on its explanation worker blocks the run", () => {
+  const run = {
+    tasks: [],
+    agent_status: Object.fromEntries(DEBATE_ROLES.map((r) => [r, { role: r, status: "completed" }])),
+    masters: ["master_natenberg"],
+    master_opinions: [{ master: "master_natenberg", stance: "cautious" }],
+    master_status: { master_natenberg: { master: "master_natenberg", status: "waiting", voice_required: true } },
+  };
+  assert.equal(masterSeatIncomplete(run, "master_natenberg"), true);
+  assert.equal(completenessStatus(run).completeness, "incomplete");
+  assert.deepEqual(completenessStatus(run).missing_masters, ["master_natenberg"]);
+
+  const voiced = {
+    ...run,
+    master_status: { master_natenberg: { master: "master_natenberg", status: "completed", voice_required: true } },
+  };
+  assert.equal(masterSeatIncomplete(voiced, "master_natenberg"), false);
+  assert.equal(completenessStatus(voiced).completeness, "complete");
+
+  // A deterministically declined seat owes nothing and must not hold the run open.
+  const declined = {
+    ...run,
+    master_opinions: [{ master: "master_natenberg", stance: "out_of_scope" }],
+    master_status: {
+      master_natenberg: { master: "master_natenberg", status: "completed", voice_required: false, deterministic_decline: true },
+    },
+  };
+  assert.equal(completenessStatus(declined).completeness, "complete");
 });

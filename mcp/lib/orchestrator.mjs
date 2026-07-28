@@ -6,7 +6,7 @@ import { readJson, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
 import { assertReaderLanguage, isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { cleanLog } from "./text.mjs";
-import { completenessStatus, verificationStatus } from "./gates.mjs";
+import { completenessStatus, masterSeatIncomplete, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
@@ -340,7 +340,12 @@ export function visibleAgentSpecs(run, userPrompt = "") {
           item.engine,
         ));
       }
-      const requiresVisibleVoice = item.engine === "v3_method_runtime";
+      // A declined seat already carries a readable deterministic scope statement and a frozen
+      // out_of_scope stance no worker may change, so the explanation worker could not alter
+      // the record -- it only cost one sequential model turn per seat on a host with no
+      // fan-out. On a full bench that was 26 extra turns, which roughly doubled visible
+      // wall-clock. Seats that actually reached a decision still get their worker below.
+      const requiresVisibleVoice = false;
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
         && byId.get(item.id)?.voice_status === "completed";
       const completed = alreadyVoiced || !requiresVisibleVoice;
@@ -394,7 +399,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     };
   }
   const frozenById = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
-  const v3VoiceAgents = [...plan.declined, ...plan.completed]
+  const v3VoiceAgents = plan.completed
     .filter((item) => item.engine === "v3_method_runtime")
     .filter((item) => run.master_status?.[item.id]?.status !== "completed")
     .map((item) => {
@@ -774,7 +779,7 @@ function visibleRoundAgentPatch(run, state, role) {
 function recordVisibleDebateRound(run, args) {
   const role = args.role;
   const missingEvidence = (run.tasks || []).filter((task) => taskState(run, task).status !== "completed");
-  const missingMasters = selectedMasters(run).filter((master) => run.master_status?.[master]?.status !== "completed");
+  const missingMasters = selectedMasters(run).filter((master) => masterSeatIncomplete(run, master));
   if (missingEvidence.length || missingMasters.length) {
     rejectVisibleDecision(
       run,
@@ -896,10 +901,7 @@ function recordVisibleDebateRound(run, args) {
 function visiblePmPrerequisites(run, state) {
   const missingEvidence = (run.tasks || [])
     .filter((task) => taskState(run, task).status !== "completed");
-  const recordedMasters = new Set((run.master_opinions || []).map((opinion) => opinion.master));
-  const missingMasters = selectedMasters(run).filter((master) => (
-    !recordedMasters.has(master) || run.master_status?.[master]?.status !== "completed"
-  ));
+  const missingMasters = selectedMasters(run).filter((master) => masterSeatIncomplete(run, master));
   const expected = run.council_mode === "quick" ? [1] : [1, 2, 3];
   const missingRounds = ["bull_researcher", "bear_researcher"].flatMap((role) => (
     expected.filter((round) => !visibleRoundEntry(state, role, round)).map((round) => `${role}:${round}`)

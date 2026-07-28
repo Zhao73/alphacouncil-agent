@@ -9,6 +9,8 @@ import { fetchMarketFinancials, coverageFor, marketFor } from "./markets.mjs";
 import { inclusiveCutoffTime } from "./personas-v3/source-anchor.mjs";
 import { adaptGroundingToTypedFacts } from "./personas-v3/grounding-adapter.mjs";
 import { classifyInstrument, instrumentResearchChecklist, isFundOrIndex } from "./instruments.mjs";
+// Aliased: this module already has a private `localized(label, chinese)` for metric labels.
+import { localized as localizedText } from "./lang.mjs";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
@@ -79,6 +81,7 @@ export async function gatherGrounding({
   options = true,
   asOf = null,
   now = new Date(),
+  language = "English",
   signal,
 } = {}) {
   const snapshotPolicy = liveSnapshotPolicy(asOf, { now });
@@ -155,7 +158,12 @@ export async function gatherGrounding({
   } else if (symbol && options && symbolMarket?.id === "US" && !out.instrument.index_like) {
     out.unavailable.push("options chain: historical cutoff requires an archived chain; current CBOE snapshot was not fetched");
   } else if (symbol && options && out.instrument.index_like) {
-    out.not_applicable.push("CBOE equity/ETF option-chain adapter: direct cash-index symbol is not supported; use the appropriate listed derivative or ETF proxy explicitly");
+    out.not_applicable.push(localizedText(language, {
+      en: "CBOE equity/ETF option-chain adapter: direct cash-index symbol is not supported; use the appropriate listed derivative or ETF proxy explicitly",
+      zh: "CBOE 股票/ETF 期权链适配器：不支持直接的现金指数代码；请显式使用对应的上市衍生品或 ETF 代理。",
+      ja: "CBOE の株式/ETF オプションチェーン・アダプタ：現物指数シンボルには非対応です。対応する上場デリバティブまたは ETF 代理を明示的に使用してください。",
+      ko: "CBOE 주식/ETF 옵션 체인 어댑터: 현물 지수 심볼은 지원하지 않습니다. 해당 상장 파생상품 또는 ETF 프록시를 명시적으로 사용하십시오.",
+    }));
   }
 
   if (cik) {
@@ -204,7 +212,21 @@ export async function gatherGrounding({
         skipped: s.rules.filter((x) => x.skipped).map((x) => ({ rule: x.id, label: x.label })),
       };
     }));
-    else out.not_applicable.push(`operating-company SEC Company Facts screen: not applicable to ${out.instrument.asset_type}`);
+    else if (out.instrument.asset_type === "unknown") {
+      // Not the same thing as "not applicable": we could not classify the security at all,
+      // so withholding the screen is a gap the report must show, not a settled routing call.
+      out.unavailable.push(localizedText(language, {
+        en: "SEC Company Facts screen: instrument type unresolved (no exchange metadata and no registrant match), so the operating-company screen was withheld rather than assumed",
+        zh: "SEC Company Facts 筛选：证券类型未能判定（既无交易所元数据也无注册人匹配），因此不做经营公司假设，直接跳过该筛选。",
+        ja: "SEC Company Facts スクリーン：銘柄種別を判定できず（取引所メタデータも登録人一致もなし）、事業会社と仮定せずスクリーンを見送りました。",
+        ko: "SEC Company Facts 스크린: 증권 유형을 확정하지 못해(거래소 메타데이터·등록인 일치 모두 없음) 사업회사로 가정하지 않고 스크린을 보류했습니다.",
+      }));
+    } else out.not_applicable.push(localizedText(language, {
+      en: `operating-company SEC Company Facts screen: not applicable to ${out.instrument.asset_type}`,
+      zh: `经营公司 SEC Company Facts 筛选：不适用于 ${out.instrument.asset_type}。`,
+      ja: `事業会社向け SEC Company Facts スクリーン：${out.instrument.asset_type} には適用されません。`,
+      ko: `사업회사용 SEC Company Facts 스크린: ${out.instrument.asset_type}에는 적용되지 않습니다.`,
+    }));
   }
 
   // Non-US symbols never reach the SEC path, so without this they arrived at the analyst
@@ -218,7 +240,12 @@ export async function gatherGrounding({
   } else if (symbol && symbolMarket && symbolMarket.id !== "US" && !isFundOrIndex(out.instrument)) {
     out.unavailable.push(`structured financials for ${symbol}: this adapter is not point-in-time versioned; current data was not fetched for a historical cutoff`);
   } else if (symbol && isFundOrIndex(out.instrument)) {
-    out.not_applicable.push(`operating-company structured financials: not applicable to ${out.instrument.asset_type}; use look-through or aggregate index evidence`);
+    out.not_applicable.push(localizedText(language, {
+      en: `operating-company structured financials: not applicable to ${out.instrument.asset_type}; use look-through or aggregate index evidence`,
+      zh: `经营公司结构化财报：不适用于 ${out.instrument.asset_type}；请使用持仓穿透或指数聚合证据。`,
+      ja: `事業会社の構造化財務データ：${out.instrument.asset_type} には適用されません。ルックスルーまたは指数集計エビデンスを使用してください。`,
+      ko: `사업회사 구조화 재무데이터: ${out.instrument.asset_type}에는 적용되지 않습니다. 룩스루 또는 지수 집계 증거를 사용하십시오.`,
+    }));
   }
 
   if (industry && snapshotPolicy.allowed) {
@@ -251,11 +278,23 @@ export async function gatherGrounding({
       rows: [{
         symbol,
         market: symbolMarket?.id || "market",
-        structured_financials: "not applicable",
-        reason: `${out.instrument.asset_type} requires holdings/index look-through rather than issuer financial statements`,
+        structured_financials: localizedText(language, {
+          en: "not applicable", zh: "不适用", ja: "適用外", ko: "해당 없음",
+        }),
+        reason: localizedText(language, {
+          en: `${out.instrument.asset_type} requires holdings/index look-through rather than issuer financial statements`,
+          zh: `${out.instrument.asset_type} 需要持仓/指数穿透，而不是发行人财务报表。`,
+          ja: `${out.instrument.asset_type} は発行体の財務諸表ではなく、保有銘柄・指数のルックスルーが必要です。`,
+          ko: `${out.instrument.asset_type}는 발행인 재무제표가 아니라 보유종목·지수 룩스루가 필요합니다.`,
+        }),
       }],
       summary: { full: 0, summary_only: 0, none: 0, not_applicable: 1 },
-      note: "Fund/index research uses dated holdings, methodology and aggregate or look-through evidence.",
+      note: localizedText(language, {
+        en: "Fund/index research uses dated holdings, methodology and aggregate or look-through evidence.",
+        zh: "基金/指数研究使用带日期的持仓、方法论，以及聚合或穿透证据。",
+        ja: "ファンド/指数のリサーチは、日付入りの保有銘柄・方法論・集計またはルックスルーのエビデンスを使用します。",
+        ko: "펀드/지수 리서치는 일자가 명시된 보유종목, 방법론, 집계 또는 룩스루 증거를 사용합니다.",
+      }),
     };
   }
   const typed = adaptGroundingToTypedFacts(out, {

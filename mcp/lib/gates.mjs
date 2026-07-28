@@ -1,4 +1,4 @@
-import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, QUICK_REPORT_SECTIONS, REPORT_SECTIONS } from "./constants.mjs";
+import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, QUICK_REPORT_SECTIONS, RECORDED_BENCH_MARKER_PREFIX, REPORT_SECTIONS } from "./constants.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, readerLanguageStatus } from "./lang.mjs";
@@ -87,6 +87,27 @@ export function agentState(run, role) {
   return run.agent_status?.[role] || { role, status: "pending" };
 }
 
+/**
+ * One definition of "this seat still owes the run something", used by every caller.
+ *
+ * The status snapshot and the completeness gate used to read a missing `master_status` entry
+ * as "fine" while the debate and PM gates read the same absence as "missing". A run recovered
+ * through the idempotent plan path could therefore report `complete` with no pending seats
+ * and still be hard-rejected at `record_visible_decision` naming exactly those seats -- an
+ * unrecoverable state behind a status display that said nothing was wrong.
+ *
+ * The shared reading resolves it toward unblocking: a seat that is genuinely waiting always
+ * has a `waiting` entry, because every write path that records an opinion also writes the
+ * status. A missing entry therefore only occurs on a run persisted before that invariant
+ * existed, and treating that as a hard block would strand the run with no way forward.
+ */
+export function masterSeatIncomplete(run, id) {
+  const recorded = (run?.master_opinions || []).some((opinion) => opinion?.master === id);
+  if (!recorded) return true;
+  const state = run?.master_status?.[id];
+  return Boolean(state) && state.status !== "completed";
+}
+
 export function completenessStatus(run) {
   const tasks = Array.isArray(run.tasks) ? run.tasks : [];
   const quick = run.council_mode === "quick";
@@ -116,11 +137,7 @@ export function completenessStatus(run) {
   // read as a finished committee -- and a bench nobody consulted is worse than no bench,
   // because the reader believes the verdict survived twenty-one lenses.
   const selected = Array.isArray(run.masters) ? run.masters : [];
-  const recorded = new Set((run.master_opinions || []).map((o) => o.master));
-  const missing_masters = selected.filter((id) => (
-    !recorded.has(id)
-      || (run.master_status?.[id] && run.master_status[id].status !== "completed")
-  ));
+  const missing_masters = selected.filter((id) => masterSeatIncomplete(run, id));
   const complete = missing_evidence.length === 0 && missing_debate.length === 0 && missing_masters.length === 0;
   return {
     completeness: complete ? "complete" : "incomplete",
@@ -296,7 +313,12 @@ export function validateFinalReport(markdown, run) {
       .filter((id) => typeof id === "string" && id.length),
   )];
   const opinionsByMaster = new Map((run?.master_opinions || []).map((opinion) => [opinion.master, opinion]));
-  const benchBody = assigned.get("master_bench")?.body || "";
+  // Anchor, not heading assignment. A relabelled PM commentary section can legally contain a
+  // localized bench alias, and it would then win the "richest body" assignment and fail every
+  // seat here against PM prose. The marker only ever appears in the system-generated bench,
+  // which assembly appends last, so everything from it onwards is system-owned output.
+  const benchMarkerAt = text.indexOf(`<!-- ${RECORDED_BENCH_MARKER_PREFIX}`);
+  const benchBody = benchMarkerAt >= 0 ? text.slice(benchMarkerAt) : (assigned.get("master_bench")?.body || "");
   const readableMethodStatements = [];
   const renderedMethodStatements = [];
   for (const id of selectedMethodSeats) {

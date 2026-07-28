@@ -1,6 +1,9 @@
 import { join } from "node:path";
 import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
-import { internalError } from "./errors.mjs";
+// A worker returning a malformed packet is a client contract violation, not a server bug:
+// these three checks used to raise -32603 while the equivalent checks in the orchestrator
+// correctly raised -32602.
+import { internalError, invalidParams } from "./errors.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import { cleanLog, clip } from "./text.mjs";
 import { scopedSourceId } from "./gates.mjs";
@@ -571,14 +574,37 @@ export function normalizeMasterOpinion(packet, masterId, run, raw = "") {
  * choose or rewrite the stance. Keeping this packet separate from normalizeMasterOpinion
  * makes a persuasive narrative incapable of overriding deterministic policy output.
  */
+/**
+ * A worker statement is prose that gets interpolated into a system-owned report section.
+ * Left raw, a statement containing a line such as `## Conclusion` emits a real level-2
+ * heading inside that section; heading assignment keeps the richest body, so the injected
+ * block becomes the section the quality gate validates and the genuine PM conclusion drops
+ * out of the gate's view entirely. Escape structural markdown at the trust boundary rather
+ * than at each render site, so a new renderer cannot reintroduce the hole.
+ */
+export function sanitizeStatementMarkdown(value) {
+  return String(value ?? "")
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line
+      .replace(/^(\s*)(#{1,6})(\s)/u, "$1\\$2$3")
+      .replace(/^(\s*)(={3,}|-{3,}|\*{3,}|_{3,})\s*$/u, "$1\\$2"))
+    .join("\n")
+    .replace(/\n{2,}/gu, "\n")
+    .trim();
+}
+
 export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw = "") {
-  const list = (value) => (Array.isArray(value) ? value.filter((x) => typeof x === "string" && x.trim()) : []);
-  if (packet?.master !== masterId) throw internalError(`dedicated method worker returned the wrong master id for ${masterId}`);
+  // Every one of these is rendered into the system-owned bench, so all of them are escaped.
+  const list = (value) => (Array.isArray(value)
+    ? value.map(sanitizeStatementMarkdown).filter(Boolean)
+    : []);
+  if (packet?.master !== masterId) throw invalidParams(`dedicated method worker returned the wrong master id for ${masterId}`);
   if (packet?.acknowledged_stance !== frozenOpinion?.stance) {
-    throw internalError(`dedicated method worker attempted to change frozen stance for ${masterId}`);
+    throw invalidParams(`dedicated method worker attempted to change frozen stance for ${masterId}`);
   }
-  const statement = typeof packet?.statement === "string" ? packet.statement.trim() : "";
-  if (!statement) throw internalError(`dedicated method worker returned no statement for ${masterId}`);
+  const statement = sanitizeStatementMarkdown(packet?.statement);
+  if (!statement) throw invalidParams(`dedicated method worker returned no statement for ${masterId}`);
   return {
     master: masterId,
     symbol: run.symbol,
