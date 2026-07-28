@@ -353,7 +353,13 @@ function headerValue(value) {
   return value === undefined ? null : String(value);
 }
 
-function requestOnce(url, { timeoutMs, maxBytes, requestImpl, destination }) {
+function requestOnce(url, {
+  timeoutMs,
+  configuredTimeoutMs = timeoutMs,
+  maxBytes,
+  requestImpl,
+  destination,
+}) {
   return new Promise((resolvePromise, rejectPromise) => {
     let settled = false;
     let timer = null;
@@ -367,8 +373,8 @@ function requestOnce(url, { timeoutMs, maxBytes, requestImpl, destination }) {
     const transport = requestImpl || (new URL(url).protocol === "https:" ? httpsRequest : httpRequest);
     let request;
     timer = setTimeout(() => {
-      request?.destroy(new Error(`source acquisition timed out after ${timeoutMs}ms`));
-      reject(new PersonaSourceAcquisitionError(`source acquisition timed out after ${timeoutMs}ms`));
+      request?.destroy(new Error(`source acquisition timed out after ${configuredTimeoutMs}ms`));
+      reject(new PersonaSourceAcquisitionError(`source acquisition timed out after ${configuredTimeoutMs}ms`));
     }, timeoutMs);
     try {
       request = transport(url, {
@@ -465,6 +471,7 @@ export async function retrieveExplicitHttpBytes(url, {
     networkTrace.push(destination);
     const result = await requestOnce(current, {
       timeoutMs: remaining,
+      configuredTimeoutMs: normalizedLimits.timeout_ms,
       maxBytes: normalizedLimits.max_bytes,
       requestImpl,
       destination,

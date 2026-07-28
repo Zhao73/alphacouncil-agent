@@ -32,6 +32,23 @@ export const SOURCE_PORTABLE_EXCLUDED_TESTS = Object.freeze([
 ]);
 
 export const SOURCE_PORTABLE_EXCLUDED_TEST_COUNT = 14;
+// The suite contains several package-install and hash-audit files that each spawn
+// their own child processes. Node's CPU-count default can oversubscribe large CI
+// hosts and turn deterministic sub-second fixtures into platform-specific timeouts.
+export const SOURCE_TEST_CONCURRENCY = 4;
+
+export function sourceTestConcurrencyArg(concurrency = SOURCE_TEST_CONCURRENCY, nodeVersion = process.versions.node) {
+  const [major = 0, minor = 0] = String(nodeVersion).split(".").map(Number);
+  const supported = (major === 18 && minor >= 19)
+    || (major === 20 && minor >= 10)
+    || major >= 21;
+  return supported ? `--test-concurrency=${concurrency}` : null;
+}
+
+function sourceTestArgs(files = []) {
+  const concurrencyArg = sourceTestConcurrencyArg();
+  return Object.freeze(["--test", ...(concurrencyArg ? [concurrencyArg] : []), ...files]);
+}
 
 function listMjsFiles(root, directory = join(root, "test")) {
   if (!existsSync(directory)) return [];
@@ -81,7 +98,11 @@ export function buildTestPlan(root = repoRoot) {
     return Object.freeze({ mode: "installed_package", excluded: Object.freeze([]), args: Object.freeze(["scripts/package-smoke.mjs"]) });
   }
   if (staging === "present") {
-    return Object.freeze({ mode: "source_with_staging", excluded: Object.freeze([]), args: Object.freeze(["--test"]) });
+    return Object.freeze({
+      mode: "source_with_staging",
+      excluded: Object.freeze([]),
+      args: sourceTestArgs(),
+    });
   }
 
   const excluded = new Set(SOURCE_PORTABLE_EXCLUDED_TESTS);
@@ -91,7 +112,7 @@ export function buildTestPlan(root = repoRoot) {
   return Object.freeze({
     mode: "source_portable",
     excluded: SOURCE_PORTABLE_EXCLUDED_TESTS,
-    args: Object.freeze(["--test", ...selected]),
+    args: sourceTestArgs(selected),
   });
 }
 

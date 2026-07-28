@@ -34,7 +34,7 @@ test("npm execution never spawns a cmd shim directly on Windows", () => {
   });
 });
 
-test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: 120_000 }, () => {
+test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: 200_000 }, () => {
   const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
     cwd: PACKAGED_PARITY_REPO_ROOT,
     encoding: "utf8",
@@ -45,7 +45,7 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
       Npm_Config_Dry_Run: "true",
     },
     maxBuffer: 32 * 1024 * 1024,
-    timeout: 110_000,
+    timeout: 180_000,
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   const report = JSON.parse(result.stdout);
@@ -100,12 +100,12 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   assert.equal(report.temporary_workspace_cleanup, "completed");
 });
 
-test("an explicit production profile keeps the packaged legacy 4/22 fallback separate from solo-test runtime", { timeout: 120_000 }, () => {
+test("an explicit production profile keeps the packaged legacy 4/22 fallback separate from solo-test runtime", { timeout: 200_000 }, () => {
   const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
     cwd: PACKAGED_PARITY_REPO_ROOT,
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
-    timeout: 110_000,
+    timeout: 180_000,
     env: { ...process.env, ALPHACOUNCIL_PERSONA_BUILD_PROFILE: "production" },
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);

@@ -8,6 +8,7 @@ import {
   SOURCE_PORTABLE_EXCLUDED_TEST_COUNT,
   SOURCE_PORTABLE_EXCLUDED_TESTS,
   buildTestPlan,
+  sourceTestConcurrencyArg,
   validatePortableExclusions,
 } from "../../scripts/run-tests.mjs";
 
@@ -46,6 +47,14 @@ function createSourceTree(root) {
   }
 }
 
+test("bounded test concurrency degrades safely on older supported Node releases", () => {
+  assert.equal(sourceTestConcurrencyArg(4, "18.18.2"), null);
+  assert.equal(sourceTestConcurrencyArg(4, "18.19.0"), "--test-concurrency=4");
+  assert.equal(sourceTestConcurrencyArg(8, "20.9.0"), null);
+  assert.equal(sourceTestConcurrencyArg(8, "20.10.0"), "--test-concurrency=8");
+  assert.equal(sourceTestConcurrencyArg(4, "21.0.0"), "--test-concurrency=4");
+});
+
 test("test runner selects installed-package smoke without source tests", (t) => {
   const plan = buildTestPlan(temporaryRoot(t));
   assert.equal(plan.mode, "installed_package");
@@ -61,7 +70,7 @@ test("test runner selects the complete suite when private staging is present", (
   const plan = buildTestPlan(root);
   assert.equal(plan.mode, "source_with_staging");
   assert.deepEqual(plan.excluded, []);
-  assert.deepEqual(plan.args, ["--test"]);
+  assert.deepEqual(plan.args, ["--test", "--test-concurrency=4"]);
 });
 
 test("test runner selects every portable source test except the reviewed private-staging list", (t) => {
@@ -77,7 +86,7 @@ test("test runner selects every portable source test except the reviewed private
   const plan = buildTestPlan(root);
   assert.equal(plan.mode, "source_portable");
   assert.deepEqual(plan.excluded, EXPECTED_PORTABLE_EXCLUSIONS);
-  assert.deepEqual(plan.args, ["--test", "test/contract/portable.test.mjs"]);
+  assert.deepEqual(plan.args, ["--test", "--test-concurrency=4", "test/contract/portable.test.mjs"]);
 });
 
 test("portable mode fails closed when an exclusion no longer names a source test", (t) => {
