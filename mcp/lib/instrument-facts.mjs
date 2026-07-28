@@ -13,7 +13,7 @@
  */
 
 import { LIMITS } from "./constants.mjs";
-import { fetchFundHoldings, lookThroughAggregate, topHoldingsCoverage } from "./funds.mjs";
+import { fetchFundHoldings, fetchFundMetadata, lookThroughAggregate, topHoldingsCoverage } from "./funds.mjs";
 import { fetchIndexAggregate, INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { fetchFundamentals } from "./fundamentals.mjs";
 import { fetchUniverse } from "./sec.mjs";
@@ -192,10 +192,15 @@ function structureFacts(holdings, metadata) {
     title: `${holdings.symbol} concentration index`,
   });
   if (finite(metadata?.expense_ratio)) {
+    // Issuers publish the fee as a percent; the typed-fact contract is a decimal fraction.
+    // Passing it through unconverted is a hundredfold error that looks entirely plausible.
+    const asDecimal = metadata.expense_ratio_unit === "percent"
+      ? metadata.expense_ratio / 100
+      : metadata.expense_ratio;
     facts.push({
       ...shared,
       fact_id: "fund.expense_ratio",
-      value: metadata.expense_ratio,
+      value: Number(asDecimal.toFixed(6)),
       value_kind: "ratio",
       unit: "decimal",
       ratio_denominator: "net_assets",
@@ -353,23 +358,31 @@ export async function gatherInstrumentFacts({
       : { kind: "unavailable", why: "no tracking-ETF proxy is registered for this index" };
   }
 
-  const [aggregate, holdings] = await Promise.all([
+  // Fee and size come from the issuer, not from the index: an index has no expense ratio.
+  // This was previously read off the index aggregate, which never carries one, so the fee
+  // fact was unreachable code that silently produced nothing.
+  const [aggregate, holdings, metadata] = await Promise.all([
     fetchIndexAggregate({ symbol: valuationSymbol, signal, asOf })
       .catch((error) => ({ unavailable: [`index aggregate: ${String(error?.message || error)}`] })),
     holdingsSymbol
       ? fetchFundHoldings(holdingsSymbol, { signal })
         .catch((error) => ({ unavailable: [`fund holdings: ${String(error?.message || error)}`] }))
       : Promise.resolve(null),
+    holdingsSymbol
+      ? fetchFundMetadata(holdingsSymbol, { signal })
+        .catch((error) => ({ unavailable: [`fund metadata: ${String(error?.message || error)}`] }))
+      : Promise.resolve(null),
   ]);
 
   facts.push(...valuationFacts(aggregate));
   unavailable.push(...(aggregate?.unavailable || []));
   if (holdings?.holdings?.length) {
-    facts.push(...structureFacts(holdings, aggregate?.metadata));
+    facts.push(...structureFacts(holdings, metadata));
     provenance.holdings_as_of = holdings.as_of;
     provenance.holdings_count = holdings.holdings.length;
   }
   unavailable.push(...(holdings?.unavailable || []));
+  unavailable.push(...(metadata?.unavailable || []));
 
   if (holdings?.holdings?.length && lookThroughFactIds.length) {
     let resolved = perHoldingFacts;

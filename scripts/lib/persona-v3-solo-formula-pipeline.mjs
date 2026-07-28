@@ -439,7 +439,7 @@ export function planSoloTestFormulaCompilation({
     production_eligible: false,
     method_model_eligible: false,
     canonical_seat_count: CANONICAL_MASTER_COUNT,
-    planned_tool_count: 52,
+    planned_tool_count: CANONICAL_MASTER_COUNT * 2,
     compiled_tool_count: tools.length,
     provisional_derivation_count: records.length,
     formula_approval_binding_count: 0,

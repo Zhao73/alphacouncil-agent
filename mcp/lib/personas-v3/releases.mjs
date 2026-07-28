@@ -727,7 +727,7 @@ function validateReleaseManifestDocument(manifest, releaseId) {
   if (manifest.release_id !== releaseId) errors.push("release manifest.release_id does not match its directory");
   if (manifest.release_status !== "assembled_immutable") errors.push("release manifest.release_status is invalid");
   if (!Number.isFinite(Date.parse(manifest.assembled_at))) errors.push("release manifest.assembled_at is invalid");
-  if (manifest.canonical_master_count !== CANONICAL_MASTER_COUNT) errors.push("release manifest count is not 26");
+  if (manifest.canonical_master_count !== CANONICAL_MASTER_COUNT) errors.push(`release manifest count is not ${CANONICAL_MASTER_COUNT}`);
   try { validateCanonicalReleaseEntries(manifest.canonical_master_ids); } catch (error) { errors.push(error.message); }
   if (!SHA256.test(manifest.canonical_catalog_hash || "") || !SHA256.test(manifest.source_inventory_hash || "")) errors.push("release manifest inventory hashes are invalid");
   if (!isObject(manifest.source_review_evidence)) errors.push("release manifest source_review_evidence is required");
@@ -763,8 +763,8 @@ function validateReleaseManifestDocument(manifest, releaseId) {
         errors.push(`release manifest formula_review_evidence.${field} is invalid`);
       }
     }
-    if (manifest.formula_review_evidence.planned_tool_count !== 52) {
-      errors.push("release manifest formula-review evidence must bind exactly 52 tools");
+    if (manifest.formula_review_evidence.planned_tool_count !== CANONICAL_MASTER_COUNT * 2) {
+      errors.push(`release manifest formula-review evidence must bind exactly ${CANONICAL_MASTER_COUNT * 2} tools`);
     }
   }
   if (manifest.masters_directory !== PERSONA_RELEASE_RULES.masters_directory) errors.push("release manifest masters directory is invalid");

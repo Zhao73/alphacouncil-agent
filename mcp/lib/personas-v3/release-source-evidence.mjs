@@ -164,7 +164,7 @@ function normalizePackSources(packSourcesByPersona) {
   const actualIds = [...byPersona.keys()].sort();
   const expectedIds = [...CANONICAL_MASTER_IDS].sort();
   if (canonicalJson(actualIds) !== canonicalJson(expectedIds)) {
-    fail("source-review evidence requires source collections for exactly 26 canonical masters", {
+    fail(`source-review evidence requires source collections for exactly ${CANONICAL_MASTER_COUNT} canonical masters`, {
       actual_ids: actualIds,
       expected_ids: expectedIds,
     });

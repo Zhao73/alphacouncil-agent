@@ -366,7 +366,7 @@ function buildIndex(entries) {
     human_reviewed_count: 0,
     method_attribution_approved_count: 0,
     production_effect: "none",
-    canonical_master_count: 26,
+    canonical_master_count: CANONICAL_MASTER_COUNT,
     seats_with_candidates: new Set(entries.map((entry) => entry.record.persona_id)).size,
     candidate_count: entries.length,
     proposition_review_count: reviews.length,

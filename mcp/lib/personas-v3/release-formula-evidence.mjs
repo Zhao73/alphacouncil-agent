@@ -76,7 +76,7 @@ function expectedToolMap() {
     seat.planned_dedicated_tools.map((tool) => tool.tool_id),
   ]));
   const count = [...byPersona.values()].reduce((total, ids) => total + ids.length, 0);
-  if (count !== 52) fail(`release formula inventory must contain exactly 52 planned tools, found ${count}`);
+  if (count !== PLANNED_TOOL_COUNT) fail(`release formula inventory must contain exactly ${PLANNED_TOOL_COUNT} planned tools, found ${count}`);
   return byPersona;
 }
 
@@ -147,8 +147,8 @@ function bindingsFromPacks({ packsRoot, trustedKeys, verifiedAt }) {
       bindings.push(verifyToolBinding({ tool, bundle, personaId, trustedKeys, now: verifiedAt }));
     }
   }
-  if (bindings.length !== 52 || new Set(bindings.map((binding) => binding.tool_id)).size !== 52) {
-    fail("release formula evidence must contain exactly 52 unique bindings");
+  if (bindings.length !== PLANNED_TOOL_COUNT || new Set(bindings.map((binding) => binding.tool_id)).size !== PLANNED_TOOL_COUNT) {
+    fail(`release formula evidence must contain exactly ${PLANNED_TOOL_COUNT} unique bindings`);
   }
   return canonicalValue(bindings);
 }
@@ -169,7 +169,7 @@ function buildDocument({ packsRoot, trustedFormulaReviewerKeys, verifiedAt }) {
     artifact_kind: "persona_v3_release_formula_review_evidence",
     verified_at: verifiedDate.toISOString(),
     canonical_master_count: CANONICAL_MASTER_IDS.length,
-    planned_tool_count: 52,
+    planned_tool_count: PLANNED_TOOL_COUNT,
     trusted_formula_reviewer_keys: publicKeys,
     trusted_key_registry_hash: sha256(publicKeys),
     formula_binding_inventory_hash: sha256(bindings),
@@ -220,7 +220,7 @@ export function verifyReleaseFormulaReviewEvidence({
   const expected = [...EVIDENCE_FIELDS].sort();
   if (canonicalJson(actual) !== canonicalJson(expected)) fail("formula-review evidence bundle fields are invalid", { actual, expected });
   if (evidence.schema_version !== 1 || evidence.artifact_kind !== "persona_v3_release_formula_review_evidence") fail("formula-review evidence bundle header is invalid");
-  if (evidence.canonical_master_count !== 26 || evidence.planned_tool_count !== 52) fail("formula-review evidence coverage is not exact");
+  if (evidence.canonical_master_count !== CANONICAL_MASTER_COUNT || evidence.planned_tool_count !== PLANNED_TOOL_COUNT) fail("formula-review evidence coverage is not exact");
   for (const field of ["trusted_key_registry_hash", "formula_binding_inventory_hash"]) {
     if (!HASH.test(evidence[field] || "")) fail(`formula-review evidence ${field} is invalid`);
   }

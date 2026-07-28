@@ -1,3 +1,4 @@
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -303,7 +304,7 @@ export function validateCouncilEvaluationProtocol(protocol = loadCouncilEvaluati
   exactValue(protocol.registry_snapshot?.verifier_ids, live.verifier_ids, "registry_snapshot.verifier_ids vs live verify roster", errors);
   exactValue(protocol.registry_snapshot?.priority_13_master_ids, PRIORITY_13_MASTER_IDS, "registry_snapshot.priority_13_master_ids", errors);
   exactValue(protocol.registry_snapshot?.canonical_26_master_ids, live.canonical_26_master_ids, "registry_snapshot.canonical_26_master_ids vs live master registry", errors);
-  if (live.canonical_26_master_ids.length !== 26) errors.push(`live master registry must contain exactly 26 enabled seats, got ${live.canonical_26_master_ids.length}`);
+  if (live.canonical_26_master_ids.length !== CANONICAL_MASTER_COUNT) errors.push(`live master registry must contain exactly ${CANONICAL_MASTER_COUNT} enabled seats, got ${live.canonical_26_master_ids.length}`);
   if (live.verifier_ids.length !== 3) errors.push(`live verify roster must contain exactly 3 verifiers, got ${live.verifier_ids.length}`);
   for (const id of live.default_analyst_ids) {
     const persona = live.reg.get(id);

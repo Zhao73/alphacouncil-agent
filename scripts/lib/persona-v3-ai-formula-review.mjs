@@ -573,7 +573,7 @@ export function planAIFormulaCrossReviews({ formulaRoot = DEFAULT_SOLO_TEST_FORM
   const reviewSchemaHash = sha256(schema);
   const input = physicalFormulaRecords(formulaRoot);
   const reviews = input.records.map((record) => reviewOne(record, input.compilationHash, reviewSchemaHash));
-  if (reviews.length !== 52 || new Set(reviews.map((review) => review.tool_id)).size !== 52) {
+  if (reviews.length !== CANONICAL_MASTER_COUNT * 2 || new Set(reviews.map((review) => review.tool_id)).size !== CANONICAL_MASTER_COUNT * 2) {
     fail("AI formula cross-review must cover exactly 52 unique tools");
   }
   const invalid = reviews.flatMap((review) => validateAIFormulaReviewArtifact(review, { reviewSchemaHash })

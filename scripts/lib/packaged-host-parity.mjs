@@ -6,6 +6,7 @@
  * PersonaPack v3 decision comparison while the production package contains zero v3 packs.
  */
 
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
 import {
@@ -582,7 +583,7 @@ function errorReason(response, label) {
 }
 
 function assertCompleteCatalog(opened, text, hostId) {
-  if (opened.maximum !== 26 || opened.masters?.length !== 26) fail(`${hostId}: packaged selector is not 26 seats`);
+  if (opened.maximum !== CANONICAL_MASTER_COUNT || opened.masters?.length !== CANONICAL_MASTER_COUNT) fail(`${hostId}: packaged selector is not ${CANONICAL_MASTER_COUNT} seats`);
   const seen = new Set();
   for (const [offset, master] of opened.masters.entries()) {
     if (master.index !== offset + 1 || seen.has(master.id)) fail(`${hostId}: catalog order or IDs are invalid`);

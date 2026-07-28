@@ -6,6 +6,7 @@
  * Gaps are expected and do not make the command fail; malformed physical artifacts do.
  */
 
+import { CANONICAL_MASTER_COUNT } from "../mcp/lib/personas-v3/staging.mjs";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { loadPersonas, defaultPersonaDir } from "../mcp/lib/personas/registry.mjs";
@@ -22,7 +23,9 @@ import {
   inspectPersonaAdmission,
 } from "../mcp/lib/personas-v3/admission.mjs";
 
-export const CANONICAL_MASTER_COUNT = 26;
+// Re-exported rather than redeclared: two independent copies of the seat count is how a
+// roster change passes one gate and fails another.
+export { CANONICAL_MASTER_COUNT } from "../mcp/lib/personas-v3/staging.mjs";
 
 function invalidResult(personaId, promptPresent, error) {
   const counts = {};

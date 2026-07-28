@@ -162,7 +162,7 @@ function loadFormulaTree(formulaRoot) {
   const errors = [];
   if (manifest.schema_version !== 1) errors.push("schema_version must be 1");
   if (manifest.artifact_kind !== "persona_v3_solo_test_formula_staging_tree") errors.push("artifact_kind is invalid");
-  if (manifest.canonical_seat_count !== 26 || manifest.compiled_tool_count !== 52) errors.push("manifest must bind exactly 26 seats and 52 tools");
+  if (manifest.canonical_seat_count !== CANONICAL_MASTER_COUNT || manifest.compiled_tool_count !== CANONICAL_MASTER_COUNT * 2) errors.push(`manifest must bind exactly ${CANONICAL_MASTER_COUNT} seats and ${CANONICAL_MASTER_COUNT * 2} tools`);
   if (manifest.assurance_class !== SOLO_TEST_ASSURANCE_CLASS) errors.push("assurance_class must be provisional_derived_proxy");
   if (manifest.review_status !== "not_human_reviewed") errors.push("review_status must be not_human_reviewed");
   if (manifest.production_eligible !== false || manifest.method_model_eligible !== false) errors.push("formula tree must be production/method-model ineligible");
@@ -194,7 +194,7 @@ function loadFormulaTree(formulaRoot) {
   if (JSON.stringify(actualSeatEntries) !== JSON.stringify([...CANONICAL_MASTER_IDS].sort())) {
     fail("formula tree contains missing or unexpected top-level entries", { actual: actualSeatEntries });
   }
-  if (total !== 52) fail(`formula tree compiled ${total} tools instead of 52`);
+  if (total !== CANONICAL_MASTER_COUNT * 2) fail(`formula tree compiled ${total} tools instead of ${CANONICAL_MASTER_COUNT * 2}`);
   return { root, manifest, byPersona };
 }
 
@@ -599,7 +599,7 @@ function generationContext({ root = DEFAULT_SOLO_TEST_PACK_ROOT, formulaRoot = D
   const blueprints = canonicalMasterBlueprints({ personaDir });
   const byBlueprint = new Map(blueprints.map((blueprint) => [blueprint.persona_id, blueprint]));
   const bySeat = new Map(buildInventory.seats.map((seat) => [seat.persona_id, seat]));
-  if (bySeat.size !== 26 || byBlueprint.size !== 26) fail("canonical solo-test inventory must contain exactly 26 unique seats");
+  if (bySeat.size !== CANONICAL_MASTER_COUNT || byBlueprint.size !== CANONICAL_MASTER_COUNT) fail(`canonical solo-test inventory must contain exactly ${CANONICAL_MASTER_COUNT} unique seats`);
   const output = resolve(root);
   if (basename(output) !== "masters" || basename(dirname(output)) !== "solo-test") {
     fail("solo-test pack root must end in knowledge/solo-test/masters (or an equivalent isolated solo-test/masters path)");

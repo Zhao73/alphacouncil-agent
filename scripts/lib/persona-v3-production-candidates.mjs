@@ -401,7 +401,7 @@ export function inspectPersonaV3ProductionCandidates({
   const inventoryErrors = [];
   if (buildInventory.seat_count !== CANONICAL_MASTER_COUNT) inventoryErrors.push("build-spec seat count is not 26");
   const expectedToolCount = [...expectedByPersona.values()].reduce((total, ids) => total + ids.length, 0);
-  if (expectedToolCount !== 52) inventoryErrors.push(`build-spec tool count is not 52: ${expectedToolCount}`);
+  if (expectedToolCount !== CANONICAL_MASTER_COUNT * 2) inventoryErrors.push(`build-spec tool count is not ${CANONICAL_MASTER_COUNT * 2}: ${expectedToolCount}`);
 
   const actualEntries = candidateRoot.exists
     ? readdirSync(candidateRoot.root, { withFileTypes: true })
