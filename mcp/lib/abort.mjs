@@ -7,7 +7,6 @@ export function linkedAbort(timeoutMs, upstream) {
   const timer = Number.isFinite(timeoutMs) && timeoutMs >= 0
     ? setTimeout(() => controller.abort(new Error(`operation timed out after ${timeoutMs}ms`)), timeoutMs)
     : null;
-  if (typeof timer?.unref === "function") timer.unref();
   return {
     signal: controller.signal,
     cleanup() {

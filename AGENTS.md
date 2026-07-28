@@ -10,7 +10,7 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `0.9.1` is a non-GA preview published to npm's `next` dist-tag and
+Package/plugin version `0.9.2` is a non-GA preview published to npm's `next` dist-tag and
 marked as a GitHub prerelease. Its build channel remains `solo_test`: 26 physical provisional
 PersonaPack v3 packs, 26 `operator_lens` seats, 52 `provisional_derived_proxy` tools,
 0 operational seats and 0 validated `method_model` seats. Do not present this feature

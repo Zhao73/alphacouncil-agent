@@ -105,8 +105,13 @@ if (task) {
 }
 writeFileSync(output, JSON.stringify(packet));
 `);
-  if (process.platform !== "win32") chmodSync(driver, 0o755);
-  return { driver, log };
+  if (process.platform !== "win32") {
+    chmodSync(driver, 0o755);
+    return { driver, log };
+  }
+  const wrapper = join(dataDir, "fake-quick-codex.cmd");
+  writeFileSync(wrapper, `@"${process.execPath}" "${driver}" %*\r\n`);
+  return { driver: wrapper, log };
 }
 
 test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v1 handoff", async () => {

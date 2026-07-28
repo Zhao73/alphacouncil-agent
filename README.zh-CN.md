@@ -57,16 +57,16 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
-## 当前 0.9.1 预览状态：non-GA solo-test
+## 当前 0.9.2 预览状态：non-GA solo-test
 
-`0.9.1` 发布在 npm 的 `next` dist-tag，并在 GitHub 标记为 prerelease。它是有界
+`0.9.2` 发布在 npm 的 `next` dist-tag，并在 GitHub 标记为 prerelease。它是有界
 `quick_v1` 功能预览，**不是**正式生产 GA。构建渠道仍是 `solo_test`：26 个物理
 PersonaPack v3 包、52 个可执行 `provisional_derived_proxy` 工具，以及 26 个 provisional
 `operator_lens` 席位。`operational`：**0**；已验证 `method_model`：**0**；人工来源/公式
 审批与审批签名仍为 **0**。
 
 生产 loader 仍拒绝这套树，production assembly、cutover 与 GA 继续 fail-closed。精确的
-quick 边界见 [v0.9.1 发布合同](docs/releases/v0.9.1.md)，`quick_v1` 与 `full_v2` 的报告差异见
+quick 边界见 [v0.9.2 发布合同](docs/releases/v0.9.2.md)，`quick_v1` 与 `full_v2` 的报告差异见
 [报告合同](docs/report-contract.md)。
 
 ## 📜 免责声明
@@ -224,7 +224,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 现代 | Aschenbrenner |
 | v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
 
-0.9.1 `solo_test` 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
+0.9.2 `solo_test` 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
 方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。

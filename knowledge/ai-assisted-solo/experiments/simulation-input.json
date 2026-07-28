@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:633cc82231d542dbc55c41a65fb234104735180d4bea554c42b7ef2db8c7db44",
+  "input_hash": "sha256:752ecf73d001424e072bd155176e93a10ba45fc4fba1104a2f52f45a490d4253",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -89,11 +89,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:2ddd03964b9dda2a1d1ba729e0d7a6148092339631216657e6c5b59601132793",
-      "pack_hash": "sha256:8bd419c30f6cf0a5c910f7f7e869340f771d8ca217fd89e0be26ef0424688b05",
+      "pack_hash": "sha256:0d7ba5386438362b955da65341f5a377fd2b6918fcd6543817b249096bba094c",
       "pack_manifest_binding": {
         "byte_length": 4121,
         "path": "knowledge/solo-test/masters/master_aschenbrenner/manifest.json",
-        "physical_file_hash": "sha256:b494b89c5d2eac34d1f8c4d3ff137b1c63b06d23a0c5d9eb85ba292750a5ce5c"
+        "physical_file_hash": "sha256:20a2dd562d8482c8000345b457ea34f8e975eaabab197ff9effa146c356343d1"
       },
       "persona_id": "master_aschenbrenner"
     },
@@ -133,11 +133,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:0adab0b69b1e8ba756deaeac3c457e044dd5a7195b1847893db0953772220e41",
-      "pack_hash": "sha256:9d8260b5256a67c74be7d2d25545c13efd2fcae8cd95cf247c8f48cc36fc8ee5",
+      "pack_hash": "sha256:0c83b559eefa9f3ffb5679aa1c2969db32f1543e29732633b007e8668eb45e33",
       "pack_manifest_binding": {
         "byte_length": 4173,
         "path": "knowledge/solo-test/masters/master_buffett/manifest.json",
-        "physical_file_hash": "sha256:20fb93cbdf2a5dbd049b33189493dc76a1926623a628555e3868d6c2246b10e0"
+        "physical_file_hash": "sha256:86cff4d8e743a95b326233140117ba05f62d4c4c7ef880d956a2269ead955b6f"
       },
       "persona_id": "master_buffett"
     },
@@ -177,11 +177,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:76cca34c2e39ea5898330406a49612004eb5ac6f5a9fc3bac57c06f72bce028f",
-      "pack_hash": "sha256:c401a14385bb67d5f4135718972ba10c670e549e4fa3c3836f3f11c493577436",
+      "pack_hash": "sha256:d16b7aba410b45b7afd3af22256f77ca334b25d07e297c9136f7843fdedc2518",
       "pack_manifest_binding": {
         "byte_length": 4090,
         "path": "knowledge/solo-test/masters/master_graham/manifest.json",
-        "physical_file_hash": "sha256:50eb075f1c250bf497aabc5a70967bd3b614a92c030e0b4a98ef9a31821b8d67"
+        "physical_file_hash": "sha256:a37e3d54c3cf65f9d1d80117c2798b6a1a2f6cdf5a7bd6ce37787e46f87c8461"
       },
       "persona_id": "master_graham"
     },
@@ -221,11 +221,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:3e44dfd0c50e52789f4e175136935f69a6b3103e80dc46742a88ffd47e2cdc1a",
-      "pack_hash": "sha256:c5eb6f8124a396e0d79afcb4b8078a87fd4f5554fda883e138941c5120a32ef5",
+      "pack_hash": "sha256:47d8049fa68dcc67e8174ceb46b5085737363fad65486e59395c537525d6bed2",
       "pack_manifest_binding": {
         "byte_length": 4081,
         "path": "knowledge/solo-test/masters/master_simons/manifest.json",
-        "physical_file_hash": "sha256:c105e6b7579eda58d33a562005086076639e33e490dec65a389ecbcf9164b943"
+        "physical_file_hash": "sha256:2abaf00c31cf6abd19369f26a9246290a2ee9ae6f42de20225691120194e736b"
       },
       "persona_id": "master_simons"
     },
@@ -291,11 +291,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:64c976a3af7f7842ca9fff39b597ec9f81fcd2c1878e6b95ddabdac507cd1951",
-      "pack_hash": "sha256:4c591309acf3dd68af2238077f691c02872b14e80cf8c3fea8c17cc2e471588f",
+      "pack_hash": "sha256:23b6f965939050ed5c57963bf844e551213ebf8ff821307c1a423a820b0b88f5",
       "pack_manifest_binding": {
         "byte_length": 4017,
         "path": "knowledge/solo-test/masters/master_soros/manifest.json",
-        "physical_file_hash": "sha256:76877fef484edbcd70ecbbf6b55ec27abc97629ba9d498766a76b3e468987ca2"
+        "physical_file_hash": "sha256:6f1c0665d648a52a5f307e730a25f2ccdf901037a61c7a93851f15bf1098d749"
       },
       "persona_id": "master_soros"
     },
@@ -361,11 +361,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:46c6f2d5014a20e4f96254cb363b71eedf66beb33204a12a4579e08116afb249",
-      "pack_hash": "sha256:2d5e3101a82b4097b8a6b75085f4ff13fb0fbaa347f262cd8d3bed94808ce672",
+      "pack_hash": "sha256:79bf5689574b5fee6717844434649744f560ff2d9881a9f5df894c3d21e97c0d",
       "pack_manifest_binding": {
         "byte_length": 4294,
         "path": "knowledge/solo-test/masters/master_cathie_wood/manifest.json",
-        "physical_file_hash": "sha256:aa543ee0f8868f292d7dfaa81c418db4cf3b64a980ec79a0a2e8d728ad6d35cc"
+        "physical_file_hash": "sha256:25fa6216604aab8db1822393fd934d41005ea707565b82abcce694007f658ae5"
       },
       "persona_id": "master_cathie_wood"
     },
@@ -405,11 +405,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:6110836b4444c3976467c4ab707a8f6e38c6cc19a1c5dc41a53884a03066fb6d",
-      "pack_hash": "sha256:14c122f22b9f6d0c4ac09bebd9783ad663e6c7b966a65d47e3c1915ea81598cf",
+      "pack_hash": "sha256:6efb8e7c22a031543ac6c81fa000a63c91a0a8fdbd145b52533c9ad8c4df9265",
       "pack_manifest_binding": {
         "byte_length": 4136,
         "path": "knowledge/solo-test/masters/master_druckenmiller/manifest.json",
-        "physical_file_hash": "sha256:0f3f52d1c5b888a84c57411ad41f93bf6e47023bc9ec9ab262d17bfa29bcc3e8"
+        "physical_file_hash": "sha256:253d70caa8bc4cbd822fdf3a3070b44554f3341a0f4f73c233fce5b29574d302"
       },
       "persona_id": "master_druckenmiller"
     },
@@ -475,11 +475,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:91c21c62a5508f53773b13714956008301a96f35455421f0a029aca9f6d96846",
-      "pack_hash": "sha256:b6ba9d263137936227500c17af79d04daf481f38b934022ae046b2344ee8dda2",
+      "pack_hash": "sha256:0b1a40720fe7c20784151f8302079341727589852276c6c40033ac0ffeefa153",
       "pack_manifest_binding": {
         "byte_length": 4082,
         "path": "knowledge/solo-test/masters/master_fisher/manifest.json",
-        "physical_file_hash": "sha256:c5102398b10cc8a41f79f4e40d4f13e5b3721180f1792b5376adb9f7cf468eec"
+        "physical_file_hash": "sha256:1360430a4238d1946902a74ade2aaaa72f0cec38d4ae25be4302726dc5c60bdc"
       },
       "persona_id": "master_fisher"
     },
@@ -545,11 +545,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:c249a152df048b50d725d1454faf6081b1bf2ef7b02dd8352275bee559f3fa13",
-      "pack_hash": "sha256:8259649c35488d58f4912c29f4f73285995c598700c460692b07e2ee8a479a97",
+      "pack_hash": "sha256:a91ef92600fe3f2954fdd2cea80c4b57a066d9fbc26723f21011af414e0e65c3",
       "pack_manifest_binding": {
         "byte_length": 4037,
         "path": "knowledge/solo-test/masters/master_munger/manifest.json",
-        "physical_file_hash": "sha256:e7c668e3b76ae9143ef1cb0787cb0beada49059856e834f20a1223dbee3cfb0d"
+        "physical_file_hash": "sha256:0ec250d7b312cde1d8b2acc4476493bca6b8f325858d21223c4aebdbe932a683"
       },
       "persona_id": "master_munger"
     },
@@ -615,11 +615,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:feeeebc8e9003a4ff4f41254cd22f865938364be8b43d15f4ec1ad3f14bef191",
-      "pack_hash": "sha256:d2791585473de4f4c97fe0aabf8e866cf4df0841ce82eede6c3593d2b606ad66",
+      "pack_hash": "sha256:3ffbb5058fbcc1617fbd9115c5a8f7f472084e0ce1efab926867ac67566616f6",
       "pack_manifest_binding": {
         "byte_length": 4015,
         "path": "knowledge/solo-test/masters/master_thorp/manifest.json",
-        "physical_file_hash": "sha256:87e3f8c5950119810bfa6a9edb7fb398a7dd542adfbd4e0e1cfa9624f9131dc1"
+        "physical_file_hash": "sha256:19cd6bba60ddcb11ed92428e7310f1c8e77d26965f31be367e2b3f46660d9471"
       },
       "persona_id": "master_thorp"
     },
@@ -659,11 +659,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:4236ab73adf9e0beb060adcd59893473dffb84c58ca4ab48e041ea7b35dbd5eb",
-      "pack_hash": "sha256:bc37cd1b902ceb6d322fb72f5e9d7ebe988828b6dc1546cca5bca629462aa042",
+      "pack_hash": "sha256:c7752d1e82f0269ccb5dda46ec0058fda1c51393707dd8bcff6d316e696c46f7",
       "pack_manifest_binding": {
         "byte_length": 4027,
         "path": "knowledge/solo-test/masters/master_asness/manifest.json",
-        "physical_file_hash": "sha256:16083a42f492594fe06aa52730df62b6020bafaff5558d0e80669a61ae729054"
+        "physical_file_hash": "sha256:bb9678db0657e11166c39bd332167ca1afd9f6649fbfaebc556a3a5c11bd2c6c"
       },
       "persona_id": "master_asness"
     },
@@ -703,11 +703,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:ebb25ead806ae9f4c20301aa29f3db83712cc7cf14af9ca9be62209a0e331849",
-      "pack_hash": "sha256:507e11f74797e94641fa87fc98eb6a4eb0c44c56a7160644c05d6f35a3c4d88e",
+      "pack_hash": "sha256:97953e9e0d9be7e2007e10b351363f12a814139f53fcf53fadff4f4b15e9af1a",
       "pack_manifest_binding": {
         "byte_length": 4034,
         "path": "knowledge/solo-test/masters/master_dalio/manifest.json",
-        "physical_file_hash": "sha256:617ecffaf0763e2ab934920d04745c647c4e4f09c2f7ad1f5b944da369360fbb"
+        "physical_file_hash": "sha256:539e5ed13bc822599dd5ecec64b9134a923030ebd9abf1bcdcd144709a6f7d7f"
       },
       "persona_id": "master_dalio"
     },
@@ -773,11 +773,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:fc1161dc5b39240909e75edadace71becb879e0bc4a51d316c1b96b0b27fe99d",
-      "pack_hash": "sha256:0499cb0c1b955e75973d1c05e23c63b86ec754a7c5915d933fa5d7041d76a44a",
+      "pack_hash": "sha256:d44f944dc72a9c025b08d1908836318b514d6d415b7f84f029630d1e0a93ec2a",
       "pack_manifest_binding": {
         "byte_length": 4129,
         "path": "knowledge/solo-test/masters/master_duan_yongping/manifest.json",
-        "physical_file_hash": "sha256:5691790e39251e6b5f3217e0104d2515682bfa4f77c6ae2be37fe3e7eab1ecf3"
+        "physical_file_hash": "sha256:e93080c238830ce80cef2d0a9bb50da77931b7b0776545c7c7a5076c6b409487"
       },
       "persona_id": "master_duan_yongping"
     },
@@ -843,11 +843,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:3c00b9082899e1bc040b4e6e967e094a1c24d53f603b0996d508bda4d3278fb8",
-      "pack_hash": "sha256:adcc2e4633f7ab3e7a9e4c018cb97a41ba69cb30c2abf09bc06c2c78dc83d26c",
+      "pack_hash": "sha256:945faa2163386bdaae4c98a30f9e63de2daf676afb49f0053af2dc2f4c2c5f28",
       "pack_manifest_binding": {
         "byte_length": 4340,
         "path": "knowledge/solo-test/masters/master_jhunjhunwala/manifest.json",
-        "physical_file_hash": "sha256:00ece6bcf7a56a9e03b0f1c9f144959ec5ed92ced205c6ed9c711c7a1f2fb270"
+        "physical_file_hash": "sha256:410aff47c4af3b0e4a3d3479d8d04e5da36a4edf66be5350154cafdca2c03068"
       },
       "persona_id": "master_jhunjhunwala"
     },
@@ -913,11 +913,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:36e4568b935d73e4bf27285ac7c2e26f4a3c4cb63ae84569accfef36af1633ee",
-      "pack_hash": "sha256:81bda7495aac1aeef35e99c74171ff77c1d0eef57225f89ac84a4985b3f885c1",
+      "pack_hash": "sha256:9ca1255c5afda27993bfb1291873cbaf080d949f23b6296bd6c33db35a410592",
       "pack_manifest_binding": {
         "byte_length": 4183,
         "path": "knowledge/solo-test/masters/master_lynch/manifest.json",
-        "physical_file_hash": "sha256:6757271240f2808ef88b32fbcbfe4ddf4b23766a9b23aa742ca2fa1f1ec43be3"
+        "physical_file_hash": "sha256:0a157af205a5a63413a34b4b3438f45e0d5fb9691e2395370bcfd6e3ac2e6c9b"
       },
       "persona_id": "master_lynch"
     },
@@ -984,11 +984,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:f5e94b07f3a31a408838a523eec198facd7059c207602e70993164433c7d97db",
-      "pack_hash": "sha256:29c04164c1ab8c8f6fbcd6f66c2402235ba3a58527b5fd66dd9a7e92c30f3e60",
+      "pack_hash": "sha256:969cb96dfb23c8974d3cf4e6ba1d27d875fba8cab966f275f6226f54459e1485",
       "pack_manifest_binding": {
         "byte_length": 4212,
         "path": "knowledge/solo-test/masters/master_forensic_short/manifest.json",
-        "physical_file_hash": "sha256:bfccbc8aefd9e2c69bb14f46a44308850f40303f6b10018b2965e3099dafadf2"
+        "physical_file_hash": "sha256:1c441b01faff87694a93fa6baf910a0a76d270dd6800593c6f6e0076f9e2dcf9"
       },
       "persona_id": "master_forensic_short"
     },
@@ -1054,11 +1054,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:4ad1827e31573a7d7f55d789bfcfa5815d949ba797c87ee758617ea0723b234a",
-      "pack_hash": "sha256:148b789fe3a3ebc4f78423c6d289034d8e2431325722fcd827972bb94ef77fd9",
+      "pack_hash": "sha256:b595a725affb11809464284a23c65644264cadd7c3959abdfaca4717fcfedc33",
       "pack_manifest_binding": {
         "byte_length": 4183,
         "path": "knowledge/solo-test/masters/master_li_lu/manifest.json",
-        "physical_file_hash": "sha256:7685ee529d259a9b51617c73a3e0a0041f56b257a6f99ff7aa15c7ac437e23b0"
+        "physical_file_hash": "sha256:a44607b7cb5c5a5b39e6f8d60c2a7b998728127372551188ac723c8dee927187"
       },
       "persona_id": "master_li_lu"
     },
@@ -1124,11 +1124,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:e15f3e3b7a166d5fb5d3e47d834958ca8efd3053a18d2d992f6d23ae84d60311",
-      "pack_hash": "sha256:78a14f4ece8219b4e976ceee24c611f2437d7f7ae599ed15c2a6fd44b9d14f2f",
+      "pack_hash": "sha256:eb83b8c97d8c7abad84357e5164e1f9799bbfd2e6e575aed72baa1030570ac4a",
       "pack_manifest_binding": {
         "byte_length": 4110,
         "path": "knowledge/solo-test/masters/master_marks/manifest.json",
-        "physical_file_hash": "sha256:c8955f7803058a592cd053340ee6b9bb1de4aafb4bd3d92321ea56ecc0f2f94f"
+        "physical_file_hash": "sha256:21893c03d6c5b83b61aa915d25c822d61bf6da5cbfbaa330bc6126f81466338f"
       },
       "persona_id": "master_marks"
     },
@@ -1194,11 +1194,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:a5b193f40fec598fb159fbe5e37dd9782e2660cee697c20e9a59b7f7f7bfa959",
-      "pack_hash": "sha256:76eb044893c547e58ecf6e4c8731c91f58568640232c0c1c4a7e4b06580d44c2",
+      "pack_hash": "sha256:47d6c93626e0017c23604a06c1d86cc6891dc37b8aaef5061a9ee7763b342c80",
       "pack_manifest_binding": {
         "byte_length": 4280,
         "path": "knowledge/solo-test/masters/master_burry/manifest.json",
-        "physical_file_hash": "sha256:9ef8229b75f33811407bcc80d39024fa33bf248790b80926359c9409f0035e23"
+        "physical_file_hash": "sha256:b3ebde137b7be6df211baf560a59e2f4284420e84a03a2ea488fe5a6d6edd5ff"
       },
       "persona_id": "master_burry"
     },
@@ -1238,11 +1238,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:ae0d83ef7c72bd83b40866af511627bd9249403c9316564d64e966ca6efbae6e",
-      "pack_hash": "sha256:8f8ccb58b10fa4bbf87d4d3f519f560566f3c73db265b04f46a01f50436ff354",
+      "pack_hash": "sha256:9e0190dda6425df7d79f54deb29bf636ebf0defbecc0712c7bef904415828c7f",
       "pack_manifest_binding": {
         "byte_length": 4122,
         "path": "knowledge/solo-test/masters/master_klarman/manifest.json",
-        "physical_file_hash": "sha256:40172c97330704132f20a0571a63ecba7f3d275480dc14497eb70df90691ce9c"
+        "physical_file_hash": "sha256:f2f6f18b3f7ce1e39a26f64372277966947e98c975915ba792fddecc7097ac7a"
       },
       "persona_id": "master_klarman"
     },
@@ -1282,11 +1282,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:5b1b600295eeee302313ddf47dc1eb639a469e2c9b5c4aa33a63eba9ec1e6ce5",
-      "pack_hash": "sha256:408a7b0965e2fb4fb984ac9490d5959c225fbf9c0b384fb2d719b0fbad22a38a",
+      "pack_hash": "sha256:27de008e9b83542d3266b5101a1924ad51d4d00a6ff077900fec5c1e1381c437",
       "pack_manifest_binding": {
         "byte_length": 4198,
         "path": "knowledge/solo-test/masters/master_pabrai/manifest.json",
-        "physical_file_hash": "sha256:c0f392a984ec22d11e7dfd239a8e0f2418177b01384f46834685d2b7c3184c30"
+        "physical_file_hash": "sha256:7f12fdfb3930de61bc1aea6457d1b5129d9fe320cadf1a0a3885abf350aaf30c"
       },
       "persona_id": "master_pabrai"
     },
@@ -1352,11 +1352,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:301b59fe11ccf10706684f270e8b7185260545dc68b13c39438f39b53e93efab",
-      "pack_hash": "sha256:6cc2aa3e5cf2698de3e42321531ae77f11e0b32cc40c5f303cfae3f5b638560f",
+      "pack_hash": "sha256:82ffb0dde35124d0ed9790e7086b8db29b169e274c2299238b9f3c82d88374e1",
       "pack_manifest_binding": {
         "byte_length": 4126,
         "path": "knowledge/solo-test/masters/master_ackman/manifest.json",
-        "physical_file_hash": "sha256:a92509b35493feb4264eb4821da4861c45e0f64610dd4450d3fd25d0a4ce2448"
+        "physical_file_hash": "sha256:fa796915b0558a394d18a12a80d1fb9124552b0e68ee5330f3a8c3537e4ed1b7"
       },
       "persona_id": "master_ackman"
     },
@@ -1396,11 +1396,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:702d4dbd2513e429997e9e77b69f8f5dd924bf4c01d8c7accf11645f2a39664c",
-      "pack_hash": "sha256:e2860158ecf8ae9ae91f0276f3585579f3a90c166062cc0d88500eec518447f9",
+      "pack_hash": "sha256:188940f9caf33ed47bb9d84c8bf7787d2dbe6d98a71226b98c828a9fa082442c",
       "pack_manifest_binding": {
         "byte_length": 4228,
         "path": "knowledge/solo-test/masters/master_damodaran/manifest.json",
-        "physical_file_hash": "sha256:0d45831e2cd7cb50eae92ad736fec4dba1479bb609a3ca470459d71aca54f2f6"
+        "physical_file_hash": "sha256:d69f28101472aa41091227f71921c94271be4bfae1477df534404bef9d6a2621"
       },
       "persona_id": "master_damodaran"
     },
@@ -1467,11 +1467,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:ce643fb45ddef2af2f9d06c2f01853fa0f8c9ce4c8599abcb1d912f7fef3d95d",
-      "pack_hash": "sha256:84486c7f0877153383e577714243572fdbe88d8e022f68fbbe6a583082457802",
+      "pack_hash": "sha256:5cf6c0f039c3838390090fabf7cb311f426b90c0954c495e8089ca4494899ee1",
       "pack_manifest_binding": {
         "byte_length": 4138,
         "path": "knowledge/solo-test/masters/master_taleb/manifest.json",
-        "physical_file_hash": "sha256:9968b99b370b1cfff4b28eaeda59fc0483c13ca498f1a94eebde09d7254e1880"
+        "physical_file_hash": "sha256:237c029d61b926a58c7abedf61f132430304e777765e7c4b14f84739d9d5da54"
       },
       "persona_id": "master_taleb"
     },
@@ -1512,11 +1512,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:d0c237072bf8310014e7ba414210d0fe5ed91dc0bc36d18d258bbaa3c6edc2bb",
-      "pack_hash": "sha256:0beff8746a48bd813d6534f2844ed2ff988ba22a02f15c8fbc9d23bedcce578a",
+      "pack_hash": "sha256:bd5994c2c769b2fb4f5e3ce86a753c4e65c454d5a3fe7439bd3dab54b37a01b5",
       "pack_manifest_binding": {
         "byte_length": 4179,
         "path": "knowledge/solo-test/masters/master_natenberg/manifest.json",
-        "physical_file_hash": "sha256:b995c050c364e4ca0316ab7e2a28058d1c7721e99466b85a1315b270ee8b093a"
+        "physical_file_hash": "sha256:8dc1ce80c5629103ef949aad26f948215e02e97da5ce7acaa092b2d3a5d0f5ae"
       },
       "persona_id": "master_natenberg"
     },
@@ -1556,11 +1556,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:f5b7f592025d580713874404b9e5bcc4d124cfc41b70628aa5bc3882395a7c7b",
-      "pack_hash": "sha256:758de9de86b1e6902690750ec70f8b7c0f209f92e9879cb1db7ddf807a4df2e6",
+      "pack_hash": "sha256:8aad92e4e8ad92358ceb16bf5d2a5c3f6565322468268fa86025efbe3b69eb4e",
       "pack_manifest_binding": {
         "byte_length": 4269,
         "path": "knowledge/solo-test/masters/master_sinclair/manifest.json",
-        "physical_file_hash": "sha256:7dc444c68f59197dac08ec9e6db5d1cf0f2481e16e73e49acd432acd2bd9624d"
+        "physical_file_hash": "sha256:e96b2fe89dc83a58777f867716f3a264cd6ebffde5ccdbda4bc3ebc5ea3e304b"
       },
       "persona_id": "master_sinclair"
     }

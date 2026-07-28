@@ -631,7 +631,6 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
           reject(error);
           controller?.abort(error);
         }, timeoutMs);
-        if (typeof timer.unref === "function") timer.unref();
       }),
     ]);
   } catch (error) {

@@ -16,7 +16,7 @@ plain MCP server in the Claude desktop app.
 npm install -g alphacouncil-agent@next
 ```
 
-`0.9.1` is intentionally on `next`; unqualified `alphacouncil-agent` follows the stable
+`0.9.2` is intentionally on `next`; unqualified `alphacouncil-agent` follows the stable
 `latest` tag and does not install this non-GA preview.
 
 Then point any MCP host at the `alphacouncil-agent` binary. For Claude Code:

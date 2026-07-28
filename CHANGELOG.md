@@ -2,6 +2,29 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.2] — 2026-07-28
+
+This is a **non-GA hotfix** for the bounded quick-council preview. `0.9.1` passed the
+source, package and public-install smoke checks, but the first clean GitHub Actions matrix
+exposed a cross-platform event-loop failure in the new hard-deadline path. Because npm
+versions are immutable, `0.9.2` supersedes `0.9.1` on the `next` dist-tag.
+
+### Fixed
+
+- Grounding and linked-operation deadline timers now remain referenced until they abort or
+  are explicitly cleared. The previous `unref()` calls allowed Node to exit while a timeout
+  Promise was still pending when no other event-loop handle remained. That could cancel the
+  grounding test on Linux, macOS and Windows and weakened the claimed hard deadline in
+  short-lived hosts.
+- The release regression covers lower-, upper- and mixed-case inherited
+  `npm_config_dry_run` variables without mutating global test-process state.
+- The npm bin path is stored in its normalized form, so npm no longer auto-corrects the
+  package manifest during publish.
+
+Quick/full scope, the 600,000ms ceiling, fixed evidence topology and all PersonaPack
+assurance boundaries are otherwise unchanged from `0.9.1`. The production GA gate remains
+intentionally failing.
+
 ## [0.9.1] — 2026-07-28
 
 This is a **non-GA quick-council preview** published on npm's `next` dist-tag and as a

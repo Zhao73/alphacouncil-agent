@@ -57,16 +57,16 @@ AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex
 
 このリポジトリはアップロード用のソースコピーです。実行成果物はリポジトリの外、`~/.alphacouncil-agent/runs/<run_id>/` に書き出されます。
 
-## 現在の 0.9.1 プレビュー：non-GA solo-test
+## 現在の 0.9.2 プレビュー：non-GA solo-test
 
-`0.9.1` は npm の `next` dist-tag で公開され、GitHub では prerelease として扱われます。
+`0.9.2` は npm の `next` dist-tag で公開され、GitHub では prerelease として扱われます。
 これは時間制限付き `quick_v1` の機能プレビューであり、正式な production GA ではありません。
 build channel は引き続き `solo_test` です。物理 PersonaPack v3 は 26、実行可能な
 `provisional_derived_proxy` ツールは 52、provisional `operator_lens` は 26。
 `operational`：**0**、検証済み `method_model`：**0**、人間によるソース/数式承認と承認署名：**0**です。
 
 production loader はこのツリーを引き続き拒否し、production assembly、cutover、GA は
-fail-closed のままです。quick の正確な境界は [v0.9.1 リリース契約](docs/releases/v0.9.1.md)、
+fail-closed のままです。quick の正確な境界は [v0.9.2 リリース契約](docs/releases/v0.9.2.md)、
 `quick_v1` と `full_v2` の違いは [レポート契約](docs/report-contract.md) を参照してください。
 
 ## 📜 免責事項
@@ -226,7 +226,7 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 | 現代 | アッシェンブレナー |
 | v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ジュンジュンワラ |
 
-0.9.1 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
+0.9.2 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
 **26 パックは 26 個の承認済みメソッドモデルを意味しません**。全 26 席は provisional
 `operator_lens` のままです。52 個のツールは実行可能な
 `provisional_derived_proxy` テスト代理であり、人間が承認した数式帰属ではありません。
