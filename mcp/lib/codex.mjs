@@ -69,13 +69,18 @@ export function codexWorkerArgs(outFile, dataDir = DATA_DIR) {
   ];
 }
 
-export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}) {
+export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}, runtime = {}) {
   return new Promise((resolvePromise) => {
     mkdirSync(DATA_DIR, { recursive: true });
     const outFile = join(DATA_DIR, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
     const args = codexWorkerArgs(outFile);
     const invocation = codexInvocation(args);
-    const child = spawn(invocation.command, invocation.args, {
+    const spawnWorker = runtime.spawn || spawn;
+    const stopWorker = runtime.stopChild || stopChild;
+    const killGraceMs = Number.isFinite(runtime.sigkillGraceMs)
+      ? Math.max(0, runtime.sigkillGraceMs)
+      : LIMITS.SIGKILL_GRACE_MS;
+    const child = spawnWorker(invocation.command, invocation.args, {
       cwd: DATA_DIR,
       stdio: ["pipe", "pipe", "pipe"],
       ...invocation.options,
@@ -109,10 +114,23 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     }, LIMITS.HEARTBEAT_MS);
     const timer = setTimeout(() => {
       timedOut = true;
-      stopChild(child);
+      stopWorker(child);
       killTimer = setTimeout(() => {
-        stopChild(child, true);
-      }, LIMITS.SIGKILL_GRACE_MS);
+        stopWorker(child, true);
+        // Do not trust a broken process tree to emit `close`. The worker deadline plus the
+        // grace period is a hard settlement boundary; any output written afterwards is
+        // rejected and removed by the late close handler or the startup sweeper.
+        finish({
+          ok: false,
+          code: null,
+          text: "",
+          stderr: appendLimited(stderr, "\nworker did not close after SIGKILL grace"),
+          stdout,
+          outFile,
+          timedOut: true,
+          forced_settle: true,
+        });
+      }, killGraceMs);
     }, timeoutMs);
     // Drain both pipes; switch to streaming logs if a progress UI needs live CLI output.
     child.stdout.on("data", (chunk) => { stdout = appendLimited(stdout, chunk.toString()); });
@@ -121,6 +139,10 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       finish({ ok: false, code: null, text: "", stderr: String(error.message || error), stdout, outFile, timedOut });
     });
     child.on("close", (code) => {
+      if (settled) {
+        try { unlinkSync(outFile); } catch {}
+        return;
+      }
       let text = "";
       if (existsSync(outFile)) text = readFileSync(outFile, "utf8");
       // A cooperative child may flush a valid-looking output and exit zero after it has
@@ -157,14 +179,19 @@ export function sweepStaleOutputs(now = Date.now()) {
   return removed;
 }
 
-export async function mapLimit(items, limit, worker) {
+export async function mapLimit(items, limit, worker, onError) {
   const results = new Array(items.length);
   let next = 0;
   async function runOne() {
     while (next < items.length) {
       const index = next;
       next += 1;
-      results[index] = await worker(items[index], index);
+      try {
+        results[index] = await worker(items[index], index);
+      } catch (error) {
+        if (!onError) throw error;
+        results[index] = await onError(error, items[index], index);
+      }
     }
   }
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, runOne));

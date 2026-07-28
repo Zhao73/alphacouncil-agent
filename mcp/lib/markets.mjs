@@ -1,6 +1,7 @@
 import { LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { fetchQuote } from "./quotes.mjs";
+import { linkedAbort } from "./abort.mjs";
 import { fetchDartFinancials, fetchEdinetFilings } from "./markets-kr-jp.mjs";
 
 /**
@@ -105,13 +106,12 @@ let twseCache = null;
 let twseCachedAt = 0;
 const TWSE_TTL_MS = 6 * 60 * 60 * 1000;
 
-async function twseIncomeStatements() {
+async function twseIncomeStatements(upstreamSignal) {
   if (twseCache && Date.now() - twseCachedAt < TWSE_TTL_MS) return twseCache;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), LIMITS.QUOTE_FETCH_MS * 2);
+  const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, upstreamSignal);
   try {
     const res = await fetch("https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci", {
-      signal: ctrl.signal,
+      signal: abort.signal,
       headers: { Accept: "application/json" },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -119,7 +119,7 @@ async function twseIncomeStatements() {
     twseCachedAt = Date.now();
     return twseCache;
   } finally {
-    clearTimeout(timer);
+    abort.cleanup();
   }
 }
 
@@ -139,9 +139,9 @@ const twField = (row, key) => {
 };
 
 /** Latest reported quarter for a Taiwan listed company, in TWD thousands as filed. */
-export async function fetchTaiwanFinancials(symbol) {
+export async function fetchTaiwanFinancials(symbol, { signal } = {}) {
   const code = String(symbol).toUpperCase().replace(/\.(TW|TWO)$/, "");
-  const rows = await twseIncomeStatements();
+  const rows = await twseIncomeStatements(signal);
   const match = rows.filter((r) => String(r["公司代號"]) === code);
   if (!match.length) return null;
   const row = match[match.length - 1];
@@ -196,7 +196,7 @@ export async function fetchMarketFinancials(symbol, extra = {}) {
   }
 
   if (market.id === "TW" && status.available) {
-    const financials = await fetchTaiwanFinancials(symbol).catch(() => null);
+    const financials = await fetchTaiwanFinancials(symbol, { signal: extra.signal }).catch(() => null);
     if (financials) return { ...base, financials, guidance: financials.note };
     return { ...base, financials: null, guidance: `Not found in the TWSE dataset for ${symbol}. Fall back to the quote and to search.` };
   }
@@ -215,7 +215,7 @@ export async function fetchMarketFinancials(symbol, extra = {}) {
   }
 
   // Everything else: say what is missing and fall back to what always works.
-  const quote = await fetchQuote(symbol).catch((e) => ({ error: String(e?.message || e) }));
+  const quote = await fetchQuote(symbol, { signal: extra.signal }).catch((e) => ({ error: String(e?.message || e) }));
   return {
     ...base,
     financials: null,

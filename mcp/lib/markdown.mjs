@@ -447,13 +447,67 @@ function withRecordedMasterBench(run, markdown) {
   return `${cleaned ? `${cleaned}\n\n` : ""}${systemBench}\n`;
 }
 
+function withDegradedLedger(run, markdown, completeness) {
+  const markerStart = "<!-- alphacouncil:degraded-ledger:v1:begin -->";
+  const markerEnd = "<!-- alphacouncil:degraded-ledger:v1:end -->";
+  let cleaned = String(markdown || "");
+  let start = cleaned.indexOf(markerStart);
+  while (start !== -1) {
+    const end = cleaned.indexOf(markerEnd, start + markerStart.length);
+    cleaned = end === -1
+      ? cleaned.slice(0, start)
+      : `${cleaned.slice(0, start)}${cleaned.slice(end + markerEnd.length)}`;
+    start = cleaned.indexOf(markerStart);
+  }
+  const tasks = completeness.degraded_evidence || [];
+  const roles = completeness.degraded_debate || [];
+  if (!tasks.length && !roles.length) return cleaned;
+  const chinese = isChineseLanguage(run.language);
+  const rows = [
+    ...tasks.map((task) => {
+      const state = taskState(run, task);
+      return `- ${task}: ${state.status}; ${state.error || (chinese ? "证据不可用" : "evidence unavailable")}${state.deadline_exhausted ? "; global deadline exhausted" : ""}`;
+    }),
+    ...roles.map((role) => {
+      const state = agentState(run, role);
+      return `- ${role}: ${state.status}; ${state.error || (chinese ? "辩论席不可用" : "debate seat unavailable")}`;
+    }),
+  ].join("\n");
+  const banner = chinese
+    ? `> [!WARNING]\n> **DEGRADED QUICK RUN — 部分席位失败。** 报告结构可能通过质量检查，但以下席位没有提供可用证据，不能把本轮当作完整覆盖：\n>\n${rows.split("\n").map((line) => `> ${line}`).join("\n")}`
+    : `> [!WARNING]\n> **DEGRADED QUICK RUN — one or more seats failed.** The report structure may pass quality checks, but the following seats supplied no usable evidence and this run is not full coverage:\n>\n${rows.split("\n").map((line) => `> ${line}`).join("\n")}`;
+  return `${markerStart}\n${banner}\n${markerEnd}\n\n${cleaned.trimStart()}`;
+}
+
+function withQuickScope(run, markdown) {
+  const markerStart = "<!-- alphacouncil:quick-scope:v1:begin -->";
+  const markerEnd = "<!-- alphacouncil:quick-scope:v1:end -->";
+  let cleaned = String(markdown || "");
+  let start = cleaned.indexOf(markerStart);
+  while (start !== -1) {
+    const end = cleaned.indexOf(markerEnd, start + markerStart.length);
+    cleaned = end === -1
+      ? cleaned.slice(0, start)
+      : `${cleaned.slice(0, start)}${cleaned.slice(end + markerEnd.length)}`;
+    start = cleaned.indexOf(markerStart);
+  }
+  if (run.council_mode !== "quick") return cleaned;
+  const banner = isChineseLanguage(run.language)
+    ? "> [!NOTE]\n> **QUICK_V1 范围。** 本轮不是 full council：固定 4 个核心证据席、1–4 个方法席、一次并行多空陈述和短 PM；没有三轮交叉问答或对抗 verifier。`full_council_equivalent=false`。"
+    : "> [!NOTE]\n> **QUICK_V1 SCOPE.** This is not a full council: four fixed core evidence seats, one to four method seats, one parallel bull/bear statement and a short PM; no three-round cross-exam or adversarial verifier. `full_council_equivalent=false`.";
+  return `${markerStart}\n${banner}\n${markerEnd}\n\n${cleaned.trimStart()}`;
+}
+
 export function finalReportMarkdown(run, manager) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
   const reportBody = withRecordedMasterBench(run, manager.report_markdown || manager.summary);
   return withDisclaimer(
     withCompletenessBanner(
-      withVerificationBanner(reportBody, gate, run.language),
+      withQuickScope(
+        run,
+        withDegradedLedger(run, withVerificationBanner(reportBody, gate, run.language), completeness),
+      ),
       completeness,
       run.language
     ),
@@ -501,26 +555,145 @@ export function packetSummary(run, task) {
   return (run.packets || []).find((packet) => packet.task === task)?.summary || "";
 }
 
+function quickUserResponse(run, manager, artifacts, chinese) {
+  const managerCompleted = agentState(run, "portfolio_manager").status === "completed"
+    && manager?.decision_available !== false;
+  const masters = (run.master_opinions || []).map((opinion) =>
+    `- ${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`) — ${opinion.stance || "unknown"}, ${opinion.confidence || "low"}: ${clipAtBoundary(opinion.verdict || opinion.summary, 360)}`,
+  ).join("\n") || (chinese ? "- 没有已记录的方法席结论。" : "- No recorded method-seat conclusion.");
+  const analysts = (run.tasks || []).map((task) => {
+    const packet = (run.packets || []).find((item) => item.task === task);
+    const status = taskState(run, task).status;
+    return `- \`${task}\` [${status}/${packet?.confidence || "low"}]: ${clipAtBoundary(packet?.summary || "", 420) || (chinese ? "无可用证据。" : "No usable evidence.")}`;
+  }).join("\n");
+  const newsPacket = (run.packets || []).find((packet) => packet.task === "news_industry_management");
+  const asOfTime = Date.parse(`${String(run.as_of || "").slice(0, 10)}T23:59:59.999Z`);
+  const recentCutoff = Number.isFinite(asOfTime) ? asOfTime - (120 * 24 * 60 * 60 * 1000) : -Infinity;
+  const newsSources = (newsPacket?.sources || []).slice();
+  const excludedNews = { undated: 0, future: 0, stale: 0 };
+  const recentNewsSources = newsSources.filter((source) => {
+    const published = Date.parse(source?.published_at || "");
+    if (!Number.isFinite(published)) { excludedNews.undated += 1; return false; }
+    if (Number.isFinite(asOfTime) && published > asOfTime) { excludedNews.future += 1; return false; }
+    if (Number.isFinite(asOfTime) && published < recentCutoff) { excludedNews.stale += 1; return false; }
+    return true;
+  });
+  const datedNews = recentNewsSources
+    .sort((a, b) => String(b.published_at || "").localeCompare(String(a.published_at || "")))
+    .slice(0, 6)
+    .map((source) => `- ${source.published_at || "unknown"} — ${clipAtBoundary(source.title || "Untitled", 220)}${source.url ? ` — ${source.url}` : ""}`)
+    .join("\n") || (chinese ? "- 本轮没有取得带日期的公司/行业新闻来源。" : "- No dated company/industry news source was retrieved.");
+  const gaps = [...new Set([
+    ...(run.tasks || []).filter((task) => taskState(run, task).status !== "completed")
+      .map((task) => `${task}: ${taskState(run, task).error || taskState(run, task).status}`),
+    ...(run.packets || []).flatMap((packet) => packet.open_questions || []),
+    ...((excludedNews.undated || excludedNews.future || excludedNews.stale)
+      ? [chinese
+          ? `近期新闻门禁排除 ${excludedNews.undated + excludedNews.future + excludedNews.stale} 个来源：无日期 ${excludedNews.undated}、晚于 as_of ${excludedNews.future}、超过 120 天 ${excludedNews.stale}。`
+          : `Recent-news gate excluded ${excludedNews.undated + excludedNews.future + excludedNews.stale} source(s): ${excludedNews.undated} undated, ${excludedNews.future} after as_of, ${excludedNews.stale} older than 120 days.`]
+      : []),
+  ])].slice(0, 8).map((item) => `- ${clipAtBoundary(item, 360)}`).join("\n")
+    || (chinese ? "- 未记录额外缺口。" : "- No additional gap was recorded.");
+
+  return chinese ? [
+    `# ${run.symbol} AlphaCouncil 快速摘要`,
+    "",
+    "## 状态与边界",
+    `- Run status: ${run.status}`,
+    `- Report quality: ${run.report_quality?.status || "not_checked"} (${run.report_quality?.contract_id || "quick_v1"})`,
+    "- 这是 quick_v1：4 个核心证据席、所选方法席、一次并行多空陈述和短 PM；没有三轮交叉问答或对抗核验，不等同 full council。",
+    "",
+    "## 结论",
+    `- 评级: ${managerCompleted ? manager.rating : "unavailable"}`,
+    `- 多空胜负: ${managerCompleted ? (manager.winner || "unknown") : "unavailable"}`,
+    `- 置信度: ${managerCompleted ? (manager.confidence || "low") : "unavailable"}`,
+    `- 判断: ${managerCompleted ? clipAtBoundary(manager.verdict || manager.summary, 620) : "NEEDS_MANAGER_REVIEW；工具或经理综合未完成，不能从失败路径推导投资评级。"}`,
+    "",
+    "## 大师方法席本轮记录（不是大师本人引语）",
+    masters,
+    "",
+    "## 分析师逐席观点",
+    analysts,
+    "",
+    "## 近期公司与行业新闻",
+    `- 新闻席摘要: ${clipAtBoundary(newsPacket?.summary || "", 620) || "未覆盖。"}`,
+    datedNews,
+    "",
+    "## 估值与仓位",
+    `- 估值/价位: ${managerCompleted ? (clipAtBoundary(manager.valuation_range, 520) || "未覆盖。") : "unavailable"}`,
+    `- 仓位: ${managerCompleted ? (clipAtBoundary(manager.position, 420) || "未覆盖。") : "unavailable"}`,
+    "",
+    "## 风险、未知与失败席",
+    gaps,
+    "",
+    "## 文件位置",
+    `- 完整快速报告: ${artifacts.final_report_md}`,
+    `- 分析师全文索引: ${artifacts.artifact_index_md}`,
+    `- 全部代理追踪: ${artifacts.all_agents_md}`,
+    `- 报告质量检查: ${artifacts.report_quality_json}`,
+  ].join("\n") : [
+    `# ${run.symbol} AlphaCouncil Quick Summary`,
+    "",
+    "## Status and Scope",
+    `- Run status: ${run.status}`,
+    `- Report quality: ${run.report_quality?.status || "not_checked"} (${run.report_quality?.contract_id || "quick_v1"})`,
+    "- This is quick_v1: four core evidence seats, selected method seats, one parallel bull/bear statement and a short PM. It has no three-round cross-exam or adversarial verification and is not equivalent to full council.",
+    "",
+    "## Conclusion",
+    `- Rating: ${managerCompleted ? manager.rating : "unavailable"}`,
+    `- Debate winner: ${managerCompleted ? (manager.winner || "unknown") : "unavailable"}`,
+    `- Confidence: ${managerCompleted ? (manager.confidence || "low") : "unavailable"}`,
+    `- Judgment: ${managerCompleted ? clipAtBoundary(manager.verdict || manager.summary, 620) : "NEEDS_MANAGER_REVIEW; a tool or manager-synthesis failure cannot be converted into an investment rating."}`,
+    "",
+    "## Recorded Method-Seat Views (not quotes from the named people)",
+    masters,
+    "",
+    "## Analyst Views",
+    analysts,
+    "",
+    "## Recent Company and Industry News",
+    `- News-seat summary: ${clipAtBoundary(newsPacket?.summary || "", 620) || "Not covered."}`,
+    datedNews,
+    "",
+    "## Valuation and Position",
+    `- Valuation / price range: ${managerCompleted ? (clipAtBoundary(manager.valuation_range, 520) || "Not covered.") : "unavailable"}`,
+    `- Position: ${managerCompleted ? (clipAtBoundary(manager.position, 420) || "Not covered.") : "unavailable"}`,
+    "",
+    "## Risks, Unknowns and Failed Seats",
+    gaps,
+    "",
+    "## File Locations",
+    `- Full quick report: ${artifacts.final_report_md}`,
+    `- Analyst file index: ${artifacts.artifact_index_md}`,
+    `- Full agent trace: ${artifacts.all_agents_md}`,
+    `- Report quality check: ${artifacts.report_quality_json}`,
+  ].join("\n");
+}
+
 export function userResponseMarkdown(run, manager) {
   const chinese = isChineseLanguage(run.language);
   const artifacts = artifactPaths(run);
-  const invalidation = (manager.invalidation || []).slice(0, 3).map((item) => `- ${clipAtBoundary(item, 220)}`).join("\n") || "- None";
+  const decisionAvailable = manager?.decision_available !== false;
+  const invalidation = decisionAvailable
+    ? (manager.invalidation || []).slice(0, 3).map((item) => `- ${clipAtBoundary(item, 220)}`).join("\n") || "- None"
+    : (chinese ? "- 经理综合未完成；没有正式失效条件。" : "- Manager synthesis did not complete; no formal invalidation conditions are available.");
+  if (run.council_mode === "quick") return quickUserResponse(run, manager, artifacts, chinese);
   if (chinese) {
     return [
       `# ${run.symbol} AlphaCouncil 摘要`,
       "",
       "## 结论",
-      `- 评级: ${manager.rating || "Hold"}`,
-      `- 多空胜负: ${manager.winner || "unknown"}`,
-      `- 置信度: ${manager.confidence || "low"}`,
-      `- 判断: ${clipAtBoundary(manager.verdict || manager.summary, 620)}`,
+      `- 评级: ${decisionAvailable ? manager.rating : "unavailable"}`,
+      `- 多空胜负: ${decisionAvailable ? (manager.winner || "unknown") : "unavailable"}`,
+      `- 置信度: ${decisionAvailable ? (manager.confidence || "low") : "unavailable"}`,
+      `- 判断: ${decisionAvailable ? clipAtBoundary(manager.verdict || manager.summary, 620) : "NEEDS_MANAGER_REVIEW；工具或经理综合失败不能转换成投资评级。"}`,
       "",
       "## 关键内容",
       `- 最新财报: ${clipAtBoundary(packetSummary(run, "earnings_deep_dive"), 420) || "未覆盖。"}`,
       `- 前瞻门槛: ${clipAtBoundary(packetSummary(run, "forward_expectations"), 420) || "未覆盖。"}`,
       `- 新闻/行业信号: ${clipAtBoundary([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "未覆盖。"}`,
-      `- 估值/价位: ${clipAtBoundary(manager.valuation_range, 520) || "未覆盖。"}`,
-      `- 仓位: ${clipAtBoundary(manager.position, 420) || "未覆盖。"}`,
+      `- 估值/价位: ${decisionAvailable ? (clipAtBoundary(manager.valuation_range, 520) || "未覆盖。") : "unavailable"}`,
+      `- 仓位: ${decisionAvailable ? (clipAtBoundary(manager.position, 420) || "未覆盖。") : "unavailable"}`,
       "",
       "## 失效条件",
       invalidation,
@@ -536,17 +709,17 @@ export function userResponseMarkdown(run, manager) {
     `# ${run.symbol} AlphaCouncil Summary`,
     "",
     "## Conclusion",
-    `- Rating: ${manager.rating || "Hold"}`,
-    `- Debate winner: ${manager.winner || "unknown"}`,
-    `- Confidence: ${manager.confidence || "low"}`,
-    `- Judgment: ${clipAtBoundary(manager.verdict || manager.summary, 620)}`,
+    `- Rating: ${decisionAvailable ? manager.rating : "unavailable"}`,
+    `- Debate winner: ${decisionAvailable ? (manager.winner || "unknown") : "unavailable"}`,
+    `- Confidence: ${decisionAvailable ? (manager.confidence || "low") : "unavailable"}`,
+    `- Judgment: ${decisionAvailable ? clipAtBoundary(manager.verdict || manager.summary, 620) : "NEEDS_MANAGER_REVIEW; a tool or manager-synthesis failure cannot be converted into an investment rating."}`,
     "",
     "## Key Content",
     `- Latest earnings: ${clipAtBoundary(packetSummary(run, "earnings_deep_dive"), 420) || "Not covered."}`,
     `- Forward thresholds: ${clipAtBoundary(packetSummary(run, "forward_expectations"), 420) || "Not covered."}`,
     `- News / industry signal: ${clipAtBoundary([packetSummary(run, "news_industry_management"), packetSummary(run, "management_industry_voices")].filter(Boolean).join(" "), 520) || "Not covered."}`,
-    `- Valuation / price range: ${clipAtBoundary(manager.valuation_range, 520) || "Not covered."}`,
-    `- Position: ${clipAtBoundary(manager.position, 420) || "Not covered."}`,
+    `- Valuation / price range: ${decisionAvailable ? (clipAtBoundary(manager.valuation_range, 520) || "Not covered.") : "unavailable"}`,
+    `- Position: ${decisionAvailable ? (clipAtBoundary(manager.position, 420) || "Not covered.") : "unavailable"}`,
     "",
     "## Invalidation",
     invalidation,

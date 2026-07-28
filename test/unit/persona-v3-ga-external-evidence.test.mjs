@@ -23,6 +23,7 @@ import {
 import {
   computeGaPackageArtifactHash,
   checkGaPackageArtifactFile,
+  stripNpmDryRunEnv,
   validateGaPackageArtifact,
 } from "../../mcp/lib/personas-v3/ga-package-evidence.mjs";
 
@@ -38,6 +39,20 @@ function writeJson(file, value) {
 }
 
 function hash(name) { return sha256({ fixture: "ga-external", name }); }
+
+test("physical package installs ignore inherited npm dry-run settings only", () => {
+  const env = stripNpmDryRunEnv({
+    npm_config_dry_run: "true",
+    NPM_CONFIG_DRY_RUN: "true",
+    Npm_Config_Dry_Run: "true",
+    npm_config_offline: "true",
+    PATH: "/fixture/bin",
+  });
+  assert.deepEqual(env, {
+    npm_config_offline: "true",
+    PATH: "/fixture/bin",
+  });
+});
 
 function experimentDocument() {
   const binding = (name) => ({ relative_path: `${name}.json`, file_hash: hash(`${name}:file`), artifact_hash: hash(`${name}:artifact`) });

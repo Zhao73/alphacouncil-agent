@@ -41,14 +41,14 @@
 
 </div>
 
-AlphaCouncil Agent は、**上場株式のリサーチ**向けの Codex / Claude Code プラグインです。複数のアナリスト・サブエージェントを統括し、出典付きの根拠を集め、強気/弱気のディベートを行い、ポートフォリオマネージャー視点の最終レポートを生成します。
+AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex / Claude Code プラグインです。既定はフル委員会で、ユーザーが明示的に `quick` を指定した場合だけ、より小さいプラグイン管理の headless 契約を使います。どちらも出典付きの根拠を集め、選択したメソッド席を実行し、監査可能な PM レポートを生成します。
 
 ### ✨ AlphaCouncil を使う理由
 
 | | |
 |---|---|
-| 🏛️ **一人の意見ではなく、委員会** | 11 の専門アナリストエージェント(株価・決算・バリュエーション・クオンツ・インサイダー/SEC・IB イベント…)が並列で稼働。 |
-| 🐂🐻 **設計からして対立的** | 構造化された強気 vs 弱気のディベートを、PM エージェントが裁定し実際のレーティングを提示。 |
+| 🏛️ **一人の意見ではなく、委員会** | フルは既定 8 根拠席（最大 11）、quick は固定 4 根拠席を並列実行。どちらも調査前に 26 メソッド席をすべて表示。 |
+| 🐂🐻 **設計からして対立的** | フルは 3 ラウンドの強気/弱気クロス審問。quick は強気・弱気を 1 回だけ並列実行して短い PM に渡し、敵対的 verifier を実行したとは主張しません。 |
 | 🔍 **監査可能、幻覚なし** | すべての主張が source ID に紐づく。欠落データは「データ欠落」セクションに明示し、決して隠さない。 |
 | ⏱️ **マルチ期間の判定** | 買い/中立/売りに加え、1〜4週・3〜6か月・12か月の見通しを個別に提示。 |
 | 🔑 **データベンダー不要・APIキー不要** | 金融データ API・マーケットデータフィード・証券口座ログインは一切不要。アナリストはエージェント自身のウェブ検索(**Codex のウェブ検索** / **Claude Code の WebSearch + WebFetch**)で根拠をリアルタイムに収集 —— 課金は既存の Codex / Claude Code サブスクのみ。MIT ライセンス。 |
@@ -57,18 +57,17 @@ AlphaCouncil Agent は、**上場株式のリサーチ**向けの Codex / Claude
 
 このリポジトリはアップロード用のソースコピーです。実行成果物はリポジトリの外、`~/.alphacouncil-agent/runs/<run_id>/` に書き出されます。
 
-## 現在の 0.9.0 ステータス：solo-test
+## 現在の 0.9.1 プレビュー：non-GA solo-test
 
-パッケージとプラグインのバージョン表面は `0.9.0-solo-test.3` ですが、これは明示的に分離された
-**solo-test** チャネルであり、正式な production GA ではありません。決定論的経路を
-エンドツーエンドで試験するため、26 個の物理 PersonaPack v3 パックと 52 個の実行可能な
-`provisional_derived_proxy` ツールを同梱します。全 26 席は provisional
-`operator_lens` のままです。`operational`：**0**、`method_model`：**0**、人間による
-ソース承認：**0**、数式承認：**0**、承認署名：**0**です。
+`0.9.1` は npm の `next` dist-tag で公開され、GitHub では prerelease として扱われます。
+これは時間制限付き `quick_v1` の機能プレビューであり、正式な production GA ではありません。
+build channel は引き続き `solo_test` です。物理 PersonaPack v3 は 26、実行可能な
+`provisional_derived_proxy` ツールは 52、provisional `operator_lens` は 26。
+`operational`：**0**、検証済み `method_model`：**0**、人間によるソース/数式承認と承認署名：**0**です。
 
-production loader はこのツリーを拒否し、production assembly、cutover、GA は
-fail-closed のままです。正確なテストコマンドと確認済みステータスは
-[docs/solo-test-0.9.0.md](docs/solo-test-0.9.0.md) を参照してください。
+production loader はこのツリーを引き続き拒否し、production assembly、cutover、GA は
+fail-closed のままです。quick の正確な境界は [v0.9.1 リリース契約](docs/releases/v0.9.1.md)、
+`quick_v1` と `full_v2` の違いは [レポート契約](docs/report-contract.md) を参照してください。
 
 ## 📜 免責事項
 
@@ -127,17 +126,42 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 | 入力 | 実行内容 | モデル消費 |
 |---|---|---|
 | `/alpha <ticker>` | 全マスターを個別表示し、`1..N`／範囲／`all` を確認してフル委員会を実行 | 選択した席ごとに 1 サブエージェント |
-| `/alpha <ticker> quick` | 同じ必須マスター選択後、アナリスト 4 名＋選択マスター＋討論。検証なし | 選択数により変動 |
+| `/alpha <ticker> quick` | 全 26 席を表示し、1-4 席を確認（`all` 禁止）後、プラグイン管理の `quick_v1`（≤10分）を実行 | 選択数により変動 |
 | `/alpha <ticker> screen` | 機械的スクリーニングのみ | **なし** |
 | `/alpha <ticker> options` | IV ターム構造、スキュー、建玉分布 | **なし** |
 | `/alpha <ticker> news` | 日付付きの提出書類とニュース | **なし** |
 | `/alpha market <theme>` | 市場が語っている物語 | **なし** |
 | `/alpha` | モード一覧を出して停止 | **なし** |
 
-**なし** と記した 4 つはキー不要のデータツールを呼ぶだけで、サブエージェントを一切起動しません。フルと quick はどちらも委員会モードです。調査前に全マスターの番号、名称、手法、最適用途を表示します。4 ホスト共通の番号テキスト入力が基準で、ネイティブ複数選択は補助にすぎません。依頼ですでに人物名が指定されていてもプリフィル扱いに留め、全一覧を表示して今回限りの receipt を確認します。
+**なし** と記した 4 つはキー不要のデータツールを呼ぶだけで、サブエージェントを一切起動しません。フルと quick はどちらも委員会モードです。調査前に全マスターの番号、名称、手法、最適用途を表示します。フルは `all` を受け付けますが、quick は異なる 1-4 席だけを受け付け、`all` を拒否します。4 ホスト共通の番号テキスト入力が基準で、ネイティブ複数選択は補助にすぎません。依頼ですでに人物名が指定されていてもプリフィル扱いに留め、全一覧を表示して今回限りかつ mode-bound の receipt を確認します。
 
 上場銘柄なら何でも：`/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`。
 提出書類ベースのモードは米国登録企業が必要です。他市場は黙って空を返すのではなく `market_coverage` で対応状況を示します。
+
+### Quick v1 — 時間制限付きであり、フルではない
+
+ユーザーが急いでいることやフル実行の失敗を理由に、quick へ自動切替はしません。Quick は
+プラグイン管理の headless `analyze_symbol(council_mode="quick")` だけで実行され、
+`plan_visible_run` は quick を拒否します。26 席を完全表示して 1-4 席を確認した後の実行図は固定です：
+
+1. `market_data`、`earnings_deep_dive`、`valuation_long_short`、
+   `news_industry_management` の 4 席を 1 波で並列実行；
+2. 選択した 1-4 メソッド席を 1 波で並列実行；
+3. Bull と Bear の各 1 回の主張を並列実行し、その後に短い PM；
+4. 決定論的な `quick_v1` レポート組立てと標準成果物の保存。
+
+企業・業界ニュースは日付を持ち、`as_of` までの直近 120 日以内でなければなりません。未来、
+日付不明、または古い項目は「最近のニュース」から除外され、データギャップとして記録されます。
+queue から成果物永続化までの上限は **600000 ms**：grounding 待ち 20 秒、各並列根拠 worker
+210 秒、各並列メソッド worker 90 秒、Bull/Bear は各 90 秒、PM 90 秒、最終組立て/永続化の
+予備 20 秒。retry も同じ個別上限と全体時計を消費します。
+
+Quick には第 2 ラウンドの反論、第 3 ラウンドの exact Q&A、
+`source_fidelity`/`rederivation`/`refuter` の敵対的 verifier fan-out はありません。明示された
+最低 coverage と system-owned degraded ledger を満たす場合だけ `degraded` で終了でき、
+それ以外の必須作業欠落は `incomplete` または `failed` です。`report_quality=passed` は
+`quick_v1` の構造だけを意味し、degraded を complete に昇格させず、`full_v2` と同等でも
+ありません。メソッド席の結果は今回記録された provisional lens の出力であり、**本人の発言や引用ではありません**。
 
 
 Claude Code、OpenCode、Grok Build ではインストール後すぐ使えます。Codex の prompts はユーザースコープなので一度コピーしてください：
@@ -158,9 +182,14 @@ Claude Code、OpenCode、Grok Build ではインストール後すぐ使えま�
 - 個別選択可能な 26 の投資手法レンズが同じ事実を読む
 - ブル、ベア、ポートフォリオマネージャーの裁定
 
+フルは mandatory evidence barrier で fail-fast します。必須根拠席が 1 回の制限付き
+parse-only 修復後も失敗した場合、失敗と診断の成果物を保存し、選択メソッド、討論、PM の
+モデル呼び出しをすべてスキップして `incomplete` で終了します。`full_v2` を満たせない実行に
+下流合成の時間を追加消費しません。
+
 最終レポートはチャット上でそのまま読めます。アナリスト作業記録、データと提出書類の要約、ブル/ベア討論、PM裁定、エントリー価格帯、短中長期の見方、データギャップ、確信度、出典表を含みます。
 
-## 🔧 ツール —— 27個、すべてキー不要
+## 🔧 ツール —— 31個、すべてキー不要
 
 以下のいずれもAPIキー、アカウント、設定ファイルを必要としません。
 
@@ -197,7 +226,7 @@ Claude Code、OpenCode、Grok Build ではインストール後すぐ使えま�
 | 現代 | アッシェンブレナー |
 | v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ジュンジュンワラ |
 
-0.9.0 solo-test カタログには 26 個の選択可能な物理 v3 パックがありますが、
+0.9.1 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
 **26 パックは 26 個の承認済みメソッドモデルを意味しません**。全 26 席は provisional
 `operator_lens` のままです。52 個のツールは実行可能な
 `provisional_derived_proxy` テスト代理であり、人間が承認した数式帰属ではありません。
@@ -207,6 +236,9 @@ Claude Code、OpenCode、Grok Build ではインストール後すぐ使えま�
 マスターはアナリストと**同じ確定事実**（提出書類、株価、財務、マクロ）を読みます。アナリストのパケットは別途、「事実ではなく他席の解釈」として明示のうえ渡されます。この分離こそが要点です：アナリストが粗利率を見た箇所でマンガーはインセンティブ構造を見る —— それぞれが独自に取捨選択してこそ、この陣容に意味があります。詳細は [docs/attribution.md](docs/attribution.md)。
 
 ## 🧩 アーキテクチャ
+
+下図はフル/deep 経路です。Quick にも Master Bench はありますが、固定 4 根拠席、1 回の
+並列 Bull/Bear 主張、短い PM を使い、図中の verifier ノードは実行しません。
 
 ```mermaid
 flowchart TD

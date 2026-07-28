@@ -134,7 +134,7 @@ function isolatedNpmEnv(tempRoot) {
   const globalConfig = join(tempRoot, "empty-global.npmrc");
   writeFileSync(userConfig, "", { encoding: "utf8", flag: "wx", mode: 0o600 });
   writeFileSync(globalConfig, "", { encoding: "utf8", flag: "wx", mode: 0o600 });
-  return {
+  const env = {
     ...process.env,
     npm_config_audit: "false",
     npm_config_cache: join(tempRoot, "npm-cache"),
@@ -146,6 +146,13 @@ function isolatedNpmEnv(tempRoot) {
     npm_config_update_notifier: "false",
     npm_config_userconfig: userConfig,
   };
+  // An outer `npm publish --dry-run` exports this setting to lifecycle scripts. The
+  // packaged-parity check must still create its private temporary tarball, so do not
+  // let the outer rehearsal turn the nested `npm pack` into another metadata-only run.
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === "npm_config_dry_run") delete env[key];
+  }
+  return env;
 }
 
 function runCommand(command, args, { cwd, env, label, timeout = PROCESS_TIMEOUT_MS } = {}) {

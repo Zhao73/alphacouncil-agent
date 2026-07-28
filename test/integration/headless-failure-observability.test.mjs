@@ -60,7 +60,7 @@ writeFileSync(outputPath, output);
   return { command: wrapper, counter };
 }
 
-test("headless failures stay out of evidence and every completed debate round is observable", async () => {
+test("headless failures stay out of evidence and full council stops before expensive downstream synthesis", async () => {
   const dataDir = makeDataDir();
   // Invoking Node with Codex CLI flags fails immediately and predictably without network
   // access. This exercises the real worker-failure path without a platform-specific shell.
@@ -109,25 +109,16 @@ test("headless failures stay out of evidence and every completed debate round is
       [{ successful: 0, failed: 1, total: 1 }],
       "a failure packet must not be reported as completed evidence",
     );
-    const completedRounds = events.filter((event) => event.type === "agent_round_completed");
-    assert.deepEqual(
-      completedRounds.map(({ role, round }) => `${role}:${round}`),
-      [
-        "bull_researcher:1",
-        "bear_researcher:1",
-        "bull_researcher:2",
-        "bear_researcher:2",
-        "bull_researcher:3",
-        "bear_researcher:3",
-      ],
-      "round completion telemetry must prove the cross-rebuttal dependency order",
-    );
-    assert.deepEqual(
-      events.filter((event) => event.type === "debate_qna_gate")
-        .map(({ status }) => status),
-      ["failed"],
-      "empty question/answer arrays must fail the advertised Q&A gate",
-    );
+    assert.equal(events.some((event) => event.type === "debate_started"), false);
+    assert.equal(events.some((event) => event.type === "agent_round_completed"), false);
+    assert.equal(events.some((event) => event.type === "debate_qna_gate"), false);
+    const terminal = events.findLast((event) => event.type === "incomplete");
+    assert.equal(terminal?.reason, "evidence_gate_failed");
+    assert.equal(terminal?.downstream_model_calls_skipped, true);
+    assert.deepEqual(terminal?.missing_evidence, ["market_data"]);
+    for (const role of ["bull_researcher", "bear_researcher", "portfolio_manager"]) {
+      assert.equal(result.run.agent_status[role].status, "skipped");
+    }
   } finally {
     await server.close();
     removeDataDir(dataDir);

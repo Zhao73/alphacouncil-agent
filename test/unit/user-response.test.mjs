@@ -49,3 +49,14 @@ test("handoff truncation never leaves an unpaired Unicode surrogate", () => {
   assert.equal(unpaired, false);
   assert.match(line, /…$/u);
 });
+
+test("a failed manager path never becomes a synthetic Hold in the full handoff", () => {
+  const markdown = userResponseMarkdown(run("English", "bounded evidence"), {
+    ...manager("NEEDS_MANAGER_REVIEW"),
+    decision_available: false,
+    rating: null,
+  });
+  assert.match(markdown, /Rating: unavailable/);
+  assert.match(markdown, /NEEDS_MANAGER_REVIEW/);
+  assert.doesNotMatch(markdown, /Rating: Hold/);
+});

@@ -1,4 +1,5 @@
 import { LIMITS } from "./constants.mjs";
+import { linkedAbort } from "./abort.mjs";
 import { invalidParams } from "./errors.mjs";
 
 // ---- Keyless delayed market data (Yahoo primary, Stooq fallback) ------------
@@ -66,29 +67,28 @@ export function parseStooqCsv(csv, requested) {
   };
 }
 
-export async function fetchText(url, timeoutMs = LIMITS.QUOTE_FETCH_MS) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+export async function fetchText(url, timeoutMs = LIMITS.QUOTE_FETCH_MS, upstreamSignal) {
+  const abort = linkedAbort(timeoutMs, upstreamSignal);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, headers: { "User-Agent": "Mozilla/5.0 (AlphaCouncil)" } });
+    const res = await fetch(url, { signal: abort.signal, headers: { "User-Agent": "Mozilla/5.0 (AlphaCouncil)" } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
   } finally {
-    clearTimeout(timer);
+    abort.cleanup();
   }
 }
 
-export async function fetchQuote(input) {
+export async function fetchQuote(input, { signal } = {}) {
   const sym = resolveMarketSymbol(input);
   if (!sym) return { query: input, error: "empty symbol" };
   try {
     const sourceUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=1d`;
-    const txt = await fetchText(sourceUrl);
+    const txt = await fetchText(sourceUrl, LIMITS.QUOTE_FETCH_MS, signal);
     return { ...parseYahooChart(JSON.parse(txt), sym), source_url: sourceUrl };
   } catch (e1) {
     try {
       const sourceUrl = `https://stooq.com/q/l/?s=${encodeURIComponent(sym.toLowerCase())}&f=sd2t2ohlcv&h&e=csv`;
-      const txt = await fetchText(sourceUrl);
+      const txt = await fetchText(sourceUrl, LIMITS.QUOTE_FETCH_MS, signal);
       return { ...parseStooqCsv(txt, sym), source_url: sourceUrl };
     } catch (e2) {
       return { query: input, symbol: sym, error: `live data unavailable (${e1.message}; ${e2.message})`, note: "fall back to WebSearch and mark open_questions" };

@@ -8,17 +8,55 @@ For anti-laziness governance, also follow `skills/agent-skills-governance/SKILL.
 
 Run `npm run check` after any code or prompt change.
 
+## Current Release Boundary
+
+Package/plugin version `0.9.1` is a non-GA preview published to npm's `next` dist-tag and
+marked as a GitHub prerelease. Its build channel remains `solo_test`: 26 physical provisional
+PersonaPack v3 packs, 26 `operator_lens` seats, 52 `provisional_derived_proxy` tools,
+0 operational seats and 0 validated `method_model` seats. Do not present this feature
+release, a passing quick report or a packaged smoke as PersonaPack production GA.
+
+## Council Modes
+
+`full` is the default and uses the `full_v2` contract. It requires all eight mandatory
+evidence roles, every selected method, the three-round Bull/Bear cross-exam and PM. If any
+mandatory evidence role still fails after its one bounded parse-only repair, persist the
+failure/diagnostic artifacts, skip method/debate/PM model calls and terminate `incomplete`
+before downstream synthesis. Never auto-downgrade that run to quick.
+
+`quick` is explicit and uses `quick_v1`. It can run only through plugin-managed headless
+`analyze_symbol`; `plan_visible_run` rejects it. Quick launches the fixed four evidence roles
+`market_data`, `earnings_deep_dive`, `valuation_long_short`, and
+`news_industry_management` in parallel; 1-4 selected methods in parallel; one Bull and one
+Bear statement in parallel; then one short PM. It has no rebuttal/Q&A rounds and no
+adversarial `source_fidelity`/`rederivation`/`refuter` fan-out.
+
+Quick company/industry news must be dated within the 120 days ending at `as_of`. Future,
+undated and older items are gaps, not recent news. Its hard queue-to-persistence ceiling is
+600000 ms: grounding wait 20s; each evidence worker 210s; each selected-method worker 90s;
+Bull and Bear 90s per side; PM 90s; final assembly/persistence reserve 20s. Retry time is
+inside the same caps. The ceiling may be lowered, never raised.
+
+Quick may terminate `degraded` only under its documented minimum-coverage rule and one
+system-owned idempotent degraded ledger. `report_quality=passed` validates `quick_v1`
+structure only; it does not turn degraded into complete or imply full-council equivalence.
+Method-seat output is a recorded provisional lens result, never a quotation from the named
+person.
+
 ## Hosts
 
 The MCP server is the load-bearing integration on every host: it reads `personas/` directly,
 so a host that ignores the generated agent files still gets correct prompts.
 
 Every host also follows the same mandatory master-selection protocol for a full or quick
-council. Call `begin_council_selection`, display every returned entry with its number,
-identity, method and `best_for`, collect a numbered/range/ID/`all` submission, then call
-`confirm_master_selection` with `display_ack: true`. Existing names in the request are only
-a prefill; the full catalog is still shown. Only the returned one-use `selection_receipt`
-may authorize `plan_visible_run`, `collect_evidence` or `analyze_symbol`. A host-native
+council. Call `begin_council_selection` with the intended `council_mode`, display all 26
+returned entries with number, identity, method and `best_for`, collect one submission, then
+call `confirm_master_selection` with `display_ack: true`. Full accepts numbers, ranges,
+stable IDs or `all`; quick accepts exactly 1-4 distinct methods and rejects `all` and
+`select_all`. Existing names in the request are only a prefill; the full catalog is still
+shown. Only the returned one-use, mode-bound `selection_receipt`, reused with the same
+symbol, prompt, language and mode, may authorize the applicable execution tool. A full
+receipt cannot launch quick and a quick receipt cannot launch full. A host-native
 multi-select is optional UI sugar; the numbered text fallback is mandatory on Claude Code,
 Codex, OpenCode and Grok Build. Data-only `screen`, `options`, `news` and `market` modes are
 the only `/alpha` routes that skip this gate.
@@ -89,7 +127,7 @@ rather than four in a menu of a hundred.
 | Invocation | What runs | Model spend |
 |---|---|---|
 | `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs the full council | one subagent per selected seat |
-| `/alpha <ticker> quick` | Same mandatory master selection, then 4 analysts + selected masters + debate; no verification | varies with selection |
+| `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |
@@ -98,7 +136,9 @@ rather than four in a menu of a hundred.
 
 The four marked **none** call keyless data tools and spawn no subagents, so they cost
 nothing beyond the turn you type them in. Full and quick are council modes: both require a
-fresh selection receipt, and their cost varies with the selected master count.
+fresh mode-bound selection receipt. Quick must poll the single durable `run_id` returned by
+`analyze_symbol(wait_for_completion=false)` through `read_run`; never emulate quick with
+visible agents or create a replacement run when it is slow.
 
 | Host | Where it reads them |
 |---|---|

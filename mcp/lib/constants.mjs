@@ -24,6 +24,16 @@ export const DEFAULT_TASKS = [
   "insider_sec",
   "ib_event_analysis",
 ];
+// A first-class bounded council for users who explicitly ask for a quick read. Keep this
+// list independent of DEFAULT_TASKS ordering: the previous `slice(0, 4)` silently omitted
+// company/industry news, which was the main thing many quick-read users asked for.
+export const QUICK_TASKS = [
+  "market_data",
+  "earnings_deep_dive",
+  "valuation_long_short",
+  "news_industry_management",
+];
+export const COUNCIL_MODES = ["full", "quick"];
 export const RATINGS = ["Buy", "Overweight", "Hold", "Underweight", "Sell"];
 export const DEBATE_ROLES = ["bull_researcher", "bear_researcher", "portfolio_manager"];
 export const MASTER_STANCES = ["constructive", "cautious", "opposed", "out_of_scope"];
@@ -82,6 +92,26 @@ export const REPORT_SECTIONS = [
   { id: "source_table", aliases: ["来源表", "source table"], min_body: 6 },
 ];
 
+// Quick reports are deliberately a different publication scope. Requiring the full
+// 23-section memo would force the short PM call to regenerate the same long report that
+// the quick path exists to avoid. The quality result records this scope explicitly.
+const QUICK_REPORT_SECTION_IDS = new Set([
+  "conclusion",
+  "analyst_work_log",
+  "debate_record",
+  "master_bench",
+  "earnings_call",
+  "news",
+  "valuation",
+  "price_levels",
+  "risks",
+  "position",
+  "data_gaps",
+  "confidence",
+  "source_table",
+]);
+export const QUICK_REPORT_SECTIONS = REPORT_SECTIONS.filter(({ id }) => QUICK_REPORT_SECTION_IDS.has(id));
+
 /** Bodies that look like a section but say nothing. */
 export const PLACEHOLDER_BODIES = [
   "", "-", "n/a", "na", "tbd", "todo", "none", "- none", "待补充", "- 待补充", "无", "- 无",
@@ -129,6 +159,37 @@ export const LIMITS = Object.freeze({
   SIGKILL_GRACE_MS: 5000,
   /** Default per-subagent Codex timeout. */
   CODEX_TIMEOUT_MS: Number(process.env.ALPHACOUNCIL_AGENT_TIMEOUT_MS) || 600000,
+  /** Non-overridable public ceiling for a quick council, including retries and synthesis. */
+  QUICK_HARD_MAX_MS: 10 * 60 * 1000,
+  /** Default quick budget. Operators may lower it for stricter environments, never raise it. */
+  QUICK_TOTAL_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_QUICK_TOTAL_MS) || 10 * 60 * 1000,
+    10 * 60 * 1000,
+  )),
+  /** Maximum time quick mode waits for deterministic grounding before recording a gap. */
+  QUICK_GROUNDING_MS: 20 * 1000,
+  /** Per evidence worker cap; all four evidence roles launch in one wave. */
+  QUICK_EVIDENCE_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_QUICK_EVIDENCE_MS) || 210 * 1000,
+    210 * 1000,
+  )),
+  /** Per method-seat cap; all selected quick seats launch in one wave. */
+  QUICK_MASTER_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_QUICK_MASTER_MS) || 90 * 1000,
+    90 * 1000,
+  )),
+  /** Per quick bull/bear or PM call cap inside the global quick budget. */
+  QUICK_SYNTHESIS_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_QUICK_SYNTHESIS_MS) || 90 * 1000,
+    90 * 1000,
+  )),
+  /** Time reserved for deterministic fallback, report assembly and atomic persistence. */
+  QUICK_FINALIZE_RESERVE_MS: 20 * 1000,
+  /** Below this evidence coverage, a quick run is incomplete rather than degraded. */
+  QUICK_MIN_SUCCESSFUL_TASKS: Math.max(1, Math.min(
+    QUICK_TASKS.length,
+    Math.trunc(Number(process.env.ALPHACOUNCIL_QUICK_MIN_SUCCESSFUL_TASKS) || 2),
+  )),
   CONCURRENCY_MIN: 1,
   CONCURRENCY_MAX: 6,
   CONCURRENCY_DEFAULT: Number(process.env.ALPHACOUNCIL_AGENT_CONCURRENCY) || 3,
@@ -145,6 +206,7 @@ export const LIMITS = Object.freeze({
   /** Minimum non-space characters before a final report is considered a real report. */
   REPORT_MIN_CHARS: 1600,
   REPORT_MIN_CHARS_DRY: 600,
+  REPORT_MIN_CHARS_QUICK: 700,
   /** Timeout for one keyless quote fetch. */
   QUOTE_FETCH_MS: 8000,
   /** Cap on symbols per get_quote call. */

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { LIMITS, MASTER_STANCES, OUTPUT_MODES, SERVER_NAME, VERSION } from "./constants.mjs";
+import { COUNCIL_MODES, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { resolveLanguage } from "./lang.mjs";
@@ -26,7 +26,7 @@ import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
 import { table, mark, metricValue, groundingDashboard, label, threshold, skippedMark } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
-import { analyzeSymbol, collectEvidence, queueHeadlessRun, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, queueHeadlessRun, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
@@ -88,6 +88,7 @@ function renderSelectionCatalog(data, zh) {
     catalog_hash: data.catalog_hash,
     intent_hash: data.intent_hash,
     expires_at: data.expires_at,
+    council_mode: data.council_mode,
   })}`;
   const cards = data.masters.map((master) => [
     `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? (zh ? " [已预选]" : " [preselected]") : ""}`,
@@ -97,11 +98,18 @@ function renderSelectionCatalog(data, zh) {
     `${zh ? "成熟度" : "Maturity"}: ${master.maturity}`,
     `${zh ? "物理格式" : "Pack format"}: ${master.pack_format} (${master.admission_level})`,
   ].join("\n   ")).join("\n\n");
+  const quick = data.council_mode === "quick";
   const instructions = zh
-    ? `请选择 1 至 ${data.maximum} 位大师。回复编号、范围、稳定 ID，或 all 全选，例如：1 / 1,3,8 / 1-5 / master_buffett / all。`
-    : `Choose 1 to ${data.maximum} masters. Submit numbers, ranges, stable IDs, or all, for example: 1 / 1,3,8 / 1-5 / master_buffett / all.`;
+    ? quick
+      ? `Quick 模式请选择 1 至 ${data.maximum} 位大师。回复编号、范围或稳定 ID，例如：1 / 1,3,8 / 1-4 / master_buffett；不支持 all 全选。`
+      : `请选择 1 至 ${data.maximum} 位大师。回复编号、范围、稳定 ID，或 all 全选，例如：1 / 1,3,8 / 1-5 / master_buffett / all。`
+    : quick
+      ? `Quick mode: choose 1 to ${data.maximum} masters. Submit numbers, ranges, or stable IDs, for example: 1 / 1,3,8 / 1-4 / master_buffett. Selecting all is not supported.`
+      : `Choose 1 to ${data.maximum} masters. Submit numbers, ranges, stable IDs, or all, for example: 1 / 1,3,8 / 1-5 / master_buffett / all.`;
   return [
-    zh ? `大师选择（${data.maximum} 位可用）` : `Master selection (${data.maximum} available)`,
+    zh
+      ? `大师选择（目录共 ${data.masters.length} 席；最多选择 ${data.maximum} 席）`
+      : `Master selection (${data.masters.length} in catalog; choose up to ${data.maximum})`,
     fallbackContext,
     "",
     cards,
@@ -142,6 +150,41 @@ function startValidation(args, entryTool) {
         unknown,
       });
     }
+  }
+  const mode = args.council_mode === undefined ? "full" : args.council_mode;
+  if (!COUNCIL_MODES.includes(mode)) {
+    throw invalidParams(`council_mode must be one of ${COUNCIL_MODES.join(", ")}.`, {
+      reason: "INVALID_COUNCIL_MODE",
+    });
+  }
+  if (mode === "quick" && args.tasks !== undefined
+    && JSON.stringify(args.tasks) !== JSON.stringify(QUICK_TASKS)) {
+    throw invalidParams("Quick council uses its fixed four-role evidence contract; tasks cannot override it.", {
+      reason: "QUICK_TASK_OVERRIDE_FORBIDDEN",
+      required_tasks: QUICK_TASKS,
+    });
+  }
+  if (args.total_timeout_ms !== undefined
+    && (!Number.isFinite(args.total_timeout_ms) || args.total_timeout_ms <= 0)) {
+    throw invalidParams("total_timeout_ms must be a positive number.", {
+      reason: "INVALID_TOTAL_TIMEOUT",
+    });
+  }
+  if (mode === "quick" && args.total_timeout_ms > LIMITS.QUICK_HARD_MAX_MS) {
+    throw invalidParams(`Quick council total_timeout_ms cannot exceed ${LIMITS.QUICK_HARD_MAX_MS}.`, {
+      reason: "QUICK_TOTAL_TIMEOUT_EXCEEDS_MAX",
+      maximum_ms: LIMITS.QUICK_HARD_MAX_MS,
+    });
+  }
+  if (mode === "quick" && args.synthesis === false) {
+    throw invalidParams("Quick council requires its one-round bull/bear and portfolio-manager synthesis.", {
+      reason: "QUICK_SYNTHESIS_REQUIRED",
+    });
+  }
+  if (entryTool === "plan_visible_run" && mode === "quick") {
+    throw invalidParams("Quick council requires plugin-managed analyze_symbol so its global deadline can be enforced.", {
+      reason: "QUICK_REQUIRES_HEADLESS_ORCHESTRATOR",
+    });
   }
 }
 
@@ -189,6 +232,7 @@ function selectedRunArgs(args = {}, entryTool) {
       run_id: id,
       language: args.language || "English",
       prompt: typeof args.prompt === "string" ? args.prompt : "",
+      council_mode: args.council_mode || "full",
     });
     return {
       ...args,
@@ -227,6 +271,8 @@ const backgroundRuns = new Map();
 
 function backgroundAnalysisAccepted(runArgs) {
   const dir = runPath(runArgs.run_id);
+  const queued = runArgs.queued_run;
+  const mode = queued?.council_mode || runArgs.council_mode || "full";
   return {
     accepted: true,
     run_id: runArgs.run_id,
@@ -234,6 +280,11 @@ function backgroundAnalysisAccepted(runArgs) {
     status: "accepted",
     phase: "queued",
     execution_mode: "background_codex_exec",
+    council_mode: mode,
+    report_contract: mode === "quick" ? "quick_v1" : "full_v2",
+    full_council_equivalent: mode !== "quick",
+    deadline_at: queued?.deadline_at || null,
+    time_budget_ms: queued?.time_budget_ms || null,
     poll_tool: "read_run",
     status_json: join(dir, "status.json"),
     events_jsonl: join(dir, "events.jsonl"),
@@ -244,12 +295,7 @@ function persistBackgroundFailure(runArgs, error) {
   const evidencePath = join(runPath(runArgs.run_id), "evidence.json");
   if (!existsSync(evidencePath)) return;
   try {
-    const run = readJson(evidencePath);
-    run.status = "failed";
-    run.phase = "failed";
-    run.completed_at = new Date().toISOString();
-    run.background_error = String(error?.message || error);
-    saveRun(run);
+    finalizeUnhandledBackgroundFailure(runArgs.run_id, runArgs.prompt || "", error);
   } catch {
     // A concurrent read can still use the last atomic status/evidence snapshot. Never let
     // failure-reporting itself become an unhandled rejection that kills the MCP process.
@@ -313,12 +359,24 @@ export function tools() {
     as_of: { type: "string", description: "Analysis date YYYY-MM-DD. Defaults to today." },
     prompt: { type: "string", description: "User objective or extra instructions." },
     language: { type: "string", default: "auto", description: "Reader-facing language for subagents and final report, e.g. auto, zh-CN, en-US, ja-JP. Auto infers from prompt." },
+    council_mode: {
+      type: "string",
+      enum: COUNCIL_MODES,
+      default: "full",
+      description: "full runs the eight-role evidence fan-out and three-round cross-exam. quick runs the fixed news-inclusive four-role preset, up to four masters, one parallel bull/bear round, a short PM, and a hard global budget.",
+    },
     tasks: { type: "array", items: { type: "string", enum: analystIds } },
     dry_run: { type: "boolean", default: false, description: "Default false. Set true only for planning/self-tests without launching Codex subagents." },
     max_concurrency: { type: "number", default: LIMITS.CONCURRENCY_DEFAULT },
     timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     synthesis: { type: "boolean", default: true, description: "Run bull, bear, and portfolio-manager synthesis after evidence collection." },
     synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
+    total_timeout_ms: {
+      type: "number",
+      default: LIMITS.QUICK_TOTAL_MS,
+      maximum: LIMITS.QUICK_HARD_MAX_MS,
+      description: "Hard end-to-end wall-clock budget for council_mode=quick, including grounding wait, retries and synthesis. It may be lowered but never raised above ten minutes. Full mode has no implicit global deadline.",
+    },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
     selection_receipt: { type: "string", description: "One-run receipt returned by confirm_master_selection. Required for every council run and consumed exactly once." },
     seat_weights: { type: "object", description: "Override the declared weight of any seat, e.g. {\"master_buffett\": 2, \"master_soros\": 0}. Weights are an editable prior, not an optimum: a return backtest of LLM judgment would be invalidated by look-ahead bias." },
@@ -331,6 +389,7 @@ export function tools() {
         symbol: common.symbol,
         prompt: common.prompt,
         language: common.language,
+        council_mode: common.council_mode,
         host: { type: "string", description: "Calling host, e.g. codex, claude-code, opencode or grok-build." },
         preselected_master_ids: {
           type: "array",
@@ -366,7 +425,9 @@ export function tools() {
         as_of: common.as_of,
         prompt: common.prompt,
         language: common.language,
+        council_mode: common.council_mode,
         tasks: common.tasks,
+        total_timeout_ms: common.total_timeout_ms,
         selection_receipt: common.selection_receipt,
         seat_weights: common.seat_weights,
         grounding: { type: "object", description: "The `grounding` object from compose_research_brief. Injected into every analyst prompt." },
@@ -401,7 +462,7 @@ export function tools() {
       properties: common,
       required: ["symbol", "selection_receipt"],
     }),
-    tool("analyze_symbol", "Collect evidence and write a manager-style decision summary.", {
+    tool("analyze_symbol", "Collect evidence and write a manager-style decision summary. Set council_mode=quick for the bounded news-inclusive quick_v1 path; the default remains the full council.", {
       type: "object",
       properties: {
         ...common,
@@ -642,6 +703,7 @@ export async function handleToolCall(id, params) {
       selection_receipt: data.selection_receipt,
       catalog_hash: data.catalog_hash,
       intent_hash: data.intent_hash,
+      council_mode: data.council_mode,
     })}`;
     sendResult(id, jsonContent(
       `${fallbackContext}\nConfirmed ${data.selected_count} master seat(s) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,

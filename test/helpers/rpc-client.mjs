@@ -119,9 +119,10 @@ export async function confirmMasterSelection(server, {
   language = "English",
   prompt = "",
   host = "test",
+  council_mode = "full",
 } = {}) {
   const opened = structured(await server.callTool("begin_council_selection", {
-    symbol, language, prompt, host,
+    symbol, language, prompt, host, council_mode,
   }));
   const choice = selection !== undefined
     ? { selection }

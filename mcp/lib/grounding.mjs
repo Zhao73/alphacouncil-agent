@@ -78,6 +78,7 @@ export async function gatherGrounding({
   options = true,
   asOf = null,
   now = new Date(),
+  signal,
 } = {}) {
   const snapshotPolicy = liveSnapshotPolicy(asOf, { now });
   const gatheredAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
@@ -93,7 +94,7 @@ export async function gatherGrounding({
   // The current ticker universe is itself time-varying. A historical run may use an explicit
   // CIK with SEC's filed-at filter, but it must not resolve that CIK from today's universe.
   if (!cik && symbol && marketFor(symbol)?.id === "US" && snapshotPolicy.allowed) {
-    cik = await fetchUniverse()
+    cik = await fetchUniverse({ signal })
       .then((rows) => rows.find((r) => String(r.ticker).toUpperCase() === String(symbol).toUpperCase())?.cik)
       .catch(() => undefined);
   } else if (!cik && symbol && marketFor(symbol)?.id === "US") {
@@ -102,7 +103,7 @@ export async function gatherGrounding({
   const jobs = [];
 
   if (symbol && snapshotPolicy.allowed) {
-    jobs.push(safely("quote", () => fetchQuote(symbol)).then((r) => {
+    jobs.push(safely("quote", () => fetchQuote(symbol, { signal })).then((r) => {
       if (r.ok && !r.value?.error) out.quote = r.value;
       else out.unavailable.push(r.ok ? `quote: ${r.value.error}` : r.error);
     }));
@@ -115,7 +116,7 @@ export async function gatherGrounding({
   // the delayed CBOE snapshot does not contain any of them. Its explicit `unavailable`
   // entries remain attached to the grounding so downstream policies see gaps as gaps.
   if (symbol && options && marketFor(symbol)?.id === "US" && snapshotPolicy.allowed) {
-    jobs.push(safely("options chain", () => fetchOptionsChain(symbol, { asOf })).then((r) => {
+    jobs.push(safely("options chain", () => fetchOptionsChain(symbol, { asOf, signal })).then((r) => {
       if (r.ok && r.value?.available) out.options = r.value;
       else out.unavailable.push(r.ok ? `options chain: ${r.value?.reason || "unavailable"}` : r.error);
     }));
@@ -125,14 +126,14 @@ export async function gatherGrounding({
 
   if (cik) {
     if (snapshotPolicy.allowed) {
-      jobs.push(safely("filer profile", () => fetchSubmissions(cik)).then((r) => {
+      jobs.push(safely("filer profile", () => fetchSubmissions(cik, { signal })).then((r) => {
         if (r.ok) out.filer = r.value;
         else out.unavailable.push(r.error);
       }));
     } else {
       out.unavailable.push("filer profile: SEC submissions metadata is current, not point-in-time versioned; it was excluded from the historical information set");
     }
-    jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf })).then((r) => {
+    jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf, signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }
       const s = r.value;
       const metricSourceIds = (metric) => (metric.source_records || []).map((source) => (
@@ -168,7 +169,7 @@ export async function gatherGrounding({
   }
 
   if (macro && snapshotPolicy.allowed) {
-    jobs.push(safely("macro", () => getMacroSnapshot({ blocks: ["rates", "dollar_liquidity", "commodities"] })).then((r) => {
+    jobs.push(safely("macro", () => getMacroSnapshot({ blocks: ["rates", "dollar_liquidity", "commodities"], signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }
       out.macro = {
         derived: r.value.derived.filter((d) => d.available).map((d) => ({ id: d.id, label: d.label, value: d.value })),
@@ -182,7 +183,7 @@ export async function gatherGrounding({
   // Non-US symbols never reach the SEC path, so without this they arrived at the analyst
   // with nothing but a price.
   if (symbol && marketFor(symbol)?.id !== "US" && snapshotPolicy.allowed) {
-    jobs.push(safely("market financials", () => fetchMarketFinancials(symbol)).then((r) => {
+    jobs.push(safely("market financials", () => fetchMarketFinancials(symbol, { signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }
       out.market = r.value;
       if (!r.value.financials) out.unavailable.push(`structured financials for ${symbol}: ${r.value.guidance}`);

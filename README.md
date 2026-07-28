@@ -50,34 +50,34 @@
 
 </div>
 
-AlphaCouncil Agent is a Codex and Claude Code plugin for full public-equity research workflows. It coordinates multiple analyst agents, gathers sourced evidence, runs bull/bear debate, and produces a portfolio-manager style final report.
+AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research councils. Full council is the default; an explicitly requested `quick` run uses a smaller, plugin-managed headless contract. Both gather sourced evidence, run selected method seats and produce an auditable portfolio-manager report.
 
 ### ✨ Why AlphaCouncil
 
 | | |
 |---|---|
 | 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
-| 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai and more read the **same facts** through different stated research priorities. Every council run shows the complete catalog and actual maturity before research and lets you select any `1..N` combination or `all`. |
-| 🐂🐻 **Adversarial by design** | A structured bull vs bear debate, refereed by a portfolio manager who issues an actual rating. The deep visible workflow also runs three verifiers that re-source, re-derive and attack load-bearing claims; headless status explicitly reports when that fan-out did not run. |
+| 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai and more read the **same facts** through different stated research priorities. Every council run shows all 26 with actual maturity before research. Full accepts any non-empty selection or `all`; quick requires 1-4 and rejects `all`. |
+| 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
-| 🔑 **27 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
-| 🖥️ **One council on four hosts** | Claude Code, Codex, OpenCode and Grok Build run the **same** workflow, the same bench and the same gates. |
+| 🔑 **31 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## Current 0.9.0 prerelease status: solo-test
+## Current 0.9.1 preview status: non-GA solo-test
 
-The package and plugin surfaces are version `0.9.0-solo-test.3`, but this is an explicitly isolated
-**solo-test** build, not formal production GA. It packages 26 physical PersonaPack v3 packs
-and 52 executable `provisional_derived_proxy` tools so the deterministic path can be tested
-end to end. All 26 seats remain provisional `operator_lens`; operational: **0**;
-`method_model`: **0**. Human source approvals: **0**; human formula approvals: **0**;
-human approval signatures: **0**.
+Version `0.9.1` is published on npm's `next` dist-tag and as a GitHub prerelease. It is a
+bounded `quick_v1` feature preview, **not** formal production GA. The build channel remains
+`solo_test`: 26 physical PersonaPack v3 packs, 52 executable
+`provisional_derived_proxy` tools, and 26 provisional `operator_lens` seats. Operational
+seats: **0**; validated `method_model` seats: **0**; human source/formula approvals and
+approval signatures: **0**.
 
-The production loader rejects this tree, and production assembly/cutover/GA stays
-fail-closed. See [docs/solo-test-0.9.0.md](docs/solo-test-0.9.0.md) for the exact commands and
-verified status.
+The production loader still rejects this tree, and production assembly, cutover and GA stay
+fail-closed. See [the v0.9.1 release contract](docs/releases/v0.9.1.md) for the exact quick
+boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
 
 ## 📜 Disclaimer
 
@@ -144,7 +144,7 @@ rather than four in a menu of a hundred.
 | Invocation | What runs | Model spend |
 |---|---|---|
 | `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs the full council | one subagent per selected seat |
-| `/alpha <ticker> quick` | Same mandatory master selection, then 4 analysts + selected masters + debate; no verification | varies with selection |
+| `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |
@@ -154,11 +154,37 @@ rather than four in a menu of a hundred.
 The four marked **none** call keyless data tools and spawn no subagents, so they cost
 nothing beyond the turn you type them in. Full and quick first display every master with a
 number, identity, method and best-use case. A native multi-select may make that easier, but
-all four hosts support the same numbered text fallback. Even a request that already names a
-master must show the catalog and confirm a fresh one-run receipt before research starts.
+all four hosts support the same numbered text fallback. Full accepts `all`; quick accepts
+only 1-4 distinct seats and rejects `all`. Even a request that already names a master must
+show the catalog and confirm a fresh, one-use, mode-bound receipt before research starts.
 
 Any listed equity: `/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`.
 Filings-based modes need a US filer; other markets are reported through `market_coverage` rather than silently returning nothing.
+
+### Quick v1 — bounded, not full
+
+Quick is never inferred from impatience or a full-run failure. It runs only through the
+plugin-managed headless `analyze_symbol(council_mode="quick")`; `plan_visible_run` rejects
+quick. After the complete 26-seat display and a 1-4-seat confirmation, it executes:
+
+1. `market_data`, `earnings_deep_dive`, `valuation_long_short` and
+   `news_industry_management` in one parallel wave;
+2. the 1-4 selected method seats in one parallel wave;
+3. one Bull and one Bear statement in parallel, then one short PM;
+4. deterministic `quick_v1` report assembly and standard artifacts.
+
+Recent company and industry news must be dated inside the 120 days ending at `as_of`;
+future, undated and older items are excluded from recent news and recorded as gaps. The hard
+queue-to-persistence ceiling is **600000 ms**: grounding wait 20s; each parallel evidence
+worker 210s; each parallel method worker 90s; Bull and Bear 90s per side; PM 90s; final
+assembly/persistence reserve 20s. Retries consume the same caps and global clock.
+
+Quick has no round-2 rebuttal, round-3 exact Q&A or adversarial
+`source_fidelity`/`rederivation`/`refuter` fan-out. It may terminate `degraded` only under its
+explicit coverage rules and system-owned degraded ledger; otherwise missing required work is
+`incomplete` or `failed`. `report_quality=passed` means the `quick_v1` structure passed—it
+does not make the run complete or equivalent to `full_v2`. A method-seat result is a
+recorded provisional lens output, never a quotation from the named person.
 
 
 Available in Claude Code, OpenCode and Grok Build as soon as the plugin is installed. Codex keeps
@@ -179,11 +205,16 @@ Default stock-analysis runs are full runs, not lite summaries:
 - A selectable bench of 26 investor method lenses reading the same facts
 - Bull researcher, bear researcher and portfolio-manager synthesis
 
+Full is fail-fast at its mandatory evidence barrier. If a required evidence role still
+fails after the one bounded parse-only repair, the run persists the failure and diagnostic
+artifacts, skips selected-method, debate and PM model calls, and terminates `incomplete`.
+It does not spend downstream synthesis time on a run that cannot satisfy `full_v2`.
+
 The final report is readable directly in chat. It carries analyst work logs, data and filing
 summaries, the bull/bear debate, the PM verdict, entry price bands, short/medium/long-term
 views, data gaps, confidence and a source table.
 
-## 🔧 Tools — 27, all keyless
+## 🔧 Tools — 31, all keyless
 
 Nothing below needs an API key, an account, or a config file. Install and run.
 
@@ -228,7 +259,7 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
 
-The 0.9.0 solo-test catalog has 26 selectable physical v3 packs, but **26 physical packs is
+The 0.9.1 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
 not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
 project-derived proxy material; the 52 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA
@@ -240,6 +271,10 @@ than as fact. That separation is the point: the bench is worth having only becau
 looks at incentives where an analyst looked at margins. See [docs/attribution.md](docs/attribution.md).
 
 ## 🧩 Architecture
+
+The diagram below is the full/deep path. Quick retains the Master Bench but uses its fixed
+four-role evidence wave, one parallel Bull/Bear statement round and short PM; it does not run
+the verifier node shown here.
 
 ```mermaid
 flowchart TD
@@ -285,11 +320,12 @@ Key files:
 
 ## 🆚 Codex vs Claude Code edition
 
-Both editions share the same workflow, JSON packet contract, audit artifacts, the no-API-keys / live-web evidence model, and the same disclaimer. The Claude Code edition changes only *how* the council is run.
+For full council, both editions share the same workflow, JSON packet contract, audit artifacts, the no-API-keys / live-web evidence model, and the same disclaimer. The Claude Code edition changes only *how* the full council is run. Quick does not use visible host orchestration on either edition; it always uses the plugin-managed headless path.
 
 | | Codex edition | Claude Code edition |
 |---|---|---|
 | Council execution | `codex exec` workers, concurrency-capped | All 11 analysts as parallel `Task` subagents, one fan-out |
+| Quick `quick_v1` | Plugin-managed headless `analyze_symbol` | Same plugin-managed headless `analyze_symbol` |
 | Per-analyst context | Separate process | Separate subagent, full isolated context window |
 | Evidence | `codex exec --search` | `WebSearch` + `WebFetch` in each analyst's own context |
 | Evidence → debate | Sequential | Hard barrier on the run's phase machine |

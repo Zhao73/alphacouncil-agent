@@ -11,7 +11,7 @@ async function completedRun(server, runId, timeoutMs = 5_000) {
     const response = await server.callTool("read_run", { run_id: runId });
     if (response.result) {
       const run = structured(response);
-      if (["complete", "incomplete", "needs_verification", "failed"].includes(run.status?.status)) return run;
+      if (["complete", "degraded", "incomplete", "needs_verification", "failed"].includes(run.status?.status)) return run;
     }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }

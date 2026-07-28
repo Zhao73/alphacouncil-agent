@@ -74,6 +74,19 @@ test("headless grounding failure becomes explicit missing facts, never model-mem
   assert.match(result.unavailable[0], /feed unavailable/);
 });
 
+test("quick grounding wait is bounded and becomes an explicit gap", async () => {
+  let aborted = false;
+  const result = await groundingForHeadlessRun(
+    { symbol: "TEST", asOf: "2026-07-27", grounding: null, dryRun: false, timeoutMs: 20 },
+    async ({ signal }) => new Promise((resolve) => {
+      signal.addEventListener("abort", () => { aborted = true; resolve({ quote: { price: 10 } }); }, { once: true });
+    }),
+  );
+  assert.equal(result.facts_unavailable, true);
+  assert.match(result.unavailable[0], /quick grounding timed out after 20ms/);
+  assert.equal(aborted, true);
+});
+
 test("dry runs stay network-free", async () => {
   const result = await groundingForHeadlessRun(
     { symbol: "TEST", asOf: "2026-07-27", grounding: null, dryRun: true },

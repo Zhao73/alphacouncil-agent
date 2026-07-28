@@ -2,6 +2,58 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.1] — 2026-07-28
+
+This is a **non-GA quick-council preview** published on npm's `next` dist-tag and as a
+GitHub prerelease. The bare SemVer does not promote the PersonaPack assurance level: the
+build profile remains `solo_test`, `production_eligible=false` and
+`method_model_eligible=false`; all 26 named-investor packs remain provisional
+`operator_lens`, not validated simulations of those people.
+
+### Added
+
+- A first-class `council_mode=quick` with a non-overridable ten-minute end-to-end ceiling.
+  It runs four fixed evidence seats in parallel (`market_data`, `earnings_deep_dive`,
+  `valuation_long_short`, `news_industry_management`), one to four selected method seats,
+  one parallel Bull/Bear statement, and one short PM synthesis.
+- `quick_v1`, a separate 13-section report contract. It records
+  `full_council_equivalent=false`, one expected debate round and
+  `adversarial_verification=not_run`; a passing quick report is never represented as a
+  passing full council.
+- A mode-bound selection receipt. Quick still displays the complete 26-seat catalog, but
+  accepts at most four explicit seats and rejects `all`; a quick receipt cannot start full.
+- An explicit terminal `degraded` state. A quick run may deliver when at least two evidence
+  seats and at least one debate side succeeded and the PM plus all selected methods were
+  recorded. A system-owned ledger names every failed/degraded seat and reason even when the
+  report-structure check passes.
+- A 120-day, `as_of`-bounded recent-news handoff. Undated, future and stale sources are
+  excluded and counted as gaps instead of being mislabeled as recent news.
+
+### Fixed
+
+- Full analysis now fails fast before method, debate and PM model calls when mandatory
+  evidence remains missing. The older RKLB runs spent another 16–43 minutes after the
+  result was already guaranteed to be incomplete.
+- Cross-seat prompts no longer resend raw transcripts or full report Markdown. Quick
+  evidence keeps a bounded claim/source projection with referential integrity; full PM
+  context retains bounded three-round summaries and exact Q&A while dropping artifact-only
+  raw text.
+- Worker and synthesis budgets share one quick deadline: grounding wait 20 seconds,
+  evidence up to 210 seconds in one four-seat wave, up to four method seats in one 90-second
+  wave, Bull/Bear in one parallel 90-second wave, PM up to 90 seconds, and 20 seconds
+  reserved for deterministic finalization. These are ceilings, not a success guarantee.
+- Failure fallback no longer emits a synthetic `Hold`; it records
+  `NEEDS_MANAGER_REVIEW`, `decision_available=false` and no rating.
+- `degraded` is recognized as terminal during polling and startup recovery. Evidence
+  telemetry uses `evidence_degraded` rather than the misleading `evidence_complete` event.
+- `npm publish --dry-run` no longer leaks `npm_config_dry_run` into the nested package-parity
+  `npm pack`, which previously returned metadata without creating the tarball and caused a
+  false release failure.
+
+The production GA gate remains intentionally failing and is not bypassed by this release.
+Formal GA requires a later monotonic version such as `0.10.0` or `1.0.0`, plus the existing
+source, method-model, experiment, physical-host and signed-release evidence.
+
 ## [0.9.0-solo-test.3] — 2026-07-27
 
 This is a post-acceptance hotfix for the **0.9.0 solo-test prerelease** channel. An

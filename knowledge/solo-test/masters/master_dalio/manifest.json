@@ -92,7 +92,7 @@
     "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
     "postmortem_horizon_days": 90
   },
-  "pack_version": "0.9.0-solo-test.3",
+  "pack_version": "0.9.1",
   "research": {
     "mandatory_disconfirming_queries": [
       "Reject resilience when refinancing at current conditions breaches documented capacity.",

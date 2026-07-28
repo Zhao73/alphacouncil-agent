@@ -1,5 +1,5 @@
 import { registry, selectRoster, personaTitle } from "./personas/registry.mjs";
-import { DEFAULT_TASKS } from "./constants.mjs";
+import { DEFAULT_TASKS, LIMITS, QUICK_TASKS } from "./constants.mjs";
 import { loadPacks } from "./personas-v2/loader.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
@@ -125,15 +125,23 @@ export function councilOptions({ language = "English" } = {}) {
   const presets = [
     {
       id: "quick",
-      label: chinese ? "快速：4 位分析师 + 所选大师 + 辩论" : "Quick: 4 analysts + selected masters + debate",
-      analysts: DEFAULT_TASKS.slice(0, 4),
+      label: chinese
+        ? "快速：4 位核心分析师并行 + 最多 4 位大师 + 单轮并行多空 + 短综合"
+        : "Quick: 4 core analysts in parallel + up to 4 masters + one parallel bull/bear round + short synthesis",
+      analysts: QUICK_TASKS,
       master_selection: "required_1_to_N",
+      master_selection_maximum: 4,
       suggested_masters_roster: null,
       verify: false,
-      ...estimateSelectionRange({ analysts: 4, allMasters }),
+      ...estimateSelectionRange({ analysts: QUICK_TASKS.length, allMasters: 4 }),
+      council_mode: "quick",
+      hard_time_budget_ms: LIMITS.QUICK_TOTAL_MS,
+      debate_rounds: 1,
+      report_contract: "quick_v1",
+      full_council_equivalent: false,
       good_for: chinese
-        ? "方向性初读；仍运行用户所选方法席，但不做交叉核验"
-        : "A directional first read with the selected methods, but no cross-verification.",
+        ? "十分钟级方向性初读：保留大师、核心分析师和近期公司/行业新闻；不做三轮交叉问答或对抗核验"
+        : "A bounded directional read retaining masters, core analysts and recent company/industry news; no three-round cross-exam or adversarial verification.",
     },
     {
       id: "standard",

@@ -1,5 +1,6 @@
 import { LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
+import { linkedAbort } from "./abort.mjs";
 
 /**
  * Keyless SEC client.
@@ -30,13 +31,12 @@ async function throttle() {
   lastCall = Date.now();
 }
 
-async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2) {
+async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2, upstreamSignal) {
   await throttle();
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const abort = linkedAbort(timeoutMs, upstreamSignal);
   try {
     const res = await fetch(url, {
-      signal: ctrl.signal,
+      signal: abort.signal,
       headers: { "User-Agent": UA, Accept: "application/json" },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -44,13 +44,13 @@ async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2) {
     if (text.trimStart().startsWith("<")) throw new Error(`SEC returned HTML rather than JSON for ${url} (rate limited or blocked)`);
     return JSON.parse(text);
   } finally {
-    clearTimeout(timer);
+    abort.cleanup();
   }
 }
 
 /** The full US listed universe: ~10k entries of {cik, ticker, title}. */
-export async function fetchUniverse() {
-  const raw = await secJson("https://www.sec.gov/files/company_tickers.json");
+export async function fetchUniverse({ signal } = {}) {
+  const raw = await secJson("https://www.sec.gov/files/company_tickers.json", LIMITS.QUOTE_FETCH_MS * 2, signal);
   return Object.values(raw).map((row) => ({
     cik: String(row.cik_str).padStart(10, "0"),
     ticker: row.ticker,
@@ -58,10 +58,10 @@ export async function fetchUniverse() {
   }));
 }
 
-export async function fetchCompanyFacts(cik) {
+export async function fetchCompanyFacts(cik, { signal } = {}) {
   const padded = String(cik).replace(/\D/g, "").padStart(10, "0");
   if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
-  return secJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${padded}.json`);
+  return secJson(`https://data.sec.gov/api/xbrl/companyfacts/CIK${padded}.json`, LIMITS.QUOTE_FETCH_MS * 2, signal);
 }
 
 /**
@@ -168,10 +168,10 @@ export const CONCEPTS = {
 export const secUserAgent = () => UA;
 
 /** Company metadata including SIC industry classification. Keyless. */
-export async function fetchSubmissions(cik) {
+export async function fetchSubmissions(cik, { signal } = {}) {
   const padded = String(cik).replace(/\D/g, "").padStart(10, "0");
   if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
-  const data = await secJson(`https://data.sec.gov/submissions/CIK${padded}.json`);
+  const data = await secJson(`https://data.sec.gov/submissions/CIK${padded}.json`, LIMITS.QUOTE_FETCH_MS * 2, signal);
   return {
     cik: padded,
     name: data.name,

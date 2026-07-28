@@ -62,12 +62,14 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
 }
 
 export function normalizeDebate(packet, role, run, raw = "") {
+  const decisionAvailable = packet?.decision_available !== false;
   return {
     role,
     symbol: run.symbol,
     as_of: run.as_of,
     verdict: typeof packet?.verdict === "string" ? packet.verdict : "",
-    rating: RATINGS.includes(packet?.rating) ? packet.rating : "Hold",
+    decision_available: decisionAvailable,
+    rating: decisionAvailable ? (RATINGS.includes(packet?.rating) ? packet.rating : "Hold") : null,
     winner: ["bull", "bear", "balanced", "unknown"].includes(packet?.winner) ? packet.winner : "unknown",
     summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
     long_thesis: Array.isArray(packet?.long_thesis) ? packet.long_thesis : [],
@@ -130,6 +132,108 @@ export function compactEvidence(run) {
       sources: packet.sources,
       open_questions: packet.open_questions,
       confidence: packet.confidence,
+    })),
+  };
+}
+
+function compactValue(value, depth = 0) {
+  if (value === null || value === undefined || typeof value === "number" || typeof value === "boolean") return value;
+  if (typeof value === "string") return clip(value, depth === 0 ? 600 : 320);
+  if (depth >= 3) return Array.isArray(value) ? `[${value.length} items]` : "[nested object]";
+  if (Array.isArray(value)) return value.slice(0, 10).map((item) => compactValue(item, depth + 1));
+  if (typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).slice(0, 20)
+      .map(([key, item]) => [key, compactValue(item, depth + 1)]));
+  }
+  return String(value);
+}
+
+/**
+ * Bounded evidence context for the quick council.
+ *
+ * The full RKLB evidence file was 340 KB and the old PM prompt reached roughly 384 KB.
+ * Raw transcripts never belonged in cross-seat context; this keeps the facts a short memo
+ * needs while retaining source IDs, URLs, dates, confidence and explicit gaps.
+ */
+export function compactQuickEvidence(run) {
+  return {
+    run_id: run.run_id,
+    symbol: run.symbol,
+    as_of: run.as_of,
+    council_mode: "quick",
+    packets: (run.packets || []).map((packet) => {
+      const allClaims = packet.claims || [];
+      const selectedClaims = allClaims.slice(0, 4);
+      const sourceById = new Map((packet.sources || []).map((source) => [source?.id, source]));
+      const referencedIds = [...new Set(selectedClaims.flatMap((claim) => claim?.source_ids || []))];
+      const selectedIds = referencedIds.filter((id) => sourceById.has(id)).slice(0, 6);
+      for (const source of packet.sources || []) {
+        if (selectedIds.length >= 6) break;
+        if (source?.id && !selectedIds.includes(source.id)) selectedIds.push(source.id);
+      }
+      const includedIds = new Set(selectedIds);
+      const omittedReferencedIds = referencedIds.filter((id) => !includedIds.has(id));
+      return {
+        task: packet.task,
+        summary: clip(packet.summary || "", 1_200),
+        claims: selectedClaims.map((claim) => ({
+          claim: clip(claim?.claim || "", 500),
+          evidence: clip(claim?.evidence || "", 500),
+          confidence: claim?.confidence || "low",
+          source_ids: (claim?.source_ids || []).filter((id) => includedIds.has(id)),
+        })),
+        metrics: compactValue(packet.metrics || {}),
+        sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
+          id: source?.id,
+          title: clip(source?.title || "", 240),
+          url: source?.url || "",
+          published_at: source?.published_at || "unknown",
+          retrieved_at: source?.retrieved_at || run.as_of,
+        })),
+        omitted_claim_count: Math.max(0, allClaims.length - selectedClaims.length),
+        omitted_source_count: Math.max(0, (packet.sources || []).length - selectedIds.length),
+        omitted_claim_source_ids: omittedReferencedIds,
+        open_questions: (packet.open_questions || []).slice(0, 5).map((item) => clip(item, 500)),
+        confidence: packet.confidence,
+        information_richness: packet.information_richness,
+      };
+    }),
+  };
+}
+
+/** Remove artifact-only payloads before a debate packet is sent to another model call. */
+export function compactDebateContext(packet) {
+  if (!packet) return null;
+  return {
+    role: packet.role,
+    verdict: clip(packet.verdict || "", 1_200),
+    rating: packet.rating,
+    winner: packet.winner,
+    summary: clip(packet.summary || "", 1_200),
+    long_thesis: (packet.long_thesis || []).slice(0, 8).map((item) => clip(item, 600)),
+    short_thesis: (packet.short_thesis || []).slice(0, 8).map((item) => clip(item, 600)),
+    valuation_range: clip(packet.valuation_range || "", 1_000),
+    catalysts: (packet.catalysts || []).slice(0, 6).map((item) => clip(item, 500)),
+    risks: (packet.risks || []).slice(0, 6).map((item) => clip(item, 500)),
+    position: clip(packet.position || "", 800),
+    invalidation: (packet.invalidation || []).slice(0, 6).map((item) => clip(item, 500)),
+    source_ids: (packet.source_ids || []).slice(0, 20),
+    confidence: packet.confidence,
+    questions: (packet.questions || []).slice(0, 3).map((item) => clip(item, 600)),
+    questions_answered: (packet.questions_answered || []).slice(0, 3).map((item) => ({
+      question: clip(item?.question || "", 600),
+      answer: clip(item?.answer || "", 900),
+    })),
+    debate_rounds: (packet.debate_rounds || []).slice(0, 3).map((round) => ({
+      round: round?.round,
+      summary: clip(round?.summary || "", 900),
+      long_thesis: (round?.long_thesis || []).slice(0, 5).map((item) => clip(item, 500)),
+      short_thesis: (round?.short_thesis || []).slice(0, 5).map((item) => clip(item, 500)),
+      questions: (round?.questions || []).slice(0, 3).map((item) => clip(item, 600)),
+      questions_answered: (round?.questions_answered || []).slice(0, 3).map((item) => ({
+        question: clip(item?.question || "", 600),
+        answer: clip(item?.answer || "", 900),
+      })),
     })),
   };
 }
@@ -259,7 +363,8 @@ export function managerFallback(run, userPrompt = "") {
     : (chinese ? "- 本轮没有已完成的大师意见。" : "- No completed master opinion is available in this run.");
   return normalizeDebate({
     verdict: summary.final_decision,
-    rating: "Hold",
+    decision_available: false,
+    rating: null,
     winner: "unknown",
     summary: chinese ? "证据已收集，但未运行经理综合子代理。" : "Evidence was collected, but the manager synthesis subagent did not run.",
     long_thesis: summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => claim.claim),

@@ -247,14 +247,14 @@ export function explainResult(result, ticker) {
   return lines.join("\n");
 }
 
-export async function screenTicker({ cik, ticker, asOf = null }) {
+export async function screenTicker({ cik, ticker, asOf = null, signal }) {
   // The tool schema offers `ticker`, so callers pass one. Demanding a CIK anyway turned a
   // documented argument into an error and made the caller go look up an identifier the
   // universe file already holds -- the opposite of working without configuration.
   let resolved = cik;
   if (!resolved && ticker) {
     const wanted = String(ticker).trim().toUpperCase();
-    const universe = await fetchUniverse();
+    const universe = await fetchUniverse({ signal });
     const hit = universe.find((row) => String(row.ticker).toUpperCase() === wanted);
     if (!hit) {
       throw invalidParams(
@@ -266,7 +266,7 @@ export async function screenTicker({ cik, ticker, asOf = null }) {
   }
   if (!resolved) throw invalidParams("screenTicker needs a cik or a ticker");
   const cikUsed = resolved;
-  const facts = await fetchCompanyFacts(cikUsed);
+  const facts = await fetchCompanyFacts(cikUsed, { signal });
   const result = evaluateRules(facts, { asOf });
   return { ticker: ticker || facts.entityName, cik: cikUsed, resolved_from_ticker: !cik && Boolean(ticker), entity: facts.entityName, as_of: asOf, ...result };
 }

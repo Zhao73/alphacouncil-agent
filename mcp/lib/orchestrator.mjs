@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES } from "./constants.mjs";
+import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
@@ -17,6 +17,56 @@ import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats, reconci
 import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
+
+function councilMode(args = {}) {
+  return COUNCIL_MODES.includes(args.council_mode) ? args.council_mode : "full";
+}
+
+function plannedTasks(args = {}) {
+  if (councilMode(args) === "quick") return QUICK_TASKS;
+  if (Array.isArray(args.tasks) && args.tasks.length) return args.tasks;
+  return DEFAULT_TASKS;
+}
+
+function quickTiming(args, startedAt) {
+  if (councilMode(args) !== "quick") {
+    return { council_mode: "full", debate_format: "three_round_cross_exam", time_budget_ms: null, deadline_at: null };
+  }
+  const requested = Number(args.total_timeout_ms);
+  const timeBudgetMs = Number.isFinite(requested) && requested > 0
+    ? Math.min(requested, LIMITS.QUICK_HARD_MAX_MS)
+    : LIMITS.QUICK_TOTAL_MS;
+  const deadlineAt = args.queued_run?.deadline_at
+    || new Date(Date.parse(startedAt) + timeBudgetMs).toISOString();
+  return {
+    council_mode: "quick",
+    debate_format: "single_round_parallel",
+    time_budget_ms: timeBudgetMs,
+    deadline_at: deadlineAt,
+  };
+}
+
+function remainingQuickBudget(run, capMs) {
+  if (run.council_mode !== "quick" || !run.deadline_at) return capMs;
+  const reserve = Math.min(
+    LIMITS.QUICK_FINALIZE_RESERVE_MS,
+    Math.max(100, Math.floor(Number(run.time_budget_ms || LIMITS.QUICK_TOTAL_MS) * 0.1)),
+  );
+  const usable = Date.parse(run.deadline_at) - Date.now() - reserve;
+  return Math.max(0, Math.min(capMs, usable));
+}
+
+function deadlineResult() {
+  return {
+    ok: false,
+    code: null,
+    text: "",
+    stderr: "quick council global deadline exhausted",
+    stdout: "",
+    timedOut: true,
+    deadline_exhausted: true,
+  };
+}
 
 function masterRuntimeProvenance(run, plan) {
   const decisions = new Map((plan.decisions || []).map((decision) => [decision.persona_id, decision]));
@@ -113,12 +163,13 @@ export function visibleRun(args) {
   const symbol = safeSymbol(args.symbol);
   const asOfDate = args.as_of || today();
   const id = args.run_id || runId(symbol);
-  const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
+  const tasks = plannedTasks(args);
   const language = resolveLanguage(args);
   const frozen = frozenMasterSelection(args);
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
+  const timing = quickTiming(args, startedAt);
   const run = {
     run_id: id,
     symbol,
@@ -128,6 +179,7 @@ export function visibleRun(args) {
     execution_mode: "visible_host_threads",
     entry_tool: args.entry_tool || "plan_visible_run",
     visibility_required: true,
+    ...timing,
     started_at: startedAt,
     updated_at: startedAt,
     completed_at: null,
@@ -556,11 +608,32 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
  * caller omitted `grounding`. Visible runs already collect it in rpc.mjs; this gives the
  * headless path the same fact boundary. Dry runs remain network-free by design.
  */
-export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun }, gather = gatherGrounding) {
+export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun, timeoutMs }, gather = gatherGrounding) {
   if (grounding && typeof grounding === "object") return grounding;
   if (dryRun) return null;
+  if (Number.isFinite(timeoutMs) && timeoutMs <= 0) {
+    return {
+      as_of: asOf,
+      facts_unavailable: true,
+      unavailable: ["quick grounding skipped: global time budget was already exhausted"],
+    };
+  }
+  let timer;
+  const controller = Number.isFinite(timeoutMs) ? new AbortController() : null;
   try {
-    return await gather({ symbol, asOf });
+    const work = gather({ symbol, asOf, ...(controller ? { signal: controller.signal } : {}) });
+    if (!Number.isFinite(timeoutMs)) return await work;
+    return await Promise.race([
+      work,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          const error = new Error(`quick grounding timed out after ${Math.round(timeoutMs)}ms`);
+          reject(error);
+          controller?.abort(error);
+        }, timeoutMs);
+        if (typeof timer.unref === "function") timer.unref();
+      }),
+    ]);
   } catch (error) {
     // A failed fact fetch is still an explicit grounding result. Keeping an object here
     // makes deterministic methods decline on missing inputs instead of taking the v1 prompt
@@ -570,6 +643,8 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun 
       facts_unavailable: true,
       unavailable: [`grounding failed: ${cleanLog(error?.message || error)}`],
     };
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
@@ -588,13 +663,14 @@ export function queueHeadlessRun(args) {
   const symbol = safeSymbol(args.symbol);
   const asOfDate = args.as_of || today();
   const id = args.run_id || runId(symbol);
-  const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
+  const tasks = plannedTasks(args);
   const dryRun = isDryRun(args);
   const language = resolveLanguage(args);
   const frozen = frozenMasterSelection(args);
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
+  const timing = quickTiming(args, startedAt);
   const run = {
     run_id: id,
     symbol,
@@ -604,6 +680,7 @@ export function queueHeadlessRun(args) {
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
     entry_tool: args.entry_tool || "analyze_symbol",
     visibility_required: false,
+    ...timing,
     started_at: startedAt,
     updated_at: startedAt,
     completed_at: null,
@@ -628,6 +705,8 @@ export function queueHeadlessRun(args) {
     selection_hash: frozen.selection.selection_hash,
     tasks,
     masters: frozen.masters,
+    council_mode: run.council_mode,
+    deadline_at: run.deadline_at,
   });
   writeAllAgentsMarkdown(run);
   return run;
@@ -640,22 +719,30 @@ export async function collectEvidence(args) {
   const symbol = safeSymbol(args.symbol);
   const asOfDate = args.as_of || today();
   const id = args.run_id || runId(symbol);
-  const tasks = Array.isArray(args.tasks) && args.tasks.length ? args.tasks : DEFAULT_TASKS;
+  const tasks = plannedTasks(args);
   const dryRun = isDryRun(args);
   const language = resolveLanguage(args);
   const frozen = frozenMasterSelection(args);
-  const timeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
-  const maxConcurrency = Math.max(LIMITS.CONCURRENCY_MIN, Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || LIMITS.CONCURRENCY_DEFAULT)));
+  const startedAt = args.queued_run?.started_at || new Date().toISOString();
+  const timing = quickTiming(args, startedAt);
+  const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
+  const timeoutMs = timing.council_mode === "quick"
+    ? Math.min(requestedTimeoutMs, LIMITS.QUICK_EVIDENCE_MS)
+    : requestedTimeoutMs;
+  const defaultConcurrency = timing.council_mode === "quick" ? QUICK_TASKS.length : LIMITS.CONCURRENCY_DEFAULT;
+  const maxConcurrency = Math.max(LIMITS.CONCURRENCY_MIN, Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || defaultConcurrency)));
   const grounding = await groundingForHeadlessRun({
     symbol,
     asOf: asOfDate,
     grounding: args.grounding,
     dryRun,
+    timeoutMs: timing.council_mode === "quick"
+      ? remainingQuickBudget(timing, LIMITS.QUICK_GROUNDING_MS)
+      : undefined,
   });
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
 
-  const startedAt = args.queued_run?.started_at || new Date().toISOString();
   const run = {
     run_id: id,
     symbol,
@@ -665,6 +752,7 @@ export async function collectEvidence(args) {
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
     entry_tool: args.entry_tool || "collect_evidence",
     visibility_required: false,
+    ...timing,
     started_at: startedAt,
     updated_at: startedAt,
     completed_at: null,
@@ -693,6 +781,8 @@ export async function collectEvidence(args) {
   appendEvent(run, "run_started", {
     tasks,
     masters: frozen.masters,
+    council_mode: run.council_mode,
+    deadline_at: run.deadline_at,
     grounding: grounding ? (grounding.facts_unavailable ? "unavailable" : "attached") : "dry_run_skipped",
   });
   writeJson(join(dir, "evidence.json"), run);
@@ -710,8 +800,46 @@ export async function collectEvidence(args) {
     writeAllAgentsMarkdown(run);
   };
 
+  const commitUnexpectedEvidenceFailure = (error, task) => {
+    const failedResult = {
+      ok: false,
+      code: null,
+      text: "",
+      stderr: cleanLog(error?.message || error),
+      stdout: "",
+      timedOut: false,
+      unexpected_error: true,
+    };
+    const failure = workerFailureArtifacts({
+      task,
+      symbol,
+      asOfDate,
+      language,
+      timeoutMs,
+      result: failedResult,
+      failureKind: "unexpected_error",
+    });
+    const diagnosticPath = join(dir, `${task}.failure.json`);
+    writeJson(diagnosticPath, failure.diagnostic, { mode: 0o600 });
+    commitPacket(failure.packet);
+    updateTask(run, task, run.council_mode === "quick" ? "degraded" : "failed", {
+      completed_at: new Date().toISOString(),
+      output: join(dir, `${task}.json`),
+      diagnostic: diagnosticPath,
+      attempts: taskState(run, task).attempts || 0,
+      error: "unexpected_error",
+    });
+    return failure.packet;
+  };
+
   await mapLimit(tasks, maxConcurrency, async (task) => {
-    const prompt = taskPrompt(task, symbol, asOfDate, args.prompt || "", language, run.grounding);
+    const quickPriority = run.council_mode === "quick"
+      ? task === "news_industry_management"
+        ? "QUICK COUNCIL PRIORITY: return only the highest-impact company and industry developments from the 120 days up to as_of. Every news source must have a publication date and URL; exclude future, undated and stale items. Keep the packet concise."
+        : "QUICK COUNCIL PRIORITY: return only the 4-6 highest-information claims needed for a directional read. Keep the packet concise, source every claim, and make unknowns explicit."
+      : "";
+    const workerObjective = [args.prompt || "", quickPriority].filter(Boolean).join("\n\n");
+    const prompt = taskPrompt(task, symbol, asOfDate, workerObjective, language, run.grounding);
     updateTask(run, task, "running", { started_at: new Date().toISOString() });
     if (dryRun) {
       const packet = dryPacket(task, symbol, asOfDate, prompt, language);
@@ -720,12 +848,17 @@ export async function collectEvidence(args) {
       return packet;
     }
     const workerStartedAt = Date.now();
-    const runAttempt = (workerPrompt, budgetMs, attempt) => runCodex(workerPrompt, budgetMs, ({ pid, output }) => {
-      updateTask(run, task, "running", { pid, output, attempts: attempt });
-    }, ({ pid, output, elapsed_ms }) => {
-      updateTask(run, task, "running", { pid, output, attempts: attempt });
-      appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms, attempt });
-    });
+    const runAttempt = async (workerPrompt, budgetMs, attempt) => {
+      const allowedMs = remainingQuickBudget(run, budgetMs);
+      if (allowedMs <= 0) return { ...deadlineResult(), budget_ms: 0 };
+      const result = await runCodex(workerPrompt, allowedMs, ({ pid, output }) => {
+        updateTask(run, task, "running", { pid, output, attempts: attempt });
+      }, ({ pid, output, elapsed_ms }) => {
+        updateTask(run, task, "running", { pid, output, attempts: attempt });
+        appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms, attempt });
+      });
+      return { ...result, budget_ms: allowedMs };
+    };
     const commitFailure = ({ failedResult, budgetMs, attempts, failureKind, parseError, retryDiagnostic }) => {
       const failure = workerFailureArtifacts({
         task,
@@ -740,22 +873,26 @@ export async function collectEvidence(args) {
       const diagnosticPath = join(dir, `${task}.failure.json`);
       writeJson(diagnosticPath, failure.diagnostic, { mode: 0o600 });
       commitPacket(failure.packet);
-      updateTask(run, task, failedResult.timedOut ? "timed_out" : "failed", {
+      const terminalStatus = run.council_mode === "quick"
+        ? "degraded"
+        : failedResult.timedOut ? "timed_out" : "failed";
+      updateTask(run, task, terminalStatus, {
         completed_at: new Date().toISOString(),
         output: join(dir, `${task}.json`),
         diagnostic: diagnosticPath,
         ...(retryDiagnostic ? { retry_diagnostic: retryDiagnostic } : {}),
         attempts,
+        deadline_exhausted: failedResult.deadline_exhausted === true,
         error: failureKind === "parse_failed"
           ? "parse_failed"
-          : (failedResult.timedOut ? "timeout" : `exit code ${failedResult.code}`),
+          : (failedResult.deadline_exhausted ? "global_deadline" : failedResult.timedOut ? "timeout" : `exit code ${failedResult.code}`),
       });
       return failure.packet;
     };
 
     let result = await runAttempt(prompt, timeoutMs, 1);
     if (!result.ok) {
-      return commitFailure({ failedResult: result, budgetMs: timeoutMs, attempts: 1 });
+      return commitFailure({ failedResult: result, budgetMs: result.budget_ms ?? timeoutMs, attempts: 1 });
     }
     let packet;
     try {
@@ -777,11 +914,11 @@ export async function collectEvidence(args) {
       const retryDiagnostic = join(dir, `${task}.attempt-1.failure.json`);
       writeJson(retryDiagnostic, firstFailure.diagnostic, { mode: 0o600 });
       const elapsedMs = Date.now() - workerStartedAt;
-      const retryTimeoutMs = timeoutMs - elapsedMs;
+      const retryTimeoutMs = Math.min(timeoutMs - elapsedMs, remainingQuickBudget(run, timeoutMs));
       if (retryTimeoutMs <= 0) {
         return commitFailure({
           failedResult: result,
-          budgetMs: timeoutMs,
+          budgetMs: result.budget_ms ?? timeoutMs,
           attempts: 1,
           failureKind: "parse_failed",
           parseError: firstParseError,
@@ -803,7 +940,7 @@ export async function collectEvidence(args) {
       if (!result.ok) {
         return commitFailure({
           failedResult: result,
-          budgetMs: retryTimeoutMs,
+          budgetMs: result.budget_ms ?? retryTimeoutMs,
           attempts: 2,
           retryDiagnostic,
         });
@@ -821,7 +958,7 @@ export async function collectEvidence(args) {
       } catch (secondParseError) {
         return commitFailure({
           failedResult: result,
-          budgetMs: retryTimeoutMs,
+          budgetMs: result.budget_ms ?? retryTimeoutMs,
           attempts: 2,
           failureKind: "parse_failed",
           parseError: secondParseError,
@@ -829,23 +966,38 @@ export async function collectEvidence(args) {
         });
       }
     }
-  });
+  }, commitUnexpectedEvidenceFailure);
 
   const successfulTasks = tasks.filter((task) => taskState(run, task).status === "completed");
-  const failedTasks = tasks.filter((task) => taskState(run, task).status !== "completed");
-  const allEvidenceSucceeded = failedTasks.length === 0;
+  const degradedTasks = tasks.filter((task) => taskState(run, task).status === "degraded");
+  const failedTasks = tasks.filter((task) => !["completed", "degraded"].includes(taskState(run, task).status));
+  const quickMinimumMet = run.council_mode === "quick"
+    && successfulTasks.length >= LIMITS.QUICK_MIN_SUCCESSFUL_TASKS;
+  const allEvidenceSucceeded = failedTasks.length === 0
+    && (degradedTasks.length === 0 || quickMinimumMet);
+  const evidenceDegraded = allEvidenceSucceeded && degradedTasks.length > 0;
+  const evidenceEvent = evidenceDegraded
+    ? "evidence_degraded"
+    : allEvidenceSucceeded ? "evidence_complete" : "evidence_partial";
   run.completed_at = new Date().toISOString();
-  run.phase = allEvidenceSucceeded ? "evidence_complete" : "evidence_partial";
-  run.status = allEvidenceSucceeded ? "evidence_complete" : "partial";
+  run.phase = evidenceDegraded
+    ? "evidence_degraded"
+    : allEvidenceSucceeded ? "evidence_complete" : "evidence_partial";
+  run.status = evidenceDegraded
+    ? "evidence_degraded"
+    : allEvidenceSucceeded ? "evidence_complete" : "partial";
   writeJson(join(dir, "evidence.json"), run);
   writeSourceManifest(run);
   writeStatus(run);
-  appendEvent(run, allEvidenceSucceeded ? "evidence_complete" : "evidence_partial", {
+  appendEvent(run, evidenceEvent, {
+    barrier_satisfied: allEvidenceSucceeded,
     successful: successfulTasks.length,
+    degraded: degradedTasks.length,
     failed: failedTasks.length,
     total: tasks.length,
     packet_count: run.packets.length,
     failed_tasks: failedTasks,
+    degraded_tasks: degradedTasks,
   });
   writeAllAgentsMarkdown(run);
   return run;
@@ -868,10 +1020,14 @@ function updateMasterStatus(run, master, status, patch = {}) {
 export async function runHeadlessMasters(run, args = {}) {
   const selected = selectedMasters(run);
   const dir = runPath(run.run_id);
-  const timeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
+  const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
+  const timeoutMs = run.council_mode === "quick"
+    ? Math.min(requestedTimeoutMs, LIMITS.QUICK_MASTER_MS)
+    : requestedTimeoutMs;
+  const defaultConcurrency = run.council_mode === "quick" ? 4 : LIMITS.CONCURRENCY_DEFAULT;
   const maxConcurrency = Math.max(
     LIMITS.CONCURRENCY_MIN,
-    Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || LIMITS.CONCURRENCY_DEFAULT)),
+    Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || defaultConcurrency)),
   );
   const plan = planMasterSeats(run, selected);
   const byId = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
@@ -952,11 +1108,14 @@ export async function runHeadlessMasters(run, args = {}) {
       return { id, opinion: attachMasterRuntimeProvenance(run, id, reconciled.opinion, resolvedEngine), engine: resolvedEngine };
     }
 
-    const result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
-      updateMasterStatus(run, id, "running", { pid, output });
-    }, ({ pid, output, elapsed_ms }) => {
-      updateMasterStatus(run, id, "running", { pid, output, elapsed_ms });
-    });
+    const allowedMs = remainingQuickBudget(run, timeoutMs);
+    const result = allowedMs <= 0
+      ? deadlineResult()
+      : await runCodex(prompt, allowedMs, ({ pid, output }) => {
+        updateMasterStatus(run, id, "running", { pid, output });
+      }, ({ pid, output, elapsed_ms }) => {
+        updateMasterStatus(run, id, "running", { pid, output, elapsed_ms });
+      });
     if (!result.ok) {
       return {
         id,
@@ -972,7 +1131,11 @@ export async function runHeadlessMasters(run, args = {}) {
     } catch (error) {
       return { id, error: "parse_failed", raw: cleanLog(result.text || String(error?.message || error)) };
     }
-  });
+  }, (error, { id }) => ({
+    id,
+    error: "unexpected_error",
+    raw: cleanLog(error?.message || error),
+  }));
 
   for (const outcome of outcomes) {
     if (!outcome.opinion) {
@@ -1000,12 +1163,14 @@ export async function runHeadlessMasters(run, args = {}) {
 export async function runDebateRole(run, role, context, timeoutMs) {
   const prompt = debatePrompt(role, run, context);
   updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round });
-  const result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
-    updateAgent(run, role, "running", { pid, output, round: context.round });
-  }, ({ pid, output, elapsed_ms }) => {
-    updateAgent(run, role, "running", { pid, output, round: context.round });
-    appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
-  });
+  const result = timeoutMs <= 0
+    ? deadlineResult()
+    : await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+      updateAgent(run, role, "running", { pid, output, round: context.round });
+    }, ({ pid, output, elapsed_ms }) => {
+      updateAgent(run, role, "running", { pid, output, round: context.round });
+      appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
+    });
   const packet = debateFromCodex(result, role, run, prompt);
   const roundCompletedAt = new Date().toISOString();
   // A role can run three times. Leaving it marked `running` after one awaited invocation
@@ -1031,15 +1196,169 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   return { packet, result };
 }
 
+function debateFailure(step) {
+  if (step.result.ok && step.packet.verdict !== "PARSE_FAILED") return undefined;
+  if (step.packet.verdict === "PARSE_FAILED") return "parse_failed";
+  if (step.result.deadline_exhausted) return "global_deadline";
+  return step.result.timedOut ? "timeout" : `exit code ${step.result.code ?? "unknown"}`;
+}
+
+async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
+  const dir = runPath(run.run_id);
+  appendEvent(run, "debate_round", { round: 1, format: "single_round_parallel" });
+  const sideBudget = remainingQuickBudget(run, timeoutMs);
+  const [bullOutcome, bearOutcome] = await Promise.allSettled([
+    runDebateRole(run, "bull_researcher", { round: 1, brief: "quick long case" }, sideBudget),
+    runDebateRole(run, "bear_researcher", { round: 1, brief: "quick short case" }, sideBudget),
+  ]);
+  const settledStep = (outcome, role) => {
+    if (outcome.status === "fulfilled") return outcome.value;
+    const result = {
+      ok: false,
+      code: null,
+      text: "",
+      stderr: cleanLog(outcome.reason?.message || outcome.reason),
+      stdout: "",
+      timedOut: false,
+      unexpected_error: true,
+    };
+    return { result, packet: debateFromCodex(result, role, run, "unexpected quick debate failure") };
+  };
+  const bullStep = settledStep(bullOutcome, "bull_researcher");
+  const bearStep = settledStep(bearOutcome, "bear_researcher");
+  const bull = mergeDebateRounds([bullStep.packet]);
+  const bear = mergeDebateRounds([bearStep.packet]);
+  const bullError = debateFailure(bullStep);
+  const bearError = debateFailure(bearStep);
+
+  writeJson(join(dir, "bull_researcher.json"), bull);
+  updateAgent(run, "bull_researcher", bullError ? "degraded" : "completed", {
+    completed_at: new Date().toISOString(),
+    output: join(dir, "bull_researcher.json"),
+    error: bullError,
+  });
+  writeJson(join(dir, "bear_researcher.json"), bear);
+  updateAgent(run, "bear_researcher", bearError ? "degraded" : "completed", {
+    completed_at: new Date().toISOString(),
+    output: join(dir, "bear_researcher.json"),
+    error: bearError,
+  });
+  appendEvent(run, "debate_qna_gate", {
+    status: "not_run",
+    reason: "quick_single_round",
+    full_council_equivalent: false,
+  });
+  writeAllAgentsMarkdown(run, { bull, bear });
+
+  const managerPrompt = debatePrompt("portfolio_manager", run, { bull, bear, outputMode });
+  updateAgent(run, "portfolio_manager", "running", { started_at: new Date().toISOString() });
+  const managerBudget = remainingQuickBudget(run, timeoutMs);
+  const managerResult = managerBudget <= 0
+    ? deadlineResult()
+    : await runCodex(managerPrompt, managerBudget, ({ pid, output }) => {
+      updateAgent(run, "portfolio_manager", "running", { pid, output });
+    }, ({ pid, output, elapsed_ms }) => {
+      updateAgent(run, "portfolio_manager", "running", { pid, output });
+      appendEvent(run, "agent_heartbeat", { role: "portfolio_manager", pid, output, elapsed_ms });
+    });
+  const manager = managerResult.ok
+    ? debateFromCodex(managerResult, "portfolio_manager", run, managerPrompt)
+    : managerFallback(run, args.prompt || "");
+  const managerOk = managerResult.ok && manager.verdict !== "PARSE_FAILED";
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  updateAgent(run, "portfolio_manager", managerOk ? "completed" : "failed", {
+    completed_at: new Date().toISOString(),
+    output: join(dir, "manager_synthesis.json"),
+    error: managerOk
+      ? undefined
+      : manager.verdict === "PARSE_FAILED"
+        ? "parse_failed"
+        : managerResult.deadline_exhausted ? "global_deadline" : managerResult.timedOut ? "timeout" : `exit code ${managerResult.code ?? "unknown"}`,
+  });
+
+  const gate = verificationStatus(run);
+  const completeness = completenessStatus(run);
+  run.completed_at = new Date().toISOString();
+  if (completeness.completeness === "incomplete") {
+    run.phase = "incomplete";
+    run.status = "incomplete";
+    appendEvent(run, "incomplete", {
+      missing_evidence: completeness.missing_evidence,
+      missing_debate: completeness.missing_debate,
+      missing_masters: completeness.missing_masters,
+      degraded_evidence: completeness.degraded_evidence,
+      degraded_debate: completeness.degraded_debate,
+    });
+  } else if (gate.verification === "needs_verification") {
+    run.phase = "needs_verification";
+    run.status = "needs_verification";
+    appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
+  } else if (completeness.degraded_evidence.length || completeness.degraded_debate.length) {
+    run.phase = "degraded";
+    run.status = "degraded";
+    appendEvent(run, "run_degraded", {
+      degraded_evidence: completeness.degraded_evidence,
+      degraded_debate: completeness.degraded_debate,
+    });
+  } else {
+    run.phase = "complete";
+    run.status = "complete";
+  }
+  const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager });
+  writeJson(join(dir, "evidence.json"), run);
+  writeStatus(run);
+  if (run.status === "complete") appendEvent(run, "run_complete", { decision: manager.rating, winner: manager.winner });
+  writeAllAgentsMarkdown(run, { bull, bear, manager });
+  return { bull, bear, manager, ...finalArtifacts };
+}
+
+function finalizeBeforeDebate(run, args, reason) {
+  const dir = runPath(run.run_id);
+  for (const role of DEBATE_ROLES) {
+    if (["pending", "waiting", "running"].includes(agentState(run, role).status)) {
+      updateAgent(run, role, "skipped", { error: reason, completed_at: new Date().toISOString() });
+    }
+  }
+  const manager = managerFallback(run, args.prompt || "");
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  run.phase = "incomplete";
+  run.status = "incomplete";
+  run.completed_at = new Date().toISOString();
+  const completeness = completenessStatus(run);
+  appendEvent(run, "incomplete", {
+    reason,
+    downstream_model_calls_skipped: true,
+    missing_evidence: completeness.missing_evidence,
+    missing_debate: completeness.missing_debate,
+    missing_masters: completeness.missing_masters,
+  });
+  const finalArtifacts = writeFinalArtifacts(run, { manager });
+  writeJson(join(dir, "evidence.json"), run);
+  writeStatus(run);
+  writeAllAgentsMarkdown(run, { manager });
+  return { bull: null, bear: null, manager, ...finalArtifacts };
+}
+
 export async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
-  const timeoutMs = Number.isFinite(args.synthesis_timeout_ms) ? args.synthesis_timeout_ms : Number(args.timeout_ms || LIMITS.CODEX_TIMEOUT_MS);
+  const requestedSynthesisMs = Number.isFinite(args.synthesis_timeout_ms)
+    ? args.synthesis_timeout_ms
+    : Number(args.timeout_ms || LIMITS.CODEX_TIMEOUT_MS);
+  const timeoutMs = run.council_mode === "quick"
+    ? Math.min(requestedSynthesisMs, LIMITS.QUICK_SYNTHESIS_MS)
+    : requestedSynthesisMs;
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
   run.phase = "debate";
   run.status = "running";
   run.completed_at = null;
   writeStatus(run);
-  appendEvent(run, "debate_started", { output_mode: outputMode });
+  appendEvent(run, "debate_started", {
+    output_mode: outputMode,
+    council_mode: run.council_mode,
+    debate_format: run.debate_format,
+  });
   if (run.dry_run || args.synthesis === false) {
     updateAgent(run, "bull_researcher", "running", { started_at: new Date().toISOString() });
     const bull = dryDebate("bull_researcher", run, debatePrompt("bull_researcher", run));
@@ -1079,6 +1398,10 @@ export async function synthesizeDecision(run, args) {
     if (run.status === "complete") appendEvent(run, "run_complete", { decision: fallback.rating, winner: fallback.winner });
     writeAllAgentsMarkdown(run, { bull, bear, manager: fallback });
     return { bull, bear, manager: fallback, ...finalArtifacts };
+  }
+
+  if (run.council_mode === "quick") {
+    return synthesizeQuickDecision(run, args, timeoutMs, outputMode);
   }
 
   // Three-round debate: R1 cases, R2 cross-rebuttal, R3 Q&A.
@@ -1197,7 +1520,47 @@ export async function synthesizeDecision(run, args) {
 
 export async function analyzeSymbol(args) {
   const run = await collectEvidence(args);
+  let gate = completenessStatus(run);
+  if (gate.missing_evidence.length > 0) {
+    const debate = finalizeBeforeDebate(run, args, "evidence_gate_failed");
+    return {
+      run,
+      debate,
+      decision: debate.manager,
+      final_report_markdown: debate.final_report_markdown,
+      user_response_markdown: debate.user_response_markdown,
+      report_quality: debate.report_quality,
+      artifacts: debate.artifacts || artifactPaths(run),
+    };
+  }
+  if (run.council_mode === "quick" && remainingQuickBudget(run, 1) <= 0) {
+    const debate = finalizeBeforeDebate(run, args, "global_deadline_before_masters");
+    return {
+      run,
+      debate,
+      decision: debate.manager,
+      final_report_markdown: debate.final_report_markdown,
+      user_response_markdown: debate.user_response_markdown,
+      report_quality: debate.report_quality,
+      artifacts: debate.artifacts || artifactPaths(run),
+    };
+  }
   await runHeadlessMasters(run, args);
+  gate = completenessStatus(run);
+  if (gate.missing_masters.length > 0
+    || (run.council_mode === "quick" && remainingQuickBudget(run, 1) <= 0)) {
+    const debate = finalizeBeforeDebate(run, args,
+      gate.missing_masters.length ? "master_gate_failed" : "global_deadline_before_debate");
+    return {
+      run,
+      debate,
+      decision: debate.manager,
+      final_report_markdown: debate.final_report_markdown,
+      user_response_markdown: debate.user_response_markdown,
+      report_quality: debate.report_quality,
+      artifacts: debate.artifacts || artifactPaths(run),
+    };
+  }
   const debate = await synthesizeDecision(run, args);
   return {
     run,
@@ -1208,6 +1571,45 @@ export async function analyzeSymbol(args) {
     report_quality: debate.report_quality,
     artifacts: debate.artifacts || artifactPaths(run),
   };
+}
+
+/** Best-effort standard artifact package for an unexpected background orchestration error. */
+export function finalizeUnhandledBackgroundFailure(runIdValue, prompt, error) {
+  const dir = runPath(runIdValue);
+  const run = readJson(join(dir, "evidence.json"));
+  const completedAt = new Date().toISOString();
+  const terminal = new Set(["completed", "degraded", "failed", "timed_out", "skipped"]);
+  const failOpenStates = (states = {}) => Object.fromEntries(Object.entries(states).map(([id, state]) => [id,
+    terminal.has(state?.status) ? state : {
+      ...state,
+      status: "failed",
+      error: "unexpected_orchestrator_error",
+      completed_at: completedAt,
+      updated_at: completedAt,
+      pid: null,
+    },
+  ]));
+  run.task_status = failOpenStates(run.task_status);
+  run.agent_status = failOpenStates(run.agent_status);
+  run.master_status = failOpenStates(run.master_status);
+  run.status = "failed";
+  run.phase = "failed";
+  run.completed_at = completedAt;
+  run.background_error = cleanLog(error?.message || error, 1_000) || "unexpected orchestration error";
+  const manager = managerFallback(run, prompt || "");
+  manager.failure_reason = "unexpected_orchestrator_error";
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  appendEvent(run, "background_run_failed", {
+    error: "unexpected_orchestrator_error",
+    diagnostic: run.background_error,
+    standard_artifacts_written: true,
+  });
+  const artifacts = writeFinalArtifacts(run, { manager });
+  writeJson(join(dir, "evidence.json"), run);
+  writeStatus(run);
+  writeAllAgentsMarkdown(run, { manager });
+  return { run, manager, ...artifacts };
 }
 
 export function recordVerifierVerdict(args) {

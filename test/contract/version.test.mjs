@@ -22,12 +22,16 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the solo-test channel uses one explicit prerelease across all 26 physical packs", () => {
+test("the 0.9.1 next preview stays non-GA across all 26 physical packs", () => {
   const expected = readJson("package.json").version;
+  const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
+  assert.equal(expected, "0.9.1");
+  assert.equal(pkg.publishConfig.tag, "next");
   assert.equal(profile.channel, "solo_test");
-  assert.match(expected, /^0\.9\.0-solo-test\.[1-9]\d*$/u);
+  assert.equal(profile.production_eligible, false);
+  assert.equal(profile.method_model_eligible, false);
   assert.equal(new RegExp(schema.properties.pack_version.pattern, "u").test(expected), true);
 
   const root = repoFile("knowledge/solo-test/masters");

@@ -38,6 +38,12 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
     cwd: PACKAGED_PARITY_REPO_ROOT,
     encoding: "utf8",
+    env: {
+      ...process.env,
+      npm_config_dry_run: "true",
+      NPM_CONFIG_DRY_RUN: "true",
+      Npm_Config_Dry_Run: "true",
+    },
     maxBuffer: 32 * 1024 * 1024,
     timeout: 110_000,
   });

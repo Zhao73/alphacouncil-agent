@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.9.0-solo-test.3",
+  "version": "0.9.1",
   "description": "Multi-agent public-equity research workflow plugin for Codex & Claude Code: sourced evidence packets, bull/bear debate, and a portfolio-manager Buy/Overweight/Hold/Underweight/Sell decision.",
   "type": "module",
   "license": "MIT",
@@ -43,6 +43,7 @@
     "persona:release:promote": "node scripts/promote-persona-v3-release.mjs",
     "persona:release:evidence:check": "node scripts/check-persona-v3-ga.mjs --expected-version 0.9.0 --require-release-evidence",
     "release:check": "npm run check && node scripts/check-persona-v3-ga.mjs --expected-version 0.9.0 --require-count 26 --require-min-admission operational --forbid-legacy --forbid-prompt-lens --require-release-evidence",
+    "release:preview:check": "npm run check && npm run test:package",
     "persona:stage:init": "node scripts/scaffold-persona-v3-staging.mjs --write",
     "persona:stage:check": "node scripts/scaffold-persona-v3-staging.mjs --check",
     "persona:stage:report": "node scripts/report-persona-v3-staging.mjs",
@@ -83,10 +84,10 @@
     "evaluation:artifacts:check": "node scripts/council-experiment-artifacts.mjs --check",
     "host:e2e:artifacts": "node scripts/host-e2e-artifacts.mjs --plan",
     "host:e2e:artifacts:check": "node scripts/host-e2e-artifacts.mjs --check",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check && npm run test:package"
   },
   "bin": {
-    "alphacouncil-agent": "./mcp/server.mjs"
+    "alphacouncil-agent": "mcp/server.mjs"
   },
   "files": [
     "mcp/",

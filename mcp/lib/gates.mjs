@@ -1,4 +1,4 @@
-import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, REPORT_SECTIONS } from "./constants.mjs";
+import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, QUICK_REPORT_SECTIONS, REPORT_SECTIONS } from "./constants.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage } from "./lang.mjs";
 
@@ -82,12 +82,28 @@ export function agentState(run, role) {
 
 export function completenessStatus(run) {
   const tasks = Array.isArray(run.tasks) ? run.tasks : [];
-  const missing_evidence = tasks.filter((task) => taskState(run, task).status !== "completed");
+  const quick = run.council_mode === "quick";
+  const successfulEvidence = tasks.filter((task) => taskState(run, task).status === "completed");
+  const degraded_evidence = tasks.filter((task) => taskState(run, task).status === "degraded");
+  const quickMinimumMet = quick && successfulEvidence.length >= LIMITS.QUICK_MIN_SUCCESSFUL_TASKS;
+  const missing_evidence = tasks.filter((task) => {
+    const status = taskState(run, task).status;
+    return status !== "completed" && !(quickMinimumMet && status === "degraded");
+  });
   // All three debate roles, including portfolio_manager. SKILL.md and the
   // record_visible_decision tool description have always promised the PM is enforced;
   // the gate only ever checked the two researchers, so a run that skipped the PM
   // entirely could still report itself complete.
-  const missing_debate = DEBATE_ROLES.filter((role) => agentState(run, role).status !== "completed");
+  const degraded_debate = DEBATE_ROLES.filter((role) => agentState(run, role).status === "degraded");
+  const successfulDebateSides = ["bull_researcher", "bear_researcher"]
+    .filter((role) => agentState(run, role).status === "completed").length;
+  const missing_debate = DEBATE_ROLES.filter((role) => {
+    const status = agentState(run, role).status;
+    if (status === "completed") return false;
+    // A quick read may survive one failed side if the other side and the PM completed and
+    // the failed packet is explicitly represented. Both sides failing is not a debate.
+    return !(quick && role !== "portfolio_manager" && status === "degraded" && successfulDebateSides >= 1);
+  });
   // A run that selected a master bench and recorded no opinions used to report itself
   // complete. That let the most expensive stage be skipped silently while the report still
   // read as a finished committee -- and a bench nobody consulted is worse than no bench,
@@ -101,6 +117,11 @@ export function completenessStatus(run) {
     missing_evidence,
     missing_debate,
     missing_masters,
+    degraded_evidence,
+    degraded_debate,
+    evidence_coverage: degraded_evidence.length ? "degraded" : "complete",
+    quick_minimum_successful_tasks: quick ? LIMITS.QUICK_MIN_SUCCESSFUL_TASKS : null,
+    successful_evidence_count: successfulEvidence.length,
     missing_evidence_count: missing_evidence.length,
     missing_debate_count: missing_debate.length,
     missing_masters_count: missing_masters.length,
@@ -167,9 +188,11 @@ export function validateFinalReport(markdown, run) {
   const assigned = assignHeadings(headings);
   const missing = [];
   const sections = [];
+  const quick = run?.council_mode === "quick";
+  const contractSections = quick ? QUICK_REPORT_SECTIONS : REPORT_SECTIONS;
 
   const benchRan = ((run?.masters || []).length > 0) || ((run?.master_opinions || []).length > 0);
-  for (const section of REPORT_SECTIONS) {
+  for (const section of contractSections) {
     if (section.when_masters && !benchRan) continue;
     const heading = assigned.get(section.id);
     if (!heading) {
@@ -203,15 +226,47 @@ export function validateFinalReport(markdown, run) {
 
   const sourceCount = (run.packets || []).reduce((sum, packet) => sum + (packet.sources?.length || 0), 0);
   if (sourceCount > 0 && !/[a-z_]+:s\d+/i.test(text)) missing.push("missing scoped source IDs such as market_data:S1");
-  const minLength = run.dry_run ? LIMITS.REPORT_MIN_CHARS_DRY : LIMITS.REPORT_MIN_CHARS;
+  const minLength = run.dry_run
+    ? LIMITS.REPORT_MIN_CHARS_DRY
+    : quick ? LIMITS.REPORT_MIN_CHARS_QUICK : LIMITS.REPORT_MIN_CHARS;
   if (denseLength(text) < minLength) missing.push(`report too short: minimum ${minLength} non-space characters`);
+  const execution = completenessStatus(run || {});
+  if (quick) {
+    const markerCount = (text.match(/alphacouncil:quick-scope:v1:begin/gu) || []).length;
+    if (markerCount !== 1) missing.push("missing system-owned quick_v1 scope marker");
+    const markerStart = text.indexOf("<!-- alphacouncil:quick-scope:v1:begin -->");
+    const markerEnd = text.indexOf("<!-- alphacouncil:quick-scope:v1:end -->", markerStart + 1);
+    const scope = markerStart >= 0 && markerEnd > markerStart ? text.slice(markerStart, markerEnd) : "";
+    if (!/full_council_equivalent=false/u.test(scope)) {
+      missing.push("quick_v1 scope marker missing full_council_equivalent=false");
+    }
+  }
+  if (quick && (execution.degraded_evidence.length || execution.degraded_debate.length)) {
+    const markerCount = (text.match(/alphacouncil:degraded-ledger:v1:begin/gu) || []).length;
+    if (markerCount !== 1) missing.push("missing system-owned degraded execution ledger");
+    const markerStart = text.indexOf("<!-- alphacouncil:degraded-ledger:v1:begin -->");
+    const markerEnd = text.indexOf("<!-- alphacouncil:degraded-ledger:v1:end -->", markerStart + 1);
+    const ledger = markerStart >= 0 && markerEnd > markerStart ? text.slice(markerStart, markerEnd) : "";
+    for (const id of [...execution.degraded_evidence, ...execution.degraded_debate]) {
+      if (!ledger.includes(id)) missing.push(`degraded ledger missing seat: ${id}`);
+    }
+  }
 
   return {
     schema_version: 2,
+    contract_id: quick ? "quick_v1" : "full_v2",
+    scope: quick ? "quick" : "full",
+    full_council_equivalent: !quick,
+    debate_rounds_expected: quick ? 1 : 3,
+    adversarial_verification: quick ? "not_run" : "separate_runtime_status",
+    required_tasks: [...(run?.tasks || [])],
+    evidence_coverage: execution.evidence_coverage,
+    degraded_evidence: execution.degraded_evidence,
+    degraded_debate: execution.degraded_debate,
     status: missing.length ? "needs_revision" : "passed",
     missing,
     sections,
     checked_at: new Date().toISOString(),
-    required_sections: REPORT_SECTIONS.filter((s) => !s.when_masters || benchRan).map((section) => section.id),
+    required_sections: contractSections.filter((s) => !s.when_masters || benchRan).map((section) => section.id),
   };
 }

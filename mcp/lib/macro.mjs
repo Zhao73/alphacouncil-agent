@@ -136,7 +136,7 @@ export async function getMacroSnapshot(args = {}) {
   const blocks = MACRO_BLOCKS.filter((block) => requested.includes(block.id));
   const symbols = [...new Set(blocks.flatMap((block) => block.members.map((m) => m.symbol)))];
 
-  const results = await Promise.all(symbols.map((symbol) => fetchQuote(symbol).catch((error) => ({
+  const results = await Promise.all(symbols.map((symbol) => fetchQuote(symbol, { signal: args.signal }).catch((error) => ({
     query: symbol,
     error: String(error?.message || error),
   }))));

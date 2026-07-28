@@ -145,12 +145,24 @@ function containedPhysicalFile(root, relativePath, label) {
   return physicalFile(target, label);
 }
 
+export function stripNpmDryRunEnv(source) {
+  const env = { ...source };
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase() === "npm_config_dry_run") delete env[key];
+  }
+  return env;
+}
+
 function isolatedNpmEnv(root) {
   const userConfig = join(root, "empty-user.npmrc");
   const globalConfig = join(root, "empty-global.npmrc");
   writeFileSync(userConfig, "", { encoding: "utf8", flag: "wx", mode: 0o600 });
   writeFileSync(globalConfig, "", { encoding: "utf8", flag: "wx", mode: 0o600 });
-  return {
+  // Lifecycle commands such as `npm publish --dry-run` export their dry-run
+  // setting to child processes. This verifier must physically install the
+  // local tarball in its isolated temporary prefix, so strip every casing of
+  // that inherited npm setting before invoking the nested installer.
+  return stripNpmDryRunEnv({
     ...process.env,
     npm_config_audit: "false",
     npm_config_cache: join(root, "npm-cache"),
@@ -161,7 +173,7 @@ function isolatedNpmEnv(root) {
     npm_config_package_lock: "false",
     npm_config_update_notifier: "false",
     npm_config_userconfig: userConfig,
-  };
+  });
 }
 
 function npmInvocation(args, env) {

@@ -33,7 +33,7 @@ test("the published package ships every Codex interface asset named by its manif
 
 test("the bin entry points at a file that exists and is executable", () => {
   const target = pkg.bin["alphacouncil-agent"];
-  assert.equal(target, "./mcp/server.mjs");
+  assert.equal(target, "mcp/server.mjs");
   const path = repoFile("mcp/server.mjs");
   assert.ok(existsSync(path));
   assert.match(readFileSync(path, "utf8").split("\n")[0], /^#!\/usr\/bin\/env node$/, "a bin needs a shebang");
@@ -69,7 +69,7 @@ test("prepublishOnly runs the checks so a broken package cannot be published", (
   assert.match(pkg.scripts.prepublishOnly, /npm run check/);
 });
 
-test("the non-GA 0.9.0 package cannot silently replace npm latest", () => {
+test("the non-GA 0.9.1 preview cannot silently replace npm latest", () => {
   assert.deepEqual(pkg.publishConfig, { access: "public", tag: "next" });
 });
 

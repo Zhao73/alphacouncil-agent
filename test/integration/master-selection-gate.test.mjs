@@ -55,6 +55,7 @@ test("opening a selection returns a text-complete individual catalog without sta
     catalog_hash: opened.catalog_hash,
     intent_hash: opened.intent_hash,
     expires_at: opened.expires_at,
+    council_mode: "full",
   });
   assert.equal(existsSync(join(dataDir, "runs")), false);
 });
@@ -89,6 +90,7 @@ test("text-only MCP hosts can complete the selection handshake without structure
     selection_receipt: confirmed.selection_receipt,
     catalog_hash: confirmed.catalog_hash,
     intent_hash: confirmed.intent_hash,
+    council_mode: "full",
   });
   assert.match(confirmedContext.selection_receipt, /^RCP-/);
   assert.equal(existsSync(join(dataDir, "runs")), false);

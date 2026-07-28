@@ -8,6 +8,7 @@ import { appendEvent, runPath, saveRun } from "./run-store.mjs";
 
 const TERMINAL_ANALYSIS_STATUSES = new Set([
   "complete",
+  "degraded",
   "incomplete",
   "needs_verification",
   "needs_revision",

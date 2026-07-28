@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, writeFileSync, utimesSync } from "node:fs";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer } from "../helpers/rpc-client.mjs";
+import { mapLimit, runCodex } from "../../mcp/lib/codex.mjs";
 
 // runCodex used to write codex-<ts>-<rand>.txt into DATA_DIR and never delete it, so
 // every analyst of every run leaked one file permanently. These tests cover the sweep
@@ -48,4 +50,41 @@ test("a dry run leaves no codex temp files in the data dir", async () => {
   } finally {
     removeDataDir(dir);
   }
+});
+
+test("runCodex force-settles after kill grace even if a broken child never closes", async () => {
+  class NeverClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 424242;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  const stops = [];
+  const started = Date.now();
+  const result = await runCodex("fixture", 10, () => {}, () => {}, {
+    spawn: () => new NeverClosingChild(),
+    stopChild: (_child, force = false) => stops.push(force ? "KILL" : "TERM"),
+    sigkillGraceMs: 15,
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.timedOut, true);
+  assert.equal(result.forced_settle, true);
+  assert.deepEqual(stops, ["TERM", "KILL"]);
+  assert.ok(Date.now() - started < 250, "forced settlement must not wait for a close event");
+});
+
+test("mapLimit can isolate an unexpected seat rejection without cancelling siblings", async () => {
+  const results = await mapLimit(
+    [1, 2, 3],
+    3,
+    async (value) => {
+      if (value === 2) throw new Error("seat exploded");
+      return value * 10;
+    },
+    async (error, value) => ({ value, error: error.message }),
+  );
+  assert.deepEqual(results, [10, { value: 2, error: "seat exploded" }, 30]);
 });

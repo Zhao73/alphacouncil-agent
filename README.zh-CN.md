@@ -41,14 +41,14 @@
 
 </div>
 
-AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 插件。它会协调多个分析师子代理、收集带来源的证据、进行多空辩论,并产出投资组合经理风格的最终报告。
+AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 插件。完整议会是默认模式；只有用户明确要求 `quick` 时，才进入更小的插件托管 headless 合同。两种模式都会收集带来源的证据、运行所选方法席，并产出可审计的 PM 报告。
 
 ### ✨ 为什么用 AlphaCouncil
 
 | | |
 |---|---|
-| 🏛️ **是委员会,不是一家之言** | 11 个专项分析师代理(行情、财报、估值、量化、内部人/SEC、投行事件……)并行工作。 |
-| 🐂🐻 **天生对抗式** | 结构化的多头 vs 空头辩论,由投资组合经理代理裁决并给出实际评级。 |
+| 🏛️ **是委员会,不是一家之言** | 完整模式默认 8 个证据席、最多 11 个；quick 固定 4 个并行证据席。两者都在研究前完整展示 26 个方法席。 |
+| 🐂🐻 **天生对抗式** | 完整模式跑三轮多空交叉质询；quick 只跑一轮并行 Bull/Bear 陈述和短 PM，且明确不声称完成对抗 verifier。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
 | 🔑 **不依赖金融 API,无需任何密钥** | 不需要金融数据 API、行情源或券商账号。分析师通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
@@ -57,16 +57,17 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
-## 当前 0.9.0 预发布状态：solo-test
+## 当前 0.9.1 预览状态：non-GA solo-test
 
-软件包与插件版本表面均为 `0.9.0-solo-test.3`，但这是一条明确隔离的 **solo-test** 渠道，不是正式
-生产 GA。它包含 26 个物理 PersonaPack v3 包与 52 个可执行的
-`provisional_derived_proxy` 工具，用于端到端测试确定性路径。全部 26 席仍是 provisional
-`operator_lens`；`operational`：**0**；`method_model`：**0**。人工来源审批：**0**；
-人工公式审批：**0**；人工审批签名：**0**。
+`0.9.1` 发布在 npm 的 `next` dist-tag，并在 GitHub 标记为 prerelease。它是有界
+`quick_v1` 功能预览，**不是**正式生产 GA。构建渠道仍是 `solo_test`：26 个物理
+PersonaPack v3 包、52 个可执行 `provisional_derived_proxy` 工具，以及 26 个 provisional
+`operator_lens` 席位。`operational`：**0**；已验证 `method_model`：**0**；人工来源/公式
+审批与审批签名仍为 **0**。
 
-生产 loader 会拒绝这套树，生产 assembly、cutover 与 GA 继续 fail-closed。精确测试命令与
-已核验状态见 [docs/solo-test-0.9.0.md](docs/solo-test-0.9.0.md)。
+生产 loader 仍拒绝这套树，production assembly、cutover 与 GA 继续 fail-closed。精确的
+quick 边界见 [v0.9.1 发布合同](docs/releases/v0.9.1.md)，`quick_v1` 与 `full_v2` 的报告差异见
+[报告合同](docs/report-contract.md)。
 
 ## 📜 免责声明
 
@@ -125,17 +126,41 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 | 输入 | 跑什么 | 额度消耗 |
 |---|---|---|
 | `/alpha <ticker>` | 逐人展示全部大师，确认 `1..N`/区间/`all` 后运行完整议会 | 每个所选席位一个子代理 |
-| `/alpha <ticker> quick` | 同样强制选择大师，再跑 4 分析师 + 所选大师 + 辩论；无验证 | 随选择数量变化 |
+| `/alpha <ticker> quick` | 展示全部 26 席，确认 1-4 席（禁用 `all`），再跑插件托管 `quick_v1`（≤10 分钟） | 随选择数量变化 |
 | `/alpha <ticker> screen` | 只跑机械筛选 | **零** |
 | `/alpha <ticker> options` | 隐含波动率期限结构、偏斜、持仓分布 | **零** |
 | `/alpha <ticker> news` | 带日期的申报与新闻 | **零** |
 | `/alpha market <theme>` | 市场在讲什么故事 | **零** |
 | `/alpha` | 列出模式后停下 | **零** |
 
-标「零」的四个只调免 key 数据工具、**不启动任何子代理**，除了你敲的这一轮之外不消耗额度。完整与 quick 都是议会模式：研究前逐人显示编号、身份、方法和最适用场景。四个宿主都支持统一的编号文本选择，原生多选只是增强。即使请求已经点名，也只作为预填；仍须显示全表并确认本次一次性 receipt。
+标「零」的四个只调免 key 数据工具、**不启动任何子代理**，除了你敲的这一轮之外不消耗额度。完整与 quick 都是议会模式：研究前逐人显示编号、身份、方法和最适用场景。完整模式可选 `all`；quick 只能选择 1-4 个不同席位并拒绝 `all`。四个宿主都支持统一的编号文本选择，原生多选只是增强。即使请求已经点名，也只作为预填；仍须显示全表并确认本次一次性、与模式绑定的 receipt。
 
 任何上市股票：`/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`。
 基于申报的模式需要美国申报主体；其他市场会通过 `market_coverage` 说明覆盖情况，而不是静默返回空结果。
+
+### Quick v1 —— 有界，但不等于完整议会
+
+不会因为用户着急或完整运行失败就自动切换 quick。Quick 只能通过插件托管的 headless
+`analyze_symbol(council_mode="quick")` 运行；`plan_visible_run` 会拒绝 quick。完整展示 26 席并
+确认 1-4 席后，执行图固定为：
+
+1. `market_data`、`earnings_deep_dive`、`valuation_long_short`、
+   `news_industry_management` 四席一波并行；
+2. 所选 1-4 个方法席一波并行；
+3. Bull 与 Bear 各做一次陈述并行启动，二者结束后运行一个短 PM；
+4. 确定性装配 `quick_v1` 报告和标准工件。
+
+公司与行业新闻必须有日期，且落在截至 `as_of` 的最近 120 天内；未来、无日期和更旧条目不会
+被展示为「最近新闻」，而会进入数据缺口。queue 到工件持久化的硬上限为 **600000 ms**：
+grounding 等待 20 秒；每个并行证据 worker 210 秒；每个并行方法 worker 90 秒；Bull/Bear
+各 90 秒；PM 90 秒；最终装配/持久化预留 20 秒。重试占用同一分项和总时钟。
+
+Quick 不跑第二轮反驳、第三轮精确问答，也不跑
+`source_fidelity`/`rederivation`/`refuter` 对抗 verifier。只有满足明确的最低覆盖规则并写入
+system-owned degraded ledger 时，才可终止为 `degraded`；否则缺少必需工作就是 `incomplete`
+或 `failed`。`report_quality=passed` 只代表 `quick_v1` 结构通过，不会把 degraded 提升为
+complete，也不代表等价于 `full_v2`。方法席输出是本次运行记录的 provisional lens 结果，
+**不是对应真人说过的话或引语**。
 
 
 Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用户级的，拷贝一次：
@@ -156,9 +181,13 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 - 可逐席选择的 26 个投资方法视角读取同一批事实
 - 多头、空头与 PM 裁决
 
+完整模式在 mandatory evidence barrier 上 fail-fast。任何必需证据席在一次有界 parse-only
+修复后仍失败，系统会保存失败与诊断工件，跳过所选方法席、多空辩论和 PM 模型调用，并以
+`incomplete` 终止；不会为一个已不可能满足 `full_v2` 的运行继续消耗下游合成时间。
+
 最终报告可直接在对话中阅读，包含分析师工作记录、数据与申报摘要、多空辩论记录、PM 裁决、入场价格区间、短中长期观点、数据缺口、置信度和来源表。
 
-## 🔧 工具 —— 27 个，全部免 key
+## 🔧 工具 —— 31 个，全部免 key
 
 以下没有一项需要 API key、账号或配置文件。装完直接跑。
 
@@ -195,7 +224,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 现代 | Aschenbrenner |
 | v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
 
-0.9.0 solo-test 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
+0.9.1 `solo_test` 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
 方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。
@@ -203,6 +232,9 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 大师读到的是**和分析师同一份已确立事实**（申报、行情、财务、宏观），分析师的证据包单独给出并标注为「其他席位的解读」而非事实。这个分离是关键：芒格看激励结构的地方分析师看的是毛利率，只有让他们各自取舍，这个议席才有存在意义。详见 [docs/attribution.md](docs/attribution.md)。
 
 ## 🧩 架构
+
+下图是完整/deep 路径。Quick 仍包含 Master Bench，但改用固定四证据席、一轮并行
+Bull/Bear 陈述和短 PM；它不运行图中的 verifier 节点。
 
 ```mermaid
 flowchart TD

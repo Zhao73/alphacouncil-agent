@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { LIMITS, SELECTIONS_DIR } from "./constants.mjs";
+import { COUNCIL_MODES, LIMITS, SELECTIONS_DIR } from "./constants.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
@@ -11,9 +11,20 @@ import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.m
 
 const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
+const QUICK_MASTER_MAX = 4;
 
 function digest(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function councilMode(value) {
+  const mode = value === undefined ? "full" : String(value);
+  if (!COUNCIL_MODES.includes(mode)) {
+    throw invalidParams(`council_mode must be one of ${COUNCIL_MODES.join(", ")}.`, {
+      reason: "INVALID_COUNCIL_MODE",
+    });
+  }
+  return mode;
 }
 
 function ensureStore() {
@@ -85,6 +96,7 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const symbol = safeSymbol(args.symbol);
   const language = String(args.language || "English");
   const prompt = typeof args.prompt === "string" ? args.prompt : "";
+  const mode = councilMode(args.council_mode);
   const catalog = catalogSnapshot(language);
   const preselected = args.preselected_master_ids === undefined
     ? []
@@ -100,8 +112,9 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     language,
     prompt,
     host: typeof args.host === "string" ? args.host : "unknown",
-    request_hash: digest({ symbol, language, prompt, host: args.host || "unknown" }),
-    intent_hash: digest({ symbol, language, prompt }),
+    council_mode: mode,
+    request_hash: digest({ symbol, language, prompt, council_mode: mode, host: args.host || "unknown" }),
+    intent_hash: digest({ symbol, language, prompt, council_mode: mode }),
     catalog_hash: catalog.catalog_hash,
     catalog,
     selected_master_ids: [],
@@ -121,15 +134,16 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     status: record.status,
     symbol,
     language,
+    council_mode: mode,
     catalog_hash: catalog.catalog_hash,
     intent_hash: record.intent_hash,
     expires_at: expiresAt,
     minimum: 1,
-    maximum: catalog.count,
+    maximum: mode === "quick" ? QUICK_MASTER_MAX : catalog.count,
     masters: catalog.masters,
     master_rosters: catalog.master_rosters,
     preselected_master_ids: preselected,
-    actions: ["explicit_selection", "select_all"],
+    actions: mode === "quick" ? ["explicit_selection"] : ["explicit_selection", "select_all"],
   };
 }
 
@@ -288,6 +302,13 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     });
   }
   const resolved = resolveConfirmation(args, record);
+  if (record.council_mode === "quick" && resolved.ids.length > QUICK_MASTER_MAX) {
+    throw invalidParams(`Quick council accepts at most ${QUICK_MASTER_MAX} selected masters.`, {
+      reason: "QUICK_MASTER_LIMIT_EXCEEDED",
+      maximum: QUICK_MASTER_MAX,
+      selected_count: resolved.ids.length,
+    });
+  }
   if (record.status === "confirmed") {
     if (record.selection_mode === resolved.mode
       && JSON.stringify(record.selected_master_ids) === JSON.stringify(resolved.ids)) {
@@ -324,12 +345,14 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     selection_id: record.selection_id,
     status: "confirmed",
     symbol: record.symbol,
+    council_mode: record.council_mode || "full",
     catalog_hash: record.catalog_hash,
     request_hash: record.request_hash,
     intent_hash: record.intent_hash,
     selection_hash: digest({
       selection_id: record.selection_id,
       catalog_hash: record.catalog_hash,
+      council_mode: record.council_mode || "full",
       selected_master_ids: record.selected_master_ids,
     }),
     selected_master_ids: record.selected_master_ids,
@@ -365,6 +388,7 @@ function confirmationResult(record) {
     selection_receipt: record.selection_receipt,
     status: record.status,
     symbol: record.symbol,
+    council_mode: record.council_mode || "full",
     catalog_hash: record.catalog_hash,
     intent_hash: record.intent_hash,
     selection_mode: record.selection_mode,
@@ -412,7 +436,15 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
   }
   const language = String(args.language || "English");
   const prompt = typeof args.prompt === "string" ? args.prompt : "";
-  const intentHash = digest({ symbol, language, prompt });
+  const mode = councilMode(args.council_mode);
+  if ((receipt.council_mode || "full") !== mode || (selection.council_mode || "full") !== mode) {
+    throw invalidParams("The selection receipt belongs to a different council mode.", {
+      reason: "MASTER_SELECTION_MODE_MISMATCH",
+      selected_mode: receipt.council_mode || selection.council_mode || "full",
+      requested_mode: mode,
+    });
+  }
+  const intentHash = digest({ symbol, language, prompt, council_mode: mode });
   if (receipt.intent_hash !== intentHash || selection.intent_hash !== intentHash) {
     throw invalidParams("The selection receipt belongs to a different prompt or language intent.", {
       reason: "MASTER_SELECTION_INTENT_MISMATCH",
@@ -474,6 +506,7 @@ function consumedResult(selection, receipt) {
     catalog_hash: selection.catalog_hash,
     intent_hash: selection.intent_hash,
     selection_mode: selection.selection_mode,
+    council_mode: selection.council_mode || "full",
     selected_master_ids: [...selection.selected_master_ids],
     selected_master_pack_hashes: { ...(receipt.selected_master_pack_hashes || {}) },
     selected_count: selection.selected_master_ids.length,

@@ -189,14 +189,14 @@ export function summarizeChain(payload, { asOf, maxExpiries = 8 } = {}) {
   };
 }
 
-export async function fetchOptionsChain(symbol, { asOf } = {}) {
+export async function fetchOptionsChain(symbol, { asOf, signal } = {}) {
   const sym = String(symbol || "").trim().toUpperCase();
   if (!/^[A-Z][A-Z0-9.\-]{0,9}$/.test(sym)) {
     return { symbol, available: false, reason: `"${symbol}" is not a symbol this feed accepts` };
   }
   let text;
   try {
-    text = await fetchText(CBOE(sym), LIMITS.QUOTE_FETCH_MS * 3);
+    text = await fetchText(CBOE(sym), LIMITS.QUOTE_FETCH_MS * 3, signal);
   } catch (error) {
     return {
       symbol: sym, available: false,

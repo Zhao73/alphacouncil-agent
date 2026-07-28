@@ -86,3 +86,45 @@ test("server startup terminalizes an orphaned background analysis", async () => 
     removeDataDir(dataDir);
   }
 });
+
+test("server startup preserves a terminal degraded quick analysis", async () => {
+  const dataDir = makeDataDir();
+  const runId = `DEGRADED-QUICK-${process.pid}`;
+  const runDir = join(dataDir, "runs", runId);
+  mkdirSync(runDir, { recursive: true });
+  const completedAt = "2026-07-27T00:09:00.000Z";
+  writeFileSync(join(runDir, "evidence.json"), `${JSON.stringify({
+    run_id: runId,
+    symbol: "RKLB",
+    as_of: "2026-07-27",
+    language: "English",
+    council_mode: "quick",
+    dry_run: false,
+    execution_mode: "background_codex_exec",
+    entry_tool: "analyze_symbol",
+    status: "degraded",
+    phase: "degraded",
+    completed_at: completedAt,
+    tasks: [],
+    task_status: {},
+    agent_status: {},
+    masters: [],
+    master_opinions: [],
+    master_status: {},
+    packets: [],
+    verifier_verdicts: [],
+  }, null, 2)}\n`);
+
+  const server = startServer({ dataDir });
+  try {
+    await server.request("initialize", {});
+    const evidence = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+    assert.equal(evidence.status, "degraded");
+    assert.equal(evidence.phase, "degraded");
+    assert.equal(evidence.completed_at, completedAt);
+    assert.equal(existsSync(join(runDir, "events.jsonl")), false);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});

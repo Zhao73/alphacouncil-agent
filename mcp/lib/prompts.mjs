@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
-import { compactEvidence, compactMasterOpinions } from "./packets.mjs";
+import { compactDebateContext, compactEvidence, compactMasterOpinions, compactQuickEvidence } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
 import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { groundingBlock } from "./grounding.mjs";
@@ -47,7 +47,8 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
 
 export function debatePrompt(role, run, context = {}) {
   const evidencePath = join(runPath(run.run_id), "evidence.json");
-  const evidenceJson = JSON.stringify(compactEvidence(run));
+  const quick = run.council_mode === "quick";
+  const evidenceJson = JSON.stringify(quick ? compactQuickEvidence(run) : compactEvidence(run));
   const language = run.language || "English";
   const chinese = isChineseLanguage(language);
   const reg = registry();
@@ -73,17 +74,27 @@ export function debatePrompt(role, run, context = {}) {
         ? "本轮为问答回答轮：把你在第 2 轮提出的 3 个问题原样复制到 `questions`。`questions_answered` 必须是恰好 3 个 `{question, answer}` 对象；每个 `question` 按数组位置逐字复制输入的对方问题，`answer` 给出对应回答。"
         : "This is the Q&A response round. Copy your 3 round 2 questions exactly into `questions`. `questions_answered` must contain exactly 3 `{question, answer}` objects; each `question` must copy the supplied opponent question verbatim at the same array index, and `answer` must answer it.")
     : "";
+  const quickInstruction = quick
+    ? role === "portfolio_manager"
+      ? (chinese
+          ? "这是 quick_v1 快速委员会，不是 full council。只发生了一次并行多空陈述，没有三轮交叉问答，也没有对抗核验。请写紧凑报告，必须有真实 Markdown 标题：结论、分析师工作记录（逐一写出 4 个计划席位及失败/缺口）、多空辩论记录、电话会管理层信号、近期公司与行业新闻、估值区间、价格条件、主要风险、仓位建议、数据缺口、置信度、来源表。不得声称 quick 等同 full。"
+          : "This is a quick_v1 council, not a full council. It ran one parallel bull/bear statement, no three-round cross-exam, and no adversarial verification. Write a compact report with real Markdown headings for Conclusion, Analyst Work Log (name every planned seat and any failure/gap), Bull/Bear Debate Record, Earnings Call Management Signals, Recent Company and Industry News, Valuation Range, Price Levels, Major Risks, Position Recommendation, Data Gaps, Confidence, and Source Table. Never claim quick is equivalent to full.")
+      : (chinese
+          ? "这是快速委员会的唯一多空陈述轮。只给最有信息量的 4–6 条论点，使用已提供来源 ID，明确回应方法席分歧；不要生成第二/第三轮问题，也不要写长报告。"
+          : "This is the quick council's only bull/bear statement round. Give only the 4-6 highest-information arguments, use supplied source IDs, and engage with method-seat disagreements. Do not create round-2/3 questions or a long report.")
+    : "";
 
   return [
     // The original spread the preamble's lines as separate array elements, so they are
     // separated by blank lines in the final prompt. Preserve that exactly.
     ...base.split("\n"),
     roleText,
+    quickInstruction,
     roundTwoInstruction,
     roundThreeInstruction,
     context.round ? `Debate round: ${context.round}` : "",
     context.brief ? `Brief length for round 1: ${context.brief}` : "",
-    context.otherCaseR1 ? `Opponent prior-round case JSON: ${JSON.stringify(context.otherCaseR1)}` : "",
+    context.otherCaseR1 ? `Opponent prior-round case JSON: ${JSON.stringify(compactDebateContext(context.otherCaseR1))}` : "",
     context.questionsYouAsked ? `Your round 2 questions to preserve JSON: ${JSON.stringify(context.questionsYouAsked)}` : "",
     context.questionsForYou ? `Questions you must answer JSON: ${JSON.stringify(context.questionsForYou)}` : "",
     // The masters ran before the debate; the bull and bear must argue with their
@@ -91,8 +102,8 @@ export function debatePrompt(role, run, context = {}) {
     (run.master_opinions || []).length
       ? `Master seat opinions JSON (read the disagreements; you must engage with them, not ignore them): ${JSON.stringify(compactMasterOpinions(run))}`
       : "",
-    context.bull ? `Bull argument JSON: ${JSON.stringify(context.bull)}` : "",
-    context.bear ? `Bear argument JSON: ${JSON.stringify(context.bear)}` : "",
+    context.bull ? `Bull argument JSON: ${JSON.stringify(compactDebateContext(context.bull))}` : "",
+    context.bear ? `Bear argument JSON: ${JSON.stringify(compactDebateContext(context.bear))}` : "",
     // The PM must reproduce the weighting rather than average the seats silently.
     role === "portfolio_manager"
       ? [
@@ -102,7 +113,7 @@ export function debatePrompt(role, run, context = {}) {
         weightTableMarkdown(resolveSeatWeights(run, run.seat_weight_overrides || {}), language),
       ].filter(Boolean).join("\n\n")
       : "",
-    role === "portfolio_manager" ? outputModeInstruction(context.outputMode || "chat", language) : "",
+    role === "portfolio_manager" && !quick ? outputModeInstruction(context.outputMode || "chat", language) : "",
     `Evidence JSON: ${evidenceJson}`,
   ].filter(Boolean).join("\n\n");
 }
@@ -141,7 +152,7 @@ export function masterPrompt(masterId, run) {
     render(personaPrompt(persona, language), values),
     `Walk-away conditions you must check explicitly: ${(persona.disqualifiers || []).join(" | ")}`,
     grounded,
-    `${packetLabel}\nEvidence JSON: ${JSON.stringify(compactEvidence(run))}`,
+    `${packetLabel}\nEvidence JSON: ${JSON.stringify(run.council_mode === "quick" ? compactQuickEvidence(run) : compactEvidence(run))}`,
   ].filter(Boolean).join("\n\n");
 }
 

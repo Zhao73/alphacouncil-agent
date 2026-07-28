@@ -13,8 +13,11 @@ plain MCP server in the Claude desktop app.
 ## npm
 
 ```bash
-npm install -g alphacouncil-agent
+npm install -g alphacouncil-agent@next
 ```
+
+`0.9.1` is intentionally on `next`; unqualified `alphacouncil-agent` follows the stable
+`latest` tag and does not install this non-GA preview.
 
 Then point any MCP host at the `alphacouncil-agent` binary. For Claude Code:
 
@@ -54,8 +57,8 @@ persona set loads, and what the data directory holds.
 One command, `/alpha`. Modes are arguments.
 
 ```text
-/alpha <ticker>              full council — asks which preset first
-/alpha <ticker> quick        4 analysts + debate, no bench, no verification
+/alpha <ticker>              full council — displays all methods and confirms this run's selection
+/alpha <ticker> quick        quick_v1 — 4 analysts incl. news + 1-4 methods + one parallel debate round (<=10m)
 /alpha <ticker> screen       mechanical filings screen only        (no model spend)
 /alpha <ticker> options      IV term structure, skew, positioning  (no model spend)
 /alpha <ticker> news         dated filings and headlines           (no model spend)
@@ -65,8 +68,50 @@ One command, `/alpha`. Modes are arguments.
 
 The four marked *no model spend* call keyless data tools and spawn no subagents. **Start
 there** — they show real data at no cost, so you can see the shape of the thing before
-committing a fan-out. The council modes spawn one subagent per seat: 7 for `quick`, 32 for
-the standard preset, 44 for deep.
+committing a fan-out. Full and quick both require a fresh method selection receipt. Model
+spend is not a fixed seat count: selected method seats may execute deterministically or be
+recorded `out_of_scope`, while evidence and debate workers are model calls.
+
+### What `quick` means
+
+`quick` is a first-class `quick_v1` contract and remains opt-in; a ticker with no mode still
+runs full. It is managed by the plugin's headless `analyze_symbol` path so the MCP server can
+enforce a wall-clock deadline. `plan_visible_run` rejects `council_mode=quick` rather than
+pretending an external host Task can be force-stopped by the plugin.
+
+- Stage 0 still displays the complete 26-seat catalog, but quick accepts exactly 1-4 selected
+  methods and forbids `all` / `select_all`.
+- The receipt is bound to symbol, prompt, language and `council_mode`; it cannot be reused
+  across quick and full.
+- Four fixed evidence workers start in parallel: `market_data`, `earnings_deep_dive`,
+  `valuation_long_short`, and `news_industry_management`. A caller cannot override this list.
+- Recent news means dated company and industry developments from the 120 days ending at
+  `as_of`; future, undated and older sources are excluded from the recent-news handoff.
+- Up to four method workers run in parallel, followed by one parallel bull/bear statement
+  round and one short PM. There is no round-2 rebuttal, round-3 Q&A or adversarial verifier
+  fan-out. Scoped source-ID presence is still checked.
+- The saved report is checked against `quick_v1`, not the full `full_v2` report, and is
+  explicitly marked `full_council_equivalent: false`.
+
+The public end-to-end ceiling is 600000 ms. It starts when the durable run is queued and
+includes all work: grounding (maximum 20 seconds), evidence (210 seconds per worker), up to
+four masters in parallel (90 seconds each), parallel bull and bear (90 seconds each), the
+short PM (90 seconds), retry time, and a 20-second finalization reserve. `total_timeout_ms`
+and `ALPHACOUNCIL_QUICK_TOTAL_MS` may lower this ceiling; neither can raise it. The ceiling
+limits runtime, not uncertainty: a run can terminate `degraded` or `incomplete` rather than
+invent evidence to meet the clock.
+
+Headless quick returns a durable `run_id` immediately by default. Poll that same run with
+`read_run` until one of these terminal statuses appears:
+
+```text
+complete | degraded | incomplete | needs_verification | needs_revision | failed
+```
+
+`degraded` is quick-only evidence/debate coverage, not an alias for complete. The report and
+handoff retain a system-owned ledger naming every degraded task or debate side and its cause.
+`report_quality=passed` only means the mode-appropriate report structure passed; it does not
+upgrade a degraded run or make quick equivalent to full.
 
 Codex keeps prompts user-scoped rather than in the plugin, so copy it once:
 
