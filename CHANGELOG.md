@@ -2,6 +2,61 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.0] — unreleased
+
+The release where the method seats stop abstaining on everything. Full notes in
+`docs/releases/v1.0.0.md`.
+
+Held unreleased on purpose: the feeds, the authoring mechanism and the voice are in, but
+`data/persona-v3-authored-methods.v1.mjs` is still an empty set, so seats continue to run the
+identity proxy. Tagging 1.0.0 before the methods are authored would claim the one thing this
+release is about.
+
+### Added
+
+- Four keyless feeds supplying the facts the seats actually ask for: dated FRED series with
+  history (net liquidity, its impulse over a stated window, the growth/inflation quadrant),
+  company fundamentals derived from XBRL (owner earnings, NCAV, downside values, growth,
+  incremental return on capital, leverage), published daily fund holdings from four issuers,
+  and index aggregates (valuation, breadth, put/call, volatility).
+- Look-through aggregation, so an operating-company method can read a basket. Absolute-currency
+  facts have no aggregation path at all, and every aggregate carries the coverage weight it was
+  computed over.
+- Authored method logic. A seat may carry its real formulas and a real decision policy —
+  eligibility, hard vetoes, scoring — instead of the generated identity proxy. A seat that is
+  not authored is unchanged, so the set fills in one seat at a time.
+- A reader-facing voice: five first-person fields per seat plus a `position_intent` that
+  narrows the frozen stance and is rejected server-side if it does not.
+
+### Fixed
+
+- Classifier failed open: with no exchange metadata, common fund tickers were asserted to be
+  operating companies; fund registrant SIC codes were read as evidence of an operating company;
+  a fund named after an index was routed as a cash index, disabling its option chain.
+- Japanese and Korean reports could never publish — a relabelled commentary section legally
+  contains a section alias and won heading assignment, so the per-seat gate failed against PM
+  prose permanently. The gate now anchors on the system section's content marker.
+- Worker statements were interpolated raw into a system-owned section, so a statement
+  containing a heading captured the section the quality gate validates.
+- The status snapshot and the blocking gates disagreed about a seat with no status entry, so a
+  recovered run reported complete while being hard-rejected.
+- Declined seats no longer schedule an explanation worker; the stance is frozen and the record
+  is already readable, so the worker cost one sequential model turn per seat and changed nothing.
+- Fundamentals re-registered filing records under the consuming metric's period, silently
+  dropping every fact that shared a record with the mechanical screen.
+- The look-through aggregator was handed a nested object where it reads one number per ticker,
+  so every aggregate refused while the constituents sat resolved in memory.
+- `not_applicable` strings and the fund/index research contract were English-only inside
+  localized reports.
+
+### Assurance boundary
+
+Unchanged. Build channel `solo_test`; admission `operator_lens`; `production_eligible=false`.
+Authored formulas are AI-written and unreviewed, and record that in place of the
+"mechanical identity proxy" limitation, which would otherwise be false. No human has reviewed
+either kind. Method-seat outputs remain project-derived provisional lenses, not quotations or
+current views of the named people.
+
 ## [0.9.5] — 2026-07-28
 
 ### Fixed
