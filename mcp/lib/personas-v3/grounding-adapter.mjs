@@ -350,6 +350,123 @@ function optionsFacts(grounding, context) {
   }
 }
 
+/**
+ * FRED observations carry their own publication date, so unlike the market snapshot they can
+ * be converted without stamping the run time onto them. That is the whole reason the macro
+ * block could not be converted before: it had readings but no lineage.
+ */
+function macroSeriesFacts(grounding, context) {
+  const macro = grounding?.macro_series;
+  if (!macro?.series) return;
+  for (const [id, series] of Object.entries(macro.series)) {
+    if (!series?.fact || !finite(series.latest)) continue;
+    const publicAt = timestampAtOrBefore(series.public_at, context.cutoff);
+    if (!publicAt) {
+      context.diagnostics.push({ code: "missing_public_at", source: `fred.${id}`, action: "not_converted" });
+      continue;
+    }
+    const sourceIdValue = sourceId("fred", id, series.observation_date);
+    if (!registerSource(context, {
+      source_id: sourceIdValue,
+      source_kind: "official_statistic",
+      title: `FRED ${id}: ${series.label}`,
+      url: series.source_url,
+      public_at: publicAt,
+      retrieved_at: grounding.gathered_at || publicAt,
+      locator: { series_id: id, observation_date: series.observation_date },
+    })) continue;
+    // Every FRED series mapped here is quoted in percent; the typed-fact contract is decimal.
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId: series.fact,
+      valueKind: "ratio",
+      value: series.latest / 100,
+      unit: "decimal",
+      ratioDenominator: "annualized_rate",
+      periodEnd: series.observation_date,
+      asOf: context.asOf,
+      publicAt,
+      sources: [sourceIdValue],
+      confidence: 0.95,
+    }));
+  }
+
+  const impulse = macro.liquidity_impulse;
+  const liquidity = macro.net_liquidity;
+  if (impulse && finite(impulse.value) && liquidity) {
+    const publicAt = timestampAtOrBefore(liquidity.public_at, context.cutoff);
+    const inputIds = (liquidity.derived_from || []).map((id) => sourceId("fred", id, macro.series?.[id]?.observation_date));
+    const registered = publicAt && (liquidity.derived_from || []).every((id) => {
+      const series = macro.series?.[id];
+      return series && registerSource(context, {
+        source_id: sourceId("fred", id, series.observation_date),
+        source_kind: "official_statistic",
+        title: `FRED ${id}: ${series.label}`,
+        url: series.source_url,
+        public_at: series.public_at,
+        retrieved_at: grounding.gathered_at || series.public_at,
+        locator: { series_id: id, observation_date: series.observation_date },
+      });
+    });
+    if (registered) {
+      addUnique(context.facts, context.diagnostics, baseFact({
+        factId: "macro.liquidity_impulse",
+        valueKind: "ratio",
+        value: impulse.value,
+        unit: "decimal",
+        ratioDenominator: `net_liquidity_change_over_${impulse.window_days}_days`,
+        periodStart: impulse.from_date,
+        periodEnd: impulse.to_date,
+        asOf: context.asOf,
+        publicAt,
+        sources: inputIds,
+        confidence: 0.8,
+        derivation: "rederived",
+        derivationToolId: `${ADAPTER_ID}:macro:net_liquidity_impulse`,
+        derivationInput: {
+          window_days: impulse.window_days,
+          from: { date: impulse.from_date, value: impulse.from_value },
+          to: { date: impulse.to_date, value: impulse.to_value },
+          construction: "WALCL - RRPONTSYD*1000 - WTREGEN, in usd_millions",
+        },
+      }));
+    } else {
+      context.diagnostics.push({ code: "missing_source_lineage", source: "fred.net_liquidity", action: "not_converted" });
+    }
+  }
+
+  const regime = macro.regime;
+  if (regime?.state) {
+    const slope = macro.series?.T10Y3M;
+    const breakeven = macro.series?.T5YIE;
+    const publicAt = slope && breakeven
+      ? timestampAtOrBefore([slope.public_at, breakeven.public_at].sort()[0], context.cutoff)
+      : null;
+    const sources = [slope, breakeven].filter(Boolean).map((series) => sourceId("fred", series.id, series.observation_date));
+    if (publicAt && sources.length === 2) {
+      addUnique(context.facts, context.diagnostics, baseFact({
+        factId: "macro.growth_regime",
+        valueKind: "text",
+        value: regime.state,
+        unit: null,
+        periodEnd: slope.observation_date,
+        asOf: context.asOf,
+        publicAt,
+        sources,
+        confidence: 0.7,
+        derivation: "rederived",
+        derivationToolId: `${ADAPTER_ID}:macro:growth_inflation_quadrant`,
+        derivationInput: {
+          window_days: regime.window_days,
+          growth_axis: regime.growth_axis,
+          inflation_axis: regime.inflation_axis,
+        },
+      }));
+    } else {
+      context.diagnostics.push({ code: "missing_source_lineage", source: "fred.regime", action: "not_converted" });
+    }
+  }
+}
+
 /** Return both the immutable pack and an explicit list of fields skipped for missing lineage. */
 export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = asOf } = {}) {
   const resolvedAsOf = asOf || grounding?.as_of || grounding?.gathered_at;
@@ -365,9 +482,13 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   quoteFacts(grounding, context);
   optionsFacts(grounding, context);
   screenFacts(grounding, context);
+  macroSeriesFacts(grounding, context);
   for (const family of ["screen", "macro", "market"]) {
     if (grounding?.[family] && !grounding[family].public_at) {
       if (family === "screen" && context.diagnostics.some((item) => String(item.source || "").startsWith("screen."))) continue;
+      // The market-priced macro block still has no lineage of its own, but the dated FRED
+      // series now cover the same ground; reporting both would read as a gap that is filled.
+      if (family === "macro" && grounding.macro_series?.series) continue;
       context.diagnostics.push({ code: "missing_source_lineage", source: family, action: "not_converted" });
     }
   }

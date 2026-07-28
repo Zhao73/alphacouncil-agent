@@ -1,6 +1,7 @@
 import { fetchQuote } from "./quotes.mjs";
 import { invalidParams } from "./errors.mjs";
 import { getMacroSnapshot } from "./macro.mjs";
+import { fetchMacroSeries } from "./fred.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
 import { resolveIndustry, industryCoverage } from "./industry.mjs";
@@ -113,6 +114,15 @@ export async function gatherGrounding({
         derived: r.value.derived.filter((d) => d.available).map((d) => ({ id: d.id, label: d.label, value: d.value })),
         unavailable: r.value.unavailable,
       };
+    }));
+    // Dated official series, fetched alongside the market block rather than instead of it.
+    // The block prices the present; these carry the history a regime or an impulse needs, and
+    // each observation publishes its own date, so they are the only macro input that can
+    // reach the typed-fact pack with real lineage.
+    jobs.push(safely("macro series", () => fetchMacroSeries({ asOf, signal })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      out.macro_series = r.value;
+      out.unavailable.push(...r.value.unavailable);
     }));
   } else if (macro) {
     out.unavailable.push("macro: historical cutoff requires archived observations; current market snapshots were not fetched");
