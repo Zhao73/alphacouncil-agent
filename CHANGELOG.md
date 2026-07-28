@@ -16,10 +16,10 @@ versions are immutable, `0.9.2` supersedes `0.9.1` on the `next` dist-tag.
   Promise was still pending when no other event-loop handle remained. That could cancel the
   grounding test on Linux, macOS and Windows and weakened the claimed hard deadline in
   short-lived hosts.
-- The release regression covers lower-, upper- and mixed-case inherited
-  `npm_config_dry_run` variables without mutating global test-process state.
-- The npm bin path is stored in its normalized form, so npm no longer auto-corrects the
-  package manifest during publish.
+- A new isolated-process regression proves the linked abort deadline fires even when it is
+  the only event-loop handle.
+- The quick-analysis fixture now uses a Node `.cmd` wrapper on Windows, so the five-job CI
+  matrix exercises the same fake worker behavior instead of silently producing empty output.
 
 Quick/full scope, the 600,000ms ceiling, fixed evidence topology and all PersonaPack
 assurance boundaries are otherwise unchanged from `0.9.1`. The production GA gate remains
