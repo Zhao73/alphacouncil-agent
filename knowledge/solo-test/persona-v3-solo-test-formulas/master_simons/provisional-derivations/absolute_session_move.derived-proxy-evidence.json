@@ -1,0 +1,63 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:50401450eb3da62a3059d51b2dd2424e49c504b7d742fb81ae57b3e1593d022d",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_simons.absolute_session_move.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "market.change_pct"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "abs",
+      "output": {
+        "output_id": "market.absolute_session_move.master_simons",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_simons",
+    "prototype_content_hash": "sha256:deeb5221eef53371a6fae060c2287bce8fed1ae7538879e940f0d948a1db9227",
+    "prototype_id": "master_simons.absolute_session_move.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_simons.absolute_session_move"
+  },
+  "derivation_spec_hash": "sha256:ff6b81460c97e1e04f0c765d6018c6e4ad3239c764604a25ec932a6724a81035",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

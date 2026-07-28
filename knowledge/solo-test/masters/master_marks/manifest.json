@@ -16,14 +16,18 @@
     ],
     "native_decision_schema": "cycle_risk_posture_v1",
     "optional_fact_types": [
+      "index.aggregate_pe_ttm",
+      "cycle.valuation_percentile",
       "cycle.credit_conditions",
       "cycle.investor_behavior",
+      "expectations.consensus",
       "valuation.implied_expectations",
       "risk.permanent_loss"
     ],
     "required_fact_types": [
-      "cycle.valuation_percentile",
-      "expectations.consensus"
+      "macro.credit_spread",
+      "index.aggregate_earnings_yield",
+      "macro.aaa_corporate_yield"
     ]
   },
   "components": {
@@ -44,8 +48,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_marks.cycle_temperature",
-      "master_marks.implied_expectations"
+      "master_marks.credit_cycle_position",
+      "master_marks.equity_over_corporate_debt"
     ]
   },
   "decision": {
@@ -53,8 +57,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "cycle.valuation_percentile",
-      "expectations.consensus"
+      "macro.credit_spread",
+      "index.aggregate_earnings_yield",
+      "macro.aaa_corporate_yield"
     ],
     "hard_vetoes": [
       "master_marks.euphoria",

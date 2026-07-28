@@ -7,6 +7,7 @@
  * approval, production admission, method_model, or formal-GA claim.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { createHash } from "node:crypto";
 import {
@@ -755,7 +756,7 @@ export function loadAiAssistedSoloProfile(file = DEFAULT_AI_ASSISTED_SOLO_PROFIL
     ai_semantic_extractions: 32,
     ai_semantic_skeptic_reviews: 32,
     ai_semantic_adjudications: 32,
-    ai_formula_cross_reviews: CANONICAL_MASTER_COUNT * 2,
+    ai_formula_cross_reviews: PLANNED_TOOL_COUNT,
     independent_roles_per_review: 3,
     automated_experiment_runs: 8,
     live_hosts: 4,

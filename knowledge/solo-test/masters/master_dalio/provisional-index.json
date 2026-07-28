@@ -16,7 +16,7 @@
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:d3b1e793b674e463262556fe92d2c03a3396108f6bf8ab603373f4ac79353e48",
+  "formula_compilation_manifest_hash": "sha256:f9303129529ed4972c96212e27df43b0f3553795957ac6d2ad618eafeead4394",
   "method_model_eligible": false,
   "native_states": [
     "provisional_regime_unknown",
@@ -26,8 +26,8 @@
   ],
   "persona_id": "master_dalio",
   "planned_tool_ids": [
-    "master_dalio.regime_classifier",
-    "master_dalio.debt_driver_stress"
+    "master_dalio.policy_real_rate",
+    "master_dalio.real_curve_slope"
   ],
   "production_eligible": false,
   "review_status": "not_human_reviewed",

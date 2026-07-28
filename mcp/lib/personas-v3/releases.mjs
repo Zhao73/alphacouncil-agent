@@ -8,6 +8,7 @@
  * modified or deleted by this API.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../../data/persona-v3-build-specs.v1.mjs";
 import { randomUUID } from "node:crypto";
 import {
   closeSync,
@@ -763,8 +764,8 @@ function validateReleaseManifestDocument(manifest, releaseId) {
         errors.push(`release manifest formula_review_evidence.${field} is invalid`);
       }
     }
-    if (manifest.formula_review_evidence.planned_tool_count !== CANONICAL_MASTER_COUNT * 2) {
-      errors.push(`release manifest formula-review evidence must bind exactly ${CANONICAL_MASTER_COUNT * 2} tools`);
+    if (manifest.formula_review_evidence.planned_tool_count !== PLANNED_TOOL_COUNT) {
+      errors.push(`release manifest formula-review evidence must bind exactly ${PLANNED_TOOL_COUNT} tools`);
     }
   }
   if (manifest.masters_directory !== PERSONA_RELEASE_RULES.masters_directory) errors.push("release manifest masters directory is invalid");

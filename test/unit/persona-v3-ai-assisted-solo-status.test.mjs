@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -51,10 +52,15 @@ test("the current physical machine reviews are hash-bound and remain explicitly 
   assert.equal(sourceTamperCheck.valid, false);
   assert.ok(sourceTamperCheck.errors.some((error) => /human_reviewed must remain false|differs from deterministic/u.test(error)));
 
-  const formula = json(resolve(
+  // Bound to whatever the seat's first tool is currently called: an authored method names its
+  // own steps, so pinning a placeholder filename here made the test a rename detector.
+  const reviewDir = resolve(
     ROOT,
-    "knowledge/ai-assisted-solo/reviews/persona-v3-ai-formula-reviews/master_buffett/reviews/owner_earnings_rebuilder.ai-review.json",
-  ));
+    "knowledge/ai-assisted-solo/reviews/persona-v3-ai-formula-reviews/master_buffett/reviews",
+  );
+  const [reviewFile] = readdirSync(reviewDir).filter((name) => name.endsWith(".ai-review.json")).sort();
+  assert.ok(reviewFile, "master_buffett has no machine formula review on disk");
+  const formula = json(resolve(reviewDir, reviewFile));
   const schema = json(resolve(ROOT, "schemas/persona-v3-ai-formula-cross-review-v1.schema.json"));
   const formulaCheck = validateAiFormulaCrossReviewArtifact(formula, { reviewSchema: schema });
   assert.equal(formulaCheck.valid, true, formulaCheck.errors.join("\n"));

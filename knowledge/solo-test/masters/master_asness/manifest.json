@@ -16,6 +16,9 @@
     ],
     "native_decision_schema": "factor_adjusted_alpha_v1",
     "optional_fact_types": [
+      "market.change_pct",
+      "macro.credit_spread",
+      "factor.value_exposure",
       "factor.momentum_exposure",
       "factor.quality_exposure",
       "factor.beta_exposure",
@@ -24,7 +27,9 @@
       "return.factor_adjusted"
     ],
     "required_fact_types": [
-      "factor.value_exposure"
+      "index.aggregate_earnings_yield",
+      "macro.real_rate",
+      "macro.long_bond_yield"
     ]
   },
   "components": {
@@ -45,8 +50,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_asness.factor_decomposer",
-      "master_asness.crowding_cost_stress"
+      "master_asness.real_earnings_yield_gap",
+      "master_asness.nominal_earnings_yield_gap"
     ]
   },
   "decision": {
@@ -54,7 +59,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "factor.value_exposure"
+      "index.aggregate_earnings_yield",
+      "macro.real_rate",
+      "macro.long_bond_yield"
     ],
     "hard_vetoes": [
       "master_asness.undefined_factor",

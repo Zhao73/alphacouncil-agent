@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:89b860b69b24b05f1aa7f52fd59ac650b71b92e5ba3c239bc02514a1d70f71a0",
-    "derivation_spec_hash": "sha256:b8b6f23a565660f04631006b564a85d23c8b76ad48cecaae235c3cca0d074daa",
-    "derivation_spec_id": "master_dalio.regime_classifier.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:1a3f42c96f53396b66e285c547f8ceaa7939e84bc94172295b4e88521d9d001c",
+    "derivation_spec_hash": "sha256:97c673d4240a4231fff621fb9fe8bf824d7c8d3c36bea2eb2d4a2a9f451dfe12",
+    "derivation_spec_id": "master_dalio.policy_real_rate.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_dalio.regime_classifier",
+    "id": "master_dalio.policy_real_rate",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:b1a35868965749e95efe34f6f95b84d632729bed866e17e0fe699bd8757824ad",
+    "input_schema_hash": "sha256:6a71fba0ba95a687fe1c621cf6468827d1dbe0de0ce014d2c0ad016b0eb8d1cb",
     "inputs": [
       {
-        "fact_id": "macro.growth_regime"
+        "fact_id": "macro.short_bond_yield"
+      },
+      {
+        "fact_id": "macro.breakeven_inflation"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "macro.growth_regime",
+    "operation": "subtract",
+    "output_id": "macro.policy_real_rate.master_dalio",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:a362f447b36b2ee7135461fa632263a44a39adcb3dcfd4a34f96fb1f547f02a5",
+    "output_schema_hash": "sha256:af5335f4593a63b35116eaca3b4ecadca909ed813e9e8859bbfd63cd0356c0e4",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:89c1ba22ac2965e32"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:9562819a0d26ff184b7888914f9efd3355f853a3af752c3a2f9943c3e522d0a4",
-    "derivation_spec_hash": "sha256:c08ce7f44b55e8191541b5b4ac350c9d2e37405f61a7ed0f4e4b056585df91ce",
-    "derivation_spec_id": "master_dalio.debt_driver_stress.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:3211513ff12fe1398acddc3927a66dd661b442cf766c5798193b605b865cadd8",
+    "derivation_spec_hash": "sha256:0464fe91c5639d9ed65d17aad4e05959c8fc1052d25c24f6722054a9663ced99",
+    "derivation_spec_id": "master_dalio.real_curve_slope.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_dalio.debt_driver_stress",
+    "id": "master_dalio.real_curve_slope",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:f6314d9460fc29333f05c0b84f233d1aa747052e63359f58397d98b16cb36b98",
+    "input_schema_hash": "sha256:50663c4617161656a613bc4590f1bce748db9446591fd986bc3fe3472a8d3164",
     "inputs": [
       {
-        "fact_id": "macro.growth_regime"
+        "fact_id": "macro.real_rate"
+      },
+      {
+        "output_id": "macro.policy_real_rate.master_dalio"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "credit.debt_service",
+    "operation": "subtract",
+    "output_id": "macro.real_curve_slope.master_dalio",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:64023fe51634160d0e494c807e520b13846450b93aa9f8b5a62c269faf4d815d",
+    "output_schema_hash": "sha256:c95ce92759d4ac065f575a18f0d9ee5f0bce5f01c33a2d630f6e11a7a5afb246",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:89c1ba22ac2965e32"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

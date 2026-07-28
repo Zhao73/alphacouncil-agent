@@ -16,6 +16,9 @@
     ],
     "native_decision_schema": "india_growth_governance_v1",
     "optional_fact_types": [
+      "fund.concentration_hhi",
+      "india.industry_penetration",
+      "governance.promoter_ownership",
       "governance.related_party_transactions",
       "financial.cash_conversion",
       "business.scaling_economics",
@@ -23,8 +26,9 @@
       "valuation.expected_return"
     ],
     "required_fact_types": [
-      "governance.promoter_ownership",
-      "india.industry_penetration"
+      "valuation.revenue_growth",
+      "macro.breakeven_inflation",
+      "accounting.cash_conversion"
     ]
   },
   "components": {
@@ -45,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_jhunjhunwala.promoter_governance",
-      "master_jhunjhunwala.penetration_liquidity"
+      "master_jhunjhunwala.real_structural_growth",
+      "master_jhunjhunwala.cash_quality_gap"
     ]
   },
   "decision": {
@@ -54,8 +58,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "governance.promoter_ownership",
-      "india.industry_penetration"
+      "valuation.revenue_growth",
+      "macro.breakeven_inflation",
+      "accounting.cash_conversion"
     ],
     "hard_vetoes": [
       "master_jhunjhunwala.promoter_integrity",

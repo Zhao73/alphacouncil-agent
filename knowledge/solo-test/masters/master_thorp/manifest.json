@@ -16,15 +16,19 @@
     ],
     "native_decision_schema": "edge_sizing_v1",
     "optional_fact_types": [
+      "financial.leverage",
+      "probability.outcome_distribution",
       "trade.payoff_distribution",
       "trade.edge",
       "portfolio.dependence",
       "execution.liquidity",
+      "risk.ruin_probability",
       "position.fraction"
     ],
     "required_fact_types": [
-      "probability.outcome_distribution",
-      "risk.ruin_probability"
+      "market.change_pct",
+      "execution.bid_ask",
+      "options.implied_volatility"
     ]
   },
   "components": {
@@ -45,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_thorp.edge_recalculator",
-      "master_thorp.fractional_kelly"
+      "master_thorp.net_edge",
+      "master_thorp.edge_per_unit_of_volatility"
     ]
   },
   "decision": {
@@ -54,8 +58,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "probability.outcome_distribution",
-      "risk.ruin_probability"
+      "market.change_pct",
+      "execution.bid_ask",
+      "options.implied_volatility"
     ],
     "hard_vetoes": [
       "master_thorp.no_measurable_edge",

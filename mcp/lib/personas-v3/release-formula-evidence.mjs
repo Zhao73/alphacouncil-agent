@@ -1,11 +1,12 @@
 /** Self-contained, immutable release evidence for all 52 deterministic formula tools. */
 
+import { PLANNED_TOOL_COUNT } from "../../../data/persona-v3-build-specs.v1.mjs";
 import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 
 // Two planned tools per canonical seat; the seat count is the single source of truth.
 // Evaluated lazily: this module participates in an import cycle with the staging roster, so a
 // module-level constant reads the binding before it is initialised.
-const plannedToolCount = () => CANONICAL_MASTER_COUNT * 2;
+const plannedToolCount = () => PLANNED_TOOL_COUNT;
 import { existsSync, lstatSync, readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 

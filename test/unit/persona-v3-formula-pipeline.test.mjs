@@ -26,12 +26,18 @@ import {
 } from "../../scripts/lib/persona-v3-solo-formula-pipeline.mjs";
 import { REPO_ROOT } from "../../scripts/lib/persona-v3-build-specs.mjs";
 import {
+
   TRUSTED_FORMULA_REVIEW_KEYS,
   TEST_FORMULA_REVIEWERS,
   approvedFormulaSpec,
   installAllFormulaCandidates,
   signedFormulaApprovalBundle,
 } from "../helpers/persona-v3-formula-review-evidence.mjs";
+
+const EXECUTABLE_OPERATIONS = new Set([
+  "identity", "add", "subtract", "multiply", "divide",
+  "sum", "mean", "min", "max", "abs", "negate", "clamp",
+]);
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -233,7 +239,7 @@ test("the real approved-candidate path verifies and emits exactly 52 tools with 
   }), /candidate file is missing/u);
 });
 
-test("solo-test compilation derives 52 executable proxies without inventing formula approvals", () => {
+test("solo-test compilation derives 52 executable tools without inventing formula approvals", () => {
   const plan = planSoloTestFormulaCompilation();
   assert.equal(plan.artifact_kind, "persona_v3_solo_test_formula_compilation");
   assert.equal(plan.assurance_class, "provisional_derived_proxy");
@@ -253,7 +259,10 @@ test("solo-test compilation derives 52 executable proxies without inventing form
     assert.equal(tool.assurance_class, "provisional_derived_proxy");
     assert.equal(tool.review_status, "not_human_reviewed");
     assert.equal(tool.production_eligible, false);
-    assert.equal(tool.operation, "identity");
+    // Authoring replaced the identity placeholder with the method's own arithmetic, so what
+    // has to hold is that the operation is one the executor implements -- not that it is the
+    // one that computes nothing.
+    assert.ok(EXECUTABLE_OPERATIONS.has(tool.operation), `unknown operation ${tool.operation}`);
     assert.equal("formula_spec_id" in tool, false);
     assert.equal("formula_review_subject_hash" in tool, false);
     assert.equal("approval_bundle_hash" in tool, false);
@@ -262,22 +271,38 @@ test("solo-test compilation derives 52 executable proxies without inventing form
       deterministicToolSchemaHashes(tool),
     );
   }
-  const optionProxy = plan.tools.find((tool) => tool.id === "master_taleb.tail_friction");
-  assert.equal(optionProxy.input_contracts[0].value_kind, "ratio");
-  assert.equal(optionProxy.input_contracts[0].unit, "decimal_annualized_volatility");
-  assert.deepEqual(optionProxy.output_period, { basis: "instant", window: null, alignment: "as_of" });
+  const optionTool = plan.tools
+    .find((tool) => (tool.inputs || []).some((input) => input.fact_id === "options.implied_volatility"));
+  assert.ok(optionTool);
+  assert.deepEqual(optionTool.output_period, { basis: "instant", window: null, alignment: "as_of" });
   // A fact the grounding adapter now produces binds to its real contract; only a fact nothing
   // generates still falls back to the fail-closed proxy scalar.
-  const knownProxy = plan.tools.find((tool) => tool.id === "master_buffett.owner_earnings_rebuilder");
-  assert.equal(knownProxy.input_contracts[0].value_kind, "monetary");
-  assert.equal(knownProxy.input_contracts[0].unit, "currency_units");
-  const unknownProxy = plan.tools.find((tool) => tool.id === "master_aschenbrenner.compute_power_bridge");
-  assert.equal(unknownProxy.input_contracts[0].unit, "derived_proxy_scalar");
+  // Bound by the fact a tool reads rather than by its name: an authored method names its own
+  // steps, so a pinned tool id here would only detect renames.
+  const contractFor = (factId) => plan.tools
+    .flatMap((tool) => (tool.inputs || []).map((operand, index) => [operand, tool.input_contracts[index]]))
+    .find(([operand]) => operand?.fact_id === factId)?.[1];
+  // A fact the grounding adapter produces binds to its declared contract.
+  assert.equal(contractFor("financial.owner_earnings").value_kind, "monetary");
+  assert.equal(contractFor("financial.owner_earnings").unit, "currency_units");
+  // Stronger than the old fallback check, and now true: every authored tool reads a fact the
+  // grounding adapter declares, so none of them silently binds the fail-closed proxy scalar.
+  // A tool on that placeholder contract can never execute against real grounding.
+  const onProxyContract = plan.tools.flatMap((tool) => (tool.inputs || [])
+    .map((operand, index) => ({ tool: tool.id, fact: operand.fact_id, contract: tool.input_contracts[index] }))
+    .filter((entry) => entry.fact && entry.contract.unit === "derived_proxy_scalar"));
+  assert.deepEqual(onProxyContract, [], `tools bound to an undeclared fact: ${JSON.stringify(onProxyContract)}`);
   for (const evidence of plan.evidence) {
     assert.equal(evidence.human_reviewer_ids.length, 0);
     assert.equal(evidence.signature_count, 0);
     assert.equal(evidence.production_eligible, false);
-    assert.ok(evidence.limitations.includes("mechanical_identity_proxy_not_the_named_investor_method"));
+    // An authored formula drops the identity-proxy claim, which would be false of it, and
+    // says what it actually is. Neither kind has been reviewed by a human.
+    assert.ok(
+      evidence.limitations.includes("mechanical_identity_proxy_not_the_named_investor_method")
+      || evidence.limitations.includes("ai_authored_candidate_formula_not_human_reviewed"),
+    );
+    assert.ok(evidence.limitations.includes("no_human_formula_review_or_cryptographic_approval_exists"));
   }
 });
 

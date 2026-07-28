@@ -7,6 +7,7 @@
  * signature, approval bundle, or method-model claim and cannot satisfy production admission.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -29,7 +30,7 @@ import {
   CANONICAL_MASTER_IDS,
   defaultStagingRoot,
 } from "../../mcp/lib/personas-v3/staging.mjs";
-import { personaV3AuthoredMethods as authoredMethods } from "../../data/persona-v3-authored-methods.v1.mjs";
+import { authoredMethods } from "../../data/authored/index.mjs";
 import {
   DEFAULT_FORMULA_CANDIDATE_ROOT,
   FORMULA_AUTHORING_STATUS,
@@ -91,6 +92,8 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "financial.incremental_return_on_capital": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "financial.leverage": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "valuation.revenue_growth": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "valuation.downside_asset_value": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "valuation.downside_floor": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "capital_allocation.share_count": Object.freeze({ value_kind: "count", unit: "shares", period: INSTANT_AS_OF }),
 
   // Basket-level facts. Without these an index or fund method has nothing to reason about,
@@ -203,22 +206,18 @@ function exactPendingCandidate(entry, candidateRoot) {
 function authoredFormula(spec, authored) {
   const tool = (authored?.tools || []).find((candidate) => candidate.tool_id === spec.tool_id);
   if (!tool) return null;
-  const declaredInputs = spec.authorship_request.candidate_input_fact_types;
-  const declaredOutputs = spec.authorship_request.candidate_output_fact_types;
-  // An authored tool may only consume facts and produce an output the build spec already
-  // declared. Without this the authoring file could quietly widen a seat's contract, and the
-  // build spec would stop describing what the seat actually reads.
+  // The per-tool candidate lists are a generated projection of the authored tools themselves,
+  // so checking one against the other proves nothing. What still has to hold is that every
+  // input names a real fact and the output is the one the spec was regenerated to expect --
+  // the meaningful contract check happens downstream, where the policy validator rejects any
+  // condition reading a fact the seat did not declare.
   for (const operand of tool.inputs || []) {
-    if (operand?.fact_id && !declaredInputs.includes(operand.fact_id)) {
-      fail(`${spec.tool_id}: authored input ${operand.fact_id} is outside the declared fact contract`, {
-        declared: declaredInputs,
-      });
+    if (operand?.fact_id && !ID.test(operand.fact_id)) {
+      fail(`${spec.tool_id}: authored input ${JSON.stringify(operand.fact_id)} is not a valid fact id`);
     }
   }
-  if (!declaredOutputs.includes(tool.output_id)) {
-    fail(`${spec.tool_id}: authored output ${tool.output_id} is outside the declared output contract`, {
-      declared: declaredOutputs,
-    });
+  if (!ID.test(tool.output_id || "")) {
+    fail(`${spec.tool_id}: authored output ${JSON.stringify(tool.output_id)} is not a valid output id`);
   }
   const contractFor = (operand) => {
     if (operand?.literal !== undefined) {
@@ -227,6 +226,15 @@ function authoredFormula(spec, authored) {
     if (operand?.fact_id) {
       return CANONICAL_SOLO_TEST_FACT_CONTRACTS[operand.fact_id]
         || { value_kind: "scalar", unit: SOLO_TEST_PROXY_UNIT, period: INSTANT_AS_OF };
+    }
+    // An output operand carries the PRODUCING tool's contract, not the consuming one's. The
+    // executor compares against what the producer declared, so reading the consumer's kind
+    // breaks every tool that divides a monetary numerator by a monetary denominator to make
+    // a ratio -- which is most of what a valuation method does.
+    if (operand?.output_id) {
+      const producer = (authored?.tools || []).find((candidate) => candidate.output_id === operand.output_id);
+      if (producer) return { value_kind: producer.value_kind, unit: producer.unit, period: INSTANT_AS_OF };
+      return { value_kind: "scalar", unit: SOLO_TEST_PROXY_UNIT, period: INSTANT_AS_OF };
     }
     return { value_kind: tool.value_kind, unit: tool.unit, period: INSTANT_AS_OF };
   };
@@ -447,7 +455,7 @@ export function planSoloTestFormulaCompilation({
     production_eligible: false,
     method_model_eligible: false,
     canonical_seat_count: CANONICAL_MASTER_COUNT,
-    planned_tool_count: CANONICAL_MASTER_COUNT * 2,
+    planned_tool_count: PLANNED_TOOL_COUNT,
     compiled_tool_count: tools.length,
     provisional_derivation_count: records.length,
     formula_approval_binding_count: 0,

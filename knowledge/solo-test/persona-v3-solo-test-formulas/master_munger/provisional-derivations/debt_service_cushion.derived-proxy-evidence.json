@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:c301af0209964128e1664dedf8ac0315d81fce83b09ed73eefd9857425eb8b8d",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_munger.debt_service_cushion.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.interest_coverage"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "multiple",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "literal": 1
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "risk.debt_service_cushion.master_munger",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_munger",
+    "prototype_content_hash": "sha256:4e881d7c3a1afdfddf4227249ad190c44ea7906357a2555bb8be8fcce093f663",
+    "prototype_id": "master_munger.debt_service_cushion.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_munger.debt_service_cushion"
+  },
+  "derivation_spec_hash": "sha256:dab13b116c3e8b1d33b8d11340c6f3f3fdada791dcfb70560d5e5c740641e6b0",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

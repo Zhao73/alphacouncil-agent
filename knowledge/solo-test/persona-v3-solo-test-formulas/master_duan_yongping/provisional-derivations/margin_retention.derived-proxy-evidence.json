@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:a11cd35cc0761c528d76b08f4567cee38ba3ee85744b9d7785d37e2c2f9d5391",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_duan_yongping.margin_retention.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.net_margin_5y"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.gross_margin_5y"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "divide",
+      "output": {
+        "output_id": "business.margin_retention.master_duan_yongping",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_duan_yongping",
+    "prototype_content_hash": "sha256:572260329ddbe37abc9d62036a0009075a83f02100d57fe437f742e2fa8c4f3c",
+    "prototype_id": "master_duan_yongping.margin_retention.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_duan_yongping.margin_retention"
+  },
+  "derivation_spec_hash": "sha256:15a2e38f3c0078b94c1548163b7da6fb8b8fd20ff72c4a8217d540b5792e8357",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

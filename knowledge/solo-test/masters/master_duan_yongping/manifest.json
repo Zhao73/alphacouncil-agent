@@ -16,14 +16,21 @@
     ],
     "native_decision_schema": "user_value_owner_decision_v1",
     "optional_fact_types": [
+      "valuation.revenue_growth",
+      "financial.free_cash_flow_5y",
       "business.model.explainability",
+      "product.user_value",
       "culture.integrity_events",
       "management.promise_record",
-      "financial.long_run_economics"
+      "financial.long_run_economics",
+      "portfolio.opportunity_cost"
     ],
     "required_fact_types": [
-      "product.user_value",
-      "portfolio.opportunity_cost"
+      "market.price",
+      "capital_allocation.share_count",
+      "macro.aaa_corporate_yield",
+      "financial.net_margin_5y",
+      "financial.gross_margin_5y"
     ]
   },
   "components": {
@@ -44,8 +51,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_duan_yongping.user_value_evidence",
-      "master_duan_yongping.opportunity_cost"
+      "master_duan_yongping.five_year_opportunity_cost",
+      "master_duan_yongping.margin_retention"
     ]
   },
   "decision": {
@@ -53,8 +60,11 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "product.user_value",
-      "portfolio.opportunity_cost"
+      "market.price",
+      "capital_allocation.share_count",
+      "macro.aaa_corporate_yield",
+      "financial.net_margin_5y",
+      "financial.gross_margin_5y"
     ],
     "hard_vetoes": [
       "master_duan_yongping.not_understood",

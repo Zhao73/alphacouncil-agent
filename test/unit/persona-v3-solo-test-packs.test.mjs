@@ -37,12 +37,22 @@ test("physical pack inventories use canonical slash paths on Windows and POSIX",
 });
 
 function positiveFactPack(pack) {
+  // Built from what the seat DECLARES it reads, not only from its tool inputs. An authored
+  // policy deliberately gates eligibility on a fact that is not a tool input, so a pack made
+  // of tool inputs alone leaves every such seat correctly but uselessly out of scope.
   const byFact = new Map();
   for (const tool of pack.components.tools) {
     tool.inputs.forEach((operand, index) => {
       if (typeof operand.fact_id !== "string" || byFact.has(operand.fact_id)) return;
       byFact.set(operand.fact_id, tool.input_contracts[index]);
     });
+  }
+  const declared = [
+    ...(pack.manifest.capability.required_fact_types || []),
+    ...(pack.manifest.capability.optional_fact_types || []),
+  ];
+  for (const factId of declared) {
+    if (!byFact.has(factId)) byFact.set(factId, { value_kind: "ratio", unit: "decimal" });
   }
   const facts = [...byFact].map(([factId, contract]) => ({
     schema_version: 1,
@@ -54,6 +64,7 @@ function positiveFactPack(pack) {
     // declare one now that those facts have real contracts instead of a proxy scalar.
     currency: contract.value_kind === "monetary" ? "USD" : null,
     scale: contract.value_kind === "monetary" ? 1 : null,
+    ...(contract.value_kind === "ratio" ? { ratio_denominator: "synthetic_denominator" } : {}),
     period_start: null,
     period_end: null,
     fiscal_year: null,
@@ -155,7 +166,11 @@ test("runtime build profile exposes all 26 as visibly provisional while formal c
   }
 });
 
-test("all-positive provisional proxy inputs execute but can never project constructive", () => {
+// An identity proxy could only ever reject or abstain: successful arithmetic over a
+// placeholder must never read as a recommendation. An authored seat is different by design --
+// a method that cannot say yes is not a method. What must not change is the assurance
+// boundary, so that is what this now pins.
+test("an authored seat decides on a full fact pack without gaining production standing", () => {
   const pack = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).get("master_buffett");
   const preDecision = buildAnonymousPreDecision({
     compiledPack: pack,
@@ -166,8 +181,15 @@ test("all-positive provisional proxy inputs execute but can never project constr
   assert.ok(preDecision.anonymous_method_contract.tools.every((tool) => !tool.id.includes("buffett")));
   const execution = executeDeterministicPersonaPolicy(preDecision);
   const result = execution.frozen_decision.structured_decision.result;
-  assert.equal(result.common_projection.stance, "cautious");
-  assert.notEqual(result.common_projection.stance, "constructive");
-  assert.equal(result.score.ratio, 1);
+  // Every fact set to one satisfies an identity proxy trivially and satisfies a real method
+  // only where its comparison happens to hold, so the ratio is whatever the method computes.
+  // What matters is that it computed rather than abstained.
+  assert.ok(result.score.ratio >= 0 && result.score.ratio <= 1);
+  assert.ok(["constructive", "cautious", "opposed"].includes(result.common_projection.stance));
+  assert.notEqual(result.common_projection.stance, "out_of_scope");
   assert.match(result.native_decision.state, /^provisional_/u);
+  // The seat may now recommend; it still may not claim to be validated.
+  assert.equal(pack.admission.level, "operator_lens");
+  assert.equal(pack.maturity, "operator_lens");
+  assert.equal(pack.build_profile, "solo_test");
 });

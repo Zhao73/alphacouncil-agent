@@ -17,6 +17,10 @@
     ],
     "native_decision_schema": "category_story_decision_v1",
     "optional_fact_types": [
+      "financial.net_margin_5y",
+      "financial.leverage",
+      "company.category",
+      "business.two_minute_story",
       "financial.growth_rate",
       "valuation.peg_contextual",
       "financial.inventory",
@@ -24,8 +28,10 @@
       "cycle.position"
     ],
     "required_fact_types": [
-      "company.category",
-      "business.two_minute_story"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.free_cash_flow_5y",
+      "valuation.revenue_growth"
     ]
   },
   "components": {
@@ -46,8 +52,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_lynch.category_classifier",
-      "master_lynch.story_numbers_check"
+      "master_lynch.market_capitalisation",
+      "master_lynch.growth_justified_capitalisation"
     ]
   },
   "decision": {
@@ -55,8 +61,10 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "company.category",
-      "business.two_minute_story"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.free_cash_flow_5y",
+      "valuation.revenue_growth"
     ],
     "hard_vetoes": [
       "master_lynch.category_error",

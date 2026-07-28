@@ -576,6 +576,10 @@ function instrumentAggregateFacts(grounding, context) {
       valueKind: entry.value_kind || "ratio",
       value: entry.value,
       unit: entry.unit || "decimal",
+      // A monetary fact carries a currency and a scale; forwarding only the ratio fields
+      // rejected the whole pack the moment a basket published its size in dollars.
+      currency: entry.currency ?? null,
+      scale: entry.scale ?? null,
       ratioDenominator: entry.ratio_denominator,
       periodEnd: entry.observation_date || null,
       asOf: context.asOf,

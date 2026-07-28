@@ -2,7 +2,71 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "valuation.free_cash_flow_yield.master_aschenbrenner"
+          },
+          "op": "lt",
+          "right": {
+            "fact_id": "macro.long_bond_yield"
+          }
+        },
+        "condition_id": "master_aschenbrenner.price_embeds_a_scaling_timeline",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "source_ids": [
+          "proxy:d16b09eea457cf401"
+        ]
+      },
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "valuation.revenue_growth"
+          }
+        },
+        "condition_id": "master_aschenbrenner.observed_scaling_rate_available",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "source_ids": [
+          "proxy:d16b09eea457cf401"
+        ]
+      },
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "financial.incremental_return_on_capital"
+          }
+        },
+        "condition_id": "master_aschenbrenner.buildout_economics_observable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "source_ids": [
+          "proxy:d16b09eea457cf401"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +74,48 @@
       "native_state": "provisional_out_of_scope"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "fact_id": "valuation.revenue_growth"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_timeline_overpriced"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        }
+      },
+      "source_ids": [
+        "proxy:d16b09eea457cf401"
+      ],
+      "veto_id": "master_aschenbrenner.scaling_has_stopped"
+    }
+  ],
   "native_decision_schema": "ai_scaling_timeline_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "ai.power.required_mw"
+        "output_id": "valuation.market_capitalisation.master_aschenbrenner"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "valuation.implied_growth"
+        "output_id": "valuation.free_cash_flow_yield.master_aschenbrenner"
       }
     }
   ],
@@ -52,7 +143,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_timeline_underpriced"
       },
       "min_ratio": 1
@@ -69,16 +160,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "ai.power.required_mw"
+            "fact_id": "valuation.revenue_growth"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "fact_id": "macro.long_bond_yield"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "aschenbrenner_scaling_rate_beats_the_riskless_alternative",
         "source_ids": [
           "proxy:d16b09eea457cf401"
         ]
@@ -86,7 +177,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "valuation.implied_growth"
+            "fact_id": "financial.incremental_return_on_capital"
           },
           "op": "gt",
           "right": {
@@ -95,7 +186,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "aschenbrenner_buildout_earns_on_the_capital_it_consumes",
         "source_ids": [
           "proxy:d16b09eea457cf401"
         ]

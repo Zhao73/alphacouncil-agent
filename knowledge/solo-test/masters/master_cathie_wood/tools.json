@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:08007b6ab598c6c5dc09c293d4abb4531f5938eb1708d57036f925a7d422ab7e",
-    "derivation_spec_hash": "sha256:95f0ea24dec3f0550aae4fdb92130f2a6b691f96b5f5ff4cc6cef5309a51d12a",
-    "derivation_spec_id": "master_cathie_wood.cost_adoption_curve.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:76ccd7cc3160b98ae243173fa2b69bb844bb88982c41c19e0e822fb1be31252c",
+    "derivation_spec_hash": "sha256:f5df869d94026c7ad00d26d8c3c23bd433c77b9a945142d927a617ad11ee9945",
+    "derivation_spec_id": "master_cathie_wood.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_cathie_wood.cost_adoption_curve",
+    "id": "master_cathie_wood.market_capitalisation",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:3f98c2b294b10e9b6c5ff9ddf1fb55b94a0d1236a37e29a59fb9223c62ec0e15",
+    "input_schema_hash": "sha256:d1b1dfcf1cf820e3e128c015c11bea9fc56a829cb5b51620c3d0697c824cfa69",
     "inputs": [
       {
-        "fact_id": "technology.cost_curve"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "technology.cost_curve",
+    "operation": "multiply",
+    "output_id": "valuation.market_capitalisation.master_cathie_wood",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:77c81ce978d65b7949949ac92d9d496372ac552acdc9ed28853699904b8fdab8",
+    "output_schema_hash": "sha256:46ac08b21ec0c3f9f8c06d34ec72b6cfc94bcdf0fc70230e0fb3ec95f87b9840",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:fee6f8a0c78b363b9"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:0fe89c8fa8423fc53f3ea68c70edcb2fa6b159aa479a21fd9c83e97b288e1f4c",
-    "derivation_spec_hash": "sha256:4b32bfbbd583fdee8e0e13a0e7e8625736f836bbd165d7f6227c9d396a3eeae3",
-    "derivation_spec_id": "master_cathie_wood.capture_valuation_bridge.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:c1d4c7a92fc505b8ddec6634c885b6a8aa945f906c6757ba1e17f64b9c8be219",
+    "derivation_spec_hash": "sha256:d44adc14425fefbe69ab8075528e224d00e8f45b479a012bb40d8526769cb90a",
+    "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_cathie_wood.capture_valuation_bridge",
+    "id": "master_cathie_wood.current_cash_yield",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:4285d5b92b2b5238f5747ffe54e943f09cca96f3c3248d1e90189bcdac9f2ca3",
+    "input_schema_hash": "sha256:88c736aaf3d49439e66a7737d1dfb28fb7146727531375c0a683f2502a2ecc9a",
     "inputs": [
       {
-        "fact_id": "company.capture_rate"
+        "fact_id": "financial.free_cash_flow_5y"
+      },
+      {
+        "output_id": "valuation.market_capitalisation.master_cathie_wood"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "company.capture_rate",
+    "operation": "divide",
+    "output_id": "valuation.free_cash_flow_yield.master_cathie_wood",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:485d3d5a3882481272691650a35397f282adbe877e01351a234ee3594ec12bad",
+    "output_schema_hash": "sha256:ddc88217ad19ccd60fe186866fa96d975b4f51c2f9e27f62a782b6017a344387",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:fee6f8a0c78b363b9"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

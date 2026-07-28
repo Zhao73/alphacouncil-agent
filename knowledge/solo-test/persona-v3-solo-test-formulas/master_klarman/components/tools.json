@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:de418868aa52986d83974fb4fef71fd43f74f7e78f9a3bced9a3148c96e41769",
-    "derivation_spec_hash": "sha256:85f32673f7ac8a67766e38d7c57381907ff937ee49a98c9f63ae96f2c89a2816",
-    "derivation_spec_id": "master_klarman.recovery_waterfall.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:835a4cbccd8b45bf87e78fe282e225226ab9ab5b97b40e50219782247e2f03af",
+    "derivation_spec_hash": "sha256:b58241f7b926f199ddb80c8995e766d93ff14ea9473bb83d3b906e3c35846fa3",
+    "derivation_spec_id": "master_klarman.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_klarman.recovery_waterfall",
+    "id": "master_klarman.market_capitalisation",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:2297b01bca68daeb51910ec0bca1afae08807db3955b38923b696b216a2685d6",
+    "input_schema_hash": "sha256:271ca5387246291e86ef07d67b26fc6fb2711e7c5581c5944540baf5f1418f02",
     "inputs": [
       {
-        "fact_id": "valuation.downside_asset_value"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "valuation.downside_asset_value",
+    "operation": "multiply",
+    "output_id": "valuation.market_capitalisation.master_klarman",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:31d92253b045487f2f2f84203ae9853bde7e5b4d04b5b85f12f1670ebc04bf05",
+    "output_schema_hash": "sha256:b27a3973682c3207a14cc6b6c0ced80639b20214be05fd7e3d22ac7b34c1de84",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_klarman.recovery_waterfall.prototype_v1"
+      "derived_proxy:master_klarman.market_capitalisation.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:d9bc815aac9edee9a6cc1224f2c933806179682c406be44a18e809880ba0fa97",
-    "derivation_spec_hash": "sha256:2bb21dec76ea432c1417dad3759c9a541d5cf69ffcda93a867fcd47bdbc8b4ff",
-    "derivation_spec_id": "master_klarman.cash_catalyst_compare.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:5ba94fac5800c2e7735529742e03972dca1a6a4aaf6f279e590f530d97458c0c",
+    "derivation_spec_hash": "sha256:be95e7b8f6c303cbf080c3f153400efb2dab0da2dad742131843dff542f6e6a9",
+    "derivation_spec_id": "master_klarman.downside_asset_coverage.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_klarman.cash_catalyst_compare",
+    "id": "master_klarman.downside_asset_coverage",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:6f18ecc41141473066fa9a35d34503afde9f8a041350b28889a8c8f8cdd7f8ca",
+    "input_schema_hash": "sha256:e46e671f964ea9f3ca0587271a0b02e429543b04a6f4921ad5f77d8f545814a1",
     "inputs": [
       {
         "fact_id": "valuation.downside_asset_value"
+      },
+      {
+        "output_id": "valuation.market_capitalisation.master_klarman"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "catalyst.path",
+    "operation": "divide",
+    "output_id": "valuation.downside_asset_coverage.master_klarman",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:00f7a46324898a60826e44ea1b5072c50ee23e75b53cb23352e3261324ba597a",
+    "output_schema_hash": "sha256:98c71a92b3902c48252fcdf9e6da20c0904b409a4a3f2b8d491f2ad8e6954c95",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_klarman.cash_catalyst_compare.prototype_v1"
+      "derived_proxy:master_klarman.downside_asset_coverage.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

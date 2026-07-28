@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:113ce391f4063f1a7bab6a33fa827d0e4476da1cf4d6a92b5e2c4e4e0b11ace3",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_natenberg.round_trip_cost.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "execution.bid_ask"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal_of_mid",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "literal": 2
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "multiply",
+      "output": {
+        "output_id": "execution.round_trip_cost.master_natenberg",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_of_mid",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_natenberg",
+    "prototype_content_hash": "sha256:c18f4e1427b5762bdfd2661aeeed9cb77bd1e10662946dce140292720f351940",
+    "prototype_id": "master_natenberg.round_trip_cost.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_natenberg.round_trip_cost"
+  },
+  "derivation_spec_hash": "sha256:c2910ac4ca61cc90ecff49a6b782cabcdf9085eda0d0d50175712b5bf6f43b20",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

@@ -1,0 +1,77 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:4d328d7bfb15575aad0df48c2431e55b692b96198230808c48b8d12e65bb145b",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_thorp.edge_per_unit_of_volatility.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "output_id": "trade.net_edge.master_thorp"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "options.implied_volatility"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal_annualized_volatility",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "divide",
+      "output": {
+        "output_id": "trade.edge_per_unit_of_volatility.master_thorp",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "unknown_fact_fail_closed_proxy_scalar_v1",
+    "persona_id": "master_thorp",
+    "prototype_content_hash": "sha256:af33c7887d97bd0f25cec9a9d53be11efc3beb554952b2d280f45689f13baf8f",
+    "prototype_id": "master_thorp.edge_per_unit_of_volatility.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_thorp.edge_per_unit_of_volatility"
+  },
+  "derivation_spec_hash": "sha256:a6dd488d25efb31022335ad6f444940ca8def0a055f8c4ab720ddb82374a7cd1",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "unknown_fact_proxy_scalar_unit_requires_a_local_test_adapter",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

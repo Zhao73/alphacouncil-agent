@@ -16,14 +16,20 @@
     ],
     "native_decision_schema": "ten_year_certainty_decision_v1",
     "optional_fact_types": [
+      "financial.gross_margin_5y",
+      "valuation.revenue_growth",
+      "capital_allocation.share_count_change_5y",
+      "business.ten_year_durability",
       "industry.structural_direction",
+      "management.promise_record",
       "governance.integrity_events",
       "capital_allocation.history",
       "valuation.long_run_return"
     ],
     "required_fact_types": [
-      "management.promise_record",
-      "business.ten_year_durability"
+      "financial.return_on_equity_10y",
+      "macro.long_bond_yield",
+      "accounting.cash_conversion"
     ]
   },
   "components": {
@@ -44,8 +50,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_li_lu.promise_integrity_ledger",
-      "master_li_lu.ten_year_return_bridge"
+      "master_li_lu.decade_return_over_long_bond",
+      "master_li_lu.cash_backed_decade_return"
     ]
   },
   "decision": {
@@ -53,8 +59,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "management.promise_record",
-      "business.ten_year_durability"
+      "financial.return_on_equity_10y",
+      "macro.long_bond_yield",
+      "accounting.cash_conversion"
     ],
     "hard_vetoes": [
       "master_li_lu.integrity_breach",

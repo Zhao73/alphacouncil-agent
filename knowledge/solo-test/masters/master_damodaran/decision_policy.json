@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "index.aggregate_pe_forward"
+          }
+        },
+        "condition_id": "master_damodaran.forward_earnings_available",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_unvalued"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_unvalued"
+        },
+        "source_ids": [
+          "proxy:bcabfc2d756d028b0"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,48 @@
       "native_state": "provisional_unvalued"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "index.implied_equity_risk_premium.master_damodaran"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_overvalued"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_unvalued"
+        }
+      },
+      "source_ids": [
+        "proxy:bcabfc2d756d028b0"
+      ],
+      "veto_id": "master_damodaran.no_premium_over_riskfree"
+    }
+  ],
   "native_decision_schema": "valuation_distribution_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "valuation.cash_flow"
+        "output_id": "index.implied_equity_risk_premium.master_damodaran"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "valuation.implied_story"
+        "output_id": "index.implied_premium_gap.master_damodaran"
       }
     }
   ],
@@ -52,7 +100,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_undervalued"
       },
       "min_ratio": 1
@@ -69,7 +117,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "valuation.cash_flow"
+            "output_id": "index.implied_premium_gap.master_damodaran"
           },
           "op": "gt",
           "right": {
@@ -78,7 +126,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "damodaran_premium_above_long_run_average",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
         ]
@@ -86,16 +134,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "valuation.implied_story"
+            "fact_id": "index.aggregate_earnings_yield"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "fact_id": "macro.aaa_corporate_yield"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "damodaran_equity_out_yields_corporate_debt",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
         ]

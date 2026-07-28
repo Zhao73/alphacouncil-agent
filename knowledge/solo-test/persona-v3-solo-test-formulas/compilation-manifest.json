@@ -4,683 +4,683 @@
   "bindings": [
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:67426c788e6b046878ebbb3785695e3d6694891b5830d20a301bd7343e852146",
-      "derivation_spec_hash": "sha256:e037f2b6a618de250e7cdd947f5fb2e54de76605fdfafc89edb9624040033fbe",
-      "derivation_spec_id": "master_aschenbrenner.compute_power_bridge.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:f8b6d943e2936b2b7c281c83098f72ced75d897425e0ea0f45aff1e2948c0140",
+      "derivation_spec_hash": "sha256:8d76c65b8d0aee17eeaaa15d8ac53ccfd8ad8d079eeea237e3b8d23eedfd3d5e",
+      "derivation_spec_id": "master_aschenbrenner.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_aschenbrenner",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_aschenbrenner.compute_power_bridge.prototype_v1"
+        "derived_proxy:master_aschenbrenner.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_aschenbrenner.compute_power_bridge"
+      "tool_id": "master_aschenbrenner.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:6dafb86e3f177bbaf5db0a663cb33080f3720a2973cedec48bb6698a6668e9a0",
-      "derivation_spec_hash": "sha256:9d12ff44cb0683d18b0960029e0a4e4cc0e85f5f5130d9d8d2f812dce48351f9",
-      "derivation_spec_id": "master_aschenbrenner.timeline_reverse_valuation.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:84c9e64fd1f2bce4e3142f8c7f2ad49e24148ea884be307729936201a953e3a1",
+      "derivation_spec_hash": "sha256:d6c10a384e3ba90a873b02e839270d2733669763c3d54b13bc8371826625135c",
+      "derivation_spec_id": "master_aschenbrenner.price_implied_cash_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_aschenbrenner",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_aschenbrenner.timeline_reverse_valuation.prototype_v1"
+        "derived_proxy:master_aschenbrenner.price_implied_cash_yield.prototype_v1"
       ],
-      "tool_id": "master_aschenbrenner.timeline_reverse_valuation"
+      "tool_id": "master_aschenbrenner.price_implied_cash_yield"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:388459b0eff6dbd6898d189c73b2aaa39e69e4b123b02dfea16b53b7f0f0327c",
-      "derivation_spec_hash": "sha256:fbaac3af8c2d46e622c7a4e79e3afa0f990674f02fb6b635911c09b7be155665",
-      "derivation_spec_id": "master_buffett.owner_earnings_rebuilder.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:7f122bd9c632386b8d9a42ae236378a5282a6c90aa7a1764a540b105eccf7ede",
+      "derivation_spec_hash": "sha256:cba0709bd7f31f34381a508d326a19f20a09a5dd3e03cfa3a64e2129d3e33ffb",
+      "derivation_spec_id": "master_buffett.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_buffett",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_buffett.owner_earnings_rebuilder.prototype_v1"
+        "derived_proxy:master_buffett.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_buffett.owner_earnings_rebuilder"
+      "tool_id": "master_buffett.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:9bc4f69144dbd0b09f08bf87e360c55f3e58151c610d36e3fa55b8e5b511faa9",
-      "derivation_spec_hash": "sha256:9b4a2f365ccbd0631fa1067dbeb3730d8b5a0f204bc97dfae22bf15f18c6273d",
-      "derivation_spec_id": "master_buffett.incremental_returns.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:1fc76abe79b2813988bd159ac4b50c7b522538a3029caadf585ea6d87cd2e72f",
+      "derivation_spec_hash": "sha256:f0b5fd7527863e772e860c413cfcbd2b53f30335153ad4a065f015022a47332c",
+      "derivation_spec_id": "master_buffett.owner_earnings_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_buffett",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_buffett.incremental_returns.prototype_v1"
+        "derived_proxy:master_buffett.owner_earnings_yield.prototype_v1"
       ],
-      "tool_id": "master_buffett.incremental_returns"
+      "tool_id": "master_buffett.owner_earnings_yield"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:ed5fb36af777291937df51d0918d43cfe977050275e0cc18e4362ebf6d0b9866",
-      "derivation_spec_hash": "sha256:58080da745ccd90c14dec4a06d3ff6f60d27b4bb065850c3714536f3ed4177da",
-      "derivation_spec_id": "master_graham.asset_floor.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:be1a19b6df6e6cbdafe6d045da217fb654631c50955c33fe1b1e88578c2a0bc8",
+      "derivation_spec_hash": "sha256:054b23001e5493aec8528aa278d1ae4733e6c1af10dc1e9b13d552fab37180c0",
+      "derivation_spec_id": "master_graham.defensive_hurdle_base.prototype_v1.derived_proxy_v1",
       "persona_id": "master_graham",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_graham.asset_floor.prototype_v1"
+        "derived_proxy:master_graham.defensive_hurdle_base.prototype_v1"
       ],
-      "tool_id": "master_graham.asset_floor"
+      "tool_id": "master_graham.defensive_hurdle_base"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:1a8fc8b8ffec9fc132534b4a7d321371cb6b27c802a41c31d6a45d16ba0ef514",
-      "derivation_spec_hash": "sha256:18e3b60efbff1ee6a3014b7771dfaf464458a28aba003ca0ff1f559f5023f077",
-      "derivation_spec_id": "master_graham.normalized_earnings.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:b6996d3a359a5decac291b1c375d06674140aa0ee5dea1dea30098f3b6926cfd",
+      "derivation_spec_hash": "sha256:fd0500ae9ea78b599e2e85426278a034b073408e323a3390b0857edbb9ceea96",
+      "derivation_spec_id": "master_graham.half_normalised_earnings_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_graham",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_graham.normalized_earnings.prototype_v1"
+        "derived_proxy:master_graham.half_normalised_earnings_yield.prototype_v1"
       ],
-      "tool_id": "master_graham.normalized_earnings"
+      "tool_id": "master_graham.half_normalised_earnings_yield"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:a900ed0f54e1f4bd095b9ffae85c323d144ea1fa4a01e1d9470d4816e7e36308",
-      "derivation_spec_hash": "sha256:0c451ec63612421c6fe99842f7626637dd90e3b3e8619257f60f4fca21bdc4e2",
-      "derivation_spec_id": "master_simons.leakage_audit.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:2d201abdb47012d24388a65f9c58601d2910df10f22b91e60491e1c13b88ffe2",
+      "derivation_spec_hash": "sha256:ff6b81460c97e1e04f0c765d6018c6e4ad3239c764604a25ec932a6724a81035",
+      "derivation_spec_id": "master_simons.absolute_session_move.prototype_v1.derived_proxy_v1",
       "persona_id": "master_simons",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_simons.leakage_audit.prototype_v1"
+        "derived_proxy:master_simons.absolute_session_move.prototype_v1"
       ],
-      "tool_id": "master_simons.leakage_audit"
+      "tool_id": "master_simons.absolute_session_move"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:078e355a7a7a7055a4bd6cbcd40853664e7d740e556e803012e2f0e5ab65b3bf",
-      "derivation_spec_hash": "sha256:50ebe908b77b3ed2e0cfd7664189a2fd5cfffb1d267a07e186d9da1baf450dc5",
-      "derivation_spec_id": "master_simons.oos_cost_test.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:84fad3eb5760b2c9d658505d852e674f61ee725cdb0a66a6b7f25913608b0758",
+      "derivation_spec_hash": "sha256:e361609896735f3499bce98748b9d23217791003e4e47da707cc07e23f9acc94",
+      "derivation_spec_id": "master_simons.session_move_over_implied.prototype_v1.derived_proxy_v1",
       "persona_id": "master_simons",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_simons.oos_cost_test.prototype_v1"
+        "derived_proxy:master_simons.session_move_over_implied.prototype_v1"
       ],
-      "tool_id": "master_simons.oos_cost_test"
+      "tool_id": "master_simons.session_move_over_implied"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:b76392a7ae4c08885cc465f8c5717a357e5f75cd8d978e720f4345313cad3716",
-      "derivation_spec_hash": "sha256:3536e8779c6955b0d9935822b7d4b54548a3f4235956348443cd884892d649cf",
-      "derivation_spec_id": "master_soros.reflexivity_graph.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:d3e2fb5428cabc4d409e6c453112d6bd40982c9cb3ea6abfe7faae7628447df1",
+      "derivation_spec_hash": "sha256:60372f2f3f55e2547144717181e0df98badfaa1a85ba753244d33980d934366c",
+      "derivation_spec_id": "master_soros.credit_cycle_position.prototype_v1.derived_proxy_v1",
       "persona_id": "master_soros",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_soros.reflexivity_graph.prototype_v1"
+        "derived_proxy:master_soros.credit_cycle_position.prototype_v1"
       ],
-      "tool_id": "master_soros.reflexivity_graph"
+      "tool_id": "master_soros.credit_cycle_position"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:ecdd895a6e939f6b154f9087f5418ea9bfabde100d00ec2934bcc14389ad1acf",
-      "derivation_spec_hash": "sha256:8ad58c927a80c9973257e5e5c0b35e294cf300cbbaaf5e8f7ed789e53565fac8",
-      "derivation_spec_id": "master_soros.reversal_monitor.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:1c10f11689fb3edfe49810928f00d1988f993c8108469df8b0eeabc034ee942f",
+      "derivation_spec_hash": "sha256:21650083f9e5a5d1960d4f0a89d3186c0a65b8bb6642019f305fc695a71d77ca",
+      "derivation_spec_id": "master_soros.financing_burden.prototype_v1.derived_proxy_v1",
       "persona_id": "master_soros",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_soros.reversal_monitor.prototype_v1"
+        "derived_proxy:master_soros.financing_burden.prototype_v1"
       ],
-      "tool_id": "master_soros.reversal_monitor"
+      "tool_id": "master_soros.financing_burden"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:08007b6ab598c6c5dc09c293d4abb4531f5938eb1708d57036f925a7d422ab7e",
-      "derivation_spec_hash": "sha256:95f0ea24dec3f0550aae4fdb92130f2a6b691f96b5f5ff4cc6cef5309a51d12a",
-      "derivation_spec_id": "master_cathie_wood.cost_adoption_curve.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:76ccd7cc3160b98ae243173fa2b69bb844bb88982c41c19e0e822fb1be31252c",
+      "derivation_spec_hash": "sha256:f5df869d94026c7ad00d26d8c3c23bd433c77b9a945142d927a617ad11ee9945",
+      "derivation_spec_id": "master_cathie_wood.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_cathie_wood",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_cathie_wood.cost_adoption_curve.prototype_v1"
+        "derived_proxy:master_cathie_wood.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_cathie_wood.cost_adoption_curve"
+      "tool_id": "master_cathie_wood.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:0fe89c8fa8423fc53f3ea68c70edcb2fa6b159aa479a21fd9c83e97b288e1f4c",
-      "derivation_spec_hash": "sha256:4b32bfbbd583fdee8e0e13a0e7e8625736f836bbd165d7f6227c9d396a3eeae3",
-      "derivation_spec_id": "master_cathie_wood.capture_valuation_bridge.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:c1d4c7a92fc505b8ddec6634c885b6a8aa945f906c6757ba1e17f64b9c8be219",
+      "derivation_spec_hash": "sha256:d44adc14425fefbe69ab8075528e224d00e8f45b479a012bb40d8526769cb90a",
+      "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_cathie_wood",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_cathie_wood.capture_valuation_bridge.prototype_v1"
+        "derived_proxy:master_cathie_wood.current_cash_yield.prototype_v1"
       ],
-      "tool_id": "master_cathie_wood.capture_valuation_bridge"
+      "tool_id": "master_cathie_wood.current_cash_yield"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:4ce23cf615fb1cfc3ad066d0d20e2b5e83da97b8b67fb903a7c8d5c1714c2b6c",
-      "derivation_spec_hash": "sha256:cbf1a3eb204cc69acb1b622f7fd924db218ee465a0316f752c6dcce39d782a79",
-      "derivation_spec_id": "master_druckenmiller.liquidity_revision_map.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:1d85b67ea3613f3e891b9e9a5669f305c7a7734ec6bff7ec97a6494acf2dfce1",
+      "derivation_spec_hash": "sha256:ab6fa28966158cbddd3e5d839bdbdedefa8e38886f5c067e84f67f99093f4ef4",
+      "derivation_spec_id": "master_druckenmiller.liquidity_curve_impulse.prototype_v1.derived_proxy_v1",
       "persona_id": "master_druckenmiller",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_druckenmiller.liquidity_revision_map.prototype_v1"
+        "derived_proxy:master_druckenmiller.liquidity_curve_impulse.prototype_v1"
       ],
-      "tool_id": "master_druckenmiller.liquidity_revision_map"
+      "tool_id": "master_druckenmiller.liquidity_curve_impulse"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:68bcf6a98d7712f2175ddad2dde6abee8552f89fe2687d47bbb47e8148bf8034",
-      "derivation_spec_hash": "sha256:9b79f261ce3b8a63a8bd432a18b948eb8a7bd198ca5585952b912c3f862a240d",
-      "derivation_spec_id": "master_druckenmiller.inflection_payoff.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:f8b940481d3fa00e03a6421d2799642ec64df5d2f772463a1bf35000bf46c0fa",
+      "derivation_spec_hash": "sha256:751eba4c8384522c5bc7525ed89316c1d0dc3eb4c666dd14ecf82892d2d59675",
+      "derivation_spec_id": "master_druckenmiller.policy_real_rate.prototype_v1.derived_proxy_v1",
       "persona_id": "master_druckenmiller",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_druckenmiller.inflection_payoff.prototype_v1"
+        "derived_proxy:master_druckenmiller.policy_real_rate.prototype_v1"
       ],
-      "tool_id": "master_druckenmiller.inflection_payoff"
+      "tool_id": "master_druckenmiller.policy_real_rate"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:746946b414d40302649355c79824292af90a8d8b822cdc3a95259e231f1fec48",
-      "derivation_spec_hash": "sha256:b6e067dd554fa9ddceedd494aaa97bb73b6d810a25d3f9e776ab0c45e759eef7",
-      "derivation_spec_id": "master_fisher.scuttlebutt_graph.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:3b2c6dbcfcb75c87e519f33572f7c654bade9dcdfa9b9e04cfbf2e30f08c3db0",
+      "derivation_spec_hash": "sha256:fe6dcf021e691a1ff6633b8d6efb0db492209bd979d02a152975a26b6e377be4",
+      "derivation_spec_id": "master_fisher.margin_retention.prototype_v1.derived_proxy_v1",
       "persona_id": "master_fisher",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_fisher.scuttlebutt_graph.prototype_v1"
+        "derived_proxy:master_fisher.margin_retention.prototype_v1"
       ],
-      "tool_id": "master_fisher.scuttlebutt_graph"
+      "tool_id": "master_fisher.margin_retention"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:dafd91e14d7dad56e88957c9d88e75438d3590b0729898af7398976db4ccea77",
-      "derivation_spec_hash": "sha256:0bf3b0980d8508c6b87bb6a05bc87403a8a279a7dbc0580bf0601be3e3ea3d91",
-      "derivation_spec_id": "master_fisher.research_productivity.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:e57cec82efe8f7ce9ec989ab1c0246ae04e3746e160274b319a78d09a7de83bb",
+      "derivation_spec_hash": "sha256:ad379ba38af7dd52b4e3ff1ad4a55f2ff6849594de3d5521aa1d94a3a22a46ee",
+      "derivation_spec_id": "master_fisher.reinvestment_spread.prototype_v1.derived_proxy_v1",
       "persona_id": "master_fisher",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_fisher.research_productivity.prototype_v1"
+        "derived_proxy:master_fisher.reinvestment_spread.prototype_v1"
       ],
-      "tool_id": "master_fisher.research_productivity"
+      "tool_id": "master_fisher.reinvestment_spread"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:b9b4890170ebd812afafa39a240b6b528a8d097b13b4979db1ce0242860db112",
-      "derivation_spec_hash": "sha256:c06b14df3f95aa5a8de58fe9395e5c914493dff41cd912db889a7933910d8cca",
-      "derivation_spec_id": "master_munger.incentive_map.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:96e50cdba5a599f5b1e462bb5747a173d3ecd671e1304098adbe3c731fb8fa26",
+      "derivation_spec_hash": "sha256:b55794858458b6fa88bd8afc18c19edc969d16765343a4ed66962862ea6ebabe",
+      "derivation_spec_id": "master_munger.reported_earnings_cash_gap.prototype_v1.derived_proxy_v1",
       "persona_id": "master_munger",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_munger.incentive_map.prototype_v1"
+        "derived_proxy:master_munger.reported_earnings_cash_gap.prototype_v1"
       ],
-      "tool_id": "master_munger.incentive_map"
+      "tool_id": "master_munger.reported_earnings_cash_gap"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:0d72d3b4ab874eef0a47fb1ef169819bd9f4bafa4c402cdffa1329e1ae5763c2",
-      "derivation_spec_hash": "sha256:1a415983d8052349b4ba93be9536460a98482cdd2c9144f808c30a868af87624",
-      "derivation_spec_id": "master_munger.failure_path_graph.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:0479347868fe364f9fd4a42048542c7e1c3a9a9ad732b00ea555baf63c99317d",
+      "derivation_spec_hash": "sha256:dab13b116c3e8b1d33b8d11340c6f3f3fdada791dcfb70560d5e5c740641e6b0",
+      "derivation_spec_id": "master_munger.debt_service_cushion.prototype_v1.derived_proxy_v1",
       "persona_id": "master_munger",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_munger.failure_path_graph.prototype_v1"
+        "derived_proxy:master_munger.debt_service_cushion.prototype_v1"
       ],
-      "tool_id": "master_munger.failure_path_graph"
+      "tool_id": "master_munger.debt_service_cushion"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:2ba3ac5b35cc5602ce88a5ba7571d134cec1d2e9390b0dab4f2a80b6bb9649b0",
-      "derivation_spec_hash": "sha256:a495305aa77816f76fc7d6abe38f8b8ff3a79c6d17b67b84a8ef7e2383adfeca",
-      "derivation_spec_id": "master_thorp.edge_recalculator.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:b85e21489b9a580f5bb3a2b8e7a537320277a23029675c607ae52d6d300a1657",
+      "derivation_spec_hash": "sha256:09e268a0fc88ee1fc5ece944be7ed8b15c1109eac01d6346cbf4452c9d380533",
+      "derivation_spec_id": "master_thorp.net_edge.prototype_v1.derived_proxy_v1",
       "persona_id": "master_thorp",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_thorp.edge_recalculator.prototype_v1"
+        "derived_proxy:master_thorp.net_edge.prototype_v1"
       ],
-      "tool_id": "master_thorp.edge_recalculator"
+      "tool_id": "master_thorp.net_edge"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:e480491cd694394c9708f3c551753d0d74282f724fdb03a57b1845f28ed63a80",
-      "derivation_spec_hash": "sha256:f8f0d4ff36cadb45ee57fd18d6b83145601ee86e19c1d10fd23a905283aaadbf",
-      "derivation_spec_id": "master_thorp.fractional_kelly.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:374b03940179a910863933294ea9670db249d921fb7e3249e0c6dd091d8af99a",
+      "derivation_spec_hash": "sha256:a6dd488d25efb31022335ad6f444940ca8def0a055f8c4ab720ddb82374a7cd1",
+      "derivation_spec_id": "master_thorp.edge_per_unit_of_volatility.prototype_v1.derived_proxy_v1",
       "persona_id": "master_thorp",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_thorp.fractional_kelly.prototype_v1"
+        "derived_proxy:master_thorp.edge_per_unit_of_volatility.prototype_v1"
       ],
-      "tool_id": "master_thorp.fractional_kelly"
+      "tool_id": "master_thorp.edge_per_unit_of_volatility"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:98e274dd74d5d074be39602d3263ebcc8da02b25e13b8ec4feca3dc207383a03",
-      "derivation_spec_hash": "sha256:319e46ff64092fb9577cba1ea97fc65ac74fb7021373aba0c7ec4111945f3712",
-      "derivation_spec_id": "master_asness.factor_decomposer.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:5417afe0a2e3efe909d206233a878a568ebe26afd3183f727ae9c166dc07a935",
+      "derivation_spec_hash": "sha256:6564e77bbe274cb64d4452b0732e6c0cc1936b2d9e6fa2f0f4a600cdbee8a45c",
+      "derivation_spec_id": "master_asness.real_earnings_yield_gap.prototype_v1.derived_proxy_v1",
       "persona_id": "master_asness",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_asness.factor_decomposer.prototype_v1"
+        "derived_proxy:master_asness.real_earnings_yield_gap.prototype_v1"
       ],
-      "tool_id": "master_asness.factor_decomposer"
+      "tool_id": "master_asness.real_earnings_yield_gap"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:a5b1fe7376f9e07ba6c320d915420933c5b0e92c3732380d5690ad7b6825d30a",
-      "derivation_spec_hash": "sha256:d9453ef6c6b917dca3aa0208f13087cf6f4607951985bfd495b5ce00d85beee1",
-      "derivation_spec_id": "master_asness.crowding_cost_stress.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:d6950f6ee33be5a8f9b62664d905a777fad3826093dd6cc31185602c81cc7dcb",
+      "derivation_spec_hash": "sha256:811f468a7a8b3f1ce04e592f426cdb6e4099a5f50dfba2277a50f1868efede8d",
+      "derivation_spec_id": "master_asness.nominal_earnings_yield_gap.prototype_v1.derived_proxy_v1",
       "persona_id": "master_asness",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_asness.crowding_cost_stress.prototype_v1"
+        "derived_proxy:master_asness.nominal_earnings_yield_gap.prototype_v1"
       ],
-      "tool_id": "master_asness.crowding_cost_stress"
+      "tool_id": "master_asness.nominal_earnings_yield_gap"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:89b860b69b24b05f1aa7f52fd59ac650b71b92e5ba3c239bc02514a1d70f71a0",
-      "derivation_spec_hash": "sha256:b8b6f23a565660f04631006b564a85d23c8b76ad48cecaae235c3cca0d074daa",
-      "derivation_spec_id": "master_dalio.regime_classifier.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:1a3f42c96f53396b66e285c547f8ceaa7939e84bc94172295b4e88521d9d001c",
+      "derivation_spec_hash": "sha256:97c673d4240a4231fff621fb9fe8bf824d7c8d3c36bea2eb2d4a2a9f451dfe12",
+      "derivation_spec_id": "master_dalio.policy_real_rate.prototype_v1.derived_proxy_v1",
       "persona_id": "master_dalio",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_dalio.regime_classifier.prototype_v1"
+        "derived_proxy:master_dalio.policy_real_rate.prototype_v1"
       ],
-      "tool_id": "master_dalio.regime_classifier"
+      "tool_id": "master_dalio.policy_real_rate"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:9562819a0d26ff184b7888914f9efd3355f853a3af752c3a2f9943c3e522d0a4",
-      "derivation_spec_hash": "sha256:c08ce7f44b55e8191541b5b4ac350c9d2e37405f61a7ed0f4e4b056585df91ce",
-      "derivation_spec_id": "master_dalio.debt_driver_stress.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:3211513ff12fe1398acddc3927a66dd661b442cf766c5798193b605b865cadd8",
+      "derivation_spec_hash": "sha256:0464fe91c5639d9ed65d17aad4e05959c8fc1052d25c24f6722054a9663ced99",
+      "derivation_spec_id": "master_dalio.real_curve_slope.prototype_v1.derived_proxy_v1",
       "persona_id": "master_dalio",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_dalio.debt_driver_stress.prototype_v1"
+        "derived_proxy:master_dalio.real_curve_slope.prototype_v1"
       ],
-      "tool_id": "master_dalio.debt_driver_stress"
+      "tool_id": "master_dalio.real_curve_slope"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:a1554485568c47e65b087a6d0850aa3614d107d66b27df5819a7e1f48cdbdfc4",
-      "derivation_spec_hash": "sha256:5522e8dbaf58f1459668cf7bb184df52639844b7a63bde6163883d64fc613347",
-      "derivation_spec_id": "master_duan_yongping.user_value_evidence.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:fa4e34e6e0aaff7d0cbd43890891bf495c0de2e6e23ca4336b4eda1a271927b5",
+      "derivation_spec_hash": "sha256:8b316b9416929b447217d74d54d4fa756e9c58b46fb3b6e781172f4d8d60ba6c",
+      "derivation_spec_id": "master_duan_yongping.five_year_opportunity_cost.prototype_v1.derived_proxy_v1",
       "persona_id": "master_duan_yongping",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_duan_yongping.user_value_evidence.prototype_v1"
+        "derived_proxy:master_duan_yongping.five_year_opportunity_cost.prototype_v1"
       ],
-      "tool_id": "master_duan_yongping.user_value_evidence"
+      "tool_id": "master_duan_yongping.five_year_opportunity_cost"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:9202803f0451a837f7a86a4f9124afd25a507527c93987b3c71c02efec557bdb",
-      "derivation_spec_hash": "sha256:7c6b3984bb186610286338003ebebd5f6434b3c17de74476134386393761bb0c",
-      "derivation_spec_id": "master_duan_yongping.opportunity_cost.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:1086de5f15c54f6c3a2accd38b0ae34d4ce15bb66cbd89e07fc85a80b8cd66a2",
+      "derivation_spec_hash": "sha256:15a2e38f3c0078b94c1548163b7da6fb8b8fd20ff72c4a8217d540b5792e8357",
+      "derivation_spec_id": "master_duan_yongping.margin_retention.prototype_v1.derived_proxy_v1",
       "persona_id": "master_duan_yongping",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_duan_yongping.opportunity_cost.prototype_v1"
+        "derived_proxy:master_duan_yongping.margin_retention.prototype_v1"
       ],
-      "tool_id": "master_duan_yongping.opportunity_cost"
+      "tool_id": "master_duan_yongping.margin_retention"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:a34e9d5dbabe64737a894da6a7362757e2f45d664806397bcc8fead300523fc4",
-      "derivation_spec_hash": "sha256:f86405ec457cc0dbe86e3605b0b833a53e3ec960ef16f2606ce3487209acbe8c",
-      "derivation_spec_id": "master_jhunjhunwala.promoter_governance.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:929b1580a5446123bbce6af5f5546b4becb82a4feddf0fa7a47b056865537d4b",
+      "derivation_spec_hash": "sha256:abdab9105dff54d6f7cc36d32af1927c09e543a2cf79d937a80fbac11a14a89e",
+      "derivation_spec_id": "master_jhunjhunwala.real_structural_growth.prototype_v1.derived_proxy_v1",
       "persona_id": "master_jhunjhunwala",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_jhunjhunwala.promoter_governance.prototype_v1"
+        "derived_proxy:master_jhunjhunwala.real_structural_growth.prototype_v1"
       ],
-      "tool_id": "master_jhunjhunwala.promoter_governance"
+      "tool_id": "master_jhunjhunwala.real_structural_growth"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:5d8e4b6809b81c61455c6cdf62f58fc98ff5374b751dce9afa7dbfebbe765559",
-      "derivation_spec_hash": "sha256:5c50cce924daa2fb7aa8b43422b786bd46eda531677178a16cc905d6174e36dc",
-      "derivation_spec_id": "master_jhunjhunwala.penetration_liquidity.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:f03bebe8a9f9b01a5c3e053968799873fb8c57e9c203485107f32e6ebb334307",
+      "derivation_spec_hash": "sha256:85a7fbb1f06b3815a20a9aa42217d9e9dcdf149b6e031462ef277b340757e5c8",
+      "derivation_spec_id": "master_jhunjhunwala.cash_quality_gap.prototype_v1.derived_proxy_v1",
       "persona_id": "master_jhunjhunwala",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_jhunjhunwala.penetration_liquidity.prototype_v1"
+        "derived_proxy:master_jhunjhunwala.cash_quality_gap.prototype_v1"
       ],
-      "tool_id": "master_jhunjhunwala.penetration_liquidity"
+      "tool_id": "master_jhunjhunwala.cash_quality_gap"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:ec8059d59b7430391aeb4e5942bf4f5ff41cc30edeeab5834e61494ca18404f3",
-      "derivation_spec_hash": "sha256:aa0c1ec29f8a57137dedde34a35ed0ecd9336ec63cfdabcfd8cda7b8ee605b9c",
-      "derivation_spec_id": "master_lynch.category_classifier.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:c2a04a2b59230f43057cbf233f21970e1d7753d8edaea8f29d94ea3cb8baba5c",
+      "derivation_spec_hash": "sha256:b616cd7f30fbf082b95cb675adb3fbe09dac6dd03a9d53312c3c99d96254f0a9",
+      "derivation_spec_id": "master_lynch.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_lynch",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_lynch.category_classifier.prototype_v1"
+        "derived_proxy:master_lynch.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_lynch.category_classifier"
+      "tool_id": "master_lynch.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:16444f202d22db621380b6fe236bbeb096f5e509c3004039203efa787795e0ba",
-      "derivation_spec_hash": "sha256:d5e0f9448a65eaaeafb4e6666b4b847eb405674d42c509def6da97ff84f681f6",
-      "derivation_spec_id": "master_lynch.story_numbers_check.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:cf974b9e9028d3c29f8f3f6f7977de3c666a0a46e40c15077e293378459a28d3",
+      "derivation_spec_hash": "sha256:f09bdde1ee4e188f389a2afaf1603465c72dab0abf2f98485730dcc99af9f23a",
+      "derivation_spec_id": "master_lynch.growth_justified_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_lynch",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_lynch.story_numbers_check.prototype_v1"
+        "derived_proxy:master_lynch.growth_justified_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_lynch.story_numbers_check"
+      "tool_id": "master_lynch.growth_justified_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:d974229c5ee51962401acaeba1c3eac6085494be27a08cf1890cd563c882c12f",
-      "derivation_spec_hash": "sha256:f3bf762b47078a2d4dcd185fe472d22ddf655ec80907c4271da872a558424ba8",
-      "derivation_spec_id": "master_forensic_short.accounting_rebuilder.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:c881581308fd5a6920708d7caa4a1e8f0b7df4967c25475fc083f58939298e42",
+      "derivation_spec_hash": "sha256:929a930bb27d4c613b84c25dc21ab1df35614dcb85ce3fcbf405aab9727a3ff2",
+      "derivation_spec_id": "master_forensic_short.cash_conversion_gap.prototype_v1.derived_proxy_v1",
       "persona_id": "master_forensic_short",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_forensic_short.accounting_rebuilder.prototype_v1"
+        "derived_proxy:master_forensic_short.cash_conversion_gap.prototype_v1"
       ],
-      "tool_id": "master_forensic_short.accounting_rebuilder"
+      "tool_id": "master_forensic_short.cash_conversion_gap"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:41c563b6ab37f5f691c67ca99c9a88622734ff891206d51eb0d02985ddedce0b",
-      "derivation_spec_hash": "sha256:5500e93ba960c4d2f1e3a3152df8184b463cd75a5a89be41627e0826a811c7ac",
-      "derivation_spec_id": "master_forensic_short.borrow_catalyst.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:899d7f99943f4085a6f9d65989029243afef88ad04f7ab773a5c0966d16bdd67",
+      "derivation_spec_hash": "sha256:acea77c54757bd5e5198bec0ac8868ea74bc9226564d89136334fd118250b3e6",
+      "derivation_spec_id": "master_forensic_short.cash_cover_of_leverage.prototype_v1.derived_proxy_v1",
       "persona_id": "master_forensic_short",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_forensic_short.borrow_catalyst.prototype_v1"
+        "derived_proxy:master_forensic_short.cash_cover_of_leverage.prototype_v1"
       ],
-      "tool_id": "master_forensic_short.borrow_catalyst"
+      "tool_id": "master_forensic_short.cash_cover_of_leverage"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:a772ba094aa0fbddf2f4676f25b0e68beca1a5c6711df5420883b98212c80172",
-      "derivation_spec_hash": "sha256:86171a2c937dee1593df6104a8614714ed984a2b523134ce1612a3aa81002a3a",
-      "derivation_spec_id": "master_li_lu.promise_integrity_ledger.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:0c3bc33134485f7db014bff8b7f79c2c0e6d713bd0f1198b9435c6066e78bafa",
+      "derivation_spec_hash": "sha256:aa942b0d8e1c13770722d6e6d06f0b048a10b2c84883f437839d8f04aeb17c41",
+      "derivation_spec_id": "master_li_lu.decade_return_over_long_bond.prototype_v1.derived_proxy_v1",
       "persona_id": "master_li_lu",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_li_lu.promise_integrity_ledger.prototype_v1"
+        "derived_proxy:master_li_lu.decade_return_over_long_bond.prototype_v1"
       ],
-      "tool_id": "master_li_lu.promise_integrity_ledger"
+      "tool_id": "master_li_lu.decade_return_over_long_bond"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:a4ee7b39b716052d982e2363fc9f9622e4bf5eb1111fa642c6c6fa58df7f69f7",
-      "derivation_spec_hash": "sha256:1c34350653b851ae614535df491bf3931f16b0adebdb00b0162fd170e821973a",
-      "derivation_spec_id": "master_li_lu.ten_year_return_bridge.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:05edc7b7c9c63866822a9d29b8a756492eeddb80adde62ad3f219940b89037d0",
+      "derivation_spec_hash": "sha256:f0ac2968bb48c4d3ae58e223ace3e4ff1c75df22d294a87981d9f8f8b95b06fc",
+      "derivation_spec_id": "master_li_lu.cash_backed_decade_return.prototype_v1.derived_proxy_v1",
       "persona_id": "master_li_lu",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_li_lu.ten_year_return_bridge.prototype_v1"
+        "derived_proxy:master_li_lu.cash_backed_decade_return.prototype_v1"
       ],
-      "tool_id": "master_li_lu.ten_year_return_bridge"
+      "tool_id": "master_li_lu.cash_backed_decade_return"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:1620d3f4bfe3ef0ef9e82681a78a01c41033f750c033b39e336f63dd870174aa",
-      "derivation_spec_hash": "sha256:ccff19b4772506ee782b8137eca4fe9547071844fc4d07c1e6fa06c51b68595a",
-      "derivation_spec_id": "master_marks.cycle_temperature.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:7fa3102a8ff54e44ea3cf29dd9e34d4ae08d830f050b71b732a76ced5f8daf29",
+      "derivation_spec_hash": "sha256:6a651ebcd2f6cd204cef99cab0e2ab363b5bcb1ea9b19447b4d562050856aa3f",
+      "derivation_spec_id": "master_marks.credit_cycle_position.prototype_v1.derived_proxy_v1",
       "persona_id": "master_marks",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_marks.cycle_temperature.prototype_v1"
+        "derived_proxy:master_marks.credit_cycle_position.prototype_v1"
       ],
-      "tool_id": "master_marks.cycle_temperature"
+      "tool_id": "master_marks.credit_cycle_position"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:f74dc4c22edda2e6998afc39dd9b009edd0d7291ed61f714015d609fabc6c767",
-      "derivation_spec_hash": "sha256:9c10a628bbb736683d6ed57868b9e36160d96855cf61d20ebc71f3c2c0823949",
-      "derivation_spec_id": "master_marks.implied_expectations.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:284ce394de5332330d2c8e70b7e600b08496e027208c47ba7fcd3093442be7da",
+      "derivation_spec_hash": "sha256:d2b8904110e22abd95fd6221802e62b82b411d310acc5e167cbb17d8ac9ddb7b",
+      "derivation_spec_id": "master_marks.equity_over_corporate_debt.prototype_v1.derived_proxy_v1",
       "persona_id": "master_marks",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_marks.implied_expectations.prototype_v1"
+        "derived_proxy:master_marks.equity_over_corporate_debt.prototype_v1"
       ],
-      "tool_id": "master_marks.implied_expectations"
+      "tool_id": "master_marks.equity_over_corporate_debt"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:6cdefe5b398a0d3f07ecde625c54b3c829d19ad7a564de8dc7339ffbc09ac1fe",
-      "derivation_spec_hash": "sha256:06eb2b7aa50fd446fcead03ecd9e3495f779f9e6f6f9b50250667833ed6bf950",
-      "derivation_spec_id": "master_burry.capital_structure_reader.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:b27bb7c7c3ffc9145a8ba0555c7017bb7be9076d7e623c12b23c1c46bb21a83e",
+      "derivation_spec_hash": "sha256:a60f598d6c904dff435dd68ea3260c0c36223a40bfa224dae747a1bea627f6a3",
+      "derivation_spec_id": "master_burry.net_current_asset_value_per_share.prototype_v1.derived_proxy_v1",
       "persona_id": "master_burry",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_burry.capital_structure_reader.prototype_v1"
+        "derived_proxy:master_burry.net_current_asset_value_per_share.prototype_v1"
       ],
-      "tool_id": "master_burry.capital_structure_reader"
+      "tool_id": "master_burry.net_current_asset_value_per_share"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:8523e508ca7228a643a4d2d190a0e2e638b9430c8d799f49939b400c46b3cf36",
-      "derivation_spec_hash": "sha256:c48f91bb43dde9875ad2b6f5a55ac287c0b0782b0d41466ec50b17d5f168fe90",
-      "derivation_spec_id": "master_burry.mispricing_carry.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:42dbe723e4ddde94ff483a4ab412af0ffa2d3fadb0b0a35c64457ada37242757",
+      "derivation_spec_hash": "sha256:c8832a0bc3de2baffb20e3014cd361eb5bfe5756320ba3c7e3ffc9b57e61df9d",
+      "derivation_spec_id": "master_burry.net_current_asset_surplus_per_share.prototype_v1.derived_proxy_v1",
       "persona_id": "master_burry",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_burry.mispricing_carry.prototype_v1"
+        "derived_proxy:master_burry.net_current_asset_surplus_per_share.prototype_v1"
       ],
-      "tool_id": "master_burry.mispricing_carry"
+      "tool_id": "master_burry.net_current_asset_surplus_per_share"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:de418868aa52986d83974fb4fef71fd43f74f7e78f9a3bced9a3148c96e41769",
-      "derivation_spec_hash": "sha256:85f32673f7ac8a67766e38d7c57381907ff937ee49a98c9f63ae96f2c89a2816",
-      "derivation_spec_id": "master_klarman.recovery_waterfall.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:835a4cbccd8b45bf87e78fe282e225226ab9ab5b97b40e50219782247e2f03af",
+      "derivation_spec_hash": "sha256:b58241f7b926f199ddb80c8995e766d93ff14ea9473bb83d3b906e3c35846fa3",
+      "derivation_spec_id": "master_klarman.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_klarman",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_klarman.recovery_waterfall.prototype_v1"
+        "derived_proxy:master_klarman.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_klarman.recovery_waterfall"
+      "tool_id": "master_klarman.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:d9bc815aac9edee9a6cc1224f2c933806179682c406be44a18e809880ba0fa97",
-      "derivation_spec_hash": "sha256:2bb21dec76ea432c1417dad3759c9a541d5cf69ffcda93a867fcd47bdbc8b4ff",
-      "derivation_spec_id": "master_klarman.cash_catalyst_compare.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:5ba94fac5800c2e7735529742e03972dca1a6a4aaf6f279e590f530d97458c0c",
+      "derivation_spec_hash": "sha256:be95e7b8f6c303cbf080c3f153400efb2dab0da2dad742131843dff542f6e6a9",
+      "derivation_spec_id": "master_klarman.downside_asset_coverage.prototype_v1.derived_proxy_v1",
       "persona_id": "master_klarman",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_klarman.cash_catalyst_compare.prototype_v1"
+        "derived_proxy:master_klarman.downside_asset_coverage.prototype_v1"
       ],
-      "tool_id": "master_klarman.cash_catalyst_compare"
+      "tool_id": "master_klarman.downside_asset_coverage"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:95b1dbfb38191116b70157c669b21a3c3ea4224606c37b00fde20caa9ed39201",
-      "derivation_spec_hash": "sha256:abce875912f1a767df44ba266165123b6be6b610553d2216104edc1c83d36993",
-      "derivation_spec_id": "master_pabrai.downside_floor.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:dbaf95615491368ee7d0ee9d63d4143776f7d6df380e16411543131a5d9d55ad",
+      "derivation_spec_hash": "sha256:20464fce3aa94ceb8173ed418670b029460bd472b798d3a0ae8eeeaeb935643f",
+      "derivation_spec_id": "master_pabrai.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_pabrai",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_pabrai.downside_floor.prototype_v1"
+        "derived_proxy:master_pabrai.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_pabrai.downside_floor"
+      "tool_id": "master_pabrai.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:20de6de0ec49831ff6dba8c759553ad9fab60baad3bc2e60c6fbfd14e3643e95",
-      "derivation_spec_hash": "sha256:81d0fc120e8e215e78a220c9a84de36f6bcb29d22dec575503d59bddd9207172",
-      "derivation_spec_id": "master_pabrai.discrete_payoff.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:be02355e7a36dd6c79a94b56686b8ad2cae398f0bbe60b6811919f6bb744f3d8",
+      "derivation_spec_hash": "sha256:c0d57680183d9dd1aa1652c990f2aafb2a70547471d3335489e91d101467cbc5",
+      "derivation_spec_id": "master_pabrai.downside_floor_coverage.prototype_v1.derived_proxy_v1",
       "persona_id": "master_pabrai",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_pabrai.discrete_payoff.prototype_v1"
+        "derived_proxy:master_pabrai.downside_floor_coverage.prototype_v1"
       ],
-      "tool_id": "master_pabrai.discrete_payoff"
+      "tool_id": "master_pabrai.downside_floor_coverage"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:1c40f8ff2cfa041ffca300488b153a04db3215431c683b215f8c4bafe6429482",
-      "derivation_spec_hash": "sha256:cbc66704abe50660a149b649d09b7897a5db8dac9b9c3d279be97908ae5e0620",
-      "derivation_spec_id": "master_ackman.power_map.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:b88b95a72ac829720356072a44881c6c856a66666415fe49eab52d02dcd25367",
+      "derivation_spec_hash": "sha256:5177b07c8b2aa0e5303c3e0e2b0a98ebaf75cf4c1ba5257e327cdd4e10ef486e",
+      "derivation_spec_id": "master_ackman.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_ackman",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_ackman.power_map.prototype_v1"
+        "derived_proxy:master_ackman.market_capitalisation.prototype_v1"
       ],
-      "tool_id": "master_ackman.power_map"
+      "tool_id": "master_ackman.market_capitalisation"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:149e0f53f4a2834190696104b7172ff834fe2228817fa5681ef6e5b1641efd38",
-      "derivation_spec_hash": "sha256:5c14bdc63fe4980710f521bdcd091a3c9b40da37b67029fb191ed161480a0885",
-      "derivation_spec_id": "master_ackman.change_value_bridge.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:07e9a19a87b73567ce0043a9a5f081deb5207348df21f1a522f24228e829bcc5",
+      "derivation_spec_hash": "sha256:073802b70c27e2ca7a6c5f5d72dbb5967bfeda72a9c66c200a3a399141f419dd",
+      "derivation_spec_id": "master_ackman.owner_earnings_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_ackman",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_ackman.change_value_bridge.prototype_v1"
+        "derived_proxy:master_ackman.owner_earnings_yield.prototype_v1"
       ],
-      "tool_id": "master_ackman.change_value_bridge"
+      "tool_id": "master_ackman.owner_earnings_yield"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:9d75640e817714a0f4e5a12c1b17f1d8c04aca144815fe2978096e787f35b6a3",
-      "derivation_spec_hash": "sha256:c2f7f571b6433796f49ec7ac917f5ce6e66ec49e593f7da0aa6dd103315328d6",
-      "derivation_spec_id": "master_damodaran.story_dcf.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:500b290e0e13e80c02f1072f33f879ab79f9cfa81a749295634e763dda75b6f2",
+      "derivation_spec_hash": "sha256:b256595a8aed8861a196eb7335efbc72e3ed70bac462d8021abe47efde3597fe",
+      "derivation_spec_id": "master_damodaran.implied_equity_risk_premium.prototype_v1.derived_proxy_v1",
       "persona_id": "master_damodaran",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_damodaran.story_dcf.prototype_v1"
+        "derived_proxy:master_damodaran.implied_equity_risk_premium.prototype_v1"
       ],
-      "tool_id": "master_damodaran.story_dcf"
+      "tool_id": "master_damodaran.implied_equity_risk_premium"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:d2136add3478895d7fed562ababbf06b661b1960a08e1fb5a30d04f51979bef7",
-      "derivation_spec_hash": "sha256:5123c4120f1b4f0ad88740df3ccb9d98301ed55a7db64c3befac9883dd6651d1",
-      "derivation_spec_id": "master_damodaran.reverse_valuation.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:5b557801dbdfeb202198eca16cfd22eaa009252ca9a39c3357e5000a1efabb90",
+      "derivation_spec_hash": "sha256:3743c713e5c27017406e6d6bc79ed177415f868a7abd3a00093f308f0e79f744",
+      "derivation_spec_id": "master_damodaran.premium_versus_long_run_average.prototype_v1.derived_proxy_v1",
       "persona_id": "master_damodaran",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_damodaran.reverse_valuation.prototype_v1"
+        "derived_proxy:master_damodaran.premium_versus_long_run_average.prototype_v1"
       ],
-      "tool_id": "master_damodaran.reverse_valuation"
+      "tool_id": "master_damodaran.premium_versus_long_run_average"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:f05c53064213d82908514be6909726fa7353df2f1320b5d01dfc80079a306e67",
-      "derivation_spec_hash": "sha256:149d3d3b9e0b2a3c7402bf8f228267112fd1ee604991ad773302c5c87c0e308c",
-      "derivation_spec_id": "master_taleb.payoff_ruin.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:a55b1e0238dde83e25776d09102a002a6542d5931cca65b4af78169972bc5057",
+      "derivation_spec_hash": "sha256:143b365a540c5c4a49ee68058512ae0d5e5ac17a62ef8eb567d0cd9388464d61",
+      "derivation_spec_id": "master_taleb.debt_service_cushion.prototype_v1.derived_proxy_v1",
       "persona_id": "master_taleb",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_taleb.payoff_ruin.prototype_v1"
+        "derived_proxy:master_taleb.debt_service_cushion.prototype_v1"
       ],
-      "tool_id": "master_taleb.payoff_ruin"
+      "tool_id": "master_taleb.debt_service_cushion"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:c52d6265a127d5f7bafdd20680860021f11203211e924642508f34c7a11e02e8",
-      "derivation_spec_hash": "sha256:4cc0fc13ae85ded9e8d4d8df020da285f5c03ccd03b070e813f0c55a7d2b3a5a",
-      "derivation_spec_id": "master_taleb.tail_friction.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:f6bcc23d1175c84de9fdb866499c869436b14f18c48391b5eac08e0a02862430",
+      "derivation_spec_hash": "sha256:88bc4482c18c31314609170fbc6d8ffe0168e5e2476a8f54a48596694958b0c7",
+      "derivation_spec_id": "master_taleb.normalised_skew.prototype_v1.derived_proxy_v1",
       "persona_id": "master_taleb",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_taleb.tail_friction.prototype_v1"
+        "derived_proxy:master_taleb.normalised_skew.prototype_v1"
       ],
-      "tool_id": "master_taleb.tail_friction"
+      "tool_id": "master_taleb.normalised_skew"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:5e7da98995b96ac2927b34d67ff3a62fc34f3885280711456321a690f7a45961",
-      "derivation_spec_hash": "sha256:6c2a0161361b3ad536f3c77f9eacc8180864c6f27a53cb1bdc186a4a640a5bc6",
-      "derivation_spec_id": "master_natenberg.surface_builder.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:0fddf8a261c5cc11c66df78ab7561eae8c384b4048d18445ea634c2e0e07e6c8",
+      "derivation_spec_hash": "sha256:ce5830892667cd57b430cd002544b938bf624cd7de829fa7ef94c1785191e341",
+      "derivation_spec_id": "master_natenberg.normalised_skew.prototype_v1.derived_proxy_v1",
       "persona_id": "master_natenberg",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_natenberg.surface_builder.prototype_v1"
+        "derived_proxy:master_natenberg.normalised_skew.prototype_v1"
       ],
-      "tool_id": "master_natenberg.surface_builder"
+      "tool_id": "master_natenberg.normalised_skew"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:78bf6fc80b4b5101602a6b469998c74bfd1d90b5f1270300d1ead63c05ff0aa0",
-      "derivation_spec_hash": "sha256:cd98be18eba8b61cdc2e57514a1d260facb2ea7c9e0846f31d581a7e3f396a5a",
-      "derivation_spec_id": "master_natenberg.greeks_payoff.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:d1d12b82955fd6721189fa4bcfa289a7a90ba276f8030e311a86b35cba6925fc",
+      "derivation_spec_hash": "sha256:c2910ac4ca61cc90ecff49a6b782cabcdf9085eda0d0d50175712b5bf6f43b20",
+      "derivation_spec_id": "master_natenberg.round_trip_cost.prototype_v1.derived_proxy_v1",
       "persona_id": "master_natenberg",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_natenberg.greeks_payoff.prototype_v1"
+        "derived_proxy:master_natenberg.round_trip_cost.prototype_v1"
       ],
-      "tool_id": "master_natenberg.greeks_payoff"
+      "tool_id": "master_natenberg.round_trip_cost"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:f8a2ee7c530df23accb2fb0e32b3363ff4c68bc7007067f30d1e1df8feb1dedd",
-      "derivation_spec_hash": "sha256:558efafa60f9b72c2ea79aeffb32743b48230dd5924599b046456e0e963ddfc2",
-      "derivation_spec_id": "master_sinclair.realized_vol_forecast.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:bf22afceb8cd2cd9840b9fea051c44223ee1b573443dda4d826de33e6452e501",
+      "derivation_spec_hash": "sha256:645d6091c32770f85e96adb310e16629f337efa27eec16a9840abaf655a129fb",
+      "derivation_spec_id": "master_sinclair.round_trip_cost.prototype_v1.derived_proxy_v1",
       "persona_id": "master_sinclair",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_sinclair.realized_vol_forecast.prototype_v1"
+        "derived_proxy:master_sinclair.round_trip_cost.prototype_v1"
       ],
-      "tool_id": "master_sinclair.realized_vol_forecast"
+      "tool_id": "master_sinclair.round_trip_cost"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:884472efc8f7084a194d8ccd27e6ba1f3ad8614971345710cd770726efe9a298",
-      "derivation_spec_hash": "sha256:88cc60fd1c935e6af428349e3bfcff3fa10a290c39dfcce8c60484e58bcb28e4",
-      "derivation_spec_id": "master_sinclair.net_edge_sizer.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:971a22cf35c7762c3629d47043ea56edfcff60cbeb9cec4972a1a43813e64184",
+      "derivation_spec_hash": "sha256:acf25eee17029d2a8cc91703827343290ee84c4d38436b977c1d4f60311f19ac",
+      "derivation_spec_id": "master_sinclair.volatility_per_unit_of_width.prototype_v1.derived_proxy_v1",
       "persona_id": "master_sinclair",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_sinclair.net_edge_sizer.prototype_v1"
+        "derived_proxy:master_sinclair.volatility_per_unit_of_width.prototype_v1"
       ],
-      "tool_id": "master_sinclair.net_edge_sizer"
+      "tool_id": "master_sinclair.volatility_per_unit_of_width"
     }
   ],
   "canonical_seat_count": 26,
-  "compilation_hash": "sha256:6239ce2dcd1799868d43078335524633b6f0d1aad968b2f7d00f330cad6a52ca",
+  "compilation_hash": "sha256:8708fe5bae03efd518aa21295680bbfca50c28c8d589a6527d2efd7231ab9f61",
   "compiled_tool_count": 52,
   "formula_approval_binding_count": 0,
   "human_reviewer_count": 0,

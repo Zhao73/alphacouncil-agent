@@ -1,0 +1,89 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:793e66c141a336e17eaa09530a3d6d8ee4d6f3bbe003e055bec8ca4f4cade85a",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_lynch.growth_justified_capitalisation.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.free_cash_flow_5y"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "valuation.revenue_growth"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "literal": 20
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "multiply",
+      "output": {
+        "output_id": "valuation.lynch_growth_justified_capitalisation.master_lynch",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_lynch",
+    "prototype_content_hash": "sha256:1b6e0add702b498c00b40b96c75ae102c1b3bac5688ea88bef815b66992e4f5e",
+    "prototype_id": "master_lynch.growth_justified_capitalisation.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_lynch.growth_justified_capitalisation"
+  },
+  "derivation_spec_hash": "sha256:f09bdde1ee4e188f389a2afaf1603465c72dab0abf2f98485730dcc99af9f23a",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

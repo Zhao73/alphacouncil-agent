@@ -8,6 +8,7 @@
  * operation.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -401,7 +402,7 @@ export function inspectPersonaV3ProductionCandidates({
   const inventoryErrors = [];
   if (buildInventory.seat_count !== CANONICAL_MASTER_COUNT) inventoryErrors.push("build-spec seat count is not 26");
   const expectedToolCount = [...expectedByPersona.values()].reduce((total, ids) => total + ids.length, 0);
-  if (expectedToolCount !== CANONICAL_MASTER_COUNT * 2) inventoryErrors.push(`build-spec tool count is not ${CANONICAL_MASTER_COUNT * 2}: ${expectedToolCount}`);
+  if (expectedToolCount !== PLANNED_TOOL_COUNT) inventoryErrors.push(`build-spec tool count is not ${PLANNED_TOOL_COUNT}: ${expectedToolCount}`);
 
   const actualEntries = candidateRoot.exists
     ? readdirSync(candidateRoot.root, { withFileTypes: true })

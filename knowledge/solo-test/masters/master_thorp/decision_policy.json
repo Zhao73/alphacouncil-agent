@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "financial.leverage"
+          }
+        },
+        "condition_id": "master_thorp.ruin_constraint_evaluable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        },
+        "source_ids": [
+          "proxy:1366952123de20fc8"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,48 @@
       "native_state": "provisional_out_of_scope"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "trade.net_edge.master_thorp"
+        },
+        "op": "lte",
+        "right": {
+          "fact_id": "execution.bid_ask"
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_no_measurable_edge"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_out_of_scope"
+        }
+      },
+      "source_ids": [
+        "proxy:1366952123de20fc8"
+      ],
+      "veto_id": "master_thorp.edge_inside_the_friction"
+    }
+  ],
   "native_decision_schema": "edge_sizing_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "trade.edge"
+        "output_id": "trade.net_edge.master_thorp"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "position.fraction"
+        "output_id": "trade.edge_per_unit_of_volatility.master_thorp"
       }
     }
   ],
@@ -52,7 +100,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_fractional_position"
       },
       "min_ratio": 1
@@ -69,16 +117,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "trade.edge"
+            "output_id": "trade.edge_per_unit_of_volatility.master_thorp"
           },
-          "op": "gt",
+          "op": "gte",
           "right": {
-            "literal": 0
+            "literal": 0.063
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "thorp_edge_beyond_one_session_sigma",
         "source_ids": [
           "proxy:1366952123de20fc8"
         ]
@@ -86,16 +134,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "position.fraction"
+            "fact_id": "financial.leverage"
           },
-          "op": "gt",
+          "op": "lte",
           "right": {
-            "literal": 0
+            "literal": 1
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "thorp_loss_cannot_exceed_the_stake",
         "source_ids": [
           "proxy:1366952123de20fc8"
         ]

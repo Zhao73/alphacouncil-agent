@@ -2,7 +2,48 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "financial.interest_coverage"
+          }
+        },
+        "condition_id": "master_pabrai.financing_runway_readable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_floor"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_floor"
+        },
+        "source_ids": [
+          "proxy:cfe480714da62e4dd"
+        ]
+      },
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "options.implied_volatility"
+          }
+        },
+        "condition_id": "master_pabrai.uncertainty_is_observable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_floor"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_floor"
+        },
+        "source_ids": [
+          "proxy:cfe480714da62e4dd"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +51,74 @@
       "native_state": "provisional_no_floor"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "fact_id": "valuation.downside_floor"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "out_of_scope",
+        "native_state": "provisional_no_floor"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_floor"
+        }
+      },
+      "source_ids": [
+        "proxy:cfe480714da62e4dd"
+      ],
+      "veto_id": "master_pabrai.no_downside_floor"
+    },
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.interest_coverage"
+        },
+        "op": "lt",
+        "right": {
+          "literal": 1
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_reject"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_floor"
+        }
+      },
+      "source_ids": [
+        "proxy:cfe480714da62e4dd"
+      ],
+      "veto_id": "master_pabrai.financing_fails_before_resolution"
+    }
+  ],
   "native_decision_schema": "dhandho_payoff_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "valuation.downside_floor"
+        "output_id": "valuation.market_capitalisation.master_pabrai"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "scenario.outcome_tree"
+        "output_id": "valuation.downside_floor_coverage.master_pabrai"
       }
     }
   ],
@@ -52,14 +146,14 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_asymmetric_candidate"
       },
       "min_ratio": 1
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -69,16 +163,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "valuation.downside_floor"
+            "output_id": "valuation.downside_floor_coverage.master_pabrai"
           },
-          "op": "gt",
+          "op": "gte",
           "right": {
-            "literal": 0
+            "literal": 1
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "pabrai_floor_covers_the_price",
         "source_ids": [
           "proxy:cfe480714da62e4dd"
         ]
@@ -86,16 +180,33 @@
       {
         "condition": {
           "left": {
-            "output_id": "scenario.outcome_tree"
+            "fact_id": "options.implied_volatility"
           },
-          "op": "gt",
+          "op": "gte",
           "right": {
-            "literal": 0
+            "literal": 0.4
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "pabrai_uncertainty_is_high_where_risk_is_not",
+        "source_ids": [
+          "proxy:cfe480714da62e4dd"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "financial.interest_coverage"
+          },
+          "op": "gte",
+          "right": {
+            "literal": 3
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "pabrai_financing_survives_to_resolution",
         "source_ids": [
           "proxy:cfe480714da62e4dd"
         ]

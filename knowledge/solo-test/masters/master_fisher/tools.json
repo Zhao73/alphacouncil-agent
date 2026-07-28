@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:746946b414d40302649355c79824292af90a8d8b822cdc3a95259e231f1fec48",
-    "derivation_spec_hash": "sha256:b6e067dd554fa9ddceedd494aaa97bb73b6d810a25d3f9e776ab0c45e759eef7",
-    "derivation_spec_id": "master_fisher.scuttlebutt_graph.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:3b2c6dbcfcb75c87e519f33572f7c654bade9dcdfa9b9e04cfbf2e30f08c3db0",
+    "derivation_spec_hash": "sha256:fe6dcf021e691a1ff6633b8d6efb0db492209bd979d02a152975a26b6e377be4",
+    "derivation_spec_id": "master_fisher.margin_retention.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_fisher.scuttlebutt_graph",
+    "id": "master_fisher.margin_retention",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:7b679b098f21cf09dbd3fa209b573e337abd3900c6a8829649bb01da19cc7012",
+    "input_schema_hash": "sha256:fe049ed212e2a2a1fb25934100ed12a772ffe6c7f9eb9d5193db73ca0792600a",
     "inputs": [
       {
-        "fact_id": "customer.retention"
+        "fact_id": "financial.net_margin_5y"
+      },
+      {
+        "fact_id": "financial.gross_margin_5y"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "scuttlebutt.source_independence",
+    "operation": "divide",
+    "output_id": "financial.margin_retention.master_fisher",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:4b1fdda3df9373113805d9d2569af1bc18eec4e283cbd517e8dad7b15f7207b9",
+    "output_schema_hash": "sha256:0ac030da1fcaac3f6ba0068259dc0e8e8eb7c26e143ca12762e7d674dfd6b523",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:4749a48ca36b9289e"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:dafd91e14d7dad56e88957c9d88e75438d3590b0729898af7398976db4ccea77",
-    "derivation_spec_hash": "sha256:0bf3b0980d8508c6b87bb6a05bc87403a8a279a7dbc0580bf0601be3e3ea3d91",
-    "derivation_spec_id": "master_fisher.research_productivity.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:e57cec82efe8f7ce9ec989ab1c0246ae04e3746e160274b319a78d09a7de83bb",
+    "derivation_spec_hash": "sha256:ad379ba38af7dd52b4e3ff1ad4a55f2ff6849594de3d5521aa1d94a3a22a46ee",
+    "derivation_spec_id": "master_fisher.reinvestment_spread.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_fisher.research_productivity",
+    "id": "master_fisher.reinvestment_spread",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:94ee3dd7a09517bc3eebfa9c87691d7ed40850f67f99b04a627c571deeb51e15",
+    "input_schema_hash": "sha256:8711bb8218a9790a85bdad83435670c6856bdc97cec715ef6d3962c3c759ad7a",
     "inputs": [
       {
-        "fact_id": "research.productivity"
+        "fact_id": "financial.incremental_return_on_capital"
+      },
+      {
+        "fact_id": "macro.aaa_corporate_yield"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "research.productivity",
+    "operation": "subtract",
+    "output_id": "financial.reinvestment_spread.master_fisher",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:52146714280bfdcf2cead10f6623a65d982bf21670c7ef268fafad2e63954d0e",
+    "output_schema_hash": "sha256:fd24ebe09318cde11e91bdeebbd0922f4acec9dfe38931b903bf98f581be3051",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:4749a48ca36b9289e"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

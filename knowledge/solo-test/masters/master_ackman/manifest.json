@@ -16,15 +16,21 @@
     ],
     "native_decision_schema": "engagement_feasibility_v1",
     "optional_fact_types": [
+      "financial.leverage",
+      "capital_allocation.share_count_change_5y",
+      "macro.long_bond_yield",
+      "valuation.standalone_value",
       "valuation.improvement_value",
+      "governance.voting_control",
       "governance.board_rights",
       "catalyst.change_levers",
       "catalyst.implementation_cost",
       "catalyst.timeline"
     ],
     "required_fact_types": [
-      "governance.voting_control",
-      "valuation.standalone_value"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.owner_earnings"
     ]
   },
   "components": {
@@ -45,8 +51,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_ackman.power_map",
-      "master_ackman.change_value_bridge"
+      "master_ackman.market_capitalisation",
+      "master_ackman.owner_earnings_yield"
     ]
   },
   "decision": {
@@ -54,8 +60,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "governance.voting_control",
-      "valuation.standalone_value"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.owner_earnings"
     ],
     "hard_vetoes": [
       "master_ackman.no_standalone_downside",

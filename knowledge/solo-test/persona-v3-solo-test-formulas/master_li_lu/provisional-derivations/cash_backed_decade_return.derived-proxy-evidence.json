@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:692ce38df6716f89a08954e29de2429bd7e44a3430746adce66a7bbf72fe3c5a",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_li_lu.cash_backed_decade_return.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.return_on_equity_10y"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "accounting.cash_conversion"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "multiple",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "multiply",
+      "output": {
+        "output_id": "valuation.cash_backed_decade_return.master_li_lu",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_li_lu",
+    "prototype_content_hash": "sha256:4d260f58c58401aa2d58cd6be0b94369e266cac4e933213306f8e8f91f08a614",
+    "prototype_id": "master_li_lu.cash_backed_decade_return.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_li_lu.cash_backed_decade_return"
+  },
+  "derivation_spec_hash": "sha256:f0ac2968bb48c4d3ae58e223ace3e4ff1c75df22d294a87981d9f8f8b95b06fc",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

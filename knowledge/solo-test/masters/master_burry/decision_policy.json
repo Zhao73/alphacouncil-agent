@@ -2,7 +2,39 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "conditions": [
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "financial.leverage"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "financial.interest_coverage"
+              }
+            }
+          ],
+          "op": "all"
+        },
+        "condition_id": "master_burry.capital_structure_readable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_document_gap"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_document_gap"
+        },
+        "source_ids": [
+          "proxy:671173c81294794a1"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +42,62 @@
       "native_state": "provisional_document_gap"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "conditions": [
+          {
+            "left": {
+              "fact_id": "financial.leverage"
+            },
+            "op": "gt",
+            "right": {
+              "literal": 1
+            }
+          },
+          {
+            "left": {
+              "fact_id": "financial.interest_coverage"
+            },
+            "op": "lt",
+            "right": {
+              "literal": 1
+            }
+          }
+        ],
+        "op": "all"
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_opinion_only"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_document_gap"
+        }
+      },
+      "source_ids": [
+        "proxy:671173c81294794a1"
+      ],
+      "veto_id": "master_burry.cannot_survive_the_wait"
+    }
+  ],
   "native_decision_schema": "structural_mispricing_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "capital_structure.seniority"
+        "output_id": "valuation.net_current_asset_value_per_share.master_burry"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "mispricing.mechanism"
+        "output_id": "valuation.net_current_asset_surplus_per_share.master_burry"
       }
     }
   ],
@@ -52,14 +125,14 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_structural_mispricing"
       },
       "min_ratio": 1
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -69,7 +142,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "capital_structure.seniority"
+            "output_id": "valuation.net_current_asset_surplus_per_share.master_burry"
           },
           "op": "gt",
           "right": {
@@ -78,7 +151,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "burry_price_below_net_current_assets",
         "source_ids": [
           "proxy:671173c81294794a1"
         ]
@@ -86,16 +159,33 @@
       {
         "condition": {
           "left": {
-            "output_id": "mispricing.mechanism"
+            "fact_id": "financial.leverage"
           },
-          "op": "gt",
+          "op": "lte",
           "right": {
-            "literal": 0
+            "literal": 1
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "burry_equity_not_junior_to_more_debt_than_equity",
+        "source_ids": [
+          "proxy:671173c81294794a1"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "financial.interest_coverage"
+          },
+          "op": "gte",
+          "right": {
+            "literal": 5
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "burry_issuer_can_wait_for_the_thesis",
         "source_ids": [
           "proxy:671173c81294794a1"
         ]

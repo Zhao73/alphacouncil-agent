@@ -7,6 +7,7 @@
  * loader rejects every output. Normal admission therefore remains operator_lens.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -21,7 +22,7 @@ import { fileURLToPath } from "node:url";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import buildInventory from "../../data/persona-v3-build-specs.v1.mjs";
-import { personaV3AuthoredMethods as authoredMethods } from "../../data/persona-v3-authored-methods.v1.mjs";
+import { authoredMethods } from "../../data/authored/index.mjs";
 import {
   selectorBestForLocale,
   selectorMethodLocale,
@@ -162,7 +163,7 @@ function loadFormulaTree(formulaRoot) {
   const errors = [];
   if (manifest.schema_version !== 1) errors.push("schema_version must be 1");
   if (manifest.artifact_kind !== "persona_v3_solo_test_formula_staging_tree") errors.push("artifact_kind is invalid");
-  if (manifest.canonical_seat_count !== CANONICAL_MASTER_COUNT || manifest.compiled_tool_count !== CANONICAL_MASTER_COUNT * 2) errors.push(`manifest must bind exactly ${CANONICAL_MASTER_COUNT} seats and ${CANONICAL_MASTER_COUNT * 2} tools`);
+  if (manifest.canonical_seat_count !== CANONICAL_MASTER_COUNT || manifest.compiled_tool_count !== PLANNED_TOOL_COUNT) errors.push(`manifest must bind exactly ${CANONICAL_MASTER_COUNT} seats and ${PLANNED_TOOL_COUNT} tools`);
   if (manifest.assurance_class !== SOLO_TEST_ASSURANCE_CLASS) errors.push("assurance_class must be provisional_derived_proxy");
   if (manifest.review_status !== "not_human_reviewed") errors.push("review_status must be not_human_reviewed");
   if (manifest.production_eligible !== false || manifest.method_model_eligible !== false) errors.push("formula tree must be production/method-model ineligible");
@@ -194,7 +195,7 @@ function loadFormulaTree(formulaRoot) {
   if (JSON.stringify(actualSeatEntries) !== JSON.stringify([...CANONICAL_MASTER_IDS].sort())) {
     fail("formula tree contains missing or unexpected top-level entries", { actual: actualSeatEntries });
   }
-  if (total !== CANONICAL_MASTER_COUNT * 2) fail(`formula tree compiled ${total} tools instead of ${CANONICAL_MASTER_COUNT * 2}`);
+  if (total !== PLANNED_TOOL_COUNT) fail(`formula tree compiled ${total} tools instead of ${PLANNED_TOOL_COUNT}`);
   return { root, manifest, byPersona };
 }
 
@@ -334,13 +335,39 @@ function authoredDecisionPolicy(seat, tools, authored) {
     native_states: seat.native_decision_contract.states.map(executableNativeState),
     abstention_policy: "fail_closed",
     fact_gate: { on_missing_critical: { native_state: outOfScope, common_stance: "out_of_scope" } },
-    eligibility: authored.eligibility || { all: [] },
+    // Authoring supplies the judgement; the build supplies identity. Source ids are minted
+    // here because the loader rejects a source id that is not in the pack, and native states
+    // are mapped here because the authored form uses the raw name a build spec declares.
+    eligibility: {
+      all: (authored.eligibility?.all || []).map((entry) => ({
+        condition_id: entry.condition_id,
+        condition: entry.condition,
+        on_false: {
+          native_state: state(entry.on_false.native_state),
+          common_stance: entry.on_false.common_stance,
+        },
+        on_uncomputable: {
+          native_state: state((entry.on_uncomputable || entry.on_false).native_state),
+          common_stance: (entry.on_uncomputable || entry.on_false).common_stance,
+        },
+        source_ids: [authored.source_id],
+      })),
+    },
     hard_vetoes: (authored.hard_vetoes || []).map((veto) => ({
       veto_id: veto.veto_id,
       condition: veto.condition,
       on_trigger: {
         native_state: state(veto.on_trigger.native_state),
         common_stance: veto.on_trigger.common_stance,
+      },
+      // A veto whose condition cannot be evaluated must not read as "not triggered". An
+      // unmeasurable disqualifier is a reason to abstain, not a reason to proceed.
+      on_uncomputable: {
+        action: "abstain",
+        decision: {
+          native_state: state(veto.on_uncomputable?.native_state || outOfScopeHypothesis),
+          common_stance: veto.on_uncomputable?.common_stance || "out_of_scope",
+        },
       },
       source_ids: [authored.source_id],
     })),

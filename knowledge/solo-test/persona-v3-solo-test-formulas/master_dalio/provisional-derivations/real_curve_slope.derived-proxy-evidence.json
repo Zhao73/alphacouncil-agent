@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:4e79dce3cb35cf6c32f33a128d4cacf23875d384329397f53be2a29a2f2cdfd7",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_dalio.real_curve_slope.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.real_rate"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "output_id": "macro.policy_real_rate.master_dalio"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "macro.real_curve_slope.master_dalio",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_dalio",
+    "prototype_content_hash": "sha256:502a8fc33a4363bfa743a37c16f2e19bb2de1b8908686ebf632f31495985ad8d",
+    "prototype_id": "master_dalio.real_curve_slope.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_dalio.real_curve_slope"
+  },
+  "derivation_spec_hash": "sha256:0464fe91c5639d9ed65d17aad4e05959c8fc1052d25c24f6722054a9663ced99",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

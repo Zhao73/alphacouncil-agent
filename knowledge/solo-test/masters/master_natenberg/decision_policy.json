@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "options.term_structure"
+          }
+        },
+        "condition_id": "master_natenberg.term_structure_available",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_surface_unavailable"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_surface_unavailable"
+        },
+        "source_ids": [
+          "proxy:d71f61ac7584ae3fa"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,48 @@
       "native_state": "provisional_surface_unavailable"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "execution.round_trip_cost.master_natenberg"
+        },
+        "op": "gte",
+        "right": {
+          "literal": 0.1
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_mispriced_untradeable"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_surface_unavailable"
+        }
+      },
+      "source_ids": [
+        "proxy:d71f61ac7584ae3fa"
+      ],
+      "veto_id": "master_natenberg.untradeable_spread"
+    }
+  ],
   "native_decision_schema": "options_relative_value_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "options.implied_volatility"
+        "output_id": "options.normalised_skew.master_natenberg"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "options.greeks"
+        "output_id": "execution.round_trip_cost.master_natenberg"
       }
     }
   ],
@@ -52,7 +100,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_relative_value"
       },
       "min_ratio": 1
@@ -69,16 +117,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "options.implied_volatility"
+            "fact_id": "options.implied_volatility"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "output_id": "execution.round_trip_cost.master_natenberg"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "natenberg_volatility_exceeds_round_trip_friction",
         "source_ids": [
           "proxy:d71f61ac7584ae3fa"
         ]
@@ -86,16 +134,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "options.greeks"
+            "output_id": "options.normalised_skew.master_natenberg"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "literal": 0.05
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "natenberg_skew_material_versus_level",
         "source_ids": [
           "proxy:d71f61ac7584ae3fa"
         ]

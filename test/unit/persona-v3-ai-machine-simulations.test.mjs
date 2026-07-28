@@ -40,9 +40,14 @@ test("eight physical machine simulations run without network, human, formal expe
   assert.equal(d13.configuration.selected_master_count, 13);
   assert.equal(d13.results.executed_count, 13);
   assert.equal(d26.configuration.selected_master_count, 26);
-  assert.equal(d26.results.executed_count, 26);
-  assert.equal(d26.results.blocked_fail_closed_count, 0);
-  assert.ok(d26.results.decisions.every((decision) => decision.stance !== "constructive"));
+  // One seat is authored to be genuinely narrow and declines on a fixture that is not its
+  // subject. A bench where every seat executes on every input is a bench with no method in it.
+  assert.equal(d26.results.executed_count, 25);
+  assert.equal(d26.results.blocked_fail_closed_count, 1);
+  // Identity proxies could only reject or abstain, so agreement was structural. Authored
+  // methods disagree, and the spread IS the output: a unanimous bench says nothing.
+  const stances = new Set(d26.results.decisions.map((decision) => decision.stance).filter(Boolean));
+  assert.ok(stances.size >= 3, `expected a divided bench, got ${[...stances].join(", ")}`);
   for (const personaId of ["master_graham", "master_pabrai", "master_forensic_short"]) {
     assert.equal(d26.results.decisions.find((decision) => decision.persona_id === personaId)?.status, "executed");
   }
@@ -60,8 +65,8 @@ test("physical simulation artifacts are exact and tampering is rejected", () => 
   const report = verifyAIMachineSimulationTree();
   assert.equal(report.valid, true);
   assert.equal(report.run_count, 8);
-  assert.equal(report.executed_count, 105);
-  assert.equal(report.blocked_fail_closed_count, 0);
+  assert.equal(report.executed_count, 102);
+  assert.equal(report.blocked_fail_closed_count, 3);
   assert.equal(report.network_call_count, 0);
   assert.equal(report.human_reference_count, 0);
   assert.equal(report.n_eff, null);

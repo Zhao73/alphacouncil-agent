@@ -7,6 +7,8 @@
  * module must never register a production pack or change a seat's maturity.
  */
 
+import { overlayAuthoredSeat } from "./authored/index.mjs";
+
 const PENDING = "pending_human_adjudication";
 
 function source(personaId, number, sourceFamily, acquisitionTarget) {
@@ -1074,7 +1076,18 @@ export const personaV3BuildSpecs = Object.freeze({
     experiments: "not_started",
     promotion_effect: "none",
   }),
-  seats: Object.freeze(seats),
+  seats: Object.freeze(seats.map(overlayAuthoredSeat)),
 });
+
+/**
+ * How many dedicated tools the whole bench plans.
+ *
+ * Computed from the specs rather than as seats times two: a method that needs a third step to
+ * express itself should be able to declare one without every downstream invariant reading the
+ * extra tool as drift. The count is still exact -- it is simply derived from the one place
+ * that knows it.
+ */
+export const PLANNED_TOOL_COUNT = personaV3BuildSpecs.seats
+  .reduce((total, seat) => total + seat.planned_dedicated_tools.length, 0);
 
 export default personaV3BuildSpecs;

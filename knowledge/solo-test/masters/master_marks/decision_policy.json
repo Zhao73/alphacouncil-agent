@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "index.aggregate_pe_ttm"
+          }
+        },
+        "condition_id": "master_marks.market_valuation_observable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_cycle_unknown"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_cycle_unknown"
+        },
+        "source_ids": [
+          "proxy:08cfa8347347faed7"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,62 @@
       "native_state": "provisional_cycle_unknown"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "conditions": [
+          {
+            "left": {
+              "output_id": "macro.credit_spread_gap.master_marks"
+            },
+            "op": "lt",
+            "right": {
+              "literal": 0
+            }
+          },
+          {
+            "left": {
+              "fact_id": "index.aggregate_earnings_yield"
+            },
+            "op": "lt",
+            "right": {
+              "fact_id": "macro.aaa_corporate_yield"
+            }
+          }
+        ],
+        "op": "all"
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_defensive"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_cycle_unknown"
+        }
+      },
+      "source_ids": [
+        "proxy:08cfa8347347faed7"
+      ],
+      "veto_id": "master_marks.euphoria"
+    }
+  ],
   "native_decision_schema": "cycle_risk_posture_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "cycle.valuation_percentile"
+        "output_id": "macro.credit_spread_gap.master_marks"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "valuation.implied_expectations"
+        "output_id": "index.equity_over_corporate_debt_premium.master_marks"
       }
     }
   ],
@@ -52,7 +114,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_aggressive"
       },
       "min_ratio": 1
@@ -69,7 +131,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "cycle.valuation_percentile"
+            "output_id": "macro.credit_spread_gap.master_marks"
           },
           "op": "gt",
           "right": {
@@ -78,7 +140,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "marks_credit_spread_above_long_run_average",
         "source_ids": [
           "proxy:08cfa8347347faed7"
         ]
@@ -86,7 +148,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "valuation.implied_expectations"
+            "output_id": "index.equity_over_corporate_debt_premium.master_marks"
           },
           "op": "gt",
           "right": {
@@ -95,7 +157,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "marks_equity_paid_over_corporate_debt",
         "source_ids": [
           "proxy:08cfa8347347faed7"
         ]

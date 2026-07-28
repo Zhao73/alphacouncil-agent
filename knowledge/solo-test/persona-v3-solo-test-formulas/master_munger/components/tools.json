@@ -1,12 +1,22 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:b9b4890170ebd812afafa39a240b6b528a8d097b13b4979db1ce0242860db112",
-    "derivation_spec_hash": "sha256:c06b14df3f95aa5a8de58fe9395e5c914493dff41cd912db889a7933910d8cca",
-    "derivation_spec_id": "master_munger.incentive_map.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:96e50cdba5a599f5b1e462bb5747a173d3ecd671e1304098adbe3c731fb8fa26",
+    "derivation_spec_hash": "sha256:b55794858458b6fa88bd8afc18c19edc969d16765343a4ed66962862ea6ebabe",
+    "derivation_spec_id": "master_munger.reported_earnings_cash_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_munger.incentive_map",
+    "id": "master_munger.reported_earnings_cash_gap",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -18,41 +28,54 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:b1cb46672ea817ef0d4f4f7386b146b2c667c7940f1e991eb422a883e2d7a9c6",
+    "input_schema_hash": "sha256:8d1c454fc53098d13d7630dccbc0130d52dd061da3e75aa87b154029dbef3def",
     "inputs": [
       {
-        "fact_id": "governance.incentive_structure"
+        "fact_id": "accounting.cash_conversion"
+      },
+      {
+        "literal": 1
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "governance.incentive_structure",
+    "operation": "subtract",
+    "output_id": "accounting.reported_earnings_cash_gap.master_munger",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:a8c9c9a0c0f03a05c6547d38302b4f5df8ff0b16ba8f785daac16d07d5adafcc",
+    "output_schema_hash": "sha256:a3804a398d53b9888ea35700443662f21cbbcaa0823bf3bc31091e1640ed2354",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_munger.incentive_map.prototype_v1"
+      "derived_proxy:master_munger.reported_earnings_cash_gap.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:0d72d3b4ab874eef0a47fb1ef169819bd9f4bafa4c402cdffa1329e1ae5763c2",
-    "derivation_spec_hash": "sha256:1a415983d8052349b4ba93be9536460a98482cdd2c9144f808c30a868af87624",
-    "derivation_spec_id": "master_munger.failure_path_graph.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:0479347868fe364f9fd4a42048542c7e1c3a9a9ad732b00ea555baf63c99317d",
+    "derivation_spec_hash": "sha256:dab13b116c3e8b1d33b8d11340c6f3f3fdada791dcfb70560d5e5c740641e6b0",
+    "derivation_spec_id": "master_munger.debt_service_cushion.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_munger.failure_path_graph",
+    "id": "master_munger.debt_service_cushion",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -64,31 +87,34 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:a053319d92c8e5e8ab432b8ad3e286ff65b0f276c4508ae59ff23618f57f718e",
+    "input_schema_hash": "sha256:ae898feb7070bb4ba1818406e377f021777c5e0c4b5c766bebe1ff6b02c67226",
     "inputs": [
       {
-        "fact_id": "risk.failure_paths"
+        "fact_id": "financial.interest_coverage"
+      },
+      {
+        "literal": 1
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "risk.failure_paths",
+    "operation": "subtract",
+    "output_id": "risk.debt_service_cushion.master_munger",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:a1a70a21216ddc520ba47d4ec18efce6189d859cd4c84505200f573c72477470",
+    "output_schema_hash": "sha256:c1bb85b42b26a4ea941a8273ac7ba86796fdd78fa32d73af60fd72d1f4c8b2d5",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_munger.failure_path_graph.prototype_v1"
+      "derived_proxy:master_munger.debt_service_cushion.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

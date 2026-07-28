@@ -6,6 +6,7 @@
  * or satisfy the formal formula-review compiler/GA path.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -573,7 +574,7 @@ export function planAIFormulaCrossReviews({ formulaRoot = DEFAULT_SOLO_TEST_FORM
   const reviewSchemaHash = sha256(schema);
   const input = physicalFormulaRecords(formulaRoot);
   const reviews = input.records.map((record) => reviewOne(record, input.compilationHash, reviewSchemaHash));
-  if (reviews.length !== CANONICAL_MASTER_COUNT * 2 || new Set(reviews.map((review) => review.tool_id)).size !== CANONICAL_MASTER_COUNT * 2) {
+  if (reviews.length !== PLANNED_TOOL_COUNT || new Set(reviews.map((review) => review.tool_id)).size !== PLANNED_TOOL_COUNT) {
     fail("AI formula cross-review must cover exactly 52 unique tools");
   }
   const invalid = reviews.flatMap((review) => validateAIFormulaReviewArtifact(review, { reviewSchemaHash })

@@ -16,15 +16,16 @@
     ],
     "native_decision_schema": "options_relative_value_v1",
     "optional_fact_types": [
-      "options.skew_surface",
       "options.term_structure",
+      "options.skew_surface",
       "options.greeks",
       "options.payoff",
-      "execution.bid_ask",
       "execution.liquidity"
     ],
     "required_fact_types": [
-      "options.implied_volatility"
+      "options.skew_25d",
+      "options.implied_volatility",
+      "execution.bid_ask"
     ]
   },
   "components": {
@@ -45,8 +46,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_natenberg.surface_builder",
-      "master_natenberg.greeks_payoff"
+      "master_natenberg.normalised_skew",
+      "master_natenberg.round_trip_cost"
     ]
   },
   "decision": {
@@ -54,7 +55,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "options.implied_volatility"
+      "options.skew_25d",
+      "options.implied_volatility",
+      "execution.bid_ask"
     ],
     "hard_vetoes": [
       "master_natenberg.stale_chain",

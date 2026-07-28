@@ -7,6 +7,7 @@
  * manifests, release evidence, or production registrations.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -571,7 +572,7 @@ export function planApprovedFormulaCompilation({
   });
   const expectedIds = authoring.inventory.entries.map((entry) => entry.tool_id);
   const actualIds = tools.map((tool) => tool.id);
-  if (actualIds.length !== CANONICAL_MASTER_COUNT * 2 || new Set(actualIds).size !== CANONICAL_MASTER_COUNT * 2
+  if (actualIds.length !== PLANNED_TOOL_COUNT || new Set(actualIds).size !== PLANNED_TOOL_COUNT
     || JSON.stringify([...actualIds].sort()) !== JSON.stringify([...expectedIds].sort())) {
     fail("approved compilation must produce exactly the 52 planned unique tool ids", { expected_ids: expectedIds, actual_ids: actualIds });
   }
@@ -591,7 +592,7 @@ export function planApprovedFormulaCompilation({
     mode: "check_only",
     production_effect: "none",
     canonical_seat_count: CANONICAL_MASTER_COUNT,
-    planned_tool_count: CANONICAL_MASTER_COUNT * 2,
+    planned_tool_count: PLANNED_TOOL_COUNT,
     compiled_tool_count: tools.length,
     formula_approval_binding_count: bindings.length,
     tool_ids: actualIds,
@@ -669,7 +670,7 @@ export function planPersonaV3FormulaPipeline(options = {}) {
   const expected = buildInventory.seats.reduce((total, seat) => total + seat.planned_dedicated_tools.length, 0);
   const errors = [...inventory.global_errors];
   if (inventory.canonical_seat_count !== buildInventory.seat_count) errors.push("canonical seat count drifted");
-  if (inventory.prototype_count !== expected || expected !== CANONICAL_MASTER_COUNT * 2) errors.push(`prototype inventory must be exactly ${CANONICAL_MASTER_COUNT * 2}, got ${inventory.prototype_count}/${expected}`);
+  if (inventory.prototype_count !== expected || expected !== PLANNED_TOOL_COUNT) errors.push(`prototype inventory must be exactly ${PLANNED_TOOL_COUNT}, got ${inventory.prototype_count}/${expected}`);
   if (inventory.entries.some((entry) => entry.validation_errors.length)) errors.push("one or more generated formula specs are invalid");
   if (inventory.executable_candidate_count !== 0 || inventory.dedicated_tool_count !== 0) errors.push("unreviewed prototypes must not become executable or dedicated tools");
   return Object.freeze(canonicalValue({ mode: "check_plan", errors, inventory }));

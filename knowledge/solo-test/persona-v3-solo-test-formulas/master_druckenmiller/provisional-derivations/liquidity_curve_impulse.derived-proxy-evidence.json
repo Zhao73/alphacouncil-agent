@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:f0f13ed7ae5f8cd0155ab1b2966669fcd6848472ffe607381fb394f63da9ffaf",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_druckenmiller.liquidity_curve_impulse.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.liquidity_impulse"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.term_structure_slope"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "mean",
+      "output": {
+        "output_id": "macro.liquidity_curve_impulse.master_druckenmiller",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_druckenmiller",
+    "prototype_content_hash": "sha256:0c4dfebaf2d813f9004eb2e3b321307fe4f0620ffdfdb5cbf978024b17105adb",
+    "prototype_id": "master_druckenmiller.liquidity_curve_impulse.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_druckenmiller.liquidity_curve_impulse"
+  },
+  "derivation_spec_hash": "sha256:ab6fa28966158cbddd3e5d839bdbdedefa8e38886f5c067e84f67f99093f4ef4",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

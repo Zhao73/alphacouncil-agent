@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "financial.return_on_equity_10y"
+          }
+        },
+        "condition_id": "master_fisher.decade_of_operating_record",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_scuttlebutt"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_scuttlebutt"
+        },
+        "source_ids": [
+          "proxy:4749a48ca36b9289e"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,74 @@
       "native_state": "provisional_insufficient_scuttlebutt"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.net_margin_5y"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_reject"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_scuttlebutt"
+        }
+      },
+      "source_ids": [
+        "proxy:4749a48ca36b9289e"
+      ],
+      "veto_id": "master_fisher.no_worthwhile_margin"
+    },
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.incremental_return_on_capital"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_reject"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_scuttlebutt"
+        }
+      },
+      "source_ids": [
+        "proxy:4749a48ca36b9289e"
+      ],
+      "veto_id": "master_fisher.research_without_return"
+    }
+  ],
   "native_decision_schema": "scuttlebutt_quality_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "scuttlebutt.source_independence"
+        "output_id": "financial.margin_retention.master_fisher"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "research.productivity"
+        "output_id": "financial.reinvestment_spread.master_fisher"
       }
     }
   ],
@@ -52,14 +126,14 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_long_duration_quality"
       },
       "min_ratio": 1
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -69,16 +143,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "scuttlebutt.source_independence"
+            "fact_id": "financial.incremental_return_on_capital"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "fact_id": "financial.return_on_equity_10y"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "fisher_new_capital_earns_more_than_the_installed_base",
         "source_ids": [
           "proxy:4749a48ca36b9289e"
         ]
@@ -86,7 +160,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "research.productivity"
+            "output_id": "financial.reinvestment_spread.master_fisher"
           },
           "op": "gt",
           "right": {
@@ -95,7 +169,24 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "fisher_reinvestment_beats_lending_the_money_out",
+        "source_ids": [
+          "proxy:4749a48ca36b9289e"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "financial.margin_retention.master_fisher"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0.25
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "fisher_margin_survives_the_research_and_sales_organisation",
         "source_ids": [
           "proxy:4749a48ca36b9289e"
         ]

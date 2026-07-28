@@ -2,7 +2,48 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "valuation.revenue_growth"
+          }
+        },
+        "condition_id": "master_duan_yongping.business_trajectory_stateable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_do_not_understand"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_do_not_understand"
+        },
+        "source_ids": [
+          "proxy:ee321ec9753f71e3e"
+        ]
+      },
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "financial.free_cash_flow_5y"
+          }
+        },
+        "condition_id": "master_duan_yongping.cash_record_exists",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_do_not_understand"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_do_not_understand"
+        },
+        "source_ids": [
+          "proxy:ee321ec9753f71e3e"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +51,88 @@
       "native_state": "provisional_do_not_understand"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.free_cash_flow_5y"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_reject"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_do_not_understand"
+        }
+      },
+      "source_ids": [
+        "proxy:ee321ec9753f71e3e"
+      ],
+      "veto_id": "master_duan_yongping.nothing_to_discount"
+    },
+    {
+      "condition": {
+        "conditions": [
+          {
+            "left": {
+              "fact_id": "valuation.revenue_growth"
+            },
+            "op": "gt",
+            "right": {
+              "literal": 0.2
+            }
+          },
+          {
+            "left": {
+              "fact_id": "financial.gross_margin_5y"
+            },
+            "op": "lt",
+            "right": {
+              "literal": 0.2
+            }
+          }
+        ],
+        "op": "all"
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_reject"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_do_not_understand"
+        }
+      },
+      "source_ids": [
+        "proxy:ee321ec9753f71e3e"
+      ],
+      "veto_id": "master_duan_yongping.growth_without_user_value"
+    }
+  ],
   "native_decision_schema": "user_value_owner_decision_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "product.user_value"
+        "output_id": "valuation.five_year_opportunity_cost.master_duan_yongping"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "portfolio.opportunity_cost"
+        "output_id": "business.margin_retention.master_duan_yongping"
       }
     }
   ],
@@ -52,14 +160,14 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_act_at_price"
       },
       "min_ratio": 1
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -69,16 +177,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "product.user_value"
+            "fact_id": "financial.free_cash_flow_5y"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "output_id": "valuation.five_year_opportunity_cost.master_duan_yongping"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "duan_five_year_cash_beats_the_alternative",
         "source_ids": [
           "proxy:ee321ec9753f71e3e"
         ]
@@ -86,16 +194,33 @@
       {
         "condition": {
           "left": {
-            "output_id": "portfolio.opportunity_cost"
+            "fact_id": "financial.gross_margin_5y"
           },
-          "op": "gt",
+          "op": "gte",
           "right": {
-            "literal": 0
+            "literal": 0.4
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "duan_product_carries_a_premium",
+        "source_ids": [
+          "proxy:ee321ec9753f71e3e"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "output_id": "business.margin_retention.master_duan_yongping"
+          },
+          "op": "gte",
+          "right": {
+            "literal": 0.25
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "duan_margin_reaches_the_owner",
         "source_ids": [
           "proxy:ee321ec9753f71e3e"
         ]

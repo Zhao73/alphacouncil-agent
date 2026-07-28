@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:5cc211678ec69f27dc21667d65021851d38ef78d4c014559677282921d363955",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_marks.credit_cycle_position.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.credit_spread"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "literal": 0.05
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "macro.credit_spread_gap.master_marks",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_marks",
+    "prototype_content_hash": "sha256:c134739db4995d10ea6e47659360d82d160ac783b2a490529dfd41d8f4b81849",
+    "prototype_id": "master_marks.credit_cycle_position.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_marks.credit_cycle_position"
+  },
+  "derivation_spec_hash": "sha256:6a651ebcd2f6cd204cef99cab0e2ab363b5bcb1ea9b19447b4d562050856aa3f",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

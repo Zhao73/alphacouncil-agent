@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:35d41e517f599aa0cfaf0fd909a819866385be7619bd6933508a91ae36188fb8",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_dalio.policy_real_rate.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.short_bond_yield"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.breakeven_inflation"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "macro.policy_real_rate.master_dalio",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_dalio",
+    "prototype_content_hash": "sha256:502a8fc33a4363bfa743a37c16f2e19bb2de1b8908686ebf632f31495985ad8d",
+    "prototype_id": "master_dalio.policy_real_rate.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_dalio.policy_real_rate"
+  },
+  "derivation_spec_hash": "sha256:97c673d4240a4231fff621fb9fe8bf824d7c8d3c36bea2eb2d4a2a9f451dfe12",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

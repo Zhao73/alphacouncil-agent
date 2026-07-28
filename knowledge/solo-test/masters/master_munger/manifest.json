@@ -16,14 +16,18 @@
     ],
     "native_decision_schema": "failure_path_verdict_v1",
     "optional_fact_types": [
+      "financial.incremental_return_on_capital",
+      "financial.leverage",
+      "governance.incentive_structure",
+      "risk.failure_paths",
       "risk.permanent_loss",
       "business.complexity",
       "capital_allocation.history",
       "decision.coupled_assumptions"
     ],
     "required_fact_types": [
-      "governance.incentive_structure",
-      "risk.failure_paths"
+      "accounting.cash_conversion",
+      "financial.interest_coverage"
     ]
   },
   "components": {
@@ -44,8 +48,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_munger.incentive_map",
-      "master_munger.failure_path_graph"
+      "master_munger.reported_earnings_cash_gap",
+      "master_munger.debt_service_cushion"
     ]
   },
   "decision": {
@@ -53,8 +57,8 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "governance.incentive_structure",
-      "risk.failure_paths"
+      "accounting.cash_conversion",
+      "financial.interest_coverage"
     ],
     "hard_vetoes": [
       "master_munger.fatal_incentive",

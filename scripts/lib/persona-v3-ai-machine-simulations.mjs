@@ -105,6 +105,16 @@ function factPackFor(pack) {
       }
     });
   }
+  // Everything the seat declares it reads, not only what its tools consume. An authored
+  // policy gates eligibility on a fact outside its tool inputs on purpose, so a fixture built
+  // from tool inputs alone leaves every such seat correctly -- and uselessly -- out of scope,
+  // and the simulation would then demonstrate nothing.
+  for (const factId of [
+    ...(pack.manifest.capability.required_fact_types || []),
+    ...(pack.manifest.capability.optional_fact_types || []),
+  ]) {
+    if (!byFact.has(factId)) byFact.set(factId, { value_kind: "ratio", unit: "decimal" });
+  }
   const facts = [...byFact].map(([factId, contract]) => canonicalValue({
     schema_version: 1,
     fact_id: factId,

@@ -16,6 +16,7 @@
     ],
     "native_decision_schema": "macro_inflection_v1",
     "optional_fact_types": [
+      "market.change_pct",
       "earnings.revision_breadth",
       "market.price_confirmation",
       "macro.forward_inflection",
@@ -23,7 +24,10 @@
       "portfolio.correlation"
     ],
     "required_fact_types": [
-      "macro.liquidity_impulse"
+      "macro.liquidity_impulse",
+      "macro.term_structure_slope",
+      "macro.short_bond_yield",
+      "macro.breakeven_inflation"
     ]
   },
   "components": {
@@ -44,8 +48,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_druckenmiller.liquidity_revision_map",
-      "master_druckenmiller.inflection_payoff"
+      "master_druckenmiller.liquidity_curve_impulse",
+      "master_druckenmiller.policy_real_rate"
     ]
   },
   "decision": {
@@ -53,7 +57,10 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "macro.liquidity_impulse"
+      "macro.liquidity_impulse",
+      "macro.term_structure_slope",
+      "macro.short_bond_yield",
+      "macro.breakeven_inflation"
     ],
     "hard_vetoes": [
       "master_druckenmiller.driver_ambiguity",

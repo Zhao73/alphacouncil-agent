@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "options.skew_25d"
+          }
+        },
+        "condition_id": "master_simons.quoted_distribution_available",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_invalid_test"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_invalid_test"
+        },
+        "source_ids": [
+          "proxy:640bd638960790aab"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,48 @@
       "native_state": "provisional_invalid_test"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "market.session_move_over_implied.master_simons"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "out_of_scope",
+        "native_state": "provisional_invalid_test"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_invalid_test"
+        }
+      },
+      "source_ids": [
+        "proxy:640bd638960790aab"
+      ],
+      "veto_id": "master_simons.no_observation_to_test"
+    }
+  ],
   "native_decision_schema": "out_of_sample_signal_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "quant.leakage_flags"
+        "output_id": "market.absolute_session_move.master_simons"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "quant.out_of_sample_returns"
+        "output_id": "market.session_move_over_implied.master_simons"
       }
     }
   ],
@@ -52,7 +100,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_deployable_signal"
       },
       "min_ratio": 1
@@ -69,16 +117,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "quant.leakage_flags"
+            "output_id": "market.session_move_over_implied.master_simons"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "literal": 0.063
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "simons_move_beyond_one_implied_sigma",
         "source_ids": [
           "proxy:640bd638960790aab"
         ]
@@ -86,16 +134,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "quant.out_of_sample_returns"
+            "output_id": "market.session_move_over_implied.master_simons"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "literal": 0.126
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "simons_move_beyond_two_implied_sigma",
         "source_ids": [
           "proxy:640bd638960790aab"
         ]
