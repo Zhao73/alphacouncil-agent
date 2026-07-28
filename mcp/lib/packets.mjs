@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
 import { internalError } from "./errors.mjs";
-import { isChineseLanguage } from "./lang.mjs";
+import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import { cleanLog, clip } from "./text.mjs";
 import { scopedSourceId } from "./gates.mjs";
 import { runPath } from "./run-store.mjs";
@@ -85,11 +85,63 @@ export function normalizeDebate(packet, role, run, raw = "") {
     questions_answered: Array.isArray(packet?.questions_answered) ? packet.questions_answered : [],
     debate_rounds: Array.isArray(packet?.debate_rounds) ? packet.debate_rounds : [],
     report_markdown: typeof packet?.report_markdown === "string" ? packet.report_markdown : "",
+    failure_kind: typeof packet?.failure_kind === "string" ? packet.failure_kind : undefined,
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
     thread_title: typeof packet?.thread_title === "string" ? packet.thread_title : undefined,
     execution_mode: typeof packet?.execution_mode === "string" ? packet.execution_mode : undefined,
     raw_text: raw,
   };
+}
+
+export function debateFailurePacket(role, run, failureKind) {
+  const kind = ["global_deadline", "timeout", "exit", "parse_failed", "reader_language_mismatch", "unexpected_error"]
+    .includes(failureKind)
+    ? failureKind
+    : "unexpected_error";
+  const copy = localized(run.language, {
+    en: {
+      global_deadline: `${role} did not complete before the council's global deadline.`,
+      timeout: `${role} timed out and produced no usable debate statement.`,
+      exit: `${role} exited unsuccessfully and produced no usable debate statement.`,
+      parse_failed: `${role} returned output that violated the debate JSON contract.`,
+      reader_language_mismatch: `${role} returned reader-facing content in the wrong language.`,
+      unexpected_error: `${role} failed unexpectedly and produced no usable debate statement.`,
+    },
+    zh: {
+      global_deadline: `${role} 未能在委员会全局截止时间前完成。`,
+      timeout: `${role} 执行超时，未生成可用的辩论发言。`,
+      exit: `${role} 异常退出，未生成可用的辩论发言。`,
+      parse_failed: `${role} 的输出违反辩论 JSON 契约。`,
+      reader_language_mismatch: `${role} 返回了错误语言的读者内容。`,
+      unexpected_error: `${role} 意外失败，未生成可用的辩论发言。`,
+    },
+    ja: {
+      global_deadline: `${role} は委員会全体の期限までに完了しませんでした。`,
+      timeout: `${role} はタイムアウトし、利用可能な討論発言を生成しませんでした。`,
+      exit: `${role} は異常終了し、利用可能な討論発言を生成しませんでした。`,
+      parse_failed: `${role} の出力は討論 JSON 契約に違反しています。`,
+      reader_language_mismatch: `${role} は指定と異なる言語の読者向け内容を返しました。`,
+      unexpected_error: `${role} は予期せず失敗し、利用可能な討論発言を生成しませんでした。`,
+    },
+    ko: {
+      global_deadline: `${role}이 위원회 전체 마감 시간 전에 완료되지 않았습니다.`,
+      timeout: `${role}이 시간 초과되어 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
+      exit: `${role}이 비정상 종료되어 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
+      parse_failed: `${role}의 출력이 토론 JSON 계약을 위반했습니다.`,
+      reader_language_mismatch: `${role}이 지정과 다른 언어의 독자용 내용을 반환했습니다.`,
+      unexpected_error: `${role}이 예기치 않게 실패해 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
+    },
+  });
+  return normalizeDebate({
+    verdict: "FAILED",
+    decision_available: false,
+    rating: null,
+    winner: "unknown",
+    summary: copy[kind],
+    confidence: "low",
+    report_markdown: "",
+    failure_kind: kind,
+  }, role, run, "");
 }
 
 export function dryPacket(task, symbol, asOfDate, prompt, language = "English") {
@@ -265,19 +317,51 @@ export function compactDebateContext(packet) {
 }
 
 export function debateFromCodex(result, role, run, fallbackPrompt) {
-  if (!result.ok) return dryDebate(role, run, cleanLog(result.stderr || result.text || fallbackPrompt));
+  if (!result.ok) {
+    const failureKind = result.deadline_exhausted
+      ? "global_deadline"
+      : result.timedOut
+        ? "timeout"
+        : Number.isInteger(result.code)
+          ? "exit"
+          : "unexpected_error";
+    return debateFailurePacket(role, run, failureKind);
+  }
   try {
     return normalizeDebate(extractJson(result.text), role, run, result.text);
-  } catch {
-    return normalizeDebate({
-      verdict: "PARSE_FAILED",
-      rating: "Hold",
-      winner: "unknown",
-      summary: `${role} returned non-JSON output.`,
-      confidence: "low",
-      report_markdown: cleanLog(result.text),
-    }, role, run, cleanLog(result.text));
+  } catch (error) {
+    return debateFailurePacket(role, run, "parse_failed");
   }
+}
+
+function asianManagerFallback(run, summary) {
+  const key = languageKey(run.language);
+  if (!new Set(["ja", "ko"]).has(key)) return null;
+  const c = localized(run.language, {
+    ja: {
+      title: "投資委員会ドラフト", conclusion: "結論", analyst: "アナリスト作業記録", debate: "強気・弱気討論記録", masters: "メソッド席", long: "強気論点", short: "弱気論点", market: "市場期待と織り込み条件", rating: "アナリスト評価と目標株価の変更", call: "決算説明会の経営シグナル", quant: "定量・ファクター視点", news: "ニュースと企業・業界シグナル", borrow: "空売り・貸株・オプション情報", transaction: "戦略取引・銀行イベント", valuation: "企業価値評価レンジ", price: "価格条件", catalysts: "主要カタリスト", risks: "主要リスク", position: "ポジション提案", shortTerm: "短期1–4週間の見通し", mediumTerm: "中期3–6か月の見通し", longTerm: "長期12か月の見通し", gaps: "データ欠落・利用不可データ", invalidation: "無効化条件", confidence: "信頼度", sources: "出典表",
+      unavailable: "今回の実行では同じ言語で確認できる情報を取得できませんでした。", managerMissing: "portfolio_manager の統合が完了していないため、正式な投資判断はありません。", draftOnly: "この文書はドラフトであり、正式なポジションを示しません。", noPackets: "証拠パケットは生成されませんでした。", noMaster: "完了したメソッド席はありません。", keyFindings: "主要所見", dataGaps: "データ欠落", packetSummary: "要約", packetConfidence: "信頼度", sourceCount: "出典数",
+    },
+    ko: {
+      title: "투자위원회 초안", conclusion: "결론", analyst: "분석가 작업 기록", debate: "강세·약세 토론 기록", masters: "방법론 좌석", long: "강세 논거", short: "약세 논거", market: "시장 기대와 내재 조건", rating: "애널리스트 등급 및 목표가 변경", call: "실적 발표 콜 경영진 신호", quant: "정량·팩터 관점", news: "뉴스 및 기업·산업 신호", borrow: "공매도·대차·옵션 정보", transaction: "전략적 거래·금융 이벤트", valuation: "가치평가 범위", price: "가격 조건", catalysts: "핵심 촉매", risks: "주요 위험", position: "포지션 제안", shortTerm: "단기 1–4주 전망", mediumTerm: "중기 3–6개월 전망", longTerm: "장기 12개월 전망", gaps: "데이터 공백·사용 불가 데이터", invalidation: "무효화 조건", confidence: "신뢰도", sources: "출처 표",
+      unavailable: "이번 실행에서는 같은 언어로 확인 가능한 정보를 확보하지 못했습니다.", managerMissing: "portfolio_manager 종합이 완료되지 않아 공식 투자 판단을 제공할 수 없습니다.", draftOnly: "이 문서는 초안이며 공식 포지션을 제시하지 않습니다.", noPackets: "증거 패킷이 생성되지 않았습니다.", noMaster: "완료된 방법론 좌석이 없습니다.", keyFindings: "핵심 발견", dataGaps: "데이터 공백", packetSummary: "요약", packetConfidence: "신뢰도", sourceCount: "출처 수",
+    },
+  });
+  const analystLog = run.packets.length
+    ? run.packets.map((packet) => {
+      const claims = (packet.claims || []).slice(0, 5).map((claim) => `  - ${claim.claim}`).join("\n");
+      const gaps = (packet.open_questions || []).slice(0, 3).map((item) => `  - ${item}`).join("\n");
+      return `### ${packet.task}\n- ${c.packetConfidence}: ${packet.confidence || "unknown"}\n- ${c.packetSummary}: ${packet.summary || c.unavailable}\n${claims ? `- ${c.keyFindings}:\n${claims}\n` : ""}${gaps ? `- ${c.dataGaps}:\n${gaps}\n` : ""}`;
+    }).join("\n\n")
+    : c.noPackets;
+  const masterLog = (run.master_opinions || []).length
+    ? run.master_opinions.map((opinion) => `- ${opinion.master}: ${opinion.stance} - ${opinion.summary || opinion.verdict || c.unavailable}`).join("\n")
+    : `- ${c.noMaster}`;
+  const long = summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => `- ${claim.claim}`).join("\n") || `- ${c.unavailable}`;
+  const short = summary.open_questions.slice(0, 6).map((item) => `- ${item}`).join("\n") || `- ${c.unavailable}`;
+  const gaps = summary.open_questions.length ? summary.open_questions.map((item) => `- ${item}`).join("\n") : `- ${c.unavailable}`;
+  const report = `# ${run.symbol} ${c.title}\n\n## ${c.conclusion}\n${summary.final_decision} — ${c.managerMissing}\n\n## ${c.analyst}\n${analystLog}\n\n## ${c.debate}\n${c.managerMissing}\n\n## ${c.masters}\n${masterLog}\n\n## ${c.long}\n${long}\n\n## ${c.short}\n${short}\n\n## ${c.market}\n${c.unavailable}\n\n## ${c.rating}\n${c.unavailable}\n\n## ${c.call}\n${c.unavailable}\n\n## ${c.quant}\n${c.unavailable}\n\n## ${c.news}\n${c.unavailable}\n\n## ${c.borrow}\n${c.unavailable}\n\n## ${c.transaction}\n${c.unavailable}\n\n## ${c.valuation}\n${c.unavailable}\n\n## ${c.price}\n${c.managerMissing} ${c.unavailable}\n\n## ${c.catalysts}\n${c.managerMissing}\n\n## ${c.risks}\n${short}\n\n## ${c.position}\n${c.draftOnly}\n\n## ${c.shortTerm}\n${c.managerMissing}\n\n## ${c.mediumTerm}\n${c.managerMissing}\n\n## ${c.longTerm}\n${c.managerMissing}\n\n## ${c.gaps}\n${gaps}\n\n## ${c.invalidation}\n${c.managerMissing} ${c.draftOnly}\n\n## ${c.confidence}\n${summary.confidence}\n\n## ${c.sources}\n- ${c.sourceCount}: ${summary.source_count}\n`;
+  return { copy: c, analystLog, masterLog, report };
 }
 
 export function mergeDebateRounds(rounds) {
@@ -373,6 +457,20 @@ export function summarizeRun(run, userPrompt = "") {
 
 export function managerFallback(run, userPrompt = "") {
   const summary = summarizeRun(run, userPrompt);
+  const asian = asianManagerFallback(run, summary);
+  if (asian) {
+    return normalizeDebate({
+      verdict: summary.final_decision,
+      decision_available: false,
+      rating: null,
+      winner: "unknown",
+      summary: asian.copy.managerMissing,
+      long_thesis: summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => claim.claim),
+      short_thesis: summary.open_questions.slice(0, 6),
+      confidence: summary.confidence,
+      report_markdown: asian.report,
+    }, "portfolio_manager", run);
+  }
   const chinese = isChineseLanguage(run.language);
   const analystLog = run.packets.length
     ? run.packets.map((packet) => {

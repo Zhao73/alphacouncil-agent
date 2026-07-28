@@ -4,12 +4,12 @@ import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
-import { isChineseLanguage, resolveLanguage } from "./lang.mjs";
+import { assertReaderLanguage, isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { cleanLog } from "./text.mjs";
 import { completenessStatus, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
@@ -218,6 +218,18 @@ export function visibleRun(args) {
     tasks,
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
     agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
+    // Visible hosts call record_visible_decision once per role and round. Keep those
+    // packets separate: overwriting bull_researcher.json three times destroys the audit
+    // chain and makes a one-round shortcut indistinguishable from a full cross-exam.
+    visible_debate: {
+      contract: "role_round_audit_v1",
+      rounds_expected: councilMode(args) === "quick" ? 1 : 3,
+      rounds: { bull_researcher: {}, bear_researcher: {} },
+      qna_gate: {
+        status: councilMode(args) === "quick" ? "not_run" : "pending",
+        errors: [],
+      },
+    },
     packets: [],
     // The receipt resolves the user's exact choice once. This frozen list, not a dynamic
     // roster lookup, is the run truth and every seat is part of the completeness gate.
@@ -250,9 +262,19 @@ export function visibleRun(args) {
 export function visibleAgentSpecs(run, userPrompt = "") {
   const evidence_agents = run.tasks.map((task) => ({
     role: task,
-    title: isChineseLanguage(run.language) ? `AlphaCouncil Agent ${run.symbol} ${task} 证据子代理` : `AlphaCouncil Agent ${run.symbol} ${task} evidence subagent`,
+    title: localized(run.language, {
+      en: `AlphaCouncil Agent ${run.symbol} ${task} evidence subagent`,
+      zh: `AlphaCouncil Agent ${run.symbol} ${task} 证据子代理`,
+      ja: `AlphaCouncil Agent ${run.symbol} ${task} 証拠サブエージェント`,
+      ko: `AlphaCouncil Agent ${run.symbol} ${task} 증거 하위 에이전트`,
+    }),
     prompt: taskPrompt(task, run.symbol, run.as_of, userPrompt, run.language, run.grounding),
-    output_contract: isChineseLanguage(run.language) ? "只返回一个 JSON evidence packet。" : `Return one JSON evidence packet with reader-facing fields in ${run.language}.`,
+    output_contract: localized(run.language, {
+      en: `Return one JSON evidence packet with reader-facing fields in ${run.language}.`,
+      zh: "只返回一个 JSON evidence packet。",
+      ja: "読者向けフィールドを日本語にした JSON evidence packet を1つだけ返してください。",
+      ko: "독자용 필드를 한국어로 작성한 JSON evidence packet 하나만 반환하십시오.",
+    }),
   }));
   const debate_agents = DEBATE_ROLES.map((role) => ({
     role,
@@ -260,11 +282,13 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     prompt_template: [
       debatePrompt(role, run),
       "",
-      isChineseLanguage(run.language) ? "主线程必须先粘贴已完成的 Evidence JSON，再运行这个可见代理。" : "The main thread must paste the completed Evidence JSON before running this visible agent.",
-      role === "bear_researcher" ? (isChineseLanguage(run.language) ? "主线程还必须粘贴 Bull argument JSON。" : "The main thread must also paste Bull argument JSON.") : "",
-      role === "portfolio_manager" ? (isChineseLanguage(run.language) ? "主线程还必须粘贴 Bull 和 Bear argument JSON。" : "The main thread must also paste Bull and Bear argument JSON.") : "",
+      localized(run.language, {
+        en: "The main thread must paste the completed Evidence JSON before running this visible agent.", zh: "主线程必须先粘贴已完成的 Evidence JSON，再运行这个可见代理。", ja: "メインスレッドは、この可視エージェントを実行する前に完成済みの Evidence JSON を貼り付ける必要があります。", ko: "메인 스레드는 이 표시형 에이전트를 실행하기 전에 완료된 Evidence JSON을 붙여 넣어야 합니다.",
+      }),
+      role === "bear_researcher" ? localized(run.language, { en: "The main thread must also paste Bull argument JSON.", zh: "主线程还必须粘贴 Bull argument JSON。", ja: "メインスレッドは Bull argument JSON も貼り付ける必要があります。", ko: "메인 스레드는 Bull argument JSON도 붙여 넣어야 합니다." }) : "",
+      role === "portfolio_manager" ? localized(run.language, { en: "The main thread must also paste Bull and Bear argument JSON.", zh: "主线程还必须粘贴 Bull 和 Bear argument JSON。", ja: "メインスレッドは Bull と Bear の argument JSON も貼り付ける必要があります。", ko: "메인 스레드는 Bull 및 Bear argument JSON도 붙여 넣어야 합니다." }) : "",
     ].filter(Boolean).join("\n"),
-    output_contract: isChineseLanguage(run.language) ? "只返回一个 JSON debate packet。" : `Return one JSON debate packet with reader-facing fields in ${run.language}.`,
+    output_contract: localized(run.language, { en: `Return one JSON debate packet with reader-facing fields in ${run.language}.`, zh: "只返回一个 JSON debate packet。", ja: "読者向けフィールドを日本語にした JSON debate packet を1つだけ返してください。", ko: "독자용 필드를 한국어로 작성한 JSON debate packet 하나만 반환하십시오." }),
   }));
   // The deterministic pass runs first and settles, for free, every seat whose method cannot
   // reach this security. Spawning an agent for a lens that has already declined is how the
@@ -283,13 +307,19 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       "",
       decision ? deterministicVerdictBlock(decision, zh) : "",
       "",
-      zh
-        ? "主线程必须先粘贴已完成的 Evidence JSON，再运行这个大师议席；大师在证据之后、辩论之前运行。"
-        : "The main thread must paste the completed Evidence JSON first. Masters run after the evidence stage and before the debate.",
+      localized(run.language, {
+        en: "The main thread must paste the completed Evidence JSON first. Masters run after the evidence stage and before the debate.",
+        zh: "主线程必须先粘贴已完成的 Evidence JSON，再运行这个大师议席；大师在证据之后、辩论之前运行。",
+        ja: "メインスレッドは先に完成済みの Evidence JSON を貼り付ける必要があります。メソッド席は証拠段階の後、討論の前に実行します。",
+        ko: "메인 스레드는 먼저 완료된 Evidence JSON을 붙여 넣어야 합니다. 방법론 좌석은 증거 단계 이후, 토론 이전에 실행합니다.",
+      }),
     ].filter(Boolean).join("\n"),
-    output_contract: zh
-      ? "只返回一个 JSON master opinion。"
-      : `Return one JSON master opinion with reader-facing fields in ${run.language}.`,
+    output_contract: localized(run.language, {
+      en: `Return one JSON master opinion with reader-facing fields in ${run.language}.`,
+      zh: "只返回一个 JSON master opinion。",
+      ja: "読者向けフィールドを日本語にした JSON master opinion を1つだけ返してください。",
+      ko: "독자용 필드를 한국어로 작성한 JSON master opinion 하나만 반환하십시오.",
+    }),
   }));
   // A declined seat is settled here rather than skipped: it is written straight into the
   // run as an out_of_scope opinion, so the completeness gate is satisfied and no agent is
@@ -432,6 +462,7 @@ export function recordMasterOpinion(args) {
     run,
     rawRecordText(args.packet),
   );
+  assertVisibleReaderLanguage(masterReaderText(normalized), run, `visible master ${args.master}`);
   // A narrated stance that disagrees with the arithmetic does not get to win quietly. The
   // deterministic verdict stands and the disagreement is preserved on the record.
   const reconciled = reconcileMasterOpinion(run, args.master, normalized);
@@ -483,6 +514,7 @@ export function recordVisiblePacket(args) {
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
   }, task, run.symbol, run.as_of, rawRecordText(args.packet));
+  assertVisibleReaderLanguage(visibleEvidenceReaderText(packet), run, `visible evidence ${task}`);
   const byTask = new Map(run.packets.map((item) => [item.task, item]));
   byTask.set(task, packet);
   run.packets = run.tasks.map((item) => byTask.get(item)).filter(Boolean);
@@ -502,6 +534,350 @@ export function recordVisiblePacket(args) {
   return run;
 }
 
+function visibleDebateState(run) {
+  const expected = run.council_mode === "quick" ? 1 : 3;
+  run.visible_debate = run.visible_debate && typeof run.visible_debate === "object"
+    ? run.visible_debate
+    : {};
+  run.visible_debate.contract = "role_round_audit_v1";
+  run.visible_debate.rounds_expected = expected;
+  run.visible_debate.rounds = run.visible_debate.rounds && typeof run.visible_debate.rounds === "object"
+    ? run.visible_debate.rounds
+    : {};
+  for (const role of ["bull_researcher", "bear_researcher"]) {
+    run.visible_debate.rounds[role] = run.visible_debate.rounds[role]
+      && typeof run.visible_debate.rounds[role] === "object"
+      ? run.visible_debate.rounds[role]
+      : {};
+  }
+  run.visible_debate.qna_gate = run.visible_debate.qna_gate && typeof run.visible_debate.qna_gate === "object"
+    ? run.visible_debate.qna_gate
+    : { status: expected === 1 ? "not_run" : "pending", errors: [] };
+  return run.visible_debate;
+}
+
+function visibleRoundEntry(state, role, round) {
+  return state?.rounds?.[role]?.[String(round)] || null;
+}
+
+function visibleRoundPacket(state, role, round) {
+  return visibleRoundEntry(state, role, round)?.packet || null;
+}
+
+function visibleRoundNumbers(state, role) {
+  return Object.keys(state?.rounds?.[role] || {})
+    .map(Number)
+    .filter(Number.isInteger)
+    .sort((a, b) => a - b);
+}
+
+function visibleDecisionContentHash(packet) {
+  const content = JSON.parse(JSON.stringify(packet || {}));
+  delete content.raw_text;
+  delete content.thread_id;
+  delete content.thread_title;
+  delete content.execution_mode;
+  return sha256(content);
+}
+
+function roundGateArgs(state, role, round, candidate) {
+  const get = (candidateRole, candidateRound) => (
+    candidateRole === role && candidateRound === round
+      ? candidate
+      : visibleRoundPacket(state, candidateRole, candidateRound)
+  );
+  return {
+    bullR2: get("bull_researcher", 2),
+    bearR2: get("bear_researcher", 2),
+    bullR3: get("bull_researcher", 3),
+    bearR3: get("bear_researcher", 3),
+  };
+}
+
+function rejectVisibleDecision(run, reason, message, data = {}) {
+  throw invalidParams(message, { reason, run_id: run.run_id, ...data });
+}
+
+function assertVisibleRoundOrder(run, state, role, round) {
+  if (round === 1) return;
+  const previous = round - 1;
+  const missing = ["bull_researcher", "bear_researcher"]
+    .filter((side) => !visibleRoundEntry(state, side, previous))
+    .map((side) => `${side}:${previous}`);
+  if (missing.length) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_DEBATE_ROUND_OUT_OF_ORDER",
+      `Cannot record ${role} round ${round} before both round ${previous} packets are recorded.`,
+      { role, round, missing_prerequisite_rounds: missing },
+    );
+  }
+}
+
+function assertVisibleRoundQna(run, state, role, round, packet) {
+  if (run.council_mode === "quick" || round === 1) return;
+  const gate = debateQnaGate(roundGateArgs(state, role, round, packet));
+  const ownErrors = gate.errors.filter((error) => error.startsWith(`${role} round ${round}`));
+  if (ownErrors.length) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_DEBATE_QNA_INVALID",
+      `Rejected ${role} round ${round}: ${ownErrors.join("; ")}`,
+      { role, round, qna_gate: { status: "failed", errors: ownErrors } },
+    );
+  }
+  const other = role === "bull_researcher" ? "bear_researcher" : "bull_researcher";
+  if (round === 3 && visibleRoundEntry(state, other, 3) && gate.status !== "passed") {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_DEBATE_QNA_INVALID",
+      `Rejected ${role} round 3 because the completed cross-exam failed the exact Q&A gate.`,
+      { role, round, qna_gate: gate },
+    );
+  }
+}
+
+function visibleRoundAgentPatch(run, state, role) {
+  const dir = runPath(run.run_id);
+  const rounds = visibleRoundNumbers(state, role);
+  const latest = rounds.length ? visibleRoundEntry(state, role, rounds.at(-1)) : null;
+  return {
+    rounds_completed: rounds,
+    last_completed_round: rounds.at(-1) || null,
+    round_status: rounds.length ? "completed" : "pending",
+    qna_gate: state.qna_gate.status,
+    thread_id: latest?.thread_id,
+    thread_title: latest?.thread_title,
+    output: join(dir, `${role}.json`),
+  };
+}
+
+function recordVisibleDebateRound(run, args) {
+  const role = args.role;
+  const expected = run.council_mode === "quick" ? [1] : [1, 2, 3];
+  if (!Number.isInteger(args.round) || !expected.includes(args.round)) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_DEBATE_ROUND_REQUIRED",
+      `${role} requires an explicit round=${expected.join("|")}.`,
+      { role, supplied_round: args.round ?? null, allowed_rounds: expected },
+    );
+  }
+  const round = args.round;
+  const dir = runPath(run.run_id);
+  const state = visibleDebateState(run);
+  const packet = {
+    ...normalizeDebate({
+      ...(args.packet || {}),
+      thread_id: args.thread_id,
+      thread_title: args.thread_title,
+      execution_mode: "visible_host_threads",
+    }, role, run, rawRecordText(args.packet)),
+    round,
+    // A caller records exactly one round. Nested supplied rounds would create a second,
+    // unaudited history inside the packet and are therefore discarded.
+    debate_rounds: [],
+  };
+  assertVisibleReaderLanguage(debateReaderText(packet), run, `visible debate ${role} round ${round}`);
+  const contentHash = visibleDecisionContentHash(packet);
+  const existing = visibleRoundEntry(state, role, round);
+  if (existing) {
+    if (existing.content_hash !== contentHash) {
+      rejectVisibleDecision(
+        run,
+        "VISIBLE_DEBATE_ROUND_CONFLICT",
+        `Conflicting replay for ${role} round ${round}.`,
+        { role, round, existing_content_hash: existing.content_hash, submitted_content_hash: contentHash },
+      );
+    }
+    return { run, decision: existing.packet, idempotent_replay: true };
+  }
+
+  assertVisibleRoundOrder(run, state, role, round);
+  assertVisibleRoundQna(run, state, role, round, packet);
+
+  const completedAt = new Date().toISOString();
+  const roundFile = join(dir, `${role}.round-${round}.json`);
+  state.rounds[role][String(round)] = {
+    round,
+    role,
+    content_hash: contentHash,
+    packet,
+    thread_id: args.thread_id,
+    thread_title: args.thread_title,
+    output: roundFile,
+    completed_at: completedAt,
+  };
+  writeJson(roundFile, packet);
+  const merged = mergeDebateRounds(visibleRoundNumbers(state, role)
+    .map((item) => visibleRoundPacket(state, role, item)));
+  writeJson(join(dir, `${role}.json`), merged);
+
+  const quick = run.council_mode === "quick";
+  const hasBothFinalRounds = ["bull_researcher", "bear_researcher"]
+    .every((side) => visibleRoundEntry(state, side, quick ? 1 : 3));
+  if (quick) {
+    state.qna_gate = { status: "not_run", errors: [], checked_at: completedAt };
+    updateAgent(run, role, "completed", {
+      ...visibleRoundAgentPatch(run, state, role),
+      completed_at: completedAt,
+    });
+  } else if (hasBothFinalRounds) {
+    const qnaGate = debateQnaGate(roundGateArgs(state, role, round, packet));
+    // The candidate was validated before persistence. This guard protects future state
+    // migrations or a manually corrupted run file from manufacturing a passed audit.
+    if (qnaGate.status !== "passed") {
+      delete state.rounds[role][String(round)];
+      rejectVisibleDecision(
+        run,
+        "VISIBLE_DEBATE_QNA_INVALID",
+        "The completed visible cross-exam failed the exact Q&A gate.",
+        { role, round, qna_gate: qnaGate },
+      );
+    }
+    state.qna_gate = { ...qnaGate, checked_at: completedAt };
+    for (const side of ["bull_researcher", "bear_researcher"]) {
+      updateAgent(run, side, "completed", {
+        ...visibleRoundAgentPatch(run, state, side),
+        completed_at: completedAt,
+      });
+    }
+    appendEvent(run, "debate_qna_gate", state.qna_gate);
+  } else {
+    updateAgent(run, role, "waiting", visibleRoundAgentPatch(run, state, role));
+  }
+
+  run.status = "running";
+  run.phase = "visible_debate";
+  run.completed_at = null;
+  saveRun(run);
+  appendEvent(run, "visible_debate_round_recorded", {
+    role,
+    round,
+    content_hash: contentHash,
+    output: roundFile,
+    qna_gate: state.qna_gate.status,
+  });
+  writeAnalystMarkdownFiles(run, existingDebate(dir));
+  writeArtifactIndex(run, existingDebate(dir));
+  writeAllAgentsMarkdown(run, existingDebate(dir));
+  return { run, decision: packet, idempotent_replay: false };
+}
+
+function visiblePmPrerequisites(run, state) {
+  const missingEvidence = (run.tasks || [])
+    .filter((task) => taskState(run, task).status !== "completed");
+  const recordedMasters = new Set((run.master_opinions || []).map((opinion) => opinion.master));
+  const missingMasters = selectedMasters(run).filter((master) => !recordedMasters.has(master));
+  const expected = run.council_mode === "quick" ? [1] : [1, 2, 3];
+  const missingRounds = ["bull_researcher", "bear_researcher"].flatMap((role) => (
+    expected.filter((round) => !visibleRoundEntry(state, role, round)).map((round) => `${role}:${round}`)
+  ));
+  const missingSides = ["bull_researcher", "bear_researcher"]
+    .filter((role) => agentState(run, role).status !== "completed");
+  const qnaRequired = run.council_mode !== "quick";
+  return {
+    missing_evidence: missingEvidence,
+    missing_masters: missingMasters,
+    missing_debate_rounds: missingRounds,
+    missing_debate_sides: missingSides,
+    qna_gate: state.qna_gate,
+    passed: missingEvidence.length === 0
+      && missingMasters.length === 0
+      && missingRounds.length === 0
+      && missingSides.length === 0
+      && (!qnaRequired || state.qna_gate.status === "passed"),
+  };
+}
+
+function recordVisiblePortfolioManager(run, args) {
+  if (args.round !== undefined && args.round !== null) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_PM_ROUND_FORBIDDEN",
+      "portfolio_manager is the final decision and does not accept a debate round.",
+      { supplied_round: args.round },
+    );
+  }
+  const dir = runPath(run.run_id);
+  const state = visibleDebateState(run);
+  const packet = normalizeDebate({
+    ...(args.packet || {}),
+    thread_id: args.thread_id,
+    thread_title: args.thread_title,
+    execution_mode: "visible_host_threads",
+  }, "portfolio_manager", run, rawRecordText(args.packet));
+  assertVisibleReaderLanguage(debateReaderText(packet), run, "visible portfolio_manager decision");
+  const contentHash = visibleDecisionContentHash(packet);
+  if (state.portfolio_manager) {
+    if (state.portfolio_manager.content_hash !== contentHash) {
+      rejectVisibleDecision(run, "VISIBLE_PM_CONFLICT", "Conflicting portfolio_manager replay.", {
+        existing_content_hash: state.portfolio_manager.content_hash,
+        submitted_content_hash: contentHash,
+      });
+    }
+    return { run, decision: state.portfolio_manager.packet, idempotent_replay: true };
+  }
+
+  const prerequisites = visiblePmPrerequisites(run, state);
+  if (!prerequisites.passed) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_PM_PREREQUISITES_INCOMPLETE",
+      "portfolio_manager rejected: complete evidence, every selected master, all required bull/bear rounds, and the exact Q&A gate are mandatory first.",
+      prerequisites,
+    );
+  }
+
+  const completedAt = new Date().toISOString();
+  const file = join(dir, "manager_synthesis.json");
+  state.portfolio_manager = {
+    content_hash: contentHash,
+    packet,
+    thread_id: args.thread_id,
+    thread_title: args.thread_title,
+    output: file,
+    completed_at: completedAt,
+  };
+  writeJson(file, packet);
+  writeJson(join(dir, "decision.json"), packet);
+  updateAgent(run, "portfolio_manager", "completed", {
+    completed_at: completedAt,
+    thread_id: args.thread_id,
+    thread_title: args.thread_title,
+    output: file,
+    debate_qna_gate: state.qna_gate.status,
+  });
+
+  const gate = verificationStatus(run);
+  const completeness = completenessStatus(run);
+  if (completeness.completeness === "incomplete") {
+    // Defensive only: visiblePmPrerequisites rejects all known incomplete states before
+    // this point. Never create a final report if a future completeness field disagrees.
+    rejectVisibleDecision(run, "VISIBLE_PM_PREREQUISITES_INCOMPLETE", "portfolio_manager completeness gate failed.", {
+      missing_evidence: completeness.missing_evidence,
+      missing_debate: completeness.missing_debate,
+      missing_masters: completeness.missing_masters,
+    });
+  }
+  if (gate.verification === "needs_verification") {
+    run.status = "needs_verification";
+    run.phase = "needs_verification";
+    appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
+  } else {
+    run.status = "complete";
+    run.phase = "complete";
+  }
+  run.completed_at = completedAt;
+  saveRun(run);
+  const finalArtifacts = writeFinalArtifacts(run, existingDebate(dir));
+  saveRun(run);
+  if (run.status === "complete") appendEvent(run, "run_complete", { decision: packet.rating, winner: packet.winner });
+  writeStatus(run);
+  writeAllAgentsMarkdown(run, existingDebate(dir));
+  return { run, decision: packet, idempotent_replay: false, ...finalArtifacts };
+}
+
 export function recordVisibleDecision(args) {
   const run = readJson(join(runPath(args.run_id), "evidence.json"));
   if (run.execution_mode !== "visible_host_threads") {
@@ -509,63 +885,9 @@ export function recordVisibleDecision(args) {
   }
   const role = args.role;
   if (!DEBATE_ROLES.includes(role)) throw invalidParams(`Unknown decision role: ${role}`);
-  const dir = runPath(run.run_id);
-  const packet = normalizeDebate({
-    ...(args.packet || {}),
-    thread_id: args.thread_id,
-    thread_title: args.thread_title,
-    execution_mode: "visible_host_threads",
-  }, role, run, rawRecordText(args.packet));
-  const file = role === "portfolio_manager" ? "manager_synthesis.json" : `${role}.json`;
-  writeJson(join(dir, file), packet);
-  // Mark the agent completed BEFORE evaluating the gates. The completeness gate now
-  // counts portfolio_manager, so reading it first would report every finished run as
-  // incomplete -- the PM would never be recorded by the time it was checked.
-  updateAgent(run, role, "completed", {
-    completed_at: new Date().toISOString(),
-    thread_id: args.thread_id,
-    thread_title: args.thread_title,
-    output: join(dir, file),
-  });
-  let finalArtifacts = {};
-  if (role === "portfolio_manager") {
-    const gate = verificationStatus(run);
-    const completeness = completenessStatus(run);
-    writeJson(join(dir, "decision.json"), packet);
-    if (completeness.completeness === "incomplete") {
-      run.status = "incomplete";
-      run.phase = "incomplete";
-      appendEvent(run, "incomplete", {
-        missing_evidence: completeness.missing_evidence,
-        missing_debate: completeness.missing_debate,
-        missing_masters: completeness.missing_masters,
-      });
-    } else if (gate.verification === "needs_verification") {
-      run.status = "needs_verification";
-      run.phase = "needs_verification";
-      appendEvent(run, "needs_verification", { missing: gate.missing_claim_source_ids.length });
-    } else {
-      run.status = "complete";
-      run.phase = "complete";
-    }
-    run.completed_at = new Date().toISOString();
-  } else {
-    run.status = "running";
-    run.phase = "visible_debate";
-  }
-  saveRun(run);
-  writeJson(join(dir, "evidence.json"), run);
-  if (role === "portfolio_manager") {
-    finalArtifacts = writeFinalArtifacts(run, existingDebate(dir));
-    writeJson(join(dir, "evidence.json"), run);
-    if (run.status === "complete") appendEvent(run, "run_complete", { decision: packet.rating, winner: packet.winner });
-  } else {
-    writeAnalystMarkdownFiles(run, existingDebate(dir));
-    writeArtifactIndex(run, existingDebate(dir));
-  }
-  writeStatus(run);
-  writeAllAgentsMarkdown(run, existingDebate(dir));
-  return { run, decision: packet, ...finalArtifacts };
+  return role === "portfolio_manager"
+    ? recordVisiblePortfolioManager(run, args)
+    : recordVisibleDebateRound(run, args);
 }
 
 export function isDryRun(args = {}) {
@@ -580,30 +902,51 @@ export function isDryRun(args = {}) {
  * but is not a sourced claim and must never enter evidence.json or downstream debate.
  */
 export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeoutMs, result, failureKind, parseError }) {
-  const chinese = isChineseLanguage(language);
+  const copy = localized(language, {
+    en: {
+      parse: `Evidence worker ${task} returned output that violated the JSON contract; it produced no evidence usable for an investment decision.`,
+      language: `Evidence worker ${task} returned reader-facing content in the wrong language; it produced no evidence usable for an investment decision.`,
+      failed: `Evidence worker ${task} timed out or failed; it produced no evidence usable for an investment decision.`,
+      inspect: `Inspect the separate ${task} failure diagnostic and retry; do not use its partial transcript as evidence.`,
+    },
+    zh: {
+      parse: `证据席位 ${task} 的输出不符合 JSON 契约；未生成可用于投资判断的证据。`,
+      language: `证据席位 ${task} 返回了错误语言的读者内容；未生成可用于投资判断的证据。`,
+      failed: `证据席位 ${task} 执行超时或失败；未生成可用于投资判断的证据。`,
+      inspect: `检查 ${task} 的独立失败诊断并重试；不得用该席位的部分对话补齐证据。`,
+    },
+    ja: {
+      parse: `証拠席 ${task} の出力は JSON 契約に違反しており、投資判断に使用できる証拠は生成されませんでした。`,
+      language: `証拠席 ${task} は指定と異なる言語の読者向け内容を返したため、投資判断に使用できる証拠は生成されませんでした。`,
+      failed: `証拠席 ${task} はタイムアウトまたは失敗し、投資判断に使用できる証拠は生成されませんでした。`,
+      inspect: `${task} の分離された失敗診断を確認して再実行してください。部分的な対話を証拠として使用してはいけません。`,
+    },
+    ko: {
+      parse: `증거 좌석 ${task}의 출력이 JSON 계약을 위반해 투자 판단에 사용할 수 있는 증거를 생성하지 못했습니다.`,
+      language: `증거 좌석 ${task}가 지정과 다른 언어의 독자용 내용을 반환해 투자 판단에 사용할 수 있는 증거를 생성하지 못했습니다.`,
+      failed: `증거 좌석 ${task}가 시간 초과 또는 실패로 투자 판단에 사용할 수 있는 증거를 생성하지 못했습니다.`,
+      inspect: `${task}의 분리된 실패 진단을 확인한 뒤 다시 실행하십시오. 부분 대화를 증거로 사용해서는 안 됩니다.`,
+    },
+  });
   const timedOut = result?.timedOut === true;
   const parseFailed = failureKind === "parse_failed";
-  const status = parseFailed ? "parse_failed" : (timedOut ? "timed_out" : "failed");
+  const languageMismatch = failureKind === "reader_language_mismatch";
+  const outputContractFailed = parseFailed || languageMismatch;
+  const status = outputContractFailed ? failureKind : (timedOut ? "timed_out" : "failed");
   const exitLabel = Number.isInteger(result?.code) ? `exit code ${result.code}` : "worker error";
   const parseMessage = cleanLog(parseError?.message || parseError || "subagent did not return valid JSON", 1_000);
-  const reason = parseFailed ? parseMessage : (timedOut ? `timeout after ${timeoutMs}ms` : exitLabel);
+  const reason = outputContractFailed ? parseMessage : (timedOut ? `timeout after ${timeoutMs}ms` : exitLabel);
   const rawOutput = String(result?.text || "");
-  const positionMatch = parseFailed ? /\bposition\s+(\d+)\b/i.exec(parseMessage) : null;
+  const positionMatch = outputContractFailed ? /\bposition\s+(\d+)\b/i.exec(parseMessage) : null;
   const parsePosition = positionMatch ? Number(positionMatch[1]) : null;
   const contextStart = Number.isInteger(parsePosition) ? Math.max(0, parsePosition - 500) : 0;
   const contextEnd = Number.isInteger(parsePosition) ? Math.min(rawOutput.length, parsePosition + 500) : 0;
   const packet = normalizePacket({
     summary: parseFailed
-      ? (chinese
-        ? `证据席位 ${task} 的输出不符合 JSON 契约；未生成可用于投资判断的证据。`
-        : `Evidence worker ${task} returned output that violated the JSON contract; it produced no evidence usable for an investment decision.`)
-      : (chinese
-        ? `证据席位 ${task} 执行超时或失败；未生成可用于投资判断的证据。`
-        : `Evidence worker ${task} timed out or failed; it produced no evidence usable for an investment decision.`),
+      ? copy.parse
+      : languageMismatch ? copy.language : copy.failed,
     claims: [],
-    open_questions: [chinese
-      ? `检查 ${task} 的独立失败诊断并重试；不得用该席位的部分对话补齐证据。`
-      : `Inspect the separate ${task} failure diagnostic and retry; do not use its partial transcript as evidence.`],
+    open_questions: [copy.inspect],
     confidence: "low",
   }, task, symbol, asOfDate, "");
   const diagnostic = {
@@ -616,11 +959,11 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     timeout_ms: timeoutMs,
     exit_code: Number.isInteger(result?.code) ? result.code : null,
     reason,
-    diagnostic_excerpt: cleanLog(parseFailed
+    diagnostic_excerpt: cleanLog(outputContractFailed
       ? (rawOutput || result?.stderr || result?.stdout || reason)
       : (result?.stderr || result?.stdout || rawOutput || reason)),
-    ...(parseFailed ? {
-      parse_error: parseMessage,
+    ...(outputContractFailed ? {
+      ...(parseFailed ? { parse_error: parseMessage } : { reader_language_error: parseMessage }),
       parse_position: Number.isInteger(parsePosition) ? parsePosition : null,
       parse_context: Number.isInteger(parsePosition)
         ? cleanLog(rawOutput.slice(contextStart, contextEnd), 1_000)
@@ -631,6 +974,68 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     recorded_at: new Date().toISOString(),
   };
   return { packet, diagnostic };
+}
+
+function evidenceReaderText(packet) {
+  return [
+    packet?.summary,
+    ...(packet?.claims || []).flatMap((claim) => [claim?.claim, claim?.evidence]),
+    ...(packet?.open_questions || []),
+  ].filter(Boolean).join("\n");
+}
+
+function readerStrings(value, skipKeys = new Set()) {
+  if (typeof value === "string") return value.trim() ? [value] : [];
+  if (Array.isArray(value)) return value.flatMap((item) => readerStrings(item, skipKeys));
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value).flatMap(([key, item]) => (
+    skipKeys.has(key) ? [] : readerStrings(item, skipKeys)
+  ));
+}
+
+function visibleEvidenceReaderText(packet) {
+  const machine = new Set([
+    "task", "symbol", "as_of", "source_ids", "id", "url", "published_at", "retrieved_at",
+    "confidence", "information_richness", "thread_id", "execution_mode", "raw_text",
+  ]);
+  return [
+    ...readerStrings(packet, machine),
+  ].filter(Boolean).join("\n");
+}
+
+function masterReaderText(opinion) {
+  const machine = new Set([
+    "master", "symbol", "as_of", "stance", "source_ids", "confidence", "thread_id", "raw_text",
+    "engine", "voice_status", "voice_language", "dedicated_worker", "runtime_provenance",
+  ]);
+  return readerStrings(opinion, machine).join("\n");
+}
+
+function debateReaderText(packet) {
+  const machine = new Set([
+    "role", "symbol", "as_of", "decision_available", "rating", "winner", "source_ids", "confidence",
+    "thread_id", "execution_mode", "raw_text", "round", "debate_rounds",
+  ]);
+  return readerStrings(packet, machine).join("\n");
+}
+
+function assertVisibleReaderLanguage(text, run, label) {
+  try {
+    return assertReaderLanguage(text, run.language, label);
+  } catch (error) {
+    if (error?.code !== "READER_LANGUAGE_MISMATCH") throw error;
+    throw invalidParams(error.message, {
+      reason: "READER_LANGUAGE_MISMATCH",
+      label,
+      ...error.data,
+    });
+  }
+}
+
+function outputFailureKind(error) {
+  return error?.code === "READER_LANGUAGE_MISMATCH"
+    ? "reader_language_mismatch"
+    : "parse_failed";
 }
 
 /**
@@ -923,8 +1328,8 @@ export async function collectEvidence(args) {
         ...(retryDiagnostic ? { retry_diagnostic: retryDiagnostic } : {}),
         attempts,
         deadline_exhausted: failedResult.deadline_exhausted === true,
-        error: failureKind === "parse_failed"
-          ? "parse_failed"
+        error: ["parse_failed", "reader_language_mismatch"].includes(failureKind)
+          ? failureKind
           : (failedResult.deadline_exhausted ? "global_deadline" : failedResult.timedOut ? "timeout" : `exit code ${failedResult.code}`),
       });
       return failure.packet;
@@ -937,10 +1342,12 @@ export async function collectEvidence(args) {
     let packet;
     try {
       packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
+      assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task}`);
       commitPacket(packet);
       updateTask(run, task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
       return packet;
     } catch (firstParseError) {
+      const firstFailureKind = outputFailureKind(firstParseError);
       const firstFailure = workerFailureArtifacts({
         task,
         symbol,
@@ -948,7 +1355,7 @@ export async function collectEvidence(args) {
         language,
         timeoutMs,
         result,
-        failureKind: "parse_failed",
+        failureKind: firstFailureKind,
         parseError: firstParseError,
       });
       const retryDiagnostic = join(dir, `${task}.attempt-1.failure.json`);
@@ -964,7 +1371,7 @@ export async function collectEvidence(args) {
           failedResult: result,
           budgetMs: result.budget_ms ?? timeoutMs,
           attempts: 1,
-          failureKind: "parse_failed",
+          failureKind: firstFailureKind,
           parseError: firstParseError,
           retryDiagnostic,
         });
@@ -974,7 +1381,7 @@ export async function collectEvidence(args) {
         task,
         attempt: 2,
         max_attempts: 2,
-        reason: "parse_failed",
+        reason: firstFailureKind,
         retry_diagnostic: retryDiagnostic,
         remaining_ms: retryTimeoutMs,
       });
@@ -983,7 +1390,10 @@ export async function collectEvidence(args) {
       const retryPrompt = [
         "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, fetch, add facts, or redo the research.",
         `Target task: ${task}; symbol: ${symbol}; as_of: ${asOfDate}; reader language: ${language}.`,
-        "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
+        firstFailureKind === "reader_language_mismatch"
+          ? "Translate only the reader-facing strings in the supplied valid JSON into the requested language. Preserve the evidence packet schema, claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. Return exactly one JSON object and nothing else."
+          : "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
+        `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
         `Malformed worker output:\n${malformed}`,
       ].join("\n\n");
       result = await runAttempt(retryPrompt, retryTimeoutMs, 2, { search: false });
@@ -997,6 +1407,7 @@ export async function collectEvidence(args) {
       }
       try {
         packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
+        assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} repair`);
         commitPacket(packet);
         updateTask(run, task, "completed", {
           completed_at: new Date().toISOString(),
@@ -1006,11 +1417,12 @@ export async function collectEvidence(args) {
         });
         return packet;
       } catch (secondParseError) {
+        const secondFailureKind = outputFailureKind(secondParseError);
         return commitFailure({
           failedResult: result,
           budgetMs: result.budget_ms ?? retryTimeoutMs,
           attempts: 2,
-          failureKind: "parse_failed",
+          failureKind: secondFailureKind,
           parseError: secondParseError,
           retryDiagnostic,
         });
@@ -1188,6 +1600,12 @@ export async function runHeadlessMasters(run, args = {}) {
     const parse = (result) => {
       if (frozenOpinion) {
         const voice = normalizeMasterVoice(extractJson(result.text), id, run, frozenOpinion, result.text);
+        assertReaderLanguage([
+          voice.statement,
+          ...(voice.key_findings || []),
+          ...(voice.disagreements || []),
+          ...(voice.what_would_change_my_mind || []),
+        ].filter(Boolean).join("\n"), run.language, `master voice ${id}`);
         return attachMasterRuntimeProvenance(run, id, {
           ...frozenOpinion,
           deterministic_summary: frozenOpinion.summary,
@@ -1206,6 +1624,13 @@ export async function runHeadlessMasters(run, args = {}) {
         }, engine);
       }
       const normalized = normalizeMasterOpinion(extractJson(result.text), id, run, result.text);
+      assertReaderLanguage([
+        normalized.summary,
+        normalized.verdict,
+        ...(normalized.key_findings || []),
+        ...(normalized.disagreements || []),
+        ...(normalized.what_would_change_my_mind || []),
+      ].filter(Boolean).join("\n"), run.language, `legacy master voice ${id}`);
       const reconciled = reconcileMasterOpinion(run, id, normalized);
       const resolvedEngine = engine || reconciled.engine || (decision ? "v2_method_model" : "v1_prompt");
       return attachMasterRuntimeProvenance(run, id, {
@@ -1224,14 +1649,16 @@ export async function runHeadlessMasters(run, args = {}) {
     try {
       return { id, opinion: parse(result), engine };
     } catch (firstParseError) {
+      const firstFailureKind = outputFailureKind(firstParseError);
       const repairBudget = Math.min(LIMITS.PARSE_REPAIR_MS, remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS));
-      if (repairBudget <= 0) return { id, error: "parse_failed", raw: cleanLog(firstParseError?.message || result.text) };
+      if (repairBudget <= 0) return { id, error: firstFailureKind, raw: cleanLog(firstParseError?.message || result.text) };
       const repairPrompt = [
         "PARSE-ONLY TRANSPORT REPAIR. Do not browse, search, add facts or change the frozen method stance.",
         `Master ID: ${id}; required acknowledged stance: ${frozenOpinion?.stance || "use the original stance"}; output language: ${run.language}.`,
         frozenOpinion
           ? "Return one JSON object with master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence."
           : "Return one JSON object matching the master_opinion schema from the original prompt.",
+        `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve the frozen stance, facts, numbers and source IDs.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
       result = await execute(repairPrompt, repairBudget, 2);
@@ -1239,7 +1666,7 @@ export async function runHeadlessMasters(run, args = {}) {
       try {
         return { id, opinion: parse(result), engine };
       } catch (secondParseError) {
-        return { id, error: "parse_failed", raw: cleanLog(secondParseError?.message || result.text) };
+        return { id, error: outputFailureKind(secondParseError), raw: cleanLog(secondParseError?.message || result.text) };
       }
     }
   }, (error, { id }) => ({
@@ -1255,7 +1682,19 @@ export async function runHeadlessMasters(run, args = {}) {
         master: outcome.id,
         failure_kind: outcome.error,
         diagnostic: outcome.raw,
-        public_summary: "The dedicated method worker did not complete; no method-seat statement is available.",
+        public_summary: outcome.error === "reader_language_mismatch"
+          ? localized(run.language, {
+            en: "The dedicated method worker returned reader-facing content in the wrong language; no method-seat statement is available.",
+            zh: "专属方法席 worker 返回了错误语言的读者内容；没有可用的方法席发言。",
+            ja: "専用メソッド席ワーカーは指定と異なる言語の読者向け内容を返したため、利用可能なメソッド席の発言はありません。",
+            ko: "전용 방법론 좌석 워커가 지정과 다른 언어의 독자용 내용을 반환해 사용할 수 있는 방법론 좌석 발언이 없습니다.",
+          })
+          : localized(run.language, {
+            en: "The dedicated method worker did not complete; no method-seat statement is available.",
+            zh: "专属方法席 worker 未完成；没有可用的方法席发言。",
+            ja: "専用メソッド席ワーカーが完了せず、利用可能なメソッド席の発言はありません。",
+            ko: "전용 방법론 좌석 워커가 완료되지 않아 사용할 수 있는 방법론 좌석 발언이 없습니다.",
+          }),
       }, { mode: 0o600 });
       updateMasterStatus(run, outcome.id, "failed", { error: outcome.error, diagnostic: diagnosticPath });
       continue;
@@ -1294,52 +1733,98 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       updateAgent(run, role, "running", { pid, output, round: context.round });
       appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
     }, { search: false, sigkillGraceMs: councilKillGrace(run) });
-  let packet = debateFromCodex(result, role, run, prompt);
-  if (result.ok && packet.verdict === "PARSE_FAILED") {
+  const enforceLanguage = (candidate) => {
+    if (candidate?.failure_kind) return candidate;
+    try {
+      assertReaderLanguage([
+        candidate?.summary,
+        ...(candidate?.long_thesis || []),
+        ...(candidate?.short_thesis || []),
+        ...(candidate?.catalysts || []),
+        ...(candidate?.risks || []),
+        candidate?.position,
+        ...(candidate?.invalidation || []),
+        ...(candidate?.questions || []),
+        ...(candidate?.questions_answered || []).flatMap((item) => [item?.question, item?.answer]),
+        candidate?.report_markdown,
+      ].filter(Boolean).join("\n"), run.language, `${role} debate output`);
+      return candidate;
+    } catch (error) {
+      return debateFailurePacket(role, run, "reader_language_mismatch");
+    }
+  };
+  let packet = enforceLanguage(debateFromCodex(result, role, run, prompt));
+  if (result.ok && ["parse_failed", "reader_language_mismatch"].includes(packet.failure_kind)) {
     const repairBudget = Math.min(LIMITS.PARSE_REPAIR_MS, remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS));
     if (repairBudget > 0) {
-      appendEvent(run, "agent_parse_repair", { role, round: context.round, budget_ms: repairBudget });
+      const repairReason = packet.failure_kind;
+      appendEvent(run, "agent_parse_repair", { role, round: context.round, budget_ms: repairBudget, reason: repairReason });
       const repairPrompt = [
         "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, add facts or redo the analysis.",
         `Role: ${role}; symbol: ${run.symbol}; as_of: ${run.as_of}; reader language: ${run.language}; round: ${context.round || "final"}.`,
-        "Convert only the supplied malformed output into one valid debate-packet JSON object. Preserve exact round-2 questions and exact round-3 question bindings when present. Return JSON only.",
+        repairReason === "reader_language_mismatch"
+          ? "Translate only the reader-facing strings in the supplied valid debate-packet JSON. Preserve exact round-2 questions, exact round-3 question bindings, facts, numbers, source IDs and uncertainty. Return one JSON object only."
+          : "Convert only the supplied malformed output into one valid debate-packet JSON object. Preserve exact round-2 questions and exact round-3 question bindings when present. Return JSON only.",
+        `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve facts, numbers, source IDs and exact Q&A bindings.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
       result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
         updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
-      packet = debateFromCodex(result, role, run, repairPrompt);
+      packet = enforceLanguage(debateFromCodex(result, role, run, repairPrompt));
     }
   }
   const roundCompletedAt = new Date().toISOString();
-  // A role can run three times. Leaving it marked `running` after one awaited invocation
-  // returned made sequential rounds look concurrent in status.json. Record the dependency
-  // boundary explicitly while reserving `completed` for the merged three-round artifact.
-  updateAgent(run, role, "waiting", {
-    round: context.round,
-    round_status: "completed",
-    last_completed_round: context.round,
-    round_completed_at: roundCompletedAt,
-    pid: null,
-    output: null,
-  });
-  appendEvent(run, "agent_round_completed", {
-    role,
-    round: context.round,
-    ok: result.ok,
-    timed_out: result.timedOut === true,
-    verdict: packet.verdict,
-    question_count: packet.questions.length,
-    answered_count: packet.questions_answered.length,
-  });
+  if (Number.isInteger(context.round)) {
+    // A role can run three times. Leaving it marked `running` after one awaited invocation
+    // returned made sequential rounds look concurrent in status.json. Record the dependency
+    // boundary explicitly while reserving `completed` for the merged three-round artifact.
+    updateAgent(run, role, "waiting", {
+      round: context.round,
+      round_status: "completed",
+      last_completed_round: context.round,
+      round_completed_at: roundCompletedAt,
+      pid: null,
+      output: null,
+    });
+    appendEvent(run, "agent_round_completed", {
+      role,
+      round: context.round,
+      ok: result.ok,
+      timed_out: result.timedOut === true,
+      verdict: packet.verdict,
+      failure_kind: packet.failure_kind,
+      question_count: packet.questions.length,
+      answered_count: packet.questions_answered.length,
+    });
+  } else {
+    updateAgent(run, role, "waiting", {
+      synthesis_status: "completed",
+      synthesis_completed_at: roundCompletedAt,
+      pid: null,
+      output: null,
+    });
+    appendEvent(run, "agent_role_completed", {
+      role,
+      ok: result.ok,
+      timed_out: result.timedOut === true,
+      verdict: packet.verdict,
+      failure_kind: packet.failure_kind,
+    });
+  }
   return { packet, result };
 }
 
 function debateFailure(step) {
-  if (step.result.ok && step.packet.verdict !== "PARSE_FAILED") return undefined;
+  if (!step.result.ok) {
+    if (step.result.deadline_exhausted) return "global_deadline";
+    if (step.result.timedOut) return "timeout";
+    if (Number.isInteger(step.result.code)) return `exit code ${step.result.code}`;
+    return "unexpected_error";
+  }
+  if (step.packet.failure_kind) return step.packet.failure_kind;
   if (step.packet.verdict === "PARSE_FAILED") return "parse_failed";
-  if (step.result.deadline_exhausted) return "global_deadline";
-  return step.result.timedOut ? "timeout" : `exit code ${step.result.code ?? "unknown"}`;
+  return undefined;
 }
 
 async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
@@ -1389,21 +1874,11 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 
-  const managerPrompt = debatePrompt("portfolio_manager", run, { bull, bear, outputMode });
-  updateAgent(run, "portfolio_manager", "running", { started_at: new Date().toISOString() });
   const managerBudget = remainingCouncilBudget(run, timeoutMs);
-  const managerResult = managerBudget <= 0
-    ? deadlineResult(run)
-    : await runCodex(managerPrompt, managerBudget, ({ pid, output }) => {
-      updateAgent(run, "portfolio_manager", "running", { pid, output });
-    }, ({ pid, output, elapsed_ms }) => {
-      updateAgent(run, "portfolio_manager", "running", { pid, output });
-      appendEvent(run, "agent_heartbeat", { role: "portfolio_manager", pid, output, elapsed_ms });
-    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
-  const manager = managerResult.ok
-    ? debateFromCodex(managerResult, "portfolio_manager", run, managerPrompt)
-    : managerFallback(run, args.prompt || "");
-  const managerOk = managerResult.ok && manager.verdict !== "PARSE_FAILED";
+  const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode }, managerBudget);
+  const managerError = debateFailure(managerStep);
+  const managerOk = !managerError;
+  const manager = managerOk ? managerStep.packet : managerFallback(run, args.prompt || "");
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
   updateAgent(run, "portfolio_manager", managerOk ? "completed" : "failed", {
@@ -1411,9 +1886,7 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
     output: join(dir, "manager_synthesis.json"),
     error: managerOk
       ? undefined
-      : manager.verdict === "PARSE_FAILED"
-        ? "parse_failed"
-        : managerResult.deadline_exhausted ? "global_deadline" : managerResult.timedOut ? "timeout" : `exit code ${managerResult.code ?? "unknown"}`,
+      : managerError,
   });
 
   const gate = verificationStatus(run);

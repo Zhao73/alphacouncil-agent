@@ -29,7 +29,12 @@ import { isDeepStrictEqual } from "node:util";
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const PACKAGED_PARITY_REPO_ROOT = resolve(HERE, "../..");
 export const PACKAGED_HOST_IDS = Object.freeze(["claude_code", "codex", "opencode", "grok"]);
-export const PACKAGED_SELECTION_INPUT = "2,23-24,26";
+export const PACKAGED_SELECTION_INPUT = Object.freeze([
+  "master_buffett",
+  "master_damodaran",
+  "master_taleb",
+  "master_sinclair",
+]);
 
 const TEMP_PREFIX = "alphacouncil-packaged-parity-";
 const SYMBOL = "NOK";
@@ -39,6 +44,13 @@ const PROMPT = "packaged adapter parity fixture";
 const TASKS = Object.freeze(["market_data"]);
 const REQUEST_TIMEOUT_MS = 30_000;
 const PROCESS_TIMEOUT_MS = 120_000;
+const EXPECTED_TOOL_COUNT = 31;
+const INSTALLED_LOCALE_CASES = Object.freeze([
+  Object.freeze({ language: "en-US", prompt: "installed package locale smoke", key: "en", script: /[A-Za-z]/u }),
+  Object.freeze({ language: "zh-CN", prompt: "安装包语言烟雾测试", key: "zh", script: /\p{Script=Han}/u }),
+  Object.freeze({ language: "ja-JP", prompt: "インストール済みパッケージの言語スモークテスト", key: "ja", script: /[\p{Script=Hiragana}\p{Script=Katakana}]/u }),
+  Object.freeze({ language: "ko-KR", prompt: "설치 패키지 언어 스모크 테스트", key: "ko", script: /\p{Script=Hangul}/u }),
+]);
 const REQUIRED_PACKAGE_FILES = Object.freeze([
   "mcp/server.mjs",
   "data/host-capabilities.v1.json",
@@ -575,12 +587,24 @@ function assertCompleteCatalog(opened, text, hostId) {
   for (const [offset, master] of opened.masters.entries()) {
     if (master.index !== offset + 1 || seen.has(master.id)) fail(`${hostId}: catalog order or IDs are invalid`);
     seen.add(master.id);
-    for (const field of ["identity", "method", "best_for", "maturity", "pack_hash"]) {
+    for (const field of ["identity", "method", "best_for", "maturity", "maturity_label", "pack_hash"]) {
       if (typeof master[field] !== "string" || !master[field]) fail(`${hostId}: catalog seat ${master.id} lacks ${field}`);
     }
     if (!/^sha256:[a-f0-9]{64}$/u.test(master.pack_hash)) fail(`${hostId}: ${master.id} pack hash is invalid`);
-    for (const visible of [`${master.index}. `, `[${master.id}]`, master.identity, master.method, master.best_for, master.maturity]) {
+    for (const visible of [`${master.index}. `, `[${master.id}]`, master.identity, master.method, master.best_for, master.maturity, master.maturity_label]) {
       if (!text.includes(visible)) fail(`${hostId}: returned text did not display ${master.id} field ${visible}`);
+    }
+  }
+}
+
+function assertLocalizedCatalog(opened, text, locale) {
+  assertCompleteCatalog(opened, text, `installed-${locale.key}`);
+  for (const master of opened.masters) {
+    for (const field of ["identity", "method", "best_for", "maturity_label"]) {
+      if (!locale.script.test(master[field])) fail(`installed-${locale.key}: ${master.id}.${field} lacks requested-locale prose`);
+      if (locale.key !== "en" && /\b[a-z]+(?:_[a-z0-9]+)+\b/u.test(master[field])) {
+        fail(`installed-${locale.key}: ${master.id}.${field} leaked a machine domain id into reader-facing prose`);
+      }
     }
   }
 }
@@ -624,7 +648,27 @@ async function executePackagedAdapters({ pack, surfaces, tempRoot }) {
         networkSentinel,
       });
       await server.request("initialize", {});
-      sessions.push({ hostId, dataDir, server });
+      const listed = await server.request("tools/list", {});
+      const tools = listed.result?.tools || [];
+      if (tools.length !== EXPECTED_TOOL_COUNT) fail(`${hostId}: installed server exposed ${tools.length} tools, expected ${EXPECTED_TOOL_COUNT}`);
+      sessions.push({ hostId, dataDir, server, toolCount: tools.length });
+    }
+
+    const localeCases = process.env.ALPHACOUNCIL_PERSONA_BUILD_PROFILE === "production"
+      ? INSTALLED_LOCALE_CASES.slice(0, 1)
+      : INSTALLED_LOCALE_CASES;
+    const localeCatalogHashes = {};
+    for (const locale of localeCases) {
+      const response = await sessions[0].server.callTool("begin_council_selection", {
+        symbol: SYMBOL,
+        as_of: AS_OF,
+        language: locale.language,
+        prompt: locale.prompt,
+        host: "installed-package-locale-smoke",
+      });
+      const opened = structured(response, `installed ${locale.language} begin_council_selection`);
+      assertLocalizedCatalog(opened, response.result.content?.[0]?.text || "", locale);
+      localeCatalogHashes[locale.key] = opened.catalog_hash;
     }
 
     for (const session of sessions) {
@@ -642,7 +686,7 @@ async function executePackagedAdapters({ pack, surfaces, tempRoot }) {
         selection_id: opened.selection_id,
         catalog_hash: opened.catalog_hash,
         display_ack: true,
-        selection: PACKAGED_SELECTION_INPUT,
+        selected_master_ids: PACKAGED_SELECTION_INPUT,
       }), `${session.hostId} confirm_master_selection`);
       session.opened = opened;
       session.confirmed = confirmed;
@@ -744,11 +788,15 @@ async function executePackagedAdapters({ pack, surfaces, tempRoot }) {
       evidence_scope: "installed_npm_tarball_mcp_stdio_adapters_only",
       host_order: PACKAGED_HOST_IDS,
       host_count: sessions.length,
+      tool_count: EXPECTED_TOOL_COUNT,
+      locale_count: localeCases.length,
+      locale_catalog_hashes: localeCatalogHashes,
       catalog_count: baseline.catalog.length,
       catalog_hash: baseline.catalog_hash,
       catalog_order_hash: sha256(baseline.catalog),
       maturity_counts: maturityCounts,
       selection_input: PACKAGED_SELECTION_INPUT,
+      selection_input_type: "stable_ids",
       selected_master_ids: baseline.selected_master_ids,
       selected_master_pack_hashes: baseline.selected_master_pack_hashes,
       receipt_binding_hash: sha256(baseline.receipt_binding),
@@ -774,6 +822,7 @@ async function executePackagedAdapters({ pack, surfaces, tempRoot }) {
         host_id: session.hostId,
         server_entry: "mcp/server.mjs",
         adapter_status: "passed",
+        tool_count: session.toolCount,
         catalog_count: session.catalog.length,
         catalog_hash: session.opened.catalog_hash,
         selected_master_ids: session.confirmed.selected_master_ids,

@@ -52,7 +52,7 @@ medium and conditional on the cited quick packets.
 `;
 }
 
-function fakeCodex(dataDir, { failedTask = null, failedRole = null } = {}) {
+function fakeCodex(dataDir, { failedTask = null, failedRole = null, wrongLanguagePmOnce = false } = {}) {
   const driver = join(dataDir, "fake-quick-codex.mjs");
   const log = join(dataDir, "quick-worker-log.jsonl");
   writeFileSync(driver, `#!/usr/bin/env node
@@ -63,11 +63,12 @@ let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 const task = (${JSON.stringify(QUICK_TASKS)}).find((id) => prompt.includes("Task: " + id));
 const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
-const role = /You are the portfolio_manager/i.test(prompt) ? "portfolio_manager"
+const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
+const role = /You are the portfolio_manager|Role: portfolio_manager/i.test(prompt) ? "portfolio_manager"
   : /You are the bull_researcher/i.test(prompt) ? "bull_researcher"
   : /You are the bear_researcher/i.test(prompt) ? "bear_researcher"
   : master || task || "unknown";
-appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, at: Date.now(), prompt_chars: prompt.length }) + "\\n");
+appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, parseRepair, search: args.includes("--search"), at: Date.now(), prompt_chars: prompt.length }) + "\\n");
 if (task && task === ${JSON.stringify(failedTask)}) process.exit(17);
 if (role === ${JSON.stringify(failedRole)}) process.exit(19);
 await new Promise((resolve) => setTimeout(resolve, role === "portfolio_manager" ? 40 : 120));
@@ -98,14 +99,22 @@ if (task) {
     what_would_change_my_mind: ["new primary evidence"], source_ids: ["market_data:S1"], confidence: "medium"
   };
 } else if (role === "portfolio_manager") {
-  packet = {
-    verdict: "Bounded quick Hold pending the next primary filing.", rating: "Hold", winner: "balanced",
-    summary: "One-round quick synthesis.", long_thesis: ["operating execution"], short_thesis: ["valuation and dilution"],
-    valuation_range: "Conditional range; no unsupported point target.", catalysts: ["next filing"], risks: ["execution"],
-    position: "small only", invalidation: ["missed milestones"],
-    source_ids: ["market_data:S1", "earnings_deep_dive:S1", "valuation_long_short:S1", "news_industry_management:S1"],
-    confidence: "medium", report_markdown: ${JSON.stringify(reportBody())}
-  };
+  packet = ${JSON.stringify(wrongLanguagePmOnce)} && !parseRepair
+    ? {
+      verdict: "条件性持有", rating: "Hold", winner: "balanced",
+      summary: "组合经理错误地使用中文完成了本轮快速综合。", long_thesis: ["经营执行仍有积极证据"], short_thesis: ["估值和稀释风险仍需核验"],
+      valuation_range: "估值区间必须依赖已冻结证据。", catalysts: ["下一份正式文件"], risks: ["执行风险"],
+      position: "仅限小仓位", invalidation: ["关键里程碑未完成"], source_ids: ["market_data:S1"],
+      confidence: "medium", report_markdown: "# 快速委员会\\n\\n本段故意使用错误语言，以验证一次有界无搜索修复。"
+    }
+    : {
+      verdict: "Bounded quick Hold pending the next primary filing.", rating: "Hold", winner: "balanced",
+      summary: "One-round quick synthesis.", long_thesis: ["operating execution"], short_thesis: ["valuation and dilution"],
+      valuation_range: "Conditional range; no unsupported point target.", catalysts: ["next filing"], risks: ["execution"],
+      position: "small only", invalidation: ["missed milestones"],
+      source_ids: ["market_data:S1", "earnings_deep_dive:S1", "valuation_long_short:S1", "news_industry_management:S1"],
+      confidence: "medium", report_markdown: ${JSON.stringify(reportBody())}
+    };
 } else {
   packet = {
     verdict: role + " quick case", rating: "Hold", winner: "unknown", summary: role + " one-round statement",
@@ -214,6 +223,52 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
     assert.equal(status.full_council_equivalent, false);
     assert.equal(status.debate_format, "single_round_parallel");
     assert.ok(status.deadline_at);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("quick PM repairs one wrong-language JSON response with the shared bounded no-search path", async () => {
+  const dataDir = makeDataDir();
+  const fake = fakeCodex(dataDir, { wrongLanguagePmOnce: true });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Run a bounded quick council and keep every reader-facing field in English.";
+    const opened = structured(await server.callTool("begin_council_selection", {
+      symbol: "RKLB", language: "English", prompt, council_mode: "quick",
+    }));
+    const confirmed = structured(await server.callTool("confirm_master_selection", {
+      selection_id: opened.selection_id, catalog_hash: opened.catalog_hash, display_ack: true,
+      selected_master_ids: ["master_buffett"],
+    }));
+    const runId = `QUICK-PM-LANGUAGE-REPAIR-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "RKLB", run_id: runId, language: "English", prompt,
+      council_mode: "quick", total_timeout_ms: 30_000,
+      timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+      wait_for_completion: true,
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: confirmed.selection_receipt,
+    }, { timeoutMs: 45_000 }));
+
+    assert.equal(result.run.status, "complete", JSON.stringify(result.run.agent_status, null, 2));
+    assert.equal(result.run.agent_status.portfolio_manager.status, "completed");
+    assert.equal(result.decision.failure_kind, undefined);
+    assert.match(result.decision.summary, /One-round quick synthesis/);
+
+    const dir = join(dataDir, "runs", runId);
+    const events = readFileSync(join(dir, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    const repair = events.filter((event) => event.type === "agent_parse_repair" && event.role === "portfolio_manager");
+    assert.equal(repair.length, 1);
+    assert.equal(repair[0].reason, "reader_language_mismatch");
+    const launches = readFileSync(fake.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    const managerLaunches = launches.filter((item) => item.role === "portfolio_manager");
+    assert.equal(managerLaunches.length, 2);
+    assert.deepEqual(managerLaunches.map((item) => item.parseRepair), [false, true]);
+    assert.equal(managerLaunches[1].search, false);
   } finally {
     await server.close();
     removeDataDir(dataDir);

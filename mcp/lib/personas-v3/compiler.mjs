@@ -18,6 +18,8 @@ function candidateLabel(label) {
   return {
     en: /candidate/i.test(label.en) ? label.en : `${label.en} candidate`,
     zh: /候选/.test(label.zh) ? label.zh : `${label.zh}候选`,
+    ...(label.ja ? { ja: /候補/.test(label.ja) ? label.ja : `${label.ja}候補` } : {}),
+    ...(label.ko ? { ko: /후보/.test(label.ko) ? label.ko : `${label.ko} 후보` } : {}),
   };
 }
 

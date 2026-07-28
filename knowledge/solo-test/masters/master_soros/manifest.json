@@ -77,11 +77,15 @@
     "maturity": "operator_lens",
     "operator_label": {
       "en": "Soros Lens Provisional Operator Lens",
+      "ja": "Soros Lens 暫定オペレーター・レンズ",
+      "ko": "Soros Lens 임시 오퍼레이터 렌즈",
       "zh": "索罗斯视角临时操作视角"
     },
     "persona_id": "master_soros",
     "public_label": {
       "en": "Soros Lens Solo Test",
+      "ja": "Soros Lens 単独テスト",
+      "ko": "Soros Lens 단독 테스트",
       "zh": "索罗斯视角单人测试"
     },
     "source_cutoff": "2026-07-27"
@@ -92,7 +96,7 @@
     "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
     "postmortem_horizon_days": 90
   },
-  "pack_version": "0.9.3",
+  "pack_version": "0.9.4",
   "research": {
     "mandatory_disconfirming_queries": [
       "Reject a reflexivity thesis that cannot show feedback from price to fundamentals.",
@@ -109,16 +113,22 @@
   "schema_version": 3,
   "selection": {
     "best_for": {
-      "en": "Testing deterministic behavior in global_macro, reflexivity, boom_bust, crowded_trades",
-      "zh": "用于测试确定性行为：global_macro、reflexivity、boom_bust、crowded_trades"
+      "en": "Global macro, reflexivity, boom-bust dynamics, and crowded trades.",
+      "ja": "グローバルマクロ、再帰性、ブームと崩壊の力学、混雑した取引。",
+      "ko": "글로벌 매크로, 재귀성, 호황과 붕괴의 역학, 혼잡 거래.",
+      "zh": "全球宏观、反身性、繁荣萧条循环与拥挤交易。"
     },
     "identity": {
       "en": "Soros Lens; project-derived and not human reviewed",
+      "ja": "Soros Lens。プロジェクト派生で、方法帰属について人による審査を受けていない暫定オペレーター・レンズ。本人の発言や現在の見解ではない。",
+      "ko": "Soros Lens. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 오퍼레이터 렌즈다. 본인의 발언이나 현재 견해가 아니다.",
       "zh": "索罗斯视角；项目派生、未经人工审定"
     },
     "method": {
       "en": "Map reflexive feedback among price, financing, fundamentals, policy and participant beliefs, then identify the observable break condition.",
-      "zh": "Map reflexive feedback among price, financing, fundamentals, policy and participant beliefs, then identify the observable break condition."
+      "ja": "価格、資金調達、ファンダメンタルズ、政策、参加者の信念の間にある反射的フィードバックを整理し、観測可能な崩壊条件を特定する。",
+      "ko": "가격, 자금 조달, 펀더멘털, 정책, 참여자의 믿음 사이의 재귀적 피드백을 구조화한 뒤 관측 가능한 붕괴 조건을 식별한다.",
+      "zh": "寻找价格、信贷、政策和参与者行为相互强化后又可能反转的反馈回路。"
     }
   },
   "voice": {

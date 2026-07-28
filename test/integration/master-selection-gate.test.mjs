@@ -1,6 +1,6 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
@@ -60,7 +60,97 @@ test("opening a selection returns a text-complete individual catalog without sta
   assert.equal(existsSync(join(dataDir, "runs")), false);
 });
 
+test("selection and confirmation text use the requested supported language", async () => {
+  const cases = [
+    { language: "zh-CN", resolved: "中文", labels: [/身份:/, /方法:/, /适合:/, /成熟度:/, /提交选择后才会开始研究。/] },
+    { language: "ja-JP", resolved: "日本語", labels: [/人物像:/, /手法:/, /適した対象:/, /成熟度:/, /選択を送信するまで調査は開始されません。/] },
+    { language: "ko-KR", resolved: "한국어", labels: [/정체성:/, /방법:/, /적합 대상:/, /성숙도:/, /선택을 제출하기 전에는 조사를 시작하지 않습니다./] },
+    { language: "en-US", resolved: "English", labels: [/Identity:/, /Method:/, /Best for:/, /Maturity:/, /Research starts only after this selection is submitted./] },
+  ];
+
+  for (const { language, resolved, labels } of cases) {
+    const openedResponse = await server.callTool("begin_council_selection", {
+      symbol: "QQQ",
+      language,
+      host: "codex",
+      prompt: `locale handshake ${language}`,
+    });
+    const opened = structured(openedResponse);
+    const openedText = openedResponse.result.content[0].text;
+    for (const label of labels) assert.match(openedText, label, language);
+
+    const confirmedResponse = await server.callTool("confirm_master_selection", {
+      selection_id: opened.selection_id,
+      catalog_hash: opened.catalog_hash,
+      display_ack: true,
+      selected_master_ids: ["master_buffett"],
+    });
+    const confirmed = structured(confirmedResponse);
+    assert.equal(confirmed.language, resolved);
+    const confirmedText = confirmedResponse.result.content[0].text;
+    if (language === "zh-CN") assert.match(confirmedText, /已为 QQQ 确认 1 个大师席位/);
+    else if (language === "ja-JP") assert.match(confirmedText, /QQQ について 1 席のマスターを確定しました/);
+    else if (language === "ko-KR") assert.match(confirmedText, /QQQ에 대해 마스터 1개 좌석을 확정했습니다/);
+    else assert.match(confirmedText, /Confirmed 1 master seat\(s\) for QQQ/);
+  }
+});
+
+test("auto infers the prompt language and binds the same canonical locale through receipt consumption", async () => {
+  const prompt = "QQQ を完全に分析し、各メソッド席の発言を表示してください。";
+  const opened = structured(await server.callTool("begin_council_selection", {
+    symbol: "QQQ", language: "auto", host: "codex", prompt,
+  }));
+  assert.equal(opened.language, "日本語");
+  const confirmed = structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    selected_master_ids: ["master_buffett"],
+  }));
+  assert.equal(confirmed.language, "日本語");
+  const runId = `SELECTION-AUTO-LOCALE-${process.pid}`;
+  const planned = structured(await server.callTool("plan_visible_run", {
+    symbol: "QQQ",
+    language: "auto",
+    prompt,
+    run_id: runId,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: confirmed.selection_receipt,
+  }));
+  assert.equal(planned.run.language, "日本語");
+  assert.equal(planned.run.master_selection.status, "consumed");
+});
+
+test("an omitted language is inferred consistently at selection and receipt consumption", async () => {
+  const prompt = "请完整分析 QQQ，并显示每个分析师和大师方法席的中文发言。";
+  const opened = structured(await server.callTool("begin_council_selection", {
+    symbol: "QQQ", host: "codex", prompt,
+  }));
+  assert.equal(opened.language, "中文");
+  const confirmed = structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    selected_master_ids: ["master_buffett"],
+  }));
+  assert.equal(confirmed.language, "中文");
+  const runId = `SELECTION-OMITTED-LOCALE-${process.pid}`;
+  const planned = structured(await server.callTool("plan_visible_run", {
+    symbol: "QQQ",
+    prompt,
+    run_id: runId,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: confirmed.selection_receipt,
+  }));
+  assert.equal(planned.run.language, "中文");
+  assert.equal(planned.run.master_selection.status, "consumed");
+});
+
 test("text-only MCP hosts can complete the selection handshake without structuredContent", async () => {
+  const runsDir = join(dataDir, "runs");
+  const runCountBefore = existsSync(runsDir) ? readdirSync(runsDir).length : 0;
   const openedResponse = await server.callTool("begin_council_selection", {
     symbol: "MELI",
     language: "English",
@@ -93,7 +183,8 @@ test("text-only MCP hosts can complete the selection handshake without structure
     council_mode: "full",
   });
   assert.match(confirmedContext.selection_receipt, /^RCP-/);
-  assert.equal(existsSync(join(dataDir, "runs")), false);
+  const runCountAfter = existsSync(runsDir) ? readdirSync(runsDir).length : 0;
+  assert.equal(runCountAfter, runCountBefore, "selection and confirmation must not create a research run");
 });
 
 test("one selected master is frozen into the run and the receipt cannot create another run", async () => {
@@ -162,6 +253,77 @@ test("a tampered per-seat pack hash is rejected before the receipt is consumed",
     selection_receipt: selection.selection_receipt,
   });
   assert.ok(accepted.result);
+});
+
+test("a tampered selection hash fails closed without burning the receipt", async () => {
+  const selection = await confirmMasterSelection(server, {
+    symbol: "ADBE",
+    selected_master_ids: ["master_buffett", "master_taleb"],
+  });
+  const file = join(dataDir, "selections", "receipts", `${selection.selection_receipt}.json`);
+  const original = JSON.parse(readFileSync(file, "utf8"));
+  writeFileSync(file, `${JSON.stringify({ ...original, selection_hash: "0".repeat(64) }, null, 2)}\n`);
+
+  const rejectedRunId = `SELECTION-HASH-REJECT-${process.pid}`;
+  const rejected = await server.callTool("plan_visible_run", {
+    symbol: "ADBE",
+    run_id: rejectedRunId,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_HASH_MISMATCH");
+  assert.equal(existsSync(join(dataDir, "runs", rejectedRunId)), false);
+  assert.equal(JSON.parse(readFileSync(file, "utf8")).status, "confirmed");
+
+  writeFileSync(file, `${JSON.stringify(original, null, 2)}\n`);
+  const accepted = await server.callTool("plan_visible_run", {
+    symbol: "ADBE",
+    run_id: `SELECTION-HASH-VALID-${process.pid}`,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.ok(accepted.result, "restoring the valid hash must leave the receipt usable");
+});
+
+test("a receipt file swapped across selection records is rejected without consuming either record", async () => {
+  const first = await confirmMasterSelection(server, {
+    symbol: "AMZN",
+    selected_master_ids: ["master_buffett"],
+  });
+  const second = await confirmMasterSelection(server, {
+    symbol: "AMZN",
+    selected_master_ids: ["master_taleb"],
+  });
+  const firstFile = join(dataDir, "selections", "receipts", `${first.selection_receipt}.json`);
+  const secondFile = join(dataDir, "selections", "receipts", `${second.selection_receipt}.json`);
+  const firstRecord = JSON.parse(readFileSync(firstFile, "utf8"));
+  const secondRecord = JSON.parse(readFileSync(secondFile, "utf8"));
+  writeFileSync(firstFile, `${JSON.stringify(secondRecord, null, 2)}\n`);
+
+  const rejectedRunId = `SELECTION-CROSS-RECORD-REJECT-${process.pid}`;
+  const rejected = await server.callTool("plan_visible_run", {
+    symbol: "AMZN",
+    run_id: rejectedRunId,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: first.selection_receipt,
+  });
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_RECORD_MISMATCH");
+  assert.deepEqual(rejected.error?.data?.mismatched_fields, ["selection_receipt"]);
+  assert.equal(existsSync(join(dataDir, "runs", rejectedRunId)), false);
+  assert.equal(JSON.parse(readFileSync(secondFile, "utf8")).status, "confirmed");
+
+  writeFileSync(firstFile, `${JSON.stringify(firstRecord, null, 2)}\n`);
+  const accepted = await server.callTool("plan_visible_run", {
+    symbol: "AMZN",
+    run_id: `SELECTION-CROSS-RECORD-VALID-${process.pid}`,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: first.selection_receipt,
+  });
+  assert.ok(accepted.result, "the first receipt must remain usable after restoring its own record");
 });
 
 test("the same consumed receipt is idempotent only for the same run id", async () => {

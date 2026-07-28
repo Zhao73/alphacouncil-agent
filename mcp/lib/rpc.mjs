@@ -4,7 +4,7 @@ import readline from "node:readline";
 import { COUNCIL_MODES, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
-import { resolveLanguage } from "./lang.mjs";
+import { localized, resolveLanguage } from "./lang.mjs";
 import { sweepStaleOutputs } from "./codex.mjs";
 import { completenessStatus, sourceManifest } from "./gates.mjs";
 import { artifactPaths, existingDebate, runId, runPath, safeSymbol, saveRun } from "./run-store.mjs";
@@ -76,7 +76,14 @@ export function recordAck(run, extra = {}) {
   };
 }
 
-function renderSelectionCatalog(data, zh) {
+function renderSelectionCatalog(data) {
+  const copy = (messages) => localized(data.language, messages);
+  const labels = copy({
+    en: { identity: "Identity", method: "Method", bestFor: "Best for", maturity: "Maturity", pack: "Pack format", preselected: "preselected" },
+    zh: { identity: "身份", method: "方法", bestFor: "适合", maturity: "成熟度", pack: "物理格式", preselected: "已预选" },
+    ja: { identity: "人物像", method: "手法", bestFor: "適した対象", maturity: "成熟度", pack: "パック形式", preselected: "事前選択済み" },
+    ko: { identity: "정체성", method: "방법", bestFor: "적합 대상", maturity: "성숙도", pack: "팩 형식", preselected: "사전 선택" },
+  });
   const preselected = new Set(data.preselected_master_ids || []);
   // Some MCP hosts expose only text content even when the server also returns
   // structuredContent. Keep the selection handshake usable on those hosts by
@@ -91,31 +98,45 @@ function renderSelectionCatalog(data, zh) {
     council_mode: data.council_mode,
   })}`;
   const cards = data.masters.map((master) => [
-    `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? (zh ? " [已预选]" : " [preselected]") : ""}`,
-    `${zh ? "身份" : "Identity"}: ${master.identity}`,
-    `${zh ? "方法" : "Method"}: ${master.method}`,
-    `${zh ? "适合" : "Best for"}: ${master.best_for}`,
-    `${zh ? "成熟度" : "Maturity"}: ${master.maturity}`,
-    `${zh ? "物理格式" : "Pack format"}: ${master.pack_format} (${master.admission_level})`,
+    `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? ` [${labels.preselected}]` : ""}`,
+    `${labels.identity}: ${master.identity}`,
+    `${labels.method}: ${master.method}`,
+    `${labels.bestFor}: ${master.best_for}`,
+    `${labels.maturity}: ${master.maturity_label} (${master.maturity})`,
+    `${labels.pack}: ${master.pack_format} (${master.admission_level})`,
   ].join("\n   ")).join("\n\n");
   const quick = data.council_mode === "quick";
-  const instructions = zh
-    ? quick
-      ? `Quick 模式请选择 1 至 ${data.maximum} 位大师。回复编号、范围或稳定 ID，例如：1 / 1,3,8 / 1-4 / master_buffett；不支持 all 全选。`
-      : `请选择 1 至 ${data.maximum} 位大师。回复编号、范围、稳定 ID，或 all 全选，例如：1 / 1,3,8 / 1-5 / master_buffett / all。`
-    : quick
-      ? `Quick mode: choose 1 to ${data.maximum} masters. Submit numbers, ranges, or stable IDs, for example: 1 / 1,3,8 / 1-4 / master_buffett. Selecting all is not supported.`
-      : `Choose 1 to ${data.maximum} masters. Submit numbers, ranges, stable IDs, or all, for example: 1 / 1,3,8 / 1-5 / master_buffett / all.`;
+  const instructions = quick
+    ? copy({
+      en: `Quick mode: choose 1 to ${data.maximum} masters. Submit numbers, ranges, or stable IDs, for example: 1 / 1,3,8 / 1-4 / master_buffett. Selecting all is not supported.`,
+      zh: `Quick 模式请选择 1 至 ${data.maximum} 位大师。回复编号、范围或稳定 ID，例如：1 / 1,3,8 / 1-4 / master_buffett；不支持 all 全选。`,
+      ja: `Quick モードでは1席から${data.maximum}席を選んでください。番号、範囲、stable ID（例：1 / 1,3,8 / 1-4 / master_buffett）を送信してください。all は使用できません。`,
+      ko: `Quick 모드에서는 1개에서 ${data.maximum}개 마스터 좌석을 선택하십시오. 번호, 범위 또는 stable ID(예: 1 / 1,3,8 / 1-4 / master_buffett)를 제출하십시오. all은 지원하지 않습니다.`,
+    })
+    : copy({
+      en: `Choose 1 to ${data.maximum} masters. Submit numbers, ranges, stable IDs, or all, for example: 1 / 1,3,8 / 1-5 / master_buffett / all.`,
+      zh: `请选择 1 至 ${data.maximum} 位大师。回复编号、范围、稳定 ID，或 all 全选，例如：1 / 1,3,8 / 1-5 / master_buffett / all。`,
+      ja: `1席から${data.maximum}席のマスターを選んでください。番号、範囲、stable ID、または all（例：1 / 1,3,8 / 1-5 / master_buffett / all）を送信してください。`,
+      ko: `1개에서 ${data.maximum}개 마스터 좌석을 선택하십시오. 번호, 범위, stable ID 또는 all(예: 1 / 1,3,8 / 1-5 / master_buffett / all)을 제출하십시오.`,
+    });
   return [
-    zh
-      ? `大师选择（目录共 ${data.masters.length} 席；最多选择 ${data.maximum} 席）`
-      : `Master selection (${data.masters.length} in catalog; choose up to ${data.maximum})`,
+    copy({
+      en: `Master selection (${data.masters.length} in catalog; choose up to ${data.maximum})`,
+      zh: `大师选择（目录共 ${data.masters.length} 席；最多选择 ${data.maximum} 席）`,
+      ja: `マスター選択（全${data.masters.length}席、最大${data.maximum}席まで）`,
+      ko: `마스터 선택(전체 ${data.masters.length}개 좌석, 최대 ${data.maximum}개 선택)`,
+    }),
     fallbackContext,
     "",
     cards,
     "",
     instructions,
-    zh ? "提交选择后才会开始研究。" : "Research starts only after this selection is submitted.",
+    copy({
+      en: "Research starts only after this selection is submitted.",
+      zh: "提交选择后才会开始研究。",
+      ja: "選択を送信するまで調査は開始されません。",
+      ko: "선택을 제출하기 전에는 조사를 시작하지 않습니다.",
+    }),
   ].join("\n");
 }
 
@@ -236,7 +257,9 @@ function selectedRunArgs(args = {}, entryTool) {
       selection_receipt: args.selection_receipt,
       symbol,
       run_id: id,
-      language: args.language || "English",
+      // Preserve omission so consumeCouncilSelection can infer the same locale
+      // from the prompt that begin_council_selection bound into the receipt.
+      language: args.language,
       prompt: typeof args.prompt === "string" ? args.prompt : "",
       council_mode: args.council_mode || "full",
     });
@@ -440,7 +463,7 @@ export function tools() {
       },
       required: ["symbol", "selection_receipt"],
     }),
-    tool("record_visible_packet", "MANDATORY sequential step (not optional): record one completed visible evidence agent packet into a planned visible run. Every planned evidence task MUST be recorded before the portfolio_manager decision; a run missing any planned packet will be marked incomplete.", {
+    tool("record_visible_packet", "MANDATORY sequential step (not optional): record one completed visible evidence agent packet into a planned visible run. Every reader-facing field must use the run language or the packet is rejected without changing run state. Every planned evidence task MUST be recorded before debate completion and portfolio_manager.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
@@ -451,16 +474,27 @@ export function tools() {
       },
       required: ["run_id", "task", "packet"],
     }),
-    tool("record_visible_decision", "Record one completed visible bull_researcher / bear_researcher / portfolio_manager packet. Record bull_researcher and bear_researcher before portfolio_manager. For role=portfolio_manager, ALL planned evidence packets AND both debate researchers (bull_researcher and bear_researcher) MUST already be recorded; otherwise the run is marked status=incomplete (NOT complete) and final_report.md gets a visible INCOMPLETE banner. This is the LAST step.", {
+    tool("record_visible_decision", "Record exactly one visible decision step. Full visible bull_researcher and bear_researcher calls MUST supply round=1, then round=2, then round=3; both sides of the prior round are required before advancing. Round 2 asks exactly three questions; Round 3 preserves its own questions and answers the opponent's questions with exact bindings. Packets are persisted by role+round: an identical replay is idempotent and conflicting content is rejected. portfolio_manager accepts no round and is rejected until all evidence, selected masters, both three-round sides, and the exact Q&A gate are complete. Every reader-facing field must use the run language.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
         role: { type: "string", enum: debateIds },
+        round: { type: "integer", minimum: 1, maximum: 3, description: "Required for bull_researcher and bear_researcher. Full visible runs require 1, 2, and 3 in order. Omit for portfolio_manager." },
         packet: { type: "object" },
         thread_id: { type: "string" },
         thread_title: { type: "string" },
       },
       required: ["run_id", "role", "packet"],
+      allOf: [
+        {
+          if: { properties: { role: { enum: ["bull_researcher", "bear_researcher"] } }, required: ["role"] },
+          then: { required: ["round"] },
+        },
+        {
+          if: { properties: { role: { const: "portfolio_manager" } }, required: ["role"] },
+          then: { not: { required: ["round"] } },
+        },
+      ],
     }),
     tool("collect_evidence", "Launch Codex subagents and save shared JSON evidence packets. Use dry_run=true only for planning/self-tests.", {
       type: "object",
@@ -509,7 +543,7 @@ export function tools() {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("record_master_opinion", "Record one completed selected master-seat opinion into a planned visible run. Masters run AFTER every evidence packet is recorded and BEFORE the bull/bear debate, so the debate has their disagreements to argue with. A master may return stance=out_of_scope, which is a recorded conclusion rather than an abstention. Every selected seat must either report or be settled deterministically before the run can be complete.", {
+    tool("record_master_opinion", "Record one completed selected master-seat opinion into a planned visible run. Every reader-facing field must use the run language or the opinion is rejected without changing run state. Masters run AFTER every evidence packet is recorded and BEFORE the bull/bear debate, so the debate has their disagreements to argue with. A master may return stance=out_of_scope, which is a recorded conclusion rather than an abstention. Every selected seat must either report or be settled deterministically before the run can be complete.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
@@ -697,8 +731,7 @@ export async function handleToolCall(id, params) {
   const args = params?.arguments || {};
   if (name === "begin_council_selection") {
     const data = beginCouncilSelection(args);
-    const zh = /中文|chinese|zh/i.test(String(data.language || ""));
-    sendResult(id, jsonContent(renderSelectionCatalog(data, zh), data));
+    sendResult(id, jsonContent(renderSelectionCatalog(data), data));
     return;
   }
   if (name === "confirm_master_selection") {
@@ -710,10 +743,13 @@ export async function handleToolCall(id, params) {
       intent_hash: data.intent_hash,
       council_mode: data.council_mode,
     })}`;
-    sendResult(id, jsonContent(
-      `${fallbackContext}\nConfirmed ${data.selected_count} master seat(s) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
-      data,
-    ));
+    const confirmation = localized(data.language, {
+      en: `Confirmed ${data.selected_count} master seat(s) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
+      zh: `已为 ${data.symbol} 确认 ${data.selected_count} 个大师席位。请使用一次性 selection_receipt 启动本轮运行。`,
+      ja: `${data.symbol} について ${data.selected_count} 席のマスターを確定しました。今回の実行を開始するには1回限りの selection_receipt を使用してください。`,
+      ko: `${data.symbol}에 대해 마스터 ${data.selected_count}개 좌석을 확정했습니다. 이번 실행을 시작하려면 일회용 selection_receipt를 사용하십시오.`,
+    });
+    sendResult(id, jsonContent(`${fallbackContext}\n${confirmation}`, data));
     return;
   }
   if (name === "plan_visible_run") {
@@ -771,11 +807,12 @@ export async function handleToolCall(id, params) {
   if (name === "record_visible_decision") {
     const result = recordVisibleDecision(args);
     sendResult(id, jsonContent(
-      `Recorded visible decision ${args.role} for ${result.run.symbol}: ${result.run.run_id}`,
+      `Recorded visible decision ${args.role}${args.round ? ` round ${args.round}` : ""} for ${result.run.symbol}: ${result.run.run_id}`,
       // decision and opinion are small and are what a caller reads back; only the full
       // run object is dropped.
       recordAck(result.run, {
         decision: result.decision,
+        idempotent_replay: result.idempotent_replay === true,
         report_quality: result.report_quality?.status,
         missing_report_items: result.report_quality?.missing || [],
       }),

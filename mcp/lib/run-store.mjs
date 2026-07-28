@@ -54,6 +54,13 @@ export function statusSnapshot(run) {
   const recordedMasters = (run.master_opinions || []).map((opinion) => opinion.master);
   const recordedSet = new Set(recordedMasters);
   const pendingMasters = selectedMasters.filter((master) => !recordedSet.has(master));
+  const visibleDebate = run.execution_mode === "visible_host_threads" ? run.visible_debate : null;
+  const visibleDebateRounds = visibleDebate
+    ? Object.fromEntries(["bull_researcher", "bear_researcher"].map((role) => [
+        role,
+        Object.keys(visibleDebate.rounds?.[role] || {}).map(Number).filter(Number.isInteger).sort((a, b) => a - b),
+      ]))
+    : null;
   return {
     run_id: run.run_id,
     symbol: run.symbol,
@@ -62,6 +69,10 @@ export function statusSnapshot(run) {
     execution_mode: run.execution_mode,
     council_mode: run.council_mode || "full",
     debate_format: run.debate_format || "three_round_cross_exam",
+    visible_debate_contract: visibleDebate?.contract || null,
+    visible_debate_rounds_expected: visibleDebate?.rounds_expected || null,
+    visible_debate_rounds_recorded: visibleDebateRounds,
+    visible_debate_qna_gate: visibleDebate?.qna_gate?.status || null,
     report_contract: run.council_mode === "quick" ? "quick_v1" : "full_v2",
     full_council_equivalent: run.council_mode !== "quick",
     master_worker_contract: run.execution_mode === "background_codex_exec"

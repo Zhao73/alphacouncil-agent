@@ -8,6 +8,8 @@
  * while that migration is underway.
  */
 
+import { MASTER_SELECTOR_METHOD_LOCALES } from "../../data/master-selector-method-locales.v1.mjs";
+
 const CARDS = Object.freeze({
   master_aschenbrenner: {
     zh: ["Leopold Aschenbrenner，关注 AI 扩张、算力和国家安全的研究者", "研究算力、电力、资本开支和技术时间线是否被市场正确定价。", "AI 基础设施、半导体、电力和长期技术扩散"],
@@ -116,15 +118,38 @@ const CARDS = Object.freeze({
 });
 
 function langKey(language) {
-  return /中文|chinese|zh/i.test(String(language || "")) ? "zh" : "en";
+  const text = String(language || "");
+  if (/中文|chinese|zh/i.test(text)) return "zh";
+  if (/日本語|japanese|ja/i.test(text)) return "ja";
+  if (/한국어|korean|ko/i.test(text)) return "ko";
+  return "en";
 }
 
 export function selectorCard(persona, language = "English") {
   const key = langKey(language);
   const fallbackTags = (persona?.philosophy_tags || persona?.tags || []).join(", ") || persona?.id || "method lens";
-  const [identity, method, bestFor] = CARDS[persona?.id]?.[key] || (key === "zh"
+  let card = CARDS[persona?.id]?.[key];
+  if (!card && (key === "ja" || key === "ko") && MASTER_SELECTOR_METHOD_LOCALES[persona?.id]?.[key]) {
+    const title = persona?.title?.en || persona?.id;
+    card = key === "ja"
+      ? [
+        `${title}。プロジェクト派生で、人による方法帰属の審査を受けていない暫定メソッド視点。本人の発言や現在の見解ではない。`,
+        MASTER_SELECTOR_METHOD_LOCALES[persona.id][key],
+        `適用領域（安定タグ）：${fallbackTags}`,
+      ]
+      : [
+        `${title}. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 방법론 관점이다. 본인의 발언이나 현재 견해가 아니다.`,
+        MASTER_SELECTOR_METHOD_LOCALES[persona.id][key],
+        `적합 영역(안정 태그): ${fallbackTags}`,
+      ];
+  }
+  const [identity, method, bestFor] = card || (key === "zh"
     ? [`${persona?.title?.zh || persona?.id}方法视角`, `重点检查：${fallbackTags}。`, "适用于其公开方法能够覆盖的问题"]
-    : [`${persona?.title?.en || persona?.id} method lens`, `Focuses on: ${fallbackTags}.`, "Questions within the method's documented scope"]);
+    : key === "ja"
+      ? [`${persona?.title?.en || persona?.id}の方法視点`, `重点項目：${fallbackTags}`, "文書化された方法の範囲内の問いに適用"]
+      : key === "ko"
+        ? [`${persona?.title?.en || persona?.id} 방법론 관점`, `중점 점검: ${fallbackTags}`, "문서화된 방법 범위의 질문에 적용"]
+        : [`${persona?.title?.en || persona?.id} method lens`, `Focuses on: ${fallbackTags}.`, "Questions within the method's documented scope"]);
   return { identity, method, best_for: bestFor };
 }
 

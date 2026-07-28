@@ -78,11 +78,15 @@
     "maturity": "operator_lens",
     "operator_label": {
       "en": "Ackman Activist Lens Provisional Operator Lens",
+      "ja": "Ackman Activist Lens 暫定オペレーター・レンズ",
+      "ko": "Ackman Activist Lens 임시 오퍼레이터 렌즈",
       "zh": "阿克曼激进投资视角临时操作视角"
     },
     "persona_id": "master_ackman",
     "public_label": {
       "en": "Ackman Activist Lens Solo Test",
+      "ja": "Ackman Activist Lens 単独テスト",
+      "ko": "Ackman Activist Lens 단독 테스트",
       "zh": "阿克曼激进投资视角单人测试"
     },
     "source_cutoff": "2026-07-27"
@@ -93,7 +97,7 @@
     "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
     "postmortem_horizon_days": 90
   },
-  "pack_version": "0.9.3",
+  "pack_version": "0.9.4",
   "research": {
     "mandatory_disconfirming_queries": [
       "Reject engagement when the existing business lacks a defensible downside case.",
@@ -110,16 +114,22 @@
   "schema_version": 3,
   "selection": {
     "best_for": {
-      "en": "Testing deterministic behavior in activism, governance, capital_allocation, corporate_change",
-      "zh": "用于测试确定性行为：activism、governance、capital_allocation、corporate_change"
+      "en": "Shareholder activism, corporate governance, capital allocation, and corporate change.",
+      "ja": "株主アクティビズム、コーポレートガバナンス、資本配分、企業変革。",
+      "ko": "주주 행동주의, 기업 지배구조, 자본 배분, 기업 변화.",
+      "zh": "股东行动主义、公司治理、资本配置与企业变革。"
     },
     "identity": {
       "en": "Ackman Activist Lens; project-derived and not human reviewed",
+      "ja": "Ackman Activist Lens。プロジェクト派生で、方法帰属について人による審査を受けていない暫定オペレーター・レンズ。本人の発言や現在の見解ではない。",
+      "ko": "Ackman Activist Lens. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 오퍼레이터 렌즈다. 본인의 발언이나 현재 견해가 아니다.",
       "zh": "阿克曼激进投资视角；项目派生、未经人工审定"
     },
     "method": {
       "en": "Separate standalone value from improvement value, then test whether a legal, financeable and time-bounded actor can execute the change path.",
-      "zh": "Separate standalone value from improvement value, then test whether a legal, financeable and time-bounded actor can execute the change path."
+      "ja": "現状の単独価値と改善による付加価値を分けたうえで、法的に実行可能で、資金調達ができ、期限が明確な主体が、その変更計画を遂行できるか検証する。",
+      "ko": "현상 유지 기준의 독립 가치와 개선으로 생기는 추가 가치를 분리한 뒤, 법적으로 실행 가능하고 자금 조달이 가능하며 기한이 명확한 주체가 변화 계획을 수행할 수 있는지 검증한다.",
+      "zh": "寻找价值缺口、治理或资本配置改善抓手，以及可执行的催化剂路径。"
     }
   },
   "voice": {

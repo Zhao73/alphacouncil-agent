@@ -116,7 +116,7 @@ test("final report assembly restores a missing master bench from recorded opinio
   const markdown = finalReportMarkdown(run, { report_markdown: reportWithout("master_bench") });
   const quality = validateFinalReport(markdown, run);
   assert.equal(quality.sections.find((section) => section.id === "master_bench")?.status, "ok");
-  assert.match(markdown, /## 大师席位 \/ Master Bench/);
+  assert.match(markdown, /## 大师席位/);
   assert.match(markdown, /out_of_scope/);
 });
 

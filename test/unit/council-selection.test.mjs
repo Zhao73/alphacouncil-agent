@@ -97,6 +97,42 @@ test("every selector card field is non-empty", () => {
   }
 });
 
+test("all supported selector locales render every user-facing card field in the requested language", () => {
+  const scripts = new Map([
+    ["zh-CN", /\p{Script=Han}/u],
+    ["ja-JP", /[\p{Script=Hiragana}\p{Script=Katakana}]/u],
+    ["ko-KR", /\p{Script=Hangul}/u],
+  ]);
+  const english = catalogSnapshot("en-US");
+
+  for (const [language, script] of scripts) {
+    const localized = catalogSnapshot(language);
+    assert.deepEqual(localized.all_master_ids, english.all_master_ids, language);
+    assert.deepEqual(
+      localized.masters.map((master) => master.pack_hash),
+      english.masters.map((master) => master.pack_hash),
+      `${language} must not alter physical pack identity`,
+    );
+    assert.notEqual(localized.catalog_hash, english.catalog_hash, `${language} display copy must be hash-bound`);
+    for (const master of localized.masters) {
+      for (const field of ["identity", "method", "best_for"]) {
+        assert.match(master[field], script, `${language} ${master.id}.${field} must follow the requested language`);
+      }
+    }
+  }
+});
+
+test("unsupported selector locales fail explicitly instead of claiming an English fallback is localized", () => {
+  assert.throws(
+    () => catalogSnapshot("fr-FR"),
+    (error) => {
+      assert.equal(error?.data?.reason, "UNSUPPORTED_SELECTION_LANGUAGE");
+      assert.deepEqual(error?.data?.supported_languages, ["zh-CN", "en-US", "ja-JP", "ko-KR"]);
+      return true;
+    },
+  );
+});
+
 test("numeric text accepts a single selection", () => {
   const result = parseMasterSelection("1", englishCatalog().masters);
   assert.deepEqual(result, { mode: "explicit", ids: expectedIds(1) });

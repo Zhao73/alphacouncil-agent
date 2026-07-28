@@ -161,7 +161,11 @@ test("an unrecognised stance is recorded as out_of_scope, not as a vote", async 
   const result = structured(await productionServer.callTool("record_master_opinion", {
     run_id: productionRunId,
     master: "master_munger",
-    packet: { verdict: "v", stance: "wildly bullish", summary: "s" },
+    packet: {
+      verdict: "The evidence does not support a scored method decision.",
+      stance: "wildly bullish",
+      summary: "This fixture supplies valid English prose while testing stance normalization only.",
+    },
   }));
   assert.equal(result.opinion.stance, "out_of_scope");
 });
@@ -172,7 +176,11 @@ test("stances a caller plausibly writes are mapped rather than discarded", async
     const result = structured(await productionServer.callTool("record_master_opinion", {
       run_id: productionRunId,
       master: "master_munger",
-      packet: { verdict: "v", stance: given, summary: "s" },
+      packet: {
+        verdict: "The evidence supports only the normalized stance in this test fixture.",
+        stance: given,
+        summary: "This fixture supplies valid English prose while testing stance aliases only.",
+      },
     }));
     assert.equal(result.opinion.stance, expected, `${given} should normalize to ${expected}`);
   }

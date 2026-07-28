@@ -58,17 +58,17 @@ AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex
 
 このリポジトリはアップロード用のソースコピーです。実行成果物はリポジトリの外、`~/.alphacouncil-agent/runs/<run_id>/` に書き出されます。
 
-## 現在の 0.9.3 プレビュー：non-GA solo-test
+## 現在の 0.9.4 プレビュー：non-GA solo-test
 
-`0.9.3` は GitHub prerelease です。この受け入れリリースでは npm publish や
-dist-tag の変更を行いません。独立に確認せず `@next` が 0.9.3 を指すと説明してはいけません。
+`0.9.4` は GitHub prerelease です。この受け入れリリースでは npm publish や
+dist-tag の変更を行いません。独立に確認せず `@next` が 0.9.4 を指すと説明してはいけません。
 これは時間制限付き council runtime のプレビューであり、正式な production GA ではありません。
 build channel は引き続き `solo_test` です。物理 PersonaPack v3 は 26、実行可能な
 `provisional_derived_proxy` ツールは 52、provisional `operator_lens` は 26。
 `operational`：**0**、検証済み `method_model`：**0**、人間によるソース/数式承認と承認署名：**0**です。
 
 production loader はこのツリーを引き続き拒否し、production assembly、cutover、GA は
-fail-closed のままです。full/quick の正確な境界は [v0.9.3 リリース契約](docs/releases/v0.9.3.md)、
+fail-closed のままです。full/quick の正確な境界は [v0.9.4 リリース契約](docs/releases/v0.9.4.md)、
 `quick_v1` と `full_v2` の違いは [レポート契約](docs/report-contract.md) を参照してください。
 
 ## 📜 免責事項
@@ -236,7 +236,7 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 | 現代 | アッシェンブレナー |
 | v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ジュンジュンワラ |
 
-0.9.3 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
+0.9.4 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
 **26 パックは 26 個の承認済みメソッドモデルを意味しません**。全 26 席は provisional
 `operator_lens` のままです。52 個のツールは実行可能な
 `provisional_derived_proxy` テスト代理であり、人間が承認した数式帰属ではありません。

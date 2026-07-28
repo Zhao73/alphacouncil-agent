@@ -173,6 +173,12 @@ test("a physical v3 seat with no typed facts declines and never reaches legacy p
   const chinese = declinedMasterOpinion({ ...run, language: "中文" }, plan.declined[0]);
   assert.match(chinese.verdict, /尾部风险操作视角无法评估/);
   assert.match(chinese.summary, /未调用旧提示词或叙述决策层/);
+  const japanese = declinedMasterOpinion({ ...run, language: "日本語" }, plan.declined[0]);
+  assert.match(japanese.verdict, /評価できません/);
+  assert.match(japanese.summary, /叙述型の判断層は呼び出していません/);
+  const korean = declinedMasterOpinion({ ...run, language: "한국어" }, plan.declined[0]);
+  assert.match(korean.verdict, /평가할 수 없습니다/);
+  assert.match(korean.summary, /서술형 판단 계층은 호출하지 않았습니다/);
 });
 
 test("a ready v3 seat executes the deterministic DSL without entering the legacy planner", () => {
@@ -205,6 +211,10 @@ test("a ready v3 seat executes the deterministic DSL without entering the legacy
   assert.match(opinion.summary, /no language model selected/i);
   const chinese = completedMasterOpinion({ symbol: "NOK", as_of: AS_OF, language: "Chinese" }, plan.completed[0]);
   assert.match(chinese.summary, /没有让语言模型选择立场/);
+  const japanese = completedMasterOpinion({ symbol: "NOK", as_of: AS_OF, language: "日本語" }, plan.completed[0]);
+  assert.match(japanese.summary, /言語モデルは立場を選択していない/);
+  const korean = completedMasterOpinion({ symbol: "NOK", as_of: AS_OF, language: "한국어" }, plan.completed[0]);
+  assert.match(korean.summary, /언어 모델은 입장을 선택하지 않았습니다/);
 });
 
 test("Taleb-style 1-of-4 optional coverage completes out_of_scope without narrative or legacy fallback", () => {

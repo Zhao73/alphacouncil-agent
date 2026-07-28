@@ -234,3 +234,16 @@ test("manager fallback is an unavailable decision, never a synthetic Hold rating
   assert.equal(fallback.rating, null);
   assert.equal(fallback.verdict, "NEEDS_MANAGER_REVIEW");
 });
+
+for (const [language, title, sentence] of [
+  ["ja-JP", /投資委員会ドラフト/, /正式な投資判断はありません/],
+  ["ko-KR", /투자위원회 초안/, /공식 투자 판단을 제공할 수 없습니다/],
+]) {
+  test(`${language} manager fallback keeps system-owned failure copy in the run language`, () => {
+    const fallback = managerFallback({ ...quickRun(), language }, "fixture failure");
+    assert.equal(fallback.decision_available, false);
+    assert.match(fallback.report_markdown, title);
+    assert.match(fallback.report_markdown, sentence);
+    assert.doesNotMatch(fallback.report_markdown, /Investment Committee Draft|The manager synthesis subagent did not complete/);
+  });
+}

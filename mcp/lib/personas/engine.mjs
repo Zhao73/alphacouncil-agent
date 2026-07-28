@@ -12,7 +12,7 @@ import { buildFactPack } from "../personas-v3/typed-facts.mjs";
 import { typedFactPackFromGrounding } from "../personas-v3/grounding-adapter.mjs";
 import { buildAnonymousPreDecision, freezeAnonymousDecision } from "../personas-v3/runtime.mjs";
 import { executeDeterministicPersonaPolicy } from "../personas-v3/deterministic-executor.mjs";
-import { isChineseLanguage } from "../lang.mjs";
+import { languageKey, localized } from "../lang.mjs";
 import {
   declinedOpinion as v2DeclinedOpinion,
   planMasters as planLegacyMasters,
@@ -190,9 +190,15 @@ export function completedMasterOpinion(run, item) {
     throw new Error("completedMasterOpinion requires a completed v3 deterministic seat");
   }
   const result = item.frozenDecision.structured_decision.result;
-  const zh = isChineseLanguage(run.language);
-  const label = item.pack.admitted_label?.[zh ? "zh" : "en"]
+  const locale = languageKey(run.language);
+  const label = item.pack.admitted_label?.[locale]
     || item.pack.admitted_label?.en || item.id;
+  const copy = localized(run.language, {
+    en: { withheld: (pct) => `${pct}% coverage; score withheld`, unscored: "not scored", verdict: (stance, reason) => `${label} frozen decision: ${stance} (${reason})`, summary: (score) => `The PersonaPack v3 deterministic policy executed with score ${score}. Typed facts, hard vetoes, and score bands produced this stance; no language model selected it.`, hit: (id) => `score hit: ${id}`, miss: (id) => `score miss: ${id}`, eligibility: (id) => `eligibility condition ${id} becomes satisfied`, veto: (id) => `hard veto ${id} no longer triggers`, score: (id) => `score condition ${id} becomes satisfied` },
+    zh: { withheld: (pct) => `覆盖率 ${pct}%，分数被保留不发布`, unscored: "未评分", verdict: (stance, reason) => `${label}的冻结结论：${stance}（${reason}）`, summary: (score) => `PersonaPack v3 确定性政策已执行；得分 ${score}。该立场由结构化事实、硬否决和评分带产生，没有让语言模型选择立场。`, hit: (id) => `评分命中：${id}`, miss: (id) => `评分未命中：${id}`, eligibility: (id) => `资格条件 ${id} 变为满足`, veto: (id) => `硬否决 ${id} 不再触发`, score: (id) => `评分条件 ${id} 变为满足` },
+    ja: { withheld: (pct) => `カバレッジ ${pct}% のためスコアは非公開`, unscored: "未採点", verdict: (stance, reason) => `${label}の凍結済み判断：${stance}（${reason}）`, summary: (score) => `PersonaPack v3 の決定論的ポリシーを実行し、スコアは ${score}。構造化事実、ハード拒否条件、スコア帯がこの立場を生成しており、言語モデルは立場を選択していない。`, hit: (id) => `採点条件を満たす：${id}`, miss: (id) => `採点条件を満たさない：${id}`, eligibility: (id) => `適格条件 ${id} が満たされる`, veto: (id) => `ハード拒否条件 ${id} が解除される`, score: (id) => `採点条件 ${id} が満たされる` },
+    ko: { withheld: (pct) => `커버리지 ${pct}%로 점수를 공개하지 않음`, unscored: "미채점", verdict: (stance, reason) => `${label}의 동결된 판단: ${stance}(${reason})`, summary: (score) => `PersonaPack v3 결정론적 정책을 실행했으며 점수는 ${score}입니다. 구조화된 사실, 하드 거부 조건, 점수 구간이 이 입장을 만들었고 언어 모델은 입장을 선택하지 않았습니다.`, hit: (id) => `점수 조건 충족: ${id}`, miss: (id) => `점수 조건 미충족: ${id}`, eligibility: (id) => `적격 조건 ${id} 충족`, veto: (id) => `하드 거부 조건 ${id} 해제`, score: (id) => `점수 조건 ${id} 충족` },
+  });
   const vetoIds = (result.vetoes_triggered || []).map((veto) => veto.veto_id);
   const unmet = result.eligibility?.unmet_condition_ids || [];
   const hitIds = (result.score?.hits || []).map((rule) => rule.rule_id);
@@ -204,33 +210,27 @@ export function completedMasterOpinion(run, item) {
     ...(result.score?.misses || []).flatMap((rule) => rule.source_ids || []),
   ]);
   const scoreText = result.score?.status === "insufficient_coverage"
-    ? zh
-      ? `覆盖率 ${Math.round(result.score.coverage * 100)}%，分数被保留不发布`
-      : `${Math.round(result.score.coverage * 100)}% coverage; score withheld`
+    ? copy.withheld(Math.round(result.score.coverage * 100))
     : result.score
       ? `${result.score.score}/${result.score.max_possible} (${Math.round((result.ratio || 0) * 100)}%)`
-    : zh ? "未评分" : "not scored";
+    : copy.unscored;
   return {
     master: item.id,
     symbol: run.symbol,
     as_of: run.as_of,
     stance: result.stance,
-    verdict: zh
-      ? `${label}的冻结结论：${result.stance}（${result.reason}）`
-      : `${label} frozen decision: ${result.stance} (${result.reason})`,
-    summary: zh
-      ? `PersonaPack v3 确定性政策已执行；得分 ${scoreText}。该立场由结构化事实、硬否决和评分带产生，没有让语言模型选择立场。`
-      : `The PersonaPack v3 deterministic policy executed with score ${scoreText}. Typed facts, hard vetoes, and score bands produced this stance; no language model selected it.`,
+    verdict: copy.verdict(result.stance, result.reason),
+    summary: copy.summary(scoreText),
     key_findings: uniqueStrings([
-      ...hitIds.map((id) => zh ? `评分命中：${id}` : `score hit: ${id}`),
-      ...missIds.map((id) => zh ? `评分未命中：${id}` : `score miss: ${id}`),
+      ...hitIds.map(copy.hit),
+      ...missIds.map(copy.miss),
     ]),
     disagreements: [],
     disqualifiers_triggered: uniqueStrings([...unmet, ...vetoIds]),
     what_would_change_my_mind: uniqueStrings([
-      ...unmet.map((id) => zh ? `资格条件 ${id} 变为满足` : `eligibility condition ${id} becomes satisfied`),
-      ...vetoIds.map((id) => zh ? `硬否决 ${id} 不再触发` : `hard veto ${id} no longer triggers`),
-      ...missIds.map((id) => zh ? `评分条件 ${id} 变为满足` : `score condition ${id} becomes satisfied`),
+      ...unmet.map(copy.eligibility),
+      ...vetoIds.map(copy.veto),
+      ...missIds.map(copy.score),
     ]),
     source_ids: sourceIds,
     confidence: result.common_projection?.confidence || "low",
@@ -257,27 +257,27 @@ export function completedMasterOpinion(run, item) {
 export function declinedMasterOpinion(run, item) {
   if (item?.engine !== "v3_method_runtime") return v2DeclinedOpinion(run, item.id, item.decision);
   const eligibility = item.preDecision.eligibility;
-  const zh = isChineseLanguage(run.language);
-  const label = item.pack.admitted_label?.[zh ? "zh" : "en"]
+  const locale = languageKey(run.language);
+  const label = item.pack.admitted_label?.[locale]
     || item.pack.admitted_label?.en || item.id;
-  const missing = eligibility.missing_required_fact_types.join(", ") || (zh ? "无" : "none");
+  const copy = localized(run.language, {
+    en: { none: "none", verdict: `${label} cannot evaluate ${run.symbol}: ${eligibility.reason}`, summary: (missing) => `The v3 typed-fact gate returned ${eligibility.status}; missing: ${missing}. No legacy prompt or narrative decision layer was called.`, available: (id) => `${id} becomes available from a point-in-time source` },
+    zh: { none: "无", verdict: `${label}无法评估 ${run.symbol}：${eligibility.reason}`, summary: (missing) => `v3 typed-fact 闸门返回 ${eligibility.status}；缺失：${missing}。系统未调用旧提示词或叙述决策层。`, available: (id) => `${id} 可从时点一致的来源取得` },
+    ja: { none: "なし", verdict: `${label}は ${run.symbol} を評価できません：${eligibility.reason}`, summary: (missing) => `v3 typed-fact ゲートは ${eligibility.status} を返しました。欠落：${missing}。旧プロンプトや叙述型の判断層は呼び出していません。`, available: (id) => `${id} が時点整合した出典から利用可能になる` },
+    ko: { none: "없음", verdict: `${label}은 ${run.symbol}을 평가할 수 없습니다: ${eligibility.reason}`, summary: (missing) => `v3 typed-fact 게이트가 ${eligibility.status}을 반환했습니다. 누락: ${missing}. 기존 프롬프트나 서술형 판단 계층은 호출하지 않았습니다.`, available: (id) => `${id}을 시점 일치 출처에서 확보할 수 있게 됨` },
+  });
+  const missing = eligibility.missing_required_fact_types.join(", ") || copy.none;
   return {
     master: item.id,
     symbol: run.symbol,
     as_of: run.as_of,
     stance: "out_of_scope",
-    verdict: zh
-      ? `${label}无法评估 ${run.symbol}：${eligibility.reason}`
-      : `${label} cannot evaluate ${run.symbol}: ${eligibility.reason}`,
-    summary: zh
-      ? `v3 typed-fact 闸门返回 ${eligibility.status}；缺失：${missing}。系统未调用旧提示词或叙述决策层。`
-      : `The v3 typed-fact gate returned ${eligibility.status}; missing: ${missing}. No legacy prompt or narrative decision layer was called.`,
+    verdict: copy.verdict,
+    summary: copy.summary(missing),
     key_findings: [],
     disagreements: [],
     disqualifiers_triggered: eligibility.missing_required_fact_types,
-    what_would_change_my_mind: eligibility.missing_required_fact_types.map((id) => (
-      zh ? `${id} 可从时点一致的来源取得` : `${id} becomes available from a point-in-time source`
-    )),
+    what_would_change_my_mind: eligibility.missing_required_fact_types.map(copy.available),
     source_ids: [],
     // The refusal itself is deterministic, but the seat has insufficient evidence for an
     // investment judgment. Keep the reader-facing evidence confidence low so a mechanically
