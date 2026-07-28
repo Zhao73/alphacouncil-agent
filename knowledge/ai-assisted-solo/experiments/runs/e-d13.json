@@ -30,12 +30,12 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:82af2f8c1febf7a4e1ed91a45ab2d3c7af323f8b47755e1c2b65b415d7292c54",
+    "input_hash": "sha256:049bd43c48516c99f3f3cd0fb3097ea81110e342e2015678726c81bedd9a77ca",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
   "production_effect": "none",
-  "result_hash": "sha256:c86d9273323d14ade20e4a508dd6865ac2894d15933e75d0557766711bbfacc3",
+  "result_hash": "sha256:1aaa496084f029f695e0be54929954d4b063293491871e5d453448fdef8bece5",
   "results": {
     "blocked_fail_closed_count": 0,
     "completion_status": "completed_machine_simulation",
@@ -234,7 +234,7 @@
     "verifier_checks": [
       {
         "check_id": "physical_input_hash_binding",
-        "input_hash": "sha256:82af2f8c1febf7a4e1ed91a45ab2d3c7af323f8b47755e1c2b65b415d7292c54",
+        "input_hash": "sha256:049bd43c48516c99f3f3cd0fb3097ea81110e342e2015678726c81bedd9a77ca",
         "status": "pass"
       },
       {
@@ -251,7 +251,7 @@
     ]
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:ceb96fad3b28207c5ad8583140f9b11954ddc2b4f0581790d1447f76eea42f32",
+  "run_artifact_hash": "sha256:fe65cc488f3a30d8c90834dcc9b5ed1a239e693a7a23ca89ad7813ff0bbc9c94",
   "run_id": "E:D13",
   "schema_version": 1,
   "simulation_scope": "D13 deterministic seats plus machine-only hash, rederivation and fail-closed checks"

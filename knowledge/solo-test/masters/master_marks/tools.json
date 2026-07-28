@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:fc5731e8512ce0a16ba1c00ac9c3f718d5f1f4b70969f3e7d0665398880330a5",
-    "derivation_spec_hash": "sha256:669beef679dd4c9a0193096ac367849e8e7cfb66ceeede65f277a89b04625f81",
+    "derivation_evidence_hash": "sha256:1620d3f4bfe3ef0ef9e82681a78a01c41033f750c033b39e336f63dd870174aa",
+    "derivation_spec_hash": "sha256:ccff19b4772506ee782b8137eca4fe9547071844fc4d07c1e6fa06c51b68595a",
     "derivation_spec_id": "master_marks.cycle_temperature.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_marks.cycle_temperature",
@@ -14,11 +14,11 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:016aec2fd07c92dd7ed6f7d264498f565f9aef99338daa3075dc190d57ecd0e1",
+    "input_schema_hash": "sha256:670ed7d9413c8ac8b83141730906ea54af494bd9e83901b409e0e71a9c9999b7",
     "inputs": [
       {
         "fact_id": "cycle.valuation_percentile"
@@ -34,15 +34,15 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:9a0bad8dd31ead6f8e5fef43c00eea682c6515fe3ac5f018d72a7c9d8baebd1e",
+    "output_schema_hash": "sha256:1b629b214e9b26c18df2ac51304aa6fcc201dad153406eb5e125ba1a7bbbface",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:08cfa8347347faed7"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
+    "unit": "decimal",
+    "value_kind": "ratio",
     "version": "0.1.0"
   },
   {

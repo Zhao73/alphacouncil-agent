@@ -16,7 +16,7 @@
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:ac779cafd2ffaf8a00707368d966b106cb922e9123b0431817b06b64f8316aef",
+  "formula_compilation_manifest_hash": "sha256:d3b1e793b674e463262556fe92d2c03a3396108f6bf8ab603373f4ac79353e48",
   "method_model_eligible": false,
   "native_states": [
     "provisional_unsupported_theme",

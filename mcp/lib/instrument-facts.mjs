@@ -15,6 +15,7 @@
 import { LIMITS } from "./constants.mjs";
 import { fetchFundHoldings, fetchFundMetadata, lookThroughAggregate, topHoldingsCoverage } from "./funds.mjs";
 import { fetchIndexAggregate, INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
+import { fetchImpliedErp } from "./damodaran.mjs";
 import { fetchFundamentals } from "./fundamentals.mjs";
 import { fetchUniverse } from "./sec.mjs";
 
@@ -361,7 +362,7 @@ export async function gatherInstrumentFacts({
   // Fee and size come from the issuer, not from the index: an index has no expense ratio.
   // This was previously read off the index aggregate, which never carries one, so the fee
   // fact was unreachable code that silently produced nothing.
-  const [aggregate, holdings, metadata] = await Promise.all([
+  const [aggregate, holdings, metadata, erp] = await Promise.all([
     fetchIndexAggregate({ symbol: valuationSymbol, signal, asOf })
       .catch((error) => ({ unavailable: [`index aggregate: ${String(error?.message || error)}`] })),
     holdingsSymbol
@@ -372,9 +373,48 @@ export async function gatherInstrumentFacts({
       ? fetchFundMetadata(holdingsSymbol, { signal })
         .catch((error) => ({ unavailable: [`fund metadata: ${String(error?.message || error)}`] }))
       : Promise.resolve(null),
+    fetchImpliedErp({ signal, asOf })
+      .catch((error) => ({ unavailable: [`implied equity risk premium: ${String(error?.message || error)}`] })),
   ]);
 
   facts.push(...valuationFacts(aggregate));
+  if (erp && finite(erp.latest)) {
+    // The premium the market is actually pricing, with where it sits in its own history. A
+    // level alone cannot say whether the market is paying up; the percentile is the claim.
+    facts.push({
+      fact_id: "valuation.implied_erp",
+      value: erp.latest,
+      value_kind: "ratio",
+      unit: "decimal",
+      ratio_denominator: "equity_over_riskfree",
+      source_kind: "published_dataset",
+      source_url: erp.source_url,
+      public_at: erp.public_at,
+      observation_date: erp.observation_date,
+      confidence: 0.85,
+      derivation: "reported",
+      method: erp.basis,
+      title: "Damodaran implied equity risk premium",
+    });
+    if (erp.percentile) {
+      facts.push({
+        fact_id: "cycle.valuation_percentile",
+        value: erp.percentile.percentile,
+        value_kind: "ratio",
+        unit: "decimal",
+        ratio_denominator: `rank_within_${erp.percentile.sample_size}_published_months`,
+        source_kind: "published_dataset",
+        source_url: erp.source_url,
+        public_at: erp.public_at,
+        observation_date: erp.observation_date,
+        confidence: 0.8,
+        derivation: "rederived",
+        method: `percentile_of_${erp.basis}_since_${erp.percentile.sample_start}`,
+        title: "implied equity risk premium percentile",
+      });
+    }
+  }
+  unavailable.push(...(erp?.unavailable || []));
   unavailable.push(...(aggregate?.unavailable || []));
   if (holdings?.holdings?.length) {
     facts.push(...structureFacts(holdings, metadata));

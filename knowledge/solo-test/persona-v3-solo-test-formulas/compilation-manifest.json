@@ -446,8 +446,8 @@
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:fc5731e8512ce0a16ba1c00ac9c3f718d5f1f4b70969f3e7d0665398880330a5",
-      "derivation_spec_hash": "sha256:669beef679dd4c9a0193096ac367849e8e7cfb66ceeede65f277a89b04625f81",
+      "derivation_evidence_hash": "sha256:1620d3f4bfe3ef0ef9e82681a78a01c41033f750c033b39e336f63dd870174aa",
+      "derivation_spec_hash": "sha256:ccff19b4772506ee782b8137eca4fe9547071844fc4d07c1e6fa06c51b68595a",
       "derivation_spec_id": "master_marks.cycle_temperature.prototype_v1.derived_proxy_v1",
       "persona_id": "master_marks",
       "production_eligible": false,
@@ -680,7 +680,7 @@
     }
   ],
   "canonical_seat_count": 26,
-  "compilation_hash": "sha256:9adb79dfeb0ece61c0114a06213abb1f197723626e17f9d9dd37d8b6f11c5bd5",
+  "compilation_hash": "sha256:6239ce2dcd1799868d43078335524633b6f0d1aad968b2f7d00f330cad6a52ca",
   "compiled_tool_count": 52,
   "formula_approval_binding_count": 0,
   "human_reviewer_count": 0,

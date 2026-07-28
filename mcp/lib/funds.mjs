@@ -27,9 +27,9 @@
  */
 
 import { Buffer } from "node:buffer";
-import { inflateRawSync } from "node:zlib";
 
 import { LIMITS } from "./constants.mjs";
+import { columnIndex, unzip, xlsxRows, xmlText } from "./xlsx.mjs";
 import { linkedAbort } from "./abort.mjs";
 import { fetchText } from "./quotes.mjs";
 
@@ -411,96 +411,6 @@ export function parseVanguardHoldings(pages, { symbol = null } = {}) {
     // Month-end, not daily. A reader comparing this to a daily iShares file needs to know.
     cadence: "month_end",
   };
-}
-
-// ---------------------------------------------------------------------------
-// SSGA -- xlsx, read with node builtins only
-// ---------------------------------------------------------------------------
-
-/**
- * Minimal ZIP central-directory reader.
- *
- * An xlsx is a ZIP of XML parts, and `zlib.inflateRawSync` is enough to read one, so SSGA is
- * supported without adding a dependency. Entries are located through the CENTRAL directory
- * rather than the local headers on purpose: when the archive uses a data descriptor, the
- * local header's sizes are zeroed and only the central directory is truthful.
- *
- * Everything unusual fails closed. This reads the one archive shape SSGA publishes; it is not
- * a general ZIP implementation and must not silently behave like one.
- */
-function unzip(buffer) {
-  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
-  if (buf.length < 22 || buf.readUInt32LE(0) !== 0x04034b50) {
-    throw new Error("SSGA response is not a ZIP/xlsx container");
-  }
-  let eocd = -1;
-  for (let i = buf.length - 22; i >= 0; i -= 1) {
-    if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
-  }
-  if (eocd < 0) throw new Error("xlsx container has no end-of-central-directory record");
-  if (buf.readUInt16LE(eocd + 10) === 0xffff) throw new Error("ZIP64 xlsx containers are not supported");
-
-  const count = buf.readUInt16LE(eocd + 10);
-  let offset = buf.readUInt32LE(eocd + 16);
-  const entries = new Map();
-  for (let i = 0; i < count; i += 1) {
-    if (offset + 46 > buf.length || buf.readUInt32LE(offset) !== 0x02014b50) {
-      throw new Error("xlsx central directory is malformed");
-    }
-    const flags = buf.readUInt16LE(offset + 8);
-    const method = buf.readUInt16LE(offset + 10);
-    const compressedSize = buf.readUInt32LE(offset + 20);
-    const nameLen = buf.readUInt16LE(offset + 28);
-    const extraLen = buf.readUInt16LE(offset + 30);
-    const commentLen = buf.readUInt16LE(offset + 32);
-    const localOffset = buf.readUInt32LE(offset + 42);
-    const name = buf.toString("utf8", offset + 46, offset + 46 + nameLen);
-    if (flags & 0x0001) throw new Error(`xlsx entry ${name} is encrypted`);
-    if (method !== 0 && method !== 8) throw new Error(`xlsx entry ${name} uses unsupported compression method ${method}`);
-    const localNameLen = buf.readUInt16LE(localOffset + 26);
-    const localExtraLen = buf.readUInt16LE(localOffset + 28);
-    const start = localOffset + 30 + localNameLen + localExtraLen;
-    const raw = buf.subarray(start, start + compressedSize);
-    entries.set(name, () => (method === 0 ? raw : inflateRawSync(raw)).toString("utf8"));
-    offset += 46 + nameLen + extraLen + commentLen;
-  }
-  return entries;
-}
-
-const XML_ENTITIES = Object.freeze({ "&lt;": "<", "&gt;": ">", "&quot;": '"', "&apos;": "'", "&amp;": "&" });
-const unescapeXml = (text) => String(text).replace(/&(?:lt|gt|quot|apos|amp);/gu, (m) => XML_ENTITIES[m]);
-
-/** Concatenate every <t> inside an element: a shared string may be split into rich-text runs. */
-const xmlText = (fragment) => {
-  let out = "";
-  for (const match of String(fragment).matchAll(/<t[^>]*>([\s\S]*?)<\/t>/gu)) out += match[1];
-  return unescapeXml(out);
-};
-
-/** "AB12" -> 27. Cells are addressed, not ordered: empty cells are simply absent. */
-const columnIndex = (ref) => {
-  const letters = /^([A-Z]+)/u.exec(String(ref || "").toUpperCase());
-  if (!letters) return -1;
-  return [...letters[1]].reduce((acc, ch) => acc * 26 + (ch.charCodeAt(0) - 64), 0) - 1;
-};
-
-function xlsxRows(sheetXml, sharedStrings) {
-  const rows = [];
-  for (const rowMatch of sheetXml.matchAll(/<row[^>]*>([\s\S]*?)<\/row>/gu)) {
-    const cells = [];
-    for (const cellMatch of rowMatch[1].matchAll(/<c\s+r="([A-Z]+\d+)"([^>]*)>([\s\S]*?)<\/c>/gu)) {
-      const index = columnIndex(cellMatch[1]);
-      if (index < 0) continue;
-      const type = /t="([^"]+)"/u.exec(cellMatch[2])?.[1] || "n";
-      const body = cellMatch[3];
-      const value = /<v>([\s\S]*?)<\/v>/u.exec(body)?.[1];
-      if (type === "s") cells[index] = sharedStrings[Number(value)] ?? null;
-      else if (type === "inlineStr") cells[index] = xmlText(/<is>([\s\S]*?)<\/is>/u.exec(body)?.[1] || "");
-      else cells[index] = value === undefined ? null : unescapeXml(value);
-    }
-    rows.push(cells);
-  }
-  return rows;
 }
 
 /**
