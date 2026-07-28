@@ -16,6 +16,7 @@ import { LIMITS } from "./constants.mjs";
 import { fetchFundHoldings, fetchFundMetadata, lookThroughAggregate, topHoldingsCoverage } from "./funds.mjs";
 import { fetchIndexAggregate, INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { fetchImpliedErp } from "./damodaran.mjs";
+import { fetchBasketBreadth } from "./breadth.mjs";
 import { fetchFundamentals } from "./fundamentals.mjs";
 import { fetchUniverse } from "./sec.mjs";
 
@@ -418,6 +419,55 @@ export async function gatherInstrumentFacts({
   unavailable.push(...(aggregate?.unavailable || []));
   if (holdings?.holdings?.length) {
     facts.push(...structureFacts(holdings, metadata));
+    // Breadth is computed from the basket rather than bought: every free screener that
+    // publishes it forbids the query, and the holdings are already in hand.
+    const breadth = await fetchBasketBreadth(holdings.holdings, { signal })
+      .catch((error) => ({ available: false, unavailable: [`breadth: ${String(error?.message || error)}`] }));
+    unavailable.push(...(breadth.unavailable || []));
+    if (breadth.available) {
+      const shared = {
+        source_kind: "market_snapshot",
+        source_url: holdings.source_url,
+        public_at: holdings.public_at,
+        observation_date: holdings.as_of,
+        value_kind: "ratio",
+        unit: "decimal",
+        derivation: "rederived",
+        confidence: 0.8,
+        coverage_weight: breadth.coverage_weight,
+        method: breadth.method,
+      };
+      facts.push({
+        ...shared,
+        fact_id: "index.breadth_above_200dma",
+        value: breadth.weighted_above,
+        ratio_denominator: "measured_basket_weight",
+        title: "share of basket weight above its 200-day average",
+      });
+      if (finite(breadth.net_assets) && !finite(metadata?.aum)) {
+        facts.push({
+          ...shared,
+          fact_id: "fund.aum",
+          value: breadth.net_assets,
+          value_kind: "monetary",
+          unit: "currency_units",
+          currency: "USD",
+          scale: 1,
+          ratio_denominator: undefined,
+          method: "sum_of_disclosed_units_at_last_close",
+          title: `${holdings.symbol} assets from disclosed positions`,
+        });
+      }
+      // The gap between weighted and counted breadth IS the concentration story: a
+      // cap-weighted basket can be above its average on weight while most members are below.
+      facts.push({
+        ...shared,
+        fact_id: "index.breadth_counted_above_200dma",
+        value: breadth.counted_above,
+        ratio_denominator: "measured_constituent_count",
+        title: "share of measured constituents above their 200-day average",
+      });
+    }
     provenance.holdings_as_of = holdings.as_of;
     provenance.holdings_count = holdings.holdings.length;
   }

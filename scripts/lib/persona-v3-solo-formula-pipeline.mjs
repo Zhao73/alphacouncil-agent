@@ -103,6 +103,10 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "fund.concentration_hhi": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "valuation.implied_erp": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "cycle.valuation_percentile": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "index.breadth_above_200dma": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "index.breadth_counted_above_200dma": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "fund.aum": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "fund.expense_ratio": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
 });
 
 const ID = /^[a-z][a-z0-9_.:-]{1,159}$/u;
