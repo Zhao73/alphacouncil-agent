@@ -67,10 +67,10 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## Current 0.9.3 preview status: non-GA solo-test
+## Current 0.9.4 preview status: non-GA solo-test
 
-Version `0.9.3` is a GitHub prerelease. This acceptance release does not publish npm or
-change npm dist-tags; verify npm separately before assuming `@next` contains 0.9.3. It is a
+Version `0.9.4` is a GitHub prerelease. This acceptance release does not publish npm or
+change npm dist-tags; verify npm separately before assuming `@next` contains 0.9.4. It is a
 bounded council-runtime preview, **not** formal production GA. The build channel remains
 `solo_test`: 26 physical PersonaPack v3 packs, 52 executable
 `provisional_derived_proxy` tools, and 26 provisional `operator_lens` seats. Operational
@@ -78,7 +78,7 @@ seats: **0**; validated `method_model` seats: **0**; human source/formula approv
 approval signatures: **0**.
 
 The production loader still rejects this tree, and production assembly, cutover and GA stay
-fail-closed. See [the v0.9.3 release contract](docs/releases/v0.9.3.md) for the exact full/quick
+fail-closed. See [the v0.9.4 release contract](docs/releases/v0.9.4.md) for the exact full/quick
 boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
 
 ## 📜 Disclaimer
@@ -283,7 +283,7 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
 
-The 0.9.3 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
+The 0.9.4 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
 not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
 project-derived proxy material; the 52 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA

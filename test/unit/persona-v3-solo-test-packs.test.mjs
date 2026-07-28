@@ -14,6 +14,7 @@ import {
 import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 import { portableRelativePath } from "../../mcp/lib/personas-v3/canonical.mjs";
+import { MASTER_SELECTOR_BEST_FOR_LOCALES } from "../../data/master-selector-method-locales.v1.mjs";
 import {
   DEFAULT_SOLO_TEST_PACK_ROOT,
   inspectPersonaV3SoloTestPacks,
@@ -89,6 +90,48 @@ test("production loading rejects a solo-test pack while the explicit provisional
   assert.ok(pack.components.tools.every((tool) => !("formula_spec_id" in tool) && !("approval_bundle_hash" in tool)));
 });
 
+test("the PersonaPack JSON Schema requires four reader locales conditionally for solo-test manifests", () => {
+  const schema = JSON.parse(readFileSync(join(REPO_ROOT, "schemas/persona-v3.schema.json"), "utf8"));
+  const conditional = schema.allOf?.find((entry) => entry.if?.properties?.build_profile?.const === "solo_test");
+  assert.ok(conditional, "solo_test must have an explicit JSON Schema condition");
+  assert.deepEqual(conditional.if.required, ["build_profile"]);
+
+  const identity = conditional.then?.properties?.identity?.properties;
+  const selection = conditional.then?.properties?.selection?.properties;
+  for (const field of [identity?.public_label, identity?.operator_label,
+    selection?.identity, selection?.method, selection?.best_for]) {
+    assert.equal(field?.$ref, "#/$defs/localizedTextFourLocales");
+  }
+  assert.deepEqual(
+    schema.$defs.localizedTextFourLocales.allOf.at(-1).required,
+    ["en", "zh", "ja", "ko"],
+  );
+});
+
+test("all 26 physical selector manifests carry distinct Chinese plus Japanese and Korean copy", () => {
+  const scripts = { zh: /\p{Script=Han}/u, ja: /[\p{Script=Hiragana}\p{Script=Katakana}]/u, ko: /\p{Script=Hangul}/u };
+  const ids = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).ids();
+  assert.deepEqual(Object.keys(MASTER_SELECTOR_BEST_FOR_LOCALES).sort(), [...ids].sort());
+  for (const id of ids) {
+    const pack = loadSoloTestV3Pack(join(DEFAULT_SOLO_TEST_PACK_ROOT, id));
+    for (const field of ["public_label", "operator_label"]) {
+      const value = pack.manifest.identity[field];
+      for (const [locale, script] of Object.entries(scripts)) assert.match(value[locale], script, `${id}.${field}.${locale}`);
+    }
+    for (const field of ["identity", "method", "best_for"]) {
+      const value = pack.manifest.selection[field];
+      for (const [locale, script] of Object.entries(scripts)) assert.match(value[locale], script, `${id}.selection.${field}.${locale}`);
+    }
+    for (const locale of ["en", "zh", "ja", "ko"]) {
+      const bestFor = pack.manifest.selection.best_for[locale];
+      assert.doesNotMatch(bestFor, /[a-z0-9]+(?:_[a-z0-9]+)+/iu, `${id}.selection.best_for.${locale} leaks a machine domain id`);
+      assert.equal(bestFor, MASTER_SELECTOR_BEST_FOR_LOCALES[id][locale]);
+    }
+    assert.ok(pack.manifest.capability.domains.every((domain) => /^[a-z0-9_]+$/u.test(domain)), `${id} must retain stable machine domain ids separately`);
+    assert.notEqual(pack.manifest.selection.method.zh, pack.manifest.selection.method.en, `${id} Chinese method must not copy English`);
+  }
+});
+
 test("runtime build profile exposes all 26 as visibly provisional while formal compilation stays production", () => {
   assert.equal(resolveRuntimePersonaBuildProfile(), "solo_test");
   const formal = loadCompiledPersonaPacks();
@@ -102,6 +145,11 @@ test("runtime build profile exposes all 26 as visibly provisional while formal c
   const menu = councilOptions({ language: "中文" });
   assert.equal(menu.masters.filter((master) => master.production_status === "solo_test_provisional").length, 26);
   assert.ok(menu.masters.every((master) => master.provisional === true));
+  for (const language of ["English", "中文", "日本語", "한국어"]) {
+    const localizedMenu = councilOptions({ language });
+    assert.equal(localizedMenu.masters.length, 26);
+    assert.ok(localizedMenu.masters.every((master) => master.maturity_label));
+  }
 });
 
 test("all-positive provisional proxy inputs execute but can never project constructive", () => {

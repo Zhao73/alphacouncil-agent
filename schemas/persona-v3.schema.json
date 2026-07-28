@@ -19,6 +19,31 @@
     "components"
   ],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "required": ["build_profile"],
+        "properties": { "build_profile": { "const": "solo_test" } }
+      },
+      "then": {
+        "properties": {
+          "identity": {
+            "properties": {
+              "public_label": { "$ref": "#/$defs/localizedTextFourLocales" },
+              "operator_label": { "$ref": "#/$defs/localizedTextFourLocales" }
+            }
+          },
+          "selection": {
+            "properties": {
+              "identity": { "$ref": "#/$defs/localizedTextFourLocales" },
+              "method": { "$ref": "#/$defs/localizedTextFourLocales" },
+              "best_for": { "$ref": "#/$defs/localizedTextFourLocales" }
+            }
+          }
+        }
+      }
+    }
+  ],
   "properties": {
     "schema_version": { "const": 3 },
     "build_profile": {
@@ -38,7 +63,9 @@
           "additionalProperties": false,
           "properties": {
             "en": { "type": "string", "minLength": 3 },
-            "zh": { "type": "string", "minLength": 2 }
+            "zh": { "type": "string", "minLength": 2 },
+            "ja": { "type": "string", "minLength": 2 },
+            "ko": { "type": "string", "minLength": 2 }
           }
         },
         "operator_label": {
@@ -192,8 +219,16 @@
       "additionalProperties": false,
       "properties": {
         "en": { "type": "string", "minLength": 3 },
-        "zh": { "type": "string", "minLength": 2 }
+        "zh": { "type": "string", "minLength": 2 },
+        "ja": { "type": "string", "minLength": 2 },
+        "ko": { "type": "string", "minLength": 2 }
       }
+    },
+    "localizedTextFourLocales": {
+      "allOf": [
+        { "$ref": "#/$defs/localizedText" },
+        { "required": ["en", "zh", "ja", "ko"] }
+      ]
     },
     "strings": {
       "type": "array",

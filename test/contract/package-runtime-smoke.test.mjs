@@ -9,8 +9,7 @@ import { runPackageSmoke } from "../../scripts/package-smoke.mjs";
 
 test("the release package smoke executes selection and rejects receipt replay", async () => {
   const result = await runPackageSmoke();
-  assert.ok(result.tools > 0);
-  assert.deepEqual(result, { tools: result.tools, catalog: 26, selected: 1, replay_rejected: true });
+  assert.deepEqual(result, { tools: 31, catalog: 26, locales: 4, selected: 1, replay_rejected: true });
 });
 
 test("selfcheck never treats partial private staging as a valid source tree", (t) => {

@@ -107,19 +107,38 @@ export async function runPackageSmoke() {
 
     const listed = await server.request("tools/list", {});
     const tools = listed.result?.tools || [];
+    assert.equal(tools.length, 31, "installed server must expose exactly 31 MCP tools");
     const names = new Set(tools.map((tool) => tool.name));
     for (const required of ["begin_council_selection", "confirm_master_selection", "plan_visible_run", "analyze_symbol"]) {
       assert.ok(names.has(required), `installed server is missing ${required}`);
     }
 
-    const prompt = "bounded installed-package smoke";
-    const opened = structured(await server.callTool("begin_council_selection", {
-      symbol: "AAPL",
-      language: "English",
-      host: "package-smoke",
-      prompt,
-    }));
-    assert.equal(opened.masters.length, 26, "installed catalog must contain exactly 26 seats");
+    const localeCases = [
+      { language: "en-US", prompt: "bounded installed-package smoke", script: /[A-Za-z]/u },
+      { language: "zh-CN", prompt: "安装包有界烟雾测试", script: /\p{Script=Han}/u },
+      { language: "ja-JP", prompt: "インストール済みパッケージの有界スモークテスト", script: /[\p{Script=Hiragana}\p{Script=Katakana}]/u },
+      { language: "ko-KR", prompt: "설치 패키지의 제한된 스모크 테스트", script: /\p{Script=Hangul}/u },
+    ];
+    let opened;
+    let prompt;
+    for (const locale of localeCases) {
+      const catalog = structured(await server.callTool("begin_council_selection", {
+        symbol: "AAPL",
+        language: locale.language,
+        host: "package-smoke",
+        prompt: locale.prompt,
+      }));
+      assert.equal(catalog.masters.length, 26, `${locale.language} installed catalog must contain exactly 26 seats`);
+      for (const master of catalog.masters) {
+        for (const field of ["identity", "method", "best_for", "maturity_label"]) {
+          assert.match(master[field], locale.script, `${locale.language} ${master.id}.${field}`);
+        }
+      }
+      if (locale.language === "zh-CN") {
+        opened = catalog;
+        prompt = locale.prompt;
+      }
+    }
 
     const confirmed = structured(await server.callTool("confirm_master_selection", {
       selection_id: opened.selection_id,
@@ -132,7 +151,7 @@ export async function runPackageSmoke() {
     const runId = `PACKAGE-SMOKE-${process.pid}`;
     const planned = structured(await server.callTool("plan_visible_run", {
       symbol: "AAPL",
-      language: "English",
+      language: "zh-CN",
       prompt,
       run_id: runId,
       tasks: ["market_data"],
@@ -143,7 +162,7 @@ export async function runPackageSmoke() {
 
     const replay = await server.callTool("plan_visible_run", {
       symbol: "AAPL",
-      language: "English",
+      language: "zh-CN",
       prompt,
       run_id: `${runId}-REPLAY`,
       tasks: ["market_data"],
@@ -152,8 +171,8 @@ export async function runPackageSmoke() {
     });
     assert.equal(replay.error?.data?.reason, "MASTER_SELECTION_REPLAYED");
 
-    process.stdout.write(`package-smoke: passed tools=${tools.length} catalog=26 selected=1 replay_rejected=true\n`);
-    return { tools: tools.length, catalog: 26, selected: 1, replay_rejected: true };
+    process.stdout.write(`package-smoke: passed tools=${tools.length} catalog=26 locales=4 selected=1 replay_rejected=true\n`);
+    return { tools: tools.length, catalog: 26, locales: 4, selected: 1, replay_rejected: true };
   } finally {
     if (!server.child.killed) await server.close().catch(() => server.child.kill());
     rmSync(dataDir, { recursive: true, force: true });

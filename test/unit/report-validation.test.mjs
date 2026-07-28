@@ -56,11 +56,46 @@ test("the complete fixture passes", () => {
   assert.ok(result.sections.every((s) => s.status === "ok"));
 });
 
-test("the mixed-language master heading emitted by a Chinese PM satisfies the bench contract", () => {
+test("an English run rejects a structurally complete Chinese report", () => {
+  const translated = fullyLocalizedReport("中文");
+  const result = validateFinalReport(translated, run);
+  assert.equal(result.language_status, "failed");
+  assert.equal(result.status, "needs_revision");
+});
+
+test("English technical names inside a Chinese report do not satisfy the English gate", () => {
+  const mixed = fullyLocalizedReport("中文").replaceAll("明确分开记录", "明确分开记录 Acme EBITDA FCF ROIC");
+  const result = validateFinalReport(mixed, run);
+  assert.equal(result.language_status, "failed");
+  assert.equal(result.observed_locale, "zh");
+});
+
+test("localized bodies cannot hide headings written in another language", () => {
+  const chineseHeadings = completeReport
+    .replace("## Conclusion", "## 结论")
+    .replace("## Analyst Work Log", "## 分析师工作记录")
+    .replace("## Bull/Bear Debate Record", "## 多空辩论记录")
+    .replace("## Market Expectations and Implied Thresholds", "## 市场预期")
+    .replace("## Earnings Call Management Signals", "## 电话会")
+    .replace("## News and Company / Industry Voice Signals", "## 新闻")
+    .replace("## Valuation Range", "## 估值")
+    .replace("## Price Levels", "## 价格条件")
+    .replace("## Risks", "## 风险")
+    .replace("## Position Recommendation", "## 仓位")
+    .replace("## Data Gaps", "## 数据缺口")
+    .replace("## Invalidation", "## 反证");
+  const result = validateFinalReport(chineseHeadings, run);
+  assert.equal(result.language_status, "failed");
+  assert.equal(result.status, "needs_revision");
+  assert.ok(result.language_mismatched_sections.some((item) => item.startsWith("heading:")));
+});
+
+test("a mixed-language master heading is structurally recognized but fails the reader-language gate", () => {
   const report = completeReport.replace("## Master Bench", "## Master席位分歧处理");
   assert.notEqual(report, completeReport, "fixture heading must actually change");
   const result = validateFinalReport(report, { ...run, masters: ["master_buffett"] });
-  assert.equal(result.status, "passed", result.missing.join("; "));
+  assert.equal(result.status, "needs_revision");
+  assert.equal(result.language_status, "failed");
   assert.equal(result.sections.find((section) => section.id === "master_bench")?.heading, "Master席位分歧处理");
 });
 
@@ -200,18 +235,49 @@ const JAPANESE_HEADINGS = {
   source_table: "出典表",
 };
 
+const CHINESE_HEADINGS = {
+  conclusion: "结论",
+  analyst_work_log: "分析师工作记录",
+  debate_record: "多空辩论记录",
+  master_bench: "大师席",
+  market_expectations: "市场预期",
+  analyst_rating: "分析师评级",
+  earnings_call: "电话会",
+  quant: "量化",
+  news: "新闻",
+  short_interest: "做空与借券",
+  strategic_transaction: "战略交易",
+  valuation: "估值",
+  price_levels: "价格条件",
+  catalysts: "催化剂",
+  risks: "风险",
+  position: "仓位",
+  short_term: "短线",
+  medium_term: "中期",
+  long_term: "长期",
+  data_gaps: "数据缺口",
+  invalidation: "反证",
+  confidence: "置信度",
+  source_table: "来源表",
+};
+
 function fullyLocalizedReport(language) {
   const korean = language === "한국어";
+  const chinese = language === "中文";
   return [
-    `# QQQ ${korean ? "전체 위원회 보고서" : "フルカウンシル報告書"}`,
+    `# QQQ ${korean ? "전체 위원회 보고서" : chinese ? "完整委员会报告" : "フルカウンシル報告書"}`,
     ...REPORT_SECTIONS.flatMap((section) => {
-      const heading = korean
+      const heading = chinese
+        ? CHINESE_HEADINGS[section.id]
+        : korean
         ? section.aliases.find((alias) => /[가-힣]/u.test(alias))
         : JAPANESE_HEADINGS[section.id];
       assert.ok(heading, `missing ${language} heading fixture for ${section.id}`);
       const task = section.id === "analyst_work_log" ? "market_data " : "";
       const source = section.id === "source_table" ? " market_data:S1 https://example.com/source " : "";
-      const body = korean
+      const body = chinese
+        ? `${task}${section.id} 本节把已核验事实、推断和未知信息明确分开记录。${source}`.repeat(5)
+        : korean
         ? `${task}${section.id} 항목은 검증된 사실과 추론 및 알려지지 않은 정보를 분리하여 기록합니다.${source}`.repeat(5)
         : `${task}${section.id} は検証済みの事実、推論、未知の情報を分けて記録します。${source}`.repeat(5);
       return [`## ${heading}`, body];
@@ -229,7 +295,37 @@ for (const language of ["日本語", "한국어"]) {
       master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
     });
     assert.equal(result.status, "passed", result.missing.join("; "));
+    assert.equal(result.language_status, "passed");
+    assert.equal(result.requested_locale, language === "日本語" ? "ja" : "ko");
+    assert.equal(result.observed_locale, language === "日本語" ? "ja" : "ko");
     assert.equal(result.contract_id, "full_v2");
     assert.ok(result.sections.every((section) => section.status === "ok"));
   });
+
+  test(`${language} run rejects a structurally complete English report`, () => {
+    const result = validateFinalReport(completeReport, {
+      ...run,
+      language,
+      masters: ["master_buffett"],
+      master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
+    });
+    assert.equal(result.status, "needs_revision");
+    assert.equal(result.language_status, "failed");
+    assert.ok(result.missing.some((item) => item.startsWith("report reader language mismatch:")));
+  });
 }
+
+test("a Han-only Japanese finance section is accepted in an otherwise Japanese report", () => {
+  const localized = fullyLocalizedReport("日本語").replace(
+    /conclusion は検証済みの事実、推論、未知の情報を分けて記録します。/gu,
+    "売上高100億円、営業利益20億円。",
+  );
+  const result = validateFinalReport(localized, {
+    ...run,
+    language: "日本語",
+    masters: ["master_buffett"],
+    master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
+  });
+  assert.equal(result.status, "passed", result.missing.join("; "));
+  assert.equal(result.observed_locale, "ja");
+});

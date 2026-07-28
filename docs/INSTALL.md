@@ -10,12 +10,12 @@ plain MCP server in the Claude desktop app.
 ---
 
 
-## GitHub v0.9.3 prerelease
+## GitHub v0.9.4 prerelease
 
 This acceptance release is GitHub-only:
 
 ```bash
-npm install -g github:Zhao73/alphacouncil-agent#v0.9.3
+npm install -g github:Zhao73/alphacouncil-agent#v0.9.4
 ```
 
 ## npm channel
@@ -24,9 +24,9 @@ npm install -g github:Zhao73/alphacouncil-agent#v0.9.3
 npm install -g alphacouncil-agent@next
 ```
 
-The GitHub-only 0.9.3 acceptance does not run `npm publish` or change npm dist-tags.
+The GitHub-only 0.9.4 acceptance does not run `npm publish` or change npm dist-tags.
 `alphacouncil-agent@next` installs whichever preview npm currently serves; verify it with
-`npm view alphacouncil-agent dist-tags --json` rather than assuming it is 0.9.3. The
+`npm view alphacouncil-agent dist-tags --json` rather than assuming it is 0.9.4. The
 unqualified package follows the stable `latest` tag.
 
 Then point any MCP host at the `alphacouncil-agent` binary. For Claude Code:

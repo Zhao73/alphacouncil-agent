@@ -1,6 +1,6 @@
 import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, QUICK_REPORT_SECTIONS, REPORT_SECTIONS } from "./constants.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
-import { isChineseLanguage, languageKey } from "./lang.mjs";
+import { isChineseLanguage, languageKey, readerLanguageStatus } from "./lang.mjs";
 
 export function withDisclaimer(markdown, language) {
   const text = typeof markdown === "string" ? markdown : "";
@@ -191,6 +191,54 @@ const isPlaceholder = (body) => {
   return PLACEHOLDER_BODIES.includes(compact);
 };
 
+const LANGUAGE_CORE_SECTIONS = new Set([
+  "conclusion", "analyst_work_log", "debate_record", "master_bench", "market_expectations",
+  "earnings_call", "news", "valuation", "price_levels", "risks", "position", "data_gaps",
+  "invalidation",
+]);
+
+function readerLanguageAudit(assigned, language) {
+  const requested = languageKey(language);
+  const mismatched = [];
+  let targetCharacters = 0;
+  let observedCharacters = 0;
+  const bodies = [];
+  for (const id of LANGUAGE_CORE_SECTIONS) {
+    const heading = assigned.get(id);
+    const body = heading?.body || "";
+    if (!body.trim()) continue;
+    bodies.push(body);
+    const section = readerLanguageStatus(body, language, { minimumTargetCharacters: 2, minimumRatio: 0.05 });
+    targetCharacters += section.target_characters;
+    observedCharacters += section.reader_characters;
+    // Pure Han fragments are inconclusive across Chinese/Japanese. Let the whole
+    // report establish the locale, but reject sections with positive other-language
+    // evidence so one translated heading cannot hide a foreign-language body.
+    if (![requested, "shared_han", "undetermined"].includes(section.observed_locale)) mismatched.push(id);
+
+    const titleProbe = readerLanguageStatus(heading?.title || "", language, { minimumTargetCharacters: 1, minimumRatio: 0 });
+    const { scripts = {} } = titleProbe;
+    let titleLocale = "undetermined";
+    if ((scripts.hangul || 0) > 0) titleLocale = "ko";
+    else if ((scripts.kana || 0) > 0 || (titleProbe.japanese_markers || 0) > 0) titleLocale = "ja";
+    else if ((titleProbe.chinese_markers || 0) > 0) titleLocale = "zh";
+    else if ((scripts.latin || 0) > 0 && (scripts.han || 0) === 0) titleLocale = "en";
+    else if ((scripts.han || 0) > 0) titleLocale = "shared_han";
+    const sharedHanAllowed = titleLocale === "shared_han" && ["zh", "ja"].includes(requested);
+    if (![requested, "undetermined"].includes(titleLocale) && !sharedHanAllowed) mismatched.push(`heading:${id}`);
+  }
+  const whole = readerLanguageStatus(bodies.join("\n"), language, { minimumTargetCharacters: 12, minimumRatio: 0.08 });
+  const languageStatus = mismatched.length || whole.status !== "passed" ? "failed" : "passed";
+  return {
+    requested_locale: requested,
+    observed_locale: whole.observed_locale,
+    language_status: languageStatus,
+    target_script_characters: whole.target_characters || targetCharacters,
+    reader_characters_checked: observedCharacters,
+    mismatched_sections: mismatched,
+  };
+}
+
 export function validateFinalReport(markdown, run) {
   const text = String(markdown || "");
   const headings = parseHeadings(text);
@@ -240,6 +288,10 @@ export function validateFinalReport(markdown, run) {
     : quick ? LIMITS.REPORT_MIN_CHARS_QUICK : LIMITS.REPORT_MIN_CHARS;
   if (denseLength(text) < minLength) missing.push(`report too short: minimum ${minLength} non-space characters`);
   const execution = completenessStatus(run || {});
+  const languageAudit = readerLanguageAudit(assigned, run?.language);
+  if (languageAudit.language_status !== "passed") {
+    missing.push(`report reader language mismatch: requested=${languageAudit.requested_locale}; sections=${languageAudit.mismatched_sections.join(",") || "insufficient target-language text"}`);
+  }
   if (quick) {
     const markerCount = (text.match(/alphacouncil:quick-scope:v1:begin/gu) || []).length;
     if (markerCount !== 1) missing.push("missing system-owned quick_v1 scope marker");
@@ -272,6 +324,12 @@ export function validateFinalReport(markdown, run) {
     evidence_coverage: execution.evidence_coverage,
     degraded_evidence: execution.degraded_evidence,
     degraded_debate: execution.degraded_debate,
+    requested_locale: languageAudit.requested_locale,
+    observed_locale: languageAudit.observed_locale,
+    language_status: languageAudit.language_status,
+    language_mismatched_sections: languageAudit.mismatched_sections,
+    target_script_characters: languageAudit.target_script_characters,
+    reader_characters_checked: languageAudit.reader_characters_checked,
     status: missing.length ? "needs_revision" : "passed",
     missing,
     sections,

@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Multi-agent public-equity research workflow plugin for Codex & Claude Code: sourced evidence packets, bull/bear debate, and a portfolio-manager Buy/Overweight/Hold/Underweight/Sell decision.",
   "type": "module",
   "license": "MIT",
@@ -33,7 +33,7 @@
     "check": "node scripts/selfcheck.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:source": "node --test",
-    "test:package": "node scripts/package-smoke.mjs",
+    "test:package": "node scripts/check-packaged-host-parity.mjs --check",
     "sync": "node scripts/sync-personas.mjs",
     "persona:corpus": "node scripts/report-persona-corpus-gaps.mjs",
     "persona:build-specs": "node scripts/report-persona-v3-build-specs.mjs",

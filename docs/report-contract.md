@@ -22,8 +22,15 @@ writes the mode-appropriate versions of:
 The report and handoff must call a named master result a recorded method-seat or lens result.
 It is not a quote from, endorsement by, or current statement of the named person.
 
-System-owned report and handoff labels are localized for `zh-CN`, `en`, `ja` and `ko`.
-Each worker receives the run language, while stable IDs and JSON field names remain English.
+System-owned selector, report and handoff labels are localized for `zh-CN`, `en`, `ja` and
+`ko`. Each worker receives the canonical run language, while stable IDs and JSON field names
+remain English. Reader-facing evidence, method, debate and PM fields are checked against the
+requested locale. Plugin-managed workers receive one bounded no-search language/JSON repair,
+then fail closed; visible-host record tools reject the wrong-language packet before writing
+it so the host may retry. `report_quality.json` records requested/observed locale, keeps
+Han-only fragments explicitly inconclusive, and cannot pass a Japanese or Korean run whose
+report body is English. Unsupported explicit selector locales are rejected instead of being
+silently mislabeled as localized English.
 
 ## full_v2 Contract
 
@@ -84,6 +91,12 @@ At deadline expiry the run stops opening downstream work and persists fail-close
 guarantee, not a promise of full-seat success when search, model transport or data sources
 are unavailable. The deadline does not apply to `plan_visible_run`: an external host owns
 those subagents and the plugin cannot force-stop them.
+
+Visible full runs use the same six role-by-round audit records and exact Q&A gate. Each
+Bull/Bear call declares round 1, 2 or 3; the server rejects out-of-order calls, altered replay
+content and a PM submitted before both Round-3 records pass. Identical role/round retries are
+idempotent. This preserves workflow completeness but does not give host-owned subagents the
+plugin-managed 30-minute deadline.
 
 ## quick_v1 Contract
 

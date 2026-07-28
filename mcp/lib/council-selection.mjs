@@ -5,6 +5,7 @@ import { COUNCIL_MODES, LIMITS, SELECTIONS_DIR } from "./constants.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
+import { resolveLanguage } from "./lang.mjs";
 import { safeSymbol } from "./run-store.mjs";
 import { cleanupSelectionStore } from "./selection-cleanup.mjs";
 import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.mjs";
@@ -12,9 +13,32 @@ import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.m
 const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
 const QUICK_MASTER_MAX = 4;
+const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(["中文", "English", "日本語", "한국어"]);
 
 function digest(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function receiptSelectionHash(receipt) {
+  return digest({
+    schema_version: receipt.schema_version,
+    selection_receipt: receipt.selection_receipt,
+    selection_id: receipt.selection_id,
+    symbol: receipt.symbol,
+    council_mode: receipt.council_mode,
+    catalog_hash: receipt.catalog_hash,
+    request_hash: receipt.request_hash,
+    intent_hash: receipt.intent_hash,
+    selected_master_ids: receipt.selected_master_ids,
+    selected_master_pack_hashes: receipt.selected_master_pack_hashes,
+    selection_mode: receipt.selection_mode,
+    created_at: receipt.created_at,
+    expires_at: receipt.expires_at,
+  });
 }
 
 function councilMode(value) {
@@ -25,6 +49,21 @@ function councilMode(value) {
     });
   }
   return mode;
+}
+
+function selectionLanguage(args = {}) {
+  const language = resolveLanguage({ language: args.language, prompt: args.prompt });
+  if (!SUPPORTED_SELECTION_LANGUAGES.includes(language)) {
+    throw invalidParams(
+      `Selection language ${JSON.stringify(language)} is unsupported. Use zh-CN, en-US, ja-JP or ko-KR.`,
+      {
+        reason: "UNSUPPORTED_SELECTION_LANGUAGE",
+        requested_language: args.language ?? null,
+        supported_languages: ["zh-CN", "en-US", "ja-JP", "ko-KR"],
+      },
+    );
+  }
+  return language;
 }
 
 function ensureStore() {
@@ -76,7 +115,8 @@ function markExpired(record) {
 }
 
 export function catalogSnapshot(language = "English") {
-  const options = councilOptions({ language });
+  const effectiveLanguage = selectionLanguage({ language });
+  const options = councilOptions({ language: effectiveLanguage });
   const catalog = {
     schema_version: 1,
     language: options.language,
@@ -94,8 +134,8 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   // performed before the new record exists and never follows symlinks or unknown names.
   cleanupSelectionStore({ selectionsDir: SELECTIONS_DIR, now });
   const symbol = safeSymbol(args.symbol);
-  const language = String(args.language || "English");
   const prompt = typeof args.prompt === "string" ? args.prompt : "";
+  const language = selectionLanguage({ language: args.language, prompt });
   const mode = councilMode(args.council_mode);
   const catalog = catalogSnapshot(language);
   const preselected = args.preselected_master_ids === undefined
@@ -349,12 +389,6 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     catalog_hash: record.catalog_hash,
     request_hash: record.request_hash,
     intent_hash: record.intent_hash,
-    selection_hash: digest({
-      selection_id: record.selection_id,
-      catalog_hash: record.catalog_hash,
-      council_mode: record.council_mode || "full",
-      selected_master_ids: record.selected_master_ids,
-    }),
     selected_master_ids: record.selected_master_ids,
     selected_master_pack_hashes: selectedPackHashes,
     selection_mode: record.selection_mode,
@@ -363,6 +397,7 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     consumed_at: null,
     consumed_by_run_id: null,
   };
+  receiptRecord.selection_hash = receiptSelectionHash(receiptRecord);
   writeJson(selectionPath(record.selection_id), record);
   writeJson(receiptPath(receipt), receiptRecord);
   return confirmationResult(record);
@@ -388,6 +423,7 @@ function confirmationResult(record) {
     selection_receipt: record.selection_receipt,
     status: record.status,
     symbol: record.symbol,
+    language: record.language,
     council_mode: record.council_mode || "full",
     catalog_hash: record.catalog_hash,
     intent_hash: record.intent_hash,
@@ -406,7 +442,50 @@ function confirmationResult(record) {
 function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
   ensureStore();
   const receipt = readReceipt(args.selection_receipt);
+  if (receipt.selection_receipt !== args.selection_receipt) {
+    throw invalidParams("The selection receipt file does not match its requested receipt id.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: ["selection_receipt"],
+    });
+  }
   const selection = readSelection(receipt.selection_id);
+  const expectedPackHashes = Object.fromEntries(
+    selection.catalog.masters
+      .filter((master) => selection.selected_master_ids.includes(master.id))
+      .map((master) => [master.id, master.pack_hash]),
+  );
+  const recordBindings = [
+    ["schema_version", receipt.schema_version, selection.schema_version],
+    ["selection_id", receipt.selection_id, selection.selection_id],
+    ["selection_receipt", receipt.selection_receipt, selection.selection_receipt],
+    ["symbol", receipt.symbol, selection.symbol],
+    ["council_mode", receipt.council_mode || "full", selection.council_mode || "full"],
+    ["catalog_hash", receipt.catalog_hash, selection.catalog_hash],
+    ["request_hash", receipt.request_hash, selection.request_hash],
+    ["intent_hash", receipt.intent_hash, selection.intent_hash],
+    ["selected_master_ids", receipt.selected_master_ids, selection.selected_master_ids],
+    ["selection_mode", receipt.selection_mode, selection.selection_mode],
+    ["created_at", receipt.created_at, selection.confirmed_at],
+    ["expires_at", receipt.expires_at, selection.expires_at],
+  ];
+  const mismatchedBindings = recordBindings
+    .filter(([, receiptValue, selectionValue]) => !sameJson(receiptValue, selectionValue))
+    .map(([field]) => field);
+  if (mismatchedBindings.length) {
+    throw invalidParams("The selection receipt does not match its confirmed selection record.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: mismatchedBindings,
+    });
+  }
+  if (!sameJson(receipt.selected_master_pack_hashes, expectedPackHashes)) {
+    throw invalidParams("The selected persona pack hashes do not match the confirmed selection record.", {
+      reason: "MASTER_SELECTION_PACK_HASH_MISMATCH",
+      mismatched_master_ids: [...new Set([
+        ...selection.selected_master_ids,
+        ...Object.keys(receipt.selected_master_pack_hashes || {}),
+      ])].filter((id) => receipt.selected_master_pack_hashes?.[id] !== expectedPackHashes[id]),
+    });
+  }
   const symbol = safeSymbol(args.symbol);
   if (receipt.symbol !== symbol || selection.symbol !== symbol) {
     throw invalidParams(`Selection receipt is for ${receipt.symbol}, not ${symbol}.`, {
@@ -434,8 +513,15 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
       mismatched_master_ids: mismatchedPackHashes,
     });
   }
-  const language = String(args.language || "English");
+  const expectedSelectionHash = receiptSelectionHash(receipt);
+  if (receipt.selection_hash !== expectedSelectionHash) {
+    throw invalidParams("The selection receipt hash is invalid.", {
+      reason: "MASTER_SELECTION_HASH_MISMATCH",
+      expected_selection_hash: expectedSelectionHash,
+    });
+  }
   const prompt = typeof args.prompt === "string" ? args.prompt : "";
+  const language = selectionLanguage({ language: args.language, prompt });
   const mode = councilMode(args.council_mode);
   if ((receipt.council_mode || "full") !== mode || (selection.council_mode || "full") !== mode) {
     throw invalidParams("The selection receipt belongs to a different council mode.", {

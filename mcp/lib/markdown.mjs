@@ -5,6 +5,7 @@ import { writeJson } from "./fsutil.mjs";
 import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
+import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
@@ -269,6 +270,9 @@ export function renderDecisionTable(decisions, lang) {
 function masterTitle(id, lang) {
   if (!id) return "Master";
   try {
+    const v3 = compiledPersonaPacks().get(id);
+    const v3Title = v3?.admitted_label?.[languageKey(lang)];
+    if (v3Title) return `${v3Title} (${id})`;
     const persona = registry().get(id);
     const title = personaTitle(persona, lang);
     return title && title !== id ? `${title} (${id})` : id;
@@ -527,10 +531,10 @@ function withRecordedMasterBench(run, markdown) {
   }
   const cleaned = lines.join("\n").trimEnd();
   const heading = localized(run.language, {
-    zh: "## 大师席位 / Master Bench",
+    zh: "## 大师席位",
     en: "## Master Bench",
-    ja: "## マスター・ベンチ / Master Bench",
-    ko: "## 마스터 벤치 / Master Bench",
+    ja: "## マスター・ベンチ",
+    ko: "## 마스터 벤치",
   });
   const systemBench = `${heading}\n\n${recordedBenchMarker(run)}\n\n${renderBenchSummary(run)}\n\n${renderMasterStatements(run)}`;
   return `${cleaned ? `${cleaned}\n\n` : ""}${systemBench}\n`;
@@ -883,20 +887,20 @@ function handoffCopy(language) {
     zh: {
       title: "AlphaCouncil 运行摘要", status: "运行状态与时限", statusLabel: "状态", contract: "报告契约", scope: "执行范围", elapsed: "耗时", deadline: "硬截止时间", deadlineMet: "是否在截止前落盘",
       fullScope: "full_v2：8 个证据席、每个已选方法席的专属 worker、三轮多空交叉问答和 PM；插件托管运行硬上限 30 分钟。", quickScope: "quick_v1：4 个证据席、1–4 个方法席、单轮多空和短 PM；不等同 full council。",
-      price: "系统记录价格", noPrice: "未取得可验证报价；没有补造价格。", conclusion: "结论", rating: "评级", winner: "多空胜负", confidence: "置信度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW；工具或 PM 失败不能转换成投资评级。",
-      masters: "逐席大神方法输出（不是本人引语）", analysts: "分析师逐席内容", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
+      price: "系统记录价格", noPrice: "未取得可验证报价；没有补造价格。", delayed: "延迟行情", conclusion: "结论", rating: "评级", winner: "多空胜负", confidence: "置信度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW；工具或 PM 失败不能转换成投资评级。",
+      masters: "逐席大神方法输出（不是本人引语）", analysts: "分析师逐席内容", worker: "专属代理", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
     },
     en: {
       title: "AlphaCouncil Run Summary", status: "Run Status and Deadline", statusLabel: "Status", contract: "Report contract", scope: "Execution scope", elapsed: "Elapsed", deadline: "Hard deadline", deadlineMet: "Persisted before deadline",
       fullScope: "full_v2: eight evidence seats, one dedicated worker per selected method, three-round cross-examination and PM; plugin-managed runs have a hard thirty-minute ceiling.", quickScope: "quick_v1: four evidence seats, one to four method seats, one debate round and short PM; not equivalent to full council.",
-      price: "System-Recorded Price", noPrice: "No verifiable quote was retrieved; no price was invented.", conclusion: "Conclusion", rating: "Rating", winner: "Debate winner", confidence: "Confidence", judgment: "Judgment", noDecision: "NEEDS_MANAGER_REVIEW; a tool or PM failure cannot be converted into an investment rating.",
-      masters: "Recorded Method-Seat Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
+      price: "System-Recorded Price", noPrice: "No verifiable quote was retrieved; no price was invented.", delayed: "delayed quote", conclusion: "Conclusion", rating: "Rating", winner: "Debate winner", confidence: "Confidence", judgment: "Judgment", noDecision: "NEEDS_MANAGER_REVIEW; a tool or PM failure cannot be converted into an investment rating.",
+      masters: "Recorded Method-Seat Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", worker: "dedicated worker", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
     },
     ja: {
-      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: "full_v2：8つの証拠席、選択した各メソッド専用ワーカー、3ラウンドの多空質疑、PM。プラグイン管理実行は30分で必ず終端状態になります。", quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "メソッド席ごとの記録（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", index: "代理成果物一覧", trace: "全代理トレース", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
+      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: "full_v2：8つの証拠席、選択した各メソッド専用ワーカー、3ラウンドの多空質疑、PM。プラグイン管理実行は30分で必ず終端状態になります。", quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "メソッド席ごとの記録（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "専用ワーカー", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", index: "代理成果物一覧", trace: "全代理トレース", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
     },
     ko: {
-      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: "full_v2: 8개 증거 좌석, 선택된 각 방법론 전용 워커, 3라운드 롱/숏 질의응답, PM. 플러그인 관리 실행은 30분 안에 반드시 종단 상태가 됩니다.", quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "방법론 좌석별 기록(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
+      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: "full_v2: 8개 증거 좌석, 선택된 각 방법론 전용 워커, 3라운드 롱/숏 질의응답, PM. 플러그인 관리 실행은 30분 안에 반드시 종단 상태가 됩니다.", quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "방법론 좌석별 기록(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "전용 워커", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
     },
   }[languageKey(language)];
 }
@@ -905,10 +909,10 @@ function localizedFailure(error, language) {
   const value = String(error || "");
   const key = languageKey(language);
   const labels = {
-    zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
-    en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
-    ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
-    ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
+    zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", qna_incomplete: "问答不完整", unexpected_error: "意外工具错误", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
+    en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", qna_incomplete: "Q&A was incomplete", unexpected_error: "unexpected tool error", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
+    ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", qna_incomplete: "質疑応答が不完全", unexpected_error: "予期しないツールエラー", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
+    ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", qna_incomplete: "질의응답 불완전", unexpected_error: "예기치 않은 도구 오류", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
   }[key];
   if (value.startsWith("exit code")) return labels.failed;
   if (value.includes("gate_failed") || value.startsWith("global_deadline_before")) return labels.skipped;
@@ -940,6 +944,18 @@ function recentNewsHandoff(run, copy) {
   return { packet, sources, exclusion };
 }
 
+function localizedDisplayValue(value, language) {
+  const key = languageKey(language);
+  const token = value === true ? "true" : value === false ? "false" : String(value || "unknown");
+  const maps = {
+    zh: { unknown: "未知", unavailable: "不可用", true: "是", false: "否", pending: "待运行", running: "运行中", waiting: "等待中", completed: "已完成", complete: "完整", failed: "失败", degraded: "降级", incomplete: "不完整", skipped: "未运行", declined: "不适用", constructive: "建设性", cautious: "谨慎", opposed: "反对", out_of_scope: "证据范围外", high: "高", medium: "中", low: "低", Buy: "买入", Overweight: "增持", Hold: "持有", Underweight: "减持", Sell: "卖出", bull: "多方", bear: "空方", balanced: "平衡" },
+    en: { unknown: "unknown", unavailable: "unavailable", true: "yes", false: "no" },
+    ja: { unknown: "不明", unavailable: "取得不可", true: "はい", false: "いいえ", pending: "待機中", running: "実行中", waiting: "待機中", completed: "完了", complete: "完了", failed: "失敗", degraded: "縮退", incomplete: "不完全", skipped: "未実行", declined: "適用外", constructive: "前向き", cautious: "慎重", opposed: "反対", out_of_scope: "証拠範囲外", high: "高", medium: "中", low: "低", Buy: "買い", Overweight: "オーバーウェイト", Hold: "中立", Underweight: "アンダーウェイト", Sell: "売り", bull: "強気", bear: "弱気", balanced: "均衡" },
+    ko: { unknown: "알 수 없음", unavailable: "확인 불가", true: "예", false: "아니요", pending: "대기 중", running: "실행 중", waiting: "대기 중", completed: "완료", complete: "완료", failed: "실패", degraded: "성능 저하", incomplete: "불완전", skipped: "미실행", declined: "적용 범위 밖", constructive: "긍정적", cautious: "신중", opposed: "반대", out_of_scope: "증거 범위 밖", high: "높음", medium: "중간", low: "낮음", Buy: "매수", Overweight: "비중 확대", Hold: "보유", Underweight: "비중 축소", Sell: "매도", bull: "강세", bear: "약세", balanced: "균형" },
+  };
+  return maps[key]?.[token] || token;
+}
+
 export function userResponseMarkdown(run, manager) {
   const artifacts = artifactPaths(run);
   const copy = handoffCopy(run.language);
@@ -947,18 +963,18 @@ export function userResponseMarkdown(run, manager) {
   const decisionAvailable = manager?.decision_available !== false;
   const quote = run?.grounding?.quote;
   const priceLine = quote && Number.isFinite(Number(quote.price))
-    ? `${quote.price} ${quote.currency || ""}; ${quote.quote_time || "unknown"}; ${quote.exchange || "unknown"}; ${quote.note || "delayed"}; ${quote.source_url || "source unavailable"}`
+    ? `${quote.price} ${quote.currency || ""}; ${quote.quote_time || localizedDisplayValue("unknown", run.language)}; ${quote.exchange || localizedDisplayValue("unknown", run.language)}; ${copy.delayed}; ${quote.source_url || localizedDisplayValue("unavailable", run.language)}`
     : copy.noPrice;
   const masterLines = (run.masters || []).map((id) => {
     const opinion = (run.master_opinions || []).find((item) => item.master === id);
     const state = run.master_status?.[id] || { status: "pending" };
-    if (!opinion) return `- ${masterTitle(id, run.language)} (\`${id}\`) [${state.status}]: ${localizedFailure(state.error, run.language) || copy.missing}`;
-    return `- ${masterTitle(id, run.language)} (\`${id}\`) [${opinion.stance}/${opinion.confidence || "low"}; worker=${opinion.dedicated_worker?.status || opinion.voice_status || "unknown"}]: ${clipAtBoundary(opinion.voice_statement || opinion.summary || opinion.verdict, 520)}`;
+    if (!opinion) return `- ${masterTitle(id, run.language)} (\`${id}\`) [${localizedDisplayValue(state.status, run.language)}]: ${localizedFailure(state.error, run.language) || copy.missing}`;
+    return `- ${masterTitle(id, run.language)} (\`${id}\`) [${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}=${localizedDisplayValue(opinion.dedicated_worker?.status || opinion.voice_status || "unknown", run.language)}]: ${clipAtBoundary(opinion.voice_statement || opinion.summary || opinion.verdict, 520)}`;
   }).join("\n") || `- ${copy.missing}`;
   const analystLines = (run.tasks || []).map((task) => {
     const packet = (run.packets || []).find((item) => item.task === task);
     const state = taskState(run, task);
-    return `- \`${task}\` [${state.status}/${packet?.confidence || "low"}]: ${clipAtBoundary(packet?.summary || "", 520) || localizedFailure(state.error, run.language) || copy.missing}`;
+    return `- \`${task}\` [${localizedDisplayValue(state.status, run.language)}/${localizedDisplayValue(packet?.confidence || "low", run.language)}]: ${clipAtBoundary(packet?.summary || "", 520) || localizedFailure(state.error, run.language) || copy.missing}`;
   }).join("\n") || `- ${copy.missing}`;
   const gaps = [...new Set([
     ...(run.tasks || []).filter((task) => taskState(run, task).status !== "completed")
@@ -972,25 +988,25 @@ export function userResponseMarkdown(run, manager) {
     : `- ${copy.noInvalidation}`;
   const elapsed = run.started_at
     ? Math.max(0, Date.parse(run.completed_at || new Date().toISOString()) - Date.parse(run.started_at))
-    : "unknown";
+    : localizedDisplayValue("unknown", run.language);
   return [
     `# ${run.symbol} ${copy.title}`,
     "",
     `## ${copy.status}`,
-    `- ${copy.statusLabel}: ${run.status}`,
+    `- ${copy.statusLabel}: ${localizedDisplayValue(run.status, run.language)}`,
     `- ${copy.contract}: ${run.council_mode === "quick" ? "quick_v1" : "full_v2"}`,
     `- ${copy.scope}: ${run.council_mode === "quick" ? copy.quickScope : copy.fullScope}`,
     `- ${copy.elapsed}: ${elapsed} ms`,
-    `- ${copy.deadline}: ${run.deadline_at || "unknown"}`,
-    `- ${copy.deadlineMet}: ${run.deadline_at && run.completed_at ? Date.parse(run.completed_at) <= Date.parse(run.deadline_at) : "unknown"}`,
+    `- ${copy.deadline}: ${run.deadline_at || localizedDisplayValue("unknown", run.language)}`,
+    `- ${copy.deadlineMet}: ${localizedDisplayValue(run.deadline_at && run.completed_at ? Date.parse(run.completed_at) <= Date.parse(run.deadline_at) : "unknown", run.language)}`,
     "",
     `## ${copy.price}`,
     `- ${priceLine}`,
     "",
     `## ${copy.conclusion}`,
-    `- ${copy.rating}: ${decisionAvailable ? manager.rating : "unavailable"}`,
-    `- ${copy.winner}: ${decisionAvailable ? (manager.winner || "unknown") : "unavailable"}`,
-    `- ${copy.confidence}: ${decisionAvailable ? (manager.confidence || "low") : "unavailable"}`,
+    `- ${copy.rating}: ${localizedDisplayValue(decisionAvailable ? manager.rating : "unavailable", run.language)}`,
+    `- ${copy.winner}: ${localizedDisplayValue(decisionAvailable ? (manager.winner || "unknown") : "unavailable", run.language)}`,
+    `- ${copy.confidence}: ${localizedDisplayValue(decisionAvailable ? (manager.confidence || "low") : "unavailable", run.language)}`,
     `- ${copy.judgment}: ${decisionAvailable ? clipAtBoundary(manager.verdict || manager.summary, 720) : copy.noDecision}`,
     "",
     `## ${copy.masters}`,
@@ -1008,8 +1024,8 @@ export function userResponseMarkdown(run, manager) {
     `- ${copy.earnings}: ${clipAtBoundary(packetSummary(run, "earnings_deep_dive"), 520) || copy.missing}`,
     `- ${copy.forward}: ${clipAtBoundary(packetSummary(run, "forward_expectations"), 520) || copy.missing}`,
     `- ${copy.news}: ${clipAtBoundary(packetSummary(run, "news_industry_management"), 620) || copy.missing}`,
-    `- ${copy.valuation}: ${decisionAvailable ? (clipAtBoundary(manager.valuation_range, 620) || copy.missing) : "unavailable"}`,
-    `- ${copy.position}: ${decisionAvailable ? (clipAtBoundary(manager.position, 520) || copy.missing) : "unavailable"}`,
+    `- ${copy.valuation}: ${decisionAvailable ? (clipAtBoundary(manager.valuation_range, 620) || copy.missing) : localizedDisplayValue("unavailable", run.language)}`,
+    `- ${copy.position}: ${decisionAvailable ? (clipAtBoundary(manager.position, 520) || copy.missing) : localizedDisplayValue("unavailable", run.language)}`,
     "",
     `## ${copy.gaps}`,
     gaps,

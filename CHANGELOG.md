@@ -2,6 +2,40 @@
 
 Notable changes per release. Dates are UTC.
 
+## [0.9.4] — 2026-07-28
+
+### Fixed
+
+- Canonicalized `zh-CN`/English/Japanese/Korean selection language before catalog, intent
+  and receipt binding; `auto` now infers CJK prompts and unsupported explicit locales fail
+  instead of silently presenting English as localized output.
+- Rebuilt all 26 provisional physical v3 packs with four-locale selector copy. Chinese
+  `method` fields are no longer copied English, and Japanese/Korean selection plus
+  confirmation text is localized.
+- Added reader-language enforcement for evidence, isolated method voice, Bull/Bear and PM
+  packets. Plugin-managed workers use one bounded no-search repair before failing closed;
+  visible-host recording rejects wrong-language packets before persistence.
+- Added Japanese/Korean execution-failure, deterministic method and manager fallback copy;
+  removed mixed-English system Master Bench and delayed-quote labels.
+- Added report-language status to `report_quality` so an English report cannot pass a
+  Japanese or Korean run.
+- Revalidated the complete selection-record/receipt binding and recomputed `selection_hash`
+  before consumption, so tampering cannot be persisted as audit evidence or burn a receipt.
+- Replaced reader-facing snake-case best-for domains with reviewed four-language copy while
+  preserving stable machine domain IDs outside the display fields.
+- Required six ordered Bull/Bear round records and exact Round-3 Q&A before a visible full
+  PM can complete; identical retries are idempotent and conflicting replays fail closed.
+- Routed quick PM through the shared language/parse repair path and separated real
+  timeout/transport/language failures from `DRY_RUN` and malformed-JSON failures.
+
+### Acceptance boundary
+
+- The package check now packs and offline-installs the physical tarball, starts the installed
+  server, and proves 31 tools, 26 seats, all four selector locales, stable-ID confirmation,
+  one-time receipt consumption and replay rejection.
+- Still `solo_test`, non-GA, `production_eligible=false`, `method_model_eligible=false`,
+  with 26 provisional `operator_lens` packs and zero approved method models.
+
 ## [0.9.3] — 2026-07-28
 
 This is a **non-GA full-council runtime and reporting correction** on the `solo_test`

@@ -113,8 +113,10 @@ function physicalComponent(packDir, relativePath, label) {
   return file;
 }
 
-function localized(value, label, errors) {
-  if (!isObject(value) || !value.en?.trim() || !value.zh?.trim()) errors.push(`${label} must contain non-empty en and zh strings`);
+function localized(value, label, errors, required = ["en", "zh"]) {
+  if (!isObject(value) || required.some((key) => !value[key]?.trim())) {
+    errors.push(`${label} must contain non-empty ${required.join(", ")} strings`);
+  }
 }
 
 function validateManifest(manifest, packDir) {
@@ -128,15 +130,16 @@ function validateManifest(manifest, packDir) {
     errors.push("pack_version must be a semantic version, optionally with a prerelease suffix");
   }
   const identity = manifest.identity;
+  const selectorLocales = manifest.build_profile === "solo_test" ? ["en", "zh", "ja", "ko"] : ["en", "zh"];
   if (!isObject(identity) || !ID.test(identity.persona_id || "")) errors.push("identity.persona_id is invalid");
   else if (basename(resolve(packDir)) !== identity.persona_id) errors.push(`pack directory must be named ${identity.persona_id}`);
-  localized(identity?.public_label, "identity.public_label", errors);
-  localized(identity?.operator_label, "identity.operator_label", errors);
+  localized(identity?.public_label, "identity.public_label", errors, selectorLocales);
+  localized(identity?.operator_label, "identity.operator_label", errors, selectorLocales);
   if (!MATURITIES.has(identity?.maturity)) errors.push("identity.maturity is invalid (and remains advisory even when valid)");
   if (!Number.isFinite(inclusiveCutoffTime(identity?.source_cutoff))) errors.push("identity.source_cutoff is invalid");
-  localized(manifest.selection?.identity, "selection.identity", errors);
-  localized(manifest.selection?.method, "selection.method", errors);
-  localized(manifest.selection?.best_for, "selection.best_for", errors);
+  localized(manifest.selection?.identity, "selection.identity", errors, selectorLocales);
+  localized(manifest.selection?.method, "selection.method", errors, selectorLocales);
+  localized(manifest.selection?.best_for, "selection.best_for", errors, selectorLocales);
   if (!Array.isArray(manifest.capability?.domains) || !manifest.capability.domains.length) errors.push("capability.domains is required");
   const requiredFacts = manifest.capability?.required_fact_types;
   const optionalFacts = manifest.capability?.optional_fact_types;

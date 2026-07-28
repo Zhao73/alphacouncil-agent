@@ -110,6 +110,8 @@ test("Chinese handoff keeps the price, every analyst seat, recent-news boundary 
   assert.match(markdown, /512\.34 USD/);
   assert.match(markdown, /## 逐席大神方法输出/);
   assert.match(markdown, /中文专属方法席发言/);
+  assert.match(markdown, /\[证据范围外\/中; 专属代理=已完成\]/);
+  assert.match(markdown, /\[已完成\/中\]/);
   assert.match(markdown, /## 分析师逐席内容/);
   assert.match(markdown, /## 近期公司与行业新闻/);
   assert.match(markdown, /本轮没有取得 as_of 之前 120 天内且带日期的新闻来源/);
@@ -123,6 +125,7 @@ test("Japanese handoff keeps the price, every analyst seat and the dedicated mas
   assert.match(markdown, /512\.34 USD/);
   assert.match(markdown, /## メソッド席ごとの記録/);
   assert.match(markdown, /日本語の専用メソッド席発言/);
+  assert.match(markdown, /\[証拠範囲外\/中; 専用ワーカー=完了\]/);
   assert.match(markdown, /## 分析担当ごとの内容/);
   assert.match(markdown, /## 直近の企業・業界ニュース/);
   assert.match(markdown, /as_of までの120日間にある日付付きニュース出典を取得できませんでした/);
@@ -140,6 +143,7 @@ test("Korean handoff keeps the price, every analyst seat and the dedicated maste
   assert.match(markdown, /512\.34 USD/);
   assert.match(markdown, /## 방법론 좌석별 기록/);
   assert.match(markdown, /한국어 전용 방법론 좌석 발언/);
+  assert.match(markdown, /\[증거 범위 밖\/중간; 전용 워커=완료\]/);
   assert.match(markdown, /## 분석가 좌석별 내용/);
   assert.match(markdown, /## 최근 기업 및 산업 뉴스/);
   assert.match(markdown, /as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다/);

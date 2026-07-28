@@ -25,14 +25,14 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `0.9.3`. It is a non-GA GitHub prerelease; this
+The declared package/plugin version is `0.9.4`. It is a non-GA GitHub prerelease; this
 acceptance release does not publish npm or change its dist-tags. The build channel remains
 `solo_test`. The isolated packaged tree contains 26 physical v3 packs and 52 executable
 `provisional_derived_proxy` tools.
 Every seat is still a provisional `operator_lens`: operational = 0, `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
 The production loader rejects these packs and formal production GA remains fail-closed.
-See `docs/releases/v0.9.3.md` and `docs/report-contract.md`.
+See `docs/releases/v0.9.4.md` and `docs/report-contract.md`.
 
 ## Agent-Skills Governance
 

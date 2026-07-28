@@ -21,6 +21,11 @@ import { fileURLToPath } from "node:url";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import buildInventory from "../../data/persona-v3-build-specs.v1.mjs";
+import {
+  selectorBestForLocale,
+  selectorMethodLocale,
+} from "../../data/master-selector-method-locales.v1.mjs";
+import { selectorCard } from "../../mcp/lib/master-catalog.mjs";
 import { inspectPersonaAdmission } from "../../mcp/lib/personas-v3/admission.mjs";
 import {
   canonicalValue,
@@ -381,14 +386,26 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
   if (policyErrors.length) fail(`${seat.persona_id}: generated deterministic policy is invalid`, { errors: policyErrors });
 
   const publicTitle = blueprint.canonical_title;
+  const selectorPersona = { id: seat.persona_id, title: publicTitle };
+  const chineseMethod = selectorCard(selectorPersona, "zh-CN").method;
   const manifest = canonicalValue({
     schema_version: 3,
     build_profile: "solo_test",
     pack_version: packVersion,
     identity: {
       persona_id: seat.persona_id,
-      public_label: { en: `${publicTitle.en} Solo Test`, zh: `${publicTitle.zh}单人测试` },
-      operator_label: { en: `${publicTitle.en} Provisional Operator Lens`, zh: `${publicTitle.zh}临时操作视角` },
+      public_label: {
+        en: `${publicTitle.en} Solo Test`,
+        zh: `${publicTitle.zh}单人测试`,
+        ja: `${publicTitle.en} 単独テスト`,
+        ko: `${publicTitle.en} 단독 테스트`,
+      },
+      operator_label: {
+        en: `${publicTitle.en} Provisional Operator Lens`,
+        zh: `${publicTitle.zh}临时操作视角`,
+        ja: `${publicTitle.en} 暫定オペレーター・レンズ`,
+        ko: `${publicTitle.en} 임시 오퍼레이터 렌즈`,
+      },
       maturity: "operator_lens",
       source_cutoff: SOURCE_DATE,
     },
@@ -396,11 +413,20 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
       identity: {
         en: `${publicTitle.en}; project-derived and not human reviewed`,
         zh: `${publicTitle.zh}；项目派生、未经人工审定`,
+        ja: `${publicTitle.en}。プロジェクト派生で、方法帰属について人による審査を受けていない暫定オペレーター・レンズ。本人の発言や現在の見解ではない。`,
+        ko: `${publicTitle.en}. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 오퍼레이터 렌즈다. 본인의 발언이나 현재 견해가 아니다.`,
       },
-      method: { en: seat.method_scope.planning_hypothesis, zh: seat.method_scope.planning_hypothesis },
+      method: {
+        en: seat.method_scope.planning_hypothesis,
+        zh: chineseMethod,
+        ja: selectorMethodLocale(seat.persona_id, "ja"),
+        ko: selectorMethodLocale(seat.persona_id, "ko"),
+      },
       best_for: {
-        en: `Testing deterministic behavior in ${seat.method_scope.applicable_domains.join(", ")}`,
-        zh: `用于测试确定性行为：${seat.method_scope.applicable_domains.join("、")}`,
+        en: selectorBestForLocale(seat.persona_id, "en"),
+        zh: selectorBestForLocale(seat.persona_id, "zh"),
+        ja: selectorBestForLocale(seat.persona_id, "ja"),
+        ko: selectorBestForLocale(seat.persona_id, "ko"),
       },
     },
     capability: {
