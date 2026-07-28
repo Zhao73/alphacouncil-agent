@@ -9,9 +9,9 @@ import { cleanLog } from "./text.mjs";
 import { completenessStatus, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizePacket, rawRecordText } from "./packets.mjs";
+import { debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
-import { debatePrompt, masterPrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
+import { debatePrompt, masterPrompt, masterVoicePrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
 import { gatherGrounding } from "./grounding.mjs";
@@ -28,40 +28,67 @@ function plannedTasks(args = {}) {
   return DEFAULT_TASKS;
 }
 
-function quickTiming(args, startedAt) {
-  if (councilMode(args) !== "quick") {
-    return { council_mode: "full", debate_format: "three_round_cross_exam", time_budget_ms: null, deadline_at: null };
-  }
+function councilTiming(args, startedAt) {
+  const mode = councilMode(args);
   const requested = Number(args.total_timeout_ms);
+  const hardMaximum = mode === "quick" ? LIMITS.QUICK_HARD_MAX_MS : LIMITS.FULL_HARD_MAX_MS;
+  const defaultBudget = mode === "quick" ? LIMITS.QUICK_TOTAL_MS : LIMITS.FULL_TOTAL_MS;
   const timeBudgetMs = Number.isFinite(requested) && requested > 0
-    ? Math.min(requested, LIMITS.QUICK_HARD_MAX_MS)
-    : LIMITS.QUICK_TOTAL_MS;
+    ? Math.min(requested, hardMaximum)
+    : defaultBudget;
   const deadlineAt = args.queued_run?.deadline_at
     || new Date(Date.parse(startedAt) + timeBudgetMs).toISOString();
   return {
-    council_mode: "quick",
-    debate_format: "single_round_parallel",
+    council_mode: mode,
+    debate_format: mode === "quick" ? "single_round_parallel" : "three_round_cross_exam_parallel_per_round",
     time_budget_ms: timeBudgetMs,
     deadline_at: deadlineAt,
+    deadline_enforced: true,
   };
 }
 
-function remainingQuickBudget(run, capMs) {
-  if (run.council_mode !== "quick" || !run.deadline_at) return capMs;
+function visibleCouncilTiming(args) {
+  const mode = councilMode(args);
+  return {
+    council_mode: mode,
+    debate_format: mode === "quick" ? "single_round_parallel" : "host_managed_visible_debate",
+    time_budget_ms: null,
+    deadline_at: null,
+    deadline_enforced: false,
+  };
+}
+
+function remainingCouncilBudget(run, capMs) {
+  if (!run.deadline_at) return capMs;
+  const configuredReserve = run.council_mode === "quick"
+    ? LIMITS.QUICK_FINALIZE_RESERVE_MS
+    : LIMITS.FULL_FINALIZE_RESERVE_MS;
   const reserve = Math.min(
-    LIMITS.QUICK_FINALIZE_RESERVE_MS,
-    Math.max(100, Math.floor(Number(run.time_budget_ms || LIMITS.QUICK_TOTAL_MS) * 0.1)),
+    configuredReserve,
+    Math.max(100, Math.floor(Number(run.time_budget_ms || LIMITS.FULL_TOTAL_MS) * 0.1)),
   );
-  const usable = Date.parse(run.deadline_at) - Date.now() - reserve;
+  const killGrace = councilKillGrace(run);
+  // runCodex may need one SIGKILL grace after its timeout. Budget that grace before
+  // launching a child so the queue-to-persistence deadline remains the outer boundary.
+  const usable = Date.parse(run.deadline_at) - Date.now() - reserve - killGrace;
   return Math.max(0, Math.min(capMs, usable));
 }
 
-function deadlineResult() {
+function councilKillGrace(run) {
+  const total = Math.max(1_000, Number(run?.time_budget_ms || LIMITS.FULL_TOTAL_MS));
+  // A fixed five-second grace would consume tiny operator-supplied budgets before the
+  // first worker. Production budgets retain the full grace; small budgets scale it down.
+  // The exact same value is passed to runCodex, so forced settlement remains inside the
+  // queue-to-persistence deadline rather than becoming an unaccounted overrun.
+  return Math.min(LIMITS.SIGKILL_GRACE_MS, Math.max(50, Math.floor(total * 0.02)));
+}
+
+function deadlineResult(run) {
   return {
     ok: false,
     code: null,
     text: "",
-    stderr: "quick council global deadline exhausted",
+    stderr: `${run?.council_mode || "council"} global deadline exhausted`,
     stdout: "",
     timedOut: true,
     deadline_exhausted: true,
@@ -169,7 +196,10 @@ export function visibleRun(args) {
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
-  const timing = quickTiming(args, startedAt);
+  // External host threads are outside this MCP process, so the plugin cannot stop them or
+  // make a truthful queue-to-persistence SLA claim. Only analyze_symbol gets the enforced
+  // thirty-minute full-council deadline.
+  const timing = visibleCouncilTiming(args);
   const run = {
     run_id: id,
     symbol,
@@ -669,7 +699,7 @@ export function queueHeadlessRun(args) {
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
-  const timing = quickTiming(args, startedAt);
+  const timing = councilTiming(args, startedAt);
   const run = {
     run_id: id,
     symbol,
@@ -723,21 +753,32 @@ export async function collectEvidence(args) {
   const language = resolveLanguage(args);
   const frozen = frozenMasterSelection(args);
   const startedAt = args.queued_run?.started_at || new Date().toISOString();
-  const timing = quickTiming(args, startedAt);
+  const timing = councilTiming(args, startedAt);
   const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
   const timeoutMs = timing.council_mode === "quick"
     ? Math.min(requestedTimeoutMs, LIMITS.QUICK_EVIDENCE_MS)
-    : requestedTimeoutMs;
-  const defaultConcurrency = timing.council_mode === "quick" ? QUICK_TASKS.length : LIMITS.CONCURRENCY_DEFAULT;
-  const maxConcurrency = Math.max(LIMITS.CONCURRENCY_MIN, Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || defaultConcurrency)));
+    : Math.min(requestedTimeoutMs, LIMITS.FULL_EVIDENCE_MS);
+  const defaultConcurrency = timing.council_mode === "quick"
+    ? QUICK_TASKS.length
+    : Math.min(tasks.length, LIMITS.FULL_EVIDENCE_CONCURRENCY);
+  // The evidence topology is contractual: every planned evidence seat starts in the same
+  // wave. A legacy low max_concurrency override may not silently turn the full fan-out back
+  // into the old three-wave, ~30-minute evidence stage. Higher values have no effect once
+  // every task can launch.
+  const requestedConcurrency = Number(args.max_concurrency || defaultConcurrency);
+  const maxConcurrency = Math.max(
+    defaultConcurrency,
+    Math.min(LIMITS.CONCURRENCY_MAX, Number.isFinite(requestedConcurrency) ? requestedConcurrency : defaultConcurrency),
+  );
   const grounding = await groundingForHeadlessRun({
     symbol,
     asOf: asOfDate,
     grounding: args.grounding,
     dryRun,
-    timeoutMs: timing.council_mode === "quick"
-      ? remainingQuickBudget(timing, LIMITS.QUICK_GROUNDING_MS)
-      : undefined,
+    timeoutMs: remainingCouncilBudget(
+      timing,
+      timing.council_mode === "quick" ? LIMITS.QUICK_GROUNDING_MS : LIMITS.FULL_GROUNDING_MS,
+    ),
   });
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
@@ -847,15 +888,15 @@ export async function collectEvidence(args) {
       return packet;
     }
     const workerStartedAt = Date.now();
-    const runAttempt = async (workerPrompt, budgetMs, attempt) => {
-      const allowedMs = remainingQuickBudget(run, budgetMs);
-      if (allowedMs <= 0) return { ...deadlineResult(), budget_ms: 0 };
+    const runAttempt = async (workerPrompt, budgetMs, attempt, { search = true } = {}) => {
+      const allowedMs = remainingCouncilBudget(run, budgetMs);
+      if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
       const result = await runCodex(workerPrompt, allowedMs, ({ pid, output }) => {
         updateTask(run, task, "running", { pid, output, attempts: attempt });
       }, ({ pid, output, elapsed_ms }) => {
         updateTask(run, task, "running", { pid, output, attempts: attempt });
         appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms, attempt });
-      });
+      }, { search, sigkillGraceMs: councilKillGrace(run) });
       return { ...result, budget_ms: allowedMs };
     };
     const commitFailure = ({ failedResult, budgetMs, attempts, failureKind, parseError, retryDiagnostic }) => {
@@ -913,7 +954,11 @@ export async function collectEvidence(args) {
       const retryDiagnostic = join(dir, `${task}.attempt-1.failure.json`);
       writeJson(retryDiagnostic, firstFailure.diagnostic, { mode: 0o600 });
       const elapsedMs = Date.now() - workerStartedAt;
-      const retryTimeoutMs = Math.min(timeoutMs - elapsedMs, remainingQuickBudget(run, timeoutMs));
+      const retryTimeoutMs = Math.min(
+        LIMITS.PARSE_REPAIR_MS,
+        timeoutMs - elapsedMs,
+        remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS),
+      );
       if (retryTimeoutMs <= 0) {
         return commitFailure({
           failedResult: result,
@@ -934,8 +979,14 @@ export async function collectEvidence(args) {
         remaining_ms: retryTimeoutMs,
       });
       updateTask(run, task, "running", { attempts: 2, retry_diagnostic: retryDiagnostic });
-      const retryPrompt = `${prompt}\n\nTRANSPORT RETRY ONLY: Your previous final response violated the required JSON transport contract. Return exactly one JSON object matching the schema above, with no prose, Markdown fence, second object, or trailing text. Do not infer or repair facts from the prior malformed response; perform the same source-bounded task again.`;
-      result = await runAttempt(retryPrompt, retryTimeoutMs, 2);
+      const malformed = String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS);
+      const retryPrompt = [
+        "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, fetch, add facts, or redo the research.",
+        `Target task: ${task}; symbol: ${symbol}; as_of: ${asOfDate}; reader language: ${language}.`,
+        "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
+        `Malformed worker output:\n${malformed}`,
+      ].join("\n\n");
+      result = await runAttempt(retryPrompt, retryTimeoutMs, 2, { search: false });
       if (!result.ok) {
         return commitFailure({
           failedResult: result,
@@ -1022,11 +1073,14 @@ export async function runHeadlessMasters(run, args = {}) {
   const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
   const timeoutMs = run.council_mode === "quick"
     ? Math.min(requestedTimeoutMs, LIMITS.QUICK_MASTER_MS)
-    : requestedTimeoutMs;
-  const defaultConcurrency = run.council_mode === "quick" ? 4 : LIMITS.CONCURRENCY_DEFAULT;
+    : Math.min(requestedTimeoutMs, LIMITS.FULL_MASTER_MS);
+  const defaultConcurrency = run.council_mode === "quick"
+    ? 4
+    : Math.min(selected.length, LIMITS.FULL_MASTER_CONCURRENCY);
+  const requestedConcurrency = Number(args.max_concurrency || defaultConcurrency);
   const maxConcurrency = Math.max(
-    LIMITS.CONCURRENCY_MIN,
-    Math.min(LIMITS.CONCURRENCY_MAX, Number(args.max_concurrency || defaultConcurrency)),
+    defaultConcurrency,
+    Math.min(LIMITS.CONCURRENCY_MAX, Number.isFinite(requestedConcurrency) ? requestedConcurrency : defaultConcurrency),
   );
   const plan = planMasterSeats(run, selected);
   const byId = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
@@ -1045,40 +1099,6 @@ export async function runHeadlessMasters(run, args = {}) {
     blocked: plan.blocked.length,
   });
 
-  for (const item of plan.declined) {
-    const opinion = attachMasterRuntimeProvenance(
-      run,
-      item.id,
-      declinedMasterOpinion(run, item),
-      item.engine,
-    );
-    byId.set(item.id, opinion);
-    writeJson(join(dir, `${item.id}.json`), opinion);
-    updateMasterStatus(run, item.id, "completed", {
-      engine: item.engine || opinion.engine,
-      deterministic_decline: true,
-      completed_at: new Date().toISOString(),
-    });
-  }
-
-  for (const item of plan.completed) {
-    const opinion = attachMasterRuntimeProvenance(
-      run,
-      item.id,
-      completedMasterOpinion(run, item),
-      item.engine,
-    );
-    byId.set(item.id, opinion);
-    writeJson(join(dir, `${item.id}.json`), opinion);
-    updateMasterStatus(run, item.id, "completed", {
-      engine: item.engine,
-      deterministic_execution: true,
-      policy_execution_hash: opinion.policy_execution_hash,
-      frozen_decision_hash: opinion.frozen_decision_hash,
-      completed_at: new Date().toISOString(),
-    });
-  }
-
   for (const item of plan.blocked) {
     updateMasterStatus(run, item.id, "failed", {
       engine: item.engine,
@@ -1087,48 +1107,140 @@ export async function runHeadlessMasters(run, args = {}) {
     });
   }
 
-  const outcomes = await mapLimit(plan.to_run, maxConcurrency, async ({ id, decision, engine }) => {
-    const prompt = [
-      masterPrompt(id, run),
-      decision ? deterministicVerdictBlock(decision, isChineseLanguage(run.language)) : "",
-    ].filter(Boolean).join("\n\n");
-    updateMasterStatus(run, id, "running", { started_at: new Date().toISOString() });
+  const workerItems = [
+    ...plan.declined.map((item) => ({
+      ...item,
+      frozenOpinion: attachMasterRuntimeProvenance(run, item.id, declinedMasterOpinion(run, item), item.engine),
+      deterministic_decline: true,
+    })),
+    ...plan.completed.map((item) => ({
+      ...item,
+      frozenOpinion: attachMasterRuntimeProvenance(run, item.id, completedMasterOpinion(run, item), item.engine),
+      deterministic_execution: true,
+    })),
+    ...plan.to_run,
+  ];
+  for (const item of workerItems) {
+    if (!item.frozenOpinion) continue;
+    writeJson(join(dir, `${item.id}.deterministic.json`), item.frozenOpinion);
+  }
+
+  const outcomes = await mapLimit(workerItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
+    const prompt = frozenOpinion
+      ? masterVoicePrompt(id, run, frozenOpinion)
+      : [
+        masterPrompt(id, run),
+        decision ? deterministicVerdictBlock(decision, isChineseLanguage(run.language)) : "",
+      ].filter(Boolean).join("\n\n");
+    updateMasterStatus(run, id, "running", {
+      started_at: new Date().toISOString(),
+      worker_kind: frozenOpinion ? "dedicated_method_voice" : "dedicated_method_judgment",
+      deterministic_decline: deterministic_decline || undefined,
+      deterministic_execution: deterministic_execution || undefined,
+    });
 
     if (run.dry_run) {
+      if (frozenOpinion) {
+        return {
+          id,
+          engine,
+          opinion: {
+            ...frozenOpinion,
+            deterministic_summary: frozenOpinion.summary,
+            voice_statement: frozenOpinion.summary,
+            voice_status: "dry_run",
+            dedicated_worker: { status: "dry_run", language: run.language, execution_mode: "dry_run" },
+          },
+        };
+      }
       const normalized = normalizeMasterOpinion({
         verdict: "DRY_RUN",
         stance: "out_of_scope",
-        summary: "Dry run: the master prompt was planned but no model judgment was executed.",
+        summary: "Dry run: the dedicated method worker was planned but no model judgment was executed.",
         what_would_change_my_mind: ["Run without dry_run to obtain a method judgment."],
         confidence: "low",
       }, id, run, prompt);
       const reconciled = reconcileMasterOpinion(run, id, normalized);
       const resolvedEngine = engine || reconciled.engine || (decision ? "v2_method_model" : "v1_prompt");
-      return { id, opinion: attachMasterRuntimeProvenance(run, id, reconciled.opinion, resolvedEngine), engine: resolvedEngine };
-    }
-
-    const allowedMs = remainingQuickBudget(run, timeoutMs);
-    const result = allowedMs <= 0
-      ? deadlineResult()
-      : await runCodex(prompt, allowedMs, ({ pid, output }) => {
-        updateMasterStatus(run, id, "running", { pid, output });
-      }, ({ pid, output, elapsed_ms }) => {
-        updateMasterStatus(run, id, "running", { pid, output, elapsed_ms });
-      });
-    if (!result.ok) {
       return {
         id,
-        error: result.timedOut ? "timeout" : `exit code ${result.code}`,
-        raw: cleanLog(result.stderr || result.stdout || result.text || "master execution failed"),
+        opinion: attachMasterRuntimeProvenance(run, id, {
+          ...reconciled.opinion,
+          voice_status: "dry_run",
+          dedicated_worker: { status: "dry_run", language: run.language, execution_mode: "dry_run" },
+        }, resolvedEngine),
+        engine: resolvedEngine,
       };
     }
-    try {
+
+    let pid = null;
+    const execute = async (workerPrompt, budgetMs, attempt) => {
+      const allowedMs = remainingCouncilBudget(run, budgetMs);
+      if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
+      const result = await runCodex(workerPrompt, allowedMs, ({ pid: workerPid, output }) => {
+        pid = workerPid;
+        updateMasterStatus(run, id, "running", { pid: workerPid, output, attempts: attempt });
+      }, ({ pid: workerPid, output, elapsed_ms }) => {
+        updateMasterStatus(run, id, "running", { pid: workerPid, output, elapsed_ms, attempts: attempt });
+      }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+      return { ...result, budget_ms: allowedMs };
+    };
+    const parse = (result) => {
+      if (frozenOpinion) {
+        const voice = normalizeMasterVoice(extractJson(result.text), id, run, frozenOpinion, result.text);
+        return attachMasterRuntimeProvenance(run, id, {
+          ...frozenOpinion,
+          deterministic_summary: frozenOpinion.summary,
+          summary: voice.statement,
+          voice_statement: voice.statement,
+          voice_status: "completed",
+          voice_language: run.language,
+          key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
+          disagreements: voice.disagreements,
+          what_would_change_my_mind: voice.what_would_change_my_mind.length
+            ? voice.what_would_change_my_mind
+            : frozenOpinion.what_would_change_my_mind,
+          source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
+          confidence: voice.confidence,
+          dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
+        }, engine);
+      }
       const normalized = normalizeMasterOpinion(extractJson(result.text), id, run, result.text);
       const reconciled = reconcileMasterOpinion(run, id, normalized);
       const resolvedEngine = engine || reconciled.engine || (decision ? "v2_method_model" : "v1_prompt");
-      return { id, opinion: attachMasterRuntimeProvenance(run, id, reconciled.opinion, resolvedEngine), engine: resolvedEngine };
-    } catch (error) {
-      return { id, error: "parse_failed", raw: cleanLog(result.text || String(error?.message || error)) };
+      return attachMasterRuntimeProvenance(run, id, {
+        ...reconciled.opinion,
+        voice_statement: reconciled.opinion.summary || reconciled.opinion.verdict,
+        voice_status: "completed",
+        voice_language: run.language,
+        dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
+      }, resolvedEngine);
+    };
+
+    let result = await execute(prompt, timeoutMs, 1);
+    if (!result.ok) {
+      return { id, error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`, raw: cleanLog(result.stderr || result.stdout || "method worker failed") };
+    }
+    try {
+      return { id, opinion: parse(result), engine };
+    } catch (firstParseError) {
+      const repairBudget = Math.min(LIMITS.PARSE_REPAIR_MS, remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS));
+      if (repairBudget <= 0) return { id, error: "parse_failed", raw: cleanLog(firstParseError?.message || result.text) };
+      const repairPrompt = [
+        "PARSE-ONLY TRANSPORT REPAIR. Do not browse, search, add facts or change the frozen method stance.",
+        `Master ID: ${id}; required acknowledged stance: ${frozenOpinion?.stance || "use the original stance"}; output language: ${run.language}.`,
+        frozenOpinion
+          ? "Return one JSON object with master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence."
+          : "Return one JSON object matching the master_opinion schema from the original prompt.",
+        `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+      ].join("\n\n");
+      result = await execute(repairPrompt, repairBudget, 2);
+      if (!result.ok) return { id, error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`, raw: cleanLog(result.stderr || "method repair failed") };
+      try {
+        return { id, opinion: parse(result), engine };
+      } catch (secondParseError) {
+        return { id, error: "parse_failed", raw: cleanLog(secondParseError?.message || result.text) };
+      }
     }
   }, (error, { id }) => ({
     id,
@@ -1138,13 +1250,25 @@ export async function runHeadlessMasters(run, args = {}) {
 
   for (const outcome of outcomes) {
     if (!outcome.opinion) {
-      updateMasterStatus(run, outcome.id, "failed", { error: outcome.error, output: outcome.raw });
+      const diagnosticPath = join(dir, `${outcome.id}.failure.json`);
+      writeJson(diagnosticPath, {
+        master: outcome.id,
+        failure_kind: outcome.error,
+        diagnostic: outcome.raw,
+        public_summary: "The dedicated method worker did not complete; no method-seat statement is available.",
+      }, { mode: 0o600 });
+      updateMasterStatus(run, outcome.id, "failed", { error: outcome.error, diagnostic: diagnosticPath });
       continue;
     }
     byId.set(outcome.id, outcome.opinion);
     writeJson(join(dir, `${outcome.id}.json`), outcome.opinion);
     updateMasterStatus(run, outcome.id, "completed", {
       engine: outcome.opinion.engine || outcome.engine,
+      worker_kind: outcome.opinion.dedicated_worker?.execution_mode === "dry_run"
+        ? "dedicated_method_voice_dry_run"
+        : "dedicated_method_worker",
+      worker_pid: outcome.opinion.dedicated_worker?.pid || null,
+      voice_status: outcome.opinion.voice_status || "completed",
       completed_at: new Date().toISOString(),
       output: join(dir, `${outcome.id}.json`),
     });
@@ -1162,15 +1286,31 @@ export async function runHeadlessMasters(run, args = {}) {
 export async function runDebateRole(run, role, context, timeoutMs) {
   const prompt = debatePrompt(role, run, context);
   updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round });
-  const result = timeoutMs <= 0
-    ? deadlineResult()
+  let result = timeoutMs <= 0
+    ? deadlineResult(run)
     : await runCodex(prompt, timeoutMs, ({ pid, output }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round });
     }, ({ pid, output, elapsed_ms }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round });
       appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
-    });
-  const packet = debateFromCodex(result, role, run, prompt);
+    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+  let packet = debateFromCodex(result, role, run, prompt);
+  if (result.ok && packet.verdict === "PARSE_FAILED") {
+    const repairBudget = Math.min(LIMITS.PARSE_REPAIR_MS, remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS));
+    if (repairBudget > 0) {
+      appendEvent(run, "agent_parse_repair", { role, round: context.round, budget_ms: repairBudget });
+      const repairPrompt = [
+        "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, add facts or redo the analysis.",
+        `Role: ${role}; symbol: ${run.symbol}; as_of: ${run.as_of}; reader language: ${run.language}; round: ${context.round || "final"}.`,
+        "Convert only the supplied malformed output into one valid debate-packet JSON object. Preserve exact round-2 questions and exact round-3 question bindings when present. Return JSON only.",
+        `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+      ].join("\n\n");
+      result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
+        updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
+      }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
+      packet = debateFromCodex(result, role, run, repairPrompt);
+    }
+  }
   const roundCompletedAt = new Date().toISOString();
   // A role can run three times. Leaving it marked `running` after one awaited invocation
   // returned made sequential rounds look concurrent in status.json. Record the dependency
@@ -1205,7 +1345,7 @@ function debateFailure(step) {
 async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   const dir = runPath(run.run_id);
   appendEvent(run, "debate_round", { round: 1, format: "single_round_parallel" });
-  const sideBudget = remainingQuickBudget(run, timeoutMs);
+  const sideBudget = remainingCouncilBudget(run, timeoutMs);
   const [bullOutcome, bearOutcome] = await Promise.allSettled([
     runDebateRole(run, "bull_researcher", { round: 1, brief: "quick long case" }, sideBudget),
     runDebateRole(run, "bear_researcher", { round: 1, brief: "quick short case" }, sideBudget),
@@ -1251,15 +1391,15 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
 
   const managerPrompt = debatePrompt("portfolio_manager", run, { bull, bear, outputMode });
   updateAgent(run, "portfolio_manager", "running", { started_at: new Date().toISOString() });
-  const managerBudget = remainingQuickBudget(run, timeoutMs);
+  const managerBudget = remainingCouncilBudget(run, timeoutMs);
   const managerResult = managerBudget <= 0
-    ? deadlineResult()
+    ? deadlineResult(run)
     : await runCodex(managerPrompt, managerBudget, ({ pid, output }) => {
       updateAgent(run, "portfolio_manager", "running", { pid, output });
     }, ({ pid, output, elapsed_ms }) => {
       updateAgent(run, "portfolio_manager", "running", { pid, output });
       appendEvent(run, "agent_heartbeat", { role: "portfolio_manager", pid, output, elapsed_ms });
-    });
+    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
   const manager = managerResult.ok
     ? debateFromCodex(managerResult, "portfolio_manager", run, managerPrompt)
     : managerFallback(run, args.prompt || "");
@@ -1340,6 +1480,47 @@ function finalizeBeforeDebate(run, args, reason) {
   return { bull: null, bear: null, manager, ...finalArtifacts };
 }
 
+function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRounds = []) {
+  const dir = runPath(run.run_id);
+  const bull = mergeDebateRounds(bullRounds.map((step) => step?.packet).filter(Boolean));
+  const bear = mergeDebateRounds(bearRounds.map((step) => step?.packet).filter(Boolean));
+  if (bull) writeJson(join(dir, "bull_researcher.json"), bull);
+  if (bear) writeJson(join(dir, "bear_researcher.json"), bear);
+  updateAgent(run, "bull_researcher", "failed", {
+    error: reason,
+    completed_at: new Date().toISOString(),
+    output: bull ? join(dir, "bull_researcher.json") : undefined,
+  });
+  updateAgent(run, "bear_researcher", "failed", {
+    error: reason,
+    completed_at: new Date().toISOString(),
+    output: bear ? join(dir, "bear_researcher.json") : undefined,
+  });
+  updateAgent(run, "portfolio_manager", "skipped", {
+    error: reason,
+    completed_at: new Date().toISOString(),
+  });
+  const manager = managerFallback(run, args.prompt || "");
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  run.phase = "incomplete";
+  run.status = "incomplete";
+  run.completed_at = new Date().toISOString();
+  const completeness = completenessStatus(run);
+  appendEvent(run, "incomplete", {
+    reason,
+    downstream_model_calls_skipped: true,
+    missing_evidence: completeness.missing_evidence,
+    missing_debate: completeness.missing_debate,
+    missing_masters: completeness.missing_masters,
+  });
+  const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager });
+  writeJson(join(dir, "evidence.json"), run);
+  writeStatus(run);
+  writeAllAgentsMarkdown(run, { bull, bear, manager });
+  return { bull, bear, manager, ...finalArtifacts };
+}
+
 export async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
   const requestedSynthesisMs = Number.isFinite(args.synthesis_timeout_ms)
@@ -1347,7 +1528,7 @@ export async function synthesizeDecision(run, args) {
     : Number(args.timeout_ms || LIMITS.CODEX_TIMEOUT_MS);
   const timeoutMs = run.council_mode === "quick"
     ? Math.min(requestedSynthesisMs, LIMITS.QUICK_SYNTHESIS_MS)
-    : requestedSynthesisMs;
+    : Math.min(requestedSynthesisMs, LIMITS.FULL_DEBATE_MS);
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
   run.phase = "debate";
   run.status = "running";
@@ -1403,28 +1584,66 @@ export async function synthesizeDecision(run, args) {
     return synthesizeQuickDecision(run, args, timeoutMs, outputMode);
   }
 
-  // Three-round debate: R1 cases, R2 cross-rebuttal, R3 Q&A.
-  appendEvent(run, "debate_round", { round: 1 });
-  const bullR1 = await runDebateRole(run, "bull_researcher", { round: 1, brief: "long" }, timeoutMs);
-  const bearR1 = await runDebateRole(run, "bear_researcher", { round: 1, brief: "short", bull: bullR1.packet }, timeoutMs);
+  const rejectedStep = (reason, role) => {
+    const result = {
+      ok: false, code: null, text: "", stderr: cleanLog(reason?.message || reason), stdout: "",
+      timedOut: false, unexpected_error: true,
+    };
+    return { result, packet: debateFromCodex(result, role, run, "unexpected debate failure") };
+  };
+  const parallelRound = async (round, bullContext, bearContext) => {
+    const budget = remainingCouncilBudget(run, timeoutMs);
+    appendEvent(run, "debate_round", { round, format: "parallel_per_round", budget_ms: budget });
+    const [bullOutcome, bearOutcome] = await Promise.allSettled([
+      runDebateRole(run, "bull_researcher", { round, ...bullContext }, budget),
+      runDebateRole(run, "bear_researcher", { round, ...bearContext }, budget),
+    ]);
+    return {
+      bull: bullOutcome.status === "fulfilled" ? bullOutcome.value : rejectedStep(bullOutcome.reason, "bull_researcher"),
+      bear: bearOutcome.status === "fulfilled" ? bearOutcome.value : rejectedStep(bearOutcome.reason, "bear_researcher"),
+    };
+  };
+  const failedRound = (round) => [debateFailure(round.bull), debateFailure(round.bear)].filter(Boolean);
 
-  appendEvent(run, "debate_round", { round: 2 });
-  const bullR2 = await runDebateRole(run, "bull_researcher", { round: 2, otherCaseR1: bearR1.packet }, timeoutMs);
-  const bearR2 = await runDebateRole(run, "bear_researcher", { round: 2, otherCaseR1: bullR1.packet }, timeoutMs);
+  // Three-round debate with a strict inter-round barrier and parallel sides per round.
+  const r1 = await parallelRound(1, { brief: "long" }, { brief: "short" });
+  if (failedRound(r1).length) {
+    return finalizeAfterDebateFailure(run, args, `debate_round_1_failed:${failedRound(r1).join(",")}`, [r1.bull], [r1.bear]);
+  }
 
-  appendEvent(run, "debate_round", { round: 3 });
-  const bullR3 = await runDebateRole(run, "bull_researcher", {
-    round: 3,
-    otherCaseR1: bearR2.packet,
-    questionsYouAsked: bullR2.packet.questions,
-    questionsForYou: bearR2.packet.questions,
-  }, timeoutMs);
-  const bearR3 = await runDebateRole(run, "bear_researcher", {
-    round: 3,
-    otherCaseR1: bullR2.packet,
-    questionsYouAsked: bearR2.packet.questions,
-    questionsForYou: bullR2.packet.questions,
-  }, timeoutMs);
+  const r2 = await parallelRound(2,
+    { otherCaseR1: r1.bear.packet },
+    { otherCaseR1: r1.bull.packet });
+  if (failedRound(r2).length) {
+    return finalizeAfterDebateFailure(run, args, `debate_round_2_failed:${failedRound(r2).join(",")}`, [r1.bull, r2.bull], [r1.bear, r2.bear]);
+  }
+  const exactlyThreeQuestions = (packet) => Array.isArray(packet?.questions)
+    && packet.questions.length === 3
+    && packet.questions.every((question) => typeof question === "string" && question.trim());
+  if (!exactlyThreeQuestions(r2.bull.packet) || !exactlyThreeQuestions(r2.bear.packet)) {
+    appendEvent(run, "debate_qna_gate", { status: "failed", errors: ["round 2 did not produce exactly three questions per side"] });
+    return finalizeAfterDebateFailure(run, args, "debate_round_2_questions_incomplete", [r1.bull, r2.bull], [r1.bear, r2.bear]);
+  }
+
+  const r3 = await parallelRound(3, {
+    otherCaseR1: r2.bear.packet,
+    questionsYouAsked: r2.bull.packet.questions,
+    questionsForYou: r2.bear.packet.questions,
+  }, {
+    otherCaseR1: r2.bull.packet,
+    questionsYouAsked: r2.bear.packet.questions,
+    questionsForYou: r2.bull.packet.questions,
+  });
+  if (failedRound(r3).length) {
+    return finalizeAfterDebateFailure(run, args, `debate_round_3_failed:${failedRound(r3).join(",")}`, [r1.bull, r2.bull, r3.bull], [r1.bear, r2.bear, r3.bear]);
+  }
+
+  const bullR1 = r1.bull;
+  const bearR1 = r1.bear;
+  const bullR2 = r2.bull;
+  const bearR2 = r2.bear;
+  const bullR3 = r3.bull;
+  const bearR3 = r3.bear;
 
   const bull = mergeDebateRounds([bullR1.packet, bullR2.packet, bullR3.packet]);
   const bear = mergeDebateRounds([bearR1.packet, bearR2.packet, bearR3.packet]);
@@ -1435,6 +1654,9 @@ export async function synthesizeDecision(run, args) {
     bearR3: bearR3.packet,
   });
   appendEvent(run, "debate_qna_gate", qnaGate);
+  if (qnaGate.status !== "passed") {
+    return finalizeAfterDebateFailure(run, args, "debate_round_3_qna_incomplete", [bullR1, bullR2, bullR3], [bearR1, bearR2, bearR3]);
+  }
   const bullQnaErrors = qnaGate.errors.filter((error) => error.startsWith("bull_researcher"));
   const bearQnaErrors = qnaGate.errors.filter((error) => error.startsWith("bear_researcher"));
   const bullTransportOk = [bullR1, bullR2, bullR3].every((step) => step.result.ok);
@@ -1472,24 +1694,17 @@ export async function synthesizeDecision(run, args) {
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 
-  const managerPrompt = debatePrompt("portfolio_manager", run, { bull, bear, outputMode });
-  updateAgent(run, "portfolio_manager", "running", { started_at: new Date().toISOString() });
-  const managerResult = await runCodex(managerPrompt, timeoutMs, ({ pid, output }) => {
-    updateAgent(run, "portfolio_manager", "running", { pid, output });
-  }, ({ pid, output, elapsed_ms }) => {
-    updateAgent(run, "portfolio_manager", "running", { pid, output });
-    appendEvent(run, "agent_heartbeat", { role: "portfolio_manager", pid, output, elapsed_ms });
-  });
-  const manager = managerResult.ok
-    ? debateFromCodex(managerResult, "portfolio_manager", run, managerPrompt)
-    : managerFallback(run, args.prompt || "");
+  const pmBudget = remainingCouncilBudget(run, Math.min(requestedSynthesisMs, LIMITS.FULL_PM_MS));
+  const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode }, pmBudget);
+  const managerOk = !debateFailure(managerStep);
+  const manager = managerOk ? managerStep.packet : managerFallback(run, args.prompt || "");
   const gate = verificationStatus(run);
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
-  updateAgent(run, "portfolio_manager", managerResult.ok && manager.verdict !== "PARSE_FAILED" ? "completed" : "failed", {
+  updateAgent(run, "portfolio_manager", managerOk ? "completed" : "failed", {
     completed_at: new Date().toISOString(),
     output: join(dir, "manager_synthesis.json"),
-    error: managerResult.ok ? undefined : (managerResult.timedOut ? "timeout" : `exit code ${managerResult.code}`),
+    error: managerOk ? undefined : debateFailure(managerStep),
   });
   const completeness = completenessStatus(run);
   run.completed_at = new Date().toISOString();
@@ -1532,7 +1747,7 @@ export async function analyzeSymbol(args) {
       artifacts: debate.artifacts || artifactPaths(run),
     };
   }
-  if (run.council_mode === "quick" && remainingQuickBudget(run, 1) <= 0) {
+  if (remainingCouncilBudget(run, 1) <= 0) {
     const debate = finalizeBeforeDebate(run, args, "global_deadline_before_masters");
     return {
       run,
@@ -1546,8 +1761,7 @@ export async function analyzeSymbol(args) {
   }
   await runHeadlessMasters(run, args);
   gate = completenessStatus(run);
-  if (gate.missing_masters.length > 0
-    || (run.council_mode === "quick" && remainingQuickBudget(run, 1) <= 0)) {
+  if (gate.missing_masters.length > 0 || remainingCouncilBudget(run, 1) <= 0) {
     const debate = finalizeBeforeDebate(run, args,
       gate.missing_masters.length ? "master_gate_failed" : "global_deadline_before_debate");
     return {

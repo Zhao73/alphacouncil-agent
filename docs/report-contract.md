@@ -22,6 +22,9 @@ writes the mode-appropriate versions of:
 The report and handoff must call a named master result a recorded method-seat or lens result.
 It is not a quote from, endorsement by, or current statement of the named person.
 
+System-owned report and handoff labels are localized for `zh-CN`, `en`, `ja` and `ko`.
+Each worker receives the run language, while stable IDs and JSON field names remain English.
+
 ## full_v2 Contract
 
 Full remains the default. Its `final_report.md` visibly covers:
@@ -48,10 +51,39 @@ Full remains the default. Its `final_report.md` visibly covers:
 - confidence
 - source table
 
+Its `user_response.md` must also visibly carry:
+
+- a system-owned price snapshot with price, currency, quote timestamp, exchange/feed and
+  source when available, or an explicit statement that the quote is unavailable;
+- every selected stable master ID, its frozen deterministic stance, its isolated voice-worker
+  explanation/status and a clear `not a quote` attribution boundary;
+- all eight mandatory analyst task IDs, statuses and summaries, including failures or gaps;
+- terminal status, contract, report quality, elapsed time, deadline state and artifact paths.
+
 All mandatory full evidence roles must be completed. If one still fails after the one bounded
 parse-only repair, full fails closed at the evidence barrier: no master, bull/bear or PM model
 call is started. The run is persisted as `incomplete` with the failed evidence and skipped
 downstream roles named. A partial PM opinion never converts that run to complete.
+
+## Full Runtime Budget
+
+Plugin-managed headless `analyze_symbol(council_mode="full")` has a non-overridable maximum
+of 1800000 ms from durable queueing through terminal artifact persistence. A caller or
+environment may lower it, never raise it. The execution topology is:
+
+1. the eight mandatory evidence workers start in one parallel wave;
+2. after the evidence barrier, every selected physical v3 method runs its deterministic
+   policy and freezes a stance, then receives one isolated voice worker that can explain but
+   cannot change that stance;
+3. Bull and Bear start together within each of three rounds, with a barrier before the next
+   round; the PM starts only after both Round-3 outputs pass exact Q&A validation;
+4. deterministic assembly and persistence consume the same global clock.
+
+At deadline expiry the run stops opening downstream work and persists fail-closed as
+`incomplete`, naming timed-out, failed and skipped roles. This is a terminal-persistence
+guarantee, not a promise of full-seat success when search, model transport or data sources
+are unavailable. The deadline does not apply to `plan_visible_run`: an external host owns
+those subagents and the plugin cannot force-stop them.
 
 ## quick_v1 Contract
 
@@ -154,7 +186,9 @@ Every handoff includes status, report contract, report quality, rating, winner, 
 one judgment paragraph, valuation/position, material gaps and file locations.
 
 A full handoff additionally carries the key earnings result, forward setup, news/voice
-signals and top invalidation conditions.
+signals and top invalidation conditions. It lists every selected method seat and all eight
+mandatory analysts rather than sampling a subset, and includes the system-owned price
+snapshot or an explicit quote-data gap.
 
 A quick handoff instead names:
 
@@ -175,10 +209,12 @@ Both handoffs list `final_report.md`, `artifact_index.md`, `all_agents.md`, and
 | "The user only asked if they can enter, so four bullets are enough." | Keep chat concise, but write the mode-appropriate report and artifact index. |
 | "Quick passed report quality, so it passed full." | `quick_v1` can only pass `quick_v1`; retain `full_council_equivalent=false`. |
 | "Ten minutes expired, so silently omit a seat." | Record the exact degraded/incomplete ledger; never manufacture evidence or extend the ceiling. |
+| "Thirty minutes expired, so finish full with the seats that returned." | Persist full as `incomplete`, name every missing/skipped role and keep the saved partial evidence; never synthesize a complete verdict. |
 | "One evidence task failed, but the PM has an opinion." | Apply the mode-specific evidence gate; full fails before downstream calls, quick may only use its explicit degraded rules. |
 | "The source table mentions the news, so the news section can be skipped." | News findings need their own visible section; quick recent news must also pass its date window. |
 | "The final report exists, so chat can hide file locations." | The handoff lists the saved report, index, trace and quality file. |
 | "The master said this." | Call it a recorded method-seat result, never a quote from the named person. |
+| "The full report has a bench table, so the handoff can hide the individual seats." | Full handoff lists every selected stable ID, stance and isolated-worker result/status. |
 
 ## How the Quality Gate Checks Reports
 

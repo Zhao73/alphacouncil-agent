@@ -20,10 +20,15 @@ after Stage 0.
 - **Full council (`full_v2`)**: run all 8 planned evidence roles (`market_data`,
   `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`,
   `news_industry_management`, `insider_sec`, `ib_event_analysis`), then every selected
-  master, then the three-round bull/bear cross-exam, then `portfolio_manager`. When a plan
+  master, then the three-round bull/bear cross-exam, then `portfolio_manager`. In the
+  plugin-managed headless path the eight roles start in one parallel wave; each selected v3
+  method freezes its deterministic stance before one isolated voice worker explains it; and
+  Bull/Bear run in parallel within each round with a barrier between rounds. When a plan
   explicitly adds optional analyst seats, every added seat is equally mandatory. A mandatory
   evidence failure is a fail-fast barrier: persist the failure and final diagnostic artifacts,
   skip masters/debate/PM model calls, and terminate `incomplete`; do not synthesize around it.
+  Headless full has a hard 1800000 ms queue-to-terminal-persistence ceiling. It fails closed
+  at expiry and does not promise all-seat success when external services deteriorate.
 - **Quick council (`quick_v1`)**: only the plugin-managed headless `analyze_symbol` path may
   execute it. It runs the four fixed evidence roles in parallel, 1-4 selected methods in
   parallel, one parallel bull/bear statement, and one short PM inside the hard 600000 ms
@@ -53,7 +58,8 @@ council and skip Stage 0.
 Use the inferred language for the Stage 0 catalog, visible progress, agent prompts, evidence
 packets, debate packets and final synthesis unless the user explicitly requests another
 language. Always pass the original user request in `prompt` and the inferred language in
-`language`.
+`language`. System-owned catalog/report/handoff labels and failure text are localized for
+`zh-CN`, `en`, `ja` and `ko`; stable IDs and JSON field names remain English.
 
 ## Stage 0 — Display, confirm and receipt-gate the master selection
 
@@ -101,6 +107,36 @@ time is a question with an obvious answer. Master selection is the one configura
 Do not ask about analysts: they default to the eight-seat fan-out. Use all eleven only if
 the user asked for breadth, and say so in the report rather than asking first.
 
+### Full v2 plugin-managed contract
+
+Use this contract when full runs through headless `analyze_symbol`:
+
+- Call `analyze_symbol` once with the full-mode receipt, `council_mode: "full"`,
+  `wait_for_completion: false`, and no task override unless the user explicitly requested
+  optional breadth. Poll the one durable `run_id`; never create a replacement.
+- The eight mandatory evidence roles start together. Each has one bounded parse-only repair;
+  repair converts malformed output and does not repeat web research.
+- After the evidence barrier, every selected physical v3 method executes its deterministic
+  policy and freezes its stance. Exactly one isolated voice worker is then launched for that
+  stable ID. It may explain the recorded policy result in the user's language, but cannot
+  change the stance, invent a typed fact or speak as the real named person. A missing voice
+  result remains visible and prevents a false complete bench.
+- Round 1 Bull/Bear run together; after both pass, Round 2 runs together; after both pass,
+  Round 3 runs together with exact saved-question bindings. The PM starts after both Round-3
+  sides pass.
+- The hard ceiling is 1800000 ms from durable queueing through terminal artifact persistence,
+  including queueing, retries, all workers and deterministic finalization. A caller or
+  environment may lower it, never raise it. At expiry persist `incomplete` and name every
+  timed-out/failed/skipped role. The deadline guarantees a terminal saved run, not successful
+  completion under provider/search/data degradation.
+- The concise handoff lists every selected stable master ID, frozen stance and voice-worker
+  explanation/status; all eight analyst task IDs, statuses and summaries; and a system-owned
+  price snapshot with currency/time/source or an explicit unavailable-data gap.
+
+`plan_visible_run` is not governed by this clock: the external host schedules and owns those
+subagents, so the plugin cannot force-stop them. Do not promise the 30-minute headless bound
+for visible-host execution.
+
 ### Quick v1 fixed contract
 
 Quick remains a council judgment and passes the same display/confirmation gate, but its
@@ -136,7 +172,7 @@ execution graph is deliberately smaller and immutable:
 This section applies to full council only. If the user explicitly chooses quick, use the
 plugin-managed Headless MCP path; never emulate quick with visible subagents.
 
-Use visible Codex subagents whenever the user asks to see subagents, asks for a chat-style analyst team, says child agents must be visible, or invokes `@alphacouncil-agent` for an investment decision without explicitly requesting headless/background mode.
+Use visible Codex subagents whenever the user asks to see subagents, asks for a chat-style analyst team, says child agents must be visible, or invokes `@alphacouncil-agent` for an investment decision without explicitly requesting headless/background mode. If the user requires a hard 30-minute terminal bound, explain that visible host tasks cannot be force-stopped by the plugin and use plugin-managed headless full after Stage 0.
 
 Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summary unless the user explicitly asks for lite, smoke test, or debug output. Do not describe the final user-facing report as "visible version", "lite", "smoke", or "debug"; those are execution details, not investment-report content.
 
@@ -172,14 +208,14 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - Failed verification **down-weights the seat that made the claim** in the PM synthesis; a seat is never silently erased.
    - `cannot_confirm` and `stands` are real results. Manufacturing a `weakened` verdict to look diligent lowers a seat's weight for no reason, and weight moves the final rating.
 6. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
-   - Round 1: bull writes the long case; bear writes the short case.
+   - Round 1: bull writes the long case; bear writes the short case; launch both in parallel and wait for both.
    - Round 2: pass bull's packet to bear and bear's packet to bull for rebuttal; each side
      ends with exactly three questions for the opponent.
    - Round 3: cross-feed those six saved questions; each side preserves its own three in
      `questions` and answers the opponent's three as exact `{question, answer}` bindings in
      `questions_answered`.
    - Final: portfolio_manager reads evidence plus all debate rounds and decides whether bull, bear, or balanced won.
-7. Return a concise but evidence-rich user handoff in the selected or inferred language: rating, debate winner, key earnings/financial results, forward expectations or event thresholds, important news/industry signals, valuation range, position guidance, top invalidation conditions, and saved file locations. Do not paste an overlong report into chat unless the user asks for the full body inline. The saved `final_report.md` must still be complete enough to read without opening artifacts: include each evidence analyst's summary, key data/news/filing/quant findings, the bull case, bear case, rebuttals/questions where available, portfolio-manager verdict, data gaps, and source table. Include links/paths to saved artifacts in the handoff.
+7. Return a concise but evidence-rich user handoff in the selected or inferred language: rating, debate winner, key earnings/financial results, forward expectations or event thresholds, important news/industry signals, valuation range, position guidance, top invalidation conditions, and saved file locations. It must name every selected master and every mandatory evidence analyst, with each status/summary, plus the system price snapshot or an explicit quote-data gap. Do not paste an overlong report into chat unless the user asks for the full body inline. The saved `final_report.md` must still be complete enough to read without opening artifacts: include each evidence analyst's summary, key data/news/filing/quant findings, the bull case, bear case, rebuttals/questions where available, portfolio-manager verdict, data gaps, and source table. Include links/paths to saved artifacts in the handoff.
    - If the Data Analytics `datascienceWidgets` tools are available, also create a real dashboard/report artifact from the completed evidence and decision: call `validate_artifact` first, then `render_artifact`. Do not treat `output_mode=data_analytics` as only a prose style.
    - If Documents, PDF, Spreadsheets, or Presentations are requested as output formats, use their plugin/skill workflow as a delivery layer after the investment decision is complete; do not move investment judgment into those format plugins.
 8. If the user specifically wants left-sidebar Codex chat threads, use `codex_app.list_projects` and `codex_app.create_thread` instead of MCP headless execution. Create one thread per major role and report the created thread IDs.
@@ -229,7 +265,8 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
    `wait_for_completion=false` when the user wants a long/short or portfolio decision saved
    under `~/.alphacouncil-agent/runs/`. This returns a small durable accepted response with
    `run_id`, `status_json`, and `events_jsonl`; acceptance does not mean the report is done.
-   For quick, do not pass task overrides and do not request `synthesis=false`.
+   For quick, do not pass task overrides and do not request `synthesis=false`. For full, the
+   1800000 ms global maximum and parallel/barrier topology in the full contract above apply.
 3. Poll `read_run(run_id)` at a bounded interval until `status.status` is terminal:
    `complete`, `degraded`, `incomplete`, `needs_verification`, `needs_revision`, or `failed`.
    Surface meaningful phase changes, not every unchanged poll. Poll the same `run_id`; never
@@ -248,7 +285,10 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
    its seat count or agreement into `N_eff`; that remains `null` without the separately
    preregistered, signed, resolved-outcome ledger.
 6. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
-7. Do not describe MCP `codex exec` workers as visible chat subagents. They are background workers with `status.json`, `events.jsonl`, and `all_agents.md`.
+7. Do not describe MCP `codex exec` workers as visible chat subagents. They are isolated
+   background processes with `status.json`, `events.jsonl`, and `all_agents.md`. Each selected
+   physical v3 method gets its own isolated voice worker after the deterministic stance is
+   frozen, but that worker is not a persistent sidebar agent and is not the named person.
 8. For full mode, any mandatory evidence failure closes the evidence barrier and terminates
    before masters, debate, and PM model calls. For quick, inspect the degraded ledger and the
    independent execution-status, evidence-coverage, and report-quality fields before handing
@@ -376,6 +416,9 @@ Debate agents return:
 - Full `full_v2` reports must also include an "Analyst Work Log" / "分析师工作记录" section summarizing every evidence agent packet, plus a "Bull/Bear Debate" / "多空辩论记录" section summarizing the long case, short case, rebuttals, exact Round-3 Q&A, unanswered questions, and who won. Do not replace these with a one-paragraph execution summary.
 - Quick `quick_v1` reports use the fixed 13-section contract stated above. Do not fail a quick report merely because it lacks full-only quant, event-banking, three-horizon, three-round-Q&A, or adversarial-verifier sections; likewise, never present a passing quick report as full-equivalent.
 - Terminal runs must preserve the standard artifacts appropriate to the executed contract, including `final_report.md`, `user_response.md`, `artifact_index.md`, `report_quality.json`, evidence-role Markdown, selected-method output, and bull/bear/PM output or explicit failure records. If `report_quality.json` is not `passed`, report `needs_revision`, not complete. A passing report-quality gate checks structure only: it does not convert a quick `degraded` execution into `complete` or prove evidence coverage.
+- A full `user_response.md` lists all eight mandatory analyst statuses/summaries, every
+  selected stable master ID with frozen stance and isolated-worker explanation/status, and
+  one system-owned price snapshot with currency/time/source or an explicit unavailable gap.
 - The `management_industry_voices` agent only uses publicly verifiable commentary from executives, board members, official company channels, customers, suppliers, competitors, regulators, industry experts, and channel voices. It must separate direct quotes, paraphrases, and media interpretation, and must not imply non-public inside information.
 - Fail closed on visibility: if visible agent/thread tools are unavailable, say that visible subagents are unavailable in this runtime and use MCP only with that limitation stated.
 - Never let a subagent call `@alphacouncil-agent`, `collect_evidence`, `analyze_symbol`, or `read_run`; visible agents are leaf workers.

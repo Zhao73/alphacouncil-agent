@@ -179,6 +179,21 @@ test("system-owned Master Bench assembly is idempotent", () => {
   assert.equal((twice.match(/outside the circle of competence/g) || []).length, 1);
 });
 
+test("localized method-seat subheadings do not break Japanese bench idempotency", () => {
+  const run = {
+    language: "ja-JP",
+    masters: ["master_buffett"],
+    master_opinions: [opinion({ voice_statement: "日本語の専用方法席センチネル", voice_status: "completed" })],
+    tasks: [],
+    packets: [],
+  };
+  const once = finalReportMarkdown(run, { report_markdown: reportWithout(null) });
+  const twice = finalReportMarkdown(run, { report_markdown: once });
+  assert.equal((twice.match(/alphacouncil:recorded-master-bench:v1:/g) || []).length, 1);
+  assert.equal((twice.match(/日本語の専用方法席センチネル/g) || []).length, 1);
+  assert.match(twice, /## マスター・ベンチ/);
+});
+
 test("Master Bench assembly never invents a missing selected opinion", () => {
   const run = {
     language: "English",
@@ -191,7 +206,7 @@ test("Master Bench assembly never invents a missing selected opinion", () => {
   const bench = benchHeadings(markdown)[0];
   assert.match(bench.body, /master_buffett/);
   assert.doesNotMatch(bench.body, /master_taleb/);
-  assert.match(markdown, /Master seats that gave no opinion:[\s\S]*master_taleb/);
+  assert.match(markdown, /Method seats that gave no opinion:[\s\S]*master_taleb/);
 });
 
 test("a record ack reports progress without echoing the whole run", () => {

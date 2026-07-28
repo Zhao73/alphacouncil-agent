@@ -22,12 +22,12 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the 0.9.2 next preview stays non-GA across all 26 physical packs", () => {
+test("the 0.9.3 preview stays non-GA across all 26 physical packs", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "0.9.2");
+  assert.equal(expected, "0.9.3");
   assert.equal(pkg.publishConfig.tag, "next");
   assert.equal(profile.channel, "solo_test");
   assert.equal(profile.production_eligible, false);

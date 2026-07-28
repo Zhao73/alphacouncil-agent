@@ -43,3 +43,11 @@ test("leaf Codex workers ignore user plugins while retaining native web search",
     "--ignore-user-config is an exec-only flag and must follow the exec subcommand",
   );
 });
+
+test("frozen-fact and parse-repair workers can explicitly omit native search", () => {
+  const args = codexWorker.codexWorkerArgs("/tmp/worker-output.json", "/tmp/alpha-data", { search: false });
+  assert.equal(args.includes("--search"), false);
+  assert.ok(args.includes("--ignore-user-config"));
+  assert.equal(args.at(-1), "/tmp/worker-output.json");
+  assert.equal(args.includes("exec"), true);
+});

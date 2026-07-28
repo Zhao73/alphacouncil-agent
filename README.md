@@ -59,6 +59,7 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 | 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
 | 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai and more read the **same facts** through different stated research priorities. Every council run shows all 26 with actual maturity before research. Full accepts any non-empty selection or `all`; quick requires 1-4 and rejects `all`. |
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
+| ⏱️ **Bounded full headless run** | Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run within 30 minutes. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
 | 🔑 **31 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
@@ -66,17 +67,18 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## Current 0.9.2 preview status: non-GA solo-test
+## Current 0.9.3 preview status: non-GA solo-test
 
-Version `0.9.2` is published on npm's `next` dist-tag and as a GitHub prerelease. It is a
-bounded `quick_v1` feature preview, **not** formal production GA. The build channel remains
+Version `0.9.3` is a GitHub prerelease. This acceptance release does not publish npm or
+change npm dist-tags; verify npm separately before assuming `@next` contains 0.9.3. It is a
+bounded council-runtime preview, **not** formal production GA. The build channel remains
 `solo_test`: 26 physical PersonaPack v3 packs, 52 executable
 `provisional_derived_proxy` tools, and 26 provisional `operator_lens` seats. Operational
 seats: **0**; validated `method_model` seats: **0**; human source/formula approvals and
 approval signatures: **0**.
 
 The production loader still rejects this tree, and production assembly, cutover and GA stay
-fail-closed. See [the v0.9.2 release contract](docs/releases/v0.9.2.md) for the exact quick
+fail-closed. See [the v0.9.3 release contract](docs/releases/v0.9.3.md) for the exact full/quick
 boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
 
 ## 📜 Disclaimer
@@ -134,7 +136,9 @@ VERDICT: Overweight  (confidence: medium)
 
 The concise handoff is written to `~/.alphacouncil-agent/runs/<run_id>/user_response.md`.
 The full report is written to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`,
-with analyst Markdown files and `artifact_index.md` in the same run directory.
+with analyst Markdown files and `artifact_index.md` in the same run directory. Full handoff
+shows the system quote (or an explicit quote-data gap), all eight analyst statuses/summaries,
+and every selected method seat's frozen stance plus isolated-worker explanation/status.
 
 ### Slash commands
 
@@ -143,7 +147,7 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs the full council | one subagent per selected seat |
+| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then full; plugin-managed headless is ≤30m | deterministic stance + one isolated voice worker per selected v3 seat |
 | `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
@@ -160,6 +164,26 @@ show the catalog and confirm a fresh, one-use, mode-bound receipt before researc
 
 Any listed equity: `/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`.
 Filings-based modes need a US filer; other markets are reported through `market_coverage` rather than silently returning nothing.
+
+### Full v2 — 30-minute plugin-managed bound
+
+Plugin-managed headless `analyze_symbol(council_mode="full")` uses one global maximum of
+**1800000 ms** from durable queueing through terminal artifact persistence. All eight
+mandatory evidence workers start in one parallel wave. After the evidence barrier, each
+selected physical v3 method freezes its deterministic stance and gets one isolated voice
+worker that can explain, but cannot change, that result. Bull and Bear run in parallel within
+each of the three rounds, with a barrier between rounds, followed by the PM.
+
+At expiry the server persists `incomplete` with every timed-out, failed and skipped role.
+Thirty minutes is a terminal-persistence guarantee, not a promise that search, model
+transport or data providers will let every seat succeed. A visible-host `plan_visible_run`
+is scheduled outside the plugin and cannot be force-stopped, so it has no 30-minute claim.
+
+The resulting full handoff names every selected stable master ID and all eight analysts, and
+includes a system-owned price snapshot or explicit unavailable-data record. Method-seat
+voice is a recorded provisional lens explanation, not a quote, endorsement or current
+statement by the named person. System-owned output supports Chinese (`zh-CN`), English,
+Japanese and Korean; each worker receives the run language.
 
 ### Quick v1 — bounded, not full
 
@@ -259,7 +283,7 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
 
-The 0.9.2 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
+The 0.9.3 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
 not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
 project-derived proxy material; the 52 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA
@@ -324,16 +348,16 @@ For full council, both editions share the same workflow, JSON packet contract, a
 
 | | Codex edition | Claude Code edition |
 |---|---|---|
-| Council execution | `codex exec` workers, concurrency-capped | All 11 analysts as parallel `Task` subagents, one fan-out |
+| Council execution | plugin-managed `codex exec` workers; full headless ≤30m | Host-owned `Task` subagents; no plugin-enforced deadline |
 | Quick `quick_v1` | Plugin-managed headless `analyze_symbol` | Same plugin-managed headless `analyze_symbol` |
 | Per-analyst context | Separate process | Separate subagent, full isolated context window |
 | Evidence | `codex exec --search` | `WebSearch` + `WebFetch` in each analyst's own context |
-| Evidence → debate | Sequential | Hard barrier on the run's phase machine |
-| Debate depth | 3 rounds (case / rebuttal / Q&A), server-run | 3 rounds, bull + bear in parallel per round |
+| Evidence → debate | Eight-role parallel wave, then hard barrier | Hard barrier on the run's phase machine |
+| Debate depth | 3 rounds (case / rebuttal / Q&A), bull + bear parallel per round | 3 rounds, bull + bear in parallel per round |
 | Claim verification | Missing-source gate (run flagged, report banner) | + per-claim adversarial verify: re-fetch cited URL, re-derive, refute *(host-driven)* |
 | Full-run enforcement | Incomplete runs marked `incomplete` (server gate) | Same gate, plus a hard barrier before debate |
 | Model & cost | One model | **Pick per role** — evidence on Sonnet, debate/verdict on Opus 4.8 (or all-Opus / all-Sonnet) |
-| Language | User's language | User's language across every subagent + the live workflow |
+| Language | `zh-CN`/English/Japanese/Korean system copy; workers get run language | User's language across every subagent + the live workflow |
 
 **Honest scope:** same model family, same prompts, same audit contract — the win is context isolation, always-on parallel fan-out, and deterministic gates, *not* a smarter model. As of **v0.3.0** the shared server runs the 3-round debate, enforces missing-source / full-run / report-quality gates, writes concise and full report artifacts, and supports native Windows Codex CLI launching. As of **v0.3.1**, the plugin also bundles `agent-skills-governance`, an `addyosmani/agent-skills`-style anti-laziness skill with explicit stop gates and exit criteria. The Claude Code edition adds parallel per-round execution and host-driven per-claim verification. Live-web staleness and paywalls limit both editions equally.
 

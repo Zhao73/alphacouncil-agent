@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { REPORT_SECTIONS } from "../../mcp/lib/constants.mjs";
 import { validateFinalReport } from "../../mcp/lib/gates.mjs";
 import { parseHeadings, normalizeHeading, denseLength, headingIncludesAlias } from "../../mcp/lib/headings.mjs";
 import { completeReport, scopedPacket } from "../helpers/fixtures.mjs";
@@ -172,3 +173,63 @@ test("the PM is told price levels are mandatory and are not a target price", asy
   assert.match(pm.bodies.en, /does not excuse omitting price levels/);
   assert.match(pm.bodies.zh, /不是免除给价位的理由/);
 });
+
+const JAPANESE_HEADINGS = {
+  conclusion: "結論",
+  analyst_work_log: "アナリスト作業記録",
+  debate_record: "強気弱気討論記録",
+  master_bench: "マスターベンチ",
+  market_expectations: "市場予想",
+  analyst_rating: "アナリスト評価",
+  earnings_call: "決算説明会",
+  quant: "クオンツ",
+  news: "ニュース",
+  short_interest: "空売り",
+  strategic_transaction: "戦略取引",
+  valuation: "バリュエーション",
+  price_levels: "価格条件",
+  catalysts: "カタリスト",
+  risks: "リスク",
+  position: "ポジション",
+  short_term: "短期",
+  medium_term: "中期",
+  long_term: "長期",
+  data_gaps: "データ欠落",
+  invalidation: "無効化条件",
+  confidence: "信頼度",
+  source_table: "出典表",
+};
+
+function fullyLocalizedReport(language) {
+  const korean = language === "한국어";
+  return [
+    `# QQQ ${korean ? "전체 위원회 보고서" : "フルカウンシル報告書"}`,
+    ...REPORT_SECTIONS.flatMap((section) => {
+      const heading = korean
+        ? section.aliases.find((alias) => /[가-힣]/u.test(alias))
+        : JAPANESE_HEADINGS[section.id];
+      assert.ok(heading, `missing ${language} heading fixture for ${section.id}`);
+      const task = section.id === "analyst_work_log" ? "market_data " : "";
+      const source = section.id === "source_table" ? " market_data:S1 https://example.com/source " : "";
+      const body = korean
+        ? `${task}${section.id} 항목은 검증된 사실과 추론 및 알려지지 않은 정보를 분리하여 기록합니다.${source}`.repeat(5)
+        : `${task}${section.id} は検証済みの事実、推論、未知の情報を分けて記録します。${source}`.repeat(5);
+      return [`## ${heading}`, body];
+    }),
+  ].join("\n\n");
+}
+
+for (const language of ["日本語", "한국어"]) {
+  test(`${language} full report headings satisfy the same full_v2 structure`, () => {
+    const localized = fullyLocalizedReport(language);
+    const result = validateFinalReport(localized, {
+      ...run,
+      language,
+      masters: ["master_buffett"],
+      master_opinions: [{ master: "master_buffett", stance: "out_of_scope" }],
+    });
+    assert.equal(result.status, "passed", result.missing.join("; "));
+    assert.equal(result.contract_id, "full_v2");
+    assert.ok(result.sections.every((section) => section.status === "ok"));
+  });
+}

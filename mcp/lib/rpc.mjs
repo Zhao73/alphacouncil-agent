@@ -176,6 +176,12 @@ function startValidation(args, entryTool) {
       maximum_ms: LIMITS.QUICK_HARD_MAX_MS,
     });
   }
+  if (mode === "full" && args.total_timeout_ms > LIMITS.FULL_HARD_MAX_MS) {
+    throw invalidParams(`Full council total_timeout_ms cannot exceed ${LIMITS.FULL_HARD_MAX_MS}.`, {
+      reason: "FULL_TOTAL_TIMEOUT_EXCEEDS_MAX",
+      maximum_ms: LIMITS.FULL_HARD_MAX_MS,
+    });
+  }
   if (mode === "quick" && args.synthesis === false) {
     throw invalidParams("Quick council requires its one-round bull/bear and portfolio-manager synthesis.", {
       reason: "QUICK_SYNTHESIS_REQUIRED",
@@ -373,9 +379,8 @@ export function tools() {
     synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     total_timeout_ms: {
       type: "number",
-      default: LIMITS.QUICK_TOTAL_MS,
-      maximum: LIMITS.QUICK_HARD_MAX_MS,
-      description: "Hard end-to-end wall-clock budget for council_mode=quick, including grounding wait, retries and synthesis. It may be lowered but never raised above ten minutes. Full mode has no implicit global deadline.",
+      maximum: LIMITS.FULL_HARD_MAX_MS,
+      description: "Hard queue-to-persistence wall-clock budget. quick defaults to and cannot exceed ten minutes; full defaults to and cannot exceed thirty minutes. Callers may lower the applicable ceiling, never raise it.",
     },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
     selection_receipt: { type: "string", description: "One-run receipt returned by confirm_master_selection. Required for every council run and consumed exactly once." },

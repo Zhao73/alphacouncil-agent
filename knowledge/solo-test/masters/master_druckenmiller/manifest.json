@@ -91,7 +91,7 @@
     "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
     "postmortem_horizon_days": 90
   },
-  "pack_version": "0.9.2",
+  "pack_version": "0.9.3",
   "research": {
     "mandatory_disconfirming_queries": [
       "Decline when no dominant forward driver can be identified and monitored.",

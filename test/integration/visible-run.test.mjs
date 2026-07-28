@@ -218,6 +218,17 @@ test("a run whose last call is the PM is persisted as complete", () => {
   assert.equal(status.phase, "complete");
 });
 
+test("visible-host status does not claim a plugin-enforced deadline or dedicated headless workers", () => {
+  const status = JSON.parse(readFileSync(join(visibleDir, "status.json"), "utf8"));
+  assert.equal(status.execution_mode, "visible_host_threads");
+  assert.equal(status.deadline_enforced, false);
+  assert.equal(status.time_budget_ms, null);
+  assert.equal(status.deadline_at, null);
+  assert.equal(status.remaining_budget_ms, null);
+  assert.equal(status.deadline_met, null);
+  assert.equal(status.master_worker_contract, "host_managed_not_plugin_enforced");
+});
+
 test("a run with full evidence and both researchers but no PM is NOT complete", () => {
   const status = JSON.parse(readFileSync(join(noPmDir, "status.json"), "utf8"));
   assert.equal(status.completeness, "incomplete");
