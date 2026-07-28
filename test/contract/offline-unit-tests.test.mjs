@@ -60,7 +60,10 @@ test("every unit test runs with the network disabled", () => {
     const result = spawnSync(process.execPath, ["--test", ...files], {
       cwd: repoRoot,
       encoding: "utf8",
-      timeout: 180000,
+      // The source_with_staging suite performs the complete hash-bound persona review
+      // audit. Under a saturated release check that audit can legitimately exceed three
+      // minutes even though every child test is still making forward progress.
+      timeout: 300000,
       env,
     });
     assert.equal(

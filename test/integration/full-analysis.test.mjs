@@ -207,7 +207,10 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     const runId = `FULL-ANALYSIS-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
-      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 2_000, synthesis_timeout_ms: 2_000,
+      // Keep the fixture-level worker cap comfortably above loaded Windows process-startup
+      // latency. The separate lowered-budget test below proves fail-closed settlement; this
+      // success-path test is responsible for the 30 s global contract and full topology.
+      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       max_concurrency: 1,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: {
