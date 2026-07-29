@@ -13,6 +13,15 @@ contract failures. `master_jhunjhunwala` declines everywhere by construction: it
 is the promoter shareholding record, which US filings do not contain, and the seat names that
 gap rather than substituting for it.
 
+### Changed
+
+- `prepublishOnly` verifies the package rather than GA readiness. It ran `npm run check`, which
+  includes reports that exit non-zero until the corpus has human-reviewed method models and a
+  live four-host E2E run — a state this build declares it is not in and cannot reach without
+  work outside the repository. Gating `npm publish` on it meant a self-declared non-GA preview
+  could never ship at all. GA readiness keeps its own gate in `release:check`, which is
+  unchanged and still fails closed.
+
 ### Added
 
 - Four keyless feeds supplying the facts the seats actually ask for: dated FRED series with
