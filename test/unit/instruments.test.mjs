@@ -72,7 +72,18 @@ test("fund and index prompts forbid company-style financial fabrication", () => 
 // The Stooq quote fallback returns instrument_type: null, short_name: null, long_name: null.
 // Every row below is a symbol that reached production classification through that path.
 test("a bare ticker shape never asserts an operating company", () => {
-  for (const symbol of ["SPY", "QQQ", "VOO", "IVV", "VTI", "BRK.B", "7203.T", "0700.HK", "600519.SS"]) {
+  // The property being guarded is the last assertion: a fund must never reach a Company Facts
+  // screen. Withholding a type was how that was achieved for every symbol; for a basket this
+  // repository holds a holdings endpoint for, naming it is strictly stronger than withholding,
+  // and it cannot produce the failure this test exists to prevent.
+  for (const symbol of ["SPY", "QQQ", "VOO", "IVV", "VTI", "SOXX", "IWM"]) {
+    const instrument = classifyInstrument({ symbol });
+    assert.equal(instrument.asset_type, "etf", `${symbol} is in the fund registry`);
+    assert.equal(instrument.classification_source, "registered_fund_holdings_source");
+    assert.equal(instrument.research_model, "fund_lookthrough");
+    assert.equal(instrument.sec_companyfacts_applicable, false);
+  }
+  for (const symbol of ["BRK.B", "7203.T", "0700.HK", "600519.SS"]) {
     const instrument = classifyInstrument({ symbol });
     assert.equal(instrument.asset_type, "unknown", `${symbol} must not be guessed`);
     assert.equal(instrument.classification_source, "unresolved");
@@ -82,6 +93,17 @@ test("a bare ticker shape never asserts an operating company", () => {
       false,
       `${symbol} must not be sent through an operating-company Company Facts screen`,
     );
+  }
+});
+
+test("an index typed without its caret still routes to the index path", () => {
+  // `^SOX` classified as an index and `SOX` did not, so a run on the name people actually type
+  // produced no basket facts at all and every seat abstained for want of data.
+  for (const symbol of ["SOX", "SPX", "NDX", "RUT"]) {
+    const instrument = classifyInstrument({ symbol });
+    assert.equal(instrument.asset_type, "index", symbol);
+    assert.equal(instrument.research_model, "index_aggregate");
+    assert.equal(instrument.sec_companyfacts_applicable, false);
   }
 });
 

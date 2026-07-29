@@ -9,6 +9,7 @@
  */
 
 import { localized } from "./lang.mjs";
+import { FUND_REGISTRY } from "./funds.mjs";
 
 export const ASSET_TYPES = Object.freeze([
   "equity",
@@ -35,10 +36,24 @@ function normalizedRawType(value) {
   return String(value || "").trim().toUpperCase().replace(/[\s-]+/gu, "_");
 }
 
+/**
+ * Cash indices people type without the caret.
+ *
+ * `^SOX` classified as an index and `SOX` did not, so a run on the name everyone actually uses
+ * produced no basket facts at all and every seat abstained for want of data it was never going
+ * to get. These are index names, not listed tickers -- deliberately a short curated set rather
+ * than the whole alias table, because an alias that collides with a real ticker would route a
+ * tradable security into the index path, which is the mirror image of the same defect.
+ */
+const BARE_INDEX_SYMBOLS = new Set([
+  "SOX", "SPX", "NDX", "DJIA", "DJI", "RUT", "VIX", "IXIC", "GSPC", "COMPQ", "NYA", "OEX", "XAX",
+]);
+
 function symbolHeuristic(symbol) {
   const text = String(symbol || "").trim().toUpperCase();
   if (!text) return null;
   if (text.startsWith("^")) return "index";
+  if (BARE_INDEX_SYMBOLS.has(text)) return "index";
   if (text.endsWith("=F")) return "future";
   if (text.endsWith("=X")) return "fx";
   if (/^[A-Z0-9]+-USD$/u.test(text)) return "crypto";
@@ -93,6 +108,16 @@ export function classifyInstrument({ symbol, quote, filer } = {}) {
       assetType = "equity";
       classificationSource = "sec_filer_sic";
     }
+  }
+  // A basket we hold an issuer holdings endpoint for is a basket, whatever a quote feed did or
+  // did not say. This is a lookup of something this repository states, not a guess from ticker
+  // shape, and it runs only after real evidence has had its turn so genuine metadata still
+  // wins and still reports its own provenance. It strengthens the fail-closed rule below
+  // rather than weakening it: the outcome is a fund, which is the one thing that can never be
+  // sent through an operating-company screen.
+  if (!assetType && Object.hasOwn(FUND_REGISTRY, String(symbol || quote?.symbol || "").trim().toUpperCase())) {
+    assetType = "etf";
+    classificationSource = "registered_fund_holdings_source";
   }
   // Deliberately fail closed. A bare ticker shape tells us nothing: SPY, QQQ and VOO all
   // match it, and the previous `equity` fallback sent them into an operating-company Company

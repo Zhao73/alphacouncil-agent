@@ -347,8 +347,19 @@ test("a constituent list is always labelled a proxy, because the index itself is
   assert.equal(withHoldings.holdings_count, 1);
 
   // An index with no mapped tracking ETF is a gap, not a silent fall-through to another index.
-  assert.equal(proxyConstituents("^RUT"), null);
+  // ^IXIC is the standing example: it has an alias so a caller can name it, and no proxy, so
+  // naming it buys a stated gap rather than another index's holdings.
+  assert.equal(proxyConstituents("^IXIC"), null);
   assert.equal(proxyConstituents("NOT_AN_INDEX"), null);
+
+  // Newly mapped baskets carry the same proxy labelling as the originals rather than being
+  // quietly exempt from it.
+  for (const index of ["^SOX", "^RUT"]) {
+    const mapped = proxyConstituents(index);
+    assert.equal(mapped.is_proxy, true, index);
+    assert.ok(mapped.license_note.includes("proxy"), index);
+    assert.ok(mapped.licensor, index);
+  }
 });
 
 test("index aliases resolve without guessing at unknown input", () => {

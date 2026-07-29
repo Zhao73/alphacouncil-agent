@@ -124,6 +124,20 @@ export const INDEX_PROXIES = Object.freeze({
     licensor: "Nasdaq, Inc.",
     why: "Nasdaq publishes NDX membership itself, but weights still come from the tracking ETF, so the same proxy labelling applies",
   }),
+  "^SOX": Object.freeze({
+    index_name: "PHLX Semiconductor Sector",
+    etf: "SOXX",
+    alternates: Object.freeze(["SMH", "SOXQ"]),
+    licensor: "Nasdaq, Inc.",
+    why: "PHLX Semiconductor membership and its modified-cap weights are a licensed Nasdaq asset; the free path is a tracking ETF's published holdings, labelled as a proxy",
+  }),
+  "^RUT": Object.freeze({
+    index_name: "Russell 2000",
+    etf: "IWM",
+    alternates: Object.freeze(["VTWO"]),
+    licensor: "FTSE Russell",
+    why: "Russell 2000 membership and weights are a licensed FTSE Russell asset; the free path is a tracking ETF's published holdings, labelled as a proxy",
+  }),
   "^DJI": Object.freeze({
     index_name: "Dow Jones Industrial Average",
     etf: "DIA",
@@ -137,7 +151,8 @@ const INDEX_ALIASES = Object.freeze({
   GSPC: "^GSPC", "^GSPC": "^GSPC", SPX: "^GSPC", "^SPX": "^GSPC", SP500: "^GSPC",
   NDX: "^NDX", "^NDX": "^NDX", NASDAQ100: "^NDX",
   DJI: "^DJI", "^DJI": "^DJI", DJIA: "^DJI",
-  RUT: "^RUT", "^RUT": "^RUT",
+  RUT: "^RUT", "^RUT": "^RUT", RUSSELL2000: "^RUT",
+  SOX: "^SOX", "^SOX": "^SOX", SOXX: "^SOX", PHLXSEMI: "^SOX",
   IXIC: "^IXIC", "^IXIC": "^IXIC",
 });
 
