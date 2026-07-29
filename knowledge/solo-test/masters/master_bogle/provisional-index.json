@@ -6,9 +6,11 @@
     "provisional_fair_expected_return": "cautious",
     "provisional_insufficient_return_inputs": "out_of_scope",
     "provisional_low_cost_index_candidate": "cautious",
+    "provisional_not_a_basket": "cautious",
     "provisional_overpriced_market": "opposed"
   },
   "declared_state_hypotheses": [
+    "not_a_basket",
     "insufficient_return_inputs",
     "overpriced_market",
     "fair_expected_return",
@@ -19,6 +21,7 @@
   "formula_compilation_manifest_hash": "sha256:9eb750e5aec2e4b6ef7a7033aba119927d5a6540220d608cbe6fd90eaf255b05",
   "method_model_eligible": false,
   "native_states": [
+    "provisional_not_a_basket",
     "provisional_insufficient_return_inputs",
     "provisional_overpriced_market",
     "provisional_fair_expected_return",

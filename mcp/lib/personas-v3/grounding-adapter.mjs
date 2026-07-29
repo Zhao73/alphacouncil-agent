@@ -805,6 +805,10 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   macroSeriesFacts(grounding, context);
   fundamentalFacts(grounding, context);
   instrumentAggregateFacts(grounding, context);
+  // The same converter, over the market-level block a company run now carries. Reusing it
+  // rather than writing a second one keeps one set of lineage and unit rules for facts that
+  // are the same facts, whoever the subject is.
+  instrumentAggregateFacts({ instrument_aggregate: grounding?.market_valuation, gathered_at: grounding?.gathered_at }, context);
   insiderOwnershipFacts(grounding, context);
   crossMarketFacts(grounding, context);
   basketNewsFacts(grounding, context);

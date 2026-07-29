@@ -1072,7 +1072,7 @@ const seats = [
     decision: {
       schemaId: "expected_market_return_v1",
       eligibility: ["basket dividend yield", "basket earnings growth", "long bond yield", "holdings concentration"],
-      states: ["insufficient_return_inputs", "overpriced_market", "fair_expected_return", "low_cost_index_candidate"],
+      states: ["not_a_basket", "insufficient_return_inputs", "overpriced_market", "fair_expected_return", "low_cost_index_candidate"],
       outputs: ["fundamental expected return", "expected return over the long bond", "valuation component", "breadth of the holding"],
       failClosed: ["no basket-level yield", "no earnings growth input", "no holdings breakdown"],
     },

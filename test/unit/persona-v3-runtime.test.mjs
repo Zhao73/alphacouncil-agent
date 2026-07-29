@@ -172,11 +172,28 @@ test("partial required facts return insufficient_grounding with an exact coverag
   });
   let called = false;
   const result = await runAnonymousDecisionLayer(preDecision, () => { called = true; });
-  assert.equal(called, false);
+  // Partial grounding now DISPATCHES. A method states what an absent input means through its
+  // own vetoes and `on_missing` rules, and refusing to execute reported this gate in place of
+  // the method's answer. The coverage vector below is what still has to be exact -- a seat
+  // that runs on a quarter of its facts must say so.
+  assert.equal(called, true);
   assert.equal(preDecision.eligibility.status, "insufficient_grounding");
   assert.deepEqual(preDecision.eligibility.coverage, { present: 1, required: 4, ratio: 0.25 });
   assert.deepEqual(preDecision.eligibility.missing_required_fact_types, required.slice(1));
   assert.equal(result.frozen_decision.structured_decision.result.eligibility.coverage.ratio, 0.25);
+});
+
+test("no required fact at all is still a hard stop that never dispatches", async () => {
+  const required = ["options.skew", "options.realized_vol"];
+  const preDecision = buildAnonymousPreDecision({
+    compiledPack: compiledPack({ requiredFactTypes: required }),
+    factPack: factPack([]),
+    privateEvidence: { chain: "none" },
+  });
+  let called = false;
+  const result = await runAnonymousDecisionLayer(preDecision, () => { called = true; });
+  assert.equal(called, false, "there is no method left to run");
+  assert.equal(preDecision.eligibility.status, "out_of_scope");
   assert.equal(result.frozen_decision.structured_decision.result.native_decision.state, "critical_facts_missing");
 });
 

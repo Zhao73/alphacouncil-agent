@@ -183,6 +183,9 @@ export const LIMITS = Object.freeze({
   )),
   /** Deterministic grounding is useful, but it may not hold the whole run hostage. */
   FULL_GROUNDING_MS: 30 * 1000,
+  // Grounding settles at its own budget and returns a partial result. This is only the
+  // backstop for a call that never returns at all, so it sits just beyond the budget.
+  GROUNDING_SETTLE_HEADROOM_MS: 5 * 1000,
   /** All eight full evidence seats launch in one wave under this per-seat cap. */
   FULL_EVIDENCE_MS: Math.max(1_000, Math.min(
     Number(process.env.ALPHACOUNCIL_FULL_EVIDENCE_MS) || 6 * 60 * 1000,

@@ -78,7 +78,19 @@ function planV3Seat(run, id, pack) {
       pack,
     };
   }
-  if (preDecision.eligibility.status !== "ready") {
+  // A seat with SOME of its required facts still runs its own policy.
+  //
+  // Several seats are authored with a veto that says, in the method's own words, what an absent
+  // fact means -- Pabrai passing without a downside floor, Graham without an asset floor. Those
+  // facts are also tool inputs, so a missing one used to end the run at this gate and the veto
+  // written for exactly that case never executed. The seat then reported "missing X", which is
+  // the runtime describing itself rather than the method answering.
+  //
+  // Vetoes are evaluated before scoring, and every tool, veto and rule already declares its own
+  // `on_missing` and `on_uncomputable` behaviour, so letting the policy run does not invent an
+  // answer: it reaches the authored one. A seat with NONE of its required facts is still a hard
+  // decline -- there is no method left to run.
+  if (preDecision.eligibility.status === "out_of_scope") {
     const frozenDecision = freezeAnonymousDecision(preDecision);
     return {
       id,
@@ -107,9 +119,27 @@ function planV3Seat(run, id, pack) {
       decision: v3DecisionRecord(id, pack, preDecision, frozenDecision),
     };
   } catch (error) {
-    // A malformed policy, unknown operation, missing declared fact, or arithmetic failure
-    // blocks this physical v3 seat. The seat still owns the ID and never falls through to a
-    // legacy prompt or an LLM-authored stance.
+    // A seat that could not run because a fact it needs is absent has DECLINED, not broken.
+    // Partially grounded seats now execute so their authored vetoes can answer, and a seat
+    // without such a veto reaches the same clean abstention it always did -- reporting that as
+    // a blocked policy would turn "there was nothing to compute with" into "the system
+    // failed", which is the confusion this whole pass exists to remove.
+    if (preDecision?.eligibility?.status === "insufficient_grounding" && error?.code === "MISSING_TOOL_INPUT") {
+      const frozenDecision = freezeAnonymousDecision(preDecision);
+      return {
+        id,
+        engine: "v3_method_runtime",
+        declined: true,
+        reason: preDecision.eligibility.status,
+        pack,
+        preDecision,
+        frozenDecision,
+        decision: v3DecisionRecord(id, pack, preDecision, frozenDecision),
+      };
+    }
+    // A malformed policy, unknown operation, or arithmetic failure blocks this physical v3
+    // seat. The seat still owns the ID and never falls through to a legacy prompt or an
+    // LLM-authored stance.
     return {
       id,
       engine: "v3_method_runtime",

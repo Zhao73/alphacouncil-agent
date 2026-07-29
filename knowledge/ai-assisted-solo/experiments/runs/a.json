@@ -18,7 +18,7 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:db8f31c70e4b4589561a53127b16985a8b9d09000ba536df3467eacf857d2d0c",
+    "input_hash": "sha256:cc4ffaa54c9477000383adc82ba43800c3725c331638f2f8f63cad15582a128f",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
@@ -54,7 +54,7 @@
     "verifier_checks": []
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:a0161522586f9a9b2ee80b68081279ec2b9399692e8e9e1ec56aef00379d27db",
+  "run_artifact_hash": "sha256:699e79ff212ba32d287d8847828b46e6bd46076519c6dc8dca5e9ac09f6d769f",
   "run_id": "A",
   "schema_version": 1,
   "simulation_scope": "single deterministic seat surrogate; formal single-model answer is not simulated"

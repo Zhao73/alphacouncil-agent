@@ -8,6 +8,25 @@ import { INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { SECTOR_SPDRS, fetchCrossMarket, fetchSectorDispersion } from "./cross-market.mjs";
 import { fetchBasketNews } from "./basket-news.mjs";
 import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
+
+/** The index a US company is measured against when a method asks what the market costs. */
+const BROAD_MARKET_INDEX = "^GSPC";
+
+/**
+ * Facts that describe the market rather than the subject.
+ *
+ * Everything else the index block produces -- leverage, growth, breadth of a basket -- is about
+ * a portfolio the company is not, and forwarding it would answer a different question in the
+ * subject's name.
+ */
+const MARKET_LEVEL_FACTS = new Set([
+  "index.aggregate_pe_ttm",
+  "index.aggregate_pe_forward",
+  "index.aggregate_earnings_yield",
+  "index.dividend_yield",
+  "valuation.implied_erp",
+  "cycle.valuation_percentile",
+]);
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
 import { resolveIndustry, industryCoverage } from "./industry.mjs";
@@ -95,6 +114,7 @@ export async function gatherGrounding({
   now = new Date(),
   language = "English",
   signal,
+  budgetMs = null,
 } = {}) {
   const snapshotPolicy = liveSnapshotPolicy(asOf, { now });
   const gatheredAt = now instanceof Date ? now.toISOString() : new Date(now).toISOString();
@@ -320,6 +340,27 @@ export async function gatherGrounding({
     out.unavailable.push(`structured financials for ${symbol}: this adapter is not point-in-time versioned; current data was not fetched for a historical cutoff`);
   }
 
+  // The market's own valuation, for every US subject rather than only for baskets.
+  //
+  // Three seats require `index.aggregate_earnings_yield` and reported it missing on every
+  // single-company run this product has ever done. They were right to ask: the market's
+  // aggregate earnings yield is not a property of the subject, it is the yardstick the subject
+  // is measured against. Damodaran's implied premium needs it, Asness's Fed-model critique IS
+  // about it, and Marks reads it as where the cycle stands. The subject decides whose holdings
+  // get read; it does not decide whether the market has a price-earnings ratio.
+  if (symbol && !isFundOrIndex(out.instrument) && symbolMarket?.id === "US" && snapshotPolicy.allowed) {
+    jobs.push(safely("market valuation", () => gatherInstrumentFacts({
+      symbol: BROAD_MARKET_INDEX, instrument: { research_model: "index_aggregate", index_like: true },
+      asOf, signal, lookThroughFactIds: [],
+    })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      // Only the market-level block. A company's own leverage and growth come from its filings,
+      // and taking them from the index would be silently answering a different question.
+      const marketFacts = (r.value.facts || []).filter((fact) => MARKET_LEVEL_FACTS.has(fact.fact_id));
+      if (marketFacts.length) out.market_valuation = { ...r.value, facts: marketFacts };
+    }));
+  }
+
   // A fund or index has no issuer financials, so this is where its evidence comes from
   // instead: published holdings, index-level valuation and the look-through aggregates that
   // let an operating-company method run against a basket at all.
@@ -379,7 +420,32 @@ export async function gatherGrounding({
     out.unavailable.push("industry map: the curated map is not publication-versioned and was excluded from the historical information set");
   }
 
-  await Promise.all(jobs);
+  // Return what arrived, not nothing.
+  //
+  // A caller that raced this whole function against a timer threw away a completed quote, a
+  // completed screen and a completed filing set because one slow feed had not landed -- and the
+  // analysts downstream, handed an empty object, reported "no ticker was provided". The symbol
+  // had been provided; the fetch had not finished. Settling at the budget keeps everything that
+  // did arrive and names what did not.
+  if (Number.isFinite(budgetMs) && budgetMs > 0) {
+    let settled = false;
+    const all = Promise.all(jobs).then(() => { settled = true; });
+    let timer;
+    await Promise.race([
+      all,
+      new Promise((resolve) => { timer = setTimeout(resolve, budgetMs); }),
+    ]);
+    clearTimeout(timer);
+    if (!settled) {
+      out.partial = true;
+      out.unavailable.push(
+        `grounding budget of ${Math.round(budgetMs)}ms elapsed before every source answered;`
+        + " this run carries what arrived by then and names the rest as gaps rather than discarding it",
+      );
+    }
+  } else {
+    await Promise.all(jobs);
+  }
 
   // Coverage across every symbol in play, so a report cannot quietly become US-only.
   const inPlay = [symbol, ...(out.industry?.participants || []).map((p) => p.symbol)].filter(Boolean);

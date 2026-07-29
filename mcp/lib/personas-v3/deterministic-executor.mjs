@@ -701,9 +701,33 @@ function nativeMetrics(policy, facts, outputs) {
   return { metrics, status };
 }
 
+/** True when a condition reads only typed facts and literals, so no tool has to run first. */
+function readsOnlyFacts(node) {
+  if (!node || typeof node !== "object") return true;
+  if (Object.hasOwn(node, "output_id")) return false;
+  return Object.values(node).every((value) => (
+    Array.isArray(value) ? value.every(readsOnlyFacts) : readsOnlyFacts(value)
+  ));
+}
+
 function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   const facts = new Map(preDecision.fact_pack.facts.map((fact) => [fact.fact_id, fact]));
   const outputs = new Map();
+
+  // A veto that reads only facts is evaluated before any tool runs.
+  //
+  // Several seats are authored with a veto that says what an ABSENT fact means -- Pabrai
+  // passing without a downside floor, Graham without an asset floor. That same fact is usually
+  // a tool input, and a tool declaring `on_missing: "fail"` aborts the whole policy before any
+  // veto is reached, so the seat reported a missing input and the author's answer never ran.
+  // Hoisting fact-only vetoes changes no arithmetic: they need nothing a tool produces, and a
+  // veto that reads a tool output still waits for it.
+  const vetoedOnFactsAlone = policy.hard_vetoes.some((record, index) => {
+    if (!readsOnlyFacts(record.condition)) return false;
+    const early = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`);
+    return early.computable ? Boolean(early.value) : record.on_uncomputable.action === "trigger";
+  });
+
   const toolById = new Map(tools.map((tool) => [tool.id, tool]));
   const toolTrace = [];
   for (const toolId of pipeline) {
@@ -712,7 +736,12 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
     const resolved = tool.inputs.map((operand) => resolveOperand(operand, facts, outputs));
     const missing = unique(resolved.flatMap((input) => input.missing_input_ids));
     if (missing.length) {
-      if (tool.on_missing === "fail") policyFail("MISSING_TOOL_INPUT", `tool ${tool.id} is missing an input`, { tool_id: tool.id, missing_input_ids: missing });
+      // A tool that cannot run is fatal, EXCEPT when a fact-only veto has already decided this
+      // seat. Then the arithmetic it would have fed is irrelevant to the outcome, and aborting
+      // reports a missing input in place of the answer the author wrote for exactly this case.
+      if (tool.on_missing === "fail" && !vetoedOnFactsAlone) {
+        policyFail("MISSING_TOOL_INPUT", `tool ${tool.id} is missing an input`, { tool_id: tool.id, missing_input_ids: missing });
+      }
       toolTrace.push({
         tool_id: tool.id,
         tool_version: tool.version,
@@ -894,7 +923,15 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
 /** Execute and freeze one ready anonymous pre-decision. */
 export function executeDeterministicPersonaPolicy(preDecision) {
   if (!isObject(preDecision) || preDecision.phase !== "anonymous_pre_decision") policyFail("INVALID_PRE_DECISION", "expected an anonymous_pre_decision payload");
-  if (preDecision.eligibility?.status !== "ready") policyFail("PRE_DECISION_NOT_READY", `typed-fact gate is ${preDecision.eligibility?.status || "invalid"}`);
+  // `insufficient_grounding` runs. Every tool, veto and rule declares its own `on_missing` and
+  // `on_uncomputable` behaviour, and those declarations are how a method states what an absent
+  // input means -- several seats are authored with a veto that answers exactly that case.
+  // Refusing to execute reported this gate instead of the method's own answer. Nothing is
+  // invented: a fact that is absent stays absent, and every reader of it takes its declared
+  // path. `out_of_scope` -- no required fact present at all -- is still a hard stop.
+  if (!["ready", "insufficient_grounding"].includes(preDecision.eligibility?.status)) {
+    policyFail("PRE_DECISION_NOT_READY", `typed-fact gate is ${preDecision.eligibility?.status || "invalid"}`);
+  }
   const contract = preDecision.anonymous_method_contract;
   const policy = contract?.decision_policy;
   const tools = contract?.tools;

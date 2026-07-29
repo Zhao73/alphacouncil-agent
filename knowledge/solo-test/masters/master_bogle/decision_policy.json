@@ -10,14 +10,14 @@
             "fact_id": "fund.top_ten_weight"
           }
         },
-        "condition_id": "master_bogle.holdings_breadth_visible",
+        "condition_id": "master_bogle.subject_is_a_basket",
         "on_false": {
           "common_stance": "out_of_scope",
-          "native_state": "provisional_insufficient_return_inputs"
+          "native_state": "provisional_not_a_basket"
         },
         "on_uncomputable": {
           "common_stance": "out_of_scope",
-          "native_state": "provisional_insufficient_return_inputs"
+          "native_state": "provisional_not_a_basket"
         },
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
@@ -77,6 +77,7 @@
     }
   ],
   "native_states": [
+    "provisional_not_a_basket",
     "provisional_insufficient_return_inputs",
     "provisional_overpriced_market",
     "provisional_fair_expected_return",

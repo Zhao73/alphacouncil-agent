@@ -238,7 +238,7 @@ export const coreSeats = Object.freeze({
     proposed_native_decision_contract: {
       schema_id: "expected_market_return_v1",
       eligibility_facts: ["basket dividend yield", "basket earnings growth", "long bond yield", "holdings concentration"],
-      states: ["insufficient_return_inputs", "overpriced_market", "fair_expected_return", "low_cost_index_candidate"],
+      states: ["not_a_basket", "insufficient_return_inputs", "overpriced_market", "fair_expected_return", "low_cost_index_candidate"],
       required_outputs: ["fundamental expected return", "expected return over the long bond", "valuation component", "breadth of the holding"],
       fail_closed_reasons: ["no basket-level yield", "no earnings growth input", "no holdings breakdown"],
     },
@@ -269,10 +269,14 @@ export const coreSeats = Object.freeze({
         // The method is about owning the whole market. Without a holdings breakdown you cannot
         // tell whether the fund is the market or a concentrated bet dressed as an index.
         {
-          condition_id: "master_bogle.holdings_breadth_visible",
+          condition_id: "master_bogle.subject_is_a_basket",
           condition: { op: "exists", value: { fact_id: "fund.top_ten_weight" } },
-          on_false: { native_state: "insufficient_return_inputs", common_stance: "out_of_scope" },
-          on_uncomputable: { native_state: "insufficient_return_inputs", common_stance: "out_of_scope" },
+          // A holdings breakdown exists for a basket and cannot exist for a single company, so
+          // this is the seat's scope test rather than a data check. Bogle's method prices what
+          // a whole market earns; asked about one business it declines by construction, and the
+          // state says that rather than naming a fact the subject was never going to have.
+          on_false: { native_state: "not_a_basket", common_stance: "out_of_scope" },
+          on_uncomputable: { native_state: "not_a_basket", common_stance: "out_of_scope" },
         },
       ],
     },

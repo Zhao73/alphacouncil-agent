@@ -1200,7 +1200,15 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
   let timer;
   const controller = Number.isFinite(timeoutMs) ? new AbortController() : null;
   try {
-    const work = gather({ symbol, asOf, ...(controller ? { signal: controller.signal } : {}) });
+    // The budget is handed DOWN so grounding can settle and return what it has. Racing it from
+    // out here discarded a completed quote and a completed screen whenever one feed was slow,
+    // and the analysts then reported a missing ticker for a symbol that had been supplied.
+    // The outer race stays as a backstop, with headroom, for a call that hangs entirely.
+    const work = gather({
+      symbol, asOf,
+      ...(Number.isFinite(timeoutMs) ? { budgetMs: timeoutMs } : {}),
+      ...(controller ? { signal: controller.signal } : {}),
+    });
     if (!Number.isFinite(timeoutMs)) return await work;
     return await Promise.race([
       work,
@@ -1209,7 +1217,7 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
           const error = new Error(`quick grounding timed out after ${Math.round(timeoutMs)}ms`);
           reject(error);
           controller?.abort(error);
-        }, timeoutMs);
+        }, timeoutMs + LIMITS.GROUNDING_SETTLE_HEADROOM_MS);
       }),
     ]);
   } catch (error) {

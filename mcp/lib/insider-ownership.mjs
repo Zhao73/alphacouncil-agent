@@ -26,6 +26,9 @@ const OWNERSHIP_FORMS = new Set(["3", "4", "5", "3/A", "4/A", "5/A"]);
 /** A registrant with more insiders than this is not a governance question, it is a bad parse. */
 const MAX_DISTINCT_OWNERS = 60;
 
+/** Filings read per round. SEC's ~10 req/s guidance is enforced by the client's own throttle. */
+const OWNERSHIP_BATCH = 8;
+
 /** Below this share of the register the aggregate says nothing, so it refuses instead. */
 export const MIN_OWNER_COVERAGE = 1;
 
@@ -105,19 +108,27 @@ export async function fetchInsiderOwnership(cik, { sharesOutstanding, asOf = nul
   const byOwner = new Map();
   const sources = [];
   let newestFiling = null;
-  for (const filing of ownershipFilings) {
-    if (byOwner.size >= MAX_DISTINCT_OWNERS) break;
-    let document;
-    try {
-      document = await fetchFilingDocument(index.cik, filing.accession, filing.primary_document, { signal });
-    } catch {
-      continue;
+  // Read in bounded concurrent batches rather than one filing at a time. Sequentially this was
+  // up to sixty throttled round trips on the critical path of every company run, which is what
+  // pushed grounding past its budget -- and a budget overrun used to discard the whole run's
+  // evidence. Newest-first order is preserved across batches, so an owner is still taken from
+  // their most recent filing.
+  const candidates = ownershipFilings.slice(0, MAX_DISTINCT_OWNERS * 3);
+  for (let offset = 0; offset < candidates.length && byOwner.size < MAX_DISTINCT_OWNERS; offset += OWNERSHIP_BATCH) {
+    const batch = candidates.slice(offset, offset + OWNERSHIP_BATCH);
+    const documents = await Promise.all(batch.map((filing) => (
+      fetchFilingDocument(index.cik, filing.accession, filing.primary_document, { signal })
+        .then((document) => ({ filing, document }))
+        .catch(() => null)
+    )));
+    for (const entry of documents) {
+      if (!entry) continue;
+      const parsed = parseOwnershipDocument(entry.document.text);
+      if (!parsed || byOwner.has(parsed.owner_cik)) continue;
+      byOwner.set(parsed.owner_cik, { ...parsed, filing_date: entry.filing.filing_date, url: entry.document.url });
+      sources.push(`sec:ownership:${index.cik}:${entry.filing.accession}`);
+      if (!newestFiling || entry.filing.filing_date > newestFiling) newestFiling = entry.filing.filing_date;
     }
-    const parsed = parseOwnershipDocument(document.text);
-    if (!parsed || byOwner.has(parsed.owner_cik)) continue;
-    byOwner.set(parsed.owner_cik, { ...parsed, filing_date: filing.filing_date, url: document.url });
-    sources.push(`sec:ownership:${index.cik}:${filing.accession}`);
-    if (!newestFiling || filing.filing_date > newestFiling) newestFiling = filing.filing_date;
   }
   if (byOwner.size < MIN_OWNER_COVERAGE) {
     return gap(`insider ownership: no Section 16 document for ${index.name || cik} could be parsed`);

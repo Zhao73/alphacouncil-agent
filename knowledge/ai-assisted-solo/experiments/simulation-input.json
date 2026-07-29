@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:db8f31c70e4b4589561a53127b16985a8b9d09000ba536df3467eacf857d2d0c",
+  "input_hash": "sha256:cc4ffaa54c9477000383adc82ba43800c3725c331638f2f8f63cad15582a128f",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -31,14 +31,14 @@
   "reviewer_kind": "ai",
   "runtime_bindings": [
     {
-      "byte_length": 27327,
+      "byte_length": 27650,
       "path": "mcp/lib/personas-v3/runtime.mjs",
-      "physical_file_hash": "sha256:ad06e3d004cdb072909fc2fb9cf643dace28ff542a4c7092309fdd53f5623b63"
+      "physical_file_hash": "sha256:aa32cf59eaec9eeb9583e44b76b31fac8fb8661e49b0b19da6de0f9b4ca5f568"
     },
     {
-      "byte_length": 49532,
+      "byte_length": 51789,
       "path": "mcp/lib/personas-v3/deterministic-executor.mjs",
-      "physical_file_hash": "sha256:1222b8c56e5535ec1f446f55aee0a3c1b948f80403e53085de932398ae90f7ef"
+      "physical_file_hash": "sha256:ee45aed55448644c194e576b9f8611a9afd163e53b36f744ee687ae25ca99bdb"
     },
     {
       "byte_length": 8032,
@@ -8278,7 +8278,7 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:d035c7f7cbace9a80cce787b1ea3204f7b85437e4552dec34681765f0ab3af26",
-      "pack_hash": "sha256:73e829f5d2e3b1124689635cb70bbef8f764559603689a5eae9920716eaf5d1c",
+      "pack_hash": "sha256:cbc29f36bcf214b24045d582bf954d06cda6cec3aab06c41f650f7410df510f0",
       "pack_manifest_binding": {
         "byte_length": 5640,
         "path": "knowledge/solo-test/masters/master_bogle/manifest.json",

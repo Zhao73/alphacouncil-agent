@@ -528,10 +528,17 @@ export function assertFrozenDecisionIntegrity(frozenDecision) {
   return true;
 }
 
-/** Dispatch only an eligible anonymous decision. Missing required facts never call the layer. */
+/**
+ * Dispatch a decision the seat can still reach.
+ *
+ * `out_of_scope` -- none of the required facts present -- never calls the layer, because there
+ * is no method left to run. `insufficient_grounding` does: the policy's own vetoes and
+ * `on_missing` rules are how a method states what an absent input means, and refusing to
+ * execute them reported the runtime's own gate instead of the method's answer.
+ */
 export async function runAnonymousDecisionLayer(preDecision, decisionLayer) {
   verifyAnonymousPreDecision(preDecision);
-  if (preDecision.eligibility.status !== "ready") {
+  if (preDecision.eligibility.status === "out_of_scope") {
     return deepFreeze({
       decision_layer_called: false,
       frozen_decision: freezeAnonymousDecision(preDecision),

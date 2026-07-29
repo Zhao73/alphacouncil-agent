@@ -80,15 +80,23 @@ after(async () => {
 // essay about numbers that do not exist is the waste this release removes. Every selected
 // seat is still accounted for by its deterministic decline record; only a seat that actually
 // reached a decision is worth a sequential model turn to explain.
-test("a decline is recorded for every v3 seat and costs no explanation worker", () => {
+test("a decline is recorded, accounts for itself, and costs no explanation worker", () => {
   const spawned = plan.master_agents.map((a) => a.role);
   const declined = plan.masters_declined.map((d) => d.master);
-  assert.deepEqual(declined.sort(), [...selectedMasters].sort());
+  // Not every selected seat declines any more, and that is the point: a seat holding SOME of
+  // its required facts runs its own policy, where its authored vetoes decide. What must hold is
+  // that a seat which declined has nothing to run, says what it lacked, and is never handed to
+  // a model to write an essay about numbers that do not exist.
   assert.ok(declined.length > 0, "a HK filer with no computable screen must decline somewhere");
-  assert.deepEqual(spawned, [], "an abstention has no stance to explain, so it spawns nothing");
+  assert.ok(declined.every((master) => selectedMasters.includes(master)), "a decline names a selected seat");
   for (const d of plan.masters_declined) {
     assert.equal(d.stance, "out_of_scope");
     assert.ok(d.unmet.length > 0, `${d.master} must say which requirement was unmet`);
+    assert.equal(
+      spawned.includes(d.master),
+      false,
+      `${d.master} abstained and has no stance to explain, so it must spawn nothing`,
+    );
   }
 });
 
@@ -114,7 +122,19 @@ test("a declined v3 seat completes on its deterministic record", () => {
 test("solo-test v3 seats never fall back to legacy judgment agents", () => {
   assert.ok(plan.master_agents.every((agent) => agent.engine === "v3_method_runtime"));
   assert.ok(plan.master_agents.every((agent) => agent.worker_kind === "visible_method_voice"));
-  assert.equal(plan.masters_declined.length, selectedMasters.length);
+  // Every seat is accounted for -- as a decline or as a worker -- and none of them by a legacy
+  // engine. The split between the two moves with the data and is not what this test pins.
+  // Four buckets, and a seat lands in exactly one: it declined, it completed, it is being
+  // explained, or its policy could not execute. The split moves with the data; what this pins
+  // is that nothing falls out of all four.
+  const accounted = new Set([
+    ...plan.masters_declined.map((seat) => seat.master),
+    ...(plan.masters_completed || []).map((seat) => seat.master),
+    ...(plan.masters_blocked || []).map((seat) => seat.master),
+    ...plan.master_agents.map((agent) => agent.role),
+  ]);
+  assert.deepEqual([...accounted].sort(), [...selectedMasters].sort(),
+    "every selected seat is declined, completed or explained -- never dropped");
   assert.ok(plan.masters_declined.every((seat) => seat.engine === "v3_method_runtime"));
 });
 
@@ -239,7 +259,7 @@ test("legacy narrative writes cannot replace a frozen v3 opinion", async () => {
 // The completeness gate is satisfied by the deterministic record itself. An all-declined
 // roster therefore reaches the debate with zero method-seat model turns spent, instead of one
 // per seat spent explaining that there was nothing to decide.
-test("a fully declined roster is complete without recording a single worker", async () => {
+test("a roster where nothing was computable is still complete and accounted for", async () => {
   const status = JSON.parse(readFileSync(join(runDir, "status.json"), "utf8"));
   assert.equal(status.missing_evidence_count, 0);
   assert.equal(status.missing_debate_count, 3);
