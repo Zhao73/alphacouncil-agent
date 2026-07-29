@@ -319,9 +319,22 @@ test("public_at comes from the filing date and never from the clock", () => {
     assert.ok(metric, `${factId} should be computable from the complete fixture`);
     assert.equal(metric.public_at, "2025-02-01T00:00:00.000Z", `${factId} must be stamped with the filing`);
     assert.notEqual(metric.public_at.slice(0, 10), today);
-    assert.ok(metric.period_end, `${factId} must report the period it covers`);
+    // A count is a point-in-time quantity and deliberately carries no interval: it exists to
+    // denominate a market capitalisation, where the number of shares matters and the window
+    // they were averaged over does not. Its basis stays stated in `assumptions`.
+    if (factId === "capital_allocation.share_count") {
+      assert.equal(metric.period_end, null, "a share count must not claim to cover a span");
+      assert.ok(
+        metric.assumptions.some((note) => /weighted average|point-in-time/u.test(note)),
+        "a share count must still state its measurement basis",
+      );
+    } else {
+      assert.ok(metric.period_end, `${factId} must report the period it covers`);
+    }
     assert.ok(Number.isInteger(metric.fiscal_year), `${factId} must report a fiscal year`);
-    assert.ok(Date.parse(metric.public_at) > Date.parse(metric.period_end), "a filing follows the period it reports");
+    if (metric.period_end) {
+      assert.ok(Date.parse(metric.public_at) > Date.parse(metric.period_end), "a filing follows the period it reports");
+    }
   }
 });
 

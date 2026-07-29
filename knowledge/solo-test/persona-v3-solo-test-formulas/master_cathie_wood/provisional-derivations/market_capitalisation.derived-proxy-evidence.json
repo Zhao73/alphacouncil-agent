@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "duration",
-            "window": "P1Y"
+            "basis": "instant",
+            "window": null
           },
           "unit": "shares",
           "value_kind": "count"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_cathie_wood.market_capitalisation"
   },
-  "derivation_spec_hash": "sha256:0d4b37a042442d62ef88c2fd3bd0703cf2bf25b81147380ac82aba421b75ab0f",
+  "derivation_spec_hash": "sha256:f5df869d94026c7ad00d26d8c3c23bd433c77b9a945142d927a617ad11ee9945",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

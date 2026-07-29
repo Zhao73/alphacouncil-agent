@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "duration",
-            "window": "P1Y"
+            "basis": "instant",
+            "window": null
           },
           "unit": "shares",
           "value_kind": "count"
@@ -84,7 +84,7 @@
     "schema_version": 1,
     "tool_id": "master_duan_yongping.five_year_opportunity_cost"
   },
-  "derivation_spec_hash": "sha256:0a3c728ee333d65a10066c6f03580c549beb628d540029d58131475e35117279",
+  "derivation_spec_hash": "sha256:8b316b9416929b447217d74d54d4fa756e9c58b46fb3b6e781172f4d8d60ba6c",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

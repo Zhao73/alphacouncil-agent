@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "duration",
-            "window": "P1Y"
+            "basis": "instant",
+            "window": null
           },
           "unit": "shares",
           "value_kind": "count"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_buffett.market_capitalisation"
   },
-  "derivation_spec_hash": "sha256:e2b7d9707d088228b5783a421efb0c2150551f8162409024dfcbbce4d4ff3e99",
+  "derivation_spec_hash": "sha256:cba0709bd7f31f34381a508d326a19f20a09a5dd3e03cfa3a64e2129d3e33ffb",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

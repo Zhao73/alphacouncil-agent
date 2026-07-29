@@ -13,14 +13,20 @@
  */
 
 import { LIMITS } from "./constants.mjs";
-import { fetchFundHoldings, fetchFundMetadata, lookThroughAggregate, topHoldingsCoverage } from "./funds.mjs";
+import {
+  MIN_LOOK_THROUGH_COVERAGE,
+  fetchFundHoldings,
+  fetchFundMetadata,
+  lookThroughAggregate,
+  topHoldingsCoverage,
+} from "./funds.mjs";
 import { fetchIndexAggregate, INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { fetchImpliedErp } from "./damodaran.mjs";
-import { fetchBasketBreadth } from "./breadth.mjs";
+import { chartUrl, fetchBasketBreadth, parseDailyCloses } from "./breadth.mjs";
+import { fetchText } from "./quotes.mjs";
 import { deriveFundamentals } from "./fundamentals.mjs";
 import { evaluateRules } from "./screen.mjs";
-import { fetchCompanyFacts } from "./sec.mjs";
-import { fetchUniverse } from "./sec.mjs";
+import { fetchCompanyFacts, fetchUniverse } from "./sec.mjs";
 
 /**
  * How many constituents may be resolved for a look-through pass.
@@ -74,6 +80,29 @@ export const LOOK_THROUGH_FACT_RULES = Object.freeze({
  * is real and worth doing; it is simply not this pass, and pretending otherwise by summing is
  * the failure mode, not the shortcut.
  */
+/**
+ * Absolute company figures a fund owns a real, computable dollar share of.
+ *
+ * `LOOK_THROUGH_BLOCKED` refuses the naive version of this and is right to: summing every
+ * constituent's owner earnings produces "the ETF's owner earnings" as though the fund owned
+ * each business outright, which it does not. What the fund does own is a stake — its position
+ * value over the company's market capitalisation — and that stake's claim on the figure is
+ * ordinary look-through accounting:
+ *
+ *     fund's claim = AUM x SUM over i of ( weight_i / market_cap_i ) x figure_i
+ *
+ * The result is in dollars and is the fund's, not the index's. Because the fund's own market
+ * capitalisation is its AUM, every seat that divides one of these by market capitalisation
+ * gets the weighted look-through yield without a single change to its method.
+ */
+export const LOOK_THROUGH_CLAIM_FACTS = Object.freeze([
+  "financial.owner_earnings",
+  "financial.free_cash_flow_5y",
+  "financial.net_current_asset_value",
+  "valuation.downside_asset_value",
+  "valuation.downside_floor",
+]);
+
 export const LOOK_THROUGH_BLOCKED = Object.freeze({
   "financial.owner_earnings": "absolute currency; needs a per-constituent market capitalisation to become a yield",
   "financial.net_current_asset_value": "absolute currency; needs a per-constituent market capitalisation to become a ratio",
@@ -92,6 +121,9 @@ const SCREEN_RULE_FACTS = Object.freeze({
   gross_margin: "financial.gross_margin_5y",
   ocf_over_ni: "accounting.cash_conversion",
   net_margin: "financial.net_margin_5y",
+  // An absolute, and the only one the screen carries. It is not aggregated as a ratio -- it
+  // feeds the ownership-claim pass, where dollars are the right unit.
+  fcf_5y: "financial.free_cash_flow_5y",
 });
 const SCREEN_PERCENT_RULES = new Set(["roe_10y", "gross_margin", "net_margin"]);
 
@@ -278,11 +310,15 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
   // The aggregate inherits whatever span its inputs covered; without carrying it the basket
   // fact arrives as a bare number that no duration contract can accept.
   const perHoldingPeriods = new Map();
+  // A share count is not aggregable and is not aggregated. It is kept because a market
+  // capitalisation -- shares times price -- is what turns an absolute figure into the fund's
+  // own dollar claim on it.
+  const shareCounts = new Map();
   const unavailable = [];
   const ranked = [...holdings]
     .sort((left, right) => (right.weight || 0) - (left.weight || 0))
     .slice(0, LOOK_THROUGH_MAX_CONSTITUENTS);
-  if (!ranked.length) return { perHolding, perHoldingPeriods, unavailable, attempted: 0 };
+  if (!ranked.length) return { perHolding, perHoldingPeriods, shareCounts, unavailable, attempted: 0 };
 
   let universe = null;
   try {
@@ -292,6 +328,7 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
     return {
       perHolding,
       perHoldingPeriods,
+      shareCounts,
       unavailable: [`look-through: SEC ticker universe unavailable (${String(error?.message || error)})`],
       attempted: 0,
     };
@@ -326,6 +363,7 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
         for (const [factId, metric] of Object.entries(derived.metrics || {})) {
           if (!metric || !Number.isFinite(metric.value)) continue;
           facts[factId] = metric.value;
+          if (factId === "capital_allocation.share_count") shareCounts.set(ticker, metric.value);
           if (metric.period_start && metric.period_end) {
             periods[factId] = { start: metric.period_start, end: metric.period_end };
           }
@@ -338,7 +376,7 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, ranked.length) }, worker));
-  return { perHolding, perHoldingPeriods, unavailable, attempted: ranked.length };
+  return { perHolding, perHoldingPeriods, shareCounts, unavailable, attempted: ranked.length };
 }
 
 /**
@@ -381,6 +419,97 @@ function aggregatePeriod(perHoldingPeriods, factId, tickers) {
     period_start: new Date(end - days * 86_400_000).toISOString().slice(0, 10),
     period_end: new Date(end).toISOString().slice(0, 10),
   };
+}
+
+/**
+ * The dollar claim a fund has on an absolute company figure, summed across constituents.
+ *
+ * Requires a market capitalisation per constituent, which is its own filed share count times
+ * its last close — both already in hand from the fundamentals pass and the breadth pass. A
+ * constituent missing either is excluded and costs coverage rather than being assumed.
+ */
+/**
+ * A share count for a fund whose issuer publishes none.
+ *
+ * Two of the four issuers disclose shares outstanding and two do not, and the seats that need
+ * a market capitalisation do not care which. The assets implied by the disclosed positions,
+ * divided by what the fund itself trades at, reconstructs the count. The product of the two is
+ * the size we already had, so this adds no new claim -- it puts a number the seats can use
+ * where a filed one is absent, and says in `method` that it is not a filed one.
+ */
+async function impliedFundShares(symbol, netAssets, metadata, signal) {
+  if (finite(metadata?.nav) && metadata.nav > 0 && finite(netAssets)) {
+    return { value: netAssets / metadata.nav, how: "assets_from_disclosed_positions_over_nav" };
+  }
+  if (!finite(netAssets) || netAssets <= 0) return null;
+  try {
+    const closes = parseDailyCloses(JSON.parse(await fetchText(chartUrl(symbol), LIMITS.QUOTE_FETCH_MS, signal)));
+    const close = closes?.at(-1);
+    if (!finite(close) || close <= 0) return null;
+    return { value: netAssets / close, how: "assets_from_disclosed_positions_over_market_price" };
+  } catch {
+    return null;
+  }
+}
+
+export function lookThroughClaims({ holdings, perHoldingFacts, perHoldingPeriods, shareCounts, closes, netAssets, holdingsMeta }) {
+  const facts = [];
+  const unavailable = [];
+  if (!finite(netAssets) || netAssets <= 0) {
+    unavailable.push("look-through claims: the fund's own size is unknown, so a dollar claim cannot be scaled");
+    return { facts, unavailable };
+  }
+  const priced = new Map();
+  for (const holding of holdings || []) {
+    const ticker = String(holding?.ticker || "").toUpperCase();
+    const shares = shareCounts?.get?.(ticker);
+    const close = closes?.[ticker];
+    if (!finite(holding?.weight) || !finite(shares) || shares <= 0 || !finite(close) || close <= 0) continue;
+    priced.set(ticker, { weight: holding.weight, marketCap: shares * close });
+  }
+  if (!priced.size) {
+    unavailable.push("look-through claims: no constituent supplied both a share count and a price");
+    return { facts, unavailable };
+  }
+  for (const factId of LOOK_THROUGH_CLAIM_FACTS) {
+    let claim = 0;
+    let covered = 0;
+    for (const [ticker, { weight, marketCap }] of priced) {
+      const value = perHoldingFacts?.get?.(ticker)?.[factId];
+      if (!finite(value)) continue;
+      claim += (weight / marketCap) * value;
+      covered += weight;
+    }
+    if (covered < MIN_LOOK_THROUGH_COVERAGE) {
+      unavailable.push(
+        `look-through claim ${factId}: ${(covered * 100).toFixed(1)}% of the basket by weight supplied it,`
+        + ` below the ${(MIN_LOOK_THROUGH_COVERAGE * 100).toFixed(0)}% floor`,
+      );
+      continue;
+    }
+    facts.push({
+      fact_id: factId,
+      value: Number((claim * netAssets).toFixed(2)),
+      // A claim on a one-year figure covers a year and a claim on a five-year total covers
+      // five. It inherits the window its inputs reported, for the same reason the ratio
+      // aggregates do.
+      ...aggregatePeriod(perHoldingPeriods, factId, [...priced.keys()]),
+      value_kind: "monetary",
+      unit: "currency_units",
+      currency: "USD",
+      scale: 1,
+      source_kind: "issuer_disclosure",
+      source_url: holdingsMeta?.source_url,
+      public_at: holdingsMeta?.public_at,
+      observation_date: holdingsMeta?.as_of,
+      confidence: 0.65,
+      derivation: "rederived",
+      method: "fund_ownership_share_of_constituent_figure",
+      coverage_weight: Number(covered.toFixed(6)),
+      title: `${holdingsMeta?.symbol || "fund"} look-through claim on ${factId}`,
+    });
+  }
+  return { facts, unavailable };
 }
 
 export function lookThroughFacts({ holdings, perHoldingFacts, perHoldingPeriods, factIds, holdingsMeta }) {
@@ -526,12 +655,14 @@ export async function gatherInstrumentFacts({
   }
   unavailable.push(...(erp?.unavailable || []));
   unavailable.push(...(aggregate?.unavailable || []));
+  let breadthResult = null;
   if (holdings?.holdings?.length) {
     facts.push(...structureFacts(holdings, metadata));
     // Breadth is computed from the basket rather than bought: every free screener that
     // publishes it forbids the query, and the holdings are already in hand.
-    const breadth = await fetchBasketBreadth(holdings.holdings, { signal })
+    breadthResult = await fetchBasketBreadth(holdings.holdings, { signal })
       .catch((error) => ({ available: false, unavailable: [`breadth: ${String(error?.message || error)}`] }));
+    const breadth = breadthResult;
     unavailable.push(...(breadth.unavailable || []));
     if (breadth.available) {
       const shared = {
@@ -567,6 +698,25 @@ export async function gatherInstrumentFacts({
           title: `${holdings.symbol} assets from disclosed positions`,
         });
       }
+      // The fund's own shares outstanding. This is the fund as an issuer, not an aggregate of
+      // anything -- and it is what lets a seat build the fund's market capitalisation with the
+      // same arithmetic it uses on a company, which is why ten seats could not read a basket.
+      const fundShares = finite(holdings.shares_outstanding)
+        ? { value: holdings.shares_outstanding, how: "issuer_disclosed_shares_outstanding" }
+        : await impliedFundShares(holdings.symbol, breadth.net_assets, metadata, signal);
+      if (fundShares) {
+        facts.push({
+          ...shared,
+          fact_id: "capital_allocation.share_count",
+          value: Number(fundShares.value.toFixed(2)),
+          value_kind: "count",
+          unit: "shares",
+          ratio_denominator: undefined,
+          derivation: fundShares.how === "issuer_disclosed_shares_outstanding" ? "reported" : "rederived",
+          method: fundShares.how,
+          title: `${holdings.symbol} shares outstanding`,
+        });
+      }
       // The gap between weighted and counted breadth IS the concentration story: a
       // cap-weighted basket can be above its average on weight while most members are below.
       facts.push({
@@ -586,10 +736,12 @@ export async function gatherInstrumentFacts({
   if (holdings?.holdings?.length && lookThroughFactIds.length) {
     let resolved = perHoldingFacts;
     let resolvedPeriods = null;
+    let resolvedShareCounts = null;
     if (!resolved) {
       const constituents = await resolveConstituentFacts(holdings.holdings, { signal, asOf });
       resolved = constituents.perHolding;
       resolvedPeriods = constituents.perHoldingPeriods;
+      resolvedShareCounts = constituents.shareCounts;
       unavailable.push(...constituents.unavailable);
       provenance.look_through = {
         constituents_attempted: constituents.attempted,
@@ -605,6 +757,22 @@ export async function gatherInstrumentFacts({
     });
     facts.push(...through.facts);
     unavailable.push(...through.unavailable);
+
+    // The fund's own size is what scales a per-dollar claim back into dollars. Prefer the
+    // issuer's published figure and fall back to the assets implied by the disclosed
+    // positions, which is the same number the size fact above is built from.
+    const netAssets = finite(metadata?.aum) ? metadata.aum : breadthResult?.net_assets;
+    const claims = lookThroughClaims({
+      holdings: holdings.holdings,
+      perHoldingFacts: resolved,
+      perHoldingPeriods: resolvedPeriods,
+      shareCounts: resolvedShareCounts,
+      closes: breadthResult?.closes,
+      netAssets,
+      holdingsMeta: holdings,
+    });
+    facts.push(...claims.facts);
+    unavailable.push(...claims.unavailable);
   }
 
   return {

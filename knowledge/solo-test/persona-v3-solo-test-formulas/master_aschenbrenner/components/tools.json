@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:fa446afcdead67e04bb0ef3bd61c787e8e79eec48a45d3622f2ba5c4bf6a14dc",
-    "derivation_spec_hash": "sha256:43b5ef79576af90eaf7c6fbafe5bff2603c538ac7ba182319449e41a89f35705",
+    "derivation_evidence_hash": "sha256:f8b6d943e2936b2b7c281c83098f72ced75d897425e0ea0f45aff1e2948c0140",
+    "derivation_spec_hash": "sha256:8d76c65b8d0aee17eeaaa15d8ac53ccfd8ad8d079eeea237e3b8d23eedfd3d5e",
     "derivation_spec_id": "master_aschenbrenner.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_aschenbrenner.market_capitalisation",
@@ -21,14 +21,14 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "duration",
-          "window": "P1Y"
+          "basis": "instant",
+          "window": null
         },
         "unit": "shares",
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:105d1f555e9572e6ba2a239517bf886aa834a21c9b1b7a485c958184d2e6ddb8",
+    "input_schema_hash": "sha256:841a04d5dcb54b3336ba8eee846fa64c99f4a7950fedb19693536dcd5f22865c",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:68bf9f8da4059964b96782d8641c494555e3a9489be91d3753b830ab3594780b",
+    "output_schema_hash": "sha256:8917b50c04a72b77622eb20ca4e40a5ef38a7c0c12c41ec8044a6d488eaacf84",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

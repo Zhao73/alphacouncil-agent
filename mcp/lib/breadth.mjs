@@ -22,7 +22,7 @@ export const BREADTH_MIN_CLOSES = 200;
 export const BREADTH_MAX_SYMBOLS = 120;
 export const BREADTH_MIN_COVERAGE = 0.5;
 
-const chartUrl = (symbol) => (
+export const chartUrl = (symbol) => (
   `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d`
 );
 
@@ -108,6 +108,10 @@ export async function fetchBasketBreadth(holdings, { signal, concurrency = 8 } =
   const netAssets = priced.reduce((sum, row) => sum + (row.units * row.close), 0);
   return Object.freeze({
     available: true,
+    // The last close per constituent, already fetched to compute breadth. A market
+    // capitalisation is a share count times a price, and this is the price -- re-fetching it
+    // would be forty quotes for numbers that are in hand.
+    closes: Object.freeze(Object.fromEntries(measured.map((row) => [row.ticker, row.close]))),
     // Only meaningful when nearly the whole basket was priced; a partial sum is not the fund.
     net_assets: pricedWeight >= 0.95 && netAssets > 0 ? Number(netAssets.toFixed(2)) : null,
     net_assets_coverage: Number(pricedWeight.toFixed(6)),

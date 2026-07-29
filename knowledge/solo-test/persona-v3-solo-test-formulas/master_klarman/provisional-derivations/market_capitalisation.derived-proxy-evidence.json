@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "duration",
-            "window": "P1Y"
+            "basis": "instant",
+            "window": null
           },
           "unit": "shares",
           "value_kind": "count"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_klarman.market_capitalisation"
   },
-  "derivation_spec_hash": "sha256:29fb1efb5c858358d7cc41f50682266168837488ef3d7bf62eb06f8afd1f2880",
+  "derivation_spec_hash": "sha256:b58241f7b926f199ddb80c8995e766d93ff14ea9473bb83d3b906e3c35846fa3",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

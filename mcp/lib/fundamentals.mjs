@@ -717,7 +717,12 @@ function shareCount(series, cik, gaps) {
     valueKind: "count",
     value: Math.round(entry.value),
     unit: "shares",
-    alignment,
+    // A count is carried as a point-in-time quantity rather than as a span. It exists to be a
+    // denominator under a market capitalisation, where what matters is how many shares there
+    // are and not which window they were averaged over -- and a fund's share count, which is
+    // a genuine instant, could satisfy no duration contract at all. The averaging basis stays
+    // stated in `assumptions` rather than being implied by an interval.
+    alignment: { ...alignment, suppressInterval: true },
     cik,
     derivation: "reported",
     inputs: { diluted_shares: entry.value, tag: entry.tag },

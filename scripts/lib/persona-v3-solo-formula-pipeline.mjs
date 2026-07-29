@@ -106,7 +106,10 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "valuation.revenue_growth": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration(ANY_REPORTING_INTERVAL) }),
   "valuation.downside_asset_value": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "valuation.downside_floor": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
-  "capital_allocation.share_count": Object.freeze({ value_kind: "count", unit: "shares", period: duration("P1Y") }),
+  // Shares outstanding is measured AT a date, not over one. The filing reports it inside a
+  // fiscal year, which is where the interval came from, but a count is an instant quantity --
+  // and a fund's share count, which carries no fiscal year at all, could satisfy no duration.
+  "capital_allocation.share_count": Object.freeze({ value_kind: "count", unit: "shares", period: INSTANT_AS_OF }),
 
   // Basket-level facts. Without these an index or fund method has nothing to reason about,
   // which is why every seat abstained on an ETF regardless of how well it was written.

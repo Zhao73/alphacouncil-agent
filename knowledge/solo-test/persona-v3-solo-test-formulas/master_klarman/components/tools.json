@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:07d7686bd7ccc3295f969f7cbe23027f66e2a002ecaae1bd84c0bdd42681dcd4",
-    "derivation_spec_hash": "sha256:29fb1efb5c858358d7cc41f50682266168837488ef3d7bf62eb06f8afd1f2880",
+    "derivation_evidence_hash": "sha256:835a4cbccd8b45bf87e78fe282e225226ab9ab5b97b40e50219782247e2f03af",
+    "derivation_spec_hash": "sha256:b58241f7b926f199ddb80c8995e766d93ff14ea9473bb83d3b906e3c35846fa3",
     "derivation_spec_id": "master_klarman.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_klarman.market_capitalisation",
@@ -21,14 +21,14 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "duration",
-          "window": "P1Y"
+          "basis": "instant",
+          "window": null
         },
         "unit": "shares",
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:b7a512fe73d7b4a4444281ad6a30983c499ff0318620b4d68e43806c12a6fe19",
+    "input_schema_hash": "sha256:271ca5387246291e86ef07d67b26fc6fb2711e7c5581c5944540baf5f1418f02",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:6586f29b7167648efc2068fff22c3b59b47bb347d0368d7514032b204c3f7e70",
+    "output_schema_hash": "sha256:b27a3973682c3207a14cc6b6c0ced80639b20214be05fd7e3d22ac7b34c1de84",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

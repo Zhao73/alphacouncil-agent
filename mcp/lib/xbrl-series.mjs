@@ -315,8 +315,10 @@ export function buildMetric({
     currency,
     scale,
     ratio_denominator: ratioDenominator,
-    period_start: alignment.period_start,
-    period_end: alignment.period_end,
+    // A metric may declare itself a point-in-time quantity, in which case the span its inputs
+    // were aligned over is not the period it covers and stating one would be wrong.
+    period_start: alignment.suppressInterval ? null : alignment.period_start,
+    period_end: alignment.suppressInterval ? null : alignment.period_end,
     fiscal_year: Number.isInteger(alignment.fiscal_year) ? alignment.fiscal_year : null,
     // Never the clock: the newest filing among the inputs is the moment this became knowable.
     public_at: alignment.public_at,

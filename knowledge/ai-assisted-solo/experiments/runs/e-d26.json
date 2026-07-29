@@ -44,12 +44,12 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:9127909a333bb31bf3bda341b3f975c47b99dc709ae602fd643cb8aca4373882",
+    "input_hash": "sha256:12ed14b1580ffc858af45f5dc4109d4fe3bcb7d89d20017f5103f3c770d9c213",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
   "production_effect": "none",
-  "result_hash": "sha256:61f457aa52076a9595cc8fa4778fa442661c5d63badbdf9fbb7d2e1425b8ff15",
+  "result_hash": "sha256:7aa56e3e783b03dbeda659f0c300c1f2970e54b5da92c98940d994f2674d724d",
   "results": {
     "blocked_fail_closed_count": 1,
     "completion_status": "completed_machine_simulation",
@@ -61,38 +61,38 @@
           "name": "TypeError"
         },
         "error_hash": "sha256:64dbad72318f966af1957739d8e9ccdd62e77471af9c2ba9d6b9ede4186a15fd",
-        "fact_pack_hash": "sha256:cc8b2174deea3c9c3e6a2482459b7242e7b9d27a46e933638f0b2da877cddaa7",
-        "pack_hash": "sha256:ca9339a76bd667727346d89cccf391798c19daba8167bc282cbee5ef0fa502a9",
+        "fact_pack_hash": "sha256:003fd8c686530f5de0321a395fce3388382184a3d61de4c32080b84479df2c58",
+        "pack_hash": "sha256:b1c6a7002ce09bdc3e4a1e765249c2a585ec4bc328d096b938f5171649714a05",
         "persona_id": "master_aschenbrenner",
         "status": "blocked_fail_closed"
       },
       {
-        "anonymous_method_hash": "sha256:ab1138811cd18a46315a4c7f840962dfe643e724c62e1343f35450e4826aac52",
-        "deterministic_core_hash": "sha256:1138841001cf2bf5b3f3faee980b23f36ac693b79cc7832fe90433948600464f",
-        "fact_pack_hash": "sha256:2887ff3b609b4d2d32b25ec1f81b7a46bea1b1cc1506d31582e6f8517591f907",
-        "frozen_decision_hash": "sha256:f758e6c2c6166fcd40ef2cb68dc80402f14c8d8097f90cce629ae7df3e652fde",
+        "anonymous_method_hash": "sha256:357500e8737d25deebdbc69a9603fc9f014e76aab2a125e0d86fda3423f09794",
+        "deterministic_core_hash": "sha256:8a78f0bd49be30a84fe42757c86ce729e5473734c9c65ba9d5effd3738990ed9",
+        "fact_pack_hash": "sha256:0f2654d4be091acd616b680ea9e3a5c0d9487b20336d2365954c160b05cc3652",
+        "frozen_decision_hash": "sha256:fed53cb66f9feaf23300dbf4df06d8d138f730cf3774663de9cb4d75a7b098d3",
         "native_state": "provisional_reject",
-        "pack_hash": "sha256:ddc7163f4e87ab93755fe95371029d811cedc273c14bdc273422eaa4dc370181",
+        "pack_hash": "sha256:6d5bb5075b04a3daf7e465e5c9d23c425b5de4bdb770f5ae83c67c3de9c5fb36",
         "persona_id": "master_buffett",
-        "policy_execution_hash": "sha256:e9f632cee5f5527bcfd7af58bfe34a4c085d48e5fe7efce6286b47483c25fd9b",
+        "policy_execution_hash": "sha256:63a783a6971d798f8e57c797376bd780bb6dd7a23ddac0a03983e3660842125d",
         "score_ratio": 0.3333333333333333,
         "stance": "opposed",
         "status": "executed",
-        "structured_decision_hash": "sha256:57a0f42891d0004baf89a7009aff6e17b504ebf8b8152ab288b54fe08438a4a7"
+        "structured_decision_hash": "sha256:1f311deaad734cbe73028eeefe08e2a967ad680a182cc415469bde700f01b490"
       },
       {
-        "anonymous_method_hash": "sha256:b203d82883911049cf407f7e2705e6776172980ffc5958410f29f7f65250e25a",
-        "deterministic_core_hash": "sha256:2bf1d6b890dbe7645570f61e395e4b5f0d8bd5ba70e2ff6b3b3a6c3c4a646719",
-        "fact_pack_hash": "sha256:3933ca1fff73fef89719b9c0630b2b986a08afcaa23b7844d93afbda4004f2fc",
-        "frozen_decision_hash": "sha256:198803de99975d90c21beae87d7267739403c6358916b1abe6362b084c00b621",
+        "anonymous_method_hash": "sha256:fedd8393df96c613eb6f0bb4539e036a8e6b7017010c02ca7b6c967140559b86",
+        "deterministic_core_hash": "sha256:897737bdd88a40a70b2fc409736b0300d097b07a104dd788a899a92553efdde5",
+        "fact_pack_hash": "sha256:f69c424fb4ab9bb147ca933702857366ea492f8e988bfb2aeeb4e64df2c32706",
+        "frozen_decision_hash": "sha256:75a3a9e52c7f7ba7e75406dff307f63f327937aa5f66d9c5d211b2deef78e21e",
         "native_state": "provisional_reject",
-        "pack_hash": "sha256:c4b01b9c61c04b4232194f51818ed63409f1da4b0fd61e8f5472b1fa52e0863c",
+        "pack_hash": "sha256:de88d2c0e811ac58876e7fd70c63d4dd75340e0f60164b960f21dad0db581aa7",
         "persona_id": "master_graham",
-        "policy_execution_hash": "sha256:6861540dd255f5ebd78cdaca15ffa18095ace1ab2ca9f5ad786c18a88414e563",
+        "policy_execution_hash": "sha256:88e3f4984c21219eeab05998ba315ff9f22c9a3a019fd25c31e0f6276b0ef721",
         "score_ratio": 0.6666666666666666,
         "stance": "opposed",
         "status": "executed",
-        "structured_decision_hash": "sha256:045bd448ff765515ddb49f0b8bbbe35943fe62399ed2fe0d606eb521aba01844"
+        "structured_decision_hash": "sha256:2a4f12a81f91a7945b53c91a9e220eba453e6d257769db5cbc567ab3ea6a13e6"
       },
       {
         "anonymous_method_hash": "sha256:8b5e33a808364beb9174b2c54d21b88c86b36a4428a066136db4987b26c1a828",
@@ -123,18 +123,18 @@
         "structured_decision_hash": "sha256:f71d724bd466ad7cb8e5bacf4b13e5f988f547d3e508229a68ce9693699486d6"
       },
       {
-        "anonymous_method_hash": "sha256:7a342446a1b28551f0409c3421ad8587912d61f40b49fbab88af02d109dfd159",
-        "deterministic_core_hash": "sha256:48239f6bd8975dcb569c876c87d5a5e928e2d5561847e3e3bdb63f41ab36f936",
-        "fact_pack_hash": "sha256:d757c4db706169da878abefd3f34c48a64868cb744fd5a3fd57b1ee397275f1a",
-        "frozen_decision_hash": "sha256:05a691139e3620f2d9215e9b545a6fc2161ebe4ee764d13d794152589750305e",
+        "anonymous_method_hash": "sha256:c417dbfd3897434af849da0c2813359c87b79010905abec75944db2d5bfd4369",
+        "deterministic_core_hash": "sha256:8d05fa95f540005da65293a4043a6062e92a93b75e49ebde36b0fa5ee6b80cfb",
+        "fact_pack_hash": "sha256:d4687d42bceafe774ed3a420db1e669e071ff54f2ca75850d78c22d23fcb8f95",
+        "frozen_decision_hash": "sha256:272da73417d4ea91b4c58b8dd4bb4defa5a1f04be8892e732f0f67b46ab7ae82",
         "native_state": "provisional_watch",
-        "pack_hash": "sha256:405941cb7b1b238148ac9e440fe6d58944bbb04e33ea87fdc38afb6e7ba5b64a",
+        "pack_hash": "sha256:8b03ac3bd46b01cfcc40e34e13abc2c7db54674ebb776b9bb59e4c3feafca5e2",
         "persona_id": "master_cathie_wood",
-        "policy_execution_hash": "sha256:a03818c1d40cbbfc4511bfe094e78fe945b2a519daf5d0930ef9b93392690a43",
+        "policy_execution_hash": "sha256:2de40220ca39b960492ac336102a38194b8a2d926ca27cf9fb18d2ecb7abebd4",
         "score_ratio": 0.5,
         "stance": "cautious",
         "status": "executed",
-        "structured_decision_hash": "sha256:80c200ae336b197c544f06500a493c608eef4bcaf960f65fb964a868d23870fb"
+        "structured_decision_hash": "sha256:84d3a269539a0f902298744241cb917ac8b6cd76bb938924724cac1b1bf1f37c"
       },
       {
         "anonymous_method_hash": "sha256:c5caca4948836d2eafef670b0b04f9b924e3819886fd784e2bbbef83e2f3984b",
@@ -221,18 +221,18 @@
         "structured_decision_hash": "sha256:ff668668bd9d4e10c8009d263e968f90bef32fc6951c337344b2f900573e0d8a"
       },
       {
-        "anonymous_method_hash": "sha256:6ceb68abad5536288b4004029bb69de3194fdc6714d7e926f4998bc5c2138136",
-        "deterministic_core_hash": "sha256:a14eb881a8c664fa2ec752856c4bc2ef4c9f88d9df3b794dd75d3ac843852550",
-        "fact_pack_hash": "sha256:30d71cddfca0992dfbdf9ae6545d846532036429e7f9674b4c479dbd9e220fd2",
-        "frozen_decision_hash": "sha256:89df871c369afcd3207661fb0213b82c860bb7a073f64300737cd82d8589e751",
+        "anonymous_method_hash": "sha256:950c6d74ef3a77bd679a3647869205aab29d4490e87770eef3afa42d0b09acb2",
+        "deterministic_core_hash": "sha256:fe38aebf150fe181d1aa49c3f843f20f7f2e23464f106bef06fa502883a8a628",
+        "fact_pack_hash": "sha256:5b31156a09e4d956c8b7b9003b3e4a9483521cce8917387124d59cf9fa3a9ab4",
+        "frozen_decision_hash": "sha256:1164bf26dcda33b670c4f0c854897c88dcc789f23b69cc6f53adc70cc11834ca",
         "native_state": "provisional_wait",
-        "pack_hash": "sha256:dfb5109f5a0970045fdbfa87f6e8a9c2ef42b339a426c070ee7bb9d633f01cdc",
+        "pack_hash": "sha256:a2574df7ed048ab58149d98fc2875d11ca60ba1688ab401579fba16dab76e853",
         "persona_id": "master_duan_yongping",
-        "policy_execution_hash": "sha256:b3db335585c12530f2f82d0392a371eac984b631fb90e3d4512828076a25a1f9",
+        "policy_execution_hash": "sha256:57375d866385ec78fcf4b752b2d56dc4efbf799a6db8ddb35af040afd8d85763",
         "score_ratio": 0.6666666666666666,
         "stance": "cautious",
         "status": "executed",
-        "structured_decision_hash": "sha256:5ad9c1b4d65a474eac210c3bfe6185b99d27579923e2e037f0b9f9cd649f2a73"
+        "structured_decision_hash": "sha256:f44095bf069e624f5bc377828d82a0874281ac9095b1167b8ca1f2a601fa131b"
       },
       {
         "anonymous_method_hash": "sha256:d774678dbb868b319c6537f4fcb58920130f7c13b56b092e1a5141e6b385c66b",
@@ -249,18 +249,18 @@
         "structured_decision_hash": "sha256:66b7ad8cf471aa8ce92a0e61a5f4cef77d88dd1ba5b671f46b436b8df0af8150"
       },
       {
-        "anonymous_method_hash": "sha256:2273c338bfdcdf7ec5e4c895a6a8d6f120e87452dd3c8300f288c84fcc287092",
-        "deterministic_core_hash": "sha256:70ba8d88de5ddbf6080224674d5b31e81b6fcbb98f193b7e48395a00749f3152",
-        "fact_pack_hash": "sha256:c4d47dc5f65a84c9b799f37241e1742054c705af8f23ee5dab4db7e94ae49336",
-        "frozen_decision_hash": "sha256:abcf4e744a91d695c71d6429bc7d90cf7826688fcb96690314c147b556bb784a",
+        "anonymous_method_hash": "sha256:629a8267e6a28e25a922d6679774255be176ef0b4a7f88fa9f851cc49533b8cc",
+        "deterministic_core_hash": "sha256:8ba2547f9733f77c3493670dd5b0139c9ee07fed15c2b88cd99ab03a2eaa06ed",
+        "fact_pack_hash": "sha256:e7dc8ac4090650fae587cdb5095e75b5d90b5fea3b961c7394cce42ce70ce27a",
+        "frozen_decision_hash": "sha256:a6827bae19091db87a530543335d7bd7cbbf7a2d8702b0671ff463e1c9b9bd4c",
         "native_state": "provisional_watch",
-        "pack_hash": "sha256:ad67afa412a06398f7a8215f51e3257fa71aa11d12a6b849cef7a1fd3e49b5bb",
+        "pack_hash": "sha256:9a49c8a1c37ea4e8653f27d829d1ba75142e15e822159bf8290463ae3edfa581",
         "persona_id": "master_lynch",
-        "policy_execution_hash": "sha256:2c6090559d28e32fa4c3e13e171c94cf34d6ecd0455e3545515111a72f3a37b3",
+        "policy_execution_hash": "sha256:501e4b2de3568740ed0e809536beff6a4219a6b8beb4cd5aa297d2e1975b0545",
         "score_ratio": 0.6666666666666666,
         "stance": "cautious",
         "status": "executed",
-        "structured_decision_hash": "sha256:528bbc9e17bc29d081b7170d70e78053c6a803909bf240e0a0120f3c252a13ee"
+        "structured_decision_hash": "sha256:d2a94dafc7057920c5fdcf6d52fd984f3190316d2276f6910f3f8ceb30b57d25"
       },
       {
         "anonymous_method_hash": "sha256:b0c2d338dd9e1f33c6fb6fda00d30a4a1192cc1fe89c4bf491f56c918b096ac8",
@@ -305,60 +305,60 @@
         "structured_decision_hash": "sha256:95c5b8f1978b007b1a6ebc81990c412a7209c05c4fc03bcd4dfa1c7743d8dbde"
       },
       {
-        "anonymous_method_hash": "sha256:e2f800a06d8b50c5326251e2480183b1bc0d2f4434c98af24b050658d4206787",
-        "deterministic_core_hash": "sha256:70f277796ea4d63017054266017f351b8b98c19ac1ca2583dab7b397ac01e3cc",
-        "fact_pack_hash": "sha256:1e0eca353b065d207796002726ad59ede1b445b64997d584c2a7e795ddb40738",
-        "frozen_decision_hash": "sha256:2e437ccfb412f54091e0b564608420310172b01c40a1a538f05b8aa9c5a2365c",
+        "anonymous_method_hash": "sha256:0edefe158d4270dede0dfa22718a3fbd9d1a72a8427ba890476e607ddbce6da3",
+        "deterministic_core_hash": "sha256:8560330be7370853e0901af5712e9a538e928438b940993a2cd76d6ed99e207e",
+        "fact_pack_hash": "sha256:fbd346b509ccd69eb16a1302d93d9ee7f8fae8c28bfb25b594b4898543ea1536",
+        "frozen_decision_hash": "sha256:d6a04a3cb73dc189c282c9485ba091dd23338c84aa8bf0f3c0cb740b4b661ecb",
         "native_state": "provisional_opinion_only",
-        "pack_hash": "sha256:b4c456b0dfd6540f667feab1a19c6e22e07764952701684f9ae0187b815bf624",
+        "pack_hash": "sha256:880c2d8f293a69541ddd080a2d6cad53488996eb6514cfd565ba0dc4039047ae",
         "persona_id": "master_burry",
-        "policy_execution_hash": "sha256:160c95db7161d5ff3a0ae41b60975b7fce2ab803e79d3bc4b6569019821b7b0a",
+        "policy_execution_hash": "sha256:83d3070fabb07322c666d306be420f5173630adaf55286dc5f4cfa3336235346",
         "score_ratio": 0.3333333333333333,
         "stance": "opposed",
         "status": "executed",
-        "structured_decision_hash": "sha256:eb514b40fdcc1c631b294d8337f09ec35b1f990ab038e59167ef56c7021b4796"
+        "structured_decision_hash": "sha256:681107df21fe8be65cc2e1ed044625466f9d0ac900b28f8eaaa79614d87d37f7"
       },
       {
-        "anonymous_method_hash": "sha256:125b477053588b1df4f195c1124ec6d0d0946e5b15b5479bc825efa4a3dabf06",
-        "deterministic_core_hash": "sha256:603b144ce2efb3f18782725443f274b90dc360b5e43fd100b5318f179394009e",
-        "fact_pack_hash": "sha256:5a05851a872edd7305aa321e983d8d61ee3d620997dce8efc0bee5e4b1a6fcd5",
-        "frozen_decision_hash": "sha256:077d226e870b59a2425977a49cf374f45dc04c77015002d1012046853874be5c",
+        "anonymous_method_hash": "sha256:4c62658084f60458f8d4eb75b578e5705b6c98c2c4fdb27c0e968220208b46a6",
+        "deterministic_core_hash": "sha256:4b0128efb7b128991a7f418bc5ffe111057afaf7c3e0ddd2c3ccf0747f6774ae",
+        "fact_pack_hash": "sha256:0b481c9b13e34ec6465e5007d364473d71c462e3940726744fa6f91b9646f4d3",
+        "frozen_decision_hash": "sha256:3a86c0798d5c342813cae929788285b6257b8e14645947ade5903a02fb8a9941",
         "native_state": "provisional_absolute_return_candidate",
-        "pack_hash": "sha256:f055e441ae2397512f1fd8802e1bae8a3952406886367c303b2001a145721e48",
+        "pack_hash": "sha256:c71dc3fb2042965075386177ee6dad16ff88abb056b8599146117437e0b19f15",
         "persona_id": "master_klarman",
-        "policy_execution_hash": "sha256:160cf9589dc26a8127170e80f800ea81aacf714de01ab02ecc8f1336ba968d72",
+        "policy_execution_hash": "sha256:b9ab294ac15f498fa08925e3ca113450b39e76cbd0e189937cfeae0577eff2a0",
         "score_ratio": 1,
         "stance": "constructive",
         "status": "executed",
-        "structured_decision_hash": "sha256:974ec14ee33dd8e57ddc906b69d118e10150c2fd6866fc69242149117c59bae7"
+        "structured_decision_hash": "sha256:0460752da890a38c5865d0fea57bfe9b41d559edb16ce50baee29fd164c21af6"
       },
       {
-        "anonymous_method_hash": "sha256:ec69ba9e9e392e64dfa3ffc4edba0b117312943931ff1bb52ef5a1d01397791b",
-        "deterministic_core_hash": "sha256:0e178e3bf0fc9113dd766876a7049e42b003dfc4ec75298193ef8b88bd92b4d4",
-        "fact_pack_hash": "sha256:4069f11b3a0887487af2c3f2d67eb7652d30fff1418f4532f446e83efc2fb020",
-        "frozen_decision_hash": "sha256:b088edad92a352a15ea315ca85e3ea3e504e6a2c6b9126446d7aa7b98060ae0f",
+        "anonymous_method_hash": "sha256:70fa6495ebb803ee4581c074f6c0f7dc9df95fc1f7f78e6e5376e37f5e5545a3",
+        "deterministic_core_hash": "sha256:5b2b1d24830c4cd7567a3d2816efa5d1e25cf00cab50c08aedf5be30c0e5d288",
+        "fact_pack_hash": "sha256:6735e9705be48f6b9c19db94360b13ad6727db15e288c4e1225664ddd1d1a5a1",
+        "frozen_decision_hash": "sha256:ac6fb93f8db3f3e0ae4bdf8111579ab58751133a56944a39b3ee4c1482d081fc",
         "native_state": "provisional_watch",
-        "pack_hash": "sha256:6f4ae445ef1eca67f7b3c7658506d3f85fc1b9265c27fc659d400cd499e25794",
+        "pack_hash": "sha256:f48324d38fbe0f5b2f68a1c391298c618962f11bec362b83c46d462f5235953f",
         "persona_id": "master_pabrai",
-        "policy_execution_hash": "sha256:23dfb7ff5fb42e8aabfa021222d7f6b3341e2bfb93fb3a378ec9e60b75128bd3",
+        "policy_execution_hash": "sha256:c97156d087bf28ae0e8717c84b43e9b0750b8eac8e3d664f33de945716dde7e3",
         "score_ratio": 0.6666666666666666,
         "stance": "cautious",
         "status": "executed",
-        "structured_decision_hash": "sha256:7dfbd10cb8eb1ab9e62d8477eb7128e9f5a08b3d0dd0aa27a2fc4ecf3b85f2f3"
+        "structured_decision_hash": "sha256:e23520cbe16ebb53d109fdb608abdf6a4e329abc1f7a607496fe6a1eea469deb"
       },
       {
-        "anonymous_method_hash": "sha256:73b59f0207396ebce092355421e97b2e4fcf7fc3541b10e316be041e03152c9a",
-        "deterministic_core_hash": "sha256:416e9c05b915244f3bbcb894d8a44d0b4debef8a33d18199ab87f34ba23a0a7c",
-        "fact_pack_hash": "sha256:3253c293a1bdac8885b6b583f280090fcf6e4a9384ecc6b33389d111d98b2db6",
-        "frozen_decision_hash": "sha256:abb9409ef348cf1a28aa67730389e244f3db4c5dec6ac65c0613e3d07d323adb",
+        "anonymous_method_hash": "sha256:897de3a4d8083b8a41f2203cc3e6b22c19ba01418d957d8c7272d39f41e1b9ba",
+        "deterministic_core_hash": "sha256:fd446a362e6e692c40e0444a36fbce48641204d5c3033eb87712ca2db3871aae",
+        "fact_pack_hash": "sha256:1180729cdf02ce708d5f878fbad58fb20f95fe65e85ec418ce7ce67eca1f041f",
+        "frozen_decision_hash": "sha256:3f1779d081b7e3395464cc0edf6cc0a46f97a0eb0e865ba830b5c3ccdd191572",
         "native_state": "provisional_infeasible",
-        "pack_hash": "sha256:e235ce383ece69987f20a09771e6a562afd23e64ef8e7fc15762f0e47b1e1d90",
+        "pack_hash": "sha256:75e8e620d38baabbceb41dd0625b28011a69deb85ef69470b449f30961eb8fd1",
         "persona_id": "master_ackman",
-        "policy_execution_hash": "sha256:4beea2f06cc4a4891895a291ff19a57fbf78856c7d6d8258ebcdf19defcda4e5",
+        "policy_execution_hash": "sha256:c6b5f62a690e0dfad7b222a3459a8bc2f7e575116a4a55b71c56f86637844259",
         "score_ratio": 0.3333333333333333,
         "stance": "opposed",
         "status": "executed",
-        "structured_decision_hash": "sha256:3f6bc3c849fed7377fdfb8e1b4e1fb76669854f1f0ccd6d06c0eb243b6067e1c"
+        "structured_decision_hash": "sha256:a67fd360c8421f51c1f15bd61864f3d5b222bf1bf26c71a44fc12db0640733bb"
       },
       {
         "anonymous_method_hash": "sha256:a5f44de372fdb85655460fcc6e1093985ca57003914947d601e0565aa50d2052",
@@ -449,13 +449,13 @@
     "verifier_checks": [
       {
         "check_id": "physical_input_hash_binding",
-        "input_hash": "sha256:9127909a333bb31bf3bda341b3f975c47b99dc709ae602fd643cb8aca4373882",
+        "input_hash": "sha256:12ed14b1580ffc858af45f5dc4109d4fe3bcb7d89d20017f5103f3c770d9c213",
         "status": "pass"
       },
       {
         "check_id": "deterministic_rederivation",
-        "first_result_hash": "sha256:ca8ca28a8ef475194b987be7cfe55fee6d5072be3c8a179296b1c39faf2856c4",
-        "repeated_result_hash": "sha256:ca8ca28a8ef475194b987be7cfe55fee6d5072be3c8a179296b1c39faf2856c4",
+        "first_result_hash": "sha256:4f24b997b66f475dbdf14af3ddb1e9990613a89f7d843406a0776e249a906e2e",
+        "repeated_result_hash": "sha256:4f24b997b66f475dbdf14af3ddb1e9990613a89f7d843406a0776e249a906e2e",
         "status": "pass"
       },
       {
@@ -466,7 +466,7 @@
     ]
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:6148aa0ca36e7f18e3dd6c1f06a1d750427203abff96dc10773c6aa886f00dd9",
+  "run_artifact_hash": "sha256:ee892f51113cc5eed8106348998174e734e0a1bf9500078aa3d5acfb61da4293",
   "run_id": "E:D26",
   "schema_version": 1,
   "simulation_scope": "D26 deterministic seats plus machine-only hash, rederivation and fail-closed checks"

@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:58a11a759f6b85265e101f0f52c4e661cc290fce369d102014db2ce093478dbd",
-    "derivation_spec_hash": "sha256:93743011ae0f60856ed031b96996f4d04a611c214cdd7ff2216cbc0f9e3eb90e",
+    "derivation_evidence_hash": "sha256:be1a19b6df6e6cbdafe6d045da217fb654631c50955c33fe1b1e88578c2a0bc8",
+    "derivation_spec_hash": "sha256:054b23001e5493aec8528aa278d1ae4733e6c1af10dc1e9b13d552fab37180c0",
     "derivation_spec_id": "master_graham.defensive_hurdle_base.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_graham.defensive_hurdle_base",
@@ -21,8 +21,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "duration",
-          "window": "P1Y"
+          "basis": "instant",
+          "window": null
         },
         "unit": "shares",
         "value_kind": "count"
@@ -38,7 +38,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:21d2922ac1be24399b6edb9b0d0e221c0e4177a237cc3e2582ffc7483f336f2e",
+    "input_schema_hash": "sha256:c146eabbb0c2670477a04eb4c97a8882db9ce3abe08ab1cb4d07b9916bfd6b29",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -60,7 +60,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:ae9edb6f825d6045495a70a90239f526ed41d57a156ffe1e180e88a4fd7e35ed",
+    "output_schema_hash": "sha256:8ede68c7a598562a9b98ca185f230643c6b755dbb374a396ebe7cc76d4375bd5",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
