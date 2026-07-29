@@ -44,12 +44,12 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:74976320729d75230ee009322babc0ce1fdd2af8abcc06a7edc2c2b614470e82",
+    "input_hash": "sha256:9127909a333bb31bf3bda341b3f975c47b99dc709ae602fd643cb8aca4373882",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
   "production_effect": "none",
-  "result_hash": "sha256:56466f42b77fc3b01006b87a3ee58143824c8cfc1e0820fb0802552f757f7924",
+  "result_hash": "sha256:0565d8cde17568faf958fb0c59dd01d69948b0bc9fb0091d8be1f1512cd7b580",
   "results": {
     "blocked_fail_closed_count": 1,
     "completion_status": "completed_machine_simulation",
@@ -235,18 +235,18 @@
         "structured_decision_hash": "sha256:5ad9c1b4d65a474eac210c3bfe6185b99d27579923e2e037f0b9f9cd649f2a73"
       },
       {
-        "anonymous_method_hash": "sha256:d0915a962faae2aa9145716af7f2ae979709876e5ab6629ed49211e2f430d12b",
-        "deterministic_core_hash": "sha256:1f7fcf967f9144b59778785a4a1e1e4b2809f3d56415c6283da45f8b3c9f7e9b",
-        "fact_pack_hash": "sha256:2f5c572a23df09240ae650852264a2c2e9c82906ec34116ec38506408a3d82b6",
-        "frozen_decision_hash": "sha256:c342d5386bd15a235fad41d17a561417335de564ad506bb7309c0a28c54f5070",
+        "anonymous_method_hash": "sha256:d774678dbb868b319c6537f4fcb58920130f7c13b56b092e1a5141e6b385c66b",
+        "deterministic_core_hash": "sha256:0c296dc59cd65805e4644e47211ac6397e4efa9513eecc6284dad1e4ce064c2e",
+        "fact_pack_hash": "sha256:37d6ca81795c191964ebae30d0c418ab3731f49f8e08127b52df94eb4886752c",
+        "frozen_decision_hash": "sha256:dbede39031daac19d17837e066656676b4fa34f72e557d2dab38e845611f0d8d",
         "native_state": "provisional_watch",
-        "pack_hash": "sha256:40bd8ad12f6969d88385ca920ce2c8038b940b3a1dbb70765ff84f3d3d518858",
+        "pack_hash": "sha256:3ed8096336e0c0dec53a3af9dbe321c7ab759d3a1661a9e9e74bbc25335a6988",
         "persona_id": "master_jhunjhunwala",
-        "policy_execution_hash": "sha256:104c63be9afd882d799122ec9e6d8ea2629b023703f098e22f92e508fb1253f9",
-        "score_ratio": 0.5,
+        "policy_execution_hash": "sha256:6b922ebdd5e7817d4f000e4eb832f30fd5f02f9c53fbf4ef0656cd12602505d2",
+        "score_ratio": 0.6666666666666666,
         "stance": "cautious",
         "status": "executed",
-        "structured_decision_hash": "sha256:8292e2b35a031cf9da47df6e6c9c37852df8595de674c902d63cb87c006a74a9"
+        "structured_decision_hash": "sha256:66b7ad8cf471aa8ce92a0e61a5f4cef77d88dd1ba5b671f46b436b8df0af8150"
       },
       {
         "anonymous_method_hash": "sha256:2273c338bfdcdf7ec5e4c895a6a8d6f120e87452dd3c8300f288c84fcc287092",
@@ -434,7 +434,7 @@
     "deterministic_execution_count": 27,
     "executed_count": 26,
     "formal_results": null,
-    "machine_reference_digest": "sha256:b1604fc5cbdd94ebbd59d2c22e6bb2b4349ec8963a55b869701e665b1eb6952b",
+    "machine_reference_digest": "sha256:ca8ca28a8ef475194b987be7cfe55fee6d5072be3c8a179296b1c39faf2856c4",
     "metric_claims": [],
     "network_call_count": 0,
     "provider_cost_usd": 0,
@@ -449,13 +449,13 @@
     "verifier_checks": [
       {
         "check_id": "physical_input_hash_binding",
-        "input_hash": "sha256:74976320729d75230ee009322babc0ce1fdd2af8abcc06a7edc2c2b614470e82",
+        "input_hash": "sha256:9127909a333bb31bf3bda341b3f975c47b99dc709ae602fd643cb8aca4373882",
         "status": "pass"
       },
       {
         "check_id": "deterministic_rederivation",
-        "first_result_hash": "sha256:b1604fc5cbdd94ebbd59d2c22e6bb2b4349ec8963a55b869701e665b1eb6952b",
-        "repeated_result_hash": "sha256:b1604fc5cbdd94ebbd59d2c22e6bb2b4349ec8963a55b869701e665b1eb6952b",
+        "first_result_hash": "sha256:ca8ca28a8ef475194b987be7cfe55fee6d5072be3c8a179296b1c39faf2856c4",
+        "repeated_result_hash": "sha256:ca8ca28a8ef475194b987be7cfe55fee6d5072be3c8a179296b1c39faf2856c4",
         "status": "pass"
       },
       {
@@ -466,7 +466,7 @@
     ]
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:5681ec9e69f12a93b49c8187539f325169163720224c4c1c22a012b1bcb0f9af",
+  "run_artifact_hash": "sha256:dedae02a429f18aff830a2055357c80d20ebd8dbb0cd8368d345e92e57ef0363",
   "run_id": "H_ai_reference",
   "schema_version": 1,
   "simulation_scope": "AI deterministic reference digest only; no human analysts or blinded human adjudicator"

@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:74976320729d75230ee009322babc0ce1fdd2af8abcc06a7edc2c2b614470e82",
+  "input_hash": "sha256:9127909a333bb31bf3bda341b3f975c47b99dc709ae602fd643cb8aca4373882",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -4110,7 +4110,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:2f5c572a23df09240ae650852264a2c2e9c82906ec34116ec38506408a3d82b6",
+        "fact_pack_hash": "sha256:37d6ca81795c191964ebae30d0c418ab3731f49f8e08127b52df94eb4886752c",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -4198,7 +4198,7 @@
             "confidence": 1,
             "currency": null,
             "derivation": "reported",
-            "fact_id": "fund.concentration_hhi",
+            "fact_id": "governance.insider_ownership",
             "fiscal_year": null,
             "lineage": {
               "calculation_hash": null,
@@ -4413,12 +4413,12 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:2f5c572a23df09240ae650852264a2c2e9c82906ec34116ec38506408a3d82b6",
-      "pack_hash": "sha256:40bd8ad12f6969d88385ca920ce2c8038b940b3a1dbb70765ff84f3d3d518858",
+      "fact_pack_hash": "sha256:37d6ca81795c191964ebae30d0c418ab3731f49f8e08127b52df94eb4886752c",
+      "pack_hash": "sha256:3ed8096336e0c0dec53a3af9dbe321c7ab759d3a1661a9e9e74bbc25335a6988",
       "pack_manifest_binding": {
-        "byte_length": 5729,
+        "byte_length": 5735,
         "path": "knowledge/solo-test/masters/master_jhunjhunwala/manifest.json",
-        "physical_file_hash": "sha256:6073c4b20076c509ed266f6d18d91504a46cf47b56b219dcd1ae4a8619cd9966"
+        "physical_file_hash": "sha256:4d0715d24fece4c467453e8b07ff519f8d04ec48be590a75f459f99e64b4ab77"
       },
       "persona_id": "master_jhunjhunwala"
     },

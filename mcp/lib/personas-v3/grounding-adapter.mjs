@@ -564,6 +564,47 @@ function fundamentalFacts(grounding, context) {
  * method run against a basket. Coverage weight is carried on every look-through fact: a
  * portfolio number computed over 8% of the weights is not the same claim as one over 95%.
  */
+/**
+ * Section 16 insider ownership as one typed fact.
+ *
+ * The value is `estimated` rather than `reported`: no filing states this number: it is summed
+ * across the newest ownership document per reporting owner, and the coverage limits of Section
+ * 16 are real. Labelling it reported would claim a document that does not exist.
+ */
+function insiderOwnershipFacts(grounding, context) {
+  const owned = grounding?.insider_ownership;
+  if (!owned || !finite(owned.value)) return;
+  const publicAt = timestampAtOrBefore(owned.public_at, context.cutoff);
+  if (!publicAt || !owned.source_url || !owned.source_ids?.length) {
+    context.diagnostics.push({ code: "missing_source_lineage", source: "insider_ownership", action: "not_converted" });
+    return;
+  }
+  const sourceIdValue = sourceId("sec", "section16_ownership", owned.as_of || publicAt);
+  if (!registerSource(context, {
+    source_id: sourceIdValue,
+    source_kind: "regulatory_filing_data",
+    title: "Section 16 ownership filings (Forms 3, 4 and 5)",
+    url: owned.source_url,
+    public_at: publicAt,
+    retrieved_at: grounding.gathered_at || publicAt,
+    locator: { filing_count: owned.source_ids.length, reporting_owners: owned.owner_count },
+  })) return;
+  addUnique(context.facts, context.diagnostics, baseFact({
+    factId: "governance.insider_ownership",
+    valueKind: "ratio",
+    value: owned.value,
+    unit: "decimal",
+    ratioDenominator: "shares_outstanding",
+    asOf: context.asOf,
+    publicAt,
+    sources: [sourceIdValue],
+    confidence: 0.7,
+    derivation: "estimated",
+    derivationToolId: `${ADAPTER_ID}:section16:insider_ownership`,
+    derivationInput: { method: owned.method, reporting_owners: owned.owner_count },
+  }));
+}
+
 function instrumentAggregateFacts(grounding, context) {
   const aggregates = grounding?.instrument_aggregate?.facts;
   if (!Array.isArray(aggregates)) return;
@@ -627,6 +668,7 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   macroSeriesFacts(grounding, context);
   fundamentalFacts(grounding, context);
   instrumentAggregateFacts(grounding, context);
+  insiderOwnershipFacts(grounding, context);
   for (const family of ["screen", "macro", "market"]) {
     if (grounding?.[family] && !grounding[family].public_at) {
       if (family === "screen" && context.diagnostics.some((item) => String(item.source || "").startsWith("screen."))) continue;

@@ -3,6 +3,7 @@ import { invalidParams } from "./errors.mjs";
 import { getMacroSnapshot } from "./macro.mjs";
 import { fetchMacroSeries } from "./fred.mjs";
 import { fetchFundamentals } from "./fundamentals.mjs";
+import { fetchInsiderOwnership } from "./insider-ownership.mjs";
 import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
@@ -195,13 +196,28 @@ export async function gatherGrounding({
     // answer "what do the method seats need". Both read the same Company Facts document, so
     // they share one classification gate and run together.
     if (out.instrument.sec_companyfacts_applicable && snapshotPolicy.allowed) {
-      jobs.push(safely("fundamentals", () => fetchFundamentals({ cik, ticker: symbol, asOf, signal })).then((r) => {
+      const fundamentalsJob = safely("fundamentals", () => fetchFundamentals({ cik, ticker: symbol, asOf, signal })).then((r) => {
         if (!r.ok) { out.unavailable.push(r.error); return; }
         out.fundamentals = r.value;
         out.unavailable.push(...(r.value.unavailable || []).map((gap) => (
           typeof gap === "string" ? gap : `fundamentals ${gap.metric}: ${gap.code}${gap.detail ? ` (${gap.detail})` : ""}`
         )));
-      }));
+      });
+      jobs.push(fundamentalsJob);
+      // Section 16 ownership is chained after the fundamentals rather than run beside them: it
+      // is a RATIO over shares outstanding, and taking that count from a second source would
+      // make the numerator and the denominator describe different registers.
+      jobs.push((async () => {
+        await fundamentalsJob;
+        const shares = out.fundamentals?.metrics?.["capital_allocation.share_count"]?.value;
+        if (!Number.isFinite(shares)) return;
+        const owned = await safely("insider ownership", () => fetchInsiderOwnership(cik, {
+          sharesOutstanding: shares, asOf, signal,
+        }));
+        if (!owned.ok) { out.unavailable.push(owned.error); return; }
+        out.insider_ownership = owned.value;
+        out.unavailable.push(...(owned.value.unavailable || []));
+      })());
     }
     if (out.instrument.sec_companyfacts_applicable) jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf, signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }

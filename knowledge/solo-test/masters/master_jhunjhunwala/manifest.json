@@ -16,7 +16,7 @@
     ],
     "native_decision_schema": "india_growth_governance_v1",
     "optional_fact_types": [
-      "fund.concentration_hhi",
+      "governance.insider_ownership",
       "india.industry_penetration",
       "governance.promoter_ownership",
       "governance.related_party_transactions",

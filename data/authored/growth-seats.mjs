@@ -499,7 +499,7 @@ export const growthSeats = Object.freeze({
 
   master_jhunjhunwala: {
     provenance:
-      "Rakesh Jhunjhunwala's public interviews and conference appearances -- CNBC-TV18, ET Now and the Economic Times markets summits -- in which he said repeatedly that he was buying India's structural growth story and that the integrity of the promoter was the first filter, before any number; and the Indian record that method reads, namely the quarterly shareholding-pattern, promoter-pledge and bulk-deal disclosures that SEBI requires of BSE- and NSE-listed issuers. He died on 14 August 2022, so no current view is attributable to him. Neither half of the method exists as a fact here. There is no Indian industry-penetration series, and there is no promoter-ownership, pledge or related-party record of any kind -- and the universe this pack grounds is US-listed, where the promoter category does not exist as a filing concept at all. This seat therefore declines by construction, and it does so explicitly: `fund.concentration_hhi` is the only ownership-concentration fact in the pack, it is produced for baskets and never for an operating company, and it stands here for the promoter shareholding record the method requires. On every US-listed operating company that gate is unmet and the seat returns `insufficient_governance`. That abstention is the method's boundary rather than a failure of the system, and it is written into eligibility so that it reads as one. The formulas below are what the seat would compute on the day it were given an Indian governance record; the real-growth and cash-conversion tests are this project's readings of statements he made without numbers.",
+      "Rakesh Jhunjhunwala's public interviews and conference appearances -- CNBC-TV18, ET Now and the Economic Times markets summits -- in which he said repeatedly that he was buying India's structural growth story and that the integrity of the promoter was the first filter, before any number; and the Indian record that method reads, namely the quarterly shareholding-pattern, promoter-pledge and bulk-deal disclosures that SEBI requires of BSE- and NSE-listed issuers. He died on 14 August 2022, so no current view is attributable to him. There is no Indian industry-penetration series here, and the promoter category does not exist as a US filing concept. What does exist is Section 16: officers, directors and holders of more than ten percent must file Forms 3, 4 and 5 stating what they hold afterwards, and `governance.insider_ownership` sums the newest such filing per reporting owner over shares outstanding. Treating that as the promoter shareholding record is this project's reading, not his: Section 16 covers a narrower set of people, reports trust and family holdings inconsistently, and carries a person who has not transacted since their Form 3 at that number. It is used the way he used the promoter record -- as the first filter, before the growth arithmetic -- and the seat says so rather than presenting it as the Indian disclosure. The real-growth and cash-conversion tests are this project's readings of statements he made without numbers.",
     tools: [
       {
         tool_id: "master_jhunjhunwala.real_structural_growth",
@@ -524,13 +524,12 @@ export const growthSeats = Object.freeze({
     ],
     eligibility: {
       all: [
-        // The method's first filter is the promoter, and the promoter record does not exist here.
-        // `fund.concentration_hhi` is the pack's only ownership-concentration fact and is produced
-        // for baskets alone, so on a US-listed operating company this is unmet by construction.
-        // The seat is meant to decline, and meant to name what it wanted when it does.
+        // The method's first filter is who owns the company, and it stays first: without an
+        // ownership record there is no governance read, and the growth arithmetic on its own is
+        // a momentum screen with his name on it. The US analogue is the Section 16 register.
         {
-          condition_id: "master_jhunjhunwala.promoter_ownership_record_available",
-          condition: { op: "exists", value: { fact_id: "fund.concentration_hhi" } },
+          condition_id: "master_jhunjhunwala.ownership_record_available",
+          condition: { op: "exists", value: { fact_id: "governance.insider_ownership" } },
           on_false: { native_state: "insufficient_governance", common_stance: "out_of_scope" },
           on_uncomputable: { native_state: "insufficient_governance", common_stance: "out_of_scope" },
         },
@@ -562,10 +561,18 @@ export const growthSeats = Object.freeze({
           "Cycle-aware cash conversion is the second thing the build spec says this method requires of a scaling claim. Operating cash flow at least matching reported earnings is one-for-one conversion, an arithmetic boundary rather than a level anyone chose.",
         condition: { op: "gte", left: { output_id: "accounting.cash_conversion_gap" }, right: { literal: 0 } },
       },
+      {
+        rule_id: "jhunjhunwala_owners_hold_the_company_they_run",
+        points: 1,
+        coverage_weight: 1,
+        rationale:
+          "He would not take a growth story from people with nothing at stake in it, and the promoter shareholding was where he looked. One percent of the register held by Section 16 insiders is this project's line, not his: it is where a US register stops being a pure agency structure and the people running the business hold a position that a bad decision costs them. The narrower coverage of Section 16 against an Indian promoter disclosure is recorded on the seat rather than adjusted for here.",
+        condition: { op: "gte", left: { fact_id: "governance.insider_ownership" }, right: { literal: 0.01 } },
+      },
     ],
     bands: [
       { min_ratio: 0, common_stance: "opposed", native_state: "reject" },
-      { min_ratio: 0.5, common_stance: "cautious", native_state: "watch" },
+      { min_ratio: 0.34, common_stance: "cautious", native_state: "watch" },
       { min_ratio: 1, common_stance: "constructive", native_state: "concentrated_growth_candidate" },
     ],
   },

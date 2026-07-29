@@ -7,10 +7,10 @@
         "condition": {
           "op": "exists",
           "value": {
-            "fact_id": "fund.concentration_hhi"
+            "fact_id": "governance.insider_ownership"
           }
         },
-        "condition_id": "master_jhunjhunwala.promoter_ownership_record_available",
+        "condition_id": "master_jhunjhunwala.ownership_record_available",
         "on_false": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_insufficient_governance"
@@ -96,7 +96,7 @@
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.34
     },
     {
       "decision": {
@@ -107,7 +107,7 @@
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -144,6 +144,23 @@
         "coverage_weight": 1,
         "points": 1,
         "rule_id": "jhunjhunwala_scaling_converts_to_cash",
+        "source_ids": [
+          "proxy:766b9b96aa87f12da"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "governance.insider_ownership"
+          },
+          "op": "gte",
+          "right": {
+            "literal": 0.01
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "jhunjhunwala_owners_hold_the_company_they_run",
         "source_ids": [
           "proxy:766b9b96aa87f12da"
         ]

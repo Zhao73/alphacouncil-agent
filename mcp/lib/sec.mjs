@@ -48,6 +48,38 @@ async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2, upstreamSigna
   }
 }
 
+/** Raw filing index for one registrant. Callers that need form types read this, not `fetchSubmissions`. */
+export async function fetchFilingIndex(cik, { signal } = {}) {
+  const padded = String(cik).replace(/\D/gu, "").padStart(10, "0");
+  if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
+  const data = await secJson(`https://data.sec.gov/submissions/CIK${padded}.json`, LIMITS.QUOTE_FETCH_MS * 2, signal);
+  const recent = data?.filings?.recent || {};
+  const rows = (recent.form || []).map((form, index) => ({
+    form,
+    accession: recent.accessionNumber?.[index] || null,
+    primary_document: recent.primaryDocument?.[index] || null,
+    filing_date: recent.filingDate?.[index] || null,
+    report_date: recent.reportDate?.[index] || null,
+  })).filter((row) => row.accession && row.primary_document);
+  return { cik: padded, name: data?.name || null, filings: rows };
+}
+
+/** One filing document, fetched as text. Same throttle and User-Agent as every other call. */
+export async function fetchFilingDocument(cik, accession, document, { signal } = {}) {
+  await throttle();
+  const stripped = String(cik).replace(/\D/gu, "").replace(/^0+/u, "");
+  const folder = String(accession).replace(/-/gu, "");
+  const url = `https://www.sec.gov/Archives/edgar/data/${stripped}/${folder}/${document}`;
+  const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, signal);
+  try {
+    const res = await fetch(url, { signal: abort.signal, headers: { "User-Agent": UA } });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return { url, text: await res.text() };
+  } finally {
+    abort.cleanup();
+  }
+}
+
 /** The full US listed universe: ~10k entries of {cik, ticker, title}. */
 export async function fetchUniverse({ signal } = {}) {
   const raw = await secJson("https://www.sec.gov/files/company_tickers.json", LIMITS.QUOTE_FETCH_MS * 2, signal);
