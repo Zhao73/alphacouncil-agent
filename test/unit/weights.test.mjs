@@ -96,3 +96,28 @@ test("the rendered table shows the adjustment reason, not just the number", () =
   assert.match(table, /look-ahead bias/, "the honesty note about not being an optimum must survive");
   assert.match(weightTableMarkdown(resolved, "中文"), /前视偏差/);
 });
+
+test("a contradicted verdict against an evidence seat actually down-weights that seat", () => {
+  // Regression: the seat enumeration stopped at debate and master seats, so a verdict recorded
+  // against an analyst was persisted and then ignored. The contract promises the opposite.
+  const seats = resolveSeatWeights(run({
+    tasks: ["market_data", "quant_factor"],
+    verifier_verdicts: [{ seat: "quant_factor", verdict: "contradicted", claim: "short interest 12-24%" }],
+  })).seats;
+
+  const quant = seats.find((s) => s.seat === "quant_factor");
+  assert.ok(quant, "the evidence seat must appear in the weight table");
+  assert.ok(quant.verification_factor < 1, "a contradicted claim must reduce the seat's weight");
+  assert.deepEqual(quant.verification_reasons, ["contradicted"]);
+
+  const clean = seats.find((s) => s.seat === "market_data");
+  assert.equal(clean.verification_factor, 1, "an unchallenged seat keeps its weight");
+});
+
+test("evidence seats are listed once even when they also appear in verdicts", () => {
+  const seats = resolveSeatWeights(run({
+    tasks: ["market_data"],
+    verifier_verdicts: [{ seat: "market_data", verdict: "stands" }],
+  })).seats;
+  assert.equal(seats.filter((s) => s.seat === "market_data").length, 1);
+});

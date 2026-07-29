@@ -14,6 +14,8 @@ const noPmRunId = `SELFTEST-NOPM-${process.pid}`;
 const shortcutRunId = `SELFTEST-SHORTCUT-${process.pid}`;
 const languageRunId = `SELFTEST-LANGUAGE-${process.pid}`;
 const barrierRunId = `SELFTEST-BARRIER-${process.pid}`;
+const citationRunId = `SELFTEST-CITATION-${process.pid}`;
+const reviseRunId = `SELFTEST-REVISE-${process.pid}`;
 const recorded = {};
 
 const bullQuestions = [
@@ -140,6 +142,22 @@ async function recordPm(runId) {
   });
 }
 
+async function recordThinPm(runId) {
+  return server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm`,
+    packet: {
+      verdict: "The portfolio manager reaches a balanced conclusion after the complete audited debate.",
+      rating: "Hold",
+      winner: "balanced",
+      summary: "A submission whose report body is empty, which the structure gate must reject.",
+      confidence: "medium",
+      report_markdown: "",
+    },
+  });
+}
+
 before(async () => {
   dataDir = makeDataDir();
   server = startServer({ dataDir });
@@ -181,6 +199,31 @@ before(async () => {
   await recordRound(shortcutRunId, "bull_researcher", 1);
   await recordRound(shortcutRunId, "bear_researcher", 1);
   recorded.shortcut = await recordPm(shortcutRunId);
+
+  // A Chinese run whose only non-Chinese text is the English source titles it cites.
+  await server.callTool("plan_visible_run", {
+    symbol: "NOK",
+    language: "zh-CN",
+    run_id: citationRunId,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: (await confirmMasterSelection(server, { symbol: "NOK", language: "zh-CN", selected_master_ids: [selectedMaster] })).selection_receipt,
+  });
+  recorded.citation = await server.callTool("record_visible_packet", {
+    run_id: citationRunId,
+    task: "market_data",
+    packet: evidencePacket("本席位记录了足够的中文证据，并按来源发布时的原文标题引用，不翻译标题。", {
+      sources: [{ id: "S1", title: "Nokia beats quarterly estimates", url: "https://example.com/a", published_at: "2026-01-02", retrieved_at: "2026-01-03" }],
+    }),
+  });
+
+  // A PM whose first submission fails the structure gate must stay revisable.
+  await plan(reviseRunId);
+  await recordEvidence(reviseRunId);
+  await recordMaster(reviseRunId);
+  await recordFullDebate(reviseRunId);
+  recorded.thinPm = structured(await recordThinPm(reviseRunId));
+  recorded.revisedPm = await recordPm(reviseRunId);
 
   await plan(languageRunId);
   const languageEvidencePath = join(dataDir, "runs", languageRunId, "evidence.json");
@@ -339,4 +382,29 @@ test("visible-host status never claims a plugin-enforced deadline or dedicated h
   assert.equal(status.remaining_budget_ms, null);
   assert.equal(status.deadline_met, null);
   assert.equal(status.master_worker_contract, "host_managed_not_plugin_enforced");
+});
+
+test("an English source title does not fail a Chinese packet's language gate", () => {
+  // Regression: `sources[].title` counted against the reader-language ratio, so a packet whose
+  // every authored sentence was Chinese was rejected at ratio 0.49. The only way to pass was to
+  // translate the citation, which falsifies the source.
+  assert.equal(recorded.citation.isError, undefined, JSON.stringify(recorded.citation).slice(0, 400));
+  const packet = structured(recorded.citation);
+  assert.ok(packet.recorded_tasks.includes("market_data"));
+});
+
+test("a portfolio manager report that fails the structure gate can be revised", () => {
+  // Regression: the idempotency lock was taken before the structure gate ran, so a thin report
+  // left the run stuck at needs_revision with no way back in.
+  assert.equal(recorded.thinPm.report_quality, "needs_revision");
+  assert.ok(recorded.thinPm.missing_report_items.length > 0);
+  assert.equal(recorded.revisedPm.isError, undefined, JSON.stringify(recorded.revisedPm).slice(0, 400));
+  const revised = structured(recorded.revisedPm);
+  assert.notEqual(revised.report_quality, "needs_revision");
+  assert.notEqual(revised.idempotent_replay, true, "a revision is a fresh record, not a replay");
+  assert.equal(revised.status, "complete");
+});
+
+test("a portfolio manager report that passed stays frozen", () => {
+  assert.equal(recorded.pmReplay.idempotent_replay, true);
 });

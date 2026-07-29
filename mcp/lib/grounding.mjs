@@ -357,7 +357,15 @@ export async function gatherGrounding({
       // Only the market-level block. A company's own leverage and growth come from its filings,
       // and taking them from the index would be silently answering a different question.
       const marketFacts = (r.value.facts || []).filter((fact) => MARKET_LEVEL_FACTS.has(fact.fact_id));
-      if (marketFacts.length) out.market_valuation = { ...r.value, facts: marketFacts };
+      if (marketFacts.length) { out.market_valuation = { ...r.value, facts: marketFacts }; return; }
+      // A fetch that succeeds but yields no market-level fact used to vanish here. Downstream,
+      // Marks and Damodaran declined with `unmet: index.aggregate_earnings_yield` and the reader
+      // was never told why the yardstick was missing -- an unexplained abstention reads as a
+      // verdict. Record it as the data gap it is.
+      out.unavailable.push(
+        `market valuation for ${BROAD_MARKET_INDEX}: fetched, but none of ${[...MARKET_LEVEL_FACTS].join(", ")} was derivable`
+        + " (seats that measure a company against the market will decline for lack of grounding, not for lack of a view)",
+      );
     }));
   }
 

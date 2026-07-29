@@ -943,12 +943,25 @@ function recordVisiblePortfolioManager(run, args) {
   assertVisibleReaderLanguage(debateReaderText(packet), run, "visible portfolio_manager decision");
   const contentHash = visibleDecisionContentHash(packet);
   if (state.portfolio_manager) {
-    if (state.portfolio_manager.content_hash !== contentHash) {
+    // A report that failed the structure gate must stay revisable. The first submission takes
+    // the idempotency lock before the gate runs, so a PM whose report_markdown was thin left the
+    // run stuck at needs_revision forever: the fix was rejected as a conflicting replay and there
+    // was no other way in. A passed report is still frozen -- revision is for repairing a
+    // rejected report, not for changing a verdict that already stands.
+    const priorQualityPath = join(dir, "report_quality.json");
+    const priorQuality = existsSync(priorQualityPath) ? readJson(priorQualityPath) : null;
+    const revisable = priorQuality && priorQuality.status !== "passed";
+    if (state.portfolio_manager.content_hash !== contentHash && !revisable) {
       rejectVisibleDecision(run, "VISIBLE_PM_CONFLICT", "Conflicting portfolio_manager replay.", {
         existing_content_hash: state.portfolio_manager.content_hash,
         submitted_content_hash: contentHash,
+        report_quality: priorQuality?.status || null,
       });
     }
+    // Revision accepted: drop the lock so the normal record path below runs again.
+    if (state.portfolio_manager.content_hash !== contentHash) state.portfolio_manager = null;
+  }
+  if (state.portfolio_manager) {
     const handoffPath = join(dir, "user_response.md");
     const reportPath = join(dir, "final_report.md");
     const qualityPath = join(dir, "report_quality.json");
@@ -1138,8 +1151,12 @@ function readerStrings(value, skipKeys = new Set()) {
 }
 
 function visibleEvidenceReaderText(packet) {
+  // `title` joins the machine set for the same reason `url` is already there: a source title is
+  // the publisher's own words. Counting English headlines against a Chinese run's language ratio
+  // rejected packets whose every authored sentence was Chinese, and the only way to pass was to
+  // translate the citation -- which is falsifying the source, not localising the report.
   const machine = new Set([
-    "task", "symbol", "as_of", "source_ids", "id", "url", "published_at", "retrieved_at",
+    "task", "symbol", "as_of", "source_ids", "id", "url", "title", "published_at", "retrieved_at",
     "confidence", "information_richness", "thread_id", "execution_mode", "raw_text",
   ]);
   return [

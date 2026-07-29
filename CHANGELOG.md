@@ -2,6 +2,43 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.5] — 2026-07-29
+
+Five defects found by running one full visible council end to end on a US operating company.
+Every one of them was silent: the run produced a report and none of these said anything was wrong.
+
+### Fixed
+
+- **A plan response could exceed the host's tool-result limit.** `plan_visible_run` echoed the
+  entire grounding object, whose macro history and typed-fact lineage are unbounded — 2.33 MB of a
+  2.54 MB payload on a single US equity — so the host truncated the plan to a scratch file and the
+  agent could not read the seat specs it had just asked for. Both fields are already in every seat
+  prompt and in `evidence.json`; the response now carries the rest of the grounding plus a pointer
+  and an entry count. Nothing else about the shape changed.
+- **An English source title failed a Chinese packet's language gate.** `sources[].title` counted
+  toward the reader-language ratio, so packets whose every authored sentence was Chinese were
+  rejected at ratio 0.49. The only way to pass was to translate the citation, which falsifies the
+  source. `title` now joins `url` as machine text.
+- **A portfolio-manager report that failed the structure gate could not be repaired.** The
+  idempotency lock was taken before the gate ran, so a thin report left the run permanently at
+  `needs_revision`: the corrected submission came back as a conflicting replay and there was no
+  other way in. A PM whose `report_quality` is not `passed` is now revisable; one that passed stays
+  frozen.
+- **A failed verification down-weighted nothing when the seat was an analyst.** The contract
+  promises that a `contradicted` verdict reduces the weight of the seat that made the claim, but
+  the seat enumeration covered only debate and master seats. Verdicts against evidence roles were
+  recorded and then ignored, and the tool still answered with `verification_factor: 1`.
+- **A missing market yardstick looked like an abstention.** When the broad-market valuation fetch
+  succeeded but yielded no market-level fact, it was dropped without a trace; downstream, Marks and
+  Damodaran declined with `unmet: index.aggregate_earnings_yield` and the report never said why the
+  fact was absent. An unexplained abstention reads as a verdict. It is now recorded as a data gap.
+
+### Changed
+
+- `MASTER_SELECTION_INTENT_MISMATCH` now returns the expected and submitted intent hashes, the
+  fields the receipt binds, and the remedy. The receipt binds the prompt verbatim by design, but
+  the error gave the caller no way to tell a retyped prompt from a wrong symbol.
+
 ## [1.0.4] — 2026-07-29
 
 ### Fixed

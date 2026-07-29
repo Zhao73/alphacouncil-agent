@@ -147,6 +147,36 @@ export function jsonContent(text, structuredContent = {}) {
   };
 }
 
+// Series history and per-fact lineage are the two unbounded parts of a grounding object: on one
+// real run they were 2.33 MB of a 2.54 MB plan payload, which exceeded the host's tool-result
+// limit and pushed the entire plan to a scratch file. They are already saved in evidence.json and
+// baked into every seat prompt, so the plan response replaces them with a pointer and a count.
+const BULK_GROUNDING_FIELDS = ["macro_series", "typed_fact_sources"];
+
+/**
+ * The grounding a plan response carries: the same object minus its two unbounded fields.
+ * Shape, flags and gap lists are preserved so a host can still read what was established.
+ */
+export function compactGrounding(run) {
+  const g = run?.grounding;
+  if (!g || typeof g !== "object") return g;
+  const compact = { ...g };
+  const omitted = [];
+  for (const field of BULK_GROUNDING_FIELDS) {
+    if (compact[field] === undefined) continue;
+    const count = Array.isArray(compact[field]) ? compact[field].length : Object.keys(compact[field] || {}).length;
+    omitted.push(`${field} (${count} entries)`);
+    delete compact[field];
+  }
+  if (!omitted.length) return compact;
+  compact.omitted_from_this_response = {
+    fields: omitted,
+    reason: "kept out of the plan payload for size; every seat prompt already carries them",
+    saved_to: join(runPath(run.run_id), "evidence.json"),
+  };
+  return compact;
+}
+
 export function tool(name, description, inputSchema, annotations = {}) {
   return { name, description, inputSchema, annotations };
 }
@@ -793,7 +823,7 @@ export async function handleToolCall(id, params) {
         + `Network preflight: ${preflight.status}. `
         + `Established facts: ${run.grounding && !run.grounding.facts_unavailable ? "attached to every seat" : "UNAVAILABLE -- seats will run without filings or quotes, say so in the report"}.`,
         {
-          run,
+          run: { ...run, grounding: compactGrounding(run) },
           idempotent_replay: Boolean(runArgs.existing_run),
           preflight,
           ...specs,

@@ -532,8 +532,16 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
   }
   const intentHash = digest({ symbol, language, prompt, council_mode: mode });
   if (receipt.intent_hash !== intentHash || selection.intent_hash !== intentHash) {
+    // Say which field moved. The receipt binds symbol, language, prompt and mode verbatim, so a
+    // single reworded character invalidates it -- and without this the caller cannot tell a
+    // retyped prompt from a wrong symbol, and retries the same broken call.
     throw invalidParams("The selection receipt belongs to a different prompt or language intent.", {
       reason: "MASTER_SELECTION_INTENT_MISMATCH",
+      expected_intent_hash: receipt.intent_hash || selection.intent_hash || null,
+      submitted_intent_hash: intentHash,
+      bound_fields: ["symbol", "language", "prompt", "council_mode"],
+      submitted: { symbol, language, council_mode: mode, prompt_length: prompt.length },
+      remedy: "Re-send the exact symbol, prompt, language and council_mode used in begin_council_selection, or start a new selection.",
     });
   }
   if (expired(receipt, now) || expired(selection, now)) {

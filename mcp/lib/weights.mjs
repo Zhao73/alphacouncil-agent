@@ -76,8 +76,15 @@ export function resolveSeatWeights(run, overrides = {}) {
 
   const debateIds = reg.ids("debate").filter((id) => id !== "portfolio_manager");
   const masterIds = (run.master_opinions || []).map((o) => o.master);
+  // Evidence seats belong here too. The contract says a failed verification down-weights the
+  // seat that made the claim, but the enumeration stopped at debate and master seats, so a
+  // `contradicted` verdict against an analyst was recorded and then silently ignored.
+  const evidenceIds = [
+    ...(run.tasks || []),
+    ...(run.verifier_verdicts || []).map((v) => v?.seat).filter(Boolean),
+  ];
 
-  for (const id of [...debateIds, ...masterIds]) {
+  for (const id of new Set([...debateIds, ...masterIds, ...evidenceIds])) {
     const persona = reg.get(id);
     if (!persona) continue;
     const declared = baseWeight(persona);
