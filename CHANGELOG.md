@@ -2,6 +2,55 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.1] — 2026-07-29
+
+A SOX run ended with 25 of 27 seats abstaining. The seats were not the problem.
+
+### Fixed
+
+- **A basket nobody registered produced no facts.** `^SOX` was not in `INDEX_PROXIES` and
+  `SOXX` was not in `FUND_REGISTRY`, so there were no holdings, no look-through and no
+  aggregate valuation — and `master_bogle`, the seat built to price a basket, abstained with
+  the rest. `^SOX` and `^RUT` are mapped, and 25 more baskets are registered, every product id
+  read from the issuer's own screener and verified by live fetch.
+- **An index typed without its caret did not route to the index path.** `^SOX` classified as an
+  index and `SOX` did not, so a run on the name people actually type produced nothing.
+- **`funds.mjs` re-exported six parsers it also calls.** A bare `export ... from` publishes a
+  name without binding it, so every live fetch path threw `not defined` while the parser tests,
+  which import directly, stayed green.
+- **Three recorded data gaps were closed and still being reported** — breadth, the implied ERP
+  and the valuation percentile. A note about a fact the pack produced reads as a gap that is
+  filled, which sends a reader to solve a solved problem.
+
+### Added
+
+- **Company methods can price a basket, without changing their methods.** A fund holding 1% of
+  a company has a claim on 1% of its owner earnings; summed across the basket that is a dollar
+  figure about the fund, and a fund's market capitalisation is its AUM, so a seat dividing one
+  by the other gets the weighted look-through yield. Ten seats were blocked on a share count
+  and none of them wanted a share count — they wanted a denominator.
+- **Every pure ratio a constituent reports now aggregates**: cash conversion, both margins,
+  ten-year ROE, incremental return on capital, interest coverage. Coverage aggregates
+  harmonically, because one debt-free constituent at 900x drags an arithmetic mean to
+  "comfortably covered" for a basket that is not.
+- **ETF flow**, from an append-only ledger of what each run saw, because no issuer serves a
+  keyless share-count history. Only a filed count or the issuer's own assets-over-NAV identity
+  may price a flow; a count reconstructed from positions over market price may size a fund and
+  is refused for a flow, because a difference cancels the number and keeps the error. Eleven
+  Select Sector SPDRs registered, which is where the question is usually asked.
+- **A cash index reads its tracking ETF's option chain**, labelled a proxy, the same discipline
+  the holdings path already applies.
+
+### Changed
+
+- A share count is carried as a point-in-time quantity. It was declared over a fiscal year
+  because that is how the filing reports it, which left a fund's count — a genuine instant —
+  unable to satisfy any contract.
+
+Measured on live grounding: SOX 0 seats to 6, SOXX 0 to 17, QQQ 11 to 16, AAPL unchanged at 18
+as the control, and across five mixed symbols all 27 seats reach a stance with no contract
+failures.
+
 ## [1.0.0] — 2026-07-29
 
 The release where the method seats stop abstaining on everything. Full notes in

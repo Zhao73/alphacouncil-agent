@@ -4,6 +4,7 @@ import { getMacroSnapshot } from "./macro.mjs";
 import { fetchMacroSeries } from "./fred.mjs";
 import { fetchFundamentals } from "./fundamentals.mjs";
 import { fetchInsiderOwnership } from "./insider-ownership.mjs";
+import { INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
@@ -77,6 +78,11 @@ async function safely(label, fn) {
  * @param {boolean} [options.options] include the delayed CBOE option-chain digest for US listings
  * @param {string} [options.asOf]     only use filings filed by this date
  */
+/** The tracking ETF whose listed chain stands in for a cash index. */
+function indexProxyEtf(symbol) {
+  return INDEX_PROXIES[normalizeIndexSymbol(symbol)]?.etf || null;
+}
+
 export async function gatherGrounding({
   symbol,
   cik,
@@ -170,6 +176,21 @@ export async function gatherGrounding({
     }));
   } else if (symbol && options && symbolMarket?.id === "US" && !out.instrument.index_like) {
     out.unavailable.push("options chain: historical cutoff requires an archived chain; current CBOE snapshot was not fetched");
+  } else if (symbol && options && out.instrument.index_like && indexProxyEtf(symbol) && snapshotPolicy.allowed) {
+    // A cash index has no chain of its own on this adapter, and its tracking ETF does. The
+    // holdings path already answers "the index itself is licensed, so read the tracker and say
+    // so"; a volatility surface is the same problem and gets the same answer. What must not
+    // happen is the substitution going unlabelled -- an ETF's implied volatility is not the
+    // index's, and a reader comparing them needs to know which one this is.
+    const proxy = indexProxyEtf(symbol);
+    jobs.push(safely("options chain", () => fetchOptionsChain(proxy, { asOf, signal })).then((r) => {
+      if (r.ok && r.value?.available) {
+        out.options = { ...r.value, proxy_for: normalizeIndexSymbol(symbol), is_proxy: true,
+          proxy_note: `${proxy} option chain used as an explicit proxy; the cash index has no chain on this adapter` };
+      } else {
+        out.unavailable.push(r.ok ? `options chain via ${proxy}: ${r.value?.reason || "unavailable"}` : r.error);
+      }
+    }));
   } else if (symbol && options && out.instrument.index_like) {
     out.not_applicable.push(localizedText(language, {
       en: "CBOE equity/ETF option-chain adapter: direct cash-index symbol is not supported; use the appropriate listed derivative or ETF proxy explicitly",
