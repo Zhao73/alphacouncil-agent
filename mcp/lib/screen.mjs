@@ -69,10 +69,36 @@ function ruleProvenance(series) {
  * Each returns { id, passed, value, threshold, reason } or { skipped } when the inputs
  * are not available -- a missing input is never silently treated as a pass.
  */
+/**
+ * Gross profit, direct where the filer tagged it and revenue less cost of revenue where not.
+ *
+ * The subtraction is the filer's own arithmetic on the filer's own figures, matched by period
+ * end so a year is never differenced against a different year. Years the filer did tag keep the
+ * tagged value: a direct number always beats a reconstructed one.
+ */
+export function derivedGrossProfit(direct, revenue, cost) {
+  if (direct?.length) return direct;
+  if (!revenue?.length || !cost?.length) return direct || [];
+  const costByEnd = new Map(cost.map((row) => [row.end, row]));
+  const derived = [];
+  for (const row of revenue) {
+    const paired = costByEnd.get(row.end);
+    if (!paired || !Number.isFinite(paired.val)) continue;
+    derived.push({
+      ...row,
+      val: row.val - paired.val,
+      tag: `${row.tag} - ${paired.tag}`,
+      derived_from: [row.tag, paired.tag],
+    });
+  }
+  return derived;
+}
+
 export function evaluateRules(facts, { asOf = null } = {}) {
   const revenue = values(facts, "revenue", asOf);
   const netIncome = values(facts, "netIncome", asOf);
-  const grossProfit = values(facts, "grossProfit", asOf);
+  // Derived where the filer did not tag it directly, from two figures it did publish.
+  const grossProfit = derivedGrossProfit(values(facts, "grossProfit", asOf), values(facts, "revenue", asOf), values(facts, "costOfRevenue", asOf));
   const operatingIncome = values(facts, "operatingIncome", asOf);
   const ocf = values(facts, "operatingCashFlow", asOf);
   const capex = values(facts, "capex", asOf);

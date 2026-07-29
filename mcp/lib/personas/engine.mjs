@@ -13,6 +13,7 @@ import { typedFactPackFromGrounding } from "../personas-v3/grounding-adapter.mjs
 import { buildAnonymousPreDecision, freezeAnonymousDecision } from "../personas-v3/runtime.mjs";
 import { executeDeterministicPersonaPolicy } from "../personas-v3/deterministic-executor.mjs";
 import { languageKey, localized } from "../lang.mjs";
+import { displayMasterLabel } from "../markdown.mjs";
 import {
   declinedOpinion as v2DeclinedOpinion,
   planMasters as planLegacyMasters,
@@ -191,8 +192,12 @@ export function completedMasterOpinion(run, item) {
   }
   const result = item.frozenDecision.structured_decision.result;
   const locale = languageKey(run.language);
-  const label = item.pack.admitted_label?.[locale]
-    || item.pack.admitted_label?.en || item.id;
+  // The pack's admitted label carries a maturity suffix -- "provisional operator lens" and its
+  // translations -- which belongs in the assurance section, not inside a sentence about the
+  // company. Left in, every statement read "using the X provisional operator lens method",
+  // which is both ungrammatical and a second copy of a disclosure the report already makes.
+  const label = displayMasterLabel(item.pack.admitted_label?.[locale]
+    || item.pack.admitted_label?.en || item.id);
   const copy = localized(run.language, {
     en: { withheld: (pct) => `${pct}% coverage; score withheld`, unscored: "not scored", verdict: (stance, reason) => `${label} frozen decision: ${stance} (${reason})`, summary: (score) => `Using the ${label} method on ${run.symbol}, the PersonaPack v3 deterministic policy executed with score ${score}. Typed facts, hard vetoes, and score bands produced this stance; no language model selected it.`, hit: (id) => `score hit: ${id}`, miss: (id) => `score miss: ${id}`, eligibility: (id) => `eligibility condition ${id} becomes satisfied`, veto: (id) => `hard veto ${id} no longer triggers`, score: (id) => `score condition ${id} becomes satisfied` },
     zh: { withheld: (pct) => `覆盖率 ${pct}%，分数被保留不发布`, unscored: "未评分", verdict: (stance, reason) => `${label}的冻结结论：${stance}（${reason}）`, summary: (score) => `按${label}方法审视 ${run.symbol}：PersonaPack v3 确定性政策已执行，得分 ${score}。该立场由结构化事实、硬否决和评分带产生，没有让语言模型选择立场。`, hit: (id) => `评分命中：${id}`, miss: (id) => `评分未命中：${id}`, eligibility: (id) => `资格条件 ${id} 变为满足`, veto: (id) => `硬否决 ${id} 不再触发`, score: (id) => `评分条件 ${id} 变为满足` },
@@ -263,8 +268,12 @@ export function declinedMasterOpinion(run, item) {
   if (item?.engine !== "v3_method_runtime") return v2DeclinedOpinion(run, item.id, item.decision);
   const eligibility = item.preDecision.eligibility;
   const locale = languageKey(run.language);
-  const label = item.pack.admitted_label?.[locale]
-    || item.pack.admitted_label?.en || item.id;
+  // The pack's admitted label carries a maturity suffix -- "provisional operator lens" and its
+  // translations -- which belongs in the assurance section, not inside a sentence about the
+  // company. Left in, every statement read "using the X provisional operator lens method",
+  // which is both ungrammatical and a second copy of a disclosure the report already makes.
+  const label = displayMasterLabel(item.pack.admitted_label?.[locale]
+    || item.pack.admitted_label?.en || item.id);
   const instrument = run?.grounding?.instrument;
   const fundOrIndex = instrument?.fund_like === true || instrument?.index_like === true
     || ["etf", "mutual_fund", "index"].includes(instrument?.asset_type);

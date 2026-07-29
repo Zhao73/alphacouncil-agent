@@ -188,12 +188,42 @@ export const CONCEPTS = {
   ],
   netIncome: ["NetIncomeLoss", "ProfitLoss"],
   grossProfit: ["GrossProfit"],
-  operatingIncome: ["OperatingIncomeLoss"],
+  // Most filers never tag GrossProfit -- ten of fifteen large caps tested do not -- and report
+  // revenue and cost of revenue separately instead. The margin is derived from those when the
+  // direct tag is absent, which is arithmetic the filer already published rather than an
+  // estimate. Without this, a gross-margin rule was unavailable for two thirds of the market
+  // and every seat that reads it fell silent.
+  costOfRevenue: [
+    "CostOfGoodsAndServicesSold",
+    "CostOfRevenue",
+    "CostOfGoodsSold",
+    "CostOfServices",
+    "CostOfGoodsAndServicesSoldExcludingDepreciationDepletionAndAmortization",
+  ],
+  operatingIncome: ["OperatingIncomeLoss", "OperatingIncomeLossIncludingEquityMethodInvestments"],
   operatingCashFlow: ["NetCashProvidedByUsedInOperatingActivities", "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations"],
-  capex: ["PaymentsToAcquirePropertyPlantAndEquipment", "PaymentsToAcquireProductiveAssets"],
+  // Capital expenditure has no single tag in practice. Corning files PaymentsForCapitalImprovements
+  // and nothing this list previously contained, which alone removed owner earnings -- and with
+  // it Buffett and Ackman -- for every issuer that tags it that way.
+  capex: [
+    "PaymentsToAcquirePropertyPlantAndEquipment",
+    "PaymentsToAcquireProductiveAssets",
+    "PaymentsForCapitalImprovements",
+    "PaymentsForProceedsFromProductiveAssets",
+    "PaymentsToAcquireOtherPropertyPlantAndEquipment",
+    "PaymentsToAcquireMachineryAndEquipment",
+  ],
   equity: ["StockholdersEquity", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"],
   assets: ["Assets"],
-  interestExpense: ["InterestExpense", "InterestIncomeExpenseNet", "InterestExpenseDebt"],
+  interestExpense: [
+    "InterestExpense",
+    "InterestIncomeExpenseNet",
+    "InterestExpenseDebt",
+    "InterestExpenseNonoperating",
+    "InterestAndDebtExpense",
+    "InterestIncomeExpenseNonoperatingNet",
+    "InterestExpenseBorrowings",
+  ],
   sharesOutstanding: ["CommonStockSharesOutstanding", "WeightedAverageNumberOfDilutedSharesOutstanding"],
 };
 
