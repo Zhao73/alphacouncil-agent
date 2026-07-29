@@ -125,6 +125,9 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "index.breadth_counted_above_200dma": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "fund.aum": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "fund.expense_ratio": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  // Creations minus redemptions, priced. A crowding signal, never a valuation one.
+  "fund.net_flow": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "fund.net_flow_ratio": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
 
   // The US has no promoter shareholding record. Section 16 ownership is the filed analogue,
   // and it is what lets a governance-first method reach a number on this universe at all.

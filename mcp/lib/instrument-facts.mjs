@@ -23,6 +23,8 @@ import {
 import { fetchIndexAggregate, INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { fetchImpliedErp } from "./damodaran.mjs";
 import { chartUrl, fetchBasketBreadth, parseDailyCloses } from "./breadth.mjs";
+import { flowInputs, recordFundObservation } from "./fund-observations.mjs";
+import { fundFlow } from "./funds.mjs";
 import { fetchText } from "./quotes.mjs";
 import { deriveFundamentals } from "./fundamentals.mjs";
 import { evaluateRules } from "./screen.mjs";
@@ -429,17 +431,23 @@ function aggregatePeriod(perHoldingPeriods, factId, tickers) {
  * constituent missing either is excluded and costs coverage rather than being assumed.
  */
 /**
- * A share count for a fund whose issuer publishes none.
+ * A share count for a fund whose holdings file does not carry one.
  *
- * Two of the four issuers disclose shares outstanding and two do not, and the seats that need
- * a market capitalisation do not care which. The assets implied by the disclosed positions,
- * divided by what the fund itself trades at, reconstructs the count. The product of the two is
- * the size we already had, so this adds no new claim -- it puts a number the seats can use
- * where a filed one is absent, and says in `method` that it is not a filed one.
+ * There are two routes and they are not equally good, which matters because a flow is a
+ * DIFFERENCE of two counts and therefore keeps only their error.
+ *
+ * The good route is the issuer's own assets over its own net asset value, on the same date
+ * from the same source: that ratio IS shares outstanding, an identity rather than an estimate,
+ * and it is trustworthy enough to difference.
+ *
+ * The weak route is the assets implied by disclosed positions over the fund's market price. It
+ * is fine for a market capitalisation -- the product is the size we already had -- and unfit
+ * for a flow, because a 95%-priced position sum and a premium to NAV each carry error that a
+ * subtraction leaves behind while cancelling the number. `flowInputs` refuses it by basis.
  */
 async function impliedFundShares(symbol, netAssets, metadata, signal) {
-  if (finite(metadata?.nav) && metadata.nav > 0 && finite(netAssets)) {
-    return { value: netAssets / metadata.nav, how: "assets_from_disclosed_positions_over_nav" };
+  if (finite(metadata?.nav) && metadata.nav > 0 && finite(metadata?.aum) && metadata.aum > 0) {
+    return { value: metadata.aum / metadata.nav, how: "issuer_aum_over_nav" };
   }
   if (!finite(netAssets) || netAssets <= 0) return null;
   try {
@@ -716,6 +724,58 @@ export async function gatherInstrumentFacts({
           method: fundShares.how,
           title: `${holdings.symbol} shares outstanding`,
         });
+      }
+      // What this run saw about the fund's size, appended to its own ledger. No issuer serves
+      // a share-count history keylessly, so the history is built one run at a time and a flow
+      // becomes computable from the second observation onward.
+      const observed = recordFundObservation({
+        symbol: holdings.symbol,
+        asOf: holdings.as_of,
+        sharesOutstanding: fundShares?.value ?? null,
+        sharesBasis: fundShares?.how ?? null,
+        nav: finite(metadata?.nav) ? metadata.nav : null,
+        netAssets: finite(metadata?.aum) ? metadata.aum : breadth.net_assets,
+        sourceUrl: holdings.source_url,
+      });
+      const inputs = flowInputs(observed.observations);
+      const flow = inputs
+        ? fundFlow({ sharesNow: inputs.sharesNow, sharesPrior: inputs.sharesPrior, nav: inputs.nav, issuer: holdings.issuer })
+        : null;
+      if (flow && finite(flow.value)) {
+        facts.push({
+          ...shared,
+          fact_id: "fund.net_flow",
+          value: flow.value,
+          value_kind: "monetary",
+          unit: "currency_units",
+          currency: "USD",
+          scale: 1,
+          ratio_denominator: undefined,
+          derivation: "rederived",
+          observation_date: inputs.asOf,
+          method: `${flow.construction.formula}; ${inputs.priorAsOf} to ${inputs.asOf}, ${inputs.gapDays} days apart`,
+          title: `${holdings.symbol} net creation over ${inputs.gapDays} days`,
+        });
+        if (finite(inputs.netAssets) && inputs.netAssets > 0) {
+          facts.push({
+            ...shared,
+            fact_id: "fund.net_flow_ratio",
+            value: Number((flow.value / inputs.netAssets).toFixed(6)),
+            ratio_denominator: "net_assets",
+            derivation: "rederived",
+            observation_date: inputs.asOf,
+            method: `net creation over assets; ${inputs.priorAsOf} to ${inputs.asOf}, ${inputs.gapDays} days apart`,
+            title: `${holdings.symbol} net creation as a share of assets`,
+          });
+        }
+      } else {
+        const filed = observed.observations.filter((row) => row.shares_basis === "issuer_disclosed_shares_outstanding").length;
+        unavailable.push(filed >= 1
+          ? `fund flow for ${holdings.symbol}: ${filed} issuer-published share-count observation(s) on record;`
+            + " a flow needs two, and no issuer serves a keyless history. The ledger grows one run at a time."
+          : `fund flow for ${holdings.symbol}: ${holdings.issuer} publishes no shares outstanding, and the count`
+            + " reconstructed from assets over price may size the fund but must not be differenced into a flow --"
+            + " the subtraction cancels the number and keeps the error.");
       }
       // The gap between weighted and counted breadth IS the concentration story: a
       // cap-weighted basket can be above its average on weight while most members are below.
