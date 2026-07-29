@@ -476,7 +476,17 @@ export const LOOK_THROUGH_METRICS = Object.freeze({
   "growth.revenue_growth": { kind: "rate", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
   "growth.earnings_growth": { kind: "rate", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
   "leverage.debt_to_equity": { kind: "ratio", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
+  // Cash conversion sits around one and is bounded in practice, so the weighted mean of the
+  // ratios is the portfolio ratio to within the usual dispersion caveat.
+  "accounting.cash_conversion": { kind: "ratio", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
+  "profitability.incremental_return_on_capital": { kind: "rate", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
+  // Interest coverage is a MULTIPLE, and an arithmetic mean of multiples is dominated by
+  // whichever constituent carries almost no debt -- one company at 900x drags a basket of
+  // thinly covered names to "comfortably covered". The harmonic mean averages the thing that
+  // actually adds up across a portfolio, which is interest expense per unit of profit.
+  "coverage.interest_coverage": { kind: "price_multiple", aggregation: "weighted_harmonic_mean", reciprocal_of: null },
   "leverage.net_debt_to_ebitda": { kind: "ratio", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
+  "profitability.return_on_equity_10y": { kind: "rate", aggregation: "weighted_arithmetic_mean", reciprocal_of: null },
 });
 
 /**

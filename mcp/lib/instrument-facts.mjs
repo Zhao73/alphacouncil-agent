@@ -17,7 +17,9 @@ import { fetchFundHoldings, fetchFundMetadata, lookThroughAggregate, topHoldings
 import { fetchIndexAggregate, INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { fetchImpliedErp } from "./damodaran.mjs";
 import { fetchBasketBreadth } from "./breadth.mjs";
-import { fetchFundamentals } from "./fundamentals.mjs";
+import { deriveFundamentals } from "./fundamentals.mjs";
+import { evaluateRules } from "./screen.mjs";
+import { fetchCompanyFacts } from "./sec.mjs";
 import { fetchUniverse } from "./sec.mjs";
 
 /**
@@ -51,6 +53,15 @@ export const LOOK_THROUGH_TARGET_COVERAGE = 0.6;
 export const LOOK_THROUGH_FACT_RULES = Object.freeze({
   "financial.leverage": "leverage.debt_to_equity",
   "valuation.revenue_growth": "growth.revenue_growth",
+  // Every one of these is a pure ratio that a weighted mean of constituents answers honestly,
+  // and every one of them was already legal to aggregate -- it simply had no line here, which
+  // is why eighteen seats stayed silent on a basket whose data was complete.
+  "accounting.cash_conversion": "accounting.cash_conversion",
+  "financial.gross_margin_5y": "profitability.gross_margin",
+  "financial.net_margin_5y": "profitability.net_margin",
+  "financial.return_on_equity_10y": "profitability.return_on_equity_10y",
+  "financial.incremental_return_on_capital": "profitability.incremental_return_on_capital",
+  "financial.interest_coverage": "coverage.interest_coverage",
 });
 
 /**
@@ -69,6 +80,32 @@ export const LOOK_THROUGH_BLOCKED = Object.freeze({
   "valuation.downside_asset_value": "absolute currency; needs a per-constituent market capitalisation to become a ratio",
   "valuation.downside_floor": "absolute currency; needs a per-constituent market capitalisation to become a ratio",
   "capital_allocation.share_count": "a count, not a rate; it has no portfolio-level meaning",
+});
+
+/**
+ * Mechanical-screen rule id -> the pack fact id it supplies, mirroring the grounding adapter's
+ * own map. Percent rules publish 15 for 15%, and every pack ratio is a decimal.
+ */
+const SCREEN_RULE_FACTS = Object.freeze({
+  roe_10y: "financial.return_on_equity_10y",
+  interest_cover: "financial.interest_coverage",
+  gross_margin: "financial.gross_margin_5y",
+  ocf_over_ni: "accounting.cash_conversion",
+  net_margin: "financial.net_margin_5y",
+});
+const SCREEN_PERCENT_RULES = new Set(["roe_10y", "gross_margin", "net_margin"]);
+
+/**
+ * The unit a look-through fact must carry.
+ *
+ * The aggregate of a quantity IS that quantity, so it has to arrive under the same contract the
+ * single-company path declares. Emitting every aggregate as a bare `decimal` made the executor
+ * reject coverage and cash conversion, which are multiples -- the fact was present and unusable,
+ * which reads exactly like the fact being absent.
+ */
+const LOOK_THROUGH_UNITS = Object.freeze({
+  "financial.interest_coverage": "multiple",
+  "accounting.cash_conversion": "multiple",
 });
 
 export const LOOK_THROUGH_FACT_IDS = Object.freeze(Object.keys(LOOK_THROUGH_FACT_RULES));
@@ -267,9 +304,25 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
       const cik = universe.get(ticker);
       if (!cik) { unavailable.push(`look-through ${ticker}: no SEC registrant for this ticker`); continue; }
       try {
-        const derived = await fetchFundamentals({ cik, ticker, asOf, signal });
+        // One document, both readers. The derived fundamentals and the mechanical screen read
+        // the same Company Facts filing, and fetching it twice per constituent would double
+        // the cost of a look-through for metrics that were already on disk. The screen is
+        // where the margins, cash conversion, ten-year ROE and interest coverage live -- which
+        // is why wiring only the fundamentals path left those aggregates permanently empty.
+        const companyFacts = await fetchCompanyFacts(cik, { signal });
+        const derived = deriveFundamentals({ companyFacts, asOf });
+        const screened = evaluateRules(companyFacts, { asOf });
         const facts = {};
         const periods = {};
+        for (const rule of screened.rules || []) {
+          const factId = SCREEN_RULE_FACTS[rule?.id];
+          if (!factId || rule.skipped || !Number.isFinite(rule.value)) continue;
+          // The screen publishes percentages as 15 for 15%; every pack ratio is a decimal.
+          facts[factId] = SCREEN_PERCENT_RULES.has(rule.id) ? rule.value / 100 : rule.value;
+          if (rule.period_start && rule.period_end) {
+            periods[factId] = { start: rule.period_start, end: rule.period_end };
+          }
+        }
         for (const [factId, metric] of Object.entries(derived.metrics || {})) {
           if (!metric || !Number.isFinite(metric.value)) continue;
           facts[factId] = metric.value;
@@ -297,20 +350,37 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
  * correct outcome and not a failure.
  */
 /**
- * The interval a basket-level aggregate covers: the widest span its contributing constituents
- * reported. Stating a narrower one would claim coverage the inputs do not have, and stating
- * none at all leaves the fact unusable by any duration contract.
+ * The interval a basket-level aggregate covers.
+ *
+ * The outer envelope -- earliest start to latest end -- is the wrong answer. Constituents keep
+ * different fiscal calendars, so the union of forty five-year spans is five years plus a year
+ * of calendar edges, and a fact that genuinely covers five years then fails a five-year
+ * contract for a reason that has nothing to do with its coverage.
+ *
+ * The median end date and the median span describe what the aggregate actually covers: a
+ * typical constituent's reporting window, which is the window the number was averaged over.
  */
 function aggregatePeriod(perHoldingPeriods, factId, tickers) {
-  let start = null;
-  let end = null;
+  const spans = [];
   for (const ticker of tickers) {
     const span = perHoldingPeriods?.get(ticker)?.[factId];
     if (!span?.start || !span?.end) continue;
-    if (!start || span.start < start) start = span.start;
-    if (!end || span.end > end) end = span.end;
+    const start = Date.parse(span.start);
+    const end = Date.parse(span.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    spans.push({ end, days: (end - start) / 86_400_000 });
   }
-  return start && end ? { period_start: start, period_end: end } : {};
+  if (!spans.length) return {};
+  const median = (values) => {
+    const sorted = [...values].sort((left, right) => left - right);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  const end = median(spans.map((span) => span.end));
+  const days = median(spans.map((span) => span.days));
+  return {
+    period_start: new Date(end - days * 86_400_000).toISOString().slice(0, 10),
+    period_end: new Date(end).toISOString().slice(0, 10),
+  };
 }
 
 export function lookThroughFacts({ holdings, perHoldingFacts, perHoldingPeriods, factIds, holdingsMeta }) {
@@ -342,7 +412,7 @@ export function lookThroughFacts({ holdings, perHoldingFacts, perHoldingPeriods,
       fact_id: factId,
       value: aggregate.value,
       value_kind: "ratio",
-      unit: "decimal",
+      unit: LOOK_THROUGH_UNITS[factId] || "decimal",
       ratio_denominator: `weight_${aggregate.method}`,
       source_kind: "issuer_disclosure",
       source_url: holdingsMeta?.source_url,
