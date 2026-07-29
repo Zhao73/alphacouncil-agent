@@ -2,6 +2,25 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.6] — 2026-07-29
+
+First release on which `npm run check` and the full test suite pass together: 995/995.
+
+### Fixed
+
+- **The formula-review gate demanded exactly 156 roles after the bench grew to 162.** The
+  literal (26 seats × 2 tools × 3 roles) survived the twenty-seventh seat, so
+  `review-persona-v3-solo-formulas --check` failed a review tree whose own output line printed
+  `roles=162/162`. The gate now derives the count from the planned-tool inventory.
+
+### Repaired (local staging, not shipped in the package)
+
+- The private PersonaPack staging tree had been left behind by the v1.0.x sessions, which
+  worked in a scratch worktree and never synced back: `staging-index.json` was missing
+  `master_bogle` (39 test failures from one integrity error), and all 27 seats' formula
+  prototypes still carried pre-rename tool ids. Synced from the authoring worktree; the
+  packaged `knowledge/solo-test` tree was already correct and is unchanged.
+
 ## [1.0.5] — 2026-07-29
 
 Five defects found by running one full visible council end to end on a US operating company.

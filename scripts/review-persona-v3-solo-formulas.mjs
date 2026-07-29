@@ -46,8 +46,8 @@ export function usage() {
   return [
     "Usage: node scripts/review-persona-v3-solo-formulas.mjs [--check|--plan|--write] [--json]",
     "",
-    "--plan         recompute 52 machine review records without reading the review tree",
-    "--write        write 52 reviews plus the manifest below isolated staging",
+    "--plan         recompute the planned machine review records without reading the review tree",
+    "--write        write every planned review plus the manifest below isolated staging",
     "--check        require exact physical files and byte-stable recomputation (default)",
     "--formula-root override the physical solo-test formula tree",
     "--review-root  override the isolated AI review tree",
@@ -93,7 +93,9 @@ export function main(argv = process.argv.slice(2)) {
   if (args.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else process.stdout.write(compact(result));
   const okay = result.review_count === PLANNED_TOOL_COUNT
-    && result.role_count === 156
+    // Derived, not hardcoded: the literal 156 (26 seats x 2 tools x 3 roles) survived the
+    // twenty-seventh seat and failed a review tree its own output line printed as 162/162.
+    && result.role_count === PLANNED_TOOL_COUNT * INDEPENDENT_ROLES_PER_REVIEW
     && result.mechanical_pass_count === PLANNED_TOOL_COUNT
     && result.disagreement_count === 0
     && result.semantic_unknown_count === PLANNED_TOOL_COUNT
