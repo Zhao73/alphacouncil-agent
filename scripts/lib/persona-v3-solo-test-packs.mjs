@@ -1,5 +1,5 @@
 /**
- * Deterministic builder for the packaged 26-seat solo-test PersonaPack v3 tree.
+ * Deterministic builder for the packaged solo-test PersonaPack v3 tree.
  *
  * This is intentionally a separate assurance channel. It consumes only the isolated
  * provisional formula tree, writes manifests with build_profile=solo_test, uses pending
@@ -7,6 +7,7 @@
  * loader rejects every output. Normal admission therefore remains operator_lens.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -21,6 +22,7 @@ import { fileURLToPath } from "node:url";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import buildInventory from "../../data/persona-v3-build-specs.v1.mjs";
+import { authoredMethods } from "../../data/authored/index.mjs";
 import {
   selectorBestForLocale,
   selectorMethodLocale,
@@ -161,7 +163,7 @@ function loadFormulaTree(formulaRoot) {
   const errors = [];
   if (manifest.schema_version !== 1) errors.push("schema_version must be 1");
   if (manifest.artifact_kind !== "persona_v3_solo_test_formula_staging_tree") errors.push("artifact_kind is invalid");
-  if (manifest.canonical_seat_count !== 26 || manifest.compiled_tool_count !== 52) errors.push("manifest must bind exactly 26 seats and 52 tools");
+  if (manifest.canonical_seat_count !== CANONICAL_MASTER_COUNT || manifest.compiled_tool_count !== PLANNED_TOOL_COUNT) errors.push(`manifest must bind exactly ${CANONICAL_MASTER_COUNT} seats and ${PLANNED_TOOL_COUNT} tools`);
   if (manifest.assurance_class !== SOLO_TEST_ASSURANCE_CLASS) errors.push("assurance_class must be provisional_derived_proxy");
   if (manifest.review_status !== "not_human_reviewed") errors.push("review_status must be not_human_reviewed");
   if (manifest.production_eligible !== false || manifest.method_model_eligible !== false) errors.push("formula tree must be production/method-model ineligible");
@@ -193,7 +195,7 @@ function loadFormulaTree(formulaRoot) {
   if (JSON.stringify(actualSeatEntries) !== JSON.stringify([...CANONICAL_MASTER_IDS].sort())) {
     fail("formula tree contains missing or unexpected top-level entries", { actual: actualSeatEntries });
   }
-  if (total !== 52) fail(`formula tree compiled ${total} tools instead of 52`);
+  if (total !== PLANNED_TOOL_COUNT) fail(`formula tree compiled ${total} tools instead of ${PLANNED_TOOL_COUNT}`);
   return { root, manifest, byPersona };
 }
 
@@ -296,6 +298,103 @@ function bindProxySource(tools, sourceId) {
   });
 }
 
+/**
+ * A seat's real decision logic, when it has been authored.
+ *
+ * The generated fallback below scores every tool output against zero, which is executable and
+ * says nothing: it exists so the pipeline runs before a method is written. An authored policy
+ * replaces it with the seat's own judgement -- what it needs before it will speak at all
+ * (eligibility), what disqualifies a candidate outright (hard vetoes), and what it actually
+ * measures (scoring).
+ *
+ * The distinction between eligibility and scoring matters more than it looks. `min_coverage`
+ * is 1, so ONE uncomputable scoring rule collapses the whole seat to out_of_scope. That is
+ * precisely why twenty-five seats abstained on every symbol. A "can this method speak at all"
+ * test therefore belongs in eligibility, which has its own exit and its own explanation.
+ */
+function authoredDecisionPolicy(seat, tools, authored) {
+  if (!authored?.scoring?.length || !authored?.bands?.length) return null;
+  const declaredStates = new Set(seat.native_decision_contract.states.map(executableNativeState));
+  const state = (value) => {
+    const resolved = executableNativeState(value);
+    if (!declaredStates.has(resolved)) {
+      fail(`${seat.persona_id}: authored policy uses undeclared native state ${JSON.stringify(value)}`, {
+        declared: [...declaredStates],
+      });
+    }
+    return resolved;
+  };
+  const outOfScopeHypothesis = seat.native_decision_contract.states
+    .find((candidate) => stanceForState(candidate) === "out_of_scope") || seat.native_decision_contract.states[0];
+  const outOfScope = executableNativeState(outOfScopeHypothesis);
+  const maxScore = authored.scoring.reduce((sum, rule) => sum + (rule.points || 0), 0);
+  return canonicalValue({
+    schema_version: 1,
+    dsl_version: "1.1",
+    native_decision_schema: seat.native_decision_contract.schema_id,
+    native_states: seat.native_decision_contract.states.map(executableNativeState),
+    abstention_policy: "fail_closed",
+    fact_gate: { on_missing_critical: { native_state: outOfScope, common_stance: "out_of_scope" } },
+    // Authoring supplies the judgement; the build supplies identity. Source ids are minted
+    // here because the loader rejects a source id that is not in the pack, and native states
+    // are mapped here because the authored form uses the raw name a build spec declares.
+    eligibility: {
+      all: (authored.eligibility?.all || []).map((entry) => ({
+        condition_id: entry.condition_id,
+        condition: entry.condition,
+        on_false: {
+          native_state: state(entry.on_false.native_state),
+          common_stance: entry.on_false.common_stance,
+        },
+        on_uncomputable: {
+          native_state: state((entry.on_uncomputable || entry.on_false).native_state),
+          common_stance: (entry.on_uncomputable || entry.on_false).common_stance,
+        },
+        source_ids: [authored.source_id],
+      })),
+    },
+    hard_vetoes: (authored.hard_vetoes || []).map((veto) => ({
+      veto_id: veto.veto_id,
+      condition: veto.condition,
+      on_trigger: {
+        native_state: state(veto.on_trigger.native_state),
+        common_stance: veto.on_trigger.common_stance,
+      },
+      // A veto whose condition cannot be evaluated must not read as "not triggered". An
+      // unmeasurable disqualifier is a reason to abstain, not a reason to proceed.
+      on_uncomputable: {
+        action: "abstain",
+        decision: {
+          native_state: state(veto.on_uncomputable?.native_state || outOfScopeHypothesis),
+          common_stance: veto.on_uncomputable?.common_stance || "out_of_scope",
+        },
+      },
+      source_ids: [authored.source_id],
+    })),
+    scoring: {
+      max_score: maxScore,
+      min_coverage: 1,
+      on_insufficient_coverage: { native_state: outOfScope, common_stance: "out_of_scope" },
+      rules: authored.scoring.map((rule) => ({
+        rule_id: rule.rule_id,
+        condition: rule.condition,
+        points: rule.points,
+        coverage_weight: rule.coverage_weight ?? 1,
+        source_ids: [authored.source_id],
+      })),
+    },
+    score_bands: authored.bands.map((band) => ({
+      min_ratio: band.min_ratio,
+      decision: { native_state: state(band.native_state), common_stance: band.common_stance },
+    })),
+    native_output_fields: tools.map((tool, index) => ({
+      field: `metric_${index + 1}`,
+      value: { output_id: tool.output_id },
+      on_missing: "fail",
+    })),
+  });
+}
+
 function buildDecisionPolicy(seat, tools, sourceId) {
   const stateHypotheses = seat.native_decision_contract.states;
   const states = stateHypotheses.map(executableNativeState);
@@ -373,7 +472,9 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
   const required = referencedFacts;
   const optional = seat.required_fact_types.filter((fact) => !required.includes(fact));
   if (!required.length) fail(`${seat.persona_id}: formula tools have no physical fact inputs`);
-  const policy = buildDecisionPolicy(seat, tools, source.source_id);
+  const authored = authoredMethods[seat.persona_id] || null;
+  const policy = authoredDecisionPolicy(seat, tools, authored ? { ...authored, source_id: source.source_id } : null)
+    || buildDecisionPolicy(seat, tools, source.source_id);
   const policyErrors = validateDeterministicPolicyArtifacts({
     policy,
     tools,
@@ -525,7 +626,7 @@ function generationContext({ root = DEFAULT_SOLO_TEST_PACK_ROOT, formulaRoot = D
   const blueprints = canonicalMasterBlueprints({ personaDir });
   const byBlueprint = new Map(blueprints.map((blueprint) => [blueprint.persona_id, blueprint]));
   const bySeat = new Map(buildInventory.seats.map((seat) => [seat.persona_id, seat]));
-  if (bySeat.size !== 26 || byBlueprint.size !== 26) fail("canonical solo-test inventory must contain exactly 26 unique seats");
+  if (bySeat.size !== CANONICAL_MASTER_COUNT || byBlueprint.size !== CANONICAL_MASTER_COUNT) fail(`canonical solo-test inventory must contain exactly ${CANONICAL_MASTER_COUNT} unique seats`);
   const output = resolve(root);
   if (basename(output) !== "masters" || basename(dirname(output)) !== "solo-test") {
     fail("solo-test pack root must end in knowledge/solo-test/masters (or an equivalent isolated solo-test/masters path)");
@@ -687,12 +788,12 @@ export function renderPersonaV3SoloTestPackReport(report) {
     "",
     "> These are packaged provisional operator lenses. They are not approved method models and the production loader rejects them.",
     "",
-    `Physical packs: ${report.summary.physical_pack_count}/26`,
-    `Solo loader valid: ${report.summary.solo_loader_valid_count}/26`,
-    `Compiled: ${report.summary.compiler_valid_count}/26`,
-    `Provisional operator lenses: ${report.summary.provisional_operator_lens_count}/26`,
-    `Production loader rejected: ${report.summary.production_loader_rejection_count}/26`,
-    `Tools: ${report.summary.tool_count}/52`,
+    `Physical packs: ${report.summary.physical_pack_count}/${CANONICAL_MASTER_COUNT}`,
+    `Solo loader valid: ${report.summary.solo_loader_valid_count}/${CANONICAL_MASTER_COUNT}`,
+    `Compiled: ${report.summary.compiler_valid_count}/${CANONICAL_MASTER_COUNT}`,
+    `Provisional operator lenses: ${report.summary.provisional_operator_lens_count}/${CANONICAL_MASTER_COUNT}`,
+    `Production loader rejected: ${report.summary.production_loader_rejection_count}/${CANONICAL_MASTER_COUNT}`,
+    `Tools: ${report.summary.tool_count}/${PLANNED_TOOL_COUNT}`,
     `Operational/method_model: ${report.summary.operational_count}/0`,
     `Ready for solo testing: ${report.summary.ready_for_solo_testing}`,
     `Readiness hash: \`${report.readiness_hash}\``,

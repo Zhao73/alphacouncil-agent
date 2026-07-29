@@ -1,7 +1,7 @@
 /**
  * Deterministic PersonaPack v3 editorial-prototype factory.
  *
- * These artifacts make every one of the 26 planned seats physically inspectable without
+ * These artifacts make every planned seat physically inspectable without
  * pretending that source adjudication, case labeling, experiments, or production promotion
  * happened. The production loader does not read this tree and a draft never contains a
  * `manifest.json`.
@@ -472,7 +472,7 @@ function generationContext(options = {}) {
   const byBlueprint = new Map(blueprints.map((blueprint) => [blueprint.persona_id, blueprint]));
   const bySource = new Map(acquisition.personas.map((persona) => [persona.persona_id, persona]));
   const bySpec = new Map(inventory.seats.map((seat) => [seat.persona_id, seat]));
-  if (bySpec.size !== CANONICAL_MASTER_COUNT) fail("canonical build-spec inventory is not exactly 26 unique seats");
+  if (bySpec.size !== CANONICAL_MASTER_COUNT) fail("canonical build-spec inventory does not cover the canonical roster exactly once");
   return { root, productionRoot, personaDir, staging, acquisition, byBlueprint, bySource, bySpec };
 }
 

@@ -32,13 +32,13 @@
     },
     "registry_snapshot": {
       "type": "object",
-      "required": ["default_analyst_ids", "verifier_ids", "priority_13_master_ids", "canonical_26_master_ids"],
+      "required": ["default_analyst_ids", "verifier_ids", "priority_13_master_ids", "canonical_master_ids"],
       "additionalProperties": false,
       "properties": {
         "default_analyst_ids": { "$ref": "#/$defs/idArray" },
         "verifier_ids": { "$ref": "#/$defs/idArray" },
         "priority_13_master_ids": { "$ref": "#/$defs/idArray" },
-        "canonical_26_master_ids": { "$ref": "#/$defs/idArray" }
+        "canonical_master_ids": { "$ref": "#/$defs/idArray" }
       }
     },
     "registration": {

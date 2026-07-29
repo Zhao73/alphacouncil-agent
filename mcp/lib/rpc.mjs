@@ -446,7 +446,7 @@ export function tools() {
         { required: ["selection"], not: { anyOf: [{ required: ["selected_master_ids"] }, { required: ["select_all"] }] } },
       ],
     }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
-    tool("plan_visible_run", "Create the visible-host-thread AlphaCouncil run after a confirmed master selection. Requires a one-time selection_receipt. Does NOT execute. You MUST then run every planned evidence agent and every selected master, record bull_researcher and bear_researcher, and only then record the portfolio_manager decision.", {
+    tool("plan_visible_run", "Create the visible-host-thread AlphaCouncil run after a confirmed master selection. Requires a one-time selection_receipt. Does NOT execute. Run every returned evidence_agent, then every returned master_agent. Physical v3 master agents explain a frozen deterministic stance and may not change it. Record all required bull/bear rounds before the portfolio_manager decision; PM rejects any returned master_agent that was not recorded.", {
       type: "object",
       properties: {
         symbol: common.symbol,
@@ -501,7 +501,7 @@ export function tools() {
       properties: common,
       required: ["symbol", "selection_receipt"],
     }),
-    tool("analyze_symbol", "Collect evidence and write a manager-style decision summary. Set council_mode=quick for the bounded news-inclusive quick_v1 path; the default remains the full council.", {
+    tool("analyze_symbol", "Research an operating company, ETF, mutual fund or market index and write a manager-style decision summary. The instrument is classified before evidence routing: funds use holdings look-through, indices use aggregate methodology, and Company Facts screens apply only to operating companies. Set council_mode=quick for the bounded news-inclusive quick_v1 path; the default remains the full council.", {
       type: "object",
       properties: {
         ...common,
@@ -543,15 +543,27 @@ export function tools() {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("record_master_opinion", "Record one completed selected master-seat opinion into a planned visible run. Every reader-facing field must use the run language or the opinion is rejected without changing run state. Masters run AFTER every evidence packet is recorded and BEFORE the bull/bear debate, so the debate has their disagreements to argue with. A master may return stance=out_of_scope, which is a recorded conclusion rather than an abstention. Every selected seat must either report or be settled deterministically before the run can be complete.", {
+    tool("record_master_opinion", "Record one returned visible method-seat worker after evidence and before debate. For physical v3 seats, submit the method-voice schema from plan_visible_run: master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. acknowledged_stance must equal the frozen stance; the worker cannot vote again. Legacy packets may use stance/verdict/summary. Reader-facing fields in the wrong run language are rejected without changing state. Every returned selected seat must be recorded before PM.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
         master: { type: "string", enum: masterIds },
         packet: {
           type: "object",
-          description: `The master_opinion packet. stance MUST be one of ${MASTER_STANCES.join(" | ")} -- anything else is recorded as out_of_scope and carries zero weight, so a seat whose stance does not survive normalization silently stops voting. Common synonyms (long/bullish, neutral/hold, short/bearish/avoid, n/a/abstain) are mapped for you.`,
-          properties: { stance: { type: "string", enum: MASTER_STANCES } },
+          description: `Current physical v3 seats use acknowledged_stance + statement; acknowledged_stance MUST be one of ${MASTER_STANCES.join(" | ")} and match the frozen stance returned by plan_visible_run. The legacy stance/verdict/summary shape remains accepted only for a legacy seat.`,
+          properties: {
+            master: { type: "string", enum: masterIds },
+            acknowledged_stance: { type: "string", enum: MASTER_STANCES },
+            statement: { type: "string", minLength: 1 },
+            key_findings: { type: "array", items: { type: "string" } },
+            disagreements: { type: "array", items: { type: "string" } },
+            what_would_change_my_mind: { type: "array", items: { type: "string" } },
+            source_ids: { type: "array", items: { type: "string" } },
+            confidence: { type: "string", enum: ["high", "medium", "low"] },
+            stance: { type: "string", enum: MASTER_STANCES },
+            verdict: { type: "string" },
+            summary: { type: "string" },
+          },
         },
         thread_id: { type: "string" },
       },
@@ -651,7 +663,7 @@ export function tools() {
       properties: { symbols: { type: "array", items: { type: "string" } } },
       required: ["symbols"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("compose_research_brief", "Assemble the hard facts BEFORE the analysts search: quote, SEC filer profile, the mechanical screen with every computed metric, macro readings, and the industry chain map. Returns both the structured data and a prompt block that tells an analyst these numbers are already established and that its search exists to explain, extend and challenge them -- with the rule that a searched number never silently overwrites a filed one. Pass the returned `grounding` object to plan_visible_run so every analyst prompt carries it.", {
+    tool("compose_research_brief", "Classify the instrument and assemble hard facts BEFORE analysts search. Operating companies may receive SEC Company Facts or local-market financials; ETFs and funds receive a holdings look-through contract; indices receive an aggregate-index contract. The result also carries quote, applicable filer profile, options/macro/industry context, explicit not-applicable routes, typed facts, and a prompt block. A searched number never silently overwrites a filed one. Pass the returned `grounding` object to plan_visible_run so every analyst prompt carries it.", {
       type: "object",
       properties: {
         symbol: common.symbol,
@@ -679,7 +691,7 @@ export function tools() {
       type: "object",
       properties: {},
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("screen_ticker", "Run the mechanical elimination screen against a company's own SEC filings. No language model is involved: seven hard rules (10y ROE, 5y cumulative FCF, interest cover, gross margin, OCF/NI, net margin, dilution) with three exemptions, and every rejection names the metric, the measured value and the threshold. Rules whose inputs are missing from the filings are reported as skipped, never as passes. Surviving is not a recommendation -- it means the name is worth research time. US filers only; other markets need their own regulator feed.", {
+    tool("screen_ticker", "Run the mechanical elimination screen against an operating company's own SEC filings. It is not applicable to ETFs, funds or indices; use compose_research_brief so those instruments are classified and routed correctly. No language model is involved: seven hard rules (10y ROE, 5y cumulative FCF, interest cover, gross margin, OCF/NI, net margin, dilution) with three exemptions, and every rejection names the metric, value and threshold. Missing rules are skipped, never passes. Surviving is not a recommendation. US operating-company filers only.", {
       type: "object",
       properties: {
         cik: { type: "string", description: "SEC CIK. Use list_us_universe to resolve a ticker." },
@@ -761,7 +773,7 @@ export async function handleToolCall(id, params) {
       // no macro, and nothing in the output says so. Same reasoning as the preflight below:
       // the host that skips the optional step is exactly the host whose seats fail quietly.
       if (!run.grounding) {
-        run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of })
+        run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of, language: run.language })
           .catch((error) => ({ error: String(error?.message || error), facts_unavailable: true }));
         saveRun(run);
       }
@@ -815,6 +827,10 @@ export async function handleToolCall(id, params) {
         idempotent_replay: result.idempotent_replay === true,
         report_quality: result.report_quality?.status,
         missing_report_items: result.report_quality?.missing || [],
+        ...(args.role === "portfolio_manager" ? {
+          handoff_contract: "inline_user_response_v1",
+          user_response_markdown: result.user_response_markdown || "",
+        } : {}),
       }),
     ));
     return;
@@ -886,10 +902,11 @@ export async function handleToolCall(id, params) {
   if (name === "compose_research_brief") {
     const grounding = await gatherGrounding({
       symbol: args.symbol, cik: args.cik, industry: args.industry,
-      macro: args.macro !== false, asOf: args.as_of,
+      macro: args.macro !== false, asOf: args.as_of, language: resolveLanguage(args),
     });
     const block = groundingBlock(grounding, resolveLanguage(args));
     const facts = [
+      grounding.instrument ? `instrument (${grounding.instrument.asset_type}/${grounding.instrument.research_model})` : null,
       grounding.quote ? "quote" : null,
       grounding.filer ? "filer profile" : null,
       grounding.screen ? `screen (${grounding.screen.rules_computed}/${grounding.screen.rules_total} rules)` : null,
@@ -898,7 +915,7 @@ export async function handleToolCall(id, params) {
     ].filter(Boolean);
     sendResult(id, jsonContent(
       groundingDashboard(grounding, resolveLanguage(args)),
-      { grounding, prompt_block: block, dashboard: groundingDashboard(grounding, resolveLanguage(args)) },
+      { grounding, prompt_block: block, facts_available: facts, dashboard: groundingDashboard(grounding, resolveLanguage(args)) },
     ));
     return;
   }

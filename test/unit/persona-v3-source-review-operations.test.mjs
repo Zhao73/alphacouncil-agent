@@ -16,6 +16,7 @@ import { runOfflineSourceReviewSigning } from "../../mcp/lib/personas-v3/source-
 import { scaffoldPersonaV3Staging } from "../../mcp/lib/personas-v3/staging.mjs";
 import { parseArgs as parseBatchArgs } from "../../scripts/export-persona-source-review-batch.mjs";
 import { parseArgs as parseSigningArgs } from "../../scripts/sign-persona-source-review.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const PERSONA = "master_buffett";
 const CANDIDATE = "buffett-letter-2024";
@@ -122,12 +123,12 @@ function signed(prepared, reviewerRecord, overrides = {}) {
   });
 }
 
-test("review batch covers all 26 seats and exposes human-only proposal work without fabricating hashes", async (t) => {
+test("review batch covers every canonical seat and exposes human-only proposal work without fabricating hashes", async (t) => {
   const paths = workspace(t);
   await acquire(paths);
   const batch = buildSourceReviewBatch({ ...paths, now: NOW, trustedReviewerKeys: {} });
-  assert.equal(batch.canonical_master_count, 26);
-  assert.equal(batch.personas.length, 26);
+  assert.equal(batch.canonical_master_count, CANONICAL_MASTER_COUNT);
+  assert.equal(batch.personas.length, CANONICAL_MASTER_COUNT);
   assert.equal(batch.progress.raw_acquisition_count, 1);
   assert.equal(batch.progress.proposal_pending_count, 1);
   assert.equal(batch.progress.prepared_source_count, 0);
@@ -169,7 +170,7 @@ test("global progress accepts only two valid approvals from distinct trusted pri
   assert.equal(item.trusted_quorum.distinct_approver_principal_count, 2);
   assert.equal(item.trusted_quorum.distinct_approver_key_count, 2);
   assert.equal(batch.progress.trusted_quorum_source_count, 1);
-  assert.equal(batch.progress.all_26_seats_have_a_two_principal_quorum_source, false);
+  assert.equal(batch.progress.all_seats_have_a_two_principal_quorum_source, false);
 });
 
 test("two trusted keys bound to one principal never satisfy quorum", () => {

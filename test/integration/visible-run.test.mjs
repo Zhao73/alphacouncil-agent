@@ -13,6 +13,7 @@ const completeRunId = `SELFTEST-VISIBLE-${process.pid}`;
 const noPmRunId = `SELFTEST-NOPM-${process.pid}`;
 const shortcutRunId = `SELFTEST-SHORTCUT-${process.pid}`;
 const languageRunId = `SELFTEST-LANGUAGE-${process.pid}`;
+const barrierRunId = `SELFTEST-BARRIER-${process.pid}`;
 const recorded = {};
 
 const bullQuestions = [
@@ -86,9 +87,13 @@ async function recordEvidence(runId, task = "market_data", packet = evidencePack
 }
 
 async function recordMaster(runId, packet = {
-  verdict: "This method seat cannot assert a directional conclusion from the available fixture evidence.",
-  stance: "out_of_scope",
-  summary: "The selected method seat records uncertainty without manufacturing an unsupported investment claim.",
+  master: selectedMaster,
+  acknowledged_stance: "out_of_scope",
+  statement: "The selected method seat records uncertainty without manufacturing an unsupported investment claim.",
+  key_findings: ["The fixture does not contain the required method-specific point-in-time facts."],
+  disagreements: [],
+  what_would_change_my_mind: ["Provide the missing method-critical facts from dated primary sources."],
+  source_ids: [],
   confidence: "low",
 }) {
   return server.callTool("record_master_opinion", {
@@ -140,7 +145,7 @@ before(async () => {
   server = startServer({ dataDir });
   await server.request("initialize", {});
 
-  await plan(completeRunId);
+  recorded.plan = structured(await plan(completeRunId));
   await recordEvidence(completeRunId);
   await recordMaster(completeRunId);
   // Round 2 cannot start until both Round-1 sides exist.
@@ -163,6 +168,7 @@ before(async () => {
   for (const role of ["bull_researcher", "bear_researcher"]) await recordRound(completeRunId, role, 2);
   for (const role of ["bull_researcher", "bear_researcher"]) await recordRound(completeRunId, role, 3);
   recorded.pm = structured(await recordPm(completeRunId));
+  recorded.pmReplay = structured(await recordPm(completeRunId));
 
   await plan(noPmRunId);
   await recordEvidence(noPmRunId);
@@ -188,9 +194,13 @@ before(async () => {
   await recordEvidence(languageRunId);
   recorded.beforeWrongMaster = readFileSync(languageEvidencePath, "utf8");
   recorded.wrongMaster = await recordMaster(languageRunId, {
-    verdict: "本方法席无法依据当前证据给出方向性判断。",
-    stance: "out_of_scope",
-    summary: "这段中文内容不应进入要求英文输出的运行记录。",
+    master: selectedMaster,
+    acknowledged_stance: "out_of_scope",
+    statement: "这段中文内容不应进入要求英文输出的运行记录。",
+    key_findings: ["本方法席无法依据当前证据给出方向性判断。"],
+    disagreements: [],
+    what_would_change_my_mind: [],
+    source_ids: [],
     confidence: "low",
   });
   recorded.afterWrongMaster = readFileSync(languageEvidencePath, "utf8");
@@ -203,6 +213,18 @@ before(async () => {
     debatePacket("bull_researcher", 1, { verdict: "这是一段错误语言的多头发言。", summary: "这段中文内容不得写入英文运行。", long_thesis: [] }),
   );
   recorded.afterWrongDebate = readFileSync(languageEvidencePath, "utf8");
+
+  await plan(barrierRunId);
+  recorded.earlyMaster = await recordMaster(barrierRunId);
+  await recordEvidence(barrierRunId);
+  recorded.earlyDebate = await recordRound(barrierRunId, "bull_researcher", 1);
+  recorded.wrongFrozenStance = await recordMaster(barrierRunId, {
+    master: selectedMaster,
+    acknowledged_stance: "constructive",
+    statement: "This packet attempts to replace the frozen deterministic stance and must be rejected.",
+    key_findings: [], disagreements: [], what_would_change_my_mind: [], source_ids: [], confidence: "low",
+  });
+  await recordMaster(barrierRunId);
 });
 
 after(async () => {
@@ -227,11 +249,27 @@ test("full visible completion requires the persisted three-round exact-Q&A chain
   }
 });
 
+test("a declined seat is planned as a settled record, not as an explanation worker", () => {
+  assert.deepEqual(recorded.plan.master_agents, []);
+  const declined = recorded.plan.masters_declined.find((seat) => seat.master === selectedMaster);
+  assert.ok(declined, "the seat must still appear in the plan as an explicit decline");
+  assert.equal(declined.stance, "out_of_scope");
+  assert.equal(declined.engine, "v3_method_runtime");
+});
+
 test("round ordering, exact questions, and conflicting replay fail closed", () => {
   assert.equal(recorded.outOfOrder.error?.data?.reason, "VISIBLE_DEBATE_ROUND_OUT_OF_ORDER");
   assert.equal(recorded.badRoundTwo.error?.data?.reason, "VISIBLE_DEBATE_QNA_INVALID");
   assert.equal(recorded.idempotent.idempotent_replay, true);
   assert.equal(recorded.conflict.error?.data?.reason, "VISIBLE_DEBATE_ROUND_CONFLICT");
+});
+
+// The method barrier itself is covered by gates.test.mjs against a `waiting` seat. It cannot
+// be exercised from this fixture any more: its only seat declines deterministically, so it is
+// settled before the debate opens and there is nothing left for the barrier to hold back.
+test("visible evidence and frozen-stance barriers are enforced server-side", () => {
+  assert.equal(recorded.earlyMaster.error?.data?.reason, "VISIBLE_MASTER_EVIDENCE_INCOMPLETE");
+  assert.equal(recorded.wrongFrozenStance.error?.data?.reason, "VISIBLE_MASTER_FROZEN_STANCE_MISMATCH");
 });
 
 test("a full three-round debate without portfolio_manager remains incomplete", () => {
@@ -265,6 +303,8 @@ test("wrong-language visible packets are structured rejections with no completio
   assert.match(evidence.packets[0].summary, /visible analyst records sufficient English evidence/);
   assert.doesNotMatch(evidence.master_opinions[0].summary, /这段中文/);
   assert.equal(evidence.master_status[selectedMaster].status, "completed");
+  assert.equal(evidence.master_opinions[0].statement_origin, "visible_method_voice_worker");
+  assert.equal(evidence.master_opinions[0].dedicated_worker.execution_mode, "visible_host_thread");
   assert.equal(evidence.agent_status.bull_researcher.status, "pending");
 });
 
@@ -278,6 +318,16 @@ test("the completed run retains visible provenance and all promised artifacts", 
     "user_response.md", "artifact_index.md", "report_quality.json", "market_data.md",
     "portfolio_manager.md", "bull_researcher.md", "bear_researcher.md",
   ]) assert.ok(existsSync(join(dir, file)), `visible run did not write ${file}`);
+});
+
+test("portfolio-manager completion returns the saved handoff inline, including the final method statement", () => {
+  for (const response of [recorded.pm, recorded.pmReplay]) {
+    assert.equal(response.handoff_contract, "inline_user_response_v1");
+    assert.match(response.user_response_markdown, /Final Per-Seat Method Statements/);
+    assert.match(response.user_response_markdown, new RegExp(selectedMaster));
+    assert.ok(response.user_response_markdown.trimEnd().endsWith("]"));
+  }
+  assert.equal(recorded.pmReplay.idempotent_replay, true);
 });
 
 test("visible-host status never claims a plugin-enforced deadline or dedicated headless workers", () => {

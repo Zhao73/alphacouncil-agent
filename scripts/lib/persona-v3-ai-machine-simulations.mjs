@@ -19,7 +19,7 @@ import { executeDeterministicPersonaPolicy } from "../../mcp/lib/personas-v3/det
 import { loadCompiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
 import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
-import { CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
+import { CANONICAL_MASTER_COUNT, CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
 import { PRIORITY_13_MASTER_IDS } from "./council-evaluation-protocol.mjs";
 
 export const AI_MACHINE_SIMULATION_RUN_IDS = Object.freeze([
@@ -105,6 +105,16 @@ function factPackFor(pack) {
       }
     });
   }
+  // Everything the seat declares it reads, not only what its tools consume. An authored
+  // policy gates eligibility on a fact outside its tool inputs on purpose, so a fixture built
+  // from tool inputs alone leaves every such seat correctly -- and uselessly -- out of scope,
+  // and the simulation would then demonstrate nothing.
+  for (const factId of [
+    ...(pack.manifest.capability.required_fact_types || []),
+    ...(pack.manifest.capability.optional_fact_types || []),
+  ]) {
+    if (!byFact.has(factId)) byFact.set(factId, { value_kind: "ratio", unit: "decimal" });
+  }
   const facts = [...byFact].map(([factId, contract]) => canonicalValue({
     schema_version: 1,
     fact_id: factId,
@@ -114,8 +124,10 @@ function factPackFor(pack) {
     currency: contract.value_kind === "monetary" ? "USD" : null,
     scale: contract.value_kind === "monetary" ? 1 : null,
     ...(contract.value_kind === "ratio" ? { ratio_denominator: "synthetic_denominator" } : {}),
-    period_start: null,
-    period_end: null,
+    // A fixture whose facts are all instants cannot exercise a method that reads a reporting
+    // interval -- the contract check rejects the fact before any arithmetic runs. The synthetic
+    // fact therefore carries whatever span its own contract asks for.
+    ...syntheticInterval(contract.period),
     fiscal_year: null,
     as_of: AS_OF,
     public_at: AS_OF,
@@ -126,6 +138,22 @@ function factPackFor(pack) {
     lineage: { input_fact_ids: [], tool_id: null, tool_version: null, calculation_hash: null },
   }));
   return buildFactPack(facts, { asOf: AS_OF });
+}
+
+/** Build an interval that satisfies the contract's declared window, or none for an instant. */
+function syntheticInterval(period) {
+  if (period?.basis !== "duration" && period?.basis !== "forecast_horizon") {
+    return { period_start: null, period_end: null };
+  }
+  const end = Date.parse(`${AS_OF}T00:00:00.000Z`);
+  const match = /^P([1-9]\d*)([DMY])$/u.exec(period.window || "");
+  const days = period.window === "ANY" ? 365
+    : match ? Number(match[1]) * ({ D: 1, M: 30, Y: 365 })[match[2]]
+      : 365;
+  return {
+    period_start: new Date(end - days * 86_400_000).toISOString().slice(0, 10),
+    period_end: AS_OF,
+  };
 }
 
 function buildInput(registry) {
@@ -224,7 +252,7 @@ function configs() {
     { run_id: "B", formal_arm_id: "B", ids: [], scope: "frozen-input control digest only; eight LLM analyst outputs are not simulated", checks: false },
     { run_id: "C", formal_arm_id: "C", ids: [], scope: "prompt-catalog binding only; prompt-only LLM outputs are not simulated", checks: false },
     { run_id: "D13", formal_arm_id: "D13", ids: [...PRIORITY_13_MASTER_IDS], scope: "13 physical provisional deterministic seats on frozen synthetic typed facts", checks: false },
-    { run_id: "D26", formal_arm_id: "D26", ids: [...CANONICAL_MASTER_IDS], scope: "26 physical provisional deterministic seats on frozen synthetic typed facts", checks: false },
+    { run_id: "D26", formal_arm_id: "D26", ids: [...CANONICAL_MASTER_IDS], scope: `${CANONICAL_MASTER_COUNT} physical provisional deterministic seats on frozen synthetic typed facts`, checks: false },
     { run_id: "E:D13", formal_arm_id: "E", ids: [...PRIORITY_13_MASTER_IDS], scope: "D13 deterministic seats plus machine-only hash, rederivation and fail-closed checks", checks: true },
     { run_id: "E:D26", formal_arm_id: "E", ids: [...CANONICAL_MASTER_IDS], scope: "D26 deterministic seats plus machine-only hash, rederivation and fail-closed checks", checks: true },
     { run_id: "H_ai_reference", formal_arm_id: "H", ids: [...CANONICAL_MASTER_IDS], scope: "AI deterministic reference digest only; no human analysts or blinded human adjudicator", checks: true },

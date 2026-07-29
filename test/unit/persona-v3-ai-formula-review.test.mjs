@@ -18,19 +18,24 @@ import {
   verifyAIFormulaCrossReviewTree,
   writeAIFormulaCrossReviews,
 } from "../../scripts/lib/persona-v3-ai-formula-review.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
-test("all 52 derived proxies receive three hash-bound machine reviews", () => {
+/** The review profile gives every tool three independent machine roles. */
+const INDEPENDENT_ROLES_PER_REVIEW = 3;
+
+test("every derived proxy receives three hash-bound machine reviews", () => {
   const plan = planAIFormulaCrossReviews();
   const { manifest, reviews } = plan;
-  assert.equal(reviews.length, 52);
-  assert.equal(manifest.review_count, 52);
-  assert.equal(manifest.role_count, 156);
-  assert.equal(manifest.test_vector_count, 208);
-  assert.equal(manifest.invariant_count, 416);
-  assert.equal(manifest.mechanical_pass_count, 52);
+  assert.equal(reviews.length, PLANNED_TOOL_COUNT);
+  assert.equal(manifest.review_count, PLANNED_TOOL_COUNT);
+  assert.equal(manifest.role_count, PLANNED_TOOL_COUNT * INDEPENDENT_ROLES_PER_REVIEW);
+  // Four vectors per tool, two invariants checked on each.
+  assert.equal(manifest.test_vector_count, PLANNED_TOOL_COUNT * 4);
+  assert.equal(manifest.invariant_count, PLANNED_TOOL_COUNT * 8);
+  assert.equal(manifest.mechanical_pass_count, PLANNED_TOOL_COUNT);
   assert.equal(manifest.disagreement_count, 0);
   assert.equal(manifest.machine_unknown_count, 0);
-  assert.equal(manifest.semantic_unknown_count, 52);
+  assert.equal(manifest.semantic_unknown_count, PLANNED_TOOL_COUNT);
   assert.equal(manifest.human_reviewer_count, 0);
   assert.equal(manifest.signature_count, 0);
   assert.equal(manifest.approval_count, 0);
@@ -87,21 +92,21 @@ test("mutation produces explicit hash disagreement instead of an approval", () =
   assert.equal(review.human_reviewed, false);
 });
 
-test("isolated review tree writes 52 reviews plus one manifest and verifies byte-for-byte", (t) => {
+test("isolated review tree writes one review per tool plus one manifest and verifies byte-for-byte", (t) => {
   const temp = mkdtempSync(join(tmpdir(), "alphacouncil-ai-formula-review-"));
   t.after(() => rmSync(temp, { recursive: true, force: true }));
   const staging = resolve(temp, "staging");
   const reviewRoot = resolve(staging, "persona-v3-ai-formula-reviews");
   mkdirSync(staging, { recursive: true });
   const written = writeAIFormulaCrossReviews({ outputRoot: reviewRoot });
-  assert.equal(written.written.length, 53);
+  assert.equal(written.written.length, PLANNED_TOOL_COUNT + 1); // one review per tool, plus the manifest
   assert.equal(written.unchanged.length, 0);
   assert.equal(written.production_effect, "none");
   assert.equal(existsSync(resolve(reviewRoot, "review-manifest.json")), true);
 
   const verified = verifyAIFormulaCrossReviewTree({ reviewRoot });
   assert.equal(verified.tree_verified, true);
-  assert.equal(verified.physical_file_count, 53);
+  assert.equal(verified.physical_file_count, PLANNED_TOOL_COUNT + 1);
   assert.equal(verified.manifest_hash, written.manifest_hash);
 });
 

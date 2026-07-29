@@ -16,6 +16,8 @@
     ],
     "native_decision_schema": "regime_balance_v1",
     "optional_fact_types": [
+      "macro.growth_regime",
+      "macro.term_structure_slope",
       "macro.inflation_regime",
       "macro.policy_stance",
       "credit.debt_service",
@@ -24,7 +26,9 @@
       "macro.analogue_distance"
     ],
     "required_fact_types": [
-      "macro.growth_regime"
+      "macro.short_bond_yield",
+      "macro.breakeven_inflation",
+      "macro.real_rate"
     ]
   },
   "components": {
@@ -45,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_dalio.regime_classifier",
-      "master_dalio.debt_driver_stress"
+      "master_dalio.policy_real_rate",
+      "master_dalio.real_curve_slope"
     ]
   },
   "decision": {
@@ -54,7 +58,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "macro.growth_regime"
+      "macro.short_bond_yield",
+      "macro.breakeven_inflation",
+      "macro.real_rate"
     ],
     "hard_vetoes": [
       "master_dalio.refinancing_break",

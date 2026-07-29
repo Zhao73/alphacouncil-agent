@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:1c40f8ff2cfa041ffca300488b153a04db3215431c683b215f8c4bafe6429482",
-    "derivation_spec_hash": "sha256:cbc66704abe50660a149b649d09b7897a5db8dac9b9c3d279be97908ae5e0620",
-    "derivation_spec_id": "master_ackman.power_map.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:be45ecbd2a78bce27dd2feb7400935bb3f47d03a0a154964719c56a85e4ec0e4",
+    "derivation_spec_hash": "sha256:9298a31cf40d017dd49ee0e9c55ee7aef395a9503500c2e74952d2bc11e9ca7e",
+    "derivation_spec_id": "master_ackman.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_ackman.power_map",
+    "id": "master_ackman.market_capitalisation",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,45 +14,68 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:d6d5421f4728b2bf2e735974a54ecccb10b243a3b74f7a2bb66238cef114aed2",
+    "input_schema_hash": "sha256:e4054170fe73d3a7231d7c3d293b1aa684df40b082302cb33fefbe4229e48518",
     "inputs": [
       {
-        "fact_id": "governance.voting_control"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "governance.voting_control",
+    "operation": "multiply",
+    "output_id": "valuation.market_capitalisation.master_ackman",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:0d7a86f1c2399ef6c935d15b79aa2bfa1abefaa83dbea81f218c06256200258b",
+    "output_schema_hash": "sha256:2ec0bc21cd87228008a531f80b33352f0c113350c1ea7977b6f207d9209dd9c5",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:16fb57696593fc4dc"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:149e0f53f4a2834190696104b7172ff834fe2228817fa5681ef6e5b1641efd38",
-    "derivation_spec_hash": "sha256:5c14bdc63fe4980710f521bdcd091a3c9b40da37b67029fb191ed161480a0885",
-    "derivation_spec_id": "master_ackman.change_value_bridge.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:80968abbbfa03af12f2711821160902e684df17d31aac8166fdf4b1c264cb6b9",
+    "derivation_spec_hash": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
+    "derivation_spec_id": "master_ackman.owner_earnings_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_ackman.change_value_bridge",
+    "id": "master_ackman.owner_earnings_yield",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -60,35 +83,38 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:a6145cd3e1648def22c39da079f7324b23293116b851c6f32e54e84421dd3a8c",
+    "input_schema_hash": "sha256:9f99ae402409f36da36df30b911141dd23e5be38b2b8f76f3597d1a1e125e518",
     "inputs": [
       {
-        "fact_id": "valuation.standalone_value"
+        "fact_id": "financial.owner_earnings"
+      },
+      {
+        "output_id": "valuation.market_capitalisation.master_ackman"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "valuation.standalone_value",
+    "operation": "divide",
+    "output_id": "valuation.owner_earnings_yield.master_ackman",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:32a524378b3639ca17788b585c900c96da5841c179dad80008c766a123bc4a8c",
+    "output_schema_hash": "sha256:20259b82092a96c0cdf3979904198a8a7bd9a147ccd83ea3df214d1ed6e40809",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:16fb57696593fc4dc"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import test from "node:test";
 
 import {
@@ -7,6 +7,18 @@ import {
   npmInvocation,
 } from "../../scripts/lib/packaged-host-parity.mjs";
 import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+
+/**
+ * The capsule is complete when the package ships every review the repository tracks, so the
+ * expectation is counted from the repository rather than restated as a number that would have
+ * to be edited on the day a seat is added.
+ */
+const REPO_REVIEW_JSON_COUNT = execSync("git ls-files knowledge/ai-assisted-solo/reviews", { cwd: PACKAGED_PARITY_REPO_ROOT, encoding: "utf8" })
+  .split("\n").filter((path) => path.endsWith(".json")).length;
+
+/** Seats whose legacy v2 operator material survives in the production fallback profile. */
+const LEGACY_OPERATOR_SEATS = 4;
 
 test("packaged parity CLI defaults to a read-only temporary check", () => {
   assert.deepEqual(parseArgs([]), { json: false, markdown: false, help: false, checkOnly: true });
@@ -60,8 +72,8 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
     "master_buffett", "master_damodaran", "master_taleb", "master_sinclair",
   ]);
   assert.deepEqual(Object.keys(report.packaged_adapter_e2e.locale_catalog_hashes).sort(), ["en", "ja", "ko", "zh"]);
-  assert.equal(report.packaged_adapter_e2e.catalog_count, 26);
-  assert.deepEqual(report.packaged_adapter_e2e.maturity_counts, { operator_lens: 26 });
+  assert.equal(report.packaged_adapter_e2e.catalog_count, CANONICAL_MASTER_COUNT);
+  assert.deepEqual(report.packaged_adapter_e2e.maturity_counts, { operator_lens: CANONICAL_MASTER_COUNT });
   assert.equal(report.packaged_adapter_e2e.controls.npm_lifecycle_scripts, "disabled_with_ignore_scripts");
   assert.equal(report.packaged_adapter_e2e.controls.npm_registry_access, "disabled_with_offline_install");
   assert.equal(report.packaged_adapter_e2e.controls.external_model_calls, 0);
@@ -70,7 +82,7 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   for (const host of report.packaged_adapter_e2e.hosts) {
     assert.equal(host.adapter_status, "passed", host.host_id);
     assert.equal(host.tool_count, 31, host.host_id);
-    assert.equal(host.catalog_count, 26, host.host_id);
+    assert.equal(host.catalog_count, CANONICAL_MASTER_COUNT, host.host_id);
     assert.equal(host.receipt_consumption, "one_run_only", host.host_id);
     assert.equal(host.cross_host_reuse, "SELECTION_RECEIPT_UNKNOWN", host.host_id);
     assert.equal(host.second_run_replay, "MASTER_SELECTION_REPLAYED", host.host_id);
@@ -87,7 +99,7 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   });
   assert.deepEqual(report.package_surfaces.ai_assisted_review_capsule, {
     status: "passed",
-    json_file_count: 185,
+    json_file_count: REPO_REVIEW_JSON_COUNT,
     source_verification_mode: "packaged_capsule_only",
     semantic_verification_modes: {
       extraction: "packaged_capsule_only",
@@ -108,7 +120,7 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   assert.equal(report.temporary_workspace_cleanup, "completed");
 });
 
-test("an explicit production profile keeps the packaged legacy 4/22 fallback separate from solo-test runtime", { timeout: 200_000 }, () => {
+test("an explicit production profile keeps the packaged legacy fallback separate from solo-test runtime", { timeout: 200_000 }, () => {
   const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
     cwd: PACKAGED_PARITY_REPO_ROOT,
     encoding: "utf8",
@@ -118,7 +130,7 @@ test("an explicit production profile keeps the packaged legacy 4/22 fallback sep
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   const report = JSON.parse(result.stdout);
-  assert.deepEqual(report.packaged_adapter_e2e.maturity_counts, { operator_lens: 4, prompt_lens: 22 });
+  assert.deepEqual(report.packaged_adapter_e2e.maturity_counts, { operator_lens: LEGACY_OPERATOR_SEATS, prompt_lens: CANONICAL_MASTER_COUNT - LEGACY_OPERATOR_SEATS });
   assert.deepEqual(report.physical_v3_decision_parity, {
     status: "not_run",
     reason: "production package contains zero physical PersonaPack v3 packs",

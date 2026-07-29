@@ -14,7 +14,7 @@
     "schema_version": { "const": 1 },
     "artifact_kind": { "const": "persona_v3_release_source_review_evidence" },
     "verified_at": { "type": "string", "format": "date-time" },
-    "canonical_master_count": { "const": 26 },
+    "canonical_master_count": { "const": 27 },
     "trusted_reviewer_keys": {
       "description": "Manifest-bound audit snapshot. Every signing key used by this bundle must also match the externally configured runtime trust registry.",
       "type": "array",
@@ -26,8 +26,8 @@
     "method_defining_source_count": { "type": "integer", "minimum": 0 },
     "ledgers": {
       "type": "array",
-      "minItems": 26,
-      "maxItems": 26,
+      "minItems": 27,
+      "maxItems": 27,
       "items": { "$ref": "source-adjudication-ledger-v1.schema.json" }
     },
     "verified_bindings": {

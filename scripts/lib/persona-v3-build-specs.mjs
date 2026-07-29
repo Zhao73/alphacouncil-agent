@@ -1,3 +1,4 @@
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -234,7 +235,7 @@ export function validatePersonaV3BuildSpecs(inventory = personaV3BuildSpecs) {
   if (inventory.inventory_id !== "personapack-v3-build-specs") add(errors, null, "inventory_id is invalid");
   if (inventory.inventory_status !== "non_production_planning_only") add(errors, null, "inventory must remain non-production");
   if (inventory.canonical_catalog_source !== "mcp/lib/personas/registry.mjs") add(errors, null, "canonical catalog source changed");
-  if (inventory.seat_count !== 26) add(errors, null, "seat_count must be 26");
+  if (inventory.seat_count !== CANONICAL_MASTER_COUNT) add(errors, null, `seat_count must be ${CANONICAL_MASTER_COUNT}`);
 
   const policy = inventory.adjudication_policy || {};
   exactKeys(policy, ["method_attribution", "source_grading", "case_labels", "veto_thresholds", "reviewer_approvals", "experiments", "promotion_effect"], "adjudication_policy", null, errors);
@@ -247,7 +248,7 @@ export function validatePersonaV3BuildSpecs(inventory = personaV3BuildSpecs) {
 
   const catalogIds = registry().ids("master");
   const selectorIds = knownSelectorCardIds();
-  if (catalogIds.length !== 26) add(errors, null, `canonical registry has ${catalogIds.length} masters, expected 26`);
+  if (catalogIds.length !== CANONICAL_MASTER_COUNT) add(errors, null, `canonical registry has ${catalogIds.length} masters, expected ${CANONICAL_MASTER_COUNT}`);
   const missingCards = catalogIds.filter((id) => !selectorIds.includes(id));
   const extraCards = selectorIds.filter((id) => !catalogIds.includes(id));
   if (missingCards.length || extraCards.length) add(errors, null, `selector cards differ from registry; missing=${missingCards.join(",") || "none"}; extra=${extraCards.join(",") || "none"}`);

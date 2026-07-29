@@ -58,6 +58,19 @@ export const OUTPUT_MODES = [
  * section body must carry, calibrated against the manager fallback report, which emits
  * several legitimately terse sections ("## Confidence\nmedium").
  */
+/**
+ * Anchors for the system-owned publication sections.
+ *
+ * The quality gate must never locate these by heading text. A PM-authored section is
+ * relabelled rather than deleted, and several of those localized commentary titles legally
+ * contain a section alias -- the Japanese label "PMによるメソッド席の説明" contains the
+ * `master_bench` alias "メソッド席". Heading assignment keeps the richest body, so the
+ * commentary could win the assignment and every per-seat coverage check would then fail
+ * against PM prose, leaving the report permanently unpublishable in ja/ko.
+ */
+export const RECORDED_BENCH_MARKER_PREFIX = "alphacouncil:recorded-master-bench:v1:";
+export const RECORDED_INSTRUMENT_MARKER_PREFIX = "alphacouncil:recorded-instrument-structure:v1:";
+
 export const REPORT_SECTIONS = [
   { id: "conclusion", aliases: ["结论", "conclusion", "結論", "결론"], min_body: 6 },
   { id: "analyst_work_log", aliases: ["分析师工作记录", "analyst work log", "アナリスト作業記録", "分析担当作業記録", "분석가 작업 기록"], min_body: 12, per_task: true },
@@ -66,6 +79,7 @@ export const REPORT_SECTIONS = [
   // then mentions none of them is the defect this entry exists to catch; a screen-only
   // run that never selected one must not be failed for omitting it.
   { id: "master_bench", aliases: ["大师席", "master席位", "master bench", "master lens", "マスターベンチ", "マスター・ベンチ", "メソッド席", "마스터 벤치", "방법론 좌석"], min_body: 20, when_masters: true },
+  { id: "instrument_structure", aliases: ["基金与指数结构", "ETF与指数结构", "资产结构与穿透", "fund and index structure", "instrument structure and look through", "ETF index structure", "ファンドと指数の構造", "資産構造とルックスルー", "펀드와 지수 구조", "자산 구조 및 룩스루"], min_body: 40, when_fund_or_index: true },
   { id: "market_expectations", aliases: ["市场预期", "market expectations", "市場予想", "市場期待", "시장 기대"], min_body: 8 },
   { id: "analyst_rating", aliases: ["分析师评级", "analyst rating", "target price", "アナリスト評価", "目標株価", "애널리스트 등급", "목표가"], min_body: 8 },
   { id: "earnings_call", aliases: ["电话会", "earnings call", "決算説明会", "실적 발표 콜"], min_body: 8 },
@@ -100,6 +114,7 @@ const QUICK_REPORT_SECTION_IDS = new Set([
   "analyst_work_log",
   "debate_record",
   "master_bench",
+  "instrument_structure",
   "earnings_call",
   "news",
   "valuation",

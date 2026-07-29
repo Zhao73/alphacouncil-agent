@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:2ba3ac5b35cc5602ce88a5ba7571d134cec1d2e9390b0dab4f2a80b6bb9649b0",
-    "derivation_spec_hash": "sha256:a495305aa77816f76fc7d6abe38f8b8ff3a79c6d17b67b84a8ef7e2383adfeca",
-    "derivation_spec_id": "master_thorp.edge_recalculator.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:b85e21489b9a580f5bb3a2b8e7a537320277a23029675c607ae52d6d300a1657",
+    "derivation_spec_hash": "sha256:09e268a0fc88ee1fc5ece944be7ed8b15c1109eac01d6346cbf4452c9d380533",
+    "derivation_spec_id": "master_thorp.net_edge.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_thorp.edge_recalculator",
+    "id": "master_thorp.net_edge",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_of_mid",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:33a9b40891c92384b5fabbb989a7e57de4a36bbc7d8df2e0f831e95da59eeec1",
+    "input_schema_hash": "sha256:c961743f77c838f8ce61aee6518a6f1fdf00dcbc1d3fb410040cb4a87bc82efb",
     "inputs": [
       {
-        "fact_id": "probability.outcome_distribution"
+        "fact_id": "market.change_pct"
+      },
+      {
+        "fact_id": "execution.bid_ask"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "trade.edge",
+    "operation": "subtract",
+    "output_id": "trade.net_edge.master_thorp",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:99afc640bca08b0e348e6c86a1f4627aa2befc5decfaadc97ae5e864148eea04",
+    "output_schema_hash": "sha256:31db25f05ef9c0fd3a5a7720d111dc95206d4f0b45840d8819c476d123e78741",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:1366952123de20fc8"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:e480491cd694394c9708f3c551753d0d74282f724fdb03a57b1845f28ed63a80",
-    "derivation_spec_hash": "sha256:f8f0d4ff36cadb45ee57fd18d6b83145601ee86e19c1d10fd23a905283aaadbf",
-    "derivation_spec_id": "master_thorp.fractional_kelly.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:374b03940179a910863933294ea9670db249d921fb7e3249e0c6dd091d8af99a",
+    "derivation_spec_hash": "sha256:a6dd488d25efb31022335ad6f444940ca8def0a055f8c4ab720ddb82374a7cd1",
+    "derivation_spec_id": "master_thorp.edge_per_unit_of_volatility.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_thorp.fractional_kelly",
+    "id": "master_thorp.edge_per_unit_of_volatility",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_annualized_volatility",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:ef43f103a768a23cdb087be838c5c82e4b28415acab9d9584c26b44ba61b0c7d",
+    "input_schema_hash": "sha256:b73a02989525bdbeb491b932578bba8b8cb9bf938c0472ab72b67c2adb10c2d2",
     "inputs": [
       {
-        "fact_id": "risk.ruin_probability"
+        "output_id": "trade.net_edge.master_thorp"
+      },
+      {
+        "fact_id": "options.implied_volatility"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "position.fraction",
+    "operation": "divide",
+    "output_id": "trade.edge_per_unit_of_volatility.master_thorp",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:5bd012b824912381c03959281fd6ebb57adb27390b0cb4fa609a610f87710447",
+    "output_schema_hash": "sha256:7f70794f803654e17c0a41edaece8b415411708e762a2ea56e8d3b80e1404354",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:1366952123de20fc8"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

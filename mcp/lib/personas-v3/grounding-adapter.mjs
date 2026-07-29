@@ -80,6 +80,15 @@ function secCompanyFactsIdentity(id) {
   };
 }
 
+/**
+ * Keep an interval only when the value genuinely covers a span. A single-ended interval is not
+ * a shorter interval -- it is an observation date wearing the wrong field.
+ */
+function pointInTimeOrInterval(periodStart, periodEnd) {
+  if (!periodStart) return { period_start: null, period_end: null };
+  return { period_start: periodStart, period_end: periodEnd };
+}
+
 function baseFact({
   factId,
   valueKind,
@@ -108,8 +117,12 @@ function baseFact({
     currency,
     scale,
     ...(ratioDenominator ? { ratio_denominator: ratioDenominator } : {}),
-    period_start: periodStart,
-    period_end: periodEnd,
+    // `period_start`/`period_end` describe the span a value COVERS, not when it was observed --
+    // that is what `as_of` and `public_at` are for. A point-in-time observation with only an end
+    // date satisfies neither contract basis: the executor rejects it as an instant because the
+    // interval is non-null, and as a duration because a window needs both ends. Facts in that
+    // shape were unusable by any tool, which is most of what kept live seats silent.
+    ...pointInTimeOrInterval(periodStart, periodEnd),
     fiscal_year: fiscalYear,
     as_of: asOf,
     public_at: publicAt,
@@ -350,6 +363,293 @@ function optionsFacts(grounding, context) {
   }
 }
 
+/**
+ * FRED observations carry their own publication date, so unlike the market snapshot they can
+ * be converted without stamping the run time onto them. That is the whole reason the macro
+ * block could not be converted before: it had readings but no lineage.
+ */
+function macroSeriesFacts(grounding, context) {
+  const macro = grounding?.macro_series;
+  if (!macro?.series) return;
+  for (const [id, series] of Object.entries(macro.series)) {
+    if (!series?.fact || !finite(series.latest)) continue;
+    const publicAt = timestampAtOrBefore(series.public_at, context.cutoff);
+    if (!publicAt) {
+      context.diagnostics.push({ code: "missing_public_at", source: `fred.${id}`, action: "not_converted" });
+      continue;
+    }
+    const sourceIdValue = sourceId("fred", id, series.observation_date);
+    if (!registerSource(context, {
+      source_id: sourceIdValue,
+      source_kind: "official_statistic",
+      title: `FRED ${id}: ${series.label}`,
+      url: series.source_url,
+      public_at: publicAt,
+      retrieved_at: grounding.gathered_at || publicAt,
+      locator: { series_id: id, observation_date: series.observation_date },
+    })) continue;
+    // Every FRED series mapped here is quoted in percent; the typed-fact contract is decimal.
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId: series.fact,
+      valueKind: "ratio",
+      value: series.latest / 100,
+      unit: "decimal",
+      ratioDenominator: "annualized_rate",
+      periodEnd: series.observation_date,
+      asOf: context.asOf,
+      publicAt,
+      sources: [sourceIdValue],
+      confidence: 0.95,
+    }));
+  }
+
+  const impulse = macro.liquidity_impulse;
+  const liquidity = macro.net_liquidity;
+  if (impulse && finite(impulse.value) && liquidity) {
+    const publicAt = timestampAtOrBefore(liquidity.public_at, context.cutoff);
+    const inputIds = (liquidity.derived_from || []).map((id) => sourceId("fred", id, macro.series?.[id]?.observation_date));
+    const registered = publicAt && (liquidity.derived_from || []).every((id) => {
+      const series = macro.series?.[id];
+      return series && registerSource(context, {
+        source_id: sourceId("fred", id, series.observation_date),
+        source_kind: "official_statistic",
+        title: `FRED ${id}: ${series.label}`,
+        url: series.source_url,
+        public_at: series.public_at,
+        retrieved_at: grounding.gathered_at || series.public_at,
+        locator: { series_id: id, observation_date: series.observation_date },
+      });
+    });
+    if (registered) {
+      addUnique(context.facts, context.diagnostics, baseFact({
+        factId: "macro.liquidity_impulse",
+        valueKind: "ratio",
+        value: impulse.value,
+        unit: "decimal",
+        ratioDenominator: `net_liquidity_change_over_${impulse.window_days}_days`,
+        periodStart: impulse.from_date,
+        periodEnd: impulse.to_date,
+        asOf: context.asOf,
+        publicAt,
+        sources: inputIds,
+        confidence: 0.8,
+        derivation: "rederived",
+        derivationToolId: `${ADAPTER_ID}:macro:net_liquidity_impulse`,
+        derivationInput: {
+          window_days: impulse.window_days,
+          from: { date: impulse.from_date, value: impulse.from_value },
+          to: { date: impulse.to_date, value: impulse.to_value },
+          construction: "WALCL - RRPONTSYD*1000 - WTREGEN, in usd_millions",
+        },
+      }));
+    } else {
+      context.diagnostics.push({ code: "missing_source_lineage", source: "fred.net_liquidity", action: "not_converted" });
+    }
+  }
+
+  const regime = macro.regime;
+  if (regime?.state) {
+    const slope = macro.series?.T10Y3M;
+    const breakeven = macro.series?.T5YIE;
+    const publicAt = slope && breakeven
+      ? timestampAtOrBefore([slope.public_at, breakeven.public_at].sort()[0], context.cutoff)
+      : null;
+    const sources = [slope, breakeven].filter(Boolean).map((series) => sourceId("fred", series.id, series.observation_date));
+    if (publicAt && sources.length === 2) {
+      addUnique(context.facts, context.diagnostics, baseFact({
+        factId: "macro.growth_regime",
+        valueKind: "text",
+        value: regime.state,
+        unit: null,
+        periodEnd: slope.observation_date,
+        asOf: context.asOf,
+        publicAt,
+        sources,
+        confidence: 0.7,
+        derivation: "rederived",
+        derivationToolId: `${ADAPTER_ID}:macro:growth_inflation_quadrant`,
+        derivationInput: {
+          window_days: regime.window_days,
+          growth_axis: regime.growth_axis,
+          inflation_axis: regime.inflation_axis,
+        },
+      }));
+    } else {
+      context.diagnostics.push({ code: "missing_source_lineage", source: "fred.regime", action: "not_converted" });
+    }
+  }
+}
+
+/**
+ * Company fundamentals derived from XBRL, already shaped as typed-fact candidates.
+ *
+ * `deriveFundamentals` computes the period, the filing date and the source records, so this
+ * function's only job is registration and unit passthrough. It deliberately does not repair
+ * anything: a metric that arrives null arrived null for a reason the deriver already named.
+ */
+function fundamentalFacts(grounding, context) {
+  const metrics = grounding?.fundamentals?.metrics;
+  if (!metrics || typeof metrics !== "object") return;
+  const cik = grounding.fundamentals.cik || grounding.screen?.cik;
+  const digits = String(cik || "").replace(/\D/gu, "");
+  const companyFactsUrl = digits
+    ? `https://data.sec.gov/api/xbrl/companyfacts/CIK${digits.padStart(10, "0")}.json`
+    : null;
+  for (const [factId, metric] of Object.entries(metrics)) {
+    if (!metric || !finite(metric.value)) continue;
+    const publicAt = timestampAtOrBefore(metric.public_at, context.cutoff);
+    const sources = Array.isArray(metric.source_ids) ? metric.source_ids.filter(Boolean) : [];
+    if (!publicAt || !sources.length) {
+      context.diagnostics.push({ code: "missing_source_lineage", source: `fundamentals.${factId}`, action: "not_converted" });
+      continue;
+    }
+    // Register each filing record from ITS OWN filing date, not from the date of whichever
+    // metric happens to consume it. Several metrics legitimately share one XBRL record, and
+    // stamping the consumer's period onto the shared source made the second registration
+    // collide with the first -- which silently dropped the fact rather than the duplicate.
+    // Match on the identity the id already encodes rather than rebuilding the id, so a change
+    // in CIK zero-padding cannot quietly break the lookup and reintroduce the collision.
+    const recordFor = (id) => {
+      const [, , , tag, accession, periodEnd] = String(id).split(":");
+      return (metric.source_records || []).find((record) => (
+        record?.tag === tag && record?.accession === accession && record?.period_end === periodEnd
+      ));
+    };
+    const registered = sources.every((id) => {
+      // The mechanical screen reads the same filings and may already have registered this
+      // record. First registration wins: both paths describe the same SEC document, and
+      // re-asserting it under a second consumer's period is what produced the collision that
+      // silently dropped every fundamentals fact sharing a record with the screen.
+      if (context.sourceRecords.has(id)) return true;
+      const identity = secCompanyFactsIdentity(id);
+      const record = recordFor(id);
+      const filedAt = record?.filed ? `${record.filed}T00:00:00.000Z` : publicAt;
+      return registerSource(context, {
+        source_id: id,
+        source_kind: "regulatory_filing_data",
+        title: identity.title,
+        url: companyFactsUrl,
+        public_at: filedAt,
+        retrieved_at: grounding.gathered_at || context.asOf,
+        locator: identity.locator,
+      });
+    });
+    if (!registered) continue;
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId,
+      valueKind: metric.value_kind,
+      value: metric.value,
+      unit: metric.unit,
+      currency: metric.currency ?? null,
+      scale: metric.scale ?? null,
+      ratioDenominator: metric.ratio_denominator,
+      periodStart: metric.period_start || null,
+      periodEnd: metric.period_end || null,
+      fiscalYear: Number.isInteger(metric.fiscal_year) ? metric.fiscal_year : null,
+      asOf: context.asOf,
+      publicAt,
+      sources,
+      confidence: finite(metric.confidence) ? metric.confidence : 0.85,
+      derivation: metric.derivation || "rederived",
+      derivationToolId: `${ADAPTER_ID}:fundamentals:${factId}`,
+      // The maintenance-capex split is an assumption, so it travels with the fact rather
+      // than living only in a comment nobody reads at decision time.
+      derivationInput: metric.assumptions?.length ? { assumptions: metric.assumptions } : null,
+    }));
+  }
+}
+
+/**
+ * Fund and index aggregates, including the look-through metrics that let an operating-company
+ * method run against a basket. Coverage weight is carried on every look-through fact: a
+ * portfolio number computed over 8% of the weights is not the same claim as one over 95%.
+ */
+/**
+ * Section 16 insider ownership as one typed fact.
+ *
+ * The value is `estimated` rather than `reported`: no filing states this number: it is summed
+ * across the newest ownership document per reporting owner, and the coverage limits of Section
+ * 16 are real. Labelling it reported would claim a document that does not exist.
+ */
+function insiderOwnershipFacts(grounding, context) {
+  const owned = grounding?.insider_ownership;
+  if (!owned || !finite(owned.value)) return;
+  const publicAt = timestampAtOrBefore(owned.public_at, context.cutoff);
+  if (!publicAt || !owned.source_url || !owned.source_ids?.length) {
+    context.diagnostics.push({ code: "missing_source_lineage", source: "insider_ownership", action: "not_converted" });
+    return;
+  }
+  const sourceIdValue = sourceId("sec", "section16_ownership", owned.as_of || publicAt);
+  if (!registerSource(context, {
+    source_id: sourceIdValue,
+    source_kind: "regulatory_filing_data",
+    title: "Section 16 ownership filings (Forms 3, 4 and 5)",
+    url: owned.source_url,
+    public_at: publicAt,
+    retrieved_at: grounding.gathered_at || publicAt,
+    locator: { filing_count: owned.source_ids.length, reporting_owners: owned.owner_count },
+  })) return;
+  addUnique(context.facts, context.diagnostics, baseFact({
+    factId: "governance.insider_ownership",
+    valueKind: "ratio",
+    value: owned.value,
+    unit: "decimal",
+    ratioDenominator: "shares_outstanding",
+    asOf: context.asOf,
+    publicAt,
+    sources: [sourceIdValue],
+    confidence: 0.7,
+    derivation: "estimated",
+    derivationToolId: `${ADAPTER_ID}:section16:insider_ownership`,
+    derivationInput: { method: owned.method, reporting_owners: owned.owner_count },
+  }));
+}
+
+function instrumentAggregateFacts(grounding, context) {
+  const aggregates = grounding?.instrument_aggregate?.facts;
+  if (!Array.isArray(aggregates)) return;
+  for (const entry of aggregates) {
+    if (!entry?.fact_id || !finite(entry.value)) continue;
+    const publicAt = timestampAtOrBefore(entry.public_at, context.cutoff);
+    if (!publicAt || !/^https?:\/\//u.test(entry.source_url || "")) {
+      context.diagnostics.push({ code: "missing_source_lineage", source: `instrument.${entry.fact_id}`, action: "not_converted" });
+      continue;
+    }
+    const sourceIdValue = sourceId(entry.source_kind || "instrument", entry.fact_id, entry.observation_date || publicAt.slice(0, 10));
+    if (!registerSource(context, {
+      source_id: sourceIdValue,
+      source_kind: entry.source_kind || "market_snapshot",
+      title: entry.title || `instrument aggregate ${entry.fact_id}`,
+      url: entry.source_url,
+      public_at: publicAt,
+      retrieved_at: grounding.gathered_at || publicAt,
+      locator: entry.locator || { fact_id: entry.fact_id },
+    })) continue;
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId: entry.fact_id,
+      valueKind: entry.value_kind || "ratio",
+      value: entry.value,
+      unit: entry.unit || "decimal",
+      // A monetary fact carries a currency and a scale; forwarding only the ratio fields
+      // rejected the whole pack the moment a basket published its size in dollars.
+      currency: entry.currency ?? null,
+      scale: entry.scale ?? null,
+      ratioDenominator: entry.ratio_denominator,
+      periodStart: entry.period_start || null,
+      periodEnd: entry.period_end || entry.observation_date || null,
+      asOf: context.asOf,
+      publicAt,
+      sources: [sourceIdValue],
+      confidence: finite(entry.confidence) ? entry.confidence : 0.75,
+      derivation: entry.derivation || "rederived",
+      derivationToolId: `${ADAPTER_ID}:instrument:${entry.fact_id}`,
+      derivationInput: entry.method
+        ? { method: entry.method, coverage_weight: entry.coverage_weight ?? null, basis: entry.basis ?? null }
+        : null,
+    }));
+  }
+}
+
 /** Return both the immutable pack and an explicit list of fields skipped for missing lineage. */
 export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = asOf } = {}) {
   const resolvedAsOf = asOf || grounding?.as_of || grounding?.gathered_at;
@@ -365,9 +665,16 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   quoteFacts(grounding, context);
   optionsFacts(grounding, context);
   screenFacts(grounding, context);
+  macroSeriesFacts(grounding, context);
+  fundamentalFacts(grounding, context);
+  instrumentAggregateFacts(grounding, context);
+  insiderOwnershipFacts(grounding, context);
   for (const family of ["screen", "macro", "market"]) {
     if (grounding?.[family] && !grounding[family].public_at) {
       if (family === "screen" && context.diagnostics.some((item) => String(item.source || "").startsWith("screen."))) continue;
+      // The market-priced macro block still has no lineage of its own, but the dated FRED
+      // series now cover the same ground; reporting both would read as a gap that is filled.
+      if (family === "macro" && grounding.macro_series?.series) continue;
       context.diagnostics.push({ code: "missing_source_lineage", source: family, action: "not_converted" });
     }
   }

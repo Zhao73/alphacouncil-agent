@@ -8,6 +8,10 @@ import {
   validateSemanticSourceExtractionArtifact,
 } from "../../mcp/lib/personas-v3/semantic-source-extraction.mjs";
 import { parseArgs } from "../../scripts/extract-persona-source-semantics.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+
+/** Seats that currently carry at least one raw source acquisition. */
+const SEATS_WITH_RAW_ACQUISITIONS = 26;
 
 const root = fileURLToPath(new URL("../../knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-extractions/", import.meta.url));
 
@@ -16,7 +20,7 @@ test("round-1 semantic extractor covers all candidates without human or producti
   assert.equal(report.valid, true, report.errors.join("\n"));
   assert.equal(report.candidate_count, 32);
   assert.equal(report.valid_artifact_count, 32);
-  assert.equal(report.seats_with_candidates, 26);
+  assert.equal(report.seats_with_candidates, SEATS_WITH_RAW_ACQUISITIONS);
   assert.deepEqual(report.readability_counts, { partial: 4, readable: 26, unreadable: 2 });
   assert.equal(report.proposition_count, 29);
   assert.equal(report.human_reviewed_count, 0);

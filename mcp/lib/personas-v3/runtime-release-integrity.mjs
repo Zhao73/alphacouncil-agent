@@ -1,5 +1,6 @@
 /** Fail-closed, dependency-light verification for an activated PersonaPack v3 release. */
 
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 import {
   existsSync,
   lstatSync,
@@ -285,7 +286,7 @@ function verifySourceEvidence({ manifest, evidence, packSources, trustedReviewer
   if (evidence.schema_version !== 1 || evidence.artifact_kind !== "persona_v3_release_source_review_evidence") {
     fail("source-review evidence bundle header is invalid");
   }
-  if (evidence.canonical_master_count !== 26 || !Array.isArray(evidence.ledgers) || evidence.ledgers.length !== 26) {
+  if (evidence.canonical_master_count !== CANONICAL_MASTER_COUNT || !Array.isArray(evidence.ledgers) || evidence.ledgers.length !== CANONICAL_MASTER_COUNT) {
     fail("source-review evidence bundle does not cover 26 masters");
   }
   if (!Array.isArray(evidence.trusted_reviewer_keys)
@@ -349,13 +350,13 @@ export function verifyRuntimePersonaRelease({
   trustedFormulaReviewerKeys,
 } = {}) {
   const physicalRelease = plainDirectory(resolve(releaseDir), "active release directory");
-  if (!Array.isArray(manifest?.canonical_master_ids) || manifest.canonical_master_ids.length !== 26
-    || new Set(manifest.canonical_master_ids).size !== 26
-    || !Array.isArray(manifest.packs) || manifest.packs.length !== 26) {
+  if (!Array.isArray(manifest?.canonical_master_ids) || manifest.canonical_master_ids.length !== CANONICAL_MASTER_COUNT
+    || new Set(manifest.canonical_master_ids).size !== CANONICAL_MASTER_COUNT
+    || !Array.isArray(manifest.packs) || manifest.packs.length !== CANONICAL_MASTER_COUNT) {
     fail("active release manifest must contain 26 unique physical packs");
   }
   const packEntries = new Map(manifest.packs.map((entry) => [entry?.persona_id, entry]));
-  if (packEntries.size !== 26
+  if (packEntries.size !== CANONICAL_MASTER_COUNT
     || canonicalJson([...packEntries.keys()].sort()) !== canonicalJson([...manifest.canonical_master_ids].sort())) {
     fail("active release pack inventory does not match its canonical master ids");
   }

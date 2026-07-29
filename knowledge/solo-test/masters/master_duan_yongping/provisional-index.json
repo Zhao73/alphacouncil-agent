@@ -16,7 +16,7 @@
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:7265b10a67bd0437af02572176793ef0b8529e48437edc5a2e0b1b1b9fbe73d0",
+  "formula_compilation_manifest_hash": "sha256:fc8afd469d9cafccccc4221622ccde5061167c538ab6472eecaaf65efce5461b",
   "method_model_eligible": false,
   "native_states": [
     "provisional_do_not_understand",
@@ -26,8 +26,8 @@
   ],
   "persona_id": "master_duan_yongping",
   "planned_tool_ids": [
-    "master_duan_yongping.user_value_evidence",
-    "master_duan_yongping.opportunity_cost"
+    "master_duan_yongping.five_year_opportunity_cost",
+    "master_duan_yongping.margin_retention"
   ],
   "production_eligible": false,
   "review_status": "not_human_reviewed",

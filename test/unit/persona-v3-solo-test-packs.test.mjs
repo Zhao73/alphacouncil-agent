@@ -19,9 +19,12 @@ import {
   DEFAULT_SOLO_TEST_PACK_ROOT,
   inspectPersonaV3SoloTestPacks,
 } from "../../scripts/lib/persona-v3-solo-test-packs.mjs";
+import { resolvePersonaPackVersion } from "../../scripts/lib/build-profile.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
-const PACKAGE_VERSION = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8")).version;
+const PERSONA_PACK_VERSION = resolvePersonaPackVersion(REPO_ROOT);
 const AS_OF = "2026-07-27";
 
 test("physical pack inventories use canonical slash paths on Windows and POSIX", () => {
@@ -35,7 +38,23 @@ test("physical pack inventories use canonical slash paths on Windows and POSIX",
   }), "evaluation/golden_cases.jsonl");
 });
 
+/** An interval satisfying the contract's declared window, or none when it wants an instant. */
+function syntheticInterval(period) {
+  if (period?.basis !== "duration" && period?.basis !== "forecast_horizon") {
+    return { period_start: null, period_end: null };
+  }
+  const match = /^P([1-9]\d*)([DMY])$/u.exec(period.window || "");
+  const days = period.window === "ANY" ? 365
+    : match ? Number(match[1]) * ({ D: 1, M: 30, Y: 365 })[match[2]]
+      : 365;
+  const end = Date.parse(`${AS_OF}T00:00:00.000Z`);
+  return { period_start: new Date(end - days * 86_400_000).toISOString().slice(0, 10), period_end: AS_OF };
+}
+
 function positiveFactPack(pack) {
+  // Built from what the seat DECLARES it reads, not only from its tool inputs. An authored
+  // policy deliberately gates eligibility on a fact that is not a tool input, so a pack made
+  // of tool inputs alone leaves every such seat correctly but uselessly out of scope.
   const byFact = new Map();
   for (const tool of pack.components.tools) {
     tool.inputs.forEach((operand, index) => {
@@ -43,16 +62,27 @@ function positiveFactPack(pack) {
       byFact.set(operand.fact_id, tool.input_contracts[index]);
     });
   }
+  const declared = [
+    ...(pack.manifest.capability.required_fact_types || []),
+    ...(pack.manifest.capability.optional_fact_types || []),
+  ];
+  for (const factId of declared) {
+    if (!byFact.has(factId)) byFact.set(factId, { value_kind: "ratio", unit: "decimal" });
+  }
   const facts = [...byFact].map(([factId, contract]) => ({
     schema_version: 1,
     fact_id: factId,
     value_kind: contract.value_kind,
     value: 1,
     unit: contract.unit,
-    currency: null,
-    scale: null,
-    period_start: null,
-    period_end: null,
+    // A monetary contract carries a currency and a scale; the tools that read filing amounts
+    // declare one now that those facts have real contracts instead of a proxy scalar.
+    currency: contract.value_kind === "monetary" ? "USD" : null,
+    scale: contract.value_kind === "monetary" ? 1 : null,
+    ...(contract.value_kind === "ratio" ? { ratio_denominator: "synthetic_denominator" } : {}),
+    // A fact whose contract asks for a reporting interval has to carry one, or the contract
+    // check rejects it before the method runs and the fixture proves nothing.
+    ...syntheticInterval(contract.period),
     fiscal_year: null,
     as_of: AS_OF,
     public_at: AS_OF,
@@ -65,15 +95,15 @@ function positiveFactPack(pack) {
   return buildFactPack(facts, { asOf: AS_OF });
 }
 
-test("the packaged solo-test tree is exactly 26 physical operator lenses and 52 provisional tools", () => {
-  const report = inspectPersonaV3SoloTestPacks({ packVersion: PACKAGE_VERSION });
+test("the packaged solo-test tree is one physical operator lens per seat and one provisional tool per plan", () => {
+  const report = inspectPersonaV3SoloTestPacks({ packVersion: PERSONA_PACK_VERSION });
   assert.equal(report.summary.ready_for_solo_testing, true);
-  assert.equal(report.summary.physical_pack_count, 26);
-  assert.equal(report.summary.solo_loader_valid_count, 26);
-  assert.equal(report.summary.compiler_valid_count, 26);
-  assert.equal(report.summary.provisional_operator_lens_count, 26);
-  assert.equal(report.summary.production_loader_rejection_count, 26);
-  assert.equal(report.summary.tool_count, 52);
+  assert.equal(report.summary.physical_pack_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.solo_loader_valid_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.compiler_valid_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.provisional_operator_lens_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.production_loader_rejection_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.tool_count, PLANNED_TOOL_COUNT);
   assert.equal(report.summary.operational_count, 0);
   assert.equal(report.summary.method_model_count, 0);
 });
@@ -108,7 +138,7 @@ test("the PersonaPack JSON Schema requires four reader locales conditionally for
   );
 });
 
-test("all 26 physical selector manifests carry distinct Chinese plus Japanese and Korean copy", () => {
+test("every canonical seat physical selector manifests carry distinct Chinese plus Japanese and Korean copy", () => {
   const scripts = { zh: /\p{Script=Han}/u, ja: /[\p{Script=Hiragana}\p{Script=Katakana}]/u, ko: /\p{Script=Hangul}/u };
   const ids = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).ids();
   assert.deepEqual(Object.keys(MASTER_SELECTOR_BEST_FOR_LOCALES).sort(), [...ids].sort());
@@ -132,27 +162,31 @@ test("all 26 physical selector manifests carry distinct Chinese plus Japanese an
   }
 });
 
-test("runtime build profile exposes all 26 as visibly provisional while formal compilation stays production", () => {
+test("runtime build profile exposes every canonical seat as visibly provisional while formal compilation stays production", () => {
   assert.equal(resolveRuntimePersonaBuildProfile(), "solo_test");
   const formal = loadCompiledPersonaPacks();
   const solo = loadCompiledPersonaPacks({ buildProfile: "solo_test" });
   assert.equal(formal.build_profile, "production");
   assert.equal(solo.build_profile, "solo_test");
-  assert.equal(solo.packs.length, 26);
+  assert.equal(solo.packs.length, CANONICAL_MASTER_COUNT);
   assert.ok(solo.packs.every((pack) => pack.build_profile === "solo_test"));
   assert.ok(solo.packs.every((pack) => pack.admission.level === "operator_lens"));
 
   const menu = councilOptions({ language: "中文" });
-  assert.equal(menu.masters.filter((master) => master.production_status === "solo_test_provisional").length, 26);
+  assert.equal(menu.masters.filter((master) => master.production_status === "solo_test_provisional").length, CANONICAL_MASTER_COUNT);
   assert.ok(menu.masters.every((master) => master.provisional === true));
   for (const language of ["English", "中文", "日本語", "한국어"]) {
     const localizedMenu = councilOptions({ language });
-    assert.equal(localizedMenu.masters.length, 26);
+    assert.equal(localizedMenu.masters.length, CANONICAL_MASTER_COUNT);
     assert.ok(localizedMenu.masters.every((master) => master.maturity_label));
   }
 });
 
-test("all-positive provisional proxy inputs execute but can never project constructive", () => {
+// An identity proxy could only ever reject or abstain: successful arithmetic over a
+// placeholder must never read as a recommendation. An authored seat is different by design --
+// a method that cannot say yes is not a method. What must not change is the assurance
+// boundary, so that is what this now pins.
+test("an authored seat decides on a full fact pack without gaining production standing", () => {
   const pack = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).get("master_buffett");
   const preDecision = buildAnonymousPreDecision({
     compiledPack: pack,
@@ -163,8 +197,15 @@ test("all-positive provisional proxy inputs execute but can never project constr
   assert.ok(preDecision.anonymous_method_contract.tools.every((tool) => !tool.id.includes("buffett")));
   const execution = executeDeterministicPersonaPolicy(preDecision);
   const result = execution.frozen_decision.structured_decision.result;
-  assert.equal(result.common_projection.stance, "cautious");
-  assert.notEqual(result.common_projection.stance, "constructive");
-  assert.equal(result.score.ratio, 1);
+  // Every fact set to one satisfies an identity proxy trivially and satisfies a real method
+  // only where its comparison happens to hold, so the ratio is whatever the method computes.
+  // What matters is that it computed rather than abstained.
+  assert.ok(result.score.ratio >= 0 && result.score.ratio <= 1);
+  assert.ok(["constructive", "cautious", "opposed"].includes(result.common_projection.stance));
+  assert.notEqual(result.common_projection.stance, "out_of_scope");
   assert.match(result.native_decision.state, /^provisional_/u);
+  // The seat may now recommend; it still may not claim to be validated.
+  assert.equal(pack.admission.level, "operator_lens");
+  assert.equal(pack.maturity, "operator_lens");
+  assert.equal(pack.build_profile, "solo_test");
 });

@@ -1,0 +1,277 @@
+{
+  "adjudication_status": "machine_consistent_semantics_unknown",
+  "artifact_kind": "persona_v3_ai_formula_cross_review",
+  "assurance_class": "provisional_ai_cross_review",
+  "disagreement": {
+    "items": [],
+    "status": "none_detected_on_mechanical_contract"
+  },
+  "execution_mode": "deterministic_review_harness",
+  "human_claims": false,
+  "human_reviewed": false,
+  "invariant_summary": {
+    "fail": 0,
+    "invariants_hash": "sha256:2d3849afde3388468034f38e61438ca790bbef541cd846ba60ce489967b176d8",
+    "pass": 8,
+    "total": 8,
+    "unknown": 0
+  },
+  "method_model_eligible": false,
+  "persona_id": "master_ackman",
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_artifact_hash": "sha256:24b26efeb1366f00b3982c28d546f5826fec3783e308e94010bc36e1a6e46756",
+  "review_schema_hash": "sha256:1b0ef67aafb46755b5a8d4a20e4d40a3c16b7ee9466ad29e4cf978474aaa56cb",
+  "review_subject": {
+    "declared_derivation_evidence_hash": "sha256:80968abbbfa03af12f2711821160902e684df17d31aac8166fdf4b1c264cb6b9",
+    "declared_derivation_spec_hash": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
+    "declared_input_schema_hash": "sha256:4b3cf147bb64dd8a69af0a6a16004a6a6b8f05a1fd4780459e306345c99cdda0",
+    "declared_output_schema_hash": "sha256:fdeea98bd3d6d44504f1292113a70bb4ff519b212a41ff81373664f1c9272d5d",
+    "derivation_evidence_content_hash": "sha256:80968abbbfa03af12f2711821160902e684df17d31aac8166fdf4b1c264cb6b9",
+    "derivation_spec_hash": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
+    "formula_compilation_hash": "sha256:53f2131c344ecab868c70e13091f7e3d6e0fc1893838934f26658b33e4143fe2",
+    "formula_content_hash": "sha256:9a429aec88b7ccb68775ea9e763bf2a2e32824be9a6a6ed3320acfdced6be5fb",
+    "persona_id": "master_ackman",
+    "recomputed_input_schema_hash": "sha256:4b3cf147bb64dd8a69af0a6a16004a6a6b8f05a1fd4780459e306345c99cdda0",
+    "recomputed_output_schema_hash": "sha256:fdeea98bd3d6d44504f1292113a70bb4ff519b212a41ff81373664f1c9272d5d",
+    "review_schema_hash": "sha256:1b0ef67aafb46755b5a8d4a20e4d40a3c16b7ee9466ad29e4cf978474aaa56cb",
+    "schema_version": 1,
+    "tool_content_hash": "sha256:6a23f0ea7a4fc11d656b89cedd422ac96b7f4b85062399f661cc5cc604d44979",
+    "tool_id": "master_ackman.owner_earnings_yield"
+  },
+  "review_subject_hash": "sha256:35fd35d6be2b15f699b0242b357e86a0646f3af4656e3270d6ba010efe5237be",
+  "reviewer_kind": "ai",
+  "role_artifact_hashes": {
+    "adjudicator": "sha256:d073246d9c6f897551e8ccf8bda0f21b13e7a4f9edde99eb295d70fbf9f37f0c",
+    "adversarial_checker": "sha256:6f73eeb5a6e732c7ea13c2f5fac38c5ded90a0d2312c562aa69dec8f378bfa3e",
+    "deriver": "sha256:b50815216bf6efc73156202c182136a819ee14a2990a4dddaea92be3a46b9b77"
+  },
+  "role_sequence": [
+    "deriver",
+    "adversarial_checker",
+    "adjudicator"
+  ],
+  "roles": {
+    "adjudicator": {
+      "artifact_hash": "sha256:d073246d9c6f897551e8ccf8bda0f21b13e7a4f9edde99eb295d70fbf9f37f0c",
+      "human_principal": false,
+      "machine_actor_id": "alphacouncil.machine.adjudicator.v1",
+      "prompt_hash": "sha256:a04bd88ee1b51c8b011e96de7513c14dcf3ba2417b0c13773d40996dfd831818",
+      "prompt_id": "ai_formula_adjudicator_v1",
+      "prompt_text": "Compare the two machine records and adjudicate mechanical consistency only. Semantic fidelity to a named investor remains unknown without source and human review; production eligibility must remain false.",
+      "result": {
+        "bound_adversarial_checker_artifact_hash": "sha256:6f73eeb5a6e732c7ea13c2f5fac38c5ded90a0d2312c562aa69dec8f378bfa3e",
+        "bound_deriver_artifact_hash": "sha256:b50815216bf6efc73156202c182136a819ee14a2990a4dddaea92be3a46b9b77",
+        "disagreements": [],
+        "human_review_disposition": "not_performed",
+        "mechanical_consistency": "pass",
+        "production_disposition": "not_eligible",
+        "semantic_fidelity": "unknown",
+        "status": "machine_consistent_semantics_unknown",
+        "unknowns": [
+          "semantic_equivalence_to_named_investor_method",
+          "appropriateness_of_first_declared_input",
+          "appropriateness_of_output_as_decision_signal",
+          "source_doctrine_fidelity"
+        ]
+      },
+      "reviewer_kind": "ai",
+      "role_id": "adjudicator",
+      "subject_hash": "sha256:35fd35d6be2b15f699b0242b357e86a0646f3af4656e3270d6ba010efe5237be"
+    },
+    "adversarial_checker": {
+      "artifact_hash": "sha256:6f73eeb5a6e732c7ea13c2f5fac38c5ded90a0d2312c562aa69dec8f378bfa3e",
+      "human_principal": false,
+      "machine_actor_id": "alphacouncil.machine.adversarial_checker.v1",
+      "prompt_hash": "sha256:02be6f66cac180e9807ff7dd01d530517c8904a4a93002c6840f2c6fd24e190c",
+      "prompt_id": "ai_formula_adversarial_checker_v1",
+      "prompt_text": "Independently recompute schema hashes, evidence hashes, test vectors, missing-input behavior, and invariants. Record disagreement or unknown explicitly; never trust the deriver result by assertion.",
+      "result": {
+        "bound_deriver_artifact_hash": "sha256:b50815216bf6efc73156202c182136a819ee14a2990a4dddaea92be3a46b9b77",
+        "disagreements": [],
+        "independently_recomputed_schema_hashes": {
+          "input_schema_hash": "sha256:4b3cf147bb64dd8a69af0a6a16004a6a6b8f05a1fd4780459e306345c99cdda0",
+          "output_schema_hash": "sha256:fdeea98bd3d6d44504f1292113a70bb4ff519b212a41ff81373664f1c9272d5d"
+        },
+        "independently_recomputed_vectors": [
+          {
+            "expected": {
+              "error_code": null,
+              "status": "computed",
+              "value": 1.2083333333333333
+            },
+            "recomputed": {
+              "error_code": null,
+              "status": "computed",
+              "value": 1.2083333333333333
+            },
+            "status": "pass",
+            "vector_id": "finite_negative"
+          },
+          {
+            "expected": {
+              "error_code": null,
+              "status": "computed",
+              "value": 0
+            },
+            "recomputed": {
+              "error_code": null,
+              "status": "computed",
+              "value": 0
+            },
+            "status": "pass",
+            "vector_id": "finite_zero_boundary"
+          },
+          {
+            "expected": {
+              "error_code": null,
+              "status": "computed",
+              "value": 0.9152542372881356
+            },
+            "recomputed": {
+              "error_code": null,
+              "status": "computed",
+              "value": 0.9152542372881356
+            },
+            "status": "pass",
+            "vector_id": "finite_positive"
+          },
+          {
+            "expected": {
+              "error_code": "MISSING_INPUT",
+              "status": "uncomputable",
+              "value": null
+            },
+            "recomputed": {
+              "error_code": "MISSING_INPUT",
+              "status": "uncomputable",
+              "value": null
+            },
+            "status": "pass",
+            "vector_id": "missing_first_input"
+          }
+        ],
+        "invariants": [
+          {
+            "evidence": "sha256:4b3cf147bb64dd8a69af0a6a16004a6a6b8f05a1fd4780459e306345c99cdda0",
+            "invariant_id": "input_schema_hash_exact",
+            "status": "pass"
+          },
+          {
+            "evidence": "sha256:fdeea98bd3d6d44504f1292113a70bb4ff519b212a41ff81373664f1c9272d5d",
+            "invariant_id": "output_schema_hash_exact",
+            "status": "pass"
+          },
+          {
+            "evidence": "sha256:80968abbbfa03af12f2711821160902e684df17d31aac8166fdf4b1c264cb6b9",
+            "invariant_id": "derivation_evidence_hash_exact",
+            "status": "pass"
+          },
+          {
+            "evidence": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
+            "invariant_id": "derivation_spec_hash_exact",
+            "status": "pass"
+          },
+          {
+            "evidence": "sha256:da7bbfb6e2a21bcaa0ad9b79c4fb5a767022cfa07e90b5421c98dfa9f7fe1b81",
+            "invariant_id": "formula_tool_contract_exact",
+            "status": "pass"
+          },
+          {
+            "evidence": "sha256:f11081358cec1aedccefbca09e064cc02cdc9e184e7b939f1454d8dd990619ca",
+            "invariant_id": "test_vectors_recompute_exact",
+            "status": "pass"
+          },
+          {
+            "evidence": "fail",
+            "invariant_id": "missing_input_fails_closed",
+            "status": "pass"
+          },
+          {
+            "evidence": "zero_human_zero_signature_non_production",
+            "invariant_id": "provisional_boundary_intact",
+            "status": "pass"
+          }
+        ],
+        "production_disposition": "not_eligible",
+        "status": "mechanically_consistent",
+        "unknowns": [
+          "semantic_equivalence_to_named_investor_method",
+          "appropriateness_of_first_declared_input",
+          "appropriateness_of_output_as_decision_signal",
+          "source_doctrine_fidelity"
+        ]
+      },
+      "reviewer_kind": "ai",
+      "role_id": "adversarial_checker",
+      "subject_hash": "sha256:35fd35d6be2b15f699b0242b357e86a0646f3af4656e3270d6ba010efe5237be"
+    },
+    "deriver": {
+      "artifact_hash": "sha256:b50815216bf6efc73156202c182136a819ee14a2990a4dddaea92be3a46b9b77",
+      "human_principal": false,
+      "machine_actor_id": "alphacouncil.machine.deriver.v1",
+      "prompt_hash": "sha256:17ddd3b71249532283b685d40b3cae51745eaaf96e4c24fab1f4d6c8f26dedbb",
+      "prompt_id": "ai_formula_deriver_v1",
+      "prompt_text": "Re-derive test expectations only from the hash-bound DSL formula and executable contracts. Preserve unknown semantic fidelity and never issue a human or production approval.",
+      "result": {
+        "executable_contract_hash": "sha256:d425b7f5d5ec46a14dfd1f9c00b3be9487ea72000b7969ffd08e35ed4b17fc17",
+        "formula_contract_hash": "sha256:d425b7f5d5ec46a14dfd1f9c00b3be9487ea72000b7969ffd08e35ed4b17fc17",
+        "production_disposition": "not_eligible",
+        "semantic_fidelity": "unknown",
+        "status": "derived",
+        "test_vectors": [
+          {
+            "expected": {
+              "error_code": null,
+              "status": "computed",
+              "value": 1.2083333333333333
+            },
+            "vector_id": "finite_negative"
+          },
+          {
+            "expected": {
+              "error_code": null,
+              "status": "computed",
+              "value": 0
+            },
+            "vector_id": "finite_zero_boundary"
+          },
+          {
+            "expected": {
+              "error_code": null,
+              "status": "computed",
+              "value": 0.9152542372881356
+            },
+            "vector_id": "finite_positive"
+          },
+          {
+            "expected": {
+              "error_code": "MISSING_INPUT",
+              "status": "uncomputable",
+              "value": null
+            },
+            "vector_id": "missing_first_input"
+          }
+        ],
+        "vector_plan_hash": "sha256:c183bdbbc80d248f508e2505dfaf346fadb60605fae2cae71ee6c8c954499e27"
+      },
+      "reviewer_kind": "ai",
+      "role_id": "deriver",
+      "subject_hash": "sha256:35fd35d6be2b15f699b0242b357e86a0646f3af4656e3270d6ba010efe5237be"
+    }
+  },
+  "schema_version": 1,
+  "tool_id": "master_ackman.owner_earnings_yield",
+  "unknowns": [
+    "semantic_equivalence_to_named_investor_method",
+    "appropriateness_of_first_declared_input",
+    "appropriateness_of_output_as_decision_signal",
+    "source_doctrine_fidelity"
+  ],
+  "vector_summary": {
+    "disagreement": 0,
+    "pass": 4,
+    "total": 4,
+    "vectors_hash": "sha256:f11081358cec1aedccefbca09e064cc02cdc9e184e7b939f1454d8dd990619ca"
+  }
+}

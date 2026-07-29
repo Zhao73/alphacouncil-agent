@@ -16,6 +16,10 @@
     ],
     "native_decision_schema": "margin_of_safety_v1",
     "optional_fact_types": [
+      "financial.leverage",
+      "financial.net_current_asset_value",
+      "financial.interest_coverage",
+      "macro.aaa_corporate_yield",
       "financial.tangible_book_value",
       "financial.normalized_earnings",
       "financial.balance_sheet_claims",
@@ -23,7 +27,9 @@
       "market.price_to_floor"
     ],
     "required_fact_types": [
-      "financial.net_current_asset_value"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.free_cash_flow_5y"
     ]
   },
   "components": {
@@ -44,8 +50,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_graham.asset_floor",
-      "master_graham.normalized_earnings"
+      "master_graham.defensive_hurdle_base",
+      "master_graham.half_normalised_earnings_yield"
     ]
   },
   "decision": {
@@ -53,7 +59,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "financial.net_current_asset_value"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.free_cash_flow_5y"
     ],
     "hard_vetoes": [
       "master_graham.no_asset_floor",

@@ -18,6 +18,8 @@ import {
 } from "../mcp/lib/personas-v3/registry.mjs";
 import { scanPersonaCorpusGaps } from "./report-persona-corpus-gaps.mjs";
 import { auditHostAdapterFreshness, validateHostCapabilities } from "./lib/host-capabilities.mjs";
+import { CANONICAL_MASTER_COUNT } from "../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../data/persona-v3-build-specs.v1.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const problems = [];
@@ -95,20 +97,20 @@ try {
     const registry = loadCompiledPersonaPacks({ buildProfile });
     const operatorCount = registry.packs.filter((pack) => pack.admission.level === "operator_lens").length;
     const toolCount = registry.packs.reduce((sum, pack) => sum + pack.components.tools.length, 0);
-    const validSoloCut = registry.packs.length === 26
-      && operatorCount === 26
-      && toolCount === 52
+    const validSoloCut = registry.packs.length === CANONICAL_MASTER_COUNT
+      && operatorCount === CANONICAL_MASTER_COUNT
+      && toolCount === PLANNED_TOOL_COUNT
       && registry.packs.every((pack) => pack.build_profile === "solo_test");
     if (validSoloCut) {
-      ok("solo-test runtime", "26 physical provisional operator_lens; 52 derived-proxy tools; 0 method_model");
+      ok("solo-test runtime", `${CANONICAL_MASTER_COUNT} physical provisional operator_lens; ${PLANNED_TOOL_COUNT} derived-proxy tools; 0 method_model`);
       notes.push("Formal PersonaPack v3 production GA is not passed; human source/formula review, signed experiments, and live four-host E2E remain absent");
     } else {
-      warn("solo-test runtime incomplete", `${registry.packs.length}/26 packs, ${operatorCount}/26 operator_lens, ${toolCount}/52 tools`);
+      warn("solo-test runtime incomplete", `${registry.packs.length}/${CANONICAL_MASTER_COUNT} packs, ${operatorCount}/${CANONICAL_MASTER_COUNT} operator_lens, ${toolCount}/${PLANNED_TOOL_COUNT} tools`);
     }
-  } else if (/^0\.9\./.test(VERSION) && report.summary.operational_or_higher !== 26) {
-    warn("0.9 v3 cutover incomplete", `${report.summary.operational_or_higher}/26 seats operational or higher`);
-  } else if (report.summary.operational_or_higher !== 26) {
-    notes.push(`PersonaPack v3 migration remains in development: ${report.summary.operational_or_higher}/26 operational or higher`);
+  } else if (/^0\.9\./.test(VERSION) && report.summary.operational_or_higher !== CANONICAL_MASTER_COUNT) {
+    warn("0.9 v3 cutover incomplete", `${report.summary.operational_or_higher}/${CANONICAL_MASTER_COUNT} seats operational or higher`);
+  } else if (report.summary.operational_or_higher !== CANONICAL_MASTER_COUNT) {
+    notes.push(`PersonaPack v3 migration remains in development: ${report.summary.operational_or_higher}/${CANONICAL_MASTER_COUNT} operational or higher`);
   }
 } catch (error) {
   warn("PersonaPack v3 corpus inventory failed", error.message.split("\n")[0]);

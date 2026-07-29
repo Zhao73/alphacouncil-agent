@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:67426c788e6b046878ebbb3785695e3d6694891b5830d20a301bd7343e852146",
-    "derivation_spec_hash": "sha256:e037f2b6a618de250e7cdd947f5fb2e54de76605fdfafc89edb9624040033fbe",
-    "derivation_spec_id": "master_aschenbrenner.compute_power_bridge.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:fa446afcdead67e04bb0ef3bd61c787e8e79eec48a45d3622f2ba5c4bf6a14dc",
+    "derivation_spec_hash": "sha256:43b5ef79576af90eaf7c6fbafe5bff2603c538ac7ba182319449e41a89f35705",
+    "derivation_spec_id": "master_aschenbrenner.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_aschenbrenner.compute_power_bridge",
+    "id": "master_aschenbrenner.market_capitalisation",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,45 +14,68 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:e8abdaf8f55dfea5addc53caaba43f7f471591318baadf7cbf4cc24b3010e58d",
+    "input_schema_hash": "sha256:105d1f555e9572e6ba2a239517bf886aa834a21c9b1b7a485c958184d2e6ddb8",
     "inputs": [
       {
-        "fact_id": "ai.compute.installed_capacity"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "ai.power.required_mw",
+    "operation": "multiply",
+    "output_id": "valuation.market_capitalisation.master_aschenbrenner",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:e12a6dbd1d6ac12a8bc327e049176a6540627f39fafdf141f6d0105551905972",
+    "output_schema_hash": "sha256:68bf9f8da4059964b96782d8641c494555e3a9489be91d3753b830ab3594780b",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_aschenbrenner.compute_power_bridge.prototype_v1"
+      "derived_proxy:master_aschenbrenner.market_capitalisation.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:6dafb86e3f177bbaf5db0a663cb33080f3720a2973cedec48bb6698a6668e9a0",
-    "derivation_spec_hash": "sha256:9d12ff44cb0683d18b0960029e0a4e4cc0e85f5f5130d9d8d2f812dce48351f9",
-    "derivation_spec_id": "master_aschenbrenner.timeline_reverse_valuation.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:9126653980212d2bfd254deddecfe2eecf60ab23e422f68f05dc66f92f2e1a98",
+    "derivation_spec_hash": "sha256:cf3d02f5e7ab3138f3d25c34fcf4a8253187de58264d2f240d5570697e589f96",
+    "derivation_spec_id": "master_aschenbrenner.price_implied_cash_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_aschenbrenner.timeline_reverse_valuation",
+    "id": "master_aschenbrenner.price_implied_cash_yield",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P5Y"
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -60,35 +83,38 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:a56fce27a51d9d861fb4c942f4728ba47dad24229f18f33bc863cc1e0fad170f",
+    "input_schema_hash": "sha256:a2b88f5cbd6f0e81fc14e37225e528aa6a3222fc74b170179a08ca1e339ddf56",
     "inputs": [
       {
-        "fact_id": "ai.compute.installed_capacity"
+        "fact_id": "financial.free_cash_flow_5y"
+      },
+      {
+        "output_id": "valuation.market_capitalisation.master_aschenbrenner"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "valuation.implied_growth",
+    "operation": "divide",
+    "output_id": "valuation.free_cash_flow_yield.master_aschenbrenner",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:97ce273559326b217e0fc81287a97d4136d021b4cb6297f7daa0ac7a470f0138",
+    "output_schema_hash": "sha256:c7d4f06e787fe7a5c7de5eb5c87f344d6a7f31c80ea5f7a7256f541f7cbcc0a2",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_aschenbrenner.timeline_reverse_valuation.prototype_v1"
+      "derived_proxy:master_aschenbrenner.price_implied_cash_yield.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

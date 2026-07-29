@@ -16,15 +16,17 @@
     ],
     "native_decision_schema": "forensic_shortability_v1",
     "optional_fact_types": [
+      "financial.interest_coverage",
       "accounting.accruals",
       "governance.related_parties",
       "accounting.audit_changes",
+      "short.borrow_cost",
       "short.borrow_availability",
       "catalyst.verifiability"
     ],
     "required_fact_types": [
       "accounting.cash_conversion",
-      "short.borrow_cost"
+      "financial.leverage"
     ]
   },
   "components": {
@@ -45,8 +47,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_forensic_short.accounting_rebuilder",
-      "master_forensic_short.borrow_catalyst"
+      "master_forensic_short.cash_conversion_gap",
+      "master_forensic_short.cash_cover_of_leverage"
     ]
   },
   "decision": {
@@ -55,7 +57,7 @@
     "confidence_calibrator": null,
     "eligibility": [
       "accounting.cash_conversion",
-      "short.borrow_cost"
+      "financial.leverage"
     ],
     "hard_vetoes": [
       "master_forensic_short.no_primary_evidence",

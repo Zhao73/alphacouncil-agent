@@ -1,58 +1,22 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:d974229c5ee51962401acaeba1c3eac6085494be27a08cf1890cd563c882c12f",
-    "derivation_spec_hash": "sha256:f3bf762b47078a2d4dcd185fe472d22ddf655ec80907c4271da872a558424ba8",
-    "derivation_spec_id": "master_forensic_short.accounting_rebuilder.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:b43ffd2984036570debce638712f9814fa3183ee6cd0d8c7a5b7003266bddf1a",
+    "derivation_spec_hash": "sha256:3fa5877481bf9011bc64df1c913d5a4df961f7e8ec0f516a27c0607ab8377797",
+    "derivation_spec_id": "master_forensic_short.cash_conversion_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_forensic_short.accounting_rebuilder",
+    "id": "master_forensic_short.cash_conversion_gap",
     "input_contracts": [
       {
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "multiple",
         "value_kind": "ratio"
-      }
-    ],
-    "input_schema_hash": "sha256:c6a616710de5f59b61c4e8b5bd1961f3be6ead4017681e8176b8ccda153c4d9f",
-    "inputs": [
-      {
-        "fact_id": "accounting.cash_conversion"
-      }
-    ],
-    "intended_use": "local_test_only",
-    "kind": "transform",
-    "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "accounting.cash_conversion",
-    "output_period": {
-      "alignment": "as_of",
-      "basis": "instant",
-      "window": null
-    },
-    "output_schema_hash": "sha256:cb0667aaa215e5d1b316d78f4b1b1b48b1c8a553c97a37119fa3c698d7db1e48",
-    "production_eligible": false,
-    "review_status": "not_human_reviewed",
-    "schema_version": 1,
-    "source_ids": [
-      "proxy:df6d07b15dbc9546c"
-    ],
-    "unit": "multiple",
-    "value_kind": "ratio",
-    "version": "0.1.0"
-  },
-  {
-    "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:41c563b6ab37f5f691c67ca99c9a88622734ff891206d51eb0d02985ddedce0b",
-    "derivation_spec_hash": "sha256:5500e93ba960c4d2f1e3a3152df8184b463cd75a5a89be41627e0826a811c7ac",
-    "derivation_spec_id": "master_forensic_short.borrow_catalyst.prototype_v1.derived_proxy_v1",
-    "dsl_version": "1.1",
-    "id": "master_forensic_short.borrow_catalyst",
-    "input_contracts": [
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -64,31 +28,93 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:b4c24a2e9ed3aeed36f128ce61958f11ff2bf9fe6ebe6d4550318d12699fb47c",
+    "input_schema_hash": "sha256:0a3d32176351b8f2248ea2c96833c34a21853a5b95bed6dac1bd88b20b327bab",
     "inputs": [
       {
-        "fact_id": "short.borrow_cost"
+        "fact_id": "accounting.cash_conversion"
+      },
+      {
+        "literal": 1
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "short.borrow_cost",
+    "operation": "subtract",
+    "output_id": "accounting.cash_conversion_gap.master_forensic_short",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:98e7730a73e3b8b2017dfce406ee1a47f7d2656df49f8a9edfdb7598a32223ad",
+    "output_schema_hash": "sha256:103121cc5a9c5e3e22af3f09a848d8dde4195e5a1325c2a71df1782d09b2a097",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:df6d07b15dbc9546c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.2.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:c5de870cf76e402bdfbf72a6056480baff5d22aa39fcf7fadc6215bd0c5ef5ba",
+    "derivation_spec_hash": "sha256:d0b8c55889efe1bc8c21f223c89f744f990efe3977434d02454888f98c5098e6",
+    "derivation_spec_id": "master_forensic_short.cash_cover_of_leverage.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_forensic_short.cash_cover_of_leverage",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P5Y"
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      }
+    ],
+    "input_schema_hash": "sha256:83fbe4c37df9a913f120c8694edd84e192233c26086e8789cbd7375ae1a74a41",
+    "inputs": [
+      {
+        "fact_id": "accounting.cash_conversion"
+      },
+      {
+        "fact_id": "financial.leverage"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "recomputation",
+    "on_missing": "fail",
+    "operation": "divide",
+    "output_id": "accounting.cash_conversion_per_unit_leverage.master_forensic_short",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:328736932f1f034c9a85a842b254ec71947c7781bed84353a46abcce8c1067d4",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "proxy:df6d07b15dbc9546c"
+    ],
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

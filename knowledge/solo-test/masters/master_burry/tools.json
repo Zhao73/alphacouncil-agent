@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:6cdefe5b398a0d3f07ecde625c54b3c829d19ad7a564de8dc7339ffbc09ac1fe",
-    "derivation_spec_hash": "sha256:06eb2b7aa50fd446fcead03ecd9e3495f779f9e6f6f9b50250667833ed6bf950",
-    "derivation_spec_id": "master_burry.capital_structure_reader.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:c6fba2c70be2047e8b701e131c2d37f18e63b521b9f0368cefbe66c7a9f25c9e",
+    "derivation_spec_hash": "sha256:95f5b674ee39668a466706430ca6ff2e55d3e81fb91afb7058730ed9d05a830d",
+    "derivation_spec_id": "master_burry.net_current_asset_value_per_share.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_burry.capital_structure_reader",
+    "id": "master_burry.net_current_asset_value_per_share",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:1691149e6b849b2419f0d2561b00b11c3822e957272e5a11fd6ae6552379c90f",
+    "input_schema_hash": "sha256:f423015ef79d3415ef1146da73b3cd62cf5e3495956943007c32aa0b51946091",
     "inputs": [
       {
-        "fact_id": "capital_structure.seniority"
+        "fact_id": "financial.net_current_asset_value"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "capital_structure.seniority",
+    "operation": "divide",
+    "output_id": "valuation.net_current_asset_value_per_share.master_burry",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:a6f9bba672b6528535d5f3ca1b89edc1700d55a519e1a7ecb622349745ba8f3f",
+    "output_schema_hash": "sha256:eaaede6eb91aeabbd91d6e5b8eca32ab2fd929dc1a1121aa96b38c5f705e8b56",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:671173c81294794a1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:8523e508ca7228a643a4d2d190a0e2e638b9430c8d799f49939b400c46b3cf36",
-    "derivation_spec_hash": "sha256:c48f91bb43dde9875ad2b6f5a55ac287c0b0782b0d41466ec50b17d5f168fe90",
-    "derivation_spec_id": "master_burry.mispricing_carry.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:42dbe723e4ddde94ff483a4ab412af0ffa2d3fadb0b0a35c64457ada37242757",
+    "derivation_spec_hash": "sha256:c8832a0bc3de2baffb20e3014cd361eb5bfe5756320ba3c7e3ffc9b57e61df9d",
+    "derivation_spec_id": "master_burry.net_current_asset_surplus_per_share.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_burry.mispricing_carry",
+    "id": "master_burry.net_current_asset_surplus_per_share",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:7777d20d14f9fc076c707450424b59cad7ad6891f9f3fd759d834c8997844dfa",
+    "input_schema_hash": "sha256:ba9e50f89613a807011af1a5f4631e989b1f1cb2b0e2b1b7f58686e445c83821",
     "inputs": [
       {
-        "fact_id": "mispricing.mechanism"
+        "output_id": "valuation.net_current_asset_value_per_share.master_burry"
+      },
+      {
+        "fact_id": "market.price"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "mispricing.mechanism",
+    "operation": "subtract",
+    "output_id": "valuation.net_current_asset_surplus_per_share.master_burry",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:793d438dec6616db00a364707b3377453cbb511112e75a0fba0cb128e13794a3",
+    "output_schema_hash": "sha256:01e9662d4bf5586293960f40410dfc542cdba69e8b984736fd1cb14f5bbb6ca0",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:671173c81294794a1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   }
 ]

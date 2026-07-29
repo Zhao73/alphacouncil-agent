@@ -2,7 +2,39 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "conditions": [
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "valuation.downside_floor"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "financial.leverage"
+              }
+            }
+          ],
+          "op": "all"
+        },
+        "condition_id": "master_taleb.downside_is_boundable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_trade"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_trade"
+        },
+        "source_ids": [
+          "proxy:678e17ab8610dd057"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +42,100 @@
       "native_state": "provisional_no_trade"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "risk.debt_service_cushion.master_taleb"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_no_trade"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_trade"
+        }
+      },
+      "source_ids": [
+        "proxy:678e17ab8610dd057"
+      ],
+      "veto_id": "master_taleb.absorbing_barrier"
+    },
+    {
+      "condition": {
+        "left": {
+          "fact_id": "valuation.downside_floor"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_no_trade"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_trade"
+        }
+      },
+      "source_ids": [
+        "proxy:678e17ab8610dd057"
+      ],
+      "veto_id": "master_taleb.unbounded_downside"
+    },
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.leverage"
+        },
+        "op": "gt",
+        "right": {
+          "literal": 1
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_no_trade"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_trade"
+        }
+      },
+      "source_ids": [
+        "proxy:678e17ab8610dd057"
+      ],
+      "veto_id": "master_taleb.leverage_is_the_fragility"
+    }
+  ],
   "native_decision_schema": "convexity_ruin_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "risk.ruin_possible"
+        "output_id": "risk.debt_service_cushion.master_taleb"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "options.realized_volatility"
+        "output_id": "options.normalised_skew.master_taleb"
       }
     }
   ],
@@ -52,7 +163,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_convex_opportunity"
       },
       "min_ratio": 1
@@ -69,16 +180,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "risk.ruin_possible"
+            "output_id": "risk.debt_service_cushion.master_taleb"
           },
-          "op": "gt",
+          "op": "gte",
           "right": {
-            "literal": 0
+            "literal": 2
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "taleb_survives_its_own_fixed_charges",
         "source_ids": [
           "proxy:678e17ab8610dd057"
         ]
@@ -86,16 +197,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "options.realized_volatility"
+            "output_id": "options.normalised_skew.master_taleb"
           },
-          "op": "gt",
+          "op": "lte",
           "right": {
-            "literal": 0
+            "literal": 0.05
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "taleb_tail_not_already_bid",
         "source_ids": [
           "proxy:678e17ab8610dd057"
         ]

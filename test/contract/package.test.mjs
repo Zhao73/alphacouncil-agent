@@ -71,7 +71,7 @@ test("prepublishOnly runs the checks so a broken package cannot be published", (
   assert.match(pkg.scripts["test:package"], /check-packaged-host-parity\.mjs/);
 });
 
-test("the non-GA 0.9.4 preview cannot silently replace npm latest", () => {
+test("the non-GA 0.9.5 preview cannot silently replace npm latest", () => {
   assert.deepEqual(pkg.publishConfig, { access: "public", tag: "next" });
 });
 

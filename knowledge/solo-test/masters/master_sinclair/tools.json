@@ -1,12 +1,22 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:f8a2ee7c530df23accb2fb0e32b3363ff4c68bc7007067f30d1e1df8feb1dedd",
-    "derivation_spec_hash": "sha256:558efafa60f9b72c2ea79aeffb32743b48230dd5924599b046456e0e963ddfc2",
-    "derivation_spec_id": "master_sinclair.realized_vol_forecast.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:bf22afceb8cd2cd9840b9fea051c44223ee1b573443dda4d826de33e6452e501",
+    "derivation_spec_hash": "sha256:645d6091c32770f85e96adb310e16629f337efa27eec16a9840abaf655a129fb",
+    "derivation_spec_id": "master_sinclair.round_trip_cost.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_sinclair.realized_vol_forecast",
+    "id": "master_sinclair.round_trip_cost",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_of_mid",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -18,40 +28,43 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:977559b77d8fa79a8194bb719fcd69fc43d0b6557a56455e684c407288771cfe",
+    "input_schema_hash": "sha256:9fac954824ec28d6dbb97952cbea141bfd880fa4b42617e86ee96af19bb178bd",
     "inputs": [
       {
-        "fact_id": "options.realized_volatility_forecast"
+        "fact_id": "execution.bid_ask"
+      },
+      {
+        "literal": 2
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "options.realized_volatility_forecast",
+    "operation": "multiply",
+    "output_id": "execution.round_trip_cost.master_sinclair",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:16c9f0263e905904f2de3860f916faacf37bf6784b67f8ce4b3c9dfbf9412267",
+    "output_schema_hash": "sha256:6db53424fe5526a9c817c351ce13aef6cdf71992985108fdc26bbf20604a0774",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:514255b4bf1696d6c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal_of_mid",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:884472efc8f7084a194d8ccd27e6ba1f3ad8614971345710cd770726efe9a298",
-    "derivation_spec_hash": "sha256:88cc60fd1c935e6af428349e3bfcff3fa10a290c39dfcce8c60484e58bcb28e4",
-    "derivation_spec_id": "master_sinclair.net_edge_sizer.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:971a22cf35c7762c3629d47043ea56edfcff60cbeb9cec4972a1a43813e64184",
+    "derivation_spec_hash": "sha256:acf25eee17029d2a8cc91703827343290ee84c4d38436b977c1d4f60311f19ac",
+    "derivation_spec_id": "master_sinclair.volatility_per_unit_of_width.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_sinclair.net_edge_sizer",
+    "id": "master_sinclair.volatility_per_unit_of_width",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal_annualized_volatility",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_of_mid",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:9756176392b8fd7daf941debd9690edd25b18fdaffcda20208d2df8011f0b56a",
+    "input_schema_hash": "sha256:c7a6e0bd84df5307084957ba17fc82ba2262f7eddc482255423de193b0d57609",
     "inputs": [
       {
-        "fact_id": "options.realized_volatility_forecast"
+        "fact_id": "options.implied_volatility"
+      },
+      {
+        "fact_id": "execution.bid_ask"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "options.volatility_risk_premium",
+    "operation": "divide",
+    "output_id": "options.volatility_per_unit_of_width.master_sinclair",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:89648263dde3aa5676c4dfc11fcf8e6309f2ffd61d13e30bd9995ec77d07139c",
+    "output_schema_hash": "sha256:a7fa8065e62c920a11989e093b070b6ed38eb8de81655e0ce0faa48b288dd1c3",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:514255b4bf1696d6c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

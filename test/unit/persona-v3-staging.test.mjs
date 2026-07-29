@@ -69,7 +69,7 @@ function sourceAnchor(personaId, status = "pending") {
   };
 }
 
-test("the staging roster is an explicit exact match for the 26 canonical master personas", () => {
+test("the staging roster is an explicit exact match for the canonical master personas", () => {
   const blueprints = canonicalMasterBlueprints();
   assert.equal(CANONICAL_MASTER_IDS.length, CANONICAL_MASTER_COUNT);
   assert.equal(blueprints.length, CANONICAL_MASTER_COUNT);
@@ -77,11 +77,12 @@ test("the staging roster is an explicit exact match for the 26 canonical master 
   assert.equal(new Set(CANONICAL_MASTER_IDS).size, CANONICAL_MASTER_COUNT);
 });
 
-test("factory creates 26 non-runnable scaffolds and is idempotent without overwriting", (t) => {
+test("factory creates the non-runnable scaffolds and is idempotent without overwriting", (t) => {
   const paths = workspace(t);
   const first = scaffoldPersonaV3Staging(stagingOptions(paths));
-  assert.equal(first.canonical_master_count, 26);
-  assert.equal(first.created.length, 55); // index + two templates + 26*(scaffold + empty queue)
+  assert.equal(first.canonical_master_count, CANONICAL_MASTER_COUNT);
+  // index + two templates + one scaffold and one empty queue per seat.
+  assert.equal(first.created.length, 3 + CANONICAL_MASTER_COUNT * 2);
   assert.equal(first.existing.length, 0);
 
   for (const id of CANONICAL_MASTER_IDS) {
@@ -98,14 +99,14 @@ test("factory creates 26 non-runnable scaffolds and is idempotent without overwr
 
   const second = scaffoldPersonaV3Staging(stagingOptions(paths));
   assert.equal(second.created.length, 0);
-  assert.equal(second.existing.length, 55);
+  assert.equal(second.existing.length, 3 + CANONICAL_MASTER_COUNT * 2);
 
   const report = inspectPersonaV3Staging(stagingOptions(paths));
   assert.equal(report.invalid_count, 0);
   assert.equal(report.unsafe_artifact_count, 0);
   assert.equal(report.production_eligible_count, 0);
   assert.equal(report.physical_v3_pack_count, 0);
-  assert.deepEqual(report.phases, { scaffolded: 26 });
+  assert.deepEqual(report.phases, { scaffolded: CANONICAL_MASTER_COUNT });
 
   // Staging is a sibling tree. The production loader sees no v3 pack from it.
   const production = loadV3Packs({ dir: paths.productionRoot });

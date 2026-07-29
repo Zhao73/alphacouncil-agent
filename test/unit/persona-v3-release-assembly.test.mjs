@@ -47,6 +47,8 @@ import {
   approvedFormulaSpec,
   signedFormulaApprovalBundle,
 } from "../helpers/persona-v3-formula-review-evidence.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
 const FORMULA_ENTRIES = planPersonaV3FormulaPipeline().inventory.entries;
 
@@ -142,31 +144,31 @@ function options(paths, releaseId = "0.9.0-rc.1") {
   };
 }
 
-test("check-only planning validates exactly 26 physical packs without creating a release root", (t) => {
+test("check-only planning validates one physical pack per canonical seat without creating a release root", (t) => {
   const paths = workspace(t);
   const result = planPersonaRelease(options(paths));
   assert.equal(result.mode, "check_only");
-  assert.equal(result.canonical_master_count, 26);
+  assert.equal(result.canonical_master_count, CANONICAL_MASTER_COUNT);
   assert.deepEqual(result.packs.map((pack) => pack.persona_id), [...CANONICAL_MASTER_IDS]);
   assert.ok(result.packs.every((pack) => pack.admission.level === "operational"));
   assert.ok(result.packs.every((pack) => Object.keys(pack.component_hashes).length === 14));
   assert.match(result.release_manifest_hash, /^sha256:[a-f0-9]{64}$/u);
-  assert.equal(result.release_manifest.formula_review_evidence.planned_tool_count, 52);
-  assert.equal(result.formula_review_evidence.verified_bindings.length, 52);
+  assert.equal(result.release_manifest.formula_review_evidence.planned_tool_count, PLANNED_TOOL_COUNT);
+  assert.equal(result.formula_review_evidence.verified_bindings.length, PLANNED_TOOL_COUNT);
   assert.equal(existsSync(paths.releaseRoot), false, "default planning must not mutate the release store");
 });
 
 test("source roster rejects 25, 27, duplicate and non-canonical seats", (t) => {
   const paths = workspace(t);
   rmSync(join(paths.sourceRoot, CANONICAL_MASTER_IDS.at(-1)), { recursive: true });
-  assert.throws(() => planPersonaRelease(options(paths)), /exactly 26 unique canonical masters/u);
+  assert.throws(() => planPersonaRelease(options(paths)), new RegExp(`exactly ${CANONICAL_MASTER_COUNT} unique canonical masters`, "u"));
 
   createPack(paths.sourceRoot, CANONICAL_MASTER_IDS.at(-1));
   createPack(paths.sourceRoot, "master_not_canonical");
-  assert.throws(() => planPersonaRelease(options(paths)), /exactly 26 unique canonical masters/u);
+  assert.throws(() => planPersonaRelease(options(paths)), new RegExp(`exactly ${CANONICAL_MASTER_COUNT} unique canonical masters`, "u"));
   assert.throws(
     () => validateCanonicalReleaseEntries([...CANONICAL_MASTER_IDS.slice(0, 25), CANONICAL_MASTER_IDS[0]]),
-    /exactly 26 unique canonical masters/u,
+    new RegExp(`exactly ${CANONICAL_MASTER_COUNT} unique canonical masters`, "u"),
   );
 });
 
@@ -290,7 +292,7 @@ test("write assembly fsyncs and commits once by same-filesystem atomic rename", 
   assert.equal(result.mode, "write");
   assert.equal(result.commit_strategy, "same_filesystem_fsync_atomic_rename");
   assert.equal(result.status, "verified");
-  assert.equal(result.canonical_master_count, 26);
+  assert.equal(result.canonical_master_count, CANONICAL_MASTER_COUNT);
   assert.equal(existsSync(join(paths.releaseRoot, "0.9.0-rc.1", "release-manifest.json")), true);
   assert.equal(existsSync(join(paths.releaseRoot, ".release.lock")), false);
   assert.throws(() => assemblePersonaRelease(options(paths)), /immutable and already exists/u);

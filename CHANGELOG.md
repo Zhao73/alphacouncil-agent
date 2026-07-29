@@ -2,6 +2,103 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.0] — 2026-07-29
+
+The release where the method seats stop abstaining on everything. Full notes in
+`docs/releases/v1.0.0.md`.
+
+All twenty-seven seats now run their own arithmetic and their own thresholds. Measured on live
+grounding across eight symbols, twenty-six of twenty-seven reach a stance somewhere with no
+contract failures. `master_jhunjhunwala` declines everywhere by construction: its first filter
+is the promoter shareholding record, which US filings do not contain, and the seat names that
+gap rather than substituting for it.
+
+### Changed
+
+- `prepublishOnly` verifies the package rather than GA readiness. It ran `npm run check`, which
+  includes reports that exit non-zero until the corpus has human-reviewed method models and a
+  live four-host E2E run — a state this build declares it is not in and cannot reach without
+  work outside the repository. Gating `npm publish` on it meant a self-declared non-GA preview
+  could never ship at all. GA readiness keeps its own gate in `release:check`, which is
+  unchanged and still fails closed.
+
+### Added
+
+- Four keyless feeds supplying the facts the seats actually ask for: dated FRED series with
+  history (net liquidity, its impulse over a stated window, the growth/inflation quadrant),
+  company fundamentals derived from XBRL (owner earnings, NCAV, downside values, growth,
+  incremental return on capital, leverage), published daily fund holdings from four issuers,
+  and index aggregates (valuation, breadth, put/call, volatility).
+- Look-through aggregation, so an operating-company method can read a basket. Absolute-currency
+  facts have no aggregation path at all, and every aggregate carries the coverage weight it was
+  computed over.
+- Authored method logic. A seat may carry its real formulas and a real decision policy —
+  eligibility, hard vetoes, scoring — instead of the generated identity proxy. A seat that is
+  not authored is unchanged, so the set fills in one seat at a time.
+- A reader-facing voice: five first-person fields per seat plus a `position_intent` that
+  narrows the frozen stance and is rejected server-side if it does not.
+
+### Fixed
+
+- Classifier failed open: with no exchange metadata, common fund tickers were asserted to be
+  operating companies; fund registrant SIC codes were read as evidence of an operating company;
+  a fund named after an index was routed as a cash index, disabling its option chain.
+- Japanese and Korean reports could never publish — a relabelled commentary section legally
+  contains a section alias and won heading assignment, so the per-seat gate failed against PM
+  prose permanently. The gate now anchors on the system section's content marker.
+- Worker statements were interpolated raw into a system-owned section, so a statement
+  containing a heading captured the section the quality gate validates.
+- The status snapshot and the blocking gates disagreed about a seat with no status entry, so a
+  recovered run reported complete while being hard-rejected.
+- Declined seats no longer schedule an explanation worker; the stance is frozen and the record
+  is already readable, so the worker cost one sequential model turn per seat and changed nothing.
+- Fundamentals re-registered filing records under the consuming metric's period, silently
+  dropping every fact that shared a record with the mechanical screen.
+- The look-through aggregator was handed a nested object where it reads one number per ticker,
+  so every aggregate refused while the constituents sat resolved in memory.
+- `not_applicable` strings and the fund/index research contract were English-only inside
+  localized reports.
+
+### Assurance boundary
+
+Unchanged. Build channel `solo_test`; admission `operator_lens`; `production_eligible=false`.
+Authored formulas are AI-written and unreviewed, and record that in place of the
+"mechanical identity proxy" limitation, which would otherwise be false. No human has reviewed
+either kind. Method-seat outputs remain project-derived provisional lenses, not quotations or
+current views of the named people.
+
+## [0.9.5] — 2026-07-28
+
+### Fixed
+
+- Preserved Yahoo instrument metadata and classified operating companies, ETFs, mutual
+  funds, cash indices and other market instruments before choosing a research route.
+  SEC ticker/registrant names provide a fallback when quote metadata is unavailable.
+- Stopped ETF/fund/index runs from invoking operating-company Company Facts or structured
+  issuer financials. Those routes are now explicit `not_applicable` records rather than
+  false research failures.
+- Added role-specific ETF/index assignments for all eight evidence seats and a system-owned
+  fund/index report section covering methodology, dated holdings/weights, concentration,
+  fees/rules, liquidity/tracking/flows and disciplined aggregate valuation.
+- Added readable deterministic statements for every completed or `out_of_scope` physical
+  v3 seat. The full handoff ends with the exact selected-seat count and one statement per
+  stable ID; an `all` selection therefore ends with all 26 method-seat statements.
+- Returned the saved handoff inline from visible portfolio-manager completion and replay
+  (`inline_user_response_v1`) so hosts do not replace it with an ACK-only recap.
+- Strengthened `report_quality` from a Master Bench heading check to per-selected-seat
+  readable and rendered statement coverage. Missing text or IDs now force
+  `needs_revision`.
+- Decoupled runtime package version from the unchanged PersonaPack snapshot. `0.9.5` keeps
+  `persona_pack_version=0.9.4`, preserving existing pack hashes and simulation evidence
+  instead of rerunning method validation for a routing-only release.
+
+### Acceptance boundary
+
+- Still `solo_test`, non-GA, `production_eligible=false`, `method_model_eligible=false`,
+  with 26 provisional `operator_lens` packs and zero approved method models.
+- This source change does not publish npm or mutate dist-tags. See
+  `docs/releases/v0.9.5.md` for the full routing and delivery contract.
+
 ## [0.9.4] — 2026-07-28
 
 ### Fixed

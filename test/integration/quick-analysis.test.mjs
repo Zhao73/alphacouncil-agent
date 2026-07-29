@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { QUICK_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer, structured } from "../helpers/rpc-client.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 function reportBody() {
   const work = QUICK_TASKS.map((task) => `- ${task}: completed a sourced quick-read packet and recorded confidence plus open questions.`).join("\n");
@@ -148,7 +149,7 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
     assert.equal(opened.council_mode, "quick");
     assert.equal(opened.maximum, 4);
     assert.deepEqual(opened.actions, ["explicit_selection"]);
-    assert.match(openedResponse.result.content[0].text, /26 in catalog; choose up to 4/);
+    assert.match(openedResponse.result.content[0].text, new RegExp(`${CANONICAL_MASTER_COUNT} in catalog; choose up to 4`));
     assert.match(openedResponse.result.content[0].text, /Selecting all is not supported/);
 
     const tooMany = await server.callTool("confirm_master_selection", {

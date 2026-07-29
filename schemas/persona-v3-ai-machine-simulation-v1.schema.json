@@ -37,7 +37,7 @@
             "protocol_binding": { "type": "object" },
             "fixture_bindings": { "type": "array", "minItems": 2 },
             "runtime_bindings": { "type": "array", "minItems": 3 },
-            "seat_inputs": { "type": "array", "minItems": 26, "maxItems": 26 },
+            "seat_inputs": { "type": "array", "minItems": 27, "maxItems": 27 },
             "input_hash": { "$ref": "#/$defs/hash" }
           }
         }

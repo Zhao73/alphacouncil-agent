@@ -16,6 +16,8 @@
     ],
     "native_decision_schema": "out_of_sample_signal_v1",
     "optional_fact_types": [
+      "options.skew_25d",
+      "quant.sample_definition",
       "quant.signal_values",
       "quant.out_of_sample_returns",
       "quant.multiple_test_count",
@@ -24,7 +26,8 @@
       "risk.drawdown"
     ],
     "required_fact_types": [
-      "quant.sample_definition"
+      "market.change_pct",
+      "options.implied_volatility"
     ]
   },
   "components": {
@@ -45,8 +48,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_simons.leakage_audit",
-      "master_simons.oos_cost_test"
+      "master_simons.absolute_session_move",
+      "master_simons.session_move_over_implied"
     ]
   },
   "decision": {
@@ -54,7 +57,8 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "quant.sample_definition"
+      "market.change_pct",
+      "options.implied_volatility"
     ],
     "hard_vetoes": [
       "master_simons.lookahead",

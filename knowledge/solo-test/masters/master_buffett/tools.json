@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:781ec61b1bc0e350a48743c34adca2d24761e66dea143bea40cc9c5918bb5503",
-    "derivation_spec_hash": "sha256:176668e0b04779a82267e4098ff9d2c6ac61c2a3870fd360b426e29bd9302a5a",
-    "derivation_spec_id": "master_buffett.owner_earnings_rebuilder.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:81f901ddcf0074860078513ebddb1e97e4490c4ab0e2c81d38cb05e3410789c2",
+    "derivation_spec_hash": "sha256:e2b7d9707d088228b5783a421efb0c2150551f8162409024dfcbbce4d4ff3e99",
+    "derivation_spec_id": "master_buffett.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_buffett.owner_earnings_rebuilder",
+    "id": "master_buffett.market_capitalisation",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,45 +14,68 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:f4b8e10fc113ebfccf99899d9fe73e77c25f4f23069a0ec09b7dbe93d826ff21",
+    "input_schema_hash": "sha256:d7fc602e53fe450884a1aa70a5f83037e071efec366688da75cbeb20d8031a4d",
     "inputs": [
       {
-        "fact_id": "financial.owner_earnings"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "financial.owner_earnings",
+    "operation": "multiply",
+    "output_id": "valuation.market_capitalisation.master_buffett",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:2d2c3c2b4462c741d08acbd351f5172f195574c785ad3eec88999dccd5cf3fb0",
+    "output_schema_hash": "sha256:6cb300c674150b38fb450e76414f2df86cf6cab7c6820ea9b69f33d112054211",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:0098985e34825996c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:67a62f019ec4312e86463e9d1858db99522c65611483c14eab284020249b09ca",
-    "derivation_spec_hash": "sha256:2847885226f0cbf39c4193b18dd17f2ba31fd407967d5a9d6fe7f8939df33421",
-    "derivation_spec_id": "master_buffett.incremental_returns.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:7582e3511648d170d5286bbb0e0585507d67e340eefa0aa8771a32d4a221f765",
+    "derivation_spec_hash": "sha256:bf9af0c7a485960d9fbc7927514c3e5c3c908e4f2236374af71081abcb43c596",
+    "derivation_spec_id": "master_buffett.owner_earnings_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_buffett.incremental_returns",
+    "id": "master_buffett.owner_earnings_yield",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -60,35 +83,38 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:e1d9e623ff7ad9a354ee28e0c24697aa8a3701cca837af59bc401fa3255f6727",
+    "input_schema_hash": "sha256:6f8d9ce3c1d15311561e0a0069c80496ce63d07b5f7d4a2f61cba6dcb9900d3b",
     "inputs": [
       {
         "fact_id": "financial.owner_earnings"
+      },
+      {
+        "output_id": "valuation.market_capitalisation.master_buffett"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "financial.incremental_return_on_capital",
+    "operation": "divide",
+    "output_id": "valuation.owner_earnings_yield.master_buffett",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c181cfb5bbec7e26fcdd484415f827b1194a161ef406ab2c17cd4dca9e9e3744",
+    "output_schema_hash": "sha256:6e418b8743a1cf8aa537a39edaa2858abb71303533f5de0a717f6af8d2bc53c7",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:0098985e34825996c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

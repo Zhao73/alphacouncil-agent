@@ -1,7 +1,7 @@
 {
   "name": "alphacouncil-agent",
-  "version": "0.9.4",
-  "description": "Host-visible or background public-equity research workflow with shared evidence packets.",
+  "version": "1.0.0",
+  "description": "Host-visible or background company, ETF and index research with shared evidence packets.",
   "author": {
     "name": "Zhao73"
   },
@@ -11,8 +11,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "AlphaCouncil Agent",
-    "shortDescription": "Run visible or background equity research workflows.",
-    "longDescription": "AlphaCouncil Agent supports host-orchestrated visible Codex analyst threads for public-equity research, plus background MCP workers for saved evidence packets, filings, news, management commentary, valuation, debate, and portfolio decisions.",
+    "shortDescription": "Run company, ETF and index research councils.",
+    "longDescription": "AlphaCouncil Agent supports host-orchestrated visible Codex threads and background MCP workers for operating companies, ETF holdings look-through and aggregate index research, with saved evidence packets, filings, news, valuation, method seats, debate and portfolio decisions.",
     "developerName": "Zhao73",
     "category": "Finance",
     "capabilities": [

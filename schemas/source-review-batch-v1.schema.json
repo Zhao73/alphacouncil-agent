@@ -12,13 +12,13 @@
   "properties": {
     "schema_version": { "const": 1 },
     "artifact_kind": { "const": "persona_v3_source_review_batch" },
-    "canonical_master_count": { "const": 26 },
+    "canonical_master_count": { "const": 27 },
     "reviewer_instructions": {
       "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }
     },
     "progress": { "$ref": "#/$defs/progress" },
     "personas": {
-      "type": "array", "minItems": 26, "maxItems": 26,
+      "type": "array", "minItems": 27, "maxItems": 27,
       "items": { "$ref": "#/$defs/persona" }
     },
     "generated_at": { "type": "string", "format": "date-time" },
@@ -31,23 +31,23 @@
       "required": [
         "seat_count", "seats_with_raw_acquisition", "raw_acquisition_count",
         "proposal_pending_count", "prepared_source_count", "trusted_quorum_source_count",
-        "invalid_seat_count", "all_26_seats_acquired", "all_candidates_prepared",
+        "invalid_seat_count", "all_seats_acquired", "all_candidates_prepared",
         "all_prepared_sources_have_two_distinct_trusted_principals",
-        "all_26_seats_have_a_two_principal_quorum_source", "production_write_count"
+        "all_seats_have_a_two_principal_quorum_source", "production_write_count"
       ],
       "additionalProperties": false,
       "properties": {
-        "seat_count": { "const": 26 },
-        "seats_with_raw_acquisition": { "type": "integer", "minimum": 0, "maximum": 26 },
+        "seat_count": { "const": 27 },
+        "seats_with_raw_acquisition": { "type": "integer", "minimum": 0, "maximum": 27 },
         "raw_acquisition_count": { "type": "integer", "minimum": 0 },
         "proposal_pending_count": { "type": "integer", "minimum": 0 },
         "prepared_source_count": { "type": "integer", "minimum": 0 },
         "trusted_quorum_source_count": { "type": "integer", "minimum": 0 },
-        "invalid_seat_count": { "type": "integer", "minimum": 0, "maximum": 26 },
-        "all_26_seats_acquired": { "type": "boolean" },
+        "invalid_seat_count": { "type": "integer", "minimum": 0, "maximum": 27 },
+        "all_seats_acquired": { "type": "boolean" },
         "all_candidates_prepared": { "type": "boolean" },
         "all_prepared_sources_have_two_distinct_trusted_principals": { "type": "boolean" },
-        "all_26_seats_have_a_two_principal_quorum_source": { "type": "boolean" },
+        "all_seats_have_a_two_principal_quorum_source": { "type": "boolean" },
         "production_write_count": { "const": 0 }
       }
     },

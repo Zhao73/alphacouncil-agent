@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { __test__ } from "../../mcp/server.mjs";
 import { repoFile } from "../helpers/paths.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(repoFile(rel), "utf8"));
 
@@ -22,12 +23,13 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the 0.9.4 preview stays non-GA across all 26 physical packs", () => {
+test("the 1.0.0 runtime keeps the reviewed 0.9.4 PersonaPack snapshot non-GA", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "0.9.4");
+  assert.equal(expected, "1.0.0");
+  assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "next");
   assert.equal(profile.channel, "solo_test");
   assert.equal(profile.production_eligible, false);
@@ -39,11 +41,11 @@ test("the 0.9.4 preview stays non-GA across all 26 physical packs", () => {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-  assert.equal(personaIds.length, 26);
+  assert.equal(personaIds.length, CANONICAL_MASTER_COUNT);
   for (const personaId of personaIds) {
     assert.equal(
       readJson(`knowledge/solo-test/masters/${personaId}/manifest.json`).pack_version,
-      expected,
+      profile.persona_pack_version,
       `${personaId} pack version drifted from package.json`,
     );
   }

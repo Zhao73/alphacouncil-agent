@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:912b5510a9e6278ac031deeef36fe082b5bd016b611e13518b99417863521220",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.free_cash_flow_5y"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "duration",
+            "window": "P5Y"
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "output_id": "valuation.market_capitalisation.master_cathie_wood"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "divide",
+      "output": {
+        "output_id": "valuation.free_cash_flow_yield.master_cathie_wood",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_cathie_wood",
+    "prototype_content_hash": "sha256:667009a14aa1f7dbdb4baa5eec75cc0c1a627792933f216186bc2aa250c8473d",
+    "prototype_id": "master_cathie_wood.current_cash_yield.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_cathie_wood.current_cash_yield"
+  },
+  "derivation_spec_hash": "sha256:60c95955604fde2ba596e5a34b9ab6857835ebfc5cacdc02dfd23b8af954a26f",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

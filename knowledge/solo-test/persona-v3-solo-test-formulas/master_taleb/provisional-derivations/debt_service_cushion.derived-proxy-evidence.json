@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:5a61cfac384dcd48891359898804838362c7f9069e70a0d9576c1dc1bd2010a2",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_taleb.debt_service_cushion.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "financial.interest_coverage"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "duration",
+            "window": "ANY"
+          },
+          "unit": "multiple",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "literal": 1
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "risk.debt_service_cushion.master_taleb",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_taleb",
+    "prototype_content_hash": "sha256:351fc55882ebd97d5f327375f8b9b61b7fc910c519a8d34f86e0384f35a2dc80",
+    "prototype_id": "master_taleb.debt_service_cushion.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_taleb.debt_service_cushion"
+  },
+  "derivation_spec_hash": "sha256:5b78e79b939648a637fbf773b55890a54eadf081fe1c22c36935f296ce103744",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

@@ -31,7 +31,7 @@
       "master_druckenmiller",
       "master_buffett"
     ],
-    "canonical_26_master_ids": [
+    "canonical_master_ids": [
       "master_aschenbrenner",
       "master_buffett",
       "master_graham",
@@ -57,7 +57,8 @@
       "master_damodaran",
       "master_taleb",
       "master_natenberg",
-      "master_sinclair"
+      "master_sinclair",
+      "master_bogle"
     ]
   },
   "registration": {
@@ -289,7 +290,8 @@
         "master_damodaran",
         "master_taleb",
         "master_natenberg",
-        "master_sinclair"
+        "master_sinclair",
+        "master_bogle"
       ],
       "verifier_ids": [],
       "base_arm_ids": ["B"],
@@ -380,7 +382,8 @@
         "master_damodaran",
         "master_taleb",
         "master_natenberg",
-        "master_sinclair"
+        "master_sinclair",
+        "master_bogle"
       ],
       "verifier_ids": [],
       "base_arm_ids": ["B"],

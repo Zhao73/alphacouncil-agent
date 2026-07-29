@@ -16,6 +16,8 @@
     ],
     "native_decision_schema": "capital_preservation_v1",
     "optional_fact_types": [
+      "financial.leverage",
+      "financial.interest_coverage",
       "distress.recovery_waterfall",
       "capital_structure.seniority",
       "catalyst.path",
@@ -24,6 +26,8 @@
       "risk.permanent_loss"
     ],
     "required_fact_types": [
+      "market.price",
+      "capital_allocation.share_count",
       "valuation.downside_asset_value"
     ]
   },
@@ -45,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_klarman.recovery_waterfall",
-      "master_klarman.cash_catalyst_compare"
+      "master_klarman.market_capitalisation",
+      "master_klarman.downside_asset_coverage"
     ]
   },
   "decision": {
@@ -54,6 +58,8 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
+      "market.price",
+      "capital_allocation.share_count",
       "valuation.downside_asset_value"
     ],
     "hard_vetoes": [

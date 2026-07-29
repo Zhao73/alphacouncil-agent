@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:d57d4b75342a89e5d3a64d4fddb35f234395236bb4516f9a0a38dcb0c5615ffa",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_jhunjhunwala.real_structural_growth.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "valuation.revenue_growth"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "duration",
+            "window": "ANY"
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "macro.breakeven_inflation"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "valuation.real_revenue_growth.master_jhunjhunwala",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_jhunjhunwala",
+    "prototype_content_hash": "sha256:fe312f165d5832b0a3c0693c73edfb07bd5fc8eae75f07e4ca09218bc8e1f9f5",
+    "prototype_id": "master_jhunjhunwala.real_structural_growth.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_jhunjhunwala.real_structural_growth"
+  },
+  "derivation_spec_hash": "sha256:033e0d68a8aaaa0b473fa7e9921bfcde73436697af03eeeac22395f0b1fe2fec",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

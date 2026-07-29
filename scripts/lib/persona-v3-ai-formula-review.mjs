@@ -1,11 +1,12 @@
 /**
- * Isolated AI-assisted cross-review lane for the 52 solo-test derived proxies.
+ * Isolated AI-assisted cross-review lane for the solo-test derived proxies.
  *
  * This lane reviews mechanical reproducibility only. Its three reviewers are explicitly
  * machine principals. It cannot emit a human approval, make a tool production eligible,
  * or satisfy the formal formula-review compiler/GA path.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -217,7 +218,7 @@ function physicalFormulaRecords(formulaRoot) {
   const plan = planSoloTestFormulaCompilation({ outputRoot: formulaRoot });
   const manifest = readPlainJson(root, "compilation-manifest.json", "solo formula manifest");
   if (manifest.compilation_hash !== plan.compilation_hash) {
-    fail("physical solo formula manifest is not bound to the current 52-tool compilation", {
+    fail("physical solo formula manifest is not bound to the current compilation", {
       expected: plan.compilation_hash,
       actual: manifest.compilation_hash,
     });
@@ -567,14 +568,14 @@ export function validateAIFormulaReviewArtifact(artifact, { reviewSchemaHash = s
   return errors;
 }
 
-/** Plan all 52 records without mutating the physical review tree. */
+/** Plan every record without mutating the physical review tree. */
 export function planAIFormulaCrossReviews({ formulaRoot = DEFAULT_SOLO_TEST_FORMULA_ROOT } = {}) {
   const schema = parsedReviewSchema();
   const reviewSchemaHash = sha256(schema);
   const input = physicalFormulaRecords(formulaRoot);
   const reviews = input.records.map((record) => reviewOne(record, input.compilationHash, reviewSchemaHash));
-  if (reviews.length !== 52 || new Set(reviews.map((review) => review.tool_id)).size !== 52) {
-    fail("AI formula cross-review must cover exactly 52 unique tools");
+  if (reviews.length !== PLANNED_TOOL_COUNT || new Set(reviews.map((review) => review.tool_id)).size !== PLANNED_TOOL_COUNT) {
+    fail(`AI formula cross-review must cover exactly ${PLANNED_TOOL_COUNT} unique tools`);
   }
   const invalid = reviews.flatMap((review) => validateAIFormulaReviewArtifact(review, { reviewSchemaHash })
     .map((message) => `${review.tool_id}: ${message}`));

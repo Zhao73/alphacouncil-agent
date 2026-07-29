@@ -16,15 +16,20 @@
     ],
     "native_decision_schema": "structural_mispricing_v1",
     "optional_fact_types": [
+      "financial.leverage",
+      "financial.interest_coverage",
+      "capital_structure.seniority",
       "credit.maturity_schedule",
       "accounting.policy_choices",
       "accounting.off_balance_sheet",
+      "mispricing.mechanism",
       "trade.carry",
       "short.borrow_availability"
     ],
     "required_fact_types": [
-      "capital_structure.seniority",
-      "mispricing.mechanism"
+      "financial.net_current_asset_value",
+      "capital_allocation.share_count",
+      "market.price"
     ]
   },
   "components": {
@@ -45,8 +50,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_burry.capital_structure_reader",
-      "master_burry.mispricing_carry"
+      "master_burry.net_current_asset_value_per_share",
+      "master_burry.net_current_asset_surplus_per_share"
     ]
   },
   "decision": {
@@ -54,8 +59,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "capital_structure.seniority",
-      "mispricing.mechanism"
+      "financial.net_current_asset_value",
+      "capital_allocation.share_count",
+      "market.price"
     ],
     "hard_vetoes": [
       "master_burry.secondary_only",

@@ -1,0 +1,41 @@
+{
+  "artifact_kind": "persona_v3_solo_test_pack_index",
+  "assurance_class": "provisional_derived_proxy",
+  "build_profile": "solo_test",
+  "common_projection": {
+    "provisional_fair_expected_return": "cautious",
+    "provisional_insufficient_return_inputs": "out_of_scope",
+    "provisional_low_cost_index_candidate": "cautious",
+    "provisional_overpriced_market": "opposed"
+  },
+  "declared_state_hypotheses": [
+    "insufficient_return_inputs",
+    "overpriced_market",
+    "fair_expected_return",
+    "low_cost_index_candidate"
+  ],
+  "experiment_pass_count": 0,
+  "formula_approval_binding_count": 0,
+  "formula_compilation_manifest_hash": "sha256:fc8afd469d9cafccccc4221622ccde5061167c538ab6472eecaaf65efce5461b",
+  "method_model_eligible": false,
+  "native_states": [
+    "provisional_insufficient_return_inputs",
+    "provisional_overpriced_market",
+    "provisional_fair_expected_return",
+    "provisional_low_cost_index_candidate"
+  ],
+  "persona_id": "master_bogle",
+  "planned_tool_ids": [
+    "master_bogle.fundamental_expected_return",
+    "master_bogle.expected_return_over_long_bond"
+  ],
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "source_adjudication_status": "pending",
+  "warnings": [
+    "Physical presence proves testability only; it does not prove source fidelity or method attribution.",
+    "Uncalibrated proxy scores never project to constructive; successful computation is capped at cautious.",
+    "The production loader, production registry, release assembler and GA must reject this pack."
+  ]
+}

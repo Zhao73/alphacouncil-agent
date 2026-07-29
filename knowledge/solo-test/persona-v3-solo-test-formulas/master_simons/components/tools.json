@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:a900ed0f54e1f4bd095b9ffae85c323d144ea1fa4a01e1d9470d4816e7e36308",
-    "derivation_spec_hash": "sha256:0c451ec63612421c6fe99842f7626637dd90e3b3e8619257f60f4fca21bdc4e2",
-    "derivation_spec_id": "master_simons.leakage_audit.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:2d201abdb47012d24388a65f9c58601d2910df10f22b91e60491e1c13b88ffe2",
+    "derivation_spec_hash": "sha256:ff6b81460c97e1e04f0c765d6018c6e4ad3239c764604a25ec932a6724a81035",
+    "derivation_spec_id": "master_simons.absolute_session_move.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_simons.leakage_audit",
+    "id": "master_simons.absolute_session_move",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,44 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:7138ac57d87fa971d158e0f540c0daa61b1dea01c0db86c597f8dae268e54602",
+    "input_schema_hash": "sha256:66da9197ca6039973143eabfd429f44f765fbf3edc584fbc44fcdc2c1e3c5a38",
     "inputs": [
       {
-        "fact_id": "quant.sample_definition"
+        "fact_id": "market.change_pct"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "quant.leakage_flags",
+    "operation": "abs",
+    "output_id": "market.absolute_session_move.master_simons",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:397d1471f41eb4c6e8f2407be6850bd6075974fbe3b34db32f072adb3602d48c",
+    "output_schema_hash": "sha256:d27c5e9e327f0044e77671224912999b9dd405609e0a666272648dffc13fc850",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_simons.leakage_audit.prototype_v1"
+      "derived_proxy:master_simons.absolute_session_move.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:078e355a7a7a7055a4bd6cbcd40853664e7d740e556e803012e2f0e5ab65b3bf",
-    "derivation_spec_hash": "sha256:50ebe908b77b3ed2e0cfd7664189a2fd5cfffb1d267a07e186d9da1baf450dc5",
-    "derivation_spec_id": "master_simons.oos_cost_test.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:84fad3eb5760b2c9d658505d852e674f61ee725cdb0a66a6b7f25913608b0758",
+    "derivation_spec_hash": "sha256:e361609896735f3499bce98748b9d23217791003e4e47da707cc07e23f9acc94",
+    "derivation_spec_id": "master_simons.session_move_over_implied.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_simons.oos_cost_test",
+    "id": "master_simons.session_move_over_implied",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +60,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_annualized_volatility",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:94124d9f3a8d1ae22574f34bd1b8df793da06ba24bcf769f646ff8d8d9b9d435",
+    "input_schema_hash": "sha256:9e496636aa58de5a954656bb4102bc4cb1dce7b921109b1775c05a8529a3e18d",
     "inputs": [
       {
-        "fact_id": "quant.sample_definition"
+        "output_id": "market.absolute_session_move.master_simons"
+      },
+      {
+        "fact_id": "options.implied_volatility"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "quant.out_of_sample_returns",
+    "operation": "divide",
+    "output_id": "market.session_move_over_implied.master_simons",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:f169b7819d68e0656a39fa3bba7c13cdb95fe020a0e8b5e9a69aa1b450ed8801",
+    "output_schema_hash": "sha256:1b8a694c61762d2d695883bca43ccd229d8a844726cadd44bff09780b26f0cc6",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_simons.oos_cost_test.prototype_v1"
+      "derived_proxy:master_simons.session_move_over_implied.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

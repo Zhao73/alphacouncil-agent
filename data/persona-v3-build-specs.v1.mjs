@@ -1,11 +1,13 @@
 /**
- * Canonical, non-production build specifications for the 26 PersonaPack v3 seats.
+ * Canonical, non-production build specifications for the PersonaPack v3 seats.
  *
  * Nothing in this file is evidence of a named person's method. Every method statement is a
  * planning hypothesis inherited from the current selector/prompt material. Source and case
  * targets are acquisition queues, not citations or completed corpus items. Importing this
  * module must never register a production pack or change a seat's maturity.
  */
+
+import { overlayAuthoredSeat } from "./authored/index.mjs";
 
 const PENDING = "pending_human_adjudication";
 
@@ -1057,6 +1059,50 @@ const seats = [
     },
     limits: ["Production volatility models, signals, portfolios and execution records are proprietary.", "Historical option quote quality and transaction-cost data may be insufficient for realistic reconstruction."],
   }),
+  // The other twenty-six seats price a business. None of them prices a basket, which is why an
+  // index or an ETF drew twenty-six abstentions rather than a number. This seat's method is the
+  // one that natively does.
+  buildSpec({
+    personaId: "master_bogle",
+    promptPath: "personas/masters/masters-value/bogle.md",
+    scope: "Price a basket rather than a business by decomposing the long-run expected return into dividend yield, earnings growth and the change in valuation, then judging it against the long bond and the cost of holding it.",
+    domains: ["index_funds", "exchange_traded_funds", "market_expected_return", "cost_of_ownership"],
+    excludes: ["a judgment on any single operating business", "security selection inside the basket", "a dated call on when a valuation reversion occurs", "manager skill inferred from a fund's past outperformance"],
+    facts: ["index.dividend_yield", "valuation.revenue_growth", "macro.long_bond_yield", "fund.top_ten_weight", "index.aggregate_earnings_yield", "macro.breakeven_inflation"],
+    decision: {
+      schemaId: "expected_market_return_v1",
+      eligibility: ["basket dividend yield", "basket earnings growth", "long bond yield", "holdings concentration"],
+      states: ["insufficient_return_inputs", "overpriced_market", "fair_expected_return", "low_cost_index_candidate"],
+      outputs: ["fundamental expected return", "expected return over the long bond", "valuation component", "breadth of the holding"],
+      failClosed: ["no basket-level yield", "no earnings growth input", "no holdings breakdown"],
+    },
+    tools: [
+      ["master_bogle.fundamental_expected_return", "Add the initial dividend yield to the growth of the underlying businesses.", ["index.fundamental_expected_return"]],
+      ["master_bogle.expected_return_over_long_bond", "Subtract the long bond yield from what the basket can reasonably be expected to deliver.", ["index.expected_return_over_long_bond"]],
+    ],
+    vetoes: [
+      ["master_bogle.expected_return_below_inflation", "Reject when dividend yield plus business growth does not exceed expected inflation, since no reduction in cost rescues a gross return already negative in real terms."],
+      ["master_bogle.single_business", "Decline when the subject is one operating business rather than a basket whose dividends and earnings aggregate."],
+      ["master_bogle.past_performance_claim", "Reject a case for a fund whose support is past outperformance rather than yield, growth and cost."],
+    ],
+    sources: [
+      source("master_bogle", 1, "published_work", "Acquire the author-written books on index investing with edition and page anchors for the return model and the cost argument."),
+      source("master_bogle", 2, "author_signed", "Acquire the signed occasional papers, articles and speeches where the return decomposition is stated with its arithmetic."),
+      source("master_bogle", 3, "institutional_primary", "Acquire fund and index-provider disclosures for expense ratios, dividend yields and the earnings basis behind each published aggregate multiple."),
+    ],
+    cases: {
+      decision: "Acquire dated public statements of expected market return with the yield, growth and valuation inputs frozen as stated at the time." ,
+      failure: "Acquire decade-long periods where the published expected return was materially too low, separating the author's own later commentary from third-party interpretation." ,
+      counterfactual: "Vary dividend yield, earnings growth, the long-run valuation centre, cost and concentration independently while holding the basket fixed." ,
+      golden: "Construct blinded basket cases where the same gross return does or does not survive cost and a valuation reversion, including single businesses whose expected state is an out-of-scope refusal." ,
+    },
+    limits: [
+      "Earnings growth is not published for a basket in this build, so a look-through revenue-growth aggregate stands in for it and that substitution changes the number.",
+      "Aggregate index multiples are quoted on incompatible earnings bases, so a reversion estimate is only meaningful within one basis and cannot be compared across sources.",
+      "Fund cost is not currently produced by the instrument feed, so the cost term depends on an acquisition target rather than on a live fact.",
+      "The method deliberately produces no judgment on a single business, so a large share of the coverage universe is out of scope by construction rather than by evidence gap.",
+    ],
+  }),
 ];
 
 export const personaV3BuildSpecs = Object.freeze({
@@ -1064,7 +1110,7 @@ export const personaV3BuildSpecs = Object.freeze({
   inventory_id: "personapack-v3-build-specs",
   inventory_status: "non_production_planning_only",
   canonical_catalog_source: "mcp/lib/personas/registry.mjs",
-  seat_count: 26,
+  seat_count: seats.length,
   adjudication_policy: Object.freeze({
     method_attribution: PENDING,
     source_grading: PENDING,
@@ -1074,7 +1120,18 @@ export const personaV3BuildSpecs = Object.freeze({
     experiments: "not_started",
     promotion_effect: "none",
   }),
-  seats: Object.freeze(seats),
+  seats: Object.freeze(seats.map(overlayAuthoredSeat)),
 });
+
+/**
+ * How many dedicated tools the whole bench plans.
+ *
+ * Computed from the specs rather than as seats times two: a method that needs a third step to
+ * express itself should be able to declare one without every downstream invariant reading the
+ * extra tool as drift. The count is still exact -- it is simply derived from the one place
+ * that knows it.
+ */
+export const PLANNED_TOOL_COUNT = personaV3BuildSpecs.seats
+  .reduce((total, seat) => total + seat.planned_dedicated_tools.length, 0);
 
 export default personaV3BuildSpecs;

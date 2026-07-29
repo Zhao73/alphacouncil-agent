@@ -64,7 +64,7 @@ export function main(argv = process.argv.slice(2)) {
       "Usage: node scripts/check-persona-v3-production-candidates.mjs [options]",
       "",
       "  --check                    inspect honestly without requiring readiness (default)",
-      "  --gate                     exit non-zero unless all 26 clear the requested admission",
+      "  --gate                     exit non-zero unless every canonical seat clears the requested admission",
       "  --require-admission LEVEL  operational | candidate | method_model",
       "  --root PATH                override isolated staging candidate root",
       "  --persona-dir PATH         override canonical persona registry",

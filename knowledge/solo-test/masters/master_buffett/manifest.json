@@ -16,13 +16,17 @@
     ],
     "native_decision_schema": "ownership_candidate_v1",
     "optional_fact_types": [
-      "business.model.explainability",
       "financial.incremental_return_on_capital",
       "financial.leverage",
-      "capital_allocation.share_count",
+      "macro.long_bond_yield",
+      "financial.return_on_equity_10y",
+      "capital_allocation.share_count_change_5y",
+      "business.model.explainability",
       "valuation.expected_owner_return"
     ],
     "required_fact_types": [
+      "market.price",
+      "capital_allocation.share_count",
       "financial.owner_earnings"
     ]
   },
@@ -44,8 +48,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_buffett.owner_earnings_rebuilder",
-      "master_buffett.incremental_returns"
+      "master_buffett.market_capitalisation",
+      "master_buffett.owner_earnings_yield"
     ]
   },
   "decision": {
@@ -53,6 +57,8 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
+      "market.price",
+      "capital_allocation.share_count",
       "financial.owner_earnings"
     ],
     "hard_vetoes": [

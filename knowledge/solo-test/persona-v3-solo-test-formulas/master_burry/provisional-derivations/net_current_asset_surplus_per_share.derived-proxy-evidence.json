@@ -1,0 +1,77 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:f322a051ed84effdaa63859e9edf3103b8bd371455ec5fe6403268d737e48674",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_burry.net_current_asset_surplus_per_share.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "output_id": "valuation.net_current_asset_value_per_share.master_burry"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "market.price"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "valuation.net_current_asset_surplus_per_share.master_burry",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "unknown_fact_fail_closed_proxy_scalar_v1",
+    "persona_id": "master_burry",
+    "prototype_content_hash": "sha256:f7356a3238c0f6677a61b923d8d29811145e144f0d2abd08ce483171c8542df4",
+    "prototype_id": "master_burry.net_current_asset_surplus_per_share.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_burry.net_current_asset_surplus_per_share"
+  },
+  "derivation_spec_hash": "sha256:c8832a0bc3de2baffb20e3014cd361eb5bfe5756320ba3c7e3ffc9b57e61df9d",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "unknown_fact_proxy_scalar_unit_requires_a_local_test_adapter",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

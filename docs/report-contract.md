@@ -22,6 +22,13 @@ writes the mode-appropriate versions of:
 The report and handoff must call a named master result a recorded method-seat or lens result.
 It is not a quote from, endorsement by, or current statement of the named person.
 
+The run classifies its instrument before selecting financial-data routes. Operating-company
+Company Facts and issuer financials are not applicable to ETFs, funds or indices. ETF/fund
+runs use holdings look-through; index runs use aggregate-index evidence. Missing dated
+holdings, constituents, weights, methodology, fees/rules, liquidity/tracking/flows or
+aggregate-valuation coverage remain explicit gaps and are never replaced with invented fund
+revenue, EPS, guidance, insider activity or summed constituent financial statements.
+
 System-owned selector, report and handoff labels are localized for `zh-CN`, `en`, `ja` and
 `ko`. Each worker receives the canonical run language, while stable IDs and JSON field names
 remain English. Reader-facing evidence, method, debate and PM fields are checked against the
@@ -40,6 +47,7 @@ Full remains the default. Its `final_report.md` visibly covers:
 - analyst work log for every planned evidence role
 - bull/bear debate record, including three rounds and exact round-3 Q&A
 - recorded Master Bench when methods were selected
+- fund/index structure and look-through when the instrument is an ETF, fund or index
 - long thesis and short thesis
 - market expectations and implied beat/miss thresholds
 - analyst rating and target-price revisions
@@ -62,10 +70,17 @@ Its `user_response.md` must also visibly carry:
 
 - a system-owned price snapshot with price, currency, quote timestamp, exchange/feed and
   source when available, or an explicit statement that the quote is unavailable;
-- every selected stable master ID, its frozen deterministic stance, its isolated voice-worker
+- every selected stable master ID, its frozen deterministic stance, its readable
   explanation/status and a clear `not a quote` attribution boundary;
 - all eight mandatory analyst task IDs, statuses and summaries, including failures or gaps;
 - terminal status, contract, report quality, elapsed time, deadline state and artifact paths.
+- a final section with the exact selected-seat count and one readable statement per selected
+  stable ID. Full `all` therefore ends with 26 statements; quick reports its actual 1–4.
+
+Visible PM completion returns `handoff_contract=inline_user_response_v1` plus the persisted
+`user_response_markdown`. The host uses that body for the final reply instead of reducing it
+to a compact ACK and hiding the method-seat tail. An idempotent PM replay returns the same
+handoff.
 
 All mandatory full evidence roles must be completed. If one still fails after the one bounded
 parse-only repair, full fails closed at the evidence barrier: no master, bull/bear or PM model
@@ -95,8 +110,11 @@ those subagents and the plugin cannot force-stop them.
 Visible full runs use the same six role-by-round audit records and exact Q&A gate. Each
 Bull/Bear call declares round 1, 2 or 3; the server rejects out-of-order calls, altered replay
 content and a PM submitted before both Round-3 records pass. Identical role/round retries are
-idempotent. This preserves workflow completeness but does not give host-owned subagents the
-plugin-managed 30-minute deadline.
+idempotent. Every non-blocked selected physical v3 seat also returns a visible post-evidence
+explanation worker, including a deterministic `out_of_scope` seat. Its
+`acknowledged_stance` must match the frozen stance, and PM checks the worker's completed
+status rather than accepting the fallback record alone. This preserves workflow completeness
+but does not give host-owned subagents the plugin-managed 30-minute deadline.
 
 ## quick_v1 Contract
 
@@ -201,7 +219,7 @@ one judgment paragraph, valuation/position, material gaps and file locations.
 A full handoff additionally carries the key earnings result, forward setup, news/voice
 signals and top invalidation conditions. It lists every selected method seat and all eight
 mandatory analysts rather than sampling a subset, and includes the system-owned price
-snapshot or an explicit quote-data gap.
+snapshot or an explicit quote-data gap. The method-seat list is the final handoff section.
 
 A quick handoff instead names:
 
@@ -227,7 +245,9 @@ Both handoffs list `final_report.md`, `artifact_index.md`, `all_agents.md`, and
 | "The source table mentions the news, so the news section can be skipped." | News findings need their own visible section; quick recent news must also pass its date window. |
 | "The final report exists, so chat can hide file locations." | The handoff lists the saved report, index, trace and quality file. |
 | "The master said this." | Call it a recorded method-seat result, never a quote from the named person. |
-| "The full report has a bench table, so the handoff can hide the individual seats." | Full handoff lists every selected stable ID, stance and isolated-worker result/status. |
+| "The full report has a bench table, so the handoff can hide the individual seats." | Full handoff ends with every selected stable ID, stance and readable result/status. |
+| "The PM tool returned success, so its small ACK is enough." | Deliver `user_response_markdown`; success metadata is not the user-facing report. |
+| "QQQ has a ticker and SEC CIK, so run the company screen." | Classify first. ETF/fund/index company financial routes are not applicable; use look-through or aggregate evidence. |
 
 ## How the Quality Gate Checks Reports
 
@@ -246,4 +266,8 @@ at least 1600 non-space characters, quick reports 700, and dry reports 600.
 
 The system-owned recorded Master Bench and degraded ledger are checked independently of PM
 prose so a generic, stale or duplicate heading cannot satisfy the contract. The authoritative
-lists are `REPORT_SECTIONS` and `QUICK_REPORT_SECTIONS` in `mcp/lib/constants.mjs`.
+Master Bench must contain the exact stable ID and a readable statement for every selected
+seat; `report_quality.json.method_statement_coverage` records selected/readable/rendered
+counts and IDs. A missing statement or ID forces `needs_revision`. Fund/index runs also
+require the system-owned instrument-structure section. The authoritative lists are
+`REPORT_SECTIONS` and `QUICK_REPORT_SECTIONS` in `mcp/lib/constants.mjs`.

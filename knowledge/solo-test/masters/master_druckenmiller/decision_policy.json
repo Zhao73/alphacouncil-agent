@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "market.change_pct"
+          }
+        },
+        "condition_id": "master_druckenmiller.price_action_available",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_inflection"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_inflection"
+        },
+        "source_ids": [
+          "proxy:807c7db58258313d3"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,62 @@
       "native_state": "provisional_no_inflection"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "conditions": [
+          {
+            "left": {
+              "fact_id": "macro.liquidity_impulse"
+            },
+            "op": "lt",
+            "right": {
+              "literal": 0
+            }
+          },
+          {
+            "left": {
+              "fact_id": "macro.term_structure_slope"
+            },
+            "op": "lt",
+            "right": {
+              "literal": 0
+            }
+          }
+        ],
+        "op": "all"
+      },
+      "on_trigger": {
+        "common_stance": "out_of_scope",
+        "native_state": "provisional_no_inflection"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_inflection"
+        }
+      },
+      "source_ids": [
+        "proxy:807c7db58258313d3"
+      ],
+      "veto_id": "master_druckenmiller.liquidity_draining_into_inversion"
+    }
+  ],
   "native_decision_schema": "macro_inflection_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "macro.liquidity_impulse"
+        "output_id": "macro.liquidity_curve_impulse.master_druckenmiller"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "macro.forward_inflection"
+        "output_id": "macro.policy_real_rate.master_druckenmiller"
       }
     }
   ],
@@ -52,14 +114,14 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_asymmetric_setup"
       },
       "min_ratio": 1
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -69,7 +131,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "macro.liquidity_impulse"
+            "output_id": "macro.liquidity_curve_impulse.master_druckenmiller"
           },
           "op": "gt",
           "right": {
@@ -78,7 +140,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "druckenmiller_liquidity_and_curve_impulse_positive",
         "source_ids": [
           "proxy:807c7db58258313d3"
         ]
@@ -86,7 +148,24 @@
       {
         "condition": {
           "left": {
-            "output_id": "macro.forward_inflection"
+            "output_id": "macro.policy_real_rate.master_druckenmiller"
+          },
+          "op": "lt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "druckenmiller_policy_real_rate_not_restrictive",
+        "source_ids": [
+          "proxy:807c7db58258313d3"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "market.change_pct"
           },
           "op": "gt",
           "right": {
@@ -95,7 +174,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "druckenmiller_price_confirms",
         "source_ids": [
           "proxy:807c7db58258313d3"
         ]

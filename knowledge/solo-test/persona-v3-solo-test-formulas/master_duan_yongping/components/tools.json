@@ -1,12 +1,42 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:a1554485568c47e65b087a6d0850aa3614d107d66b27df5819a7e1f48cdbdfc4",
-    "derivation_spec_hash": "sha256:5522e8dbaf58f1459668cf7bb184df52639844b7a63bde6163883d64fc613347",
-    "derivation_spec_id": "master_duan_yongping.user_value_evidence.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:80c3af4218aab09224e1a5ca41088311bb86f75069e5560bde6cd68b58c27ea9",
+    "derivation_spec_hash": "sha256:0a3c728ee333d65a10066c6f03580c549beb628d540029d58131475e35117279",
+    "derivation_spec_id": "master_duan_yongping.five_year_opportunity_cost.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_duan_yongping.user_value_evidence",
+    "id": "master_duan_yongping.five_year_opportunity_cost",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -18,77 +48,99 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:4ec6a7131604f6ceb7a476774937d915ef648a2a6116af71830e8bf44104e3e7",
+    "input_schema_hash": "sha256:cab6ab126234175b1459cc45e133a65d87ffd9025965f897f66f59a7a059bba5",
     "inputs": [
       {
-        "fact_id": "product.user_value"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
+      },
+      {
+        "fact_id": "macro.aaa_corporate_yield"
+      },
+      {
+        "literal": 5
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "product.user_value",
+    "operation": "multiply",
+    "output_id": "valuation.five_year_opportunity_cost.master_duan_yongping",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:f8d3da33cf7c737a8ee5ce071b12680ae2afca478148e88d731fce9eace960fe",
+    "output_schema_hash": "sha256:74a132768141f8f0bd1f3985de9ad029d0b7f1f06ebb67d1b59f2177aee6a258",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_duan_yongping.user_value_evidence.prototype_v1"
+      "derived_proxy:master_duan_yongping.five_year_opportunity_cost.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:9202803f0451a837f7a86a4f9124afd25a507527c93987b3c71c02efec557bdb",
-    "derivation_spec_hash": "sha256:7c6b3984bb186610286338003ebebd5f6434b3c17de74476134386393761bb0c",
-    "derivation_spec_id": "master_duan_yongping.opportunity_cost.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:4093b47b9083694371dd9bf31489a3f11dfee0554fb87f72de5661d63d2fa5e9",
+    "derivation_spec_hash": "sha256:b1543d78a86822685d586d0fef12ecb68db7f0377fab8303472ec2f99a3b4670",
+    "derivation_spec_id": "master_duan_yongping.margin_retention.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_duan_yongping.opportunity_cost",
+    "id": "master_duan_yongping.margin_retention",
     "input_contracts": [
       {
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P5Y"
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:1e55ffa9b0f2115f203aef13d8dacc4e37833a001c94bbc5edbc6286098e6119",
+    "input_schema_hash": "sha256:d3e1ad53c4df9283c1e93e55b12c2ff07306bac8df298624e13e3ad52b4cc2b2",
     "inputs": [
       {
-        "fact_id": "portfolio.opportunity_cost"
+        "fact_id": "financial.net_margin_5y"
+      },
+      {
+        "fact_id": "financial.gross_margin_5y"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "portfolio.opportunity_cost",
+    "operation": "divide",
+    "output_id": "business.margin_retention.master_duan_yongping",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:d42e64ba5f42b216dea2d15747e12a52a10a1f5e970970c946b3854031422362",
+    "output_schema_hash": "sha256:4e478e7f5d1909cf4664d0e5a317d12af268bd9bed8276bd29827a74c6048f7c",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_duan_yongping.opportunity_cost.prototype_v1"
+      "derived_proxy:master_duan_yongping.margin_retention.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

@@ -1,12 +1,22 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:fc5731e8512ce0a16ba1c00ac9c3f718d5f1f4b70969f3e7d0665398880330a5",
-    "derivation_spec_hash": "sha256:669beef679dd4c9a0193096ac367849e8e7cfb66ceeede65f277a89b04625f81",
-    "derivation_spec_id": "master_marks.cycle_temperature.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:7fa3102a8ff54e44ea3cf29dd9e34d4ae08d830f050b71b732a76ced5f8daf29",
+    "derivation_spec_hash": "sha256:6a651ebcd2f6cd204cef99cab0e2ab363b5bcb1ea9b19447b4d562050856aa3f",
+    "derivation_spec_id": "master_marks.credit_cycle_position.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_marks.cycle_temperature",
+    "id": "master_marks.credit_cycle_position",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -18,40 +28,43 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:c4c4aaf3cc5db27eddd4aa9775efaf1b89cd1ce6d4da657b823a0e15ab23ed66",
+    "input_schema_hash": "sha256:b68a8008d20bf5170d3c9619f3debefc71a8a840de8ea1af6e7975818ba5103f",
     "inputs": [
       {
-        "fact_id": "cycle.valuation_percentile"
+        "fact_id": "macro.credit_spread"
+      },
+      {
+        "literal": 0.05
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "cycle.valuation_percentile",
+    "operation": "subtract",
+    "output_id": "macro.credit_spread_gap.master_marks",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:12a870201283ae7ed086cbcb4d12e20f61199938ed5f84e9d8cd99e2f8f8112d",
+    "output_schema_hash": "sha256:61bad5d24673c89be7e190dfc6bda8fc2bad3d87dee43e58b7cd29614d8f1751",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_marks.cycle_temperature.prototype_v1"
+      "derived_proxy:master_marks.credit_cycle_position.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:f74dc4c22edda2e6998afc39dd9b009edd0d7291ed61f714015d609fabc6c767",
-    "derivation_spec_hash": "sha256:9c10a628bbb736683d6ed57868b9e36160d96855cf61d20ebc71f3c2c0823949",
-    "derivation_spec_id": "master_marks.implied_expectations.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:284ce394de5332330d2c8e70b7e600b08496e027208c47ba7fcd3093442be7da",
+    "derivation_spec_hash": "sha256:d2b8904110e22abd95fd6221802e62b82b411d310acc5e167cbb17d8ac9ddb7b",
+    "derivation_spec_id": "master_marks.equity_over_corporate_debt.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_marks.implied_expectations",
+    "id": "master_marks.equity_over_corporate_debt",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:2186dab679ac088482bca01271f0c252d25d80f97c02dafe1125e98c12d0dcea",
+    "input_schema_hash": "sha256:eb6de88b8ee152d691b53866d4837c92c203c197ba11d56929bdb6bd4abb622a",
     "inputs": [
       {
-        "fact_id": "expectations.consensus"
+        "fact_id": "index.aggregate_earnings_yield"
+      },
+      {
+        "fact_id": "macro.aaa_corporate_yield"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "valuation.implied_expectations",
+    "operation": "subtract",
+    "output_id": "index.equity_over_corporate_debt_premium.master_marks",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:51221a38013ee7b549c633bcd3a00364ad37f75e29f8f0db5b210ad9f525731d",
+    "output_schema_hash": "sha256:6e46f57b37df1ca051587dcfc43f3607e1487dc8fb511f8490c2f4f80293fad4",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_marks.implied_expectations.prototype_v1"
+      "derived_proxy:master_marks.equity_over_corporate_debt.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

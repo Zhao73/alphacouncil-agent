@@ -3,11 +3,12 @@
  *
  * This layer deliberately does not manufacture manifests or promote editorial drafts. A
  * candidate exists only after a real schema-v3 directory has been authored on disk. The
- * inspector then proves loader/compiler validity, computed admission and coverage of the 52
+ * inspector then proves loader/compiler validity, computed admission and coverage of every
  * planned seat-specific tools. Immutable release assembly remains a later, separately signed
  * operation.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -401,7 +402,7 @@ export function inspectPersonaV3ProductionCandidates({
   const inventoryErrors = [];
   if (buildInventory.seat_count !== CANONICAL_MASTER_COUNT) inventoryErrors.push("build-spec seat count is not 26");
   const expectedToolCount = [...expectedByPersona.values()].reduce((total, ids) => total + ids.length, 0);
-  if (expectedToolCount !== 52) inventoryErrors.push(`build-spec tool count is not 52: ${expectedToolCount}`);
+  if (expectedToolCount !== PLANNED_TOOL_COUNT) inventoryErrors.push(`build-spec tool count is not ${PLANNED_TOOL_COUNT}: ${expectedToolCount}`);
 
   const actualEntries = candidateRoot.exists
     ? readdirSync(candidateRoot.root, { withFileTypes: true })
@@ -474,13 +475,13 @@ export function renderPersonaV3ProductionCandidateReadiness(report) {
     "",
     "> Read-only staging report. Physical presence is not source approval, experiment passage, release assembly or production promotion.",
     "",
-    `Physical candidates: ${report.summary.physical_candidate_count}/26`,
-    `Loader-valid candidates: ${report.summary.loader_valid_count}/26`,
-    `Operational candidates: ${report.summary.operational_candidate_count}/26`,
-    `Candidate admissions: ${report.summary.candidate_admission_count}/26`,
-    `Method models: ${report.summary.method_model_count}/26`,
-    `Planned tool coverage: ${report.summary.planned_tool_coverage_count}/52`,
-    `Verified formula approvals: ${report.summary.formula_approval_evidence_count}/52`,
+    `Physical candidates: ${report.summary.physical_candidate_count}/${CANONICAL_MASTER_COUNT}`,
+    `Loader-valid candidates: ${report.summary.loader_valid_count}/${CANONICAL_MASTER_COUNT}`,
+    `Operational candidates: ${report.summary.operational_candidate_count}/${CANONICAL_MASTER_COUNT}`,
+    `Candidate admissions: ${report.summary.candidate_admission_count}/${CANONICAL_MASTER_COUNT}`,
+    `Method models: ${report.summary.method_model_count}/${CANONICAL_MASTER_COUNT}`,
+    `Planned tool coverage: ${report.summary.planned_tool_coverage_count}/${PLANNED_TOOL_COUNT}`,
+    `Verified formula approvals: ${report.summary.formula_approval_evidence_count}/${PLANNED_TOOL_COUNT}`,
     `Required admission: ${report.required_admission}`,
     `Gate clear: ${report.summary.gate_clear}`,
     `Readiness hash: \`${report.readiness_hash}\``,

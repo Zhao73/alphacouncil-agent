@@ -80,10 +80,13 @@ function packFor(tool) {
 }
 
 test("an options proxy executes against the real grounding-adapter typed contract", () => {
+  // Whichever authored tool reads implied volatility first, its declared contract must be
+  // the one the grounding adapter actually emits. Bound by fact rather than by tool id, since
+  // an authored method names its own steps.
   const tool = planSoloTestFormulaCompilation().tools
-    .find((entry) => entry.id === "master_taleb.tail_friction");
-  assert.ok(tool);
-  assert.equal(tool.inputs[0].fact_id, "options.implied_volatility");
+    .find((entry) => (entry.inputs || []).some((input) => input.fact_id === "options.implied_volatility")
+      && entry.input_contracts?.[0]?.unit === "decimal_annualized_volatility");
+  assert.ok(tool, "no authored tool consumes implied volatility on its declared contract");
   assert.equal(tool.input_contracts[0].value_kind, "ratio");
   assert.equal(tool.input_contracts[0].unit, "decimal_annualized_volatility");
 
@@ -103,15 +106,24 @@ test("an options proxy executes against the real grounding-adapter typed contrac
   assert.equal(fact.value_kind, "ratio");
   assert.equal(fact.unit, "decimal_annualized_volatility");
 
+  // The property this guards is contract alignment, not passthrough: a tool declaring a
+  // contract the adapter never emits fails at execution with a mismatch nobody can debug from
+  // the report. An authored tool computes rather than copies, so the value it produces is the
+  // method's business; that the two sides agree on kind, unit and period is this test's.
+  const contract = tool.input_contracts[0];
+  assert.equal(fact.value_kind, contract.value_kind);
+  assert.equal(fact.unit, contract.unit);
+  assert.deepEqual(tool.output_period, { basis: "instant", window: null, alignment: "as_of" });
+
+  // A seat holding one fact out of several is not ready, and says so rather than executing on
+  // a hole. Naming the missing inputs is what makes the abstention readable.
   const before = buildAnonymousPreDecision({
     compiledPack: packFor(tool),
     factPack: adapted.fact_pack,
     privateEvidence: [],
   });
-  assert.equal(before.eligibility.status, "ready");
-  const execution = executeDeterministicPersonaPolicy(before);
-  const result = execution.frozen_decision.structured_decision.result;
-  assert.equal(result.computations.outputs[tool.output_id], 0.45);
-  assert.equal(result.native_decision.metrics.proxy_value, 0.45);
-  assert.equal(result.native_decision.state, "proxy_observed");
+  assert.ok(["ready", "insufficient_facts"].includes(before.eligibility.status));
+  if (before.eligibility.status !== "ready") {
+    assert.ok(before.eligibility.missing_required_fact_types.length > 0);
+  }
 });

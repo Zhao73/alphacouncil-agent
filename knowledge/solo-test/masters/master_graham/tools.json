@@ -1,12 +1,32 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:ab278afe4a2667e545e3530a45b7ecd01c975b84107509da7154d2632d4b95e3",
-    "derivation_spec_hash": "sha256:39b4f21e95e0e5c177f8d31ca6d2278269e2d61ecdb9e88a412490ee7dbafb50",
-    "derivation_spec_id": "master_graham.asset_floor.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:58a11a759f6b85265e101f0f52c4e661cc290fce369d102014db2ce093478dbd",
+    "derivation_spec_hash": "sha256:93743011ae0f60856ed031b96996f4d04a611c214cdd7ff2216cbc0f9e3eb90e",
+    "derivation_spec_id": "master_graham.defensive_hurdle_base.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_graham.asset_floor",
+    "id": "master_graham.defensive_hurdle_base",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -18,41 +38,57 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:26d982760423c7f0b54dd2922f5be604d57ff626de6da213f24e0179d8f2d932",
+    "input_schema_hash": "sha256:21d2922ac1be24399b6edb9b0d0e221c0e4177a237cc3e2582ffc7483f336f2e",
     "inputs": [
       {
-        "fact_id": "financial.net_current_asset_value"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
+      },
+      {
+        "literal": 10
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "financial.net_current_asset_value",
+    "operation": "multiply",
+    "output_id": "valuation.graham_hurdle_base.master_graham",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:d00d30510fab2092d78e440726cb377ad180331fbeac2852a4c58ee0de94817c",
+    "output_schema_hash": "sha256:ae9edb6f825d6045495a70a90239f526ed41d57a156ffe1e180e88a4fd7e35ed",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:efc142652d20dd68c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:61e7b2bfcef7c29c74becce76fe2b7d61b8a5043a507aec5eac2c8eb51de053c",
-    "derivation_spec_hash": "sha256:e7cfcc32bfbec92faf3af85e147bbab990cad07bb977f211a7aeeeb0b47aeac3",
-    "derivation_spec_id": "master_graham.normalized_earnings.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:c4aa7aeedf15dd3bfd673e08c165abeff468ee6bbf9f87859997238ad5d89cc2",
+    "derivation_spec_hash": "sha256:3a6bfd410cabf900182c9371d308eb071bc1e42688bcb0a9f541e881c95c2ded",
+    "derivation_spec_id": "master_graham.half_normalised_earnings_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_graham.normalized_earnings",
+    "id": "master_graham.half_normalised_earnings_yield",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P5Y"
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -60,35 +96,38 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:842d3cf2cea0077712f30abcdbd92f98bcf90606da23edfd03b7c2e1372bb379",
+    "input_schema_hash": "sha256:b17a9b8f40bfa30cd19587afe13ae4666eb6120e9b6564b61f011723fa39d843",
     "inputs": [
       {
-        "fact_id": "financial.net_current_asset_value"
+        "fact_id": "financial.free_cash_flow_5y"
+      },
+      {
+        "output_id": "valuation.graham_hurdle_base.master_graham"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "financial.normalized_earnings",
+    "operation": "divide",
+    "output_id": "valuation.graham_half_earnings_yield.master_graham",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:32753ad8f7abd76ef6dc8cb087ad0097aecdd55fc8eb45374211ce1385a42a9e",
+    "output_schema_hash": "sha256:490aa0af1468e2460fdabd32704272065ae782ad1ed41a4c7241d49e9f32528a",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:efc142652d20dd68c"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

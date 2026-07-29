@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Build or verify the isolated 52-tool AI-assisted formula cross-review tree. */
+/** Build or verify the isolated AI-assisted formula cross-review tree. */
 
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +11,10 @@ import {
   writeAIFormulaCrossReviews,
 } from "./lib/persona-v3-ai-formula-review.mjs";
 import { DEFAULT_SOLO_TEST_FORMULA_ROOT } from "./lib/persona-v3-solo-formula-pipeline.mjs";
+import { PLANNED_TOOL_COUNT } from "../data/persona-v3-build-specs.v1.mjs";
+
+/** The review profile gives every tool three independent machine roles. */
+const INDEPENDENT_ROLES_PER_REVIEW = 3;
 
 export function parseArgs(argv) {
   const args = {
@@ -57,13 +61,13 @@ function compact(result) {
   return [
     "persona-v3-ai-formula-review:",
     `mode=${result.mode || "plan_ai_formula_cross_reviews"}`,
-    `reviews=${result.review_count}/52`,
-    `roles=${result.role_count}/156`,
+    `reviews=${result.review_count}/${PLANNED_TOOL_COUNT}`,
+    `roles=${result.role_count}/${PLANNED_TOOL_COUNT * INDEPENDENT_ROLES_PER_REVIEW}`,
     `vectors=${result.test_vector_count}`,
     `invariants=${result.invariant_count}`,
-    `mechanical_pass=${result.mechanical_pass_count}/52`,
+    `mechanical_pass=${result.mechanical_pass_count}/${PLANNED_TOOL_COUNT}`,
     `disagreements=${result.disagreement_count}`,
-    `semantic_unknown=${result.semantic_unknown_count}/52`,
+    `semantic_unknown=${result.semantic_unknown_count}/${PLANNED_TOOL_COUNT}`,
     `human_reviewers=${result.human_reviewer_count}`,
     `approvals=${result.approval_count}`,
     `production_eligible=${result.production_eligible}`,
@@ -88,11 +92,11 @@ export function main(argv = process.argv.slice(2)) {
   }
   if (args.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else process.stdout.write(compact(result));
-  const okay = result.review_count === 52
+  const okay = result.review_count === PLANNED_TOOL_COUNT
     && result.role_count === 156
-    && result.mechanical_pass_count === 52
+    && result.mechanical_pass_count === PLANNED_TOOL_COUNT
     && result.disagreement_count === 0
-    && result.semantic_unknown_count === 52
+    && result.semantic_unknown_count === PLANNED_TOOL_COUNT
     && result.human_reviewer_count === 0
     && result.approval_count === 0
     && result.production_eligible === false;

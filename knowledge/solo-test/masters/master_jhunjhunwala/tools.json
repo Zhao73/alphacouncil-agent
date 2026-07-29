@@ -1,12 +1,22 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:a34e9d5dbabe64737a894da6a7362757e2f45d664806397bcc8fead300523fc4",
-    "derivation_spec_hash": "sha256:f86405ec457cc0dbe86e3605b0b833a53e3ec960ef16f2606ce3487209acbe8c",
-    "derivation_spec_id": "master_jhunjhunwala.promoter_governance.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:717d22acdb9fbe995b7504340a8266e7cef34a545f9fc67367c1c3607cd82155",
+    "derivation_spec_hash": "sha256:033e0d68a8aaaa0b473fa7e9921bfcde73436697af03eeeac22395f0b1fe2fec",
+    "derivation_spec_id": "master_jhunjhunwala.real_structural_growth.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_jhunjhunwala.promoter_governance",
+    "id": "master_jhunjhunwala.real_structural_growth",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "ANY"
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -14,45 +24,58 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:ab01c4ca3d7b4db29180fa036503a2001119e98d8f73f5c923915386a71a8194",
+    "input_schema_hash": "sha256:70e1bb7046baddce72fcefece507487a78269214032e722714ed7a3fe3d96db6",
     "inputs": [
       {
-        "fact_id": "governance.promoter_ownership"
+        "fact_id": "valuation.revenue_growth"
+      },
+      {
+        "fact_id": "macro.breakeven_inflation"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "governance.promoter_ownership",
+    "operation": "subtract",
+    "output_id": "valuation.real_revenue_growth.master_jhunjhunwala",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:7c6b8fa4565751c9ae5ed60203fffbb21ef7bd09cc76c2607b798452cc53f13f",
+    "output_schema_hash": "sha256:75358123014c254f42b70557547d6d213014f16216c0938adb0e96666c5a43cc",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:766b9b96aa87f12da"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:5d8e4b6809b81c61455c6cdf62f58fc98ff5374b751dce9afa7dbfebbe765559",
-    "derivation_spec_hash": "sha256:5c50cce924daa2fb7aa8b43422b786bd46eda531677178a16cc905d6174e36dc",
-    "derivation_spec_id": "master_jhunjhunwala.penetration_liquidity.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:5b4afb1d8102b48ae249f3fcb3c4f513baa118e51268836690e6023cef1a7da0",
+    "derivation_spec_hash": "sha256:9c63f0a133850afd359ed9dc015cc4a8fc360f20379bd6cab407f6f3b3e1fb81",
+    "derivation_spec_id": "master_jhunjhunwala.cash_quality_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_jhunjhunwala.penetration_liquidity",
+    "id": "master_jhunjhunwala.cash_quality_gap",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P5Y"
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -64,31 +87,34 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:22f06517c1b26fd65bd323eb4bb5a8a1ef99d8d322b308f6627eaf8ebf2b2f99",
+    "input_schema_hash": "sha256:c8a2fd49460e82c6cf62913439ad19588a79e5e78236a3def9d7324f2d1dfef8",
     "inputs": [
       {
-        "fact_id": "india.industry_penetration"
+        "fact_id": "accounting.cash_conversion"
+      },
+      {
+        "literal": 1
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "india.industry_penetration",
+    "operation": "subtract",
+    "output_id": "accounting.cash_conversion_gap.master_jhunjhunwala",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:27d770c51a5d192ca43e9d261d7f7871695204025aeb68dd88fcaf92074d4d15",
+    "output_schema_hash": "sha256:d26f6420a596441a700846db30e592fde67bcb9a886c0a35df42eab268e3852d",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:766b9b96aa87f12da"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "multiple",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

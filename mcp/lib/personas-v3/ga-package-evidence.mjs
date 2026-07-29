@@ -1,3 +1,4 @@
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -219,9 +220,9 @@ function safelyInstallAndDerive(tarball, { packageName, releaseId }) {
     const releaseFile = containedPhysicalFile(installedRoot, join("knowledge", "persona-releases", releaseId, "manifest.json"), "installed release manifest");
     const release = parseJson(releaseFile.bytes, "installed release manifest");
     if (release.artifact_kind !== "persona_v3_release_manifest" || release.release_id !== releaseId) throw new Error("installed release manifest identity differs from the package artifact");
-    if (release.canonical_master_count !== 26 || !Array.isArray(release.canonical_master_ids)
-      || release.canonical_master_ids.length !== 26 || new Set(release.canonical_master_ids).size !== 26
-      || !Array.isArray(release.packs) || release.packs.length !== 26) throw new Error("installed release manifest does not contain exactly 26 canonical packs");
+    if (release.canonical_master_count !== CANONICAL_MASTER_COUNT || !Array.isArray(release.canonical_master_ids)
+      || release.canonical_master_ids.length !== CANONICAL_MASTER_COUNT || new Set(release.canonical_master_ids).size !== CANONICAL_MASTER_COUNT
+      || !Array.isArray(release.packs) || release.packs.length !== CANONICAL_MASTER_COUNT) throw new Error(`installed release manifest does not contain exactly ${CANONICAL_MASTER_COUNT} canonical packs`);
     const selectedPackHashes = release.packs.map((pack, index) => {
       if (pack?.persona_id !== release.canonical_master_ids[index] || !HASH.test(pack?.pack_hash || "")) throw new Error(`installed release manifest pack ${index} does not bind canonical ID/order/hash`);
       return pack.pack_hash;
@@ -323,7 +324,7 @@ export function checkGaPackageArtifactFile(file, { packageJsonPath, expectedVers
       if (artifact.package?.[field] !== sourcePackage?.[field]) errors.push(`package artifact ${field} differs from repository package.json`);
       if (artifact.package?.[field] !== tarballPackage?.[field]) errors.push(`package artifact ${field} differs from tarball package.json`);
     }
-    if (artifact.catalog?.selected_master_ids?.length === 26) {
+    if (artifact.catalog?.selected_master_ids?.length === CANONICAL_MASTER_COUNT) {
       installedMetadata = safelyInstallAndDerive(tarballFile.absolute, {
         packageName: tarballPackage.name,
         releaseId: artifact.release_id,

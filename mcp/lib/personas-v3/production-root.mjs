@@ -1,3 +1,4 @@
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 import {
   existsSync,
   lstatSync,
@@ -188,11 +189,11 @@ function validateReleaseManifest(manifest, pointer) {
   }
   if (manifest.release_id !== pointer.release_id) fail("active release manifest id does not match the pointer");
   if (manifest.release_status !== "assembled_immutable") fail("active release is not immutable");
-  if (manifest.canonical_master_count !== 26
+  if (manifest.canonical_master_count !== CANONICAL_MASTER_COUNT
     || !Array.isArray(manifest.canonical_master_ids)
-    || manifest.canonical_master_ids.length !== 26
-    || new Set(manifest.canonical_master_ids).size !== 26) {
-    fail("active release manifest does not contain exactly 26 canonical seats");
+    || manifest.canonical_master_ids.length !== CANONICAL_MASTER_COUNT
+    || new Set(manifest.canonical_master_ids).size !== CANONICAL_MASTER_COUNT) {
+    fail(`active release manifest does not contain exactly ${CANONICAL_MASTER_COUNT} canonical seats`);
   }
   if (manifest.masters_directory !== "masters") fail("active release masters directory is invalid");
   if (!isObject(manifest.source_review_evidence)

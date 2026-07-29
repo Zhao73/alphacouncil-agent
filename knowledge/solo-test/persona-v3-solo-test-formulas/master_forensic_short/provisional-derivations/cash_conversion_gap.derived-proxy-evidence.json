@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:7c734d76b0636f0b81c6d3fb103e8282fe75c7e2eea129f165af18b88a282149",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_forensic_short.cash_conversion_gap.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "accounting.cash_conversion"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "duration",
+            "window": "P5Y"
+          },
+          "unit": "multiple",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "literal": 1
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "derived_proxy_scalar",
+          "value_kind": "scalar"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "subtract",
+      "output": {
+        "output_id": "accounting.cash_conversion_gap.master_forensic_short",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "multiple",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_forensic_short",
+    "prototype_content_hash": "sha256:7dff3a7f830494584856283ff19b35ed168e85b8f5bb94a2e1eda740763c6b04",
+    "prototype_id": "master_forensic_short.cash_conversion_gap.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_forensic_short.cash_conversion_gap"
+  },
+  "derivation_spec_hash": "sha256:3fa5877481bf9011bc64df1c913d5a4df961f7e8ec0f516a27c0607ab8377797",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

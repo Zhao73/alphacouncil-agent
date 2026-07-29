@@ -291,9 +291,9 @@
     }
   ],
   "candidate_count": 32,
-  "canonical_master_count": 26,
+  "canonical_master_count": 27,
   "human_reviewed_count": 0,
-  "index_hash": "sha256:8d916ceda6c30bbcab86c5add14ef241fce640a7e2d5a4b0075cbe36aea1fec0",
+  "index_hash": "sha256:712b227059e659c9c0561556a4b5feb65633d255af4322c3a985b9d617217c25",
   "method_attribution_approved_count": 0,
   "production_effect": "none",
   "proposition_count": 29,

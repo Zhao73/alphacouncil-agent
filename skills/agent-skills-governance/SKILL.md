@@ -37,7 +37,9 @@ Before giving a final investment answer, all gates below must be satisfied:
    when at least two completed and every failed role has a recorded diagnostic/data gap.
 5. Source gate: every material claim maps to scoped source IDs like `<task>:S1`; never cite bare `S1`.
 6. Master gate: every master named in the confirmed receipt has either reported or produced
-   a deterministic `out_of_scope` result. An unexecuted selected seat keeps the run incomplete.
+   a deterministic `out_of_scope` result, every result has a readable final statement, and
+   every stable ID appears in the published Master Bench. An unexecuted or hidden selected
+   seat keeps the run incomplete or `needs_revision`.
 7. Debate gate: full requires all three bull/bear rounds, exact round-3 Q&A and PM. Quick
    requires one parallel statement round and PM; one degraded side is allowed only if the
    other side and PM completed, while two degraded sides or PM failure is incomplete.
@@ -53,7 +55,9 @@ Before giving a final investment answer, all gates below must be satisfied:
     winner, confidence, valuation/position, material gaps and saved file locations. Full
     also carries forward setup and invalidations. Quick names all four analyst statuses,
     selected method IDs/stances, dated recent company/industry news, every degraded item,
-    and that it is not equivalent to full council.
+    and that it is not equivalent to full council. Full handoff ends with the exact selected
+    seat count and every per-seat method statement; use returned `user_response_markdown`
+    rather than an ACK-only recap.
 12. Deadline gate: plugin-managed quick uses headless `analyze_symbol`; `plan_visible_run`
     quick is rejected. Never extend its end-to-end deadline above 600000 ms or silently
     omit work to appear complete.
@@ -73,6 +77,8 @@ Before giving a final investment answer, all gates below must be satisfied:
 | "Quick report quality passed, so full passed." | Keep `full_council_equivalent=false`; only `quick_v1` passed. |
 | "The ten-minute clock expired, so skip a seat quietly." | Return the exact degraded/incomplete ledger; never extend the ceiling or invent evidence. |
 | "The master said this." | Call it a recorded method-seat result, never a quote from the named person. |
+| "The PM ACK says complete, so I can summarize it." | Deliver the returned `user_response_markdown`; the final per-seat section is part of the contract. |
+| "QQQ has an SEC CIK, so the company screen applies." | Classify first. ETF/fund/index company financial routes are not applicable; require look-through or aggregate evidence. |
 
 ## Exit Criteria
 

@@ -2,7 +2,48 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "financial.leverage"
+          }
+        },
+        "condition_id": "master_ackman.capital_structure_resolvable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_passive_only"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_passive_only"
+        },
+        "source_ids": [
+          "proxy:16fb57696593fc4dc"
+        ]
+      },
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "capital_allocation.share_count_change_5y"
+          }
+        },
+        "condition_id": "master_ackman.capital_allocation_history_available",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_passive_only"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_passive_only"
+        },
+        "source_ids": [
+          "proxy:16fb57696593fc4dc"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +51,74 @@
       "native_state": "provisional_passive_only"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.owner_earnings"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_infeasible"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_passive_only"
+        }
+      },
+      "source_ids": [
+        "proxy:16fb57696593fc4dc"
+      ],
+      "veto_id": "master_ackman.no_standalone_downside"
+    },
+    {
+      "condition": {
+        "left": {
+          "fact_id": "financial.leverage"
+        },
+        "op": "gt",
+        "right": {
+          "literal": 3
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_infeasible"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_passive_only"
+        }
+      },
+      "source_ids": [
+        "proxy:16fb57696593fc4dc"
+      ],
+      "veto_id": "master_ackman.balance_sheet_cannot_finance_change"
+    }
+  ],
   "native_decision_schema": "engagement_feasibility_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "governance.voting_control"
+        "output_id": "valuation.market_capitalisation.master_ackman"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "valuation.standalone_value"
+        "output_id": "valuation.owner_earnings_yield.master_ackman"
       }
     }
   ],
@@ -52,14 +146,14 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_engagement_candidate"
       },
       "min_ratio": 1
     }
   ],
   "scoring": {
-    "max_score": 2,
+    "max_score": 3,
     "min_coverage": 1,
     "on_insufficient_coverage": {
       "common_stance": "out_of_scope",
@@ -69,16 +163,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "governance.voting_control"
+            "output_id": "valuation.owner_earnings_yield.master_ackman"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "fact_id": "macro.long_bond_yield"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "ackman_value_gap_over_the_long_bond",
         "source_ids": [
           "proxy:16fb57696593fc4dc"
         ]
@@ -86,7 +180,24 @@
       {
         "condition": {
           "left": {
-            "output_id": "valuation.standalone_value"
+            "fact_id": "financial.leverage"
+          },
+          "op": "lt",
+          "right": {
+            "literal": 1
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "ackman_balance_sheet_can_carry_the_change",
+        "source_ids": [
+          "proxy:16fb57696593fc4dc"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "capital_allocation.share_count_change_5y"
           },
           "op": "gt",
           "right": {
@@ -95,7 +206,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "ackman_capital_allocation_lever_exists",
         "source_ids": [
           "proxy:16fb57696593fc4dc"
         ]

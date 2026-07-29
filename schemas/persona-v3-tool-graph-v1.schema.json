@@ -113,7 +113,7 @@
       "additionalProperties": false,
       "properties": {
         "basis": { "enum": ["instant", "duration", "forecast_horizon", "not_applicable"] },
-        "window": { "type": ["string", "null"], "pattern": "^P[1-9][0-9]*[DMY]$" },
+        "window": { "type": ["string", "null"], "pattern": "^(P[1-9][0-9]*[DMY]|ANY)$" },
         "alignment": { "enum": ["exact", "same_period", "as_of", "not_applicable"] }
       }
     },

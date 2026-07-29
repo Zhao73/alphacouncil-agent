@@ -16,7 +16,7 @@
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:7265b10a67bd0437af02572176793ef0b8529e48437edc5a2e0b1b1b9fbe73d0",
+  "formula_compilation_manifest_hash": "sha256:fc8afd469d9cafccccc4221622ccde5061167c538ab6472eecaaf65efce5461b",
   "method_model_eligible": false,
   "native_states": [
     "provisional_out_of_scope",
@@ -26,8 +26,8 @@
   ],
   "persona_id": "master_munger",
   "planned_tool_ids": [
-    "master_munger.incentive_map",
-    "master_munger.failure_path_graph"
+    "master_munger.reported_earnings_cash_gap",
+    "master_munger.debt_service_cushion"
   ],
   "production_eligible": false,
   "review_status": "not_human_reviewed",

@@ -6,6 +6,7 @@
  * PersonaPack v3 decision comparison while the production package contains zero v3 packs.
  */
 
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { createHash } from "node:crypto";
 import { once } from "node:events";
 import {
@@ -322,8 +323,13 @@ function validatePackagedSurfaces(pack) {
   }
   const reviewPrefix = "knowledge/ai-assisted-solo/reviews/";
   const packagedReviews = pack.tarFiles.filter((path) => path.startsWith(reviewPrefix) && path.endsWith(".json"));
-  if (packagedReviews.length !== 185) {
-    fail(`installed AI-assisted review capsule must contain exactly 185 JSON files; got ${packagedReviews.length}`);
+  // The capsule is complete when the package carries every review the repository holds. Pinning
+  // a number instead would only restate the roster size, and would have to be edited on the
+  // day a seat is added -- which is exactly when the check should still be meaningful.
+  const repoReviews = walkFiles(resolve(PACKAGED_PARITY_REPO_ROOT, reviewPrefix))
+    .filter((entry) => entry.path.endsWith(".json"));
+  if (packagedReviews.length !== repoReviews.length) {
+    fail(`installed AI-assisted review capsule must contain every one of the ${repoReviews.length} repository review files; got ${packagedReviews.length}`);
   }
   if (pack.tarFiles.some((path) => path.startsWith("knowledge/ai-assisted-solo/host-e2e/"))) {
     fail("local external-host failure evidence must not ship in the npm package");
@@ -582,7 +588,7 @@ function errorReason(response, label) {
 }
 
 function assertCompleteCatalog(opened, text, hostId) {
-  if (opened.maximum !== 26 || opened.masters?.length !== 26) fail(`${hostId}: packaged selector is not 26 seats`);
+  if (opened.maximum !== CANONICAL_MASTER_COUNT || opened.masters?.length !== CANONICAL_MASTER_COUNT) fail(`${hostId}: packaged selector is not ${CANONICAL_MASTER_COUNT} seats`);
   const seen = new Set();
   for (const [offset, master] of opened.masters.entries()) {
     if (master.index !== offset + 1 || seen.has(master.id)) fail(`${hostId}: catalog order or IDs are invalid`);

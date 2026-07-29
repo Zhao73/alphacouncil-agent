@@ -16,6 +16,8 @@
     ],
     "native_decision_schema": "dhandho_payoff_v1",
     "optional_fact_types": [
+      "financial.interest_coverage",
+      "options.implied_volatility",
       "distress.recovery_waterfall",
       "credit.financing_runway",
       "scenario.outcome_tree",
@@ -24,6 +26,8 @@
       "portfolio.concentration_limit"
     ],
     "required_fact_types": [
+      "market.price",
+      "capital_allocation.share_count",
       "valuation.downside_floor"
     ]
   },
@@ -45,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_pabrai.downside_floor",
-      "master_pabrai.discrete_payoff"
+      "master_pabrai.market_capitalisation",
+      "master_pabrai.downside_floor_coverage"
     ]
   },
   "decision": {
@@ -54,6 +58,8 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
+      "market.price",
+      "capital_allocation.share_count",
       "valuation.downside_floor"
     ],
     "hard_vetoes": [

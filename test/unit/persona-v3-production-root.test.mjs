@@ -22,7 +22,7 @@ import {
   PERSONA_PRODUCTION_ROOT_ENV,
   resolveActivePersonaKnowledgeDir,
 } from "../../mcp/lib/personas-v3/production-root.mjs";
-import { CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
+import { CANONICAL_MASTER_COUNT, CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
 import {
   TRUSTED_FORMULA_REVIEW_KEYS,
   installFormulaEvidenceIntoPack,
@@ -182,7 +182,7 @@ function activeRelease(paths, { releaseId = "0.9.0-rc.1", mutatePointer = {}, mu
     schema_version: 1,
     artifact_kind: "persona_v3_release_source_review_evidence",
     verified_at: "2026-07-27T00:00:00.000Z",
-    canonical_master_count: 26,
+    canonical_master_count: CANONICAL_MASTER_COUNT,
     trusted_reviewer_keys: trustedReviewerKeys,
     trusted_key_registry_hash: sha256(trustedReviewerKeys),
     ledger_inventory_hash: sha256(ledgerInventory),
@@ -203,7 +203,7 @@ function activeRelease(paths, { releaseId = "0.9.0-rc.1", mutatePointer = {}, mu
     release_id: releaseId,
     release_status: "assembled_immutable",
     assembled_at: "2026-07-27T00:00:00.000Z",
-    canonical_master_count: 26,
+    canonical_master_count: CANONICAL_MASTER_COUNT,
     canonical_master_ids: ids,
     canonical_catalog_hash: `sha256:${"a".repeat(64)}`,
     source_inventory_hash: sha256(packs.map((pack) => ({
@@ -358,8 +358,8 @@ test("pointer history, manifest and release count tampering fail closed", (t) =>
   });
   assert.throws(() => resolveActivePersonaKnowledgeDir(resolveOptions(paths)), /history is incomplete|latest immutable history/u);
   rmSync(join(paths.releases, "pointers", "00000002.json"));
-  writeJson(join(active.release, "release-manifest.json"), { ...active.manifest, canonical_master_count: 25 });
-  assert.throws(() => resolveActivePersonaKnowledgeDir(resolveOptions(paths)), /exactly 26/);
+  writeJson(join(active.release, "release-manifest.json"), { ...active.manifest, canonical_master_count: CANONICAL_MASTER_COUNT - 1 });
+  assert.throws(() => resolveActivePersonaKnowledgeDir(resolveOptions(paths)), new RegExp(`exactly ${CANONICAL_MASTER_COUNT}`));
 });
 
 test("active release rejects missing or mutated source-review evidence", (t) => {

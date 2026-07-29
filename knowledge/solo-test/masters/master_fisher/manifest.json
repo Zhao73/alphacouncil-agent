@@ -16,14 +16,19 @@
     ],
     "native_decision_schema": "scuttlebutt_quality_v1",
     "optional_fact_types": [
+      "financial.return_on_equity_10y",
+      "research.productivity",
       "sales.organization_quality",
+      "customer.retention",
       "supplier.relationships",
       "management.depth",
       "financial.reinvestment_runway"
     ],
     "required_fact_types": [
-      "customer.retention",
-      "research.productivity"
+      "financial.net_margin_5y",
+      "financial.gross_margin_5y",
+      "financial.incremental_return_on_capital",
+      "macro.aaa_corporate_yield"
     ]
   },
   "components": {
@@ -44,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_fisher.scuttlebutt_graph",
-      "master_fisher.research_productivity"
+      "master_fisher.margin_retention",
+      "master_fisher.reinvestment_spread"
     ]
   },
   "decision": {
@@ -53,8 +58,10 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "customer.retention",
-      "research.productivity"
+      "financial.net_margin_5y",
+      "financial.gross_margin_5y",
+      "financial.incremental_return_on_capital",
+      "macro.aaa_corporate_yield"
     ],
     "hard_vetoes": [
       "master_fisher.single_source_story",

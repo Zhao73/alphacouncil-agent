@@ -1,0 +1,120 @@
+[
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:2de0e74dd81eff43426b5ab6fe3549b83aee8b726ee6d6801e98051906426297",
+    "derivation_spec_hash": "sha256:d6c5ea2ec3aa187abbcf906959b2a086c4f6bb6c7daed15969133783dd1089ff",
+    "derivation_spec_id": "master_bogle.fundamental_expected_return.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_bogle.fundamental_expected_return",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "ANY"
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      }
+    ],
+    "input_schema_hash": "sha256:cbed50fe12b4b63e5790e955ce6e540852b1b2112d1f627a2c0900522298cfc6",
+    "inputs": [
+      {
+        "fact_id": "index.dividend_yield"
+      },
+      {
+        "fact_id": "valuation.revenue_growth"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "recomputation",
+    "on_missing": "fail",
+    "operation": "add",
+    "output_id": "index.fundamental_expected_return.master_bogle",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:efdb780dbfeb71e71c627ed7aa4a524a46bd059f9a5c3b90c4ebc0cb68d689c5",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_bogle.fundamental_expected_return.prototype_v1"
+    ],
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
+  },
+  {
+    "assurance_class": "provisional_derived_proxy",
+    "derivation_evidence_hash": "sha256:661066c5b9c8240cf756c92a1b206576d6a67ff7b750e12c73a7f96bdca20a61",
+    "derivation_spec_hash": "sha256:9598751b8e2024a2f0b32aee9a98e261c4cb8de67e119dea9bfd7f5551661248",
+    "derivation_spec_id": "master_bogle.expected_return_over_long_bond.prototype_v1.derived_proxy_v1",
+    "dsl_version": "1.1",
+    "id": "master_bogle.expected_return_over_long_bond",
+    "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      }
+    ],
+    "input_schema_hash": "sha256:2fb8c17ffb0e1adb2f12ff40ee360ddffd5923893c25455914652b3a1df2c016",
+    "inputs": [
+      {
+        "output_id": "index.fundamental_expected_return.master_bogle"
+      },
+      {
+        "fact_id": "macro.long_bond_yield"
+      }
+    ],
+    "intended_use": "local_test_only",
+    "kind": "recomputation",
+    "on_missing": "fail",
+    "operation": "subtract",
+    "output_id": "index.expected_return_over_long_bond.master_bogle",
+    "output_period": {
+      "alignment": "as_of",
+      "basis": "instant",
+      "window": null
+    },
+    "output_schema_hash": "sha256:f638bc204ec1144b26ee85bc4133f766dec778ad236f3ae12af29adb52151ce9",
+    "production_eligible": false,
+    "review_status": "not_human_reviewed",
+    "schema_version": 1,
+    "source_ids": [
+      "derived_proxy:master_bogle.expected_return_over_long_bond.prototype_v1"
+    ],
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
+  }
+]

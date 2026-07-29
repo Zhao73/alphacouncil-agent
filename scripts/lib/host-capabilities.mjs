@@ -1,3 +1,4 @@
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import os from "node:os";
@@ -216,7 +217,7 @@ export function validateHostCapabilities(contract = loadHostCapabilities(), { ro
   }
 
   const catalog = catalogSnapshot("English");
-  if (catalog.count !== 26 || !arraysEqual(catalog.all_master_ids, registry().ids("master"))) errors.push("runtime selector catalog is not the canonical 26-seat registry order");
+  if (catalog.count !== CANONICAL_MASTER_COUNT || !arraysEqual(catalog.all_master_ids, registry().ids("master"))) errors.push(`runtime selector catalog is not the canonical ${CANONICAL_MASTER_COUNT}-seat registry order`);
   if (!/^[a-f0-9]{64}$/.test(catalog.catalog_hash)) errors.push("runtime catalog hash is not sha256 hex");
   for (const [index, seat] of catalog.masters.entries()) {
     if (seat.index !== index + 1 || seat.id !== catalog.all_master_ids[index]) errors.push(`runtime selector index/id drift at ${index + 1}`);

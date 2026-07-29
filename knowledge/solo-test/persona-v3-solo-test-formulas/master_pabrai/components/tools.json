@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:95b1dbfb38191116b70157c669b21a3c3ea4224606c37b00fde20caa9ed39201",
-    "derivation_spec_hash": "sha256:abce875912f1a767df44ba266165123b6be6b610553d2216104edc1c83d36993",
-    "derivation_spec_id": "master_pabrai.downside_floor.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:0299b9dd6cb76de592911b81c6be12fe2f22681e053b825f9c83ca8e9f74737d",
+    "derivation_spec_hash": "sha256:1acefb8accb027d69731ada96a4875aba9f27870c62bf458a95edcf3f1604f02",
+    "derivation_spec_id": "master_pabrai.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_pabrai.downside_floor",
+    "id": "master_pabrai.market_capitalisation",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "duration",
+          "window": "P1Y"
+        },
+        "unit": "shares",
+        "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:b7e06487c36dd9e1442c793526cf8689e5afcca6e1dadf1b87f9017c996d5285",
+    "input_schema_hash": "sha256:fbbf54a8a4c29f76d13caf3390edc589d031636a427e09f732ba8ab5296c1463",
     "inputs": [
       {
-        "fact_id": "valuation.downside_floor"
+        "fact_id": "market.price"
+      },
+      {
+        "fact_id": "capital_allocation.share_count"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "valuation.downside_floor",
+    "operation": "multiply",
+    "output_id": "valuation.market_capitalisation.master_pabrai",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:f0a6178d5033c230d1f1ad1252ed1f27df8675c401beb010ac11a2684aba5df1",
+    "output_schema_hash": "sha256:b3831f18a56bc49dbe59fb99b3490cdfefb2492cf899d6242291a24572e30f85",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_pabrai.downside_floor.prototype_v1"
+      "derived_proxy:master_pabrai.market_capitalisation.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "currency_units",
+    "value_kind": "monetary",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:20de6de0ec49831ff6dba8c759553ad9fab60baad3bc2e60c6fbfd14e3643e95",
-    "derivation_spec_hash": "sha256:81d0fc120e8e215e78a220c9a84de36f6bcb29d22dec575503d59bddd9207172",
-    "derivation_spec_id": "master_pabrai.discrete_payoff.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:be02355e7a36dd6c79a94b56686b8ad2cae398f0bbe60b6811919f6bb744f3d8",
+    "derivation_spec_hash": "sha256:c0d57680183d9dd1aa1652c990f2aafb2a70547471d3335489e91d101467cbc5",
+    "derivation_spec_id": "master_pabrai.downside_floor_coverage.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_pabrai.discrete_payoff",
+    "id": "master_pabrai.downside_floor_coverage",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "currency_units",
+        "value_kind": "monetary"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:bf0ffba61faa186fca759e978078d3e326c50004c6534943aa32c43279275bba",
+    "input_schema_hash": "sha256:75c1bb6f30918a17cae0fe6b7e4bdb32c1db41c95596d29f393daeb301db8a85",
     "inputs": [
       {
         "fact_id": "valuation.downside_floor"
+      },
+      {
+        "output_id": "valuation.market_capitalisation.master_pabrai"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "scenario.outcome_tree",
+    "operation": "divide",
+    "output_id": "valuation.downside_floor_coverage.master_pabrai",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c9e1d4e9cbe21e75c5a42973c2fba83a39d30673cc89bcaa5880c3159386540e",
+    "output_schema_hash": "sha256:f3bdb4f0e95602a01584cfe01d2fcadee03c831729e70dde845b227240f7d78d",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_pabrai.discrete_payoff.prototype_v1"
+      "derived_proxy:master_pabrai.downside_floor_coverage.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

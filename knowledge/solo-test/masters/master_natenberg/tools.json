@@ -1,12 +1,22 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:5e7da98995b96ac2927b34d67ff3a62fc34f3885280711456321a690f7a45961",
-    "derivation_spec_hash": "sha256:6c2a0161361b3ad536f3c77f9eacc8180864c6f27a53cb1bdc186a4a640a5bc6",
-    "derivation_spec_id": "master_natenberg.surface_builder.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:0fddf8a261c5cc11c66df78ab7561eae8c384b4048d18445ea634c2e0e07e6c8",
+    "derivation_spec_hash": "sha256:ce5830892667cd57b430cd002544b938bf624cd7de829fa7ef94c1785191e341",
+    "derivation_spec_id": "master_natenberg.normalised_skew.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_natenberg.surface_builder",
+    "id": "master_natenberg.normalised_skew",
     "input_contracts": [
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal_volatility_difference",
+        "value_kind": "ratio"
+      },
       {
         "on_missing": "fail",
         "period": {
@@ -18,40 +28,43 @@
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:d2b44c26284465b216dd41348b1e659e6bc06bb75f8753d8420e8dde6b68dd09",
+    "input_schema_hash": "sha256:be0aba834f49e444b277182a44ae434882b003a1c5042b53849c5c3964fcffe1",
     "inputs": [
+      {
+        "fact_id": "options.skew_25d"
+      },
       {
         "fact_id": "options.implied_volatility"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "options.implied_volatility",
+    "operation": "divide",
+    "output_id": "options.normalised_skew.master_natenberg",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:74437233e221a6bb8859595fdb733cebbefc7e5fd932c297b0af2f288c709a1f",
+    "output_schema_hash": "sha256:e97835f3ca1e3c8b7c111fdc9aa807d55e7662cd7a506e07e981770d9b4dcb16",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:d71f61ac7584ae3fa"
     ],
-    "unit": "decimal_annualized_volatility",
+    "unit": "decimal",
     "value_kind": "ratio",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:78bf6fc80b4b5101602a6b469998c74bfd1d90b5f1270300d1ead63c05ff0aa0",
-    "derivation_spec_hash": "sha256:cd98be18eba8b61cdc2e57514a1d260facb2ea7c9e0846f31d581a7e3f396a5a",
-    "derivation_spec_id": "master_natenberg.greeks_payoff.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:d1d12b82955fd6721189fa4bcfa289a7a90ba276f8030e311a86b35cba6925fc",
+    "derivation_spec_hash": "sha256:c2910ac4ca61cc90ecff49a6b782cabcdf9085eda0d0d50175712b5bf6f43b20",
+    "derivation_spec_id": "master_natenberg.round_trip_cost.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_natenberg.greeks_payoff",
+    "id": "master_natenberg.round_trip_cost",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "decimal_annualized_volatility",
+        "unit": "decimal_of_mid",
         "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "derived_proxy_scalar",
+        "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:b2e6f3fc599a417cc4459d185df3b962d14f9b8fc72b5b8182881e8efcfc9862",
+    "input_schema_hash": "sha256:ff269c4199a2832e7741c653736f8d42e3849539b8129efe171f5e1c1e44904e",
     "inputs": [
       {
-        "fact_id": "options.implied_volatility"
+        "fact_id": "execution.bid_ask"
+      },
+      {
+        "literal": 2
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "options.greeks",
+    "operation": "multiply",
+    "output_id": "execution.round_trip_cost.master_natenberg",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:773f440b7fbd1d820afb37becdb69338bc65cb83da6070ac5da8646417e3ab11",
+    "output_schema_hash": "sha256:a3e23ab312371119bf0859317bba0d5a66e337cc06e4850995087a38125c62c4",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:d71f61ac7584ae3fa"
     ],
-    "unit": "decimal_annualized_volatility",
+    "unit": "decimal_of_mid",
     "value_kind": "ratio",
-    "version": "0.1.0"
+    "version": "0.2.0"
   }
 ]

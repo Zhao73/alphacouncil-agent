@@ -5,474 +5,492 @@
   "bindings": [
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_aschenbrenner/reviews/compute_power_bridge.ai-review.json",
+      "path": "master_aschenbrenner/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_aschenbrenner",
-      "review_artifact_hash": "sha256:de749f5ac255b4b242ce5308b7d31109c1f812167405aa16a2aa3ac572fd2a25",
-      "review_file_content_hash": "sha256:bc0ec349a77b55889d7fa229c55df0eea838eeea77d5fc1174182e226f11eb65",
-      "review_subject_hash": "sha256:03bf5691a8eeb2bd9b7d58c37d642b3350b086dc6e7049e3ddf434d1d74ffb8f",
-      "tool_id": "master_aschenbrenner.compute_power_bridge"
+      "review_artifact_hash": "sha256:77f95ec17c0d9b737a86aafb9c12988c2b4ed25ad849c9bac2c1cd6c084aea08",
+      "review_file_content_hash": "sha256:989f1b11a27a00bd1b1d0d6b371937c397d8123b624ef999b037b779640eb8b9",
+      "review_subject_hash": "sha256:fd069757e55c47bf8b9ce75878bda750ec928ee2732249d1759df8ad4eb983b7",
+      "tool_id": "master_aschenbrenner.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_aschenbrenner/reviews/timeline_reverse_valuation.ai-review.json",
+      "path": "master_aschenbrenner/reviews/price_implied_cash_yield.ai-review.json",
       "persona_id": "master_aschenbrenner",
-      "review_artifact_hash": "sha256:a38c40b34ee570ddfb84d3a0b6e9f7ad5b8983cfa48a4a804b55d6fe835e4431",
-      "review_file_content_hash": "sha256:bd7d1b4aeaf51e994463b39831297830943f37d233af97a357ff0e163ad9395a",
-      "review_subject_hash": "sha256:2ecc05907ee283905dd01b406e5975c5b5e65f476c2b9368b8f07f20b8acefea",
-      "tool_id": "master_aschenbrenner.timeline_reverse_valuation"
+      "review_artifact_hash": "sha256:1781c277cce6e9383034d1d382315f550d18eca9ec2b6bd48f295cc27bca6a66",
+      "review_file_content_hash": "sha256:4b7d870e5037723ff86b39a9fa479996d60bc00d29af7875a1ea8d855fefe922",
+      "review_subject_hash": "sha256:611a72a7480b7cf09041774173f358c831eb9875365203156715903909a81b73",
+      "tool_id": "master_aschenbrenner.price_implied_cash_yield"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_buffett/reviews/owner_earnings_rebuilder.ai-review.json",
+      "path": "master_buffett/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_buffett",
-      "review_artifact_hash": "sha256:92122c44f40a70fa32b49dd1ad1292d5e12805af65bd399f4b877133e37e57f4",
-      "review_file_content_hash": "sha256:6a523926aba125797f36e648efca081441f860de90aa5d26fbdf591e2110a4af",
-      "review_subject_hash": "sha256:6581e31199a77fee200a3598a8a15d7e5572b98a1dd703dd1c7623de32a210c0",
-      "tool_id": "master_buffett.owner_earnings_rebuilder"
+      "review_artifact_hash": "sha256:8ab3e3dc56021f5d26c24b33b4721e2cf9520a45f8739e0e8d6bc2f29cd9877c",
+      "review_file_content_hash": "sha256:f65a346baafe4a0fdf95d668fdb33b4e4390ee67bfbb128578e4558fc1046525",
+      "review_subject_hash": "sha256:1e4214550c08a93ac5923bf45aa49beefb9e62c13055d04cfa61ac9a37a80dac",
+      "tool_id": "master_buffett.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_buffett/reviews/incremental_returns.ai-review.json",
+      "path": "master_buffett/reviews/owner_earnings_yield.ai-review.json",
       "persona_id": "master_buffett",
-      "review_artifact_hash": "sha256:1a59edf31b23362b4093a196da528e9c458046a48203c9b60df12459f605d927",
-      "review_file_content_hash": "sha256:3011ed33aab19ed1cf154dd9ab89c2d67c07cdc2a4bc752a6b707e44ac349fe1",
-      "review_subject_hash": "sha256:f8af74117eab037fb54247215b39479fbc89384d8aa78dd844a6e3919c552668",
-      "tool_id": "master_buffett.incremental_returns"
+      "review_artifact_hash": "sha256:3e743715d64b407e6fb0ed2af2322b4075f16b119fcf8e83dc64576d9e625a0f",
+      "review_file_content_hash": "sha256:a54216e821cf3f3291480d537b69d913d4a64413903e06c7a42fda0caede4b49",
+      "review_subject_hash": "sha256:03b82313df8045bbc9916b6302d2e9ea5d7d67c77a15b2c3e5523a1d3e2f72b2",
+      "tool_id": "master_buffett.owner_earnings_yield"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_graham/reviews/asset_floor.ai-review.json",
+      "path": "master_graham/reviews/defensive_hurdle_base.ai-review.json",
       "persona_id": "master_graham",
-      "review_artifact_hash": "sha256:1e73c5716c5553544c563f65c8e09209fda99df7038c30e97bf4323b7ad0f2c8",
-      "review_file_content_hash": "sha256:3f0d13d4916fae72ee5353817b7364582eda16ce71c5874841e71b2c6e314ddd",
-      "review_subject_hash": "sha256:efb5758b575ff86e024762e741fec45cc15b0120079c8ab6b8a7fec9a64e7325",
-      "tool_id": "master_graham.asset_floor"
+      "review_artifact_hash": "sha256:2f046df4f4c9da17a171d55cbdc95ec2d6762de0922c97c3ff622a4ae7f62d7f",
+      "review_file_content_hash": "sha256:2df98200733d0811da988920ea3e0e085cadf15201f7821fc00f8d170b072f6e",
+      "review_subject_hash": "sha256:c30275ca07aeec788bfd8bd91f79b453f5318a06d13063aea6eee0cc9d9d9130",
+      "tool_id": "master_graham.defensive_hurdle_base"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_graham/reviews/normalized_earnings.ai-review.json",
+      "path": "master_graham/reviews/half_normalised_earnings_yield.ai-review.json",
       "persona_id": "master_graham",
-      "review_artifact_hash": "sha256:c6f461bed343f95f8914385697e31ab31e763d19b13bda3ce753d9b429f5286e",
-      "review_file_content_hash": "sha256:f18a25cd28d9618a1decaa2b4863fef758fc856c2d39056ea52e4fa83ed13aeb",
-      "review_subject_hash": "sha256:7041777bbb3214fee767c7bea3fa4faf8d2e804c33cc71b580bc6335079758bb",
-      "tool_id": "master_graham.normalized_earnings"
+      "review_artifact_hash": "sha256:e5558860dc23169ffdcb6e17dfb7ef4fa5b8030574d3932aad97e79948bf972a",
+      "review_file_content_hash": "sha256:0da509b9b2425e7878e70995cd777990d86c5ff64443a92a76753edd93e86fa8",
+      "review_subject_hash": "sha256:3636b25f2dcfb565198ca95799fb09fdf920928dc792704591eeff2c914b3ca2",
+      "tool_id": "master_graham.half_normalised_earnings_yield"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_simons/reviews/leakage_audit.ai-review.json",
+      "path": "master_simons/reviews/absolute_session_move.ai-review.json",
       "persona_id": "master_simons",
-      "review_artifact_hash": "sha256:1f64d4df370a9b604bc2506e171a43c4f359aeb6b75d7514b44d36698c03dc59",
-      "review_file_content_hash": "sha256:f2b481a52dc94594a60aadfee6b37b94bfac79c969910e6b407d4b7e1a79a295",
-      "review_subject_hash": "sha256:3dc3d86faafd227a632bc67e0877306b8e61452a2778f9c939b352b5da557880",
-      "tool_id": "master_simons.leakage_audit"
+      "review_artifact_hash": "sha256:e05dfb6e23f83ab4ffb89406f0ae3f0a7052bf825c7742962a58b8b419c5c3ba",
+      "review_file_content_hash": "sha256:425217096e7986bef847f25cff0c093e981f3fe1ebd47977f06d3fb3635cc65f",
+      "review_subject_hash": "sha256:7259baffebc0b665adf4d95b027aef1bbf9742a8c4f4a0a6dd43122b937e2e57",
+      "tool_id": "master_simons.absolute_session_move"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_simons/reviews/oos_cost_test.ai-review.json",
+      "path": "master_simons/reviews/session_move_over_implied.ai-review.json",
       "persona_id": "master_simons",
-      "review_artifact_hash": "sha256:fedc9e60cea78bfa60086cd3b998999c06461941558c57cfb4101c850ea957d3",
-      "review_file_content_hash": "sha256:3d2c7e2f54e201a87393d2588a65889b4fb171ece678033ef48ec4cabc022a43",
-      "review_subject_hash": "sha256:3aefb4e4689ce587e5e3267ba378a44717703f56a4700fcba092e2a0061a7210",
-      "tool_id": "master_simons.oos_cost_test"
+      "review_artifact_hash": "sha256:b97f843bb68f06150dc2e09ffb2391cf13e47d727b1f3e5fdecc1b8865be058b",
+      "review_file_content_hash": "sha256:59d46507c9e52e47d654162084fd98b2b32e0832a9ae3fa24afdfe124ee94e7d",
+      "review_subject_hash": "sha256:815cba7b68b1697f3be9b8018055827272122dff088cbbe5c14c377cd6b83edc",
+      "tool_id": "master_simons.session_move_over_implied"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_soros/reviews/reflexivity_graph.ai-review.json",
+      "path": "master_soros/reviews/credit_cycle_position.ai-review.json",
       "persona_id": "master_soros",
-      "review_artifact_hash": "sha256:afd58b9adf2bad6720cb47bcbc1a84a677e2bfa9f27d75349a69c9b17d9dc611",
-      "review_file_content_hash": "sha256:e2f1f661258ded930dc7476bb283167eb79e6943691306fa3cb387603b892db8",
-      "review_subject_hash": "sha256:4ae9d6949cd241c01516bd1a0ec36d7609aa6dcf8b6c4f849c7a90adf93bb8f1",
-      "tool_id": "master_soros.reflexivity_graph"
+      "review_artifact_hash": "sha256:9d94710bb8b3e6c02587b4c78fa5f7b5c4744968041f0cfb8065dab99f80425c",
+      "review_file_content_hash": "sha256:5b7527ca054c5bdb0e538878ad7e78a2a32983b988b77073ea5c088c2ed3c005",
+      "review_subject_hash": "sha256:f91f85cd7f05c7d518fb89d75056158c6e127e548c3fb27ee70e5fda9181a581",
+      "tool_id": "master_soros.credit_cycle_position"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_soros/reviews/reversal_monitor.ai-review.json",
+      "path": "master_soros/reviews/financing_burden.ai-review.json",
       "persona_id": "master_soros",
-      "review_artifact_hash": "sha256:adc2b2fe3fff4ad629b5e01983375d0e0b1818c8dc7c9820d52e27111dbd85ac",
-      "review_file_content_hash": "sha256:b18f061d1bd863c6985aed7425cb5c8092448481ace65a238ec1a5006d65a114",
-      "review_subject_hash": "sha256:abfc9cec1bd7a1be25dda4efb6c8f1ede455aa7e2acc90538df9a51da623c5f8",
-      "tool_id": "master_soros.reversal_monitor"
+      "review_artifact_hash": "sha256:4a85023e9fa70b79c1a7b275a85105bc60bd21f3f04cf6bcc430255ab1b1d191",
+      "review_file_content_hash": "sha256:93d82e01f7e3a37dba5e6e727a2e7f96c0522b5028ff5225ec50dd9f393703ce",
+      "review_subject_hash": "sha256:1d52a802c2822ccf7dddebb235d6b33a287b96a62de262bf96b482fc402cd29b",
+      "tool_id": "master_soros.financing_burden"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_cathie_wood/reviews/cost_adoption_curve.ai-review.json",
+      "path": "master_cathie_wood/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_cathie_wood",
-      "review_artifact_hash": "sha256:b9c19bc05b3e41a579656924b5466df817a8b51bc9478f606d69d3f7b36c065c",
-      "review_file_content_hash": "sha256:5e51affedbd27b70cb3b0dba67dfc38252daddb9618c3e6afe81369f8daea534",
-      "review_subject_hash": "sha256:88485d0187b6169aadd4d21a68012e2e42b3bfe88c8a6e63f36954c64cefe14d",
-      "tool_id": "master_cathie_wood.cost_adoption_curve"
+      "review_artifact_hash": "sha256:bf195d61c11319e5b4184fcc0c88d4a0b6aed2e2d2b3d5e452ee86b4a46a36df",
+      "review_file_content_hash": "sha256:22d8c6eae1b3a1dd2303add682b079a73716eb311d60e27182a7a756654a0f6e",
+      "review_subject_hash": "sha256:dddfdc1d99d719a183258c5644bba2851cd610fa8ce7961b534b350facc0d36c",
+      "tool_id": "master_cathie_wood.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_cathie_wood/reviews/capture_valuation_bridge.ai-review.json",
+      "path": "master_cathie_wood/reviews/current_cash_yield.ai-review.json",
       "persona_id": "master_cathie_wood",
-      "review_artifact_hash": "sha256:ee9bee37e3f726f7134deb17dcfb5d4d5ad80acb4eb5f555380127260997f3f8",
-      "review_file_content_hash": "sha256:246d887cab8aca5667d32efd4d450529951dff862230e7f363b4ee724b3dd69b",
-      "review_subject_hash": "sha256:8e1bd6d98c7996fc14686b6f6a556779f6d98358b3ded7d9caf15ac744ce72b3",
-      "tool_id": "master_cathie_wood.capture_valuation_bridge"
+      "review_artifact_hash": "sha256:b0a0805e1705e18a289a04e9adc3dda76615397ec58ff6566700c01df090bc4b",
+      "review_file_content_hash": "sha256:8c43bba0176c6f4ce2596af3433b4e2e5de3d6973c737fb302707b42411cc19d",
+      "review_subject_hash": "sha256:3ca4f673a01e22afc1ae70421554c9e8a15a013a0640e1520ea45d8c6ad3c4b8",
+      "tool_id": "master_cathie_wood.current_cash_yield"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_druckenmiller/reviews/liquidity_revision_map.ai-review.json",
+      "path": "master_druckenmiller/reviews/liquidity_curve_impulse.ai-review.json",
       "persona_id": "master_druckenmiller",
-      "review_artifact_hash": "sha256:bc95f87350aa5c9777e6581984194f2e54303994b00c4c4d0da9582a1bcf794c",
-      "review_file_content_hash": "sha256:c751286b816fe109f28e601973ce72515bc6074c38fb649bfd3af626eb3c0cf8",
-      "review_subject_hash": "sha256:9f474bb0e2b689d976ed9228e245eb02b3a09f8eb219c60d8170d1d025ec1680",
-      "tool_id": "master_druckenmiller.liquidity_revision_map"
+      "review_artifact_hash": "sha256:2bff1339458ae0ccbad35dd0364b4f10629bf5e584c088d02ff2c4d2fef3a8cd",
+      "review_file_content_hash": "sha256:6bc8fc33bdcadf5f6f5801e21f9a983cbcf925b4eab89cec5ec994a9ea4c1110",
+      "review_subject_hash": "sha256:bc129841e2abde14dfc7e1fd3eeae521d67d9c2d4ff6732544472608a72030da",
+      "tool_id": "master_druckenmiller.liquidity_curve_impulse"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_druckenmiller/reviews/inflection_payoff.ai-review.json",
+      "path": "master_druckenmiller/reviews/policy_real_rate.ai-review.json",
       "persona_id": "master_druckenmiller",
-      "review_artifact_hash": "sha256:60c966ed27dc7b8f87a7942a0f17830e9fc58b1bd61beb6a51ffe6d0f5e8f89c",
-      "review_file_content_hash": "sha256:60bf3e9831d6fe1172932dbb833d315907735b62b7c5c7bdb5c3025581edf9b0",
-      "review_subject_hash": "sha256:f2e44ba5ae8332832cd7df35789edd5017805ae2c942d2ade5abc889f6de6480",
-      "tool_id": "master_druckenmiller.inflection_payoff"
+      "review_artifact_hash": "sha256:ad117c0cca865f81d00d594721386f4b56d2d32c4c3331f6ef3825431a31fb63",
+      "review_file_content_hash": "sha256:e8eca2020fb794fdc6cc830abc7174a9073c8d7350f262eb0cc97b357e7dc514",
+      "review_subject_hash": "sha256:8d32f914afe766af8921d75e1d6c48f8005238a2065c4768a5055d1873f7779c",
+      "tool_id": "master_druckenmiller.policy_real_rate"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_fisher/reviews/scuttlebutt_graph.ai-review.json",
+      "path": "master_fisher/reviews/margin_retention.ai-review.json",
       "persona_id": "master_fisher",
-      "review_artifact_hash": "sha256:f8ae4ee15cc1d9b201e93afdc62f7af852550f8906342eae38f8d2efe58bb41c",
-      "review_file_content_hash": "sha256:5ef1e970b57bb61814d4d99e0ce7a6d985d61c259cd37f716bf651fa4763ab35",
-      "review_subject_hash": "sha256:05bda11462fe19b753008356bb357a4186ed05ddb31bcd0ccd1f9cc70545bcfe",
-      "tool_id": "master_fisher.scuttlebutt_graph"
+      "review_artifact_hash": "sha256:5b0ead90d80e448ac8b4beb3587b189e8cfc3cd30f78162089bb199169f18e6f",
+      "review_file_content_hash": "sha256:62dae6f5b14de3bf4d0e193cdfe6513b15516c62d2388b1cfdcf34cc8c1a6127",
+      "review_subject_hash": "sha256:ae4c10a8865f120661e42890f3a6ee1613ba05f3a18968a8d0accbbdb496cebc",
+      "tool_id": "master_fisher.margin_retention"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_fisher/reviews/research_productivity.ai-review.json",
+      "path": "master_fisher/reviews/reinvestment_spread.ai-review.json",
       "persona_id": "master_fisher",
-      "review_artifact_hash": "sha256:2f69569f4b5ce0f8040370df6f9ce05696fb9c27a466182ff9152091dfe16092",
-      "review_file_content_hash": "sha256:5cfab656a0bff29499193116bc326b51c1d35f3998c8ae97c20dff501a848309",
-      "review_subject_hash": "sha256:939e5c63cf8afd81edc36c2a33fb4d904fecfa9077364b08b10ca5ba4c80bda9",
-      "tool_id": "master_fisher.research_productivity"
+      "review_artifact_hash": "sha256:3c5bda0f8abae9425516c5e6ecea2888e15a91a4c2982771986ec3ff69b858f4",
+      "review_file_content_hash": "sha256:e32fcc087a354a7183f3e46fe87cb087f84cccaa8bdbd426980d7d9444317e3e",
+      "review_subject_hash": "sha256:a9d1dfc59b8d175850648eb38a8bdb58c08f201bae34b44c649adda17c4c54d6",
+      "tool_id": "master_fisher.reinvestment_spread"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_munger/reviews/incentive_map.ai-review.json",
+      "path": "master_munger/reviews/reported_earnings_cash_gap.ai-review.json",
       "persona_id": "master_munger",
-      "review_artifact_hash": "sha256:207038c0c8ae738fffa5508edd8e9a3c836831baabb1aace2891401cf14bbb3f",
-      "review_file_content_hash": "sha256:e56721f9912aca23746c191f680c1db6b1eaa4577f1cda492e75a2bc9c43e3a7",
-      "review_subject_hash": "sha256:319477bdcaf937f2d210a8bb6da183c43539315de2d3fd3640919cf882c1a28b",
-      "tool_id": "master_munger.incentive_map"
+      "review_artifact_hash": "sha256:0f3f7cd7faa375e57310fd1a9da868b8e2eaeb54d6da7f1cc0f0a57786405f0d",
+      "review_file_content_hash": "sha256:9de2b786cde4fda2ef643450bcd887ef9975ced7d0d9aa9c27071baa30b06525",
+      "review_subject_hash": "sha256:13e9a29099a0bd34f78455b8f932df1d0bc2549a43c603c2506ef933c3573b16",
+      "tool_id": "master_munger.reported_earnings_cash_gap"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_munger/reviews/failure_path_graph.ai-review.json",
+      "path": "master_munger/reviews/debt_service_cushion.ai-review.json",
       "persona_id": "master_munger",
-      "review_artifact_hash": "sha256:b18a25301db58169313aeb22a5d99d64a26c2b3e012b9babfef9f80c659c3dfa",
-      "review_file_content_hash": "sha256:7a7ed7048be248be26fa65dc9bb9c983bcb296aa0532f6df4cbfdeb2012a8fe2",
-      "review_subject_hash": "sha256:e92c6df590ff21ebd437117861b3ee53b1fda32ff232bfdee42c5e12da5d3472",
-      "tool_id": "master_munger.failure_path_graph"
+      "review_artifact_hash": "sha256:4ef18134b6de8699d877f56b6a44a11bf40a77b191847b290c950338a46a7f75",
+      "review_file_content_hash": "sha256:4c070b1108045b55554930e4629f4a9f458d0eefa597c37cec33dcf046427c1f",
+      "review_subject_hash": "sha256:755554b366ab582121bb14ed9f0f8ab63e3536f9f0bc1d7bfacaf59ad28e0448",
+      "tool_id": "master_munger.debt_service_cushion"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_thorp/reviews/edge_recalculator.ai-review.json",
+      "path": "master_thorp/reviews/net_edge.ai-review.json",
       "persona_id": "master_thorp",
-      "review_artifact_hash": "sha256:f9c51bb6e4e55837c81b8fbd22e2e13d038b6f29fc60e15a10cefa6527a1d10c",
-      "review_file_content_hash": "sha256:fcce9146474e9c63b543ecb7567d6de47980f2399c4da5d6dadbddb2a584673d",
-      "review_subject_hash": "sha256:781d69eede700508fac035e1a59addecebfb1e8f7bf4ef4031431decc037bb7c",
-      "tool_id": "master_thorp.edge_recalculator"
+      "review_artifact_hash": "sha256:730632b49d5456747a67bf68d08b46f7ac60efae4a3f36e21a171f2dfbbcb05d",
+      "review_file_content_hash": "sha256:0d35358b1eae5a654fd6e0b8d53e131267d9633e0c659e5638e6c833e92dbd8b",
+      "review_subject_hash": "sha256:69670cd6bce785e9a4c2ebb6cb56ff4672a088b58c32b5db6d71fb377d16c523",
+      "tool_id": "master_thorp.net_edge"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_thorp/reviews/fractional_kelly.ai-review.json",
+      "path": "master_thorp/reviews/edge_per_unit_of_volatility.ai-review.json",
       "persona_id": "master_thorp",
-      "review_artifact_hash": "sha256:a575822b5f35e3b92060644110dfe39c90faef1b33f523804c5cc8053c601692",
-      "review_file_content_hash": "sha256:265f38fd38db3a606a5b64e009f09b350909a4bd5039864c141014be868b2da8",
-      "review_subject_hash": "sha256:e279669196723f1237683af028236cb4cb88367fa2ae782eeb7ac2ec96d26900",
-      "tool_id": "master_thorp.fractional_kelly"
+      "review_artifact_hash": "sha256:4d6f2dd65069dbfe2f98e16cec284c56916b6f6792cbd2c62e6a2633b0be6a62",
+      "review_file_content_hash": "sha256:21b960f076926de76c0f3e3feabc30e3bbff5fc92a85794a51280ffa5aac3798",
+      "review_subject_hash": "sha256:c84342151cf642ac0194ff406857501da53db3ce2fc532ff00b2c15ae774bd5c",
+      "tool_id": "master_thorp.edge_per_unit_of_volatility"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_asness/reviews/factor_decomposer.ai-review.json",
+      "path": "master_asness/reviews/real_earnings_yield_gap.ai-review.json",
       "persona_id": "master_asness",
-      "review_artifact_hash": "sha256:29b20257da4ee6688e775741a27e3a8e36cca8a0489037072db8b94171366eee",
-      "review_file_content_hash": "sha256:ccb18a5688e6bbd2fad0139909f99535a8b6716c5f48d19819c89e9571b4546e",
-      "review_subject_hash": "sha256:e406937435a4168714b4aa8f3374f6612057a2f3f2b41094a15dfbd7d6ebf849",
-      "tool_id": "master_asness.factor_decomposer"
+      "review_artifact_hash": "sha256:899d2c5f11b832cfe66e07bd95a2ee0ca34fa61220e051ca94839cfc8b3a53c6",
+      "review_file_content_hash": "sha256:3c36151b5b6d51a8c810bedc63ca703a5f12d052f7dc82a138bb941de56bde03",
+      "review_subject_hash": "sha256:679206eebfbf4c1a3de48a60ee3a579e157c5492f80c0d402166dd5ef19562b2",
+      "tool_id": "master_asness.real_earnings_yield_gap"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_asness/reviews/crowding_cost_stress.ai-review.json",
+      "path": "master_asness/reviews/nominal_earnings_yield_gap.ai-review.json",
       "persona_id": "master_asness",
-      "review_artifact_hash": "sha256:745e9b8ad6f8849756bd9ace402640c1560a6b1145af9530d09becb6debcbff9",
-      "review_file_content_hash": "sha256:8ddb8e378b7caa64fce4b74bb72bf1cb18e4945f8599a3c0ddf4e50668b3fb01",
-      "review_subject_hash": "sha256:c2a302eaad24e906d7f96bd5aa9c2407bc942dcb44b18dfa5a996bd6e9292ceb",
-      "tool_id": "master_asness.crowding_cost_stress"
+      "review_artifact_hash": "sha256:95c5758e7ba5b4f3d6799fb19dbd215bac74e9a9462f0df2639d75174bd3c6e4",
+      "review_file_content_hash": "sha256:127bf45a13cae3214f34bee7128b97bb730e3b5eb66a2b455d482dde39ff573e",
+      "review_subject_hash": "sha256:2c40ed4b3f598bacd20115a0326c0c72f018864762742cdde9c08d2d87b2fdac",
+      "tool_id": "master_asness.nominal_earnings_yield_gap"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_dalio/reviews/regime_classifier.ai-review.json",
+      "path": "master_dalio/reviews/policy_real_rate.ai-review.json",
       "persona_id": "master_dalio",
-      "review_artifact_hash": "sha256:b87b0f0cbb5f71d8a0e178805225e9565e41ece8a8ec2e6508d8d96a9086fa35",
-      "review_file_content_hash": "sha256:0f140d5e889388c57f244c3f12b8480ab37f0481342a6f7e645d95cc6a31b56c",
-      "review_subject_hash": "sha256:3dc1cc49e8779439691cfcef123e96c6d5c16d1271d6f7d76580f70f913028c3",
-      "tool_id": "master_dalio.regime_classifier"
+      "review_artifact_hash": "sha256:87224747dd115fa581115f79beb042ad72261afdeaee930be6df7211300af979",
+      "review_file_content_hash": "sha256:f0e48af9c8b525de514c62ce3e24d1793b26bd353628f7dca5c4f2ae97e0eca2",
+      "review_subject_hash": "sha256:c70d19da49ce6c079d95cd17a9bc5b1ab0547b742a5109451782c96f3afb3ad8",
+      "tool_id": "master_dalio.policy_real_rate"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_dalio/reviews/debt_driver_stress.ai-review.json",
+      "path": "master_dalio/reviews/real_curve_slope.ai-review.json",
       "persona_id": "master_dalio",
-      "review_artifact_hash": "sha256:afdd8558523455bcdd124e229c230bce5ff3203f83d94529580d35283398e19a",
-      "review_file_content_hash": "sha256:8a016c1b875acaa90154165f2d1a36504763b3cbe24ed10e917c560239f4ae01",
-      "review_subject_hash": "sha256:2788a88339e27e33a6b9854de446a77202794883f04e146c17ac45c801c1130c",
-      "tool_id": "master_dalio.debt_driver_stress"
+      "review_artifact_hash": "sha256:baf74bcfab566189ccd0a19ec0edf7a72e2e8ea88c9b7f666ca50d7069600363",
+      "review_file_content_hash": "sha256:a6cb18ab4d74c20b289842b3bb99a096a94371cab08fde73e08ddb6964e3f13a",
+      "review_subject_hash": "sha256:fc4b07ba82b35d33a50d3551a9798517edd210f8e3f7f1331dd7177ee4eaee16",
+      "tool_id": "master_dalio.real_curve_slope"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_duan_yongping/reviews/user_value_evidence.ai-review.json",
+      "path": "master_duan_yongping/reviews/five_year_opportunity_cost.ai-review.json",
       "persona_id": "master_duan_yongping",
-      "review_artifact_hash": "sha256:b1b23f87188977e90ce1d192c7771efefa0144d4a862e9fa90b4e9fe4e327506",
-      "review_file_content_hash": "sha256:90bb7247136ac1d430a69f511824a3cc318847bae8b48cf331793e560c3b52f2",
-      "review_subject_hash": "sha256:2c78ab05115aab9504f177dc940ca0ea51cc25a4f152dbe86a0d01a3a0bfaf1b",
-      "tool_id": "master_duan_yongping.user_value_evidence"
+      "review_artifact_hash": "sha256:92dd6b4dd7b128cf3f2a05f87ab571bac3edf7cf9de41d12e938656d0c7fd2ce",
+      "review_file_content_hash": "sha256:f7cf2b14ab0cdb0375e018ba2785b2d8ae30f68009852d5f866b682f6bc17fca",
+      "review_subject_hash": "sha256:b42c2c12eb9356c787c7a9836a48bc747133ad7ed8263bf334d92637a4297903",
+      "tool_id": "master_duan_yongping.five_year_opportunity_cost"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_duan_yongping/reviews/opportunity_cost.ai-review.json",
+      "path": "master_duan_yongping/reviews/margin_retention.ai-review.json",
       "persona_id": "master_duan_yongping",
-      "review_artifact_hash": "sha256:f5ff28abbdb964bb1f556d4a519948b955a157525be7ecdd9ab44836ab810999",
-      "review_file_content_hash": "sha256:379d2e34416f926da3b9e061c6cdcf90037d0263828a97f15c8cc1fccf412ada",
-      "review_subject_hash": "sha256:d299f38d2fe9f051bf6738a74552ac08489b4a13495734936baa52ca62fa79fd",
-      "tool_id": "master_duan_yongping.opportunity_cost"
+      "review_artifact_hash": "sha256:3718e7118838b076558555b0ad2f58b1d6a868f3e5b4e09bc5398cf20a02c6b9",
+      "review_file_content_hash": "sha256:bcd95d4066509af9747fc30600489e08323b5e2848b3e9af6531e98dbd25a4ce",
+      "review_subject_hash": "sha256:7a936e1b0570dc7aaf5cc26c049d72305e3383ccb269871680247204119727b5",
+      "tool_id": "master_duan_yongping.margin_retention"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_jhunjhunwala/reviews/promoter_governance.ai-review.json",
+      "path": "master_jhunjhunwala/reviews/real_structural_growth.ai-review.json",
       "persona_id": "master_jhunjhunwala",
-      "review_artifact_hash": "sha256:207c0ad0266cac346007ca452ab6ca9e56eca9db0f83164a0c12d6f7d00f43f0",
-      "review_file_content_hash": "sha256:ab65b4286183b9eca7de44a833c59aaa4ffc42cbed355ee016375ac0cc844cc2",
-      "review_subject_hash": "sha256:8758143dd351e9be7cc9b413329aec3e861fd41e4b8d24805630e5d1421ac91a",
-      "tool_id": "master_jhunjhunwala.promoter_governance"
+      "review_artifact_hash": "sha256:e6ffcf01a743338ab11b65ffe44495d12f659b706a98e14d71e684834865a486",
+      "review_file_content_hash": "sha256:5db8dcb997898ad169addd6c83d69a83fafca55b4c51f2350a3d0f52e9155736",
+      "review_subject_hash": "sha256:f997b165fcb8d733520b348ea37af1cf512ef089632d190e914207b21ee66779",
+      "tool_id": "master_jhunjhunwala.real_structural_growth"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_jhunjhunwala/reviews/penetration_liquidity.ai-review.json",
+      "path": "master_jhunjhunwala/reviews/cash_quality_gap.ai-review.json",
       "persona_id": "master_jhunjhunwala",
-      "review_artifact_hash": "sha256:65ab3b4c86d1199f47ce6e3aaef63b5d8bd8c7cb253a900ffa6a182d79811fb6",
-      "review_file_content_hash": "sha256:c228f30d8fcf74ffcce99544e7215df9e2412db594d4b09a50d3b3272f36f727",
-      "review_subject_hash": "sha256:0ef568274ae234e61d6ee8e4fd9bd1b942c7af88197857aa34e3b828a388e3ff",
-      "tool_id": "master_jhunjhunwala.penetration_liquidity"
+      "review_artifact_hash": "sha256:61e702dcf82d6c72ad5dcac8e8398d3442912f2a0a06fc386075d5c5729bec3d",
+      "review_file_content_hash": "sha256:93318a5a3373de68bee619c73346570e2c96cc7828dd8e7e887e5e29730fb7fc",
+      "review_subject_hash": "sha256:cbb271995e0b9acb3c5401462a1a1466968b9d5b67e6172a8f29daf0242ddf77",
+      "tool_id": "master_jhunjhunwala.cash_quality_gap"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_lynch/reviews/category_classifier.ai-review.json",
+      "path": "master_lynch/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_lynch",
-      "review_artifact_hash": "sha256:4cb4f32a72ea14b44bec935fa35546bab48090bedc4640acbbbe3f0364fcf382",
-      "review_file_content_hash": "sha256:634b7b70be66b514c1b25783af2c62c03b62c2d10143d6487f7a6362a985ea55",
-      "review_subject_hash": "sha256:0745bd12d63bbca94b2d336f7a2ca7f9fa24460766bf4c1b55c64009d7a2d125",
-      "tool_id": "master_lynch.category_classifier"
+      "review_artifact_hash": "sha256:b06cdc5c61ad5bea31206a77bac9d034913b624735eaa4afaa2d4e17fac46914",
+      "review_file_content_hash": "sha256:a45d9641b9dd0a16fa65fd790d6c8132761689fbc4d4f3c559921eb9467a9971",
+      "review_subject_hash": "sha256:949189894b15021025e306e5cbaf8456c00ca40cccc185d6fb31912d6388e508",
+      "tool_id": "master_lynch.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_lynch/reviews/story_numbers_check.ai-review.json",
+      "path": "master_lynch/reviews/growth_justified_capitalisation.ai-review.json",
       "persona_id": "master_lynch",
-      "review_artifact_hash": "sha256:6a315ed8858dbc5fbf76e756a4469164f971fb589ee26883b44b2584142ea9a3",
-      "review_file_content_hash": "sha256:3a2bdad6a1aeeb092bd27f36919b91b226034cdb8dd87fc7eac4c72972e88cfe",
-      "review_subject_hash": "sha256:bb5d13f07fb0a814c0e7c9076dd6f4189e7f6c35403758a39a06b42c9abcfffb",
-      "tool_id": "master_lynch.story_numbers_check"
+      "review_artifact_hash": "sha256:d71dede26995abd286e1734e081daa5ec0e3f67fd8618aeed3249ff6ec6a47ac",
+      "review_file_content_hash": "sha256:608d0da00faf97f69ff103e6f0b305f9883dbeb410344d158eed0d6f702030d5",
+      "review_subject_hash": "sha256:97a73268cc7b927617a627c24ee9cb044803f086a918dc105f65c30f997f3097",
+      "tool_id": "master_lynch.growth_justified_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_forensic_short/reviews/accounting_rebuilder.ai-review.json",
+      "path": "master_forensic_short/reviews/cash_conversion_gap.ai-review.json",
       "persona_id": "master_forensic_short",
-      "review_artifact_hash": "sha256:8b1fe1f639baa4f034f9ce292bfcceaf7f23b5786ee719e4e471c4ba9c194588",
-      "review_file_content_hash": "sha256:1ca4a58cbc66770dc51a2e63a9170c6e5e61402b19c3a97937d5c76eecb1e600",
-      "review_subject_hash": "sha256:f777dcd4847916bd37cd0a0cc6f0facf351b232ff187d007decba91732f0e895",
-      "tool_id": "master_forensic_short.accounting_rebuilder"
+      "review_artifact_hash": "sha256:ea3f9b815a24fdb28edff34329dd9a6ef477f0131f22b56c356f687fae759bc7",
+      "review_file_content_hash": "sha256:ed9af45918e0cf980033275f74d78b61e8a855dd23047d1e5208c504778e7ac4",
+      "review_subject_hash": "sha256:ec02bf1b1bf2ceadc8efef49a93c6a258ee1039a30e4b51462f6467b61c37c1e",
+      "tool_id": "master_forensic_short.cash_conversion_gap"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_forensic_short/reviews/borrow_catalyst.ai-review.json",
+      "path": "master_forensic_short/reviews/cash_cover_of_leverage.ai-review.json",
       "persona_id": "master_forensic_short",
-      "review_artifact_hash": "sha256:6668d74ba66aa52434dc0213c832d2aab873292d0225515b988f6fe6571e459d",
-      "review_file_content_hash": "sha256:f70dffc27f9693660530d4c7b53a7ad70be3bb135cc6fd87a191e9a262e3ad57",
-      "review_subject_hash": "sha256:740028ca15b1503f87615daedf14259fbdeaddff8b4c62892ae0873c24d69d6b",
-      "tool_id": "master_forensic_short.borrow_catalyst"
+      "review_artifact_hash": "sha256:40639c198fe36d38ae424bf9782d8d7d17cd26f3d46ebbc0fba4d3df64cd7750",
+      "review_file_content_hash": "sha256:aa7226f000fb7a929cd1a66147f7ab96970c8747779a65503546860f1e8f69d8",
+      "review_subject_hash": "sha256:380ae909f9dede7be9ea314291e58b38baeeb4b86a175ceac6ad9ca7db76eda6",
+      "tool_id": "master_forensic_short.cash_cover_of_leverage"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_li_lu/reviews/promise_integrity_ledger.ai-review.json",
+      "path": "master_li_lu/reviews/decade_return_over_long_bond.ai-review.json",
       "persona_id": "master_li_lu",
-      "review_artifact_hash": "sha256:c97ba5f9af88f5a111f9aa066df880b1edf7d991ccf6af233842eb214cc6916e",
-      "review_file_content_hash": "sha256:c31369c199f0fffee217adcd73ad5cc79b73c9fece8dafe8027abbc1a6f10806",
-      "review_subject_hash": "sha256:11f13ef28ad887f01ddd05cd9266cdaef15997a1cef87c191a7809ad9845b9c2",
-      "tool_id": "master_li_lu.promise_integrity_ledger"
+      "review_artifact_hash": "sha256:9bb5d390f1e5b769d28eca00b665185c6a0de5b49156561d6f64df431f575986",
+      "review_file_content_hash": "sha256:db6e0c0727fea07af0b0281fe479236d4c750f6350386305ecff17f1d61b200f",
+      "review_subject_hash": "sha256:845577e0ce828cdb3e5243a5bfabec87aa2acb08afa79e92874c292889c66465",
+      "tool_id": "master_li_lu.decade_return_over_long_bond"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_li_lu/reviews/ten_year_return_bridge.ai-review.json",
+      "path": "master_li_lu/reviews/cash_backed_decade_return.ai-review.json",
       "persona_id": "master_li_lu",
-      "review_artifact_hash": "sha256:8e5df44fe30315d06a9245d4486b9ba8a98382ae0fa0647e49d9095738bd09ee",
-      "review_file_content_hash": "sha256:d8d8d9d662f5c6b6ed33a7d7b4da62fe298748bc3baf82cedfd3805f384ae8a7",
-      "review_subject_hash": "sha256:8ff09282c00beb3199a83ec5843e9d1b46b54df140d64e9713c577de4e18efa4",
-      "tool_id": "master_li_lu.ten_year_return_bridge"
+      "review_artifact_hash": "sha256:ac19b2db72606861ede6a3b5197ea60c4b131cadd533d414583a84c078659b0e",
+      "review_file_content_hash": "sha256:c2ef46824e823ba59179150b19d21b0d8cb9a0dacdc3a74abd90caf118199996",
+      "review_subject_hash": "sha256:138663b1b68909de9eb2c865d69dd4e959d959ab9bde2f1664bd748425cbddc0",
+      "tool_id": "master_li_lu.cash_backed_decade_return"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_marks/reviews/cycle_temperature.ai-review.json",
+      "path": "master_marks/reviews/credit_cycle_position.ai-review.json",
       "persona_id": "master_marks",
-      "review_artifact_hash": "sha256:5a4b5c77d41ee92d41a59e1445b80d9b006ea138cca7b351680f8308d29f1495",
-      "review_file_content_hash": "sha256:1a1255c154f8aab503ddb65b22021d69a0f2ad5ef4923daf951755e3ce0386fe",
-      "review_subject_hash": "sha256:09179b294378b16010c1aaacf9b8c4ba5850581768b4a78bc42271a3daee032c",
-      "tool_id": "master_marks.cycle_temperature"
+      "review_artifact_hash": "sha256:21126b47f156c52dc756401d777a890dbfed70dbf9b44b5c87abc8c6e3cc4712",
+      "review_file_content_hash": "sha256:9f6af8afff9dd50650cfa72efd32ef1704d5020dd08c8db3aaa5e639814f294a",
+      "review_subject_hash": "sha256:0f8ef8d299b1241ada7cf1f566d807077e358cfacede4306fdcf02cee641e400",
+      "tool_id": "master_marks.credit_cycle_position"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_marks/reviews/implied_expectations.ai-review.json",
+      "path": "master_marks/reviews/equity_over_corporate_debt.ai-review.json",
       "persona_id": "master_marks",
-      "review_artifact_hash": "sha256:fb06d4455c0330321bcbe050533434ba3033cebcc5e77da73c81e14fad25d018",
-      "review_file_content_hash": "sha256:8ce8028354b6f97eb56a421b55ccf720cadc54e7ccd982e332bcda5e6c5054f5",
-      "review_subject_hash": "sha256:dfeb643dee900654de6890220e4a317c593e4e31584a7bed95bad355210a981b",
-      "tool_id": "master_marks.implied_expectations"
+      "review_artifact_hash": "sha256:58ced37e38b4192df1987ea0d7308a8b2fc16e62144438473b4f4b3d84066ef1",
+      "review_file_content_hash": "sha256:15c227f06b049f0fa10b129cac46cc75d5a2df0dbda142535ffcc35443cd8c19",
+      "review_subject_hash": "sha256:d062f0762e481822ce9af392bd9b29a4d2ff6af87f9989153753c73c82966906",
+      "tool_id": "master_marks.equity_over_corporate_debt"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_burry/reviews/capital_structure_reader.ai-review.json",
+      "path": "master_burry/reviews/net_current_asset_value_per_share.ai-review.json",
       "persona_id": "master_burry",
-      "review_artifact_hash": "sha256:b2cb7b3dd9f90738cc1496ec63c4d4115122657fe5dca1c3ed11b59a722c3a41",
-      "review_file_content_hash": "sha256:466c10a7bf0e473f6518a8a91113be0b69e62e28c5857dba4a56f21577c91c1f",
-      "review_subject_hash": "sha256:ba964281139b0a9d1cce4de711467c17cb06d0cb5259d71bd50468edd22ce740",
-      "tool_id": "master_burry.capital_structure_reader"
+      "review_artifact_hash": "sha256:1345914b0be3a9dfe4c0fb7130c14e2353d87f40ca9811eb918c77cb27895115",
+      "review_file_content_hash": "sha256:0b353333d25ff2c76ee6eacaaa7f23b21e67c651d32051d1c8b8bc7425518de1",
+      "review_subject_hash": "sha256:ccd44fd23247a5d1c9d98a98db735f7b63a14e107afa8212459e90f54f36bebf",
+      "tool_id": "master_burry.net_current_asset_value_per_share"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_burry/reviews/mispricing_carry.ai-review.json",
+      "path": "master_burry/reviews/net_current_asset_surplus_per_share.ai-review.json",
       "persona_id": "master_burry",
-      "review_artifact_hash": "sha256:4808b786306e5f1c54dc342fdf02d664046fe743e47e82e30ae75704a6ee842d",
-      "review_file_content_hash": "sha256:9db0fb0d196db40b1d73e6796e8255fa9d6c9a2f99aafdf179fcebc29bd8ca8a",
-      "review_subject_hash": "sha256:7ea595553f1b6e8494e65db21b336d20ee4dd352f41f774a3cfc4100aa26e21a",
-      "tool_id": "master_burry.mispricing_carry"
+      "review_artifact_hash": "sha256:2a689e07d982909c1debdad6634b3fb762be8cb2405dbff51f2cde8c9e4118da",
+      "review_file_content_hash": "sha256:41437e9c9dd2fd1479d485b1906a6edee14d8896b6a0b923171a6c57ca366a84",
+      "review_subject_hash": "sha256:8410a5ea9afa3c1ef09df46a0de5ad7bdde6dbcc7e2814b0b5e58ba7cf7aeb1e",
+      "tool_id": "master_burry.net_current_asset_surplus_per_share"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_klarman/reviews/recovery_waterfall.ai-review.json",
+      "path": "master_klarman/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_klarman",
-      "review_artifact_hash": "sha256:fd7966d8fdf0fabd2a6c307869b32f0241af627ee6ae46e1e4c205e6825bc37b",
-      "review_file_content_hash": "sha256:73d948a13bb49f9c58b4ac7dbbbfb2d5d9c2173f8ed6035fa51f050ac3e78287",
-      "review_subject_hash": "sha256:bd288b82a5527c38e3dfd8492fe6addb2764e2dbfd4dd63a074bfa1526f43997",
-      "tool_id": "master_klarman.recovery_waterfall"
+      "review_artifact_hash": "sha256:0693007353d09a3524056b9828633f47b2acaa24033570afaca5a79290c9b1fa",
+      "review_file_content_hash": "sha256:ae56fd90fe0d36d88c4c95d72af10c162681ed44f91f7def4a29f38d08bdd9e8",
+      "review_subject_hash": "sha256:d5e4d75aa54c863e40213cf087505263dfe29f68623046badf9fd4309ee5d92e",
+      "tool_id": "master_klarman.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_klarman/reviews/cash_catalyst_compare.ai-review.json",
+      "path": "master_klarman/reviews/downside_asset_coverage.ai-review.json",
       "persona_id": "master_klarman",
-      "review_artifact_hash": "sha256:9b0d06c04f038874923ad538df19a57930f0cc7b30eae2f64c1b622cc0d68900",
-      "review_file_content_hash": "sha256:3a63f9dc0a3b5460ef60a8c6c5b40202b01776bbff2f6d680e5f9ef0bb51c544",
-      "review_subject_hash": "sha256:a78cefb138ece09491f4b79f332514954287832d37453afda728e11caafd11bb",
-      "tool_id": "master_klarman.cash_catalyst_compare"
+      "review_artifact_hash": "sha256:06a8e30f6fb385f4421735ab6de136a40cdc2faec2001a6d8c5d8301b063dbce",
+      "review_file_content_hash": "sha256:e31db53830d6e4112380ea2650343559c61f2c1f18e29a0e9b67b0436d3edb15",
+      "review_subject_hash": "sha256:ad0b4bd09da8f00ef459007004716e871110329b8022bfcb1a34591f5c7f44eb",
+      "tool_id": "master_klarman.downside_asset_coverage"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_pabrai/reviews/downside_floor.ai-review.json",
+      "path": "master_pabrai/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_pabrai",
-      "review_artifact_hash": "sha256:7edb05b4707394e56a3ae853ed04804242787ee2b214f29697e6a753b20ac77f",
-      "review_file_content_hash": "sha256:64567feb6c965e7f7877e94241a0f35a4c62f4e29df3fb2f46ee164b50c39a9a",
-      "review_subject_hash": "sha256:1fe46faebaf06527a3556c89335646bcb77b96ac0ab97e20267701e92799bc0e",
-      "tool_id": "master_pabrai.downside_floor"
+      "review_artifact_hash": "sha256:d59e8718fd7718ca733a94c27f5853c8a406fcb085cedccd3ba9bd2bc3a44a49",
+      "review_file_content_hash": "sha256:9825132f3faa974e4546c0e1bc2ec1a57504137dbfba32d710b788e3fbcf7bb7",
+      "review_subject_hash": "sha256:e974cf5dfff3b9c1ea74e399b1498aac0257132187dfcf246df9cc53d3b55e99",
+      "tool_id": "master_pabrai.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_pabrai/reviews/discrete_payoff.ai-review.json",
+      "path": "master_pabrai/reviews/downside_floor_coverage.ai-review.json",
       "persona_id": "master_pabrai",
-      "review_artifact_hash": "sha256:5efe8897b821dfa9102ce31b49d6e4dead009016b8adf6554ff6937df2a775b7",
-      "review_file_content_hash": "sha256:2e598741b5d16cb4b927f6492ab9b0a0e8985044692a566111a0089a452b9567",
-      "review_subject_hash": "sha256:7c33e08cb41d157d96ee72ef2b3e13c43e92ff1eaeda418158bfa252562f6c71",
-      "tool_id": "master_pabrai.discrete_payoff"
+      "review_artifact_hash": "sha256:3256e56b1019c16c6ef5c41769b1a98ae6f7160d5c4d2e23fef6d4173f5bfeba",
+      "review_file_content_hash": "sha256:1f71e5bd9f61625038310dccd3cfa6e1bd71cddb9e16fdcd987af7496f62bf13",
+      "review_subject_hash": "sha256:4025f847b3939a35f9745147c50ce3a3a2c63a23e080007b56245b061b51b813",
+      "tool_id": "master_pabrai.downside_floor_coverage"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_ackman/reviews/power_map.ai-review.json",
+      "path": "master_ackman/reviews/market_capitalisation.ai-review.json",
       "persona_id": "master_ackman",
-      "review_artifact_hash": "sha256:8c02d32e9136b34d139cc2cb5f92f7a748f33948cc5d00d4f14aaadef2a3c5eb",
-      "review_file_content_hash": "sha256:8c528b08584cec42b6258f5ce7f6f0225560d76dd0599efd1ddd5ca0697ba1d3",
-      "review_subject_hash": "sha256:40b121543f468236dd9c9828c25a92c5579a3e4921914279811b8031ee75154f",
-      "tool_id": "master_ackman.power_map"
+      "review_artifact_hash": "sha256:14b6925c71fb0eb67be668a88d6d426554a1b2a8a209f65c1a7b69f68614259e",
+      "review_file_content_hash": "sha256:755b710828662fa05f608ff6733a4c07c244f28a703832f485e895040a08bc32",
+      "review_subject_hash": "sha256:3869a92b668050dbf2d10d53f39b084dc5efeccc6be0ade48753a9308d4c4ac6",
+      "tool_id": "master_ackman.market_capitalisation"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_ackman/reviews/change_value_bridge.ai-review.json",
+      "path": "master_ackman/reviews/owner_earnings_yield.ai-review.json",
       "persona_id": "master_ackman",
-      "review_artifact_hash": "sha256:38ab2000b30366a47fcc039a4f19eda6d754ba3a56f666cc69abe700bb43b1ca",
-      "review_file_content_hash": "sha256:b57fd421e5b08a6949e35f54e00c38dd77e81cfce9b5a66b7a3110a31e4e6e93",
-      "review_subject_hash": "sha256:83d65699d1af5820fb07da92f28fea895cc71a1d0361a9277c66d8eea9ff8466",
-      "tool_id": "master_ackman.change_value_bridge"
+      "review_artifact_hash": "sha256:24b26efeb1366f00b3982c28d546f5826fec3783e308e94010bc36e1a6e46756",
+      "review_file_content_hash": "sha256:af936c70af00ffeb40f484ca40ba34deb472009e0630589fff3b056f3cddcf56",
+      "review_subject_hash": "sha256:35fd35d6be2b15f699b0242b357e86a0646f3af4656e3270d6ba010efe5237be",
+      "tool_id": "master_ackman.owner_earnings_yield"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_damodaran/reviews/story_dcf.ai-review.json",
+      "path": "master_damodaran/reviews/implied_equity_risk_premium.ai-review.json",
       "persona_id": "master_damodaran",
-      "review_artifact_hash": "sha256:b064ce09f2cd17faaf561af2311043b079b8a8b7ea80e2e061c79bc254e1a79d",
-      "review_file_content_hash": "sha256:5710006126fc1fdaf7480d265295b67af616a50c552c2ad63f9fe54dbfdde7b3",
-      "review_subject_hash": "sha256:8e93f11391f1055150e8108df2c2ed04444905bc303dd7221b816324be7bc436",
-      "tool_id": "master_damodaran.story_dcf"
+      "review_artifact_hash": "sha256:349e21f98d012154948d8710c76822f938fc2dd6ae3d4a683feb31b7f80b5c30",
+      "review_file_content_hash": "sha256:ba421e9b0b64478ff3ea504e95cce22ac1ef901ba916ccd74b57eca7174fafd5",
+      "review_subject_hash": "sha256:9c159aef9f440074dc47120066f2117089813d9f215147855ac9e32db0a4206b",
+      "tool_id": "master_damodaran.implied_equity_risk_premium"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_damodaran/reviews/reverse_valuation.ai-review.json",
+      "path": "master_damodaran/reviews/premium_versus_long_run_average.ai-review.json",
       "persona_id": "master_damodaran",
-      "review_artifact_hash": "sha256:c1b2e2dad65384cd7aaae24f0bb1846ff55e95c175a5834b2039455cbb8a0583",
-      "review_file_content_hash": "sha256:c4dac6ccb20188e114c9baf0b2cc9b797397ccc2c7f0776f8061a6b43b06e742",
-      "review_subject_hash": "sha256:ba811b7c32818a02f5d1982af2659c7b4340c2163048cc5879bb506dabd4328b",
-      "tool_id": "master_damodaran.reverse_valuation"
+      "review_artifact_hash": "sha256:f9033202a257ae586fbac7498ebed61056ff24bf4069f969f32f2542f7f6fd93",
+      "review_file_content_hash": "sha256:df15687028106859e52978709b9da8277c99e84a27f0b6eace4937881c689aa6",
+      "review_subject_hash": "sha256:ae64b5fbfa461a94824cfe978e651604c587a3bf1870e33aa839d5ca4e1061a7",
+      "tool_id": "master_damodaran.premium_versus_long_run_average"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_taleb/reviews/payoff_ruin.ai-review.json",
+      "path": "master_taleb/reviews/debt_service_cushion.ai-review.json",
       "persona_id": "master_taleb",
-      "review_artifact_hash": "sha256:aac2b76c3064ec6502944f64b726d66dd61cef49d9803a1ae8771b481924b85d",
-      "review_file_content_hash": "sha256:57ff70837a85700658ae7fc92ac7795a1541ad694a85901c12f47807112514bf",
-      "review_subject_hash": "sha256:021ed2b6f424e753590a5163bfa398e1a19c64b16adf33d2bee7f7bfead0b3e0",
-      "tool_id": "master_taleb.payoff_ruin"
+      "review_artifact_hash": "sha256:371741459e1500e6146976095dd97f3d2fea94f38eedeb754d74628a2cda32cb",
+      "review_file_content_hash": "sha256:bf96a3e8d9f9df42e4e963c9720c7df0bedfd5bc4b923b74777475a7be48de73",
+      "review_subject_hash": "sha256:6ac0c2f56ad5b32301fbc2286321ce042a6816a7ead408c3d431a0c528b5c0bf",
+      "tool_id": "master_taleb.debt_service_cushion"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_taleb/reviews/tail_friction.ai-review.json",
+      "path": "master_taleb/reviews/normalised_skew.ai-review.json",
       "persona_id": "master_taleb",
-      "review_artifact_hash": "sha256:a604ed4d3da5b842d6d41909dfb78deadf7a96df51d747895e6efcfaff4a12dd",
-      "review_file_content_hash": "sha256:d024b559a5964fbc52651595a9a1d1dc36d3212cd3cc9f5683265540561cbf1c",
-      "review_subject_hash": "sha256:b131fc46ce1300fd13dea881e8f6a1a5879737457d59acfe2ae2ce1bc47c2309",
-      "tool_id": "master_taleb.tail_friction"
+      "review_artifact_hash": "sha256:1be48611ce52725286db2803fdce9644a13c3c1604c787c9189d29cbac423257",
+      "review_file_content_hash": "sha256:9d857efa97666789e21a29d67c105a320c8db6f0655f14d265f39961fedbfa21",
+      "review_subject_hash": "sha256:2031062ffcf037389e0e7c0c9b636883c4d7debc4bafe1fe4db2a5b1301e0f11",
+      "tool_id": "master_taleb.normalised_skew"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_natenberg/reviews/surface_builder.ai-review.json",
+      "path": "master_natenberg/reviews/normalised_skew.ai-review.json",
       "persona_id": "master_natenberg",
-      "review_artifact_hash": "sha256:92008dba6cf1c1a89bd26129857924c5a86e998143339e1e39349031cdf08bc5",
-      "review_file_content_hash": "sha256:b201c3ac3429ad05f80b09a00a49d37187af8c7be6097ea7602388c59b7083db",
-      "review_subject_hash": "sha256:7e53304b6fe6d4a332b721bd06b47681be71e2f53f057784016dc20a4777e87f",
-      "tool_id": "master_natenberg.surface_builder"
+      "review_artifact_hash": "sha256:5f0cd064bc8433030da4d96f11f6f21f045adf971967478b06987f880e5bc7a8",
+      "review_file_content_hash": "sha256:45a4b1393117e65d6c1521f68fb8216625988cbf605381cea062ad2776640dc2",
+      "review_subject_hash": "sha256:5e09e8ea45c9379f4039631683f2b99650c7a2541ab06d336008812bb45710aa",
+      "tool_id": "master_natenberg.normalised_skew"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_natenberg/reviews/greeks_payoff.ai-review.json",
+      "path": "master_natenberg/reviews/round_trip_cost.ai-review.json",
       "persona_id": "master_natenberg",
-      "review_artifact_hash": "sha256:632848d79d6c8b2ad2171de8d0e80cc46fd66e7c9698094ac5e737de93cd586d",
-      "review_file_content_hash": "sha256:90f9540d18fc649f70e9e41ac65cb9468022c6854ad3448a3f1c8c96d9d872c0",
-      "review_subject_hash": "sha256:63e3455f4c30de0ba7b8ce59ac3cc8b02c6b615a5832192b01eefbcca060ea13",
-      "tool_id": "master_natenberg.greeks_payoff"
+      "review_artifact_hash": "sha256:c0a0025940bf39de9e291ce07c8b4aa9e61967efbe161c188ad3679123ee076a",
+      "review_file_content_hash": "sha256:d3b4feb47bc277b7c084b71ce4553c61fd9e6576f0e0b6a7fa6b0f301be22ce7",
+      "review_subject_hash": "sha256:c2f63a72adc0bbb6d28a3962facff1e67c483acf7b3aec72363bb0d39e4a8b0d",
+      "tool_id": "master_natenberg.round_trip_cost"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_sinclair/reviews/realized_vol_forecast.ai-review.json",
+      "path": "master_sinclair/reviews/round_trip_cost.ai-review.json",
       "persona_id": "master_sinclair",
-      "review_artifact_hash": "sha256:bcb379c124807ee987b783421aa04903d462771f20198cf704d1c895b39b2118",
-      "review_file_content_hash": "sha256:feee7f4ca9bfb0c3f02b10a5b09a63e683406ebff157b6cc3ac10721a8ebd7ff",
-      "review_subject_hash": "sha256:50ab07a01218e5beb162537d40e83f4dcad0fc55cfede1b66d087b1faf90c698",
-      "tool_id": "master_sinclair.realized_vol_forecast"
+      "review_artifact_hash": "sha256:b04193f6e2f6c1e524739bd5300fd22a889ad49eccf34e153f4668415e0b158d",
+      "review_file_content_hash": "sha256:e14d63a65a7ec23e9b9a31bb5978a786cf1f1094c6d06d0ba9578730ac3e5fcb",
+      "review_subject_hash": "sha256:f74e4b6ac817f60b99b170813a669de297a66d1ae4195468e760542c3f6e68a3",
+      "tool_id": "master_sinclair.round_trip_cost"
     },
     {
       "adjudication_status": "machine_consistent_semantics_unknown",
-      "path": "master_sinclair/reviews/net_edge_sizer.ai-review.json",
+      "path": "master_sinclair/reviews/volatility_per_unit_of_width.ai-review.json",
       "persona_id": "master_sinclair",
-      "review_artifact_hash": "sha256:e79f74616ee03c1694e1003dd049ed93d9687c2181c9b6918e9a982524eb11e9",
-      "review_file_content_hash": "sha256:712d18b33f88d3196e87970e1a57a44404bd354e402b31911ad9de0c785b579b",
-      "review_subject_hash": "sha256:c844e539e6aec35f70272f3ef263d7ee1f37eda2fdbb5e3b1cfa533ae658e5ac",
-      "tool_id": "master_sinclair.net_edge_sizer"
+      "review_artifact_hash": "sha256:bf4022ef62d0a479bc274fa6a3614feeb90af78aef534fbc8998beab143fad65",
+      "review_file_content_hash": "sha256:4fa0d81bf91ac5e47b2a8402060e7bb0178378a8345d0f25a088daa3484e5ae5",
+      "review_subject_hash": "sha256:164457b4cc6310f47e7ccce9547aa8cc0363263a27419972a5e32fb52b6dd70b",
+      "tool_id": "master_sinclair.volatility_per_unit_of_width"
+    },
+    {
+      "adjudication_status": "machine_consistent_semantics_unknown",
+      "path": "master_bogle/reviews/fundamental_expected_return.ai-review.json",
+      "persona_id": "master_bogle",
+      "review_artifact_hash": "sha256:fbbea7ab146b43258cfeab994bce110f7f675fe52bc33845b7dfa3180f68fef5",
+      "review_file_content_hash": "sha256:ad3122720c3b82944ce803ea3a7ee300e5ed711fc38c5dcc3488abb469f0313d",
+      "review_subject_hash": "sha256:afb0896b39d5fb149a5abd0d832b5db4a7e3ee6cab0f450fa8f531b6ce5428e8",
+      "tool_id": "master_bogle.fundamental_expected_return"
+    },
+    {
+      "adjudication_status": "machine_consistent_semantics_unknown",
+      "path": "master_bogle/reviews/expected_return_over_long_bond.ai-review.json",
+      "persona_id": "master_bogle",
+      "review_artifact_hash": "sha256:b86276d2616aafe4b49447cdcfa0cf608e4559bef2d2af95a5d0ec21fdb8d145",
+      "review_file_content_hash": "sha256:a16bdcc16e10aa112f2f8dfd230f5cefec11b4d2cfd5ff2dd68d818f591b80fd",
+      "review_subject_hash": "sha256:beadab2f36dd17c972ba744448e2f84d2de7bc05b4e8adde0cef9c1cc5a3ab5f",
+      "tool_id": "master_bogle.expected_return_over_long_bond"
     }
   ],
-  "canonical_seat_count": 26,
+  "canonical_seat_count": 27,
   "disagreement_count": 0,
   "distinct_prompt_ids": [
     "ai_formula_deriver_v1",
@@ -485,25 +503,25 @@
     "adjudicator"
   ],
   "execution_mode": "deterministic_review_harness",
-  "formula_compilation_hash": "sha256:bac54120b129bd7f02b7af800f559d6806db5e4beeace15468a6da6d9a4c254a",
+  "formula_compilation_hash": "sha256:53f2131c344ecab868c70e13091f7e3d6e0fc1893838934f26658b33e4143fe2",
   "human_claims": false,
   "human_reviewed": false,
   "human_reviewer_count": 0,
-  "invariant_count": 416,
+  "invariant_count": 432,
   "machine_unknown_count": 0,
-  "manifest_hash": "sha256:2f6f6e73f7dabc17ec97a205dea3c463cb30a86d84a4ddb2df8552e2fcfa7146",
-  "mechanical_pass_count": 52,
+  "manifest_hash": "sha256:f60d2c9c0b1fa92b5d4e2c57630502547f24d28155d89f100eb53d14a5f61264",
+  "mechanical_pass_count": 54,
   "method_model_eligible": false,
   "production_effect": "none",
   "production_eligible": false,
-  "review_count": 52,
+  "review_count": 54,
   "review_schema_hash": "sha256:1b0ef67aafb46755b5a8d4a20e4d40a3c16b7ee9466ad29e4cf978474aaa56cb",
   "review_schema_path": "schemas/persona-v3-ai-formula-cross-review-v1.schema.json",
   "reviewer_kind": "ai",
-  "role_count": 156,
+  "role_count": 162,
   "schema_version": 1,
-  "semantic_unknown_count": 52,
+  "semantic_unknown_count": 54,
   "signature_count": 0,
-  "test_vector_count": 208,
-  "tool_count": 52
+  "test_vector_count": 216,
+  "tool_count": 54
 }

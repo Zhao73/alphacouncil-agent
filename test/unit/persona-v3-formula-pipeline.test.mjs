@@ -26,12 +26,23 @@ import {
 } from "../../scripts/lib/persona-v3-solo-formula-pipeline.mjs";
 import { REPO_ROOT } from "../../scripts/lib/persona-v3-build-specs.mjs";
 import {
+
   TRUSTED_FORMULA_REVIEW_KEYS,
   TEST_FORMULA_REVIEWERS,
   approvedFormulaSpec,
   installAllFormulaCandidates,
   signedFormulaApprovalBundle,
 } from "../helpers/persona-v3-formula-review-evidence.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
+
+/** One `components/tools.json` per seat, plus the single compilation manifest. */
+const PLANNED_SEAT_TOOL_FILES = CANONICAL_MASTER_COUNT + 1;
+
+const EXECUTABLE_OPERATIONS = new Set([
+  "identity", "add", "subtract", "multiply", "divide",
+  "sum", "mean", "min", "max", "abs", "negate", "clamp",
+]);
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -54,16 +65,16 @@ function compileOptions(spec, prototypeDocument = boundPrototype(spec)) {
   };
 }
 
-test("builds an exact 52-entry fail-closed authoring inventory across all 26 seats", () => {
+test("builds an exact one-per-tool fail-closed authoring inventory across every canonical seat", () => {
   const plan = planPersonaV3FormulaPipeline();
   assert.deepEqual(plan.errors, []);
-  assert.equal(plan.inventory.canonical_seat_count, 26);
-  assert.equal(plan.inventory.prototype_count, 52);
-  assert.equal(plan.inventory.needs_formula_authorship_count, 52);
+  assert.equal(plan.inventory.canonical_seat_count, CANONICAL_MASTER_COUNT);
+  assert.equal(plan.inventory.prototype_count, PLANNED_TOOL_COUNT);
+  assert.equal(plan.inventory.needs_formula_authorship_count, PLANNED_TOOL_COUNT);
   assert.equal(plan.inventory.executable_candidate_count, 0);
   assert.equal(plan.inventory.dedicated_tool_count, 0);
-  assert.equal(new Set(plan.inventory.entries.map((entry) => entry.persona_id)).size, 26);
-  assert.equal(new Set(plan.inventory.entries.map((entry) => entry.prototype_id)).size, 52);
+  assert.equal(new Set(plan.inventory.entries.map((entry) => entry.persona_id)).size, CANONICAL_MASTER_COUNT);
+  assert.equal(new Set(plan.inventory.entries.map((entry) => entry.prototype_id)).size, PLANNED_TOOL_COUNT);
   assert.deepEqual(new Set(plan.inventory.entries.map((entry) => entry.artifact_status)), new Set([FORMULA_AUTHORING_STATUS]));
   for (const entry of plan.inventory.entries) {
     assert.equal(entry.formula_spec.formula, null, entry.prototype_id);
@@ -91,12 +102,12 @@ test("preserves cross-seat and within-seat prototype differences in the authorin
     values.push(signature);
     bySeat.set(entry.persona_id, values);
   }
-  assert.equal(bySeat.size, 26);
+  assert.equal(bySeat.size, CANONICAL_MASTER_COUNT);
   for (const [personaId, signatures] of bySeat) {
     assert.equal(signatures.length, 2, personaId);
     assert.notEqual(signatures[0], signatures[1], personaId);
   }
-  assert.equal(new Set([...bySeat.values()].map((pair) => JSON.stringify(pair))).size, 26);
+  assert.equal(new Set([...bySeat.values()].map((pair) => JSON.stringify(pair))).size, CANONICAL_MASTER_COUNT);
 });
 
 test("pending formulas or formulas without a matching review-subject hash cannot compile", () => {
@@ -163,36 +174,36 @@ test("formula contract drift or post-review tampering invalidates compilation", 
   );
 });
 
-test("explicit writer emits only 52 specs plus one inventory below an isolated staging root", (t) => {
+test("explicit writer emits only one spec per tool plus one inventory below an isolated staging root", (t) => {
   const dir = mkdtempSync(join(tmpdir(), "alphacouncil-formulas-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const outputRoot = join(dir, "knowledge", "staging", "persona-v3-formula-candidates");
   const first = writePersonaV3FormulaCandidates({ outputRoot });
-  assert.equal(first.written.length, 53);
+  assert.equal(first.written.length, PLANNED_TOOL_COUNT + 1); // one spec per tool, plus the inventory
   assert.equal(first.unchanged.length, 0);
   assert.equal(existsSync(join(outputRoot, "authoring-inventory.json")), true);
   assert.equal(existsSync(join(outputRoot, "manifest.json")), false);
   const second = writePersonaV3FormulaCandidates({ outputRoot });
   assert.equal(second.written.length, 0);
-  assert.equal(second.unchanged.length, 53);
+  assert.equal(second.unchanged.length, PLANNED_TOOL_COUNT + 1);
 });
 
-test("the real approved-candidate path verifies and emits exactly 52 tools with 52 preserved bundles", (t) => {
+test("the real approved-candidate path verifies and emits exactly one per planned tool tools with one preserved bundle each", (t) => {
   const dir = mkdtempSync(join(tmpdir(), "alphacouncil-approved-formulas-"));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const candidateRoot = join(dir, "staging", FORMULA_CANDIDATE_DIRNAME);
   const outputRoot = join(dir, "staging", COMPILED_FORMULA_DIRNAME);
   const records = installAllFormulaCandidates(candidateRoot);
-  assert.equal(records.length, 52);
+  assert.equal(records.length, PLANNED_TOOL_COUNT);
 
   const plan = planApprovedFormulaCompilation({
     candidateRoot,
     trustedFormulaReviewerKeys: TRUSTED_FORMULA_REVIEW_KEYS,
     now: new Date("2026-07-27T12:00:00.000Z"),
   });
-  assert.equal(plan.compiled_tool_count, 52);
-  assert.equal(plan.formula_approval_binding_count, 52);
-  assert.equal(new Set(plan.tool_ids).size, 52);
+  assert.equal(plan.compiled_tool_count, PLANNED_TOOL_COUNT);
+  assert.equal(plan.formula_approval_binding_count, PLANNED_TOOL_COUNT);
+  assert.equal(new Set(plan.tool_ids).size, PLANNED_TOOL_COUNT);
   assert.ok(plan.tools.every((tool) => tool.formula_spec_hash && tool.approval_bundle_hash));
 
   const written = writeApprovedFormulaCompilation({
@@ -201,9 +212,9 @@ test("the real approved-candidate path verifies and emits exactly 52 tools with 
     trustedFormulaReviewerKeys: TRUSTED_FORMULA_REVIEW_KEYS,
     now: new Date("2026-07-27T12:00:00.000Z"),
   });
-  assert.equal(written.compiled_tool_count, 52);
-  assert.equal(written.formula_approval_binding_count, 52);
-  assert.equal(written.written.length, 79);
+  assert.equal(written.compiled_tool_count, PLANNED_TOOL_COUNT);
+  assert.equal(written.formula_approval_binding_count, PLANNED_TOOL_COUNT);
+  assert.equal(written.written.length, PLANNED_TOOL_COUNT + PLANNED_SEAT_TOOL_FILES); // per-seat tool files plus one compilation manifest
   assert.equal(existsSync(join(outputRoot, "compilation-manifest.json")), true);
 
   const keysFile = join(dir, "formula-review-keys.json");
@@ -221,8 +232,8 @@ test("the real approved-candidate path verifies and emits exactly 52 tools with 
     "--trusted-formula-reviewer-keys", keysFile,
   ], { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(cli.status, 0, cli.stderr);
-  assert.match(cli.stdout, /tools=52\/52/u);
-  assert.match(cli.stdout, /formula_approvals=52\/52/u);
+  assert.match(cli.stdout, new RegExp(`tools=${PLANNED_TOOL_COUNT}/${PLANNED_TOOL_COUNT}`, "u"));
+  assert.match(cli.stdout, new RegExp(`formula_approvals=${PLANNED_TOOL_COUNT}/${PLANNED_TOOL_COUNT}`, "u"));
 
   unlinkSync(join(candidateRoot, "approvals", records[0].entry.persona_id,
     `${records[0].entry.tool_id.slice(records[0].entry.persona_id.length + 1)}.approval-bundle.json`));
@@ -233,27 +244,30 @@ test("the real approved-candidate path verifies and emits exactly 52 tools with 
   }), /candidate file is missing/u);
 });
 
-test("solo-test compilation derives 52 executable proxies without inventing formula approvals", () => {
+test("solo-test compilation derives the executable tools without inventing formula approvals", () => {
   const plan = planSoloTestFormulaCompilation();
   assert.equal(plan.artifact_kind, "persona_v3_solo_test_formula_compilation");
   assert.equal(plan.assurance_class, "provisional_derived_proxy");
   assert.equal(plan.review_status, "not_human_reviewed");
   assert.equal(plan.intended_use, "local_test_only");
-  assert.equal(plan.canonical_seat_count, 26);
-  assert.equal(plan.compiled_tool_count, 52);
-  assert.equal(plan.provisional_derivation_count, 52);
+  assert.equal(plan.canonical_seat_count, CANONICAL_MASTER_COUNT);
+  assert.equal(plan.compiled_tool_count, PLANNED_TOOL_COUNT);
+  assert.equal(plan.provisional_derivation_count, PLANNED_TOOL_COUNT);
   assert.equal(plan.formula_approval_binding_count, 0);
   assert.equal(plan.human_reviewer_count, 0);
   assert.equal(plan.signature_count, 0);
   assert.equal(plan.production_eligible, false);
   assert.equal(plan.method_model_eligible, false);
-  assert.equal(new Set(plan.tools.map((tool) => tool.id)).size, 52);
-  assert.equal(new Set(plan.tools.map((tool) => tool.output_id)).size, 52);
+  assert.equal(new Set(plan.tools.map((tool) => tool.id)).size, PLANNED_TOOL_COUNT);
+  assert.equal(new Set(plan.tools.map((tool) => tool.output_id)).size, PLANNED_TOOL_COUNT);
   for (const tool of plan.tools) {
     assert.equal(tool.assurance_class, "provisional_derived_proxy");
     assert.equal(tool.review_status, "not_human_reviewed");
     assert.equal(tool.production_eligible, false);
-    assert.equal(tool.operation, "identity");
+    // Authoring replaced the identity placeholder with the method's own arithmetic, so what
+    // has to hold is that the operation is one the executor implements -- not that it is the
+    // one that computes nothing.
+    assert.ok(EXECUTABLE_OPERATIONS.has(tool.operation), `unknown operation ${tool.operation}`);
     assert.equal("formula_spec_id" in tool, false);
     assert.equal("formula_review_subject_hash" in tool, false);
     assert.equal("approval_bundle_hash" in tool, false);
@@ -262,17 +276,38 @@ test("solo-test compilation derives 52 executable proxies without inventing form
       deterministicToolSchemaHashes(tool),
     );
   }
-  const optionProxy = plan.tools.find((tool) => tool.id === "master_taleb.tail_friction");
-  assert.equal(optionProxy.input_contracts[0].value_kind, "ratio");
-  assert.equal(optionProxy.input_contracts[0].unit, "decimal_annualized_volatility");
-  assert.deepEqual(optionProxy.output_period, { basis: "instant", window: null, alignment: "as_of" });
-  const unknownProxy = plan.tools.find((tool) => tool.id === "master_buffett.owner_earnings_rebuilder");
-  assert.equal(unknownProxy.input_contracts[0].unit, "derived_proxy_scalar");
+  const optionTool = plan.tools
+    .find((tool) => (tool.inputs || []).some((input) => input.fact_id === "options.implied_volatility"));
+  assert.ok(optionTool);
+  assert.deepEqual(optionTool.output_period, { basis: "instant", window: null, alignment: "as_of" });
+  // A fact the grounding adapter now produces binds to its real contract; only a fact nothing
+  // generates still falls back to the fail-closed proxy scalar.
+  // Bound by the fact a tool reads rather than by its name: an authored method names its own
+  // steps, so a pinned tool id here would only detect renames.
+  const contractFor = (factId) => plan.tools
+    .flatMap((tool) => (tool.inputs || []).map((operand, index) => [operand, tool.input_contracts[index]]))
+    .find(([operand]) => operand?.fact_id === factId)?.[1];
+  // A fact the grounding adapter produces binds to its declared contract.
+  assert.equal(contractFor("financial.owner_earnings").value_kind, "monetary");
+  assert.equal(contractFor("financial.owner_earnings").unit, "currency_units");
+  // Stronger than the old fallback check, and now true: every authored tool reads a fact the
+  // grounding adapter declares, so none of them silently binds the fail-closed proxy scalar.
+  // A tool on that placeholder contract can never execute against real grounding.
+  const onProxyContract = plan.tools.flatMap((tool) => (tool.inputs || [])
+    .map((operand, index) => ({ tool: tool.id, fact: operand.fact_id, contract: tool.input_contracts[index] }))
+    .filter((entry) => entry.fact && entry.contract.unit === "derived_proxy_scalar"));
+  assert.deepEqual(onProxyContract, [], `tools bound to an undeclared fact: ${JSON.stringify(onProxyContract)}`);
   for (const evidence of plan.evidence) {
     assert.equal(evidence.human_reviewer_ids.length, 0);
     assert.equal(evidence.signature_count, 0);
     assert.equal(evidence.production_eligible, false);
-    assert.ok(evidence.limitations.includes("mechanical_identity_proxy_not_the_named_investor_method"));
+    // An authored formula drops the identity-proxy claim, which would be false of it, and
+    // says what it actually is. Neither kind has been reviewed by a human.
+    assert.ok(
+      evidence.limitations.includes("mechanical_identity_proxy_not_the_named_investor_method")
+      || evidence.limitations.includes("ai_authored_candidate_formula_not_human_reviewed"),
+    );
+    assert.ok(evidence.limitations.includes("no_human_formula_review_or_cryptographic_approval_exists"));
   }
 });
 
@@ -281,24 +316,24 @@ test("solo-test writer stays isolated and CLI reports zero approvals", (t) => {
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const outputRoot = join(dir, "staging", SOLO_TEST_FORMULA_DIRNAME);
   const first = writeSoloTestFormulaCompilation({ outputRoot });
-  assert.equal(first.written.length, 79);
+  assert.equal(first.written.length, PLANNED_TOOL_COUNT + PLANNED_SEAT_TOOL_FILES);
   assert.equal(first.unchanged.length, 0);
-  assert.equal(first.compiled_tool_count, 52);
+  assert.equal(first.compiled_tool_count, PLANNED_TOOL_COUNT);
   assert.equal(first.formula_approval_binding_count, 0);
   assert.equal(existsSync(join(outputRoot, "compilation-manifest.json")), true);
   assert.equal(existsSync(join(outputRoot, "master_buffett", "components", "tools.json")), true);
   assert.equal(existsSync(join(outputRoot, "master_buffett", "formula-approvals")), false);
   const second = writeSoloTestFormulaCompilation({ outputRoot });
   assert.equal(second.written.length, 0);
-  assert.equal(second.unchanged.length, 79);
+  assert.equal(second.unchanged.length, PLANNED_TOOL_COUNT + PLANNED_SEAT_TOOL_FILES);
 
   const cli = spawnSync(process.execPath, [
     "scripts/compile-persona-v3-formulas.mjs",
     "--compile-solo-test",
   ], { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(cli.status, 0, cli.stderr);
-  assert.match(cli.stdout, /tools=52\/52/u);
-  assert.match(cli.stdout, /formula_approvals=0\/52/u);
+  assert.match(cli.stdout, new RegExp(`tools=${PLANNED_TOOL_COUNT}/${PLANNED_TOOL_COUNT}`, "u"));
+  assert.match(cli.stdout, new RegExp(`formula_approvals=0/${PLANNED_TOOL_COUNT}`, "u"));
   assert.match(cli.stdout, /assurance=provisional_derived_proxy/u);
   assert.match(cli.stdout, /production_eligible=false/u);
 });
@@ -319,8 +354,8 @@ test("formula schema is exact and CLI is plan-only unless --write is explicit", 
   const args = ["scripts/compile-persona-v3-formulas.mjs", "--output-root", outputRoot];
   const plan = spawnSync(process.execPath, args, { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(plan.status, 0, plan.stderr);
-  assert.match(plan.stdout, /prototypes=52\/52/);
-  assert.match(plan.stdout, /needs_authorship=52/);
+  assert.match(plan.stdout, new RegExp(`prototypes=${PLANNED_TOOL_COUNT}/${PLANNED_TOOL_COUNT}`));
+  assert.match(plan.stdout, new RegExp(`needs_authorship=${PLANNED_TOOL_COUNT}`));
   assert.match(plan.stdout, /executable_candidates=0/);
   assert.equal(existsSync(outputRoot), false);
 

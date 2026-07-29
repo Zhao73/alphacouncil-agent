@@ -16,14 +16,19 @@
     ],
     "native_decision_schema": "innovation_adoption_scenario_v1",
     "optional_fact_types": [
+      "valuation.revenue_growth",
+      "macro.long_bond_yield",
+      "technology.cost_curve",
       "technology.adoption_rate",
       "market.addressable_units",
+      "company.capture_rate",
       "economics.unit_margin",
       "valuation.scenario_distribution"
     ],
     "required_fact_types": [
-      "technology.cost_curve",
-      "company.capture_rate"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.free_cash_flow_5y"
     ]
   },
   "components": {
@@ -44,8 +49,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_cathie_wood.cost_adoption_curve",
-      "master_cathie_wood.capture_valuation_bridge"
+      "master_cathie_wood.market_capitalisation",
+      "master_cathie_wood.current_cash_yield"
     ]
   },
   "decision": {
@@ -53,8 +58,9 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "technology.cost_curve",
-      "company.capture_rate"
+      "market.price",
+      "capital_allocation.share_count",
+      "financial.free_cash_flow_5y"
     ],
     "hard_vetoes": [
       "master_cathie_wood.theme_company_gap",

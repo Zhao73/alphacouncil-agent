@@ -1,0 +1,170 @@
+{
+  "abstention_policy": "fail_closed",
+  "dsl_version": "1.1",
+  "eligibility": {
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "fund.top_ten_weight"
+          }
+        },
+        "condition_id": "master_bogle.holdings_breadth_visible",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_return_inputs"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_return_inputs"
+        },
+        "source_ids": [
+          "proxy:1b982d2dc6b935fc0"
+        ]
+      }
+    ]
+  },
+  "fact_gate": {
+    "on_missing_critical": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_insufficient_return_inputs"
+    }
+  },
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "index.fundamental_expected_return.master_bogle"
+        },
+        "op": "lte",
+        "right": {
+          "fact_id": "macro.breakeven_inflation"
+        }
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_overpriced_market"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_insufficient_return_inputs"
+        }
+      },
+      "source_ids": [
+        "proxy:1b982d2dc6b935fc0"
+      ],
+      "veto_id": "master_bogle.expected_return_below_inflation"
+    }
+  ],
+  "native_decision_schema": "expected_market_return_v1",
+  "native_output_fields": [
+    {
+      "field": "metric_1",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "index.fundamental_expected_return.master_bogle"
+      }
+    },
+    {
+      "field": "metric_2",
+      "on_missing": "fail",
+      "value": {
+        "output_id": "index.expected_return_over_long_bond.master_bogle"
+      }
+    }
+  ],
+  "native_states": [
+    "provisional_insufficient_return_inputs",
+    "provisional_overpriced_market",
+    "provisional_fair_expected_return",
+    "provisional_low_cost_index_candidate"
+  ],
+  "schema_version": 1,
+  "score_bands": [
+    {
+      "decision": {
+        "common_stance": "opposed",
+        "native_state": "provisional_overpriced_market"
+      },
+      "min_ratio": 0
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
+        "native_state": "provisional_fair_expected_return"
+      },
+      "min_ratio": 0.5
+    },
+    {
+      "decision": {
+        "common_stance": "constructive",
+        "native_state": "provisional_low_cost_index_candidate"
+      },
+      "min_ratio": 1
+    }
+  ],
+  "scoring": {
+    "max_score": 3,
+    "min_coverage": 1,
+    "on_insufficient_coverage": {
+      "common_stance": "out_of_scope",
+      "native_state": "provisional_insufficient_return_inputs"
+    },
+    "rules": [
+      {
+        "condition": {
+          "left": {
+            "output_id": "index.expected_return_over_long_bond.master_bogle"
+          },
+          "op": "gt",
+          "right": {
+            "literal": 0
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "bogle_fundamental_return_beats_long_bond",
+        "source_ids": [
+          "proxy:1b982d2dc6b935fc0"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "index.aggregate_earnings_yield"
+          },
+          "op": "gte",
+          "right": {
+            "literal": 0.0667
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "bogle_multiple_at_or_below_long_run_norm",
+        "source_ids": [
+          "proxy:1b982d2dc6b935fc0"
+        ]
+      },
+      {
+        "condition": {
+          "left": {
+            "fact_id": "fund.top_ten_weight"
+          },
+          "op": "lte",
+          "right": {
+            "literal": 0.5
+          }
+        },
+        "coverage_weight": 1,
+        "points": 1,
+        "rule_id": "bogle_owns_the_whole_market",
+        "source_ids": [
+          "proxy:1b982d2dc6b935fc0"
+        ]
+      }
+    ]
+  }
+}

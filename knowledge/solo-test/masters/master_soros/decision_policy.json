@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "market.change_pct"
+          }
+        },
+        "condition_id": "master_soros.price_leg_observable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_loop"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_loop"
+        },
+        "source_ids": [
+          "proxy:efa4c7a15523b575e"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,88 @@
       "native_state": "provisional_no_loop"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "left": {
+          "output_id": "reflexivity.financing_burden.master_soros"
+        },
+        "op": "lte",
+        "right": {
+          "literal": 0
+        }
+      },
+      "on_trigger": {
+        "common_stance": "out_of_scope",
+        "native_state": "provisional_no_loop"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_loop"
+        }
+      },
+      "source_ids": [
+        "proxy:efa4c7a15523b575e"
+      ],
+      "veto_id": "master_soros.no_reflexive_link"
+    },
+    {
+      "condition": {
+        "conditions": [
+          {
+            "left": {
+              "fact_id": "market.change_pct"
+            },
+            "op": "gt",
+            "right": {
+              "literal": 0
+            }
+          },
+          {
+            "left": {
+              "output_id": "macro.credit_spread_gap.master_soros"
+            },
+            "op": "gt",
+            "right": {
+              "literal": 0
+            }
+          }
+        ],
+        "op": "all"
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_broken"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_no_loop"
+        }
+      },
+      "source_ids": [
+        "proxy:efa4c7a15523b575e"
+      ],
+      "veto_id": "master_soros.price_outruns_its_financing"
+    }
+  ],
   "native_decision_schema": "reflexive_loop_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "reflexivity.loop_state"
+        "output_id": "macro.credit_spread_gap.master_soros"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "reflexivity.break_signals"
+        "output_id": "reflexivity.financing_burden.master_soros"
       }
     }
   ],
@@ -52,7 +140,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_reinforcing"
       },
       "min_ratio": 1
@@ -69,7 +157,7 @@
       {
         "condition": {
           "left": {
-            "output_id": "reflexivity.loop_state"
+            "fact_id": "market.change_pct"
           },
           "op": "gt",
           "right": {
@@ -78,7 +166,7 @@
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "soros_price_leg_rising",
         "source_ids": [
           "proxy:efa4c7a15523b575e"
         ]
@@ -86,16 +174,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "reflexivity.break_signals"
+            "output_id": "macro.credit_spread_gap.master_soros"
           },
-          "op": "gt",
+          "op": "lt",
           "right": {
             "literal": 0
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "soros_financing_leg_permissive",
         "source_ids": [
           "proxy:efa4c7a15523b575e"
         ]

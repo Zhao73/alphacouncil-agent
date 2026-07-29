@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:e05fd4fdbb3b1411a88ed32e472ccb0ff771508227dbf9102c9bbcb632410118",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_pabrai.downside_floor_coverage.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "valuation.downside_floor"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "output_id": "valuation.market_capitalisation.master_pabrai"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "currency_units",
+          "value_kind": "monetary"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "divide",
+      "output": {
+        "output_id": "valuation.downside_floor_coverage.master_pabrai",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_pabrai",
+    "prototype_content_hash": "sha256:6c8726536b236a2353b26a83451dd34015daea6a8e6f0bd247e032b2dc6fcc3b",
+    "prototype_id": "master_pabrai.downside_floor_coverage.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_pabrai.downside_floor_coverage"
+  },
+  "derivation_spec_hash": "sha256:c0d57680183d9dd1aa1652c990f2aafb2a70547471d3335489e91d101467cbc5",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

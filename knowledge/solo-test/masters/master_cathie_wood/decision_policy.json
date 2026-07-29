@@ -2,7 +2,28 @@
   "abstention_policy": "fail_closed",
   "dsl_version": "1.1",
   "eligibility": {
-    "all": []
+    "all": [
+      {
+        "condition": {
+          "op": "exists",
+          "value": {
+            "fact_id": "valuation.revenue_growth"
+          }
+        },
+        "condition_id": "master_cathie_wood.adoption_rate_observable",
+        "on_false": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_unsupported_theme"
+        },
+        "on_uncomputable": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_unsupported_theme"
+        },
+        "source_ids": [
+          "proxy:fee6f8a0c78b363b9"
+        ]
+      }
+    ]
   },
   "fact_gate": {
     "on_missing_critical": {
@@ -10,21 +31,62 @@
       "native_state": "provisional_unsupported_theme"
     }
   },
-  "hard_vetoes": [],
+  "hard_vetoes": [
+    {
+      "condition": {
+        "conditions": [
+          {
+            "left": {
+              "fact_id": "valuation.revenue_growth"
+            },
+            "op": "lt",
+            "right": {
+              "literal": 0.15
+            }
+          },
+          {
+            "left": {
+              "output_id": "valuation.free_cash_flow_yield.master_cathie_wood"
+            },
+            "op": "lt",
+            "right": {
+              "fact_id": "macro.long_bond_yield"
+            }
+          }
+        ],
+        "op": "all"
+      },
+      "on_trigger": {
+        "common_stance": "opposed",
+        "native_state": "provisional_overpriced_adoption"
+      },
+      "on_uncomputable": {
+        "action": "abstain",
+        "decision": {
+          "common_stance": "out_of_scope",
+          "native_state": "provisional_unsupported_theme"
+        }
+      },
+      "source_ids": [
+        "proxy:fee6f8a0c78b363b9"
+      ],
+      "veto_id": "master_cathie_wood.adoption_already_priced"
+    }
+  ],
   "native_decision_schema": "innovation_adoption_scenario_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "technology.cost_curve"
+        "output_id": "valuation.market_capitalisation.master_cathie_wood"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "company.capture_rate"
+        "output_id": "valuation.free_cash_flow_yield.master_cathie_wood"
       }
     }
   ],
@@ -52,7 +114,7 @@
     },
     {
       "decision": {
-        "common_stance": "cautious",
+        "common_stance": "constructive",
         "native_state": "provisional_asymmetric_innovation"
       },
       "min_ratio": 1
@@ -69,16 +131,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "technology.cost_curve"
+            "fact_id": "valuation.revenue_growth"
           },
-          "op": "gt",
+          "op": "gte",
           "right": {
-            "literal": 0
+            "literal": 0.15
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_1",
+        "rule_id": "wood_growth_clears_the_published_hurdle",
         "source_ids": [
           "proxy:fee6f8a0c78b363b9"
         ]
@@ -86,16 +148,16 @@
       {
         "condition": {
           "left": {
-            "output_id": "company.capture_rate"
+            "fact_id": "valuation.revenue_growth"
           },
           "op": "gt",
           "right": {
-            "literal": 0
+            "output_id": "valuation.free_cash_flow_yield.master_cathie_wood"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "proxy_score_2",
+        "rule_id": "wood_growth_exceeds_what_the_price_already_earns",
         "source_ids": [
           "proxy:fee6f8a0c78b363b9"
         ]

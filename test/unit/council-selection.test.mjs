@@ -3,11 +3,13 @@ import assert from "node:assert/strict";
 
 import { catalogSnapshot, parseMasterSelection } from "../../mcp/lib/council-selection.mjs";
 import { registry } from "../../mcp/lib/personas/registry.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const TARGET_MASTER_IDS = [
   "master_ackman",
   "master_aschenbrenner",
   "master_asness",
+  "master_bogle",
   "master_buffett",
   "master_burry",
   "master_cathie_wood",
@@ -70,9 +72,9 @@ test("catalog order and hash are stable across repeated snapshots", () => {
   );
 });
 
-test("the 0.9 development catalog contains exactly the planned 26 stable master ids", () => {
+test("the 0.9 development catalog contains exactly the planned stable master ids", () => {
   const catalog = englishCatalog();
-  assert.equal(catalog.count, 26);
+  assert.equal(catalog.count, CANONICAL_MASTER_COUNT);
   assert.deepEqual([...catalog.all_master_ids].sort(), TARGET_MASTER_IDS);
 });
 

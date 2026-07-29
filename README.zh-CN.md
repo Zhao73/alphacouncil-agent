@@ -55,20 +55,24 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 | 🔑 **不依赖金融 API,无需任何密钥** | 不需要金融数据 API、行情源或券商账号。分析师通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
 | 📚 **内置研究方法论** | 股票研究与投行事件分析的方法论以**本地 skill** 形式打包(`skills/public-equity-investing`、`skills/investment-banking`)——不依赖 Codex 专属远程工作流,Claude Code 也能获得同等研究深度。 |
 | 📈 **真实行情兜底,免 key** | 内置 `get_quote` 通过 Yahoo + Stooq 拉延迟(~15分钟)的指数 / 股指期货(含夜盘)/ 汇率 / 利率 / 波动率 / 商品 / 个股点位——不用 API key,分析师引用真实数字而非猜测。 |
+| 🧭 **公司、ETF 与指数正确分流** | 先识别资产再研究：公司走发行人财务，ETF 走带时点持仓穿透，指数走聚合方法；QQQ/SPY 不会再被当成有自身营收和 EPS 的公司。 |
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
-## 当前 0.9.4 预览状态：non-GA solo-test
+## 当前 1.0.0 预览状态：non-GA solo-test
 
-`0.9.4` 是 GitHub prerelease；本次验收发布不执行 npm publish，也不改变 npm
-dist-tag。不要在未独立核验时声称 `@next` 已包含 0.9.4。它是有界议会运行时预览，
+`1.0.0` 是 GitHub preview；本次源码升级不执行 npm publish，也不改变 npm
+dist-tag。不要在未独立核验时声称 `@next` 已包含 1.0.0。它是有界议会运行时预览，
 **不是**正式生产 GA。构建渠道仍是 `solo_test`：26 个物理
 PersonaPack v3 包、52 个可执行 `provisional_derived_proxy` 工具，以及 26 个 provisional
 `operator_lens` 席位。`operational`：**0**；已验证 `method_model`：**0**；人工来源/公式
 审批与审批签名仍为 **0**。
 
+本次只升级运行时与报告协议，保留未改动的 `persona_pack_version=0.9.4`，因此 26 个 pack
+hash 与既有仿真证据不会仅因插件代码升到 1.0.0 而漂移。
+
 生产 loader 仍拒绝这套树，production assembly、cutover 与 GA 继续 fail-closed。精确的
-full/quick 边界见 [v0.9.4 发布合同](docs/releases/v0.9.4.md)，`quick_v1` 与 `full_v2` 的报告差异见
+ETF/指数与 full/quick 边界见 [v1.0.0 发布合同](docs/releases/v1.0.0.md)，`quick_v1` 与 `full_v2` 的报告差异见
 [报告合同](docs/report-contract.md)。
 
 ## 📜 免责声明
@@ -121,7 +125,8 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 完整报告写入 `~/.alphacouncil-agent/runs/<run_id>/final_report.md`。
 同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。完整模式的摘要
 会显示系统价格（或明确的行情缺口）、8 个分析师的状态/摘要，以及每个所选方法席冻结的立场
-和独立 worker 的解释/状态。
+和可读解释/状态。摘要最后一节给出准确的所选席位数，并逐席输出一个陈词；选择 `all` 时
+结尾就是完整 26 席。它们是项目派生的临时方法席输出，不是本人引语。
 
 ### 斜杠命令
 
@@ -213,7 +218,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 
 | 领域 | 工具 | 数据源 |
 |---|---|---|
-| **申报** | `screen_ticker` `screen_candidates` `list_us_universe` `compose_research_brief` | SEC EDGAR XBRL |
+| **资产识别与申报** | `compose_research_brief` `screen_ticker` `screen_candidates` `list_us_universe` | 公司/ETF/指数分流；仅在适用时使用 SEC EDGAR XBRL |
 | **非美申报** | `market_financials` `market_coverage` | 台交所免 key；DART/EDINET 需免费 key；港股/A股仅文档 |
 | **行情** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq，21 条宏观序列 + 5 项派生 |
 | **期权** | `get_options_chain` | CBOE 延迟报价 —— 隐含波动率期限结构、25Δ 偏斜、未平仓量、Greeks |
@@ -244,7 +249,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 现代 | Aschenbrenner |
 | v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
 
-0.9.4 `solo_test` 目录已有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
+1.0.0 `solo_test` 目录已有 27 个可选的物理 v3 包，但 **27 个物理包不等于 27 个已获批的
 方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。

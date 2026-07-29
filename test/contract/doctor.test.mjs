@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { repoRoot } from "../helpers/paths.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
 // doctor's exit code depends on the developer's machine (a second install, leaked files),
 // so this asserts it runs and reports, not that it is clean.
@@ -21,7 +23,9 @@ test("doctor runs and reports on every area it covers", () => {
     assert.match(result.stdout, /personas load/, "doctor must verify the persona set");
     assert.match(result.stdout, /corpus inventory/, "doctor must verify PersonaPack v3 admission inventory");
     assert.match(result.stdout, /runtime build profile\s+solo_test/, "doctor must identify the provisional runtime channel");
-    assert.match(result.stdout, /solo-test runtime\s+26 physical provisional operator_lens; 52 derived-proxy tools; 0 method_model/, "doctor must report the exact solo-test maturity boundary");
+    assert.match(result.stdout,
+      new RegExp(`solo-test runtime\\s+${CANONICAL_MASTER_COUNT} physical provisional operator_lens; ${PLANNED_TOOL_COUNT} derived-proxy tools; 0 method_model`),
+      "doctor must report the exact solo-test maturity boundary");
     assert.match(result.stdout, /Formal PersonaPack v3 production GA is not passed/, "doctor must not imply formal GA");
     assert.match(result.stdout, /mcp\/server\.mjs present/, "doctor must verify the entry point");
     assert.match(result.stdout, /static four-host contract/, "doctor must validate the static host contract");

@@ -1,6 +1,10 @@
 import { fetchQuote } from "./quotes.mjs";
 import { invalidParams } from "./errors.mjs";
 import { getMacroSnapshot } from "./macro.mjs";
+import { fetchMacroSeries } from "./fred.mjs";
+import { fetchFundamentals } from "./fundamentals.mjs";
+import { fetchInsiderOwnership } from "./insider-ownership.mjs";
+import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
 import { resolveIndustry, industryCoverage } from "./industry.mjs";
@@ -8,6 +12,9 @@ import { fetchSubmissions, fetchUniverse } from "./sec.mjs";
 import { fetchMarketFinancials, coverageFor, marketFor } from "./markets.mjs";
 import { inclusiveCutoffTime } from "./personas-v3/source-anchor.mjs";
 import { adaptGroundingToTypedFacts } from "./personas-v3/grounding-adapter.mjs";
+import { classifyInstrument, instrumentResearchChecklist, isFundOrIndex } from "./instruments.mjs";
+// Aliased: this module already has a private `localized(label, chinese)` for metric labels.
+import { localized as localizedText } from "./lang.mjs";
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
@@ -78,6 +85,7 @@ export async function gatherGrounding({
   options = true,
   asOf = null,
   now = new Date(),
+  language = "English",
   signal,
 } = {}) {
   const snapshotPolicy = liveSnapshotPolicy(asOf, { now });
@@ -87,53 +95,131 @@ export async function gatherGrounding({
     gathered_at: gatheredAt,
     point_in_time_policy: snapshotPolicy,
     unavailable: [],
+    not_applicable: [],
   };
-  // Without this, a caller that has a ticker but not a CIK gets no filer profile and no
-  // mechanical screen -- the filings half of "established facts" disappears and nothing
-  // in the output says it was skipped.
-  // The current ticker universe is itself time-varying. A historical run may use an explicit
-  // CIK with SEC's filed-at filter, but it must not resolve that CIK from today's universe.
-  if (!cik && symbol && marketFor(symbol)?.id === "US" && snapshotPolicy.allowed) {
-    cik = await fetchUniverse({ signal })
-      .then((rows) => rows.find((r) => String(r.ticker).toUpperCase() === String(symbol).toUpperCase())?.cik)
-      .catch(() => undefined);
-  } else if (!cik && symbol && marketFor(symbol)?.id === "US") {
-    out.unavailable.push("SEC ticker mapping: historical cutoff requires an explicit point-in-time CIK; today's ticker universe was not fetched");
-  }
   const jobs = [];
+  let quoteJob = null;
 
   if (symbol && snapshotPolicy.allowed) {
-    jobs.push(safely("quote", () => fetchQuote(symbol, { signal })).then((r) => {
+    quoteJob = safely("quote", () => fetchQuote(symbol, { signal })).then((r) => {
       if (r.ok && !r.value?.error) out.quote = r.value;
       else out.unavailable.push(r.ok ? `quote: ${r.value.error}` : r.error);
-    }));
+    });
+    jobs.push(quoteJob);
   } else if (symbol) {
     out.unavailable.push("quote: historical cutoff requires an archived point-in-time price; current snapshot was not fetched");
+  }
+
+  if (macro && snapshotPolicy.allowed) {
+    jobs.push(safely("macro", () => getMacroSnapshot({ blocks: ["rates", "dollar_liquidity", "commodities"], signal })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      out.macro = {
+        derived: r.value.derived.filter((d) => d.available).map((d) => ({ id: d.id, label: d.label, value: d.value })),
+        unavailable: r.value.unavailable,
+      };
+    }));
+    // Dated official series, fetched alongside the market block rather than instead of it.
+    // The block prices the present; these carry the history a regime or an impulse needs, and
+    // each observation publishes its own date, so they are the only macro input that can
+    // reach the typed-fact pack with real lineage.
+    jobs.push(safely("macro series", () => fetchMacroSeries({ asOf, signal })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      out.macro_series = r.value;
+      out.unavailable.push(...r.value.unavailable);
+    }));
+  } else if (macro) {
+    out.unavailable.push("macro: historical cutoff requires archived observations; current market snapshots were not fetched");
+  }
+
+  // Classification is a routing decision, so wait for the already-started quote metadata
+  // before choosing SEC/company versus fund/index paths. Macro continues in parallel.
+  if (quoteJob) await quoteJob;
+  out.instrument = classifyInstrument({ symbol, quote: out.quote });
+
+  // Without this, a caller that has a ticker but not a CIK gets no filer profile and no
+  // mechanical screen -- the filings half of "established facts" disappears and nothing
+  // in the output says it was skipped. Fund registrants still get their submissions profile,
+  // but never an operating-company Company Facts screen.
+  const symbolMarket = marketFor(symbol);
+  const secRegistrantCandidate = symbolMarket?.id === "US"
+    && !["index", "future", "fx", "crypto"].includes(out.instrument.asset_type);
+  if (!cik && symbol && secRegistrantCandidate && snapshotPolicy.allowed) {
+    const mapping = await safely("SEC ticker mapping", () => fetchUniverse({ signal }));
+    if (mapping.ok) {
+      const match = mapping.value.find((row) => String(row.ticker).toUpperCase() === String(symbol).toUpperCase());
+      cik = match?.cik;
+      if (match) {
+        out.sec_ticker_match = { cik: match.cik, ticker: match.ticker, title: match.title };
+        out.instrument = classifyInstrument({ symbol, quote: out.quote, filer: { title: match.title } });
+      }
+    } else {
+      out.unavailable.push(mapping.error);
+    }
+  } else if (!cik && symbol && secRegistrantCandidate) {
+    out.unavailable.push("SEC ticker mapping: historical cutoff requires an explicit point-in-time CIK; today's ticker universe was not fetched");
   }
 
   // Persona methods must receive the same shape the options calculator actually returns.
   // Do not manufacture realised volatility, a friction-adjusted edge, or event coverage:
   // the delayed CBOE snapshot does not contain any of them. Its explicit `unavailable`
   // entries remain attached to the grounding so downstream policies see gaps as gaps.
-  if (symbol && options && marketFor(symbol)?.id === "US" && snapshotPolicy.allowed) {
+  if (symbol && options && symbolMarket?.id === "US" && !out.instrument.index_like && snapshotPolicy.allowed) {
     jobs.push(safely("options chain", () => fetchOptionsChain(symbol, { asOf, signal })).then((r) => {
       if (r.ok && r.value?.available) out.options = r.value;
       else out.unavailable.push(r.ok ? `options chain: ${r.value?.reason || "unavailable"}` : r.error);
     }));
-  } else if (symbol && options && marketFor(symbol)?.id === "US") {
+  } else if (symbol && options && symbolMarket?.id === "US" && !out.instrument.index_like) {
     out.unavailable.push("options chain: historical cutoff requires an archived chain; current CBOE snapshot was not fetched");
+  } else if (symbol && options && out.instrument.index_like) {
+    out.not_applicable.push(localizedText(language, {
+      en: "CBOE equity/ETF option-chain adapter: direct cash-index symbol is not supported; use the appropriate listed derivative or ETF proxy explicitly",
+      zh: "CBOE 股票/ETF 期权链适配器：不支持直接的现金指数代码；请显式使用对应的上市衍生品或 ETF 代理。",
+      ja: "CBOE の株式/ETF オプションチェーン・アダプタ：現物指数シンボルには非対応です。対応する上場デリバティブまたは ETF 代理を明示的に使用してください。",
+      ko: "CBOE 주식/ETF 옵션 체인 어댑터: 현물 지수 심볼은 지원하지 않습니다. 해당 상장 파생상품 또는 ETF 프록시를 명시적으로 사용하십시오.",
+    }));
   }
 
   if (cik) {
     if (snapshotPolicy.allowed) {
-      jobs.push(safely("filer profile", () => fetchSubmissions(cik, { signal })).then((r) => {
-        if (r.ok) out.filer = r.value;
-        else out.unavailable.push(r.error);
-      }));
+      // Resolve the registrant before deciding whether Company Facts applies. Scheduling
+      // both in parallel recreated the QQQ bug when quote metadata was unavailable: the
+      // screen started under an equity fallback before the fund name arrived.
+      const filer = await safely("filer profile", () => fetchSubmissions(cik, { signal }));
+      if (filer.ok) {
+        out.filer = filer.value;
+        out.instrument = classifyInstrument({ symbol, quote: out.quote, filer: out.filer });
+      } else out.unavailable.push(filer.error);
     } else {
       out.unavailable.push("filer profile: SEC submissions metadata is current, not point-in-time versioned; it was excluded from the historical information set");
     }
-    jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf, signal })).then((r) => {
+    // The mechanical screen answers "is this worth research time"; the derived fundamentals
+    // answer "what do the method seats need". Both read the same Company Facts document, so
+    // they share one classification gate and run together.
+    if (out.instrument.sec_companyfacts_applicable && snapshotPolicy.allowed) {
+      const fundamentalsJob = safely("fundamentals", () => fetchFundamentals({ cik, ticker: symbol, asOf, signal })).then((r) => {
+        if (!r.ok) { out.unavailable.push(r.error); return; }
+        out.fundamentals = r.value;
+        out.unavailable.push(...(r.value.unavailable || []).map((gap) => (
+          typeof gap === "string" ? gap : `fundamentals ${gap.metric}: ${gap.code}${gap.detail ? ` (${gap.detail})` : ""}`
+        )));
+      });
+      jobs.push(fundamentalsJob);
+      // Section 16 ownership is chained after the fundamentals rather than run beside them: it
+      // is a RATIO over shares outstanding, and taking that count from a second source would
+      // make the numerator and the denominator describe different registers.
+      jobs.push((async () => {
+        await fundamentalsJob;
+        const shares = out.fundamentals?.metrics?.["capital_allocation.share_count"]?.value;
+        if (!Number.isFinite(shares)) return;
+        const owned = await safely("insider ownership", () => fetchInsiderOwnership(cik, {
+          sharesOutstanding: shares, asOf, signal,
+        }));
+        if (!owned.ok) { out.unavailable.push(owned.error); return; }
+        out.insider_ownership = owned.value;
+        out.unavailable.push(...(owned.value.unavailable || []));
+      })());
+    }
+    if (out.instrument.sec_companyfacts_applicable) jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf, signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }
       const s = r.value;
       const metricSourceIds = (metric) => (metric.source_records || []).map((source) => (
@@ -166,30 +252,58 @@ export async function gatherGrounding({
         skipped: s.rules.filter((x) => x.skipped).map((x) => ({ rule: x.id, label: x.label })),
       };
     }));
-  }
-
-  if (macro && snapshotPolicy.allowed) {
-    jobs.push(safely("macro", () => getMacroSnapshot({ blocks: ["rates", "dollar_liquidity", "commodities"], signal })).then((r) => {
-      if (!r.ok) { out.unavailable.push(r.error); return; }
-      out.macro = {
-        derived: r.value.derived.filter((d) => d.available).map((d) => ({ id: d.id, label: d.label, value: d.value })),
-        unavailable: r.value.unavailable,
-      };
+    else if (out.instrument.asset_type === "unknown") {
+      // Not the same thing as "not applicable": we could not classify the security at all,
+      // so withholding the screen is a gap the report must show, not a settled routing call.
+      out.unavailable.push(localizedText(language, {
+        en: "SEC Company Facts screen: instrument type unresolved (no exchange metadata and no registrant match), so the operating-company screen was withheld rather than assumed",
+        zh: "SEC Company Facts 筛选：证券类型未能判定（既无交易所元数据也无注册人匹配），因此不做经营公司假设，直接跳过该筛选。",
+        ja: "SEC Company Facts スクリーン：銘柄種別を判定できず（取引所メタデータも登録人一致もなし）、事業会社と仮定せずスクリーンを見送りました。",
+        ko: "SEC Company Facts 스크린: 증권 유형을 확정하지 못해(거래소 메타데이터·등록인 일치 모두 없음) 사업회사로 가정하지 않고 스크린을 보류했습니다.",
+      }));
+    } else out.not_applicable.push(localizedText(language, {
+      en: `operating-company SEC Company Facts screen: not applicable to ${out.instrument.asset_type}`,
+      zh: `经营公司 SEC Company Facts 筛选：不适用于 ${out.instrument.asset_type}。`,
+      ja: `事業会社向け SEC Company Facts スクリーン：${out.instrument.asset_type} には適用されません。`,
+      ko: `사업회사용 SEC Company Facts 스크린: ${out.instrument.asset_type}에는 적용되지 않습니다.`,
     }));
-  } else if (macro) {
-    out.unavailable.push("macro: historical cutoff requires archived observations; current market snapshots were not fetched");
   }
 
   // Non-US symbols never reach the SEC path, so without this they arrived at the analyst
   // with nothing but a price.
-  if (symbol && marketFor(symbol)?.id !== "US" && snapshotPolicy.allowed) {
+  if (symbol && symbolMarket && symbolMarket.id !== "US" && !isFundOrIndex(out.instrument) && snapshotPolicy.allowed) {
     jobs.push(safely("market financials", () => fetchMarketFinancials(symbol, { signal })).then((r) => {
       if (!r.ok) { out.unavailable.push(r.error); return; }
       out.market = r.value;
       if (!r.value.financials) out.unavailable.push(`structured financials for ${symbol}: ${r.value.guidance}`);
     }));
-  } else if (symbol && marketFor(symbol)?.id !== "US") {
+  } else if (symbol && symbolMarket && symbolMarket.id !== "US" && !isFundOrIndex(out.instrument)) {
     out.unavailable.push(`structured financials for ${symbol}: this adapter is not point-in-time versioned; current data was not fetched for a historical cutoff`);
+  }
+
+  // A fund or index has no issuer financials, so this is where its evidence comes from
+  // instead: published holdings, index-level valuation and the look-through aggregates that
+  // let an operating-company method run against a basket at all.
+  if (symbol && isFundOrIndex(out.instrument) && snapshotPolicy.allowed) {
+    jobs.push(safely("instrument aggregate", () => gatherInstrumentFacts({
+      symbol, instrument: out.instrument, asOf, signal,
+      // The operating-company facts a basket can supply at all: everything the method seats
+      // ask of a company, aggregated by weight across the constituents that publish it.
+      lookThroughFactIds: LOOK_THROUGH_FACT_IDS,
+    })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      out.instrument_aggregate = r.value;
+      out.unavailable.push(...(r.value.unavailable || []));
+    }));
+  }
+
+  if (symbol && isFundOrIndex(out.instrument)) {
+    out.not_applicable.push(localizedText(language, {
+      en: `operating-company structured financials: not applicable to ${out.instrument.asset_type}; use look-through or aggregate index evidence`,
+      zh: `经营公司结构化财报：不适用于 ${out.instrument.asset_type}；请使用持仓穿透或指数聚合证据。`,
+      ja: `事業会社の構造化財務データ：${out.instrument.asset_type} には適用されません。ルックスルーまたは指数集計エビデンスを使用してください。`,
+      ko: `사업회사 구조화 재무데이터: ${out.instrument.asset_type}에는 적용되지 않습니다. 룩스루 또는 지수 집계 증거를 사용하십시오.`,
+    }));
   }
 
   if (industry && snapshotPolicy.allowed) {
@@ -216,7 +330,31 @@ export async function gatherGrounding({
 
   // Coverage across every symbol in play, so a report cannot quietly become US-only.
   const inPlay = [symbol, ...(out.industry?.participants || []).map((p) => p.symbol)].filter(Boolean);
-  if (inPlay.length) out.coverage = coverageFor([...new Set(inPlay)]);
+  if (inPlay.length && !isFundOrIndex(out.instrument)) out.coverage = coverageFor([...new Set(inPlay)]);
+  else if (symbol && isFundOrIndex(out.instrument)) {
+    out.coverage = {
+      rows: [{
+        symbol,
+        market: symbolMarket?.id || "market",
+        structured_financials: localizedText(language, {
+          en: "not applicable", zh: "不适用", ja: "適用外", ko: "해당 없음",
+        }),
+        reason: localizedText(language, {
+          en: `${out.instrument.asset_type} requires holdings/index look-through rather than issuer financial statements`,
+          zh: `${out.instrument.asset_type} 需要持仓/指数穿透，而不是发行人财务报表。`,
+          ja: `${out.instrument.asset_type} は発行体の財務諸表ではなく、保有銘柄・指数のルックスルーが必要です。`,
+          ko: `${out.instrument.asset_type}는 발행인 재무제표가 아니라 보유종목·지수 룩스루가 필요합니다.`,
+        }),
+      }],
+      summary: { full: 0, summary_only: 0, none: 0, not_applicable: 1 },
+      note: localizedText(language, {
+        en: "Fund/index research uses dated holdings, methodology and aggregate or look-through evidence.",
+        zh: "基金/指数研究使用带日期的持仓、方法论，以及聚合或穿透证据。",
+        ja: "ファンド/指数のリサーチは、日付入りの保有銘柄・方法論・集計またはルックスルーのエビデンスを使用します。",
+        ko: "펀드/지수 리서치는 일자가 명시된 보유종목, 방법론, 집계 또는 룩스루 증거를 사용합니다.",
+      }),
+    };
+  }
   const typed = adaptGroundingToTypedFacts(out, {
     asOf: asOf || gatheredAt,
     knowledgeAsOf: asOf || gatheredAt,
@@ -258,13 +396,20 @@ const localized = (label, chinese) => {
 
 export function groundingBlock(grounding, language = "English") {
   const chinese = /中文|chinese|zh/i.test(String(language));
-  if (!grounding || (!grounding.quote && !grounding.screen && !grounding.options && !grounding.macro && !grounding.industry)) return "";
+  if (!grounding || (!grounding.instrument && !grounding.quote && !grounding.screen && !grounding.options && !grounding.macro && !grounding.industry)) return "";
 
   const lines = [];
   const head = chinese
     ? "## 已确立的事实（来自申报原文与交易所数据，不是你的记忆）"
     : "## Established facts (from filings and exchange data, not from your memory)";
   lines.push(head);
+
+  if (grounding.instrument) {
+    const i = grounding.instrument;
+    lines.push(chinese
+      ? `- 资产类型：${i.asset_type}｜研究模型 ${i.research_model}｜识别来源 ${i.classification_source}`
+      : `- Instrument: ${i.asset_type} | research model ${i.research_model} | classified by ${i.classification_source}`);
+  }
 
   if (grounding.filer) {
     lines.push(chinese
@@ -339,6 +484,13 @@ export function groundingBlock(grounding, language = "English") {
     lines.push(chinese ? `- 取不到的数据（属于数据缺口，禁止用记忆补）：${grounding.unavailable.join("；")}`
       : `- Could not be retrieved -- these are data gaps and must NOT be filled from memory: ${grounding.unavailable.join("; ")}`);
   }
+  if (grounding.not_applicable?.length) {
+    lines.push(chinese ? `- 明确不适用（不是数据抓取错误）：${grounding.not_applicable.join("；")}`
+      : `- Explicitly not applicable (not a retrieval failure): ${grounding.not_applicable.join("; ")}`);
+  }
+
+  const instrumentChecklist = instrumentResearchChecklist(grounding.instrument, language);
+  if (instrumentChecklist) lines.push("", instrumentChecklist);
 
   lines.push("");
   lines.push(chinese

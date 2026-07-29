@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:98e274dd74d5d074be39602d3263ebcc8da02b25e13b8ec4feca3dc207383a03",
-    "derivation_spec_hash": "sha256:319e46ff64092fb9577cba1ea97fc65ac74fb7021373aba0c7ec4111945f3712",
-    "derivation_spec_id": "master_asness.factor_decomposer.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:5417afe0a2e3efe909d206233a878a568ebe26afd3183f727ae9c166dc07a935",
+    "derivation_spec_hash": "sha256:6564e77bbe274cb64d4452b0732e6c0cc1936b2d9e6fa2f0f4a600cdbee8a45c",
+    "derivation_spec_id": "master_asness.real_earnings_yield_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_asness.factor_decomposer",
+    "id": "master_asness.real_earnings_yield_gap",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,44 +14,57 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:4d384bb1cd5cff6b8fdd73a7c3c0bafed0062947690eb3b22ee3b255781644f0",
+    "input_schema_hash": "sha256:f9ab8119c6771460d0a5e11d4125bfb62c0055c67c71a6c9061e6855e73f34c5",
     "inputs": [
       {
-        "fact_id": "factor.value_exposure"
+        "fact_id": "index.aggregate_earnings_yield"
+      },
+      {
+        "fact_id": "macro.real_rate"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "factor.value_exposure",
+    "operation": "subtract",
+    "output_id": "index.real_earnings_yield_gap.master_asness",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:2b1892d96b0adfc083555870ed3c35de5e50cdf55fd2204a84bd09ea454282bb",
+    "output_schema_hash": "sha256:9a754889ab447250138308fa3e8ba7fc17219437ae2f82c1a952c4f96fcb8aaa",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_asness.factor_decomposer.prototype_v1"
+      "derived_proxy:master_asness.real_earnings_yield_gap.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:a5b1fe7376f9e07ba6c320d915420933c5b0e92c3732380d5690ad7b6825d30a",
-    "derivation_spec_hash": "sha256:d9453ef6c6b917dca3aa0208f13087cf6f4607951985bfd495b5ce00d85beee1",
-    "derivation_spec_id": "master_asness.crowding_cost_stress.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:d6950f6ee33be5a8f9b62664d905a777fad3826093dd6cc31185602c81cc7dcb",
+    "derivation_spec_hash": "sha256:811f468a7a8b3f1ce04e592f426cdb6e4099a5f50dfba2277a50f1868efede8d",
+    "derivation_spec_id": "master_asness.nominal_earnings_yield_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_asness.crowding_cost_stress",
+    "id": "master_asness.nominal_earnings_yield_gap",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -60,35 +73,48 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      {
+        "on_missing": "fail",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:ff254ddc04c9bf35579c0926f3104757a685909ccd7cbbc6ac1c8986540932e9",
+    "input_schema_hash": "sha256:5d5982706e8dd31d5dbf4498ac797037e39efed0eb52f1330e4da5b42ab2fcef",
     "inputs": [
       {
-        "fact_id": "factor.value_exposure"
+        "fact_id": "index.aggregate_earnings_yield"
+      },
+      {
+        "fact_id": "macro.long_bond_yield"
       }
     ],
     "intended_use": "local_test_only",
-    "kind": "transform",
+    "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "identity",
-    "output_id": "factor.crowding",
+    "operation": "subtract",
+    "output_id": "index.implied_equity_risk_premium.master_asness",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:3408f3c219a1aee002e8a9f3948ba7693fccbd7cebff73882d39c43a8f6cffd7",
+    "output_schema_hash": "sha256:f6f3c5eb05b06b28ae65f05c612d876c91699f891ace50b213c209ba2127e547",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_asness.crowding_cost_stress.prototype_v1"
+      "derived_proxy:master_asness.nominal_earnings_yield_gap.prototype_v1"
     ],
-    "unit": "derived_proxy_scalar",
-    "value_kind": "scalar",
-    "version": "0.1.0"
+    "unit": "decimal",
+    "value_kind": "ratio",
+    "version": "0.2.0"
   }
 ]

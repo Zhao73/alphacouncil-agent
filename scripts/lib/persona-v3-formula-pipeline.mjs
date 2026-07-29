@@ -2,11 +2,12 @@
  * Fail-closed PersonaPack v3 formula authoring and DSL 1.1 compilation pipeline.
  *
  * Inventory construction and compilation are pure functions. Filesystem helpers only read
- * the 26 canonical staging prototypes or, after an explicit caller action, write isolated
+ * the canonical staging prototypes or, after an explicit caller action, write isolated
  * non-production formula-candidate artifacts. Nothing here writes knowledge/masters,
  * manifests, release evidence, or production registrations.
  */
 
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 import {
   existsSync,
   lstatSync,
@@ -316,7 +317,7 @@ function pendingFormulaSpec(prototype, prototypePath) {
   });
 }
 
-/** Build the 52-entry authoring queue from already-read prototype documents. */
+/** Build the authoring queue from already-read prototype documents. */
 export function buildFormulaAuthoringInventory(prototypeArtifacts) {
   if (!Array.isArray(prototypeArtifacts)) fail("prototypeArtifacts must be an array");
   const byPersona = new Map(prototypeArtifacts.map((artifact) => [artifact?.document?.persona_id, artifact]));
@@ -523,7 +524,7 @@ function collectJsonFiles(root, dir, prefix = "") {
   return result;
 }
 
-/** Read and verify all 52 human-authored specs and dual-signed bundles without writing. */
+/** Read and verify every human-authored spec and dual-signed bundles without writing. */
 export function planApprovedFormulaCompilation({
   candidateRoot = DEFAULT_FORMULA_CANDIDATE_ROOT,
   root = defaultStagingRoot(),
@@ -556,10 +557,10 @@ export function planApprovedFormulaCompilation({
   const actualSpecFiles = collectJsonFiles(candidate, resolve(candidate, "specs"));
   const actualApprovalFiles = collectJsonFiles(candidate, resolve(candidate, "approvals"));
   if (JSON.stringify(actualSpecFiles) !== JSON.stringify(expectedSpecFiles.sort())) {
-    fail("approved formula compilation requires exactly the 52 planned spec files", { expected: expectedSpecFiles.sort(), actual: actualSpecFiles });
+    fail("approved formula compilation requires exactly the planned spec files, one per tool", { expected: expectedSpecFiles.sort(), actual: actualSpecFiles });
   }
   if (JSON.stringify(actualApprovalFiles) !== JSON.stringify(expectedApprovalFiles.sort())) {
-    fail("approved formula compilation requires exactly the 52 planned approval bundles", { expected: expectedApprovalFiles.sort(), actual: actualApprovalFiles });
+    fail("approved formula compilation requires exactly the planned approval bundles, one per tool", { expected: expectedApprovalFiles.sort(), actual: actualApprovalFiles });
   }
   const prototypeDocuments = Object.fromEntries(readFormulaPrototypeArtifacts({ root })
     .map((artifact) => [artifact.relative_path, artifact.document]));
@@ -571,9 +572,9 @@ export function planApprovedFormulaCompilation({
   });
   const expectedIds = authoring.inventory.entries.map((entry) => entry.tool_id);
   const actualIds = tools.map((tool) => tool.id);
-  if (actualIds.length !== 52 || new Set(actualIds).size !== 52
+  if (actualIds.length !== PLANNED_TOOL_COUNT || new Set(actualIds).size !== PLANNED_TOOL_COUNT
     || JSON.stringify([...actualIds].sort()) !== JSON.stringify([...expectedIds].sort())) {
-    fail("approved compilation must produce exactly the 52 planned unique tool ids", { expected_ids: expectedIds, actual_ids: actualIds });
+    fail("approved compilation must produce exactly the planned unique tool ids, one per tool", { expected_ids: expectedIds, actual_ids: actualIds });
   }
   const bindings = tools.map((tool) => canonicalValue({
     persona_id: tool.id.split(".")[0],
@@ -591,7 +592,7 @@ export function planApprovedFormulaCompilation({
     mode: "check_only",
     production_effect: "none",
     canonical_seat_count: CANONICAL_MASTER_COUNT,
-    planned_tool_count: 52,
+    planned_tool_count: PLANNED_TOOL_COUNT,
     compiled_tool_count: tools.length,
     formula_approval_binding_count: bindings.length,
     tool_ids: actualIds,
@@ -669,7 +670,7 @@ export function planPersonaV3FormulaPipeline(options = {}) {
   const expected = buildInventory.seats.reduce((total, seat) => total + seat.planned_dedicated_tools.length, 0);
   const errors = [...inventory.global_errors];
   if (inventory.canonical_seat_count !== buildInventory.seat_count) errors.push("canonical seat count drifted");
-  if (inventory.prototype_count !== expected || expected !== 52) errors.push(`prototype inventory must be exactly 52, got ${inventory.prototype_count}/${expected}`);
+  if (inventory.prototype_count !== expected || expected !== PLANNED_TOOL_COUNT) errors.push(`prototype inventory must be exactly ${PLANNED_TOOL_COUNT}, got ${inventory.prototype_count}/${expected}`);
   if (inventory.entries.some((entry) => entry.validation_errors.length)) errors.push("one or more generated formula specs are invalid");
   if (inventory.executable_candidate_count !== 0 || inventory.dedicated_tool_count !== 0) errors.push("unreviewed prototypes must not become executable or dedicated tools");
   return Object.freeze(canonicalValue({ mode: "check_plan", errors, inventory }));
@@ -732,7 +733,7 @@ export function renderFormulaAuthoringPlan(plan) {
     "# PersonaPack v3 formula authoring queue",
     "",
     `Seats: ${plan.inventory.canonical_seat_count}`,
-    `Prototypes: ${plan.inventory.prototype_count}/52`,
+    `Prototypes: ${plan.inventory.prototype_count}/${PLANNED_TOOL_COUNT}`,
     `Needs formula authorship: ${plan.inventory.needs_formula_authorship_count}`,
     `Executable staging candidates: ${plan.inventory.executable_candidate_count}`,
     `Dedicated production tools: ${plan.inventory.dedicated_tool_count}`,

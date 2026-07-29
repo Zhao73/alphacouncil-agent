@@ -339,7 +339,7 @@ Compute per-claim survived-confidence: keep `high` only if source_fidelity != co
 
 ### Stage 2c - Selected master methods
 
-Run every `master_agent` returned by `plan_visible_run` after the evidence and verification barrier, and before the bull/bear debate. Record each result with `record_master_opinion`. A deterministic `masters_declined` entry is already recorded as `out_of_scope` and must not be spawned again. HARD GATE: `status.json.pending_masters` must be empty before Stage 3.
+Run every `master_agent` returned by `plan_visible_run` after the evidence and verification barrier, and before the bull/bear debate. Physical v3 agents are explanation workers over an already frozen stance, including `out_of_scope`; append the completed Evidence JSON, require `acknowledged_stance` to match `frozen_stance`, and record each result with `record_master_opinion`. `masters_declined` documents the deterministic result but does not waive a returned visible explanation worker. HARD GATE: `status.json.pending_masters` must be empty before Stage 3.
 
 ### Stage 3 — Debate pipeline (3 rounds, parallel per round)
 Run the documented rounds, each as a parallel fan-out of `bull_researcher` + `bear_researcher` fed the verified evidence:
@@ -353,7 +353,7 @@ Run the documented rounds, each as a parallel fan-out of `bull_researcher` + `be
 Persist each round via `record_visible_decision(run_id, role, packet)` so `all_agents.md` accumulates the full trace. DISPUTED/UNVERIFIABLE claims may appear in a thesis only with an explicit caveat.
 
 ### Stage 4 — Verdict + synthesize
-Run one `portfolio_manager` `Task` fed the verified evidence plus all three debate rounds. Record it via `record_visible_decision(run_id, 'portfolio_manager', packet)`, which writes `decision.json` + `final_report.md` and marks the run complete. Then return the complete report inline (SKILL step 5) in the user's language, including the Analyst Work Log, Bull/Bear Debate record, the verification ledger (per material claim: self-confidence, verifier tally, source-fidelity, survived-confidence), all mandated sections, data gaps, short/medium/long-term views, and the `<task>:<source_id>` source table. Link artifacts only in an appendix.
+Run one `portfolio_manager` `Task` fed the verified evidence plus all three debate rounds. Record it via `record_visible_decision(run_id, 'portfolio_manager', packet)`, which writes `decision.json` + `final_report.md` and marks the run complete. A successful PM response has `handoff_contract=inline_user_response_v1` and returns `user_response_markdown`; use that Markdown as the final user-facing response body instead of replacing it with a shorter recap. Its last section is the exact selected-seat count and one readable method statement per seat, including deterministic `out_of_scope` statements. Then link the complete report and audit artifacts in an appendix. The saved full report still contains the Analyst Work Log, Bull/Bear Debate record, verification ledger, all mandated sections, data gaps, horizons and `<task>:<source_id>` source table.
 
 Honest limits: Task fan-out is best-effort, not a guaranteed workflow engine; enforce the barrier by polling artifacts, not by assuming. WebSearch/WebFetch is the only evidence channel (no financial API), so some numeric claims stay "narratively corroborated, not vendor-verified". This is the same auditable contract as the other paths — a stronger runner, not a different audit story.
 
@@ -410,6 +410,12 @@ Debate agents return:
   playbooks run by subagents, not Python libraries.
 - Keep non-public information out of scope unless the user provides the document directly.
 - For exact index / index-futures (incl. night session) / FX / rates / vol / commodity / stock levels, call the **`get_quote`** MCP tool (keyless, ~15m delayed; accepts names like `KOSPI`/`纳指期货`/`VIX`/`美元指数` or raw tickers) and cite it. Web search is the interpretation layer and the fallback when `get_quote` errors — then record the gap in `open_questions`. `get_quote` is delayed market data, never a real-time feed.
+- Classify the instrument before choosing company-data routes. ETFs/funds use dated
+  holdings look-through; cash indices use aggregate-index methodology. Do not call or ask
+  for operating-company revenue, EPS, guidance, Form 4 or Company Facts as if they belonged
+  to a fund/index. Cover methodology, holdings/constituent date and weights, concentration,
+  fee or index rules, liquidity/tracking/flows, rebalances and same-date aggregate valuation
+  with disclosed coverage; every missing field is an explicit gap.
 - Every material claim should map back to an evidence packet with sources and confidence.
 - Evidence sources are globally scoped as `<task>:<local_source_id>` and mirrored in `source_manifest.json`; never cite bare `S1/S2` after packets are merged.
 - Full `full_v2` manager reports must include separate visible sections for market expectations / implied beat-miss thresholds, analyst rating or target-price revisions, earnings-call management signals, quant factor / technical risk view, news and management/industry voice signals, short interest / borrow / options where available, strategic transaction or banking-event terms where relevant, data gaps / unavailable data, and separate short-term 1-4 weeks / medium-term 3-6 months / long-term 12 months views. Do not hide these only in the source table. If a data source is unavailable, state that explicitly instead of omitting the section. If no key source is missing, include a data-gaps section saying no critical gaps were found.
@@ -417,8 +423,10 @@ Debate agents return:
 - Quick `quick_v1` reports use the fixed 13-section contract stated above. Do not fail a quick report merely because it lacks full-only quant, event-banking, three-horizon, three-round-Q&A, or adversarial-verifier sections; likewise, never present a passing quick report as full-equivalent.
 - Terminal runs must preserve the standard artifacts appropriate to the executed contract, including `final_report.md`, `user_response.md`, `artifact_index.md`, `report_quality.json`, evidence-role Markdown, selected-method output, and bull/bear/PM output or explicit failure records. If `report_quality.json` is not `passed`, report `needs_revision`, not complete. A passing report-quality gate checks structure only: it does not convert a quick `degraded` execution into `complete` or prove evidence coverage.
 - A full `user_response.md` lists all eight mandatory analyst statuses/summaries, every
-  selected stable master ID with frozen stance and isolated-worker explanation/status, and
-  one system-owned price snapshot with currency/time/source or an explicit unavailable gap.
+  selected stable master ID with frozen stance and readable explanation/status, and one
+  system-owned price snapshot with currency/time/source or an explicit unavailable gap. Its
+  final section contains the exact selected-seat count and one statement per selected ID.
+  Visible PM completion returns `user_response_markdown`; deliver it instead of an ACK recap.
 - The `management_industry_voices` agent only uses publicly verifiable commentary from executives, board members, official company channels, customers, suppliers, competitors, regulators, industry experts, and channel voices. It must separate direct quotes, paraphrases, and media interpretation, and must not imply non-public inside information.
 - Fail closed on visibility: if visible agent/thread tools are unavailable, say that visible subagents are unavailable in this runtime and use MCP only with that limitation stated.
 - Never let a subagent call `@alphacouncil-agent`, `collect_evidence`, `analyze_symbol`, or `read_run`; visible agents are leaf workers.

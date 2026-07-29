@@ -47,12 +47,12 @@
         "n_eff_disclosure"
       ],
       "properties": {
-        "physical_solo_packs": { "const": 26 },
+        "physical_solo_packs": { "const": 27 },
         "ai_source_prereviews": { "const": 32 },
         "ai_semantic_extractions": { "const": 32 },
         "ai_semantic_skeptic_reviews": { "const": 32 },
         "ai_semantic_adjudications": { "const": 32 },
-        "ai_formula_cross_reviews": { "const": 52 },
+        "ai_formula_cross_reviews": { "const": 54 },
         "independent_roles_per_review": { "const": 3 },
         "automated_experiment_runs": { "const": 8 },
         "live_hosts": { "const": 4 },
