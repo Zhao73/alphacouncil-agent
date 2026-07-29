@@ -72,7 +72,11 @@ export const FUND_REGISTRY = Object.freeze({
  * (Invesco's /nav and /profile both answer HTTP 501). A flow for those two is a gap. It is
  * NOT a modelling problem to be solved with an estimate -- see `fundFlow`.
  */
-export {
+// Imported, not merely re-exported: this module calls all six. A bare `export ... from` makes
+// the names part of the public surface without binding them in this scope, so every fetch path
+// threw `not defined` at runtime while the parser unit tests -- which import them directly --
+// stayed green.
+import {
   checkWeightSum,
   isoDate,
   parseIsharesHoldingsCsv,
@@ -80,6 +84,15 @@ export {
   parseSsgaHoldingsXlsx,
   parseVanguardHoldings,
 } from "./fund-holdings-parsers.mjs";
+
+export {
+  checkWeightSum,
+  isoDate,
+  parseIsharesHoldingsCsv,
+  parseInvescoHoldings,
+  parseSsgaHoldingsXlsx,
+  parseVanguardHoldings,
+};
 
 export const DAILY_SHARES_ISSUERS = Object.freeze(["ishares", "ssga"]);
 
@@ -302,7 +315,7 @@ export async function fetchFundHoldings(symbol, { signal } = {}) {
     unavailable.push(`${fund.issuer} ${fund.symbol}: shares outstanding absent from the holdings file, so no flow can be computed`);
   }
   if (!DAILY_SHARES_ISSUERS.includes(fund.issuer)) {
-    unavailable.push(`${fund.issuer} publishes no keyless shares-outstanding or AUM endpoint; fund flow is a gap for ${fund.symbol}`);
+    unavailable.push(`${fund.issuer} publishes no keyless shares-outstanding endpoint; fund flow is a gap for ${fund.symbol}`);
   }
   if (parsed.cadence === "month_end") {
     unavailable.push(`${fund.issuer} ${fund.symbol}: holdings are month-end only, not daily (stated date ${parsed.as_of})`);
@@ -708,8 +721,12 @@ export async function fetchFundMetadata(symbol, { signal } = {}) {
   });
 
   if (fund.issuer === "vanguard" || fund.issuer === "invesco") {
-    return gap(`${fund.issuer} publishes no keyless AUM or shares-outstanding endpoint for ${fund.symbol}`
-      + (fund.issuer === "invesco" ? " (its /nav and /profile both answer HTTP 501)" : ""));
+    // Fund size is recovered from the disclosed positions instead, so the missing figure here
+    // is the SHARE COUNT: two dated share counts are what a flow needs, and no arithmetic over
+    // one day's positions can reconstruct yesterday's.
+    return gap(`${fund.issuer} publishes no keyless shares-outstanding endpoint for ${fund.symbol}`
+      + (fund.issuer === "invesco" ? " (its /nav and /profile both answer HTTP 501)" : "")
+      + "; fund size is derived from disclosed positions, but flow needs two dated share counts");
   }
 
   const url = fund.issuer === "ishares" ? ISHARES_SCREENER_URL : SSGA_FUNDFINDER_URL;

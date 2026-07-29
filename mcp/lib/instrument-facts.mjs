@@ -225,6 +225,17 @@ function structureFacts(holdings, metadata) {
  * rather than substituted, and its weight simply does not count toward coverage. That keeps
  * the coverage number honest, which is the only thing that makes the aggregate meaningful.
  */
+/**
+ * True when a diagnostic names a fact the pack ended up producing anyway. Matching is by the
+ * fact id appearing in the note, so a note that names no fact is always kept.
+ */
+function factsProducedFor(note, facts) {
+  const produced = new Set(facts.map((fact) => fact.fact_id));
+  return [...produced].some((factId) => String(note).includes(factId))
+    || (/implied equity risk premium/iu.test(note) && produced.has("valuation.implied_erp"))
+    || (/valuation percentile/iu.test(note) && produced.has("cycle.valuation_percentile"));
+}
+
 export async function resolveConstituentFacts(holdings, { signal, asOf = null, concurrency = 6 } = {}) {
   const perHolding = new Map();
   // The aggregate inherits whatever span its inputs covered; without carrying it the basket
@@ -531,7 +542,12 @@ export async function gatherInstrumentFacts({
     research_model: instrument?.research_model || "market_instrument",
     provenance,
     facts,
-    unavailable,
+    // Several facts have more than one route -- the implied ERP and the valuation percentile
+    // are computed from the published workbook when the index feed cannot supply them -- and
+    // each route reports its own failure. Keeping a note about a fact the pack actually
+    // produced reads as a gap that is filled, which is worse than saying nothing: it invites
+    // a reader to go and solve a problem that is already solved.
+    unavailable: unavailable.filter((note) => !factsProducedFor(note, facts)),
     limits: {
       max_constituents: LOOK_THROUGH_MAX_CONSTITUENTS,
       target_coverage: LOOK_THROUGH_TARGET_COVERAGE,

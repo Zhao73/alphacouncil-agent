@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { deflateRawSync } from "node:zlib";
+import { readFileSync } from "node:fs";
+
+import { repoFile } from "../helpers/paths.mjs";
 
 import {
   DAILY_SHARES_ISSUERS,
@@ -486,4 +489,29 @@ test("a missing flow input is a named gap, never a substituted estimate", () => 
   assert.equal(flow.value, null);
   assert.match(flow.unavailable[0], /needs shares_outstanding_prior, nav; no estimate is substituted/);
   assert.equal(fundFlow({}).value, null);
+});
+
+/**
+ * A module that re-exports a name without importing it publishes the name and still throws
+ * `not defined` on every call. The parser unit tests import the parsers directly, so they stay
+ * green while every live fetch path is broken -- which is exactly what happened when these
+ * parsers moved into their own module. The check is not "does the parser work" but "can the
+ * module that fetches actually reach it".
+ */
+test("every parser funds.mjs dispatches to is bound in its own scope, not merely re-exported", async () => {
+  const source = readFileSync(repoFile("mcp/lib/funds.mjs"), "utf8");
+  const called = [...source.matchAll(/\b(parse[A-Z]\w+|checkWeightSum|isoDate|numeric)\s*\(/gu)]
+    .map((match) => match[1]);
+  assert.ok(called.length >= 4, "expected funds.mjs to dispatch to the issuer parsers");
+  // Only the names that live in the parser module have to be imported; the rest are defined
+  // in funds.mjs itself and are already in scope.
+  const parsers = await import("../../mcp/lib/fund-holdings-parsers.mjs");
+  const borrowed = [...new Set(called)].filter((name) => typeof parsers[name] === "function");
+  assert.ok(borrowed.length >= 4, "expected funds.mjs to dispatch to the issuer parsers");
+  // The binding a re-export does not create: an imported name appears in an import statement.
+  const imported = [...source.matchAll(/import \{([^}]*)\} from "\.\/fund-holdings-parsers\.mjs";/gu)]
+    .map((match) => match[1]).join(",");
+  for (const name of borrowed) {
+    assert.ok(imported.includes(name), `${name} is called in funds.mjs but never imported there`);
+  }
 });
