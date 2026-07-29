@@ -6,6 +6,7 @@ import { fetchFundamentals } from "./fundamentals.mjs";
 import { fetchInsiderOwnership } from "./insider-ownership.mjs";
 import { INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
 import { SECTOR_SPDRS, fetchCrossMarket, fetchSectorDispersion } from "./cross-market.mjs";
+import { fetchBasketNews } from "./basket-news.mjs";
 import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
@@ -323,7 +324,7 @@ export async function gatherGrounding({
   // instead: published holdings, index-level valuation and the look-through aggregates that
   // let an operating-company method run against a basket at all.
   if (symbol && isFundOrIndex(out.instrument) && snapshotPolicy.allowed) {
-    jobs.push(safely("instrument aggregate", () => gatherInstrumentFacts({
+    const instrumentJob = safely("instrument aggregate", () => gatherInstrumentFacts({
       symbol, instrument: out.instrument, asOf, signal,
       // The operating-company facts a basket can supply at all: everything the method seats
       // ask of a company, aggregated by weight across the constituents that publish it.
@@ -332,7 +333,21 @@ export async function gatherGrounding({
       if (!r.ok) { out.unavailable.push(r.error); return; }
       out.instrument_aggregate = r.value;
       out.unavailable.push(...(r.value.unavailable || []));
-    }));
+    });
+    jobs.push(instrumentJob);
+    // A basket has no press office and files nothing, so its news comes from what it holds.
+    // Chained after the instrument pass rather than run beside it, because the holdings are
+    // what name the industry -- fetching them twice to avoid the wait would cost more than it
+    // saves.
+    jobs.push((async () => {
+      await instrumentJob;
+      const holdings = out.instrument_aggregate?.holdings;
+      if (!holdings?.length) return;
+      const news = await safely("basket news", () => fetchBasketNews(holdings, { asOf, signal }));
+      if (!news.ok) { out.unavailable.push(news.error); return; }
+      if (news.value.available) out.basket_news = news.value;
+      out.unavailable.push(...(news.value.unavailable || []));
+    })());
   }
 
   if (symbol && isFundOrIndex(out.instrument)) {

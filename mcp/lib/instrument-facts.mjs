@@ -839,6 +839,9 @@ export async function gatherInstrumentFacts({
     symbol,
     research_model: instrument?.research_model || "market_instrument",
     provenance,
+    // The disclosed positions themselves, so a caller that needs the basket's identity rather
+    // than its aggregates -- news, for one -- does not fetch the holdings file a second time.
+    holdings: holdings?.holdings || null,
     facts,
     // Several facts have more than one route -- the implied ERP and the valuation percentile
     // are computed from the published workbook when the index feed cannot supply them -- and

@@ -579,6 +579,62 @@ function fundamentalFacts(grounding, context) {
  * to Korea is the semiconductor cycle read from outside the United States. Sector dispersion is
  * whether one factor or many are repricing the market.
  */
+/**
+ * News as counts, never as content.
+ *
+ * A headline cannot reach a seat's arithmetic: the same symbol would answer differently
+ * depending on what was published that morning, and a frozen deterministic stance would stop
+ * being reproducible. What IS a fact is how much of the basket generated dated news in a stated
+ * window, and how many constituents filed an 8-K in it. Both are counts with a date, and both
+ * are the kind of thing an event-driven method legitimately asks for.
+ *
+ * The headlines themselves stay in the grounding for the report and for the voice worker that
+ * explains a stance the seat already reached.
+ */
+function basketNewsFacts(grounding, context) {
+  const news = grounding?.basket_news;
+  if (!news?.available) return;
+  const publicAt = timestampAtOrBefore(grounding?.gathered_at || context.asOf, context.cutoff);
+  if (!publicAt) return;
+  const sourceIdValue = sourceId("news", "basket_window", news.window_days, publicAt.slice(0, 10));
+  if (!registerSource(context, {
+    source_id: sourceIdValue,
+    source_kind: "news_aggregate",
+    title: `dated items for the basket's largest holdings over ${news.window_days} days`,
+    url: "https://news.google.com/rss",
+    public_at: publicAt,
+    retrieved_at: grounding.gathered_at || publicAt,
+    locator: { window_days: news.window_days, constituents_read: news.constituents_read, industry: news.industry?.id || null },
+  })) return;
+  const shared = {
+    asOf: context.asOf,
+    publicAt,
+    sources: [sourceIdValue],
+    confidence: 0.6,
+    derivation: "rederived",
+  };
+  addUnique(context.facts, context.diagnostics, baseFact({
+    ...shared,
+    factId: "news.covered_weight",
+    valueKind: "ratio",
+    value: news.coverage_weight,
+    unit: "decimal",
+    ratioDenominator: `weight_of_${news.constituents_read}_largest_holdings`,
+    derivationToolId: `${ADAPTER_ID}:news:covered_weight`,
+    derivationInput: { window_days: news.window_days },
+  }));
+  addUnique(context.facts, context.diagnostics, baseFact({
+    ...shared,
+    factId: "news.filing_event_weight",
+    valueKind: "ratio",
+    value: news.filing_event_weight,
+    unit: "decimal",
+    ratioDenominator: `weight_of_${news.constituents_read}_largest_holdings`,
+    derivationToolId: `${ADAPTER_ID}:news:filing_event_weight`,
+    derivationInput: { window_days: news.window_days, filers: news.filing_event_count },
+  }));
+}
+
 function crossMarketFacts(grounding, context) {
   const rows = grounding?.cross_market;
   const stamp = grounding?.gathered_at || context.asOf;
@@ -751,6 +807,7 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   instrumentAggregateFacts(grounding, context);
   insiderOwnershipFacts(grounding, context);
   crossMarketFacts(grounding, context);
+  basketNewsFacts(grounding, context);
   for (const family of ["screen", "macro", "market"]) {
     if (grounding?.[family] && !grounding[family].public_at) {
       if (family === "screen" && context.diagnostics.some((item) => String(item.source || "").startsWith("screen."))) continue;

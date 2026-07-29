@@ -132,6 +132,10 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "market.correlation_to_kospi": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "market.correlation_to_kosdaq": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "market.correlation_to_semiconductors": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  // News as counts. The headlines never enter a computation; how much of the basket is in the
+  // news, and how much of it filed, are dated quantities an event-driven method may read.
+  "news.covered_weight": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "news.filing_event_weight": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "market.sector_dispersion": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "fund.net_flow": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "fund.net_flow_ratio": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),

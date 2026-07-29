@@ -2,6 +2,43 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.2] — 2026-07-29
+
+### Added
+
+- **A basket now has a news identity.** `SOX` has no press office and files nothing, so a
+  basket run carried market-wide headlines and no industry at all. The industry is derived from
+  the SIC groups of the largest holdings, weighted — SOXX resolves to semiconductors because
+  its holdings are semiconductor registrants, and it survives a rebalance because nothing is
+  hand-maintained. Where no group dominates, the basket is queried as the several industries it
+  actually is: an industrial fund gets aerospace, machinery and electronics rather than one
+  misleading label. Constituent news and 8-K filings come with the weight of the holding they
+  belong to.
+- **The SIC group table covers every code a US registrant can file.** It had real holes —
+  aerospace and autos, brokers, media and entertainment, commercial research — and a holding in
+  one of them resolved to no industry and therefore to no industry news. 22 groups to 43, with
+  a test that walks every SIC from 0100 to 8999.
+- **News as counts, never as content.** `news.covered_weight` and `news.filing_event_weight`
+  are dated quantities an event-driven method may read. Headlines themselves stay out of the
+  arithmetic: a stance that changed with the morning's press would not be reproducible, which
+  is the property this runtime exists to protect.
+- **Cross-market correlation and sector dispersion.** Correlation to the broad market, to
+  KOSPI, to KOSDAQ and to the semiconductor cycle, plus dispersion across the eleven sector
+  SPDRs. Dalio's authored policy already limited position size by correlation and had none to
+  read. Sessions pair by DATE: Korea and the United States keep different holidays, and zipping
+  two close arrays by index compares a Tuesday with a Wednesday.
+
+### Changed
+
+- **A fired veto is a verdict, not silence.** Graham finding no asset floor has answered —
+  his construction is a price below a computed floor, and without one there is no margin of
+  safety, which is his own definition of speculation. He passes. Klarman and Pabrai likewise.
+  Left alone: li_lu, forensic_short and asness refuse on circle-of-competence grounds, and a
+  forensic short with no allegation is not bearish.
+- **The report separates a judgment from a data gap**, in four languages. A seat whose method
+  ran to completion and returned "not this one" no longer reads as a seat that was starved of
+  inputs.
+
 ## [1.0.1] — 2026-07-29
 
 A SOX run ended with 25 of 27 seats abstaining. The seats were not the problem.
