@@ -86,10 +86,10 @@
   "identity": {
     "maturity": "operator_lens",
     "operator_label": {
-      "en": "Peter Lynch Lens Provisional Operator Lens",
-      "ja": "Peter Lynch Lens 暫定オペレーター・レンズ",
-      "ko": "Peter Lynch Lens 임시 오퍼레이터 렌즈",
-      "zh": "彼得·林奇视角临时操作视角"
+      "en": "Peter Lynch Lens",
+      "ja": "Peter Lynch Lens・メソッドレンズ",
+      "ko": "Peter Lynch Lens 방법론 렌즈",
+      "zh": "彼得·林奇视角"
     },
     "persona_id": "master_lynch",
     "public_label": {
@@ -129,10 +129,10 @@
       "zh": "消费者观察、成长类别、周期股、困境反转与资产型机会。"
     },
     "identity": {
-      "en": "Peter Lynch Lens; project-derived and not human reviewed",
-      "ja": "Peter Lynch Lens。プロジェクト派生で、方法帰属について人による審査を受けていない暫定オペレーター・レンズ。本人の発言や現在の見解ではない。",
-      "ko": "Peter Lynch Lens. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 오퍼레이터 렌즈다. 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "彼得·林奇视角；项目派生、未经人工审定"
+      "en": "Peter Lynch Lens; a method model, not the person's own words",
+      "ja": "Peter Lynch Lens。メソッドモデルであり、本人の発言や現在の見解ではない。",
+      "ko": "Peter Lynch Lens. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "彼得·林奇视角；方法模型，非本人言论"
     },
     "method": {
       "en": "Classify the company type first, test a concise evidence-backed story, then apply category-appropriate growth, balance-sheet and valuation checks.",

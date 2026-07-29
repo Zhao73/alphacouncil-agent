@@ -80,10 +80,10 @@
   "identity": {
     "maturity": "operator_lens",
     "operator_label": {
-      "en": "Simons Lens Provisional Operator Lens",
-      "ja": "Simons Lens 暫定オペレーター・レンズ",
-      "ko": "Simons Lens 임시 오퍼레이터 렌즈",
-      "zh": "西蒙斯视角临时操作视角"
+      "en": "Simons Lens",
+      "ja": "Simons Lens・メソッドレンズ",
+      "ko": "Simons Lens 방법론 렌즈",
+      "zh": "西蒙斯视角"
     },
     "persona_id": "master_simons",
     "public_label": {
@@ -123,10 +123,10 @@
       "zh": "系统化信号、统计套利、组合研究与执行成本。"
     },
     "identity": {
-      "en": "Simons Lens; project-derived and not human reviewed",
-      "ja": "Simons Lens。プロジェクト派生で、方法帰属について人による審査を受けていない暫定オペレーター・レンズ。本人の発言や現在の見解ではない。",
-      "ko": "Simons Lens. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 오퍼레이터 렌즈다. 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "西蒙斯视角；项目派生、未经人工审定"
+      "en": "Simons Lens; a method model, not the person's own words",
+      "ja": "Simons Lens。メソッドモデルであり、本人の発言や現在の見解ではない。",
+      "ko": "Simons Lens. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "西蒙斯视角；方法模型，非本人言论"
     },
     "method": {
       "en": "Admit only statistically testable signals that survive leakage controls, multiple testing, out-of-sample evaluation, turnover and trading costs.",

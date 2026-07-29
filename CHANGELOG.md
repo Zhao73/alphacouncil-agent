@@ -2,6 +2,18 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.8] — 2026-07-30
+
+### Changed
+
+- **The catalog stops repeating a review-status warning next to every seat.** The owner
+  reviewed and accepted the method attributions, so `operator_label` is now just the method's
+  name and the selection identity says what a seat IS — "a method model, not the person's own
+  words" — instead of "project-derived and not human reviewed" twenty-seven times. The
+  impersonation guard stays; the machine-verified `admission_level` and every fail-closed
+  release gate are unchanged. All 27 solo-test packs regenerated; machine simulations re-run
+  against the new pack hashes.
+
 ## [1.0.7] — 2026-07-29
 
 ### Fixed
