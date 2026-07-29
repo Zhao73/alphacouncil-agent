@@ -782,6 +782,17 @@ export function deriveFundamentals({ companyFacts, asOf = null, maintenanceCapex
 }
 
 /**
+ * True when a registrant has filed no XBRL at all.
+ *
+ * SEC's own ticker file maps XOM to ExxonMobil Holdings Corp -- a newly formed entity with zero
+ * us-gaap tags -- while the operating history sits under a different CIK. Every metric then
+ * reported as missing, individually, and nothing said the registrant itself was empty.
+ */
+export function hasNoXbrlHistory(companyFacts) {
+  return Object.keys(companyFacts?.facts?.["us-gaap"] || {}).length === 0;
+}
+
+/**
  * Thin fetching wrapper: resolve the filer, pull Company Facts through the throttled and
  * User-Agent-bearing sec.mjs client, then hand the JSON to the pure function above.
  */

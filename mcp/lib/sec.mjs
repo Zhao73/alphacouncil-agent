@@ -31,21 +31,54 @@ async function throttle() {
   lastCall = Date.now();
 }
 
-async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2, upstreamSignal) {
-  await throttle();
-  const abort = linkedAbort(timeoutMs, upstreamSignal);
-  try {
-    const res = await fetch(url, {
-      signal: abort.signal,
-      headers: { "User-Agent": UA, Accept: "application/json" },
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-    const text = await res.text();
-    if (text.trimStart().startsWith("<")) throw new Error(`SEC returned HTML rather than JSON for ${url} (rate limited or blocked)`);
-    return JSON.parse(text);
-  } finally {
-    abort.cleanup();
+/**
+ * SEC answers 429 when a client outruns its guidance, and the throttle above only paces a
+ * single process -- a second one, or a burst of look-through fetches, still crosses the line.
+ * Without a backoff the whole evidence chain for a run collapses on one rate-limited response,
+ * which is indistinguishable in the report from the data not existing.
+ *
+ * Deliberately short and bounded: three attempts over about a second and a half. A caller that
+ * is genuinely over budget should fail fast and be told, not stall a research run.
+ */
+const RATE_LIMIT_ATTEMPTS = 3;
+const RATE_LIMIT_BACKOFF_MS = 400;
+
+function isRateLimited(status) {
+  return status === 429 || status === 503;
+}
+
+async function withRateLimitRetry(attempt) {
+  let lastError = null;
+  for (let tries = 0; tries < RATE_LIMIT_ATTEMPTS; tries += 1) {
+    if (tries > 0) await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_BACKOFF_MS * (2 ** (tries - 1))));
+    const outcome = await attempt();
+    if (!outcome.rateLimited) return outcome;
+    lastError = outcome.error;
   }
+  throw lastError;
+}
+
+async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2, upstreamSignal) {
+  const outcome = await withRateLimitRetry(async () => {
+    await throttle();
+    const abort = linkedAbort(timeoutMs, upstreamSignal);
+    try {
+      const res = await fetch(url, {
+        signal: abort.signal,
+        headers: { "User-Agent": UA, Accept: "application/json" },
+      });
+      if (isRateLimited(res.status)) {
+        return { rateLimited: true, error: new Error(`HTTP ${res.status} for ${url}`) };
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      const text = await res.text();
+      if (text.trimStart().startsWith("<")) throw new Error(`SEC returned HTML rather than JSON for ${url} (rate limited or blocked)`);
+      return { rateLimited: false, value: JSON.parse(text) };
+    } finally {
+      abort.cleanup();
+    }
+  });
+  return outcome.value;
 }
 
 /** Raw filing index for one registrant. Callers that need form types read this, not `fetchSubmissions`. */

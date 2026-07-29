@@ -14,6 +14,7 @@ import { buildAnonymousPreDecision, freezeAnonymousDecision } from "../personas-
 import { executeDeterministicPersonaPolicy } from "../personas-v3/deterministic-executor.mjs";
 import { languageKey, localized } from "../lang.mjs";
 import { displayMasterLabel } from "../markdown.mjs";
+import { voiceFromDecision, voiceFromDecline } from "../voice-from-decision.mjs";
 import {
   declinedOpinion as v2DeclinedOpinion,
   planMasters as planLegacyMasters,
@@ -258,6 +259,16 @@ export function completedMasterOpinion(run, item) {
     verdict: copy.verdict(result.stance, result.reason),
     summary: deterministicStatement,
     voice_statement: deterministicStatement,
+    // The five fields, composed from the frozen decision rather than written about it: which
+    // facts were read and their values, what the tools produced, which scoring conditions held
+    // and which did not, and what would move the verdict. A one-line statement told a reader
+    // the stance and nothing about how it was reached.
+    voice: voiceFromDecision({
+      result,
+      policy: item.pack.components?.decision_policy,
+      factPack: item.preDecision?.fact_pack,
+      language: run.language,
+    }),
     voice_status: "deterministic_fallback",
     voice_language: run.language,
     statement_origin: "deterministic_policy_fallback",
@@ -323,7 +334,14 @@ export function declinedMasterOpinion(run, item) {
     verdict: copy.verdict,
     summary: copy.summary(missing),
     voice_statement: deterministicStatement,
-    voice_status: "deterministic_fallback",
+    // The five fields, composed from the frozen decision rather than written about it: which
+    // facts were read and their values, what the tools produced, which scoring conditions held
+    // and which did not, and what would move the verdict. A one-line statement told a reader
+    // the stance and nothing about how it was reached.
+    // An abstention is readable too: what the method did have, what it needed, and why it will
+    // not substitute a proxy for the difference.
+    voice: voiceFromDecline({ eligibility, language: run.language }),
+    voice_status: "deterministic_scope",
     voice_language: run.language,
     statement_origin: "deterministic_scope_fallback",
     key_findings: [deterministicStatement],

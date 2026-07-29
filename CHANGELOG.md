@@ -2,6 +2,51 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.3] — 2026-07-29
+
+Three real runs are the specification: a GLW run put all eight selected seats at `out_of_scope`
+with weight zero, an INTC run sent six to the deterministic fallback, and a LITE run reported
+"no ticker was provided" for a ticker that had been provided. The filings contained the data
+every one of them said was missing.
+
+### Fixed
+
+- **The missing facts were mostly missing tag aliases.** `grossProfit` resolved for five of
+  fifteen large caps, because most filers publish revenue and cost of revenue separately rather
+  than tagging it; it is now derived from those two, matched by period end, with a tagged value
+  always winning. `capex` missed Corning entirely, which files `PaymentsForCapitalImprovements`
+  — that one absent alias removed owner earnings, and with it Buffett and Ackman, for every
+  issuer tagging it that way. Gross margin now resolves for all fourteen testable filers.
+- **Market facts were fetched only for baskets.** Asness, Marks and Damodaran require
+  `index.aggregate_earnings_yield` and reported it missing on every single-company run. The
+  market's aggregate earnings yield is not a property of the subject; it is the yardstick the
+  subject is measured against.
+- **A seat could not reach its own answer about an absent fact.** Pabrai is authored with a veto
+  that says no downside floor means pass. That fact is also a tool input, and a tool declaring
+  `on_missing: "fail"` aborted the policy before any veto ran. A veto that reads only facts
+  needs nothing a tool produces, so when one has already decided the seat, the tools it would
+  have fed no longer abort the run.
+- **A grounding timeout discarded everything.** The caller threw away a completed quote, screen
+  and filing set because one feed was slow, and the analysts described the empty result as a
+  missing ticker. Grounding settles at its own budget and returns what arrived. Section 16
+  ownership was reading filings one at a time — up to sixty throttled round trips on the
+  critical path — and is now batched: LITE completes in seven seconds.
+- **SEC rate limiting collapsed a run.** A 429 is now retried with a bounded backoff instead of
+  being indistinguishable in the report from the data not existing.
+- **A registrant with no filings is one diagnosis, not eight.** `XOM` resolves through SEC's own
+  ticker file to a newly formed holding company with zero us-gaap tags.
+- **The maturity suffix stopped leaking into sentences.** Statements read "using the X
+  provisional operator lens method".
+
+### Added
+
+- **Seats say what they looked at.** The five-field voice — what I see, how my method reads it,
+  would I act, what changes my mind, where I disagree — is composed from the frozen decision:
+  the facts read and their values, what the tools produced, which scoring conditions held and
+  which did not, and what would move the verdict. Because it is derived from the decision it
+  cannot drift from it, and anonymous rule ids are mapped back to the seat's readable names.
+  Abstentions get the same structure.
+
 ## [1.0.2] — 2026-07-29
 
 ### Added
