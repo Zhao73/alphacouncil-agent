@@ -2,6 +2,29 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.7] — 2026-07-29
+
+### Fixed
+
+- **A historical cutoff silently discarded the market yardstick and a fund's entire evidence
+  base.** Two sibling blocks in grounding skipped their fetch when the cutoff was historical and
+  wrote nothing to `unavailable`: the US-subject market-valuation block (so Marks and Damodaran
+  declined with `unmet: index.aggregate_earnings_yield` and the reader was never told why) and
+  the fund/index holdings block (worse — holdings, look-through aggregates and basket news ARE a
+  fund's evidence, so a historical fund run kept only a price). Both now record the gap the way
+  their sibling blocks always did. Three network-free regression tests pin the contract,
+  including one that walks the market earnings yield through the typed-fact lineage gate to a
+  `ready` Damodaran seat.
+
+### Clarified
+
+- The LITE council run that motivated 1.0.5 was executed by a cached 1.0.2 server, not by
+  current code: on HEAD, `index.aggregate_earnings_yield` resolves from the WSJ keyless
+  trailing-P/E source (verified live: 0.0397, dated, https lineage) and Marks, Damodaran and
+  Asness are all `ready` on a US equity. The seats were never method-blocked — the host was
+  running last week's build. If a seat declines on a fact the catalog says it should have,
+  check the plugin cache version before the method.
+
 ## [1.0.6] — 2026-07-29
 
 First release on which `npm run check` and the full test suite pass together: 995/995.

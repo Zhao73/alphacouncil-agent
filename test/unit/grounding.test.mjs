@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { gatherGrounding, groundingBlock, liveSnapshotPolicy } from "../../mcp/lib/grounding.mjs";
 import { groundingForHeadlessRun } from "../../mcp/lib/orchestrator.mjs";
 import { taskPrompt } from "../../mcp/lib/prompts.mjs";
+import { adaptGroundingToTypedFacts } from "../../mcp/lib/personas-v3/grounding-adapter.mjs";
+import { planMasterSeats } from "../../mcp/lib/personas/engine.mjs";
 
 const sample = {
   quote: { symbol: "MU", price: 100, currency: "USD", change_pct: -2.5, source: "yahoo" },
@@ -244,4 +246,117 @@ test("a non-US filing is rendered with its currency, unit and calendar", () => {
   assert.match(block, /TWSE OpenAPI filing \(2026Q1, TWD thousands as filed\)/);
   assert.match(block, /49,086,932/);
   assert.match(block, /EPS 8\.41/);
+});
+
+/**
+ * The market's own valuation is a US company's yardstick, and its absence must be visible.
+ *
+ * Three seats -- Marks, Damodaran and Asness -- require `index.aggregate_earnings_yield`, which
+ * describes the market rather than the subject. A build that shipped without the block that
+ * fetches it produced runs where those seats declined with `unmet: index.aggregate_earnings_yield`
+ * and the grounding said nothing at all, so an unexplained abstention read as a verdict. These
+ * tests pin both halves of the contract: a live cutoff enqueues the fetch, and a historical
+ * cutoff that cannot serve it names the gap.
+ */
+test("a historical US company run names the market yardstick it could not fetch", async () => {
+  const grounding = await gatherGrounding({
+    symbol: "AAPL",
+    asOf: "2026-07-26",
+    now: new Date("2026-07-27T12:00:00.000Z"),
+  });
+  assert.equal(grounding.market_valuation, undefined);
+  assert.ok(
+    grounding.unavailable.some((item) => /market valuation for \^GSPC/.test(item)),
+    `historical grounding hid the missing market yardstick: ${JSON.stringify(grounding.unavailable)}`,
+  );
+});
+
+/**
+ * A basket's evidence IS its holdings, so a cutoff that cannot serve them must say so.
+ *
+ * The fund/index block had the same silence as the market-valuation block above, with more at
+ * stake: an operating company keeps its filings and its screen, but a fund whose holdings,
+ * look-through aggregates and basket news are all skipped reaches the seats with a price and
+ * no account of why nothing else is there.
+ */
+test("a historical fund run names the holdings and basket news it could not fetch", async () => {
+  const grounding = await gatherGrounding({
+    symbol: "QQQ",
+    asOf: "2026-07-26",
+    now: new Date("2026-07-27T12:00:00.000Z"),
+  });
+  assert.equal(grounding.instrument.fund_like, true);
+  assert.equal(grounding.instrument_aggregate, undefined);
+  assert.equal(grounding.basket_news, undefined);
+  assert.ok(
+    grounding.unavailable.some((item) => /holdings, look-through aggregates and basket news for QQQ/.test(item)),
+    `historical fund grounding hid its own missing evidence: ${JSON.stringify(grounding.unavailable)}`,
+  );
+});
+
+/**
+ * The market-level facts a company run carries must survive the typed-fact lineage check.
+ *
+ * Facts reaching the adapter without a `public_at` at or before the cutoff and an https
+ * `source_url` are dropped as `missing_source_lineage` and never reach a seat, which is how a
+ * whole council once abstained while the grounding looked complete. The shape asserted here is
+ * the one `valuationFacts` actually emits for ^GSPC.
+ */
+test("the market's earnings yield reaches the typed pack and unblocks the seats that need it", () => {
+  const asOf = "2026-07-27";
+  const marketFact = {
+    fact_id: "index.aggregate_earnings_yield",
+    value: 0.03973,
+    value_kind: "ratio",
+    unit: "decimal",
+    ratio_denominator: "price",
+    source_kind: "market_snapshot",
+    source_url: "https://www.wsj.com/market-data/stocks/peyields?type=mdc_peAndYields",
+    public_at: "2026-07-24T00:00:00.000Z",
+    observation_date: "2026-07-24",
+    basis: "wsj_index_basis",
+    title: "S&P 500 Index valuation (wsj_index_basis)",
+    confidence: 0.8,
+    method: "reciprocal_of_wsj_index_basis_trailing_pe",
+  };
+  const grounding = {
+    as_of: asOf,
+    gathered_at: "2026-07-27T12:00:00.000Z",
+    market_valuation: { symbol: "^GSPC", research_model: "index_aggregate", facts: [marketFact] },
+  };
+
+  const adapted = adaptGroundingToTypedFacts(grounding, { asOf });
+  const yieldFact = adapted.fact_pack.facts.find((fact) => fact.fact_id === "index.aggregate_earnings_yield");
+  assert.ok(yieldFact, "the market earnings yield was dropped before any seat could read it");
+  assert.equal(yieldFact.value, 0.03973);
+  assert.equal(adapted.diagnostics.length, 0);
+  assert.ok(adapted.sources.some((source) => source.url.startsWith("https://")));
+
+  // The same fact without lineage is refused rather than passed on unsourced.
+  const unsourced = adaptGroundingToTypedFacts({
+    ...grounding,
+    market_valuation: { facts: [{ ...marketFact, source_url: null }] },
+  }, { asOf });
+  assert.equal(unsourced.fact_pack.facts.length, 0);
+  assert.deepEqual(unsourced.diagnostics.map((item) => item.code), ["missing_source_lineage"]);
+
+  // What the seats actually see: the yardstick leaves their unmet list.
+  const unmetFor = (typedPack) => {
+    const plan = planMasterSeats({ symbol: "AAPL", as_of: asOf, grounding: { typed_fact_pack: typedPack } },
+      ["master_damodaran", "master_marks", "master_asness"]);
+    return Object.fromEntries([...plan.completed, ...plan.declined, ...plan.blocked]
+      .map((seat) => [seat.id, seat.preDecision?.eligibility?.missing_required_fact_types || []]));
+  };
+  const without = unmetFor(adaptGroundingToTypedFacts({ as_of: asOf }, { asOf }).fact_pack);
+  const with_ = unmetFor(adapted.fact_pack);
+  for (const seat of ["master_damodaran", "master_marks", "master_asness"]) {
+    assert.ok(
+      without[seat].includes("index.aggregate_earnings_yield"),
+      `${seat} was expected to require the market earnings yield`,
+    );
+    assert.ok(
+      !with_[seat].includes("index.aggregate_earnings_yield"),
+      `${seat} still reports the market earnings yield as unmet: ${JSON.stringify(with_[seat])}`,
+    );
+  }
 });

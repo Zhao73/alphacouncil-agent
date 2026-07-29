@@ -367,6 +367,15 @@ export async function gatherGrounding({
         + " (seats that measure a company against the market will decline for lack of grounding, not for lack of a view)",
       );
     }));
+  } else if (symbol && !isFundOrIndex(out.instrument) && symbolMarket?.id === "US") {
+    // Every other block on this path names the cutoff it could not serve; this one used to
+    // skip in silence, so a historical run lost the yardstick with nothing said about it and
+    // Marks and Damodaran again declined for a reason the reader could not see.
+    out.unavailable.push(
+      `market valuation for ${BROAD_MARKET_INDEX}: the index aggregate is published only as a current snapshot`
+      + " with no point-in-time archive, so it was not fetched for a historical cutoff"
+      + " (seats that measure a company against the market will decline for lack of grounding, not for lack of a view)",
+    );
   }
 
   // A fund or index has no issuer financials, so this is where its evidence comes from
@@ -397,6 +406,15 @@ export async function gatherGrounding({
       if (news.value.available) out.basket_news = news.value;
       out.unavailable.push(...(news.value.unavailable || []));
     })());
+  } else if (symbol && isFundOrIndex(out.instrument)) {
+    // The same silence as the market-valuation block above, and worse here: a basket's
+    // holdings, look-through aggregates and news are the whole of its evidence, so a
+    // historical cutoff left the seats with a price and nothing to explain the emptiness.
+    out.unavailable.push(
+      `holdings, look-through aggregates and basket news for ${symbol}: issuer holdings and index`
+      + " aggregates are published only as current snapshots with no point-in-time archive,"
+      + " so they were not fetched for a historical cutoff",
+    );
   }
 
   if (symbol && isFundOrIndex(out.instrument)) {
