@@ -10,8 +10,8 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `0.9.5` is a non-GA GitHub preview. This source upgrade does
-not mutate npm dist-tags; verify npm independently before claiming `next` serves 0.9.5. Its
+Package/plugin version `1.0.0` is a non-GA GitHub preview. This source upgrade does
+not mutate npm dist-tags; verify npm independently before claiming `next` serves 1.0.0. Its
 build channel remains `solo_test`: 26 physical provisional
 PersonaPack v3 packs, 26 `operator_lens` seats, 52 `provisional_derived_proxy` tools,
 0 operational seats and 0 validated `method_model` seats. Do not present this feature

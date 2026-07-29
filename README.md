@@ -68,10 +68,10 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## Current 0.9.5 preview status: non-GA solo-test
+## Current 1.0.0 preview status: non-GA solo-test
 
-Version `0.9.5` is a GitHub preview. This source upgrade does not publish npm or
-change npm dist-tags; verify npm separately before assuming `@next` contains 0.9.5. It is a
+Version `1.0.0` is a GitHub preview. This source upgrade does not publish npm or
+change npm dist-tags; verify npm separately before assuming `@next` contains 1.0.0. It is a
 bounded council-runtime preview, **not** formal production GA. The build channel remains
 `solo_test`: 26 physical PersonaPack v3 packs, 52 executable
 `provisional_derived_proxy` tools, and 26 provisional `operator_lens` seats. Operational
@@ -80,10 +80,10 @@ approval signatures: **0**.
 
 This runtime/reporting release keeps the unchanged `persona_pack_version=0.9.4`, so the 26
 pack hashes and their existing simulation evidence do not drift merely because plugin code
-moved to 0.9.5.
+moved to 1.0.0.
 
 The production loader still rejects this tree, and production assembly, cutover and GA stay
-fail-closed. See [the v0.9.5 release contract](docs/releases/v0.9.5.md) for the exact ETF/index and full/quick
+fail-closed. See [the v1.0.0 release contract](docs/releases/v1.0.0.md) for the exact ETF/index and full/quick
 boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
 
 ## 📜 Disclaimer
@@ -291,7 +291,7 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
 
-The 0.9.5 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
+The 1.0.0 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
 not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
 project-derived proxy material; the 52 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA

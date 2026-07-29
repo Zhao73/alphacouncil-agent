@@ -2,15 +2,16 @@
 
 Notable changes per release. Dates are UTC.
 
-## [1.0.0] — unreleased
+## [1.0.0] — 2026-07-29
 
 The release where the method seats stop abstaining on everything. Full notes in
 `docs/releases/v1.0.0.md`.
 
-Held unreleased on purpose: the feeds, the authoring mechanism and the voice are in, but
-`data/persona-v3-authored-methods.v1.mjs` is still an empty set, so seats continue to run the
-identity proxy. Tagging 1.0.0 before the methods are authored would claim the one thing this
-release is about.
+All twenty-seven seats now run their own arithmetic and their own thresholds. Measured on live
+grounding across eight symbols, twenty-six of twenty-seven reach a stance somewhere with no
+contract failures. `master_jhunjhunwala` declines everywhere by construction: its first filter
+is the promoter shareholding record, which US filings do not contain, and the seat names that
+gap rather than substituting for it.
 
 ### Added
 
