@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_fisher.margin_retention"
   },
-  "derivation_spec_hash": "sha256:fe6dcf021e691a1ff6633b8d6efb0db492209bd979d02a152975a26b6e377be4",
+  "derivation_spec_hash": "sha256:82f13154344f2be7f000ef5cc6f2ddca14984bbc64bef1384aecef7f26cd08ae",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

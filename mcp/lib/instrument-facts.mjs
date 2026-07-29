@@ -227,11 +227,14 @@ function structureFacts(holdings, metadata) {
  */
 export async function resolveConstituentFacts(holdings, { signal, asOf = null, concurrency = 6 } = {}) {
   const perHolding = new Map();
+  // The aggregate inherits whatever span its inputs covered; without carrying it the basket
+  // fact arrives as a bare number that no duration contract can accept.
+  const perHoldingPeriods = new Map();
   const unavailable = [];
   const ranked = [...holdings]
     .sort((left, right) => (right.weight || 0) - (left.weight || 0))
     .slice(0, LOOK_THROUGH_MAX_CONSTITUENTS);
-  if (!ranked.length) return { perHolding, unavailable, attempted: 0 };
+  if (!ranked.length) return { perHolding, perHoldingPeriods, unavailable, attempted: 0 };
 
   let universe = null;
   try {
@@ -240,6 +243,7 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
   } catch (error) {
     return {
       perHolding,
+      perHoldingPeriods,
       unavailable: [`look-through: SEC ticker universe unavailable (${String(error?.message || error)})`],
       attempted: 0,
     };
@@ -254,17 +258,23 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
       try {
         const derived = await fetchFundamentals({ cik, ticker, asOf, signal });
         const facts = {};
+        const periods = {};
         for (const [factId, metric] of Object.entries(derived.metrics || {})) {
-          if (metric && Number.isFinite(metric.value)) facts[factId] = metric.value;
+          if (!metric || !Number.isFinite(metric.value)) continue;
+          facts[factId] = metric.value;
+          if (metric.period_start && metric.period_end) {
+            periods[factId] = { start: metric.period_start, end: metric.period_end };
+          }
         }
         if (Object.keys(facts).length) perHolding.set(ticker, facts);
+        if (Object.keys(periods).length) perHoldingPeriods.set(ticker, periods);
       } catch (error) {
         unavailable.push(`look-through ${ticker}: ${String(error?.message || error)}`);
       }
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, ranked.length) }, worker));
-  return { perHolding, unavailable, attempted: ranked.length };
+  return { perHolding, perHoldingPeriods, unavailable, attempted: ranked.length };
 }
 
 /**
@@ -275,7 +285,24 @@ export async function resolveConstituentFacts(holdings, { signal, asOf = null, c
  * valid, cheap run -- it yields no look-through facts and one explicit gap, which is the
  * correct outcome and not a failure.
  */
-export function lookThroughFacts({ holdings, perHoldingFacts, factIds, holdingsMeta }) {
+/**
+ * The interval a basket-level aggregate covers: the widest span its contributing constituents
+ * reported. Stating a narrower one would claim coverage the inputs do not have, and stating
+ * none at all leaves the fact unusable by any duration contract.
+ */
+function aggregatePeriod(perHoldingPeriods, factId, tickers) {
+  let start = null;
+  let end = null;
+  for (const ticker of tickers) {
+    const span = perHoldingPeriods?.get(ticker)?.[factId];
+    if (!span?.start || !span?.end) continue;
+    if (!start || span.start < start) start = span.start;
+    if (!end || span.end > end) end = span.end;
+  }
+  return start && end ? { period_start: start, period_end: end } : {};
+}
+
+export function lookThroughFacts({ holdings, perHoldingFacts, perHoldingPeriods, factIds, holdingsMeta }) {
   const facts = [];
   const unavailable = [];
   if (!holdings?.length) return { facts, unavailable };
@@ -310,6 +337,7 @@ export function lookThroughFacts({ holdings, perHoldingFacts, factIds, holdingsM
       source_url: holdingsMeta?.source_url,
       public_at: holdingsMeta?.public_at,
       observation_date: holdingsMeta?.as_of,
+      ...aggregatePeriod(perHoldingPeriods, factId, [...byTicker.keys()]),
       confidence: 0.7,
       derivation: "rederived",
       method: aggregate.method,
@@ -476,9 +504,11 @@ export async function gatherInstrumentFacts({
 
   if (holdings?.holdings?.length && lookThroughFactIds.length) {
     let resolved = perHoldingFacts;
+    let resolvedPeriods = null;
     if (!resolved) {
       const constituents = await resolveConstituentFacts(holdings.holdings, { signal, asOf });
       resolved = constituents.perHolding;
+      resolvedPeriods = constituents.perHoldingPeriods;
       unavailable.push(...constituents.unavailable);
       provenance.look_through = {
         constituents_attempted: constituents.attempted,
@@ -488,6 +518,7 @@ export async function gatherInstrumentFacts({
     const through = lookThroughFacts({
       holdings: holdings.holdings,
       perHoldingFacts: resolved,
+      perHoldingPeriods: resolvedPeriods,
       factIds: lookThroughFactIds,
       holdingsMeta: holdings,
     });

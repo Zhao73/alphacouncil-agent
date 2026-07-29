@@ -8,6 +8,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CANONICAL_MASTER_COUNT } from "../mcp/lib/personas-v3/staging.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const serverEntry = join(root, "mcp", "server.mjs");
@@ -128,7 +129,7 @@ export async function runPackageSmoke() {
         host: "package-smoke",
         prompt: locale.prompt,
       }));
-      assert.equal(catalog.masters.length, 26, `${locale.language} installed catalog must contain exactly 26 seats`);
+      assert.equal(catalog.masters.length, CANONICAL_MASTER_COUNT, `${locale.language} installed catalog must contain exactly ${CANONICAL_MASTER_COUNT} seats`);
       for (const master of catalog.masters) {
         for (const field of ["identity", "method", "best_for", "maturity_label"]) {
           assert.match(master[field], locale.script, `${locale.language} ${master.id}.${field}`);

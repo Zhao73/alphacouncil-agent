@@ -1,0 +1,11 @@
+{
+  "assurance_class": "provisional_derived_proxy",
+  "mandatory_disconfirming_queries": [
+    "Reject when dividend yield plus business growth does not exceed expected inflation, since no reduction in cost rescues a gross return already negative in real terms.",
+    "Decline when the subject is one operating business rather than a basket whose dividends and earnings aggregate.",
+    "Reject a case for a fund whose support is past outperformance rather than yield, growth and cost."
+  ],
+  "private_research_paths": [
+    "dated public primary documents"
+  ]
+}

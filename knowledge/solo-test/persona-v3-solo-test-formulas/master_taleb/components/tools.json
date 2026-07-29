@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:a55b1e0238dde83e25776d09102a002a6542d5931cca65b4af78169972bc5057",
-    "derivation_spec_hash": "sha256:143b365a540c5c4a49ee68058512ae0d5e5ac17a62ef8eb567d0cd9388464d61",
+    "derivation_evidence_hash": "sha256:3289b24b65e14cbd73a54701c6b3227f25d0b813a8831666a0c6d9fb47246161",
+    "derivation_spec_hash": "sha256:5b78e79b939648a637fbf773b55890a54eadf081fe1c22c36935f296ce103744",
     "derivation_spec_id": "master_taleb.debt_service_cushion.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_taleb.debt_service_cushion",
@@ -11,8 +11,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "ANY"
         },
         "unit": "multiple",
         "value_kind": "ratio"
@@ -28,7 +28,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:db1da058aeead47ae9fa667c551ceebf117bd90cb801a00fbf716f71664cedbb",
+    "input_schema_hash": "sha256:9ff235b64fd337b45ade7fd44beee6ea7b4d2df01f98654294e47d9136c52ff3",
     "inputs": [
       {
         "fact_id": "financial.interest_coverage"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:1a864d9f8c2957fcc6c803bee7f91e061cc7902433e036eb29bc93303a305fd4",
+    "output_schema_hash": "sha256:2097c0ae539de66a16d56c45b60a0d4ddd9f52e0807c6eafd080bd9b25bcedd9",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

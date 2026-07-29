@@ -1,4 +1,4 @@
-/** Self-contained, immutable release evidence for all 52 deterministic formula tools. */
+/** Self-contained, immutable release evidence for every deterministic formula tool. */
 
 import { PLANNED_TOOL_COUNT } from "../../../data/persona-v3-build-specs.v1.mjs";
 import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
@@ -244,7 +244,7 @@ export function verifyReleaseFormulaReviewEvidence({
     trustedFormulaReviewerKeys: externallyTrustedSnapshot,
     verifiedAt: evidence.verified_at,
   });
-  if (canonicalJson(rebuilt) !== canonicalJson(evidence)) fail("formula-review evidence no longer matches the 52 physical tool bindings");
+  if (canonicalJson(rebuilt) !== canonicalJson(evidence)) fail("formula-review evidence no longer matches the physical tool bindings");
   return Object.freeze(rebuilt);
 }
 

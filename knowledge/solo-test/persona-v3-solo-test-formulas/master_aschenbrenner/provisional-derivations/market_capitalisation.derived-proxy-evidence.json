@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P1Y"
           },
           "unit": "shares",
           "value_kind": "count"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_aschenbrenner.market_capitalisation"
   },
-  "derivation_spec_hash": "sha256:8d76c65b8d0aee17eeaaa15d8ac53ccfd8ad8d079eeea237e3b8d23eedfd3d5e",
+  "derivation_spec_hash": "sha256:43b5ef79576af90eaf7c6fbafe5bff2603c538ac7ba182319449e41a89f35705",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

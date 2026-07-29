@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P10Y"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "multiple",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_li_lu.cash_backed_decade_return"
   },
-  "derivation_spec_hash": "sha256:f0ac2968bb48c4d3ae58e223ace3e4ff1c75df22d294a87981d9f8f8b95b06fc",
+  "derivation_spec_hash": "sha256:ca2e43c99672fda3cc77eb9e50ffb602ab08c4ce220455ff85c76db25bd02d40",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

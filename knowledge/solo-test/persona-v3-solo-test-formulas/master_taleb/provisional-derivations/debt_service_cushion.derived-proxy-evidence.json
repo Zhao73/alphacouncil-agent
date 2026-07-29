@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "ANY"
           },
           "unit": "multiple",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_taleb.debt_service_cushion"
   },
-  "derivation_spec_hash": "sha256:143b365a540c5c4a49ee68058512ae0d5e5ac17a62ef8eb567d0cd9388464d61",
+  "derivation_spec_hash": "sha256:5b78e79b939648a637fbf773b55890a54eadf081fe1c22c36935f296ce103744",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

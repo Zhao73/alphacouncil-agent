@@ -228,10 +228,10 @@
   ],
   "assurance_class": "machine_pre_review_only",
   "candidate_count": 32,
-  "canonical_master_count": 26,
+  "canonical_master_count": 27,
   "human_claim_count": 0,
   "human_reviewed_count": 0,
-  "index_hash": "sha256:dacfe0763c9f4d198c446ec8b40f33d59f1063556f79a6d888ed7332771c732e",
+  "index_hash": "sha256:3ce3085cb3ed7c4fdc1a99a7941558ff29c9248f70a833f2a9140b8a248dba67",
   "personas": [
     {
       "candidate_count": 1,
@@ -336,6 +336,10 @@
     {
       "candidate_count": 1,
       "persona_id": "master_sinclair"
+    },
+    {
+      "candidate_count": 0,
+      "persona_id": "master_bogle"
     }
   ],
   "production_effect": "none",

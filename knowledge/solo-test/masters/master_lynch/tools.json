@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:c2a04a2b59230f43057cbf233f21970e1d7753d8edaea8f29d94ea3cb8baba5c",
-    "derivation_spec_hash": "sha256:b616cd7f30fbf082b95cb675adb3fbe09dac6dd03a9d53312c3c99d96254f0a9",
+    "derivation_evidence_hash": "sha256:52a7c3bd87531c34f627feaaddc932931c805248ddd4088fe815972a9244a69a",
+    "derivation_spec_hash": "sha256:f45b9f6cb098d893f2f5d90d47f09b57b8f60ddc3f11cc6e909166ec93216013",
     "derivation_spec_id": "master_lynch.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_lynch.market_capitalisation",
@@ -21,14 +21,14 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P1Y"
         },
         "unit": "shares",
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:6dfd8936a29ce56f930151ef8ef85fa5b7c7287f7d3afabb9301e75ba9dcfc3f",
+    "input_schema_hash": "sha256:014fc15523fc0e43ed8a00eb0a919906f0fa8bf32f9a03da70c609cc722d249b",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:6a99a27ed2c5b449c642120f31a9d92c3caf807c943851b7050a886bbf061d5d",
+    "output_schema_hash": "sha256:e9720490d54bd7418bae25eac0bbaffd044e45d519ce743e57feb8bd1e96597f",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:cf974b9e9028d3c29f8f3f6f7977de3c666a0a46e40c15077e293378459a28d3",
-    "derivation_spec_hash": "sha256:f09bdde1ee4e188f389a2afaf1603465c72dab0abf2f98485730dcc99af9f23a",
+    "derivation_evidence_hash": "sha256:1dfb12c46177bc62e3ae887947e46083f14098f735ad295a060e032047cfa1ec",
+    "derivation_spec_hash": "sha256:8853906f825f28224238ef6f616eb3609f1249a6050d7bf1f67946c38afe948b",
     "derivation_spec_id": "master_lynch.growth_justified_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_lynch.growth_justified_capitalisation",
@@ -70,8 +70,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "currency_units",
         "value_kind": "monetary"
@@ -80,8 +80,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "ANY"
         },
         "unit": "decimal",
         "value_kind": "ratio"
@@ -97,7 +97,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:891c986c0a644a42fdd1ddc075e092365e2b9c7b6fd4f279edc5a591a47fbbb8",
+    "input_schema_hash": "sha256:3615ba32b04be656a5c7ea107d33a6389ef3f338da4b3d31c9e9c164bdad2742",
     "inputs": [
       {
         "fact_id": "financial.free_cash_flow_5y"
@@ -119,7 +119,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:de2b136ddda35188cca2830549b8ad716294b87da655c9c310b13b28eb8a2f32",
+    "output_schema_hash": "sha256:1d72c0667f606301193078ff7ca80e8e1734dd8efd157bb0f8967c6659d057f8",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

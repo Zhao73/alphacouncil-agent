@@ -22,6 +22,10 @@ import {
   writePersonaV3DraftPacks,
 } from "../../scripts/lib/persona-v3-draft-packs.mjs";
 import { REPO_ROOT } from "../../scripts/lib/persona-v3-build-specs.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+
+/** Each seat gets the same fixed slice of draft artifacts; the roster size is what varies. */
+const DRAFT_ARTIFACTS_PER_SEAT = 9;
 
 function workspace(t) {
   const dir = mkdtempSync(join(tmpdir(), "alphacouncil-v3-drafts-"));
@@ -33,14 +37,14 @@ function workspace(t) {
   return { dir, root, productionRoot };
 }
 
-test("factory writes all 26 physical draft slices and is byte-stable", (t) => {
+test("factory writes every canonical seat physical draft slices and is byte-stable", (t) => {
   const paths = workspace(t);
   const first = writePersonaV3DraftPacks(paths);
-  assert.equal(first.written.length, 26 * 10); // nine artifacts plus one scaffold update per seat
+  assert.equal(first.written.length, CANONICAL_MASTER_COUNT * (DRAFT_ARTIFACTS_PER_SEAT + 1)); // artifacts plus one scaffold update per seat
   assert.equal(first.unchanged.length, 0);
   const firstReport = inspectPersonaV3DraftPacks(paths);
-  assert.equal(firstReport.draft_pack_count, 26);
-  assert.equal(firstReport.present_artifact_count, 234);
+  assert.equal(firstReport.draft_pack_count, CANONICAL_MASTER_COUNT);
+  assert.equal(firstReport.present_artifact_count, CANONICAL_MASTER_COUNT * DRAFT_ARTIFACTS_PER_SEAT);
   assert.equal(firstReport.invalid_count, 0);
   assert.equal(firstReport.production_loader_visible_count, 0);
   assert.equal(firstReport.production_eligible_count, 0);
@@ -48,7 +52,7 @@ test("factory writes all 26 physical draft slices and is byte-stable", (t) => {
 
   const second = writePersonaV3DraftPacks(paths);
   assert.equal(second.written.length, 0);
-  assert.equal(second.unchanged.length, 26 * 10);
+  assert.equal(second.unchanged.length, CANONICAL_MASTER_COUNT * (DRAFT_ARTIFACTS_PER_SEAT + 1));
   const secondReport = inspectPersonaV3DraftPacks(paths);
   assert.equal(secondReport.draft_inventory_hash, firstReport.draft_inventory_hash);
 });
@@ -98,7 +102,7 @@ test("all computation pairs are structurally differentiated by seat-specific fac
     assert.notEqual(signature(first), signature(second), seat.persona_id);
     signatures.push(JSON.stringify(tools.computations.map(signature)));
   }
-  assert.equal(new Set(signatures).size, 26, "all 26 seats need distinct computation structures");
+  assert.equal(new Set(signatures).size, CANONICAL_MASTER_COUNT, "every canonical seat need distinct computation structures");
 });
 
 test("scaffolds describe draft work without hashes, reviewers or production eligibility", (t) => {
@@ -150,11 +154,11 @@ test("CLI is check-only by default and --write is explicit", (t) => {
 
   const write = spawnSync(process.execPath, [...baseArgs, "--write"], { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(write.status, 0, write.stderr);
-  assert.match(write.stdout, /seats=26\/26/);
+  assert.match(write.stdout, new RegExp(`seats=${CANONICAL_MASTER_COUNT}/${CANONICAL_MASTER_COUNT}`));
   assert.match(write.stdout, /loader_visible=0/);
 
   const check = spawnSync(process.execPath, baseArgs, { cwd: REPO_ROOT, encoding: "utf8" });
   assert.equal(check.status, 0, check.stderr);
-  assert.match(check.stdout, /artifacts=234\/234/);
+  assert.match(check.stdout, new RegExp(`artifacts=${CANONICAL_MASTER_COUNT * DRAFT_ARTIFACTS_PER_SEAT}/${CANONICAL_MASTER_COUNT * DRAFT_ARTIFACTS_PER_SEAT}`));
   assert.equal(loadV3Packs({ dir: paths.root }).packs.length, 0);
 });

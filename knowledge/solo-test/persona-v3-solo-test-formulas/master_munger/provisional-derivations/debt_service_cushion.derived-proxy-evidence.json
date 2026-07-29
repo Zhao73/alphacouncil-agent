@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "ANY"
           },
           "unit": "multiple",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_munger.debt_service_cushion"
   },
-  "derivation_spec_hash": "sha256:dab13b116c3e8b1d33b8d11340c6f3f3fdada791dcfb70560d5e5c740641e6b0",
+  "derivation_spec_hash": "sha256:b305f753d74db920ed87360669a592d0bbbb2112ba3aab4b73bdad2bdc71f029",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

@@ -24,6 +24,7 @@ import {
   signExperimentEntry,
 } from "../../mcp/lib/personas-v3/admission.mjs";
 import { withTestFormulaApprovalBinding } from "../helpers/persona-v3-deterministic-tool.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const TEST_SIGNER = "ci:test-key-v1";
@@ -676,7 +677,7 @@ test("experiment evaluator separates failed, unsigned and missing results", () =
   assert.ok(result.missing.includes("name_invariance"));
 });
 
-test("the report script scans the canonical 26 and emits JSON with required deltas", () => {
+test("the report script scans the canonical roster and emits JSON with required deltas", () => {
   const run = spawnSync(process.execPath, ["scripts/report-persona-corpus-gaps.mjs", "--json"], {
     cwd: ROOT,
     encoding: "utf8",
@@ -684,8 +685,8 @@ test("the report script scans the canonical 26 and emits JSON with required delt
   });
   assert.equal(run.status, 0, run.stderr);
   const report = JSON.parse(run.stdout);
-  assert.equal(report.canonical_master_count, 26);
-  assert.equal(report.personas.length, 26);
+  assert.equal(report.canonical_master_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.personas.length, CANONICAL_MASTER_COUNT);
   assert.equal(report.summary.method_models, 0);
   const buffett = report.personas.find((persona) => persona.persona_id === "master_buffett");
   assert.equal(buffett.pack_format, "v2_inline");

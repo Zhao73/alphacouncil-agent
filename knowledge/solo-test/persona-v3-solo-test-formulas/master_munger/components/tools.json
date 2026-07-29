@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:96e50cdba5a599f5b1e462bb5747a173d3ecd671e1304098adbe3c731fb8fa26",
-    "derivation_spec_hash": "sha256:b55794858458b6fa88bd8afc18c19edc969d16765343a4ed66962862ea6ebabe",
+    "derivation_evidence_hash": "sha256:70affd27867c58b5b0dce7a1318cd95af402efdd2c1513fbae32b7f5ad48d582",
+    "derivation_spec_hash": "sha256:f1a1bc86653ed606699379f37f452bc93dd099fb1c5f945a442d270841be031b",
     "derivation_spec_id": "master_munger.reported_earnings_cash_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_munger.reported_earnings_cash_gap",
@@ -11,8 +11,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "multiple",
         "value_kind": "ratio"
@@ -28,7 +28,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:8d1c454fc53098d13d7630dccbc0130d52dd061da3e75aa87b154029dbef3def",
+    "input_schema_hash": "sha256:55676f7c335663550027434c226427356e559431906c524b9eda27ead54e313c",
     "inputs": [
       {
         "fact_id": "accounting.cash_conversion"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:a3804a398d53b9888ea35700443662f21cbbcaa0823bf3bc31091e1640ed2354",
+    "output_schema_hash": "sha256:df32a29a6137f138156006609b45374e1ca3ac1dd5771d15b863d9bad8d69c02",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:0479347868fe364f9fd4a42048542c7e1c3a9a9ad732b00ea555baf63c99317d",
-    "derivation_spec_hash": "sha256:dab13b116c3e8b1d33b8d11340c6f3f3fdada791dcfb70560d5e5c740641e6b0",
+    "derivation_evidence_hash": "sha256:2a75bcbb5e2db67006965def37f3cc9bf6ddb40059c4031342f9423a1f01d887",
+    "derivation_spec_hash": "sha256:b305f753d74db920ed87360669a592d0bbbb2112ba3aab4b73bdad2bdc71f029",
     "derivation_spec_id": "master_munger.debt_service_cushion.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_munger.debt_service_cushion",
@@ -70,8 +70,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "ANY"
         },
         "unit": "multiple",
         "value_kind": "ratio"
@@ -87,7 +87,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:ae898feb7070bb4ba1818406e377f021777c5e0c4b5c766bebe1ff6b02c67226",
+    "input_schema_hash": "sha256:408cc354af8fee5340e55e0f5eac3abbf00f078be178fad783979a6f425affd7",
     "inputs": [
       {
         "fact_id": "financial.interest_coverage"
@@ -106,7 +106,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c1bb85b42b26a4ea941a8273ac7ba86796fdd78fa32d73af60fd72d1f4c8b2d5",
+    "output_schema_hash": "sha256:44ae88a51cf21e570f4b8820c607cfbc01a34911956fd6aaf3e8258bd0098f4c",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

@@ -80,6 +80,15 @@ function secCompanyFactsIdentity(id) {
   };
 }
 
+/**
+ * Keep an interval only when the value genuinely covers a span. A single-ended interval is not
+ * a shorter interval -- it is an observation date wearing the wrong field.
+ */
+function pointInTimeOrInterval(periodStart, periodEnd) {
+  if (!periodStart) return { period_start: null, period_end: null };
+  return { period_start: periodStart, period_end: periodEnd };
+}
+
 function baseFact({
   factId,
   valueKind,
@@ -108,8 +117,12 @@ function baseFact({
     currency,
     scale,
     ...(ratioDenominator ? { ratio_denominator: ratioDenominator } : {}),
-    period_start: periodStart,
-    period_end: periodEnd,
+    // `period_start`/`period_end` describe the span a value COVERS, not when it was observed --
+    // that is what `as_of` and `public_at` are for. A point-in-time observation with only an end
+    // date satisfies neither contract basis: the executor rejects it as an instant because the
+    // interval is non-null, and as a duration because a window needs both ends. Facts in that
+    // shape were unusable by any tool, which is most of what kept live seats silent.
+    ...pointInTimeOrInterval(periodStart, periodEnd),
     fiscal_year: fiscalYear,
     as_of: asOf,
     public_at: publicAt,
@@ -581,7 +594,8 @@ function instrumentAggregateFacts(grounding, context) {
       currency: entry.currency ?? null,
       scale: entry.scale ?? null,
       ratioDenominator: entry.ratio_denominator,
-      periodEnd: entry.observation_date || null,
+      periodStart: entry.period_start || null,
+      periodEnd: entry.period_end || entry.observation_date || null,
       asOf: context.asOf,
       publicAt,
       sources: [sourceIdValue],

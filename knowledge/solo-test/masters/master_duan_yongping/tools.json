@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:fa4e34e6e0aaff7d0cbd43890891bf495c0de2e6e23ca4336b4eda1a271927b5",
-    "derivation_spec_hash": "sha256:8b316b9416929b447217d74d54d4fa756e9c58b46fb3b6e781172f4d8d60ba6c",
+    "derivation_evidence_hash": "sha256:80c3af4218aab09224e1a5ca41088311bb86f75069e5560bde6cd68b58c27ea9",
+    "derivation_spec_hash": "sha256:0a3c728ee333d65a10066c6f03580c549beb628d540029d58131475e35117279",
     "derivation_spec_id": "master_duan_yongping.five_year_opportunity_cost.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_duan_yongping.five_year_opportunity_cost",
@@ -21,8 +21,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P1Y"
         },
         "unit": "shares",
         "value_kind": "count"
@@ -48,7 +48,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:874fc37f77565c8cc2f5bc42890492a288ec90cc505c48e5c6df265635bdf574",
+    "input_schema_hash": "sha256:f7a9dde26fc09a0bb0286719a92a4ea9150be86a504160c25125841e60135d3c",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -73,7 +73,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:695bb434209758e7949d1b3812481a389555b5f8c4b12165b9d0140887571c5d",
+    "output_schema_hash": "sha256:d1cee723a684cd4f0eb55e50c61d1e4bbd637d458fb39d8204c9b497383c2894",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -86,8 +86,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:1086de5f15c54f6c3a2accd38b0ae34d4ce15bb66cbd89e07fc85a80b8cd66a2",
-    "derivation_spec_hash": "sha256:15a2e38f3c0078b94c1548163b7da6fb8b8fd20ff72c4a8217d540b5792e8357",
+    "derivation_evidence_hash": "sha256:4093b47b9083694371dd9bf31489a3f11dfee0554fb87f72de5661d63d2fa5e9",
+    "derivation_spec_hash": "sha256:b1543d78a86822685d586d0fef12ecb68db7f0377fab8303472ec2f99a3b4670",
     "derivation_spec_id": "master_duan_yongping.margin_retention.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_duan_yongping.margin_retention",
@@ -96,8 +96,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "decimal",
         "value_kind": "ratio"
@@ -106,14 +106,14 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "decimal",
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:0b7800f3b2a2b453b1c457b6b2f6868c2b1715df0b12fa707153668249ea6222",
+    "input_schema_hash": "sha256:ca2f1bcf84bbcdc247c59ad7990ce18bca5a6ca3adcd85c29dd3f3700e30e1a6",
     "inputs": [
       {
         "fact_id": "financial.net_margin_5y"
@@ -132,7 +132,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c6d36e803b9fc1e5a0d465e5bc3a43553227ddcfe71b3fb479e017d65e093423",
+    "output_schema_hash": "sha256:b1097206354b3c03c78e1ddcd5c6ffcb05e9084f31b046d424bd0af2abd0408e",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

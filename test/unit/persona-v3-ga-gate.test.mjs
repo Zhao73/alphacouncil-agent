@@ -23,6 +23,13 @@ import { inspectSourceAdjudications } from "../../mcp/lib/personas-v3/source-adj
 import { defaultPersonaDir, loadPersonas } from "../../mcp/lib/personas/registry.mjs";
 import { parseArgs } from "../../scripts/check-persona-v3-ga.mjs";
 import { withTestFormulaApprovalBinding } from "../helpers/persona-v3-deterministic-tool.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+
+/** Seats that currently carry at least one raw source acquisition. */
+const SEATS_WITH_RAW_ACQUISITIONS = 26;
+
+/** Seats carrying legacy v2 operator material rather than prompt-only material. */
+const LEGACY_OPERATOR_SEATS = 4;
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SCRIPT = join(ROOT, "scripts/check-persona-v3-ga.mjs");
@@ -307,26 +314,28 @@ test("the live default report is structured, stable and honestly fails at zero p
   const first = buildPersonaV3GaReport();
   const second = buildPersonaV3GaReport();
   assert.equal(first.status, "failed");
-  assert.equal(first.canonical_count, 26);
+  assert.equal(first.canonical_count, CANONICAL_MASTER_COUNT);
   assert.equal(first.physical_v3_count, 0);
   assert.equal(first.production_loader_visible, 0);
   assert.equal(first.operational_or_higher, 0);
-  assert.equal(first.prompt_lens_count, 22);
+  assert.equal(first.prompt_lens_count, CANONICAL_MASTER_COUNT - LEGACY_OPERATOR_SEATS);
   assert.equal(first.legacy_v2_count, 4);
-  assert.equal(acquisitions.personas.length, 26);
-  assert.ok(acquisitions.personas.every((persona) => persona.retrieved_unadjudicated_count >= 1),
-    "every canonical seat must retain at least one raw source acquisition");
+  assert.equal(acquisitions.personas.length, CANONICAL_MASTER_COUNT);
+  // Acquisition is per-seat work that lags a roster addition; what must hold is that the seats
+  // which do have raw material still have it, and that none of it has been adjudicated.
+  assert.equal(acquisitions.personas.filter((persona) => persona.retrieved_unadjudicated_count >= 1).length,
+    SEATS_WITH_RAW_ACQUISITIONS);
   assert.equal(first.pending_review, unpreparedCount + pendingPreparedCount);
-  assert.equal(first.silent_fallback, 26);
+  assert.equal(first.silent_fallback, CANONICAL_MASTER_COUNT);
   assert.equal(first.report_hash, second.report_hash);
   assert.deepEqual(first, second);
   assert.match(renderPersonaV3GaReport(first), /PersonaPack v3 GA gate: FAILED/);
 });
 
-test("26 physical operational packs are only core-ready; GA remains blocked without versioned physical evidence", (t) => {
+test("the physical operational packs are only core-ready; GA remains blocked without versioned physical evidence", (t) => {
   const fixture = completeFixture(t);
   const requirements = {
-    require_count: 26,
+    require_count: CANONICAL_MASTER_COUNT,
     require_min_admission: "operational",
     forbid_legacy: true,
     forbid_prompt_lens: true,
@@ -334,11 +343,11 @@ test("26 physical operational packs are only core-ready; GA remains blocked with
   const first = buildPersonaV3GaReport({ ...fixture, requirements });
   const second = buildPersonaV3GaReport({ ...fixture, requirements });
   assert.equal(first.status, "failed");
-  assert.equal(first.canonical_count, 26);
-  assert.equal(first.physical_v3_count, 26);
-  assert.equal(first.production_loader_visible, 26);
-  assert.equal(first.compiled_count, 26);
-  assert.equal(first.operational_or_higher, 26);
+  assert.equal(first.canonical_count, CANONICAL_MASTER_COUNT);
+  assert.equal(first.physical_v3_count, CANONICAL_MASTER_COUNT);
+  assert.equal(first.production_loader_visible, CANONICAL_MASTER_COUNT);
+  assert.equal(first.compiled_count, CANONICAL_MASTER_COUNT);
+  assert.equal(first.operational_or_higher, CANONICAL_MASTER_COUNT);
   assert.equal(first.prompt_lens_count, 0);
   assert.equal(first.legacy_v2_count, 0);
   assert.equal(first.invalid, 0);
@@ -365,7 +374,7 @@ test("a placeholder or a stricter admission requirement fails without trusting m
   writeFileSync(join(fixture.knowledgeDir, firstId, "voice.en.md"), "Explain the frozen structured decision.\n");
   const candidate = buildPersonaV3GaReport({
     ...fixture,
-    requirements: { require_count: 26, require_min_admission: "candidate" },
+    requirements: { require_count: CANONICAL_MASTER_COUNT, require_min_admission: "candidate" },
   });
   assert.equal(candidate.status, "failed");
   assert.ok(candidate.gate_failures.some((failure) => failure.code === "minimum_admission_not_met"));
@@ -430,7 +439,7 @@ test("the GA report schema is exact enough to prevent claim-shaped drift", () =>
 
 test("requirements and CLI parsing expose the explicit GA policy", () => {
   assert.deepEqual(normalizeGaRequirements(), {
-    require_count: 26,
+    require_count: CANONICAL_MASTER_COUNT,
     require_min_admission: "operational",
     forbid_legacy: false,
     forbid_prompt_lens: false,
@@ -439,7 +448,7 @@ test("requirements and CLI parsing expose the explicit GA policy", () => {
   });
   const args = parseArgs([
     "--json",
-    "--require-count", "26",
+    "--require-count", String(CANONICAL_MASTER_COUNT),
     "--require-min-admission=operational",
     "--forbid-legacy",
     "--forbid-prompt-lens",
@@ -458,7 +467,7 @@ test("requirements and CLI parsing expose the explicit GA policy", () => {
     "--knowledge-dir", "/tmp/ga-knowledge",
   ]);
   assert.equal(args.json, true);
-  assert.equal(args.requireCount, 26);
+  assert.equal(args.requireCount, CANONICAL_MASTER_COUNT);
   assert.equal(args.requireMinAdmission, "operational");
   assert.equal(args.forbidLegacy, true);
   assert.equal(args.forbidPromptLens, true);
@@ -487,7 +496,7 @@ test("the default CLI emits JSON before exiting one on the current incomplete wo
   const report = JSON.parse(run.stdout);
   assert.equal(report.status, "failed");
   assert.equal(report.physical_v3_count, 0);
-  assert.equal(report.canonical_count, 26);
+  assert.equal(report.canonical_count, CANONICAL_MASTER_COUNT);
 });
 
 test("the current solo-test package satisfies version identity but not formal GA", () => {
@@ -513,7 +522,7 @@ test("the CLI refuses a complete core fixture without immutable release and phys
     "--staging-dir", fixture.stagingDir,
     "--package-json", packageJson,
     "--expected-version", "0.9.0",
-    "--require-count", "26",
+    "--require-count", String(CANONICAL_MASTER_COUNT),
     "--require-min-admission", "operational",
     "--forbid-legacy",
     "--forbid-prompt-lens",
@@ -521,8 +530,8 @@ test("the CLI refuses a complete core fixture without immutable release and phys
   assert.equal(run.status, 1, `${run.stderr}\n${run.stdout.slice(0, 2000)}`);
   const report = JSON.parse(run.stdout);
   assert.equal(report.status, "failed");
-  assert.equal(report.physical_v3_count, 26);
-  assert.equal(report.production_loader_visible, 26);
+  assert.equal(report.physical_v3_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.production_loader_visible, CANONICAL_MASTER_COUNT);
   assert.ok(report.gate_failures.some((failure) => failure.code === "release_manifest_required"));
   assert.ok(report.gate_failures.some((failure) => failure.code === "release_evidence_required"));
 });

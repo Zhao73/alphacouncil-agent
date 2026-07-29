@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "currency_units",
           "value_kind": "monetary"
@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "ANY"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -71,7 +71,7 @@
     "schema_version": 1,
     "tool_id": "master_lynch.growth_justified_capitalisation"
   },
-  "derivation_spec_hash": "sha256:f09bdde1ee4e188f389a2afaf1603465c72dab0abf2f98485730dcc99af9f23a",
+  "derivation_spec_hash": "sha256:8853906f825f28224238ef6f616eb3609f1249a6050d7bf1f67946c38afe948b",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

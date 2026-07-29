@@ -14,6 +14,10 @@ import {
 import { sha256Bytes } from "../../mcp/lib/personas-v3/source-acquisition.mjs";
 import { buildSourceReviewBatch } from "../../mcp/lib/personas-v3/source-review-operations.mjs";
 import { parseArgs } from "../../scripts/pre-review-persona-sources.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+
+/** Seats that currently carry at least one raw source acquisition. */
+const SEATS_WITH_RAW_ACQUISITIONS = 26;
 
 const BYTES = Buffer.from("machine pre-review source bytes");
 const RECORD = {
@@ -69,11 +73,13 @@ test("validator rejects human impersonation, production effect, and unbound role
   assert.ok(errors.some((error) => error.includes("artifact_hash is invalid")));
 });
 
-test("physical machine pre-review inventory covers all 32 candidates across 26 seats and leaves human quorum empty", () => {
+test("physical machine pre-review inventory covers all 32 candidates across the canonical seats and leaves human quorum empty", () => {
   const report = inspectAiSourcePreReviews();
   assert.equal(report.valid, true, report.errors.join("\n"));
-  assert.equal(report.canonical_master_count, 26);
-  assert.equal(report.seats_with_candidates, 26);
+  assert.equal(report.canonical_master_count, CANONICAL_MASTER_COUNT);
+  // A seat only appears here once it has a raw acquisition; the newest seat has none yet,
+  // and reporting that honestly is the point of this inventory.
+  assert.equal(report.seats_with_candidates, SEATS_WITH_RAW_ACQUISITIONS);
   assert.equal(report.candidate_count, 32);
   assert.equal(report.valid_artifact_count, 32);
   assert.equal(report.role_output_count, 96);

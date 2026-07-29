@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "currency_units",
           "value_kind": "monetary"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_graham.half_normalised_earnings_yield"
   },
-  "derivation_spec_hash": "sha256:fd0500ae9ea78b599e2e85426278a034b073408e323a3390b0857edbb9ceea96",
+  "derivation_spec_hash": "sha256:3a6bfd410cabf900182c9371d308eb071bc1e42688bcb0a9f541e881c95c2ded",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

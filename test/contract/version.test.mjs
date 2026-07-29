@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { __test__ } from "../../mcp/server.mjs";
 import { repoFile } from "../helpers/paths.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(repoFile(rel), "utf8"));
 
@@ -40,7 +41,7 @@ test("the 0.9.5 runtime keeps the reviewed 0.9.4 PersonaPack snapshot non-GA", (
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort();
-  assert.equal(personaIds.length, 26);
+  assert.equal(personaIds.length, CANONICAL_MASTER_COUNT);
   for (const personaId of personaIds) {
     assert.equal(
       readJson(`knowledge/solo-test/masters/${personaId}/manifest.json`).pack_version,

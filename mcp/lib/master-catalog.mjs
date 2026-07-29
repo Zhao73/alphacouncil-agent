@@ -111,6 +111,10 @@ const CARDS = Object.freeze({
     zh: ["Mohnish Pabrai，Pabrai Funds 创始人和 Dhandho 价值投资人", "寻找低永久损失、高不确定性、离散催化剂和明显不对称赔率。", "特殊情形、资产保护、克隆后独立复算和集中机会"],
     en: ["Mohnish Pabrai, Pabrai Funds founder and Dhandho value investor", "Looks for low permanent-loss risk, high uncertainty, discrete catalysts and strongly asymmetric odds.", "Special situations, asset protection, independently rebuilt clones and concentration"],
   },
+  master_bogle: {
+    zh: ["约翰·博格，先锋集团创始人和低成本指数投资的倡导者", "把一篮子的长期预期回报拆成股息率、盈利增长和估值变化，再减去持有成本。", "指数基金、ETF、整体市场预期回报和持有成本"],
+    en: ["John C. Bogle, Vanguard's founder and the advocate of low-cost index investing", "Decomposes a basket's long-run expected return into dividend yield, earnings growth and the change in valuation, then subtracts the cost of holding it.", "Index funds, ETFs, market-wide expected return and cost of ownership"],
+  },
   master_jhunjhunwala: {
     zh: ["Rakesh Jhunjhunwala，以长期集中持仓闻名的印度投资人", "结合印度结构成长、promoter 治理、现金质量、规模扩张和流动性。", "印度上市公司、结构渗透、治理和集中成长机会"],
     en: ["Rakesh Jhunjhunwala, an Indian investor known for long-duration concentrated holdings", "Combines Indian structural growth, promoter governance, cash quality, scaling and liquidity.", "Indian equities, structural penetration, governance and concentrated growth"],

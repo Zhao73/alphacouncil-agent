@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Build or verify the packaged 26-seat provisional solo-test PersonaPack v3 tree. */
+/** Build or verify the packaged provisional solo-test PersonaPack v3 tree. */
 
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
@@ -59,10 +59,10 @@ export function main(argv = process.argv.slice(2)) {
     process.stdout.write([
       "Usage: node scripts/build-persona-v3-solo-test-packs.mjs [--check|--write] [--json]",
       "",
-      "  --write              materialize all 26 packaged provisional packs, then verify",
+      "  --write              materialize every packaged provisional pack, then verify",
       "  --check              read-only verification (default)",
       "  --root PATH          override the isolated solo-test/masters output root",
-      "  --formula-root PATH  override the 52-tool provisional formula staging tree",
+      "  --formula-root PATH  override the provisional formula staging tree",
       "  --persona-dir PATH   override the canonical persona registry",
       "  --pack-version X.Y.Z[-PRERELEASE] override package-derived pack version",
       "  --json               emit a machine-readable report",
@@ -85,6 +85,7 @@ const invoked = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(im
 if (invoked) {
   try { process.exitCode = main(); } catch (error) {
     process.stderr.write(`persona-v3 solo-test pack build failed: ${error.message}\n`);
+    if (error.details) process.stderr.write(`${JSON.stringify(error.details, null, 2).slice(0, 2000)}\n`);
     process.exitCode = 1;
   }
 }

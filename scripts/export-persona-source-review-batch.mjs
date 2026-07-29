@@ -82,7 +82,7 @@ function helpText() {
     "  node scripts/export-persona-source-review-batch.mjs --output FILE --write [--trusted-reviewer-keys FILE] [--json]",
     "",
     "Default/check mode is read-only. --write creates one new audit batch and never overwrites it.",
-    "The batch includes all 26 seats, raw acquisition bindings, human-only proposal templates, hashes, locator gaps, and strict trusted-principal quorum progress.",
+    "The batch includes every canonical seat, raw acquisition bindings, human-only proposal templates, hashes, locator gaps, and strict trusted-principal quorum progress.",
     "It never prepares, reviews, approves, promotes, or writes production knowledge.",
     "",
   ].join("\n");

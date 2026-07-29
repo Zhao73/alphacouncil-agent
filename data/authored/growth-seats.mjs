@@ -1,7 +1,7 @@
 /**
  * Authored method logic for the six growth, activism and adversarial seats, keyed by persona id.
  *
- * Same contract and same discipline as `docs/pending-seats/persona-v3-authored-methods.v1.mjs`:
+ * Same contract and same discipline as the other authored seat files:
  * a seat listed here gets its real formulas and its real decision policy, a seat absent from it
  * keeps the mechanical identity proxy, and every threshold either traces to a named published
  * source or is labelled in `rationale` and `provenance` as this project's reading rather than

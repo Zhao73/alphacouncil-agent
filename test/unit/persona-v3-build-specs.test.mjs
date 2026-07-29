@@ -9,11 +9,13 @@ import {
   personaV3BuildSpecReport,
   validatePersonaV3BuildSpecs,
 } from "../../scripts/lib/persona-v3-build-specs.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
-test("the planning inventory matches the canonical 26-seat catalog and legacy material", () => {
+test("the planning inventory matches the canonical seat catalog and legacy material", () => {
   const result = validatePersonaV3BuildSpecs();
   assert.equal(result.valid, true, result.errors.join("\n"));
-  assert.equal(result.canonical_ids.length, 26);
+  assert.equal(result.canonical_ids.length, CANONICAL_MASTER_COUNT);
   assert.deepEqual(inventory.seats.map((seat) => seat.persona_id), result.canonical_ids);
   assert.deepEqual(result.legacy_v2_ids, [
     "master_buffett",
@@ -44,20 +46,30 @@ test("every seat remains evidence-honest and pending human adjudication", () => 
 test("report distinguishes planned requirements from current maturity", () => {
   const report = personaV3BuildSpecReport();
   assert.equal(report.valid, true);
-  assert.equal(report.current_material.v1_prompt, 22);
+  // The split between prompt-only and legacy-operator material is a property of the seats, not
+  // a number to restate: what has to hold is that every canonical seat lands in exactly one bucket.
+  assert.equal(report.current_material.v1_prompt + report.current_material.v2_operator, CANONICAL_MASTER_COUNT);
   assert.equal(report.current_material.v2_operator, 4);
   assert.equal(report.current_material.physical_v3, 0);
   assert.equal(report.current_material.method_model, 0);
   assert.deepEqual(report.adjudication, {
-    pending_seats: 26,
+    pending_seats: CANONICAL_MASTER_COUNT,
     reviewer_approvals: 0,
     experiment_passes: 0,
     production_promotions: 0,
   });
-  assert.equal(report.totals.planned_tools, 52);
-  assert.equal(report.totals.veto_families, 78);
-  assert.equal(report.totals.source_targets, 78);
-  assert.deepEqual(report.totals.case_targets, { decision: 130, failure: 78, counterfactual: 520, golden: 312 });
+  assert.equal(report.totals.planned_tools, PLANNED_TOOL_COUNT);
+  // Every seat plans three vetoes, three source targets and the same four case minimums, so
+  // these are per-seat rates rather than fixed totals -- stating them as multiples keeps the
+  // shape pinned while letting the roster grow.
+  assert.equal(report.totals.veto_families, CANONICAL_MASTER_COUNT * 3);
+  assert.equal(report.totals.source_targets, CANONICAL_MASTER_COUNT * 3);
+  assert.deepEqual(report.totals.case_targets, {
+    decision: CANONICAL_MASTER_COUNT * 5,
+    failure: CANONICAL_MASTER_COUNT * 3,
+    counterfactual: CANONICAL_MASTER_COUNT * 20,
+    golden: CANONICAL_MASTER_COUNT * 12,
+  });
 });
 
 test("validator rejects invented citations, fake completion and fake reviewer approval", () => {
@@ -85,7 +97,7 @@ test("validator rejects catalog drift and paths that leave the repository", () =
 test("build-spec JSON schema is parseable and carries non-production constants", () => {
   const schema = JSON.parse(readFileSync(`${REPO_ROOT}/schemas/persona-v3-build-spec-v1.schema.json`, "utf8"));
   assert.equal(schema.properties.inventory_status.const, "non_production_planning_only");
-  assert.equal(schema.properties.seat_count.const, 26);
+  assert.equal(schema.properties.seat_count.const, CANONICAL_MASTER_COUNT);
   assert.equal(schema.properties.adjudication_policy.properties.promotion_effect.const, "none");
   assert.equal(schema.$defs.seat.properties.build_status.const, "spec_only");
 });
@@ -96,8 +108,8 @@ test("report CLI passes its validation gate and can render markdown", () => {
     encoding: "utf8",
   });
   assert.equal(check.status, 0, check.stderr);
-  assert.match(check.stdout, /26\/26 specs/);
-  assert.match(check.stdout, /26 pending human review/);
+  assert.match(check.stdout, new RegExp(`${CANONICAL_MASTER_COUNT}/${CANONICAL_MASTER_COUNT} specs`));
+  assert.match(check.stdout, new RegExp(`${CANONICAL_MASTER_COUNT} pending human review`));
   assert.match(check.stdout, /0 production promotions/);
 
   const markdown = spawnSync(process.execPath, ["scripts/report-persona-v3-build-specs.mjs", "--markdown"], {

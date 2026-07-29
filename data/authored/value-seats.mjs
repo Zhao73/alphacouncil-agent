@@ -1,7 +1,7 @@
 /**
  * Authored method logic for the six remaining value seats, keyed by persona id.
  *
- * Same contract and same discipline as `docs/pending-seats/persona-v3-authored-methods.v1.mjs`,
+ * Same contract and same discipline as the other authored seat files,
  * which authored buffett, graham, bogle, marks, damodaran, dalio, druckenmiller, asness and
  * natenberg. This file finishes the value bench: munger, klarman, pabrai, li_lu, duan_yongping
  * and lynch.

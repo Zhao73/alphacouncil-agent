@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "currency_units",
           "value_kind": "monetary"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_aschenbrenner.price_implied_cash_yield"
   },
-  "derivation_spec_hash": "sha256:d6c10a384e3ba90a873b02e839270d2733669763c3d54b13bc8371826625135c",
+  "derivation_spec_hash": "sha256:cf3d02f5e7ab3138f3d25c34fcf4a8253187de58264d2f240d5570697e589f96",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

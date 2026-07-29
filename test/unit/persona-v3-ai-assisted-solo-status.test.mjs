@@ -13,6 +13,8 @@ import {
 } from "../../scripts/lib/persona-v3-ai-assisted-solo-status.mjs";
 import { parseArgs } from "../../scripts/check-persona-v3-ai-assisted-solo.mjs";
 import { resolveRuntimePersonaBuildProfile } from "../../mcp/lib/personas-v3/registry.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
 const ROOT = process.cwd();
 
@@ -76,7 +78,7 @@ test("the status gate separates local AI-review readiness from unfinished releas
   assert.equal(report.integrity_status, "passed", report.integrity_errors.join("\n"));
   assert.equal(report.local_test_status, "ready");
   assert.equal(report.release_status, "blocked");
-  assert.equal(report.solo_packs.completed, 26);
+  assert.equal(report.solo_packs.completed, CANONICAL_MASTER_COUNT);
   assert.equal(report.ai_review_coverage.source.completed, 32);
   assert.equal(report.ai_review_coverage.source.verification_mode, "raw_revalidated");
   assert.equal(report.ai_review_coverage.source.raw_source_revalidated_count, 32);
@@ -84,7 +86,7 @@ test("the status gate separates local AI-review readiness from unfinished releas
   assert.equal(report.ai_review_coverage.semantic.skeptic.completed, 32);
   assert.equal(report.ai_review_coverage.semantic.adjudication.completed, 32);
   assert.equal(report.ai_review_coverage.semantic.status, "passed");
-  assert.equal(report.ai_review_coverage.formula.completed, 52);
+  assert.equal(report.ai_review_coverage.formula.completed, PLANNED_TOOL_COUNT);
   assert.equal(report.automated_experiment_coverage.completed, 8);
   assert.equal(report.automated_experiment_coverage.canonical_experiment_completed, 0);
   assert.equal(report.live_host_coverage.completed, 0);

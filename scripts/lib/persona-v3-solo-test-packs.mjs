@@ -1,5 +1,5 @@
 /**
- * Deterministic builder for the packaged 26-seat solo-test PersonaPack v3 tree.
+ * Deterministic builder for the packaged solo-test PersonaPack v3 tree.
  *
  * This is intentionally a separate assurance channel. It consumes only the isolated
  * provisional formula tree, writes manifests with build_profile=solo_test, uses pending
@@ -788,12 +788,12 @@ export function renderPersonaV3SoloTestPackReport(report) {
     "",
     "> These are packaged provisional operator lenses. They are not approved method models and the production loader rejects them.",
     "",
-    `Physical packs: ${report.summary.physical_pack_count}/26`,
-    `Solo loader valid: ${report.summary.solo_loader_valid_count}/26`,
-    `Compiled: ${report.summary.compiler_valid_count}/26`,
-    `Provisional operator lenses: ${report.summary.provisional_operator_lens_count}/26`,
-    `Production loader rejected: ${report.summary.production_loader_rejection_count}/26`,
-    `Tools: ${report.summary.tool_count}/52`,
+    `Physical packs: ${report.summary.physical_pack_count}/${CANONICAL_MASTER_COUNT}`,
+    `Solo loader valid: ${report.summary.solo_loader_valid_count}/${CANONICAL_MASTER_COUNT}`,
+    `Compiled: ${report.summary.compiler_valid_count}/${CANONICAL_MASTER_COUNT}`,
+    `Provisional operator lenses: ${report.summary.provisional_operator_lens_count}/${CANONICAL_MASTER_COUNT}`,
+    `Production loader rejected: ${report.summary.production_loader_rejection_count}/${CANONICAL_MASTER_COUNT}`,
+    `Tools: ${report.summary.tool_count}/${PLANNED_TOOL_COUNT}`,
     `Operational/method_model: ${report.summary.operational_count}/0`,
     `Ready for solo testing: ${report.summary.ready_for_solo_testing}`,
     `Readiness hash: \`${report.readiness_hash}\``,

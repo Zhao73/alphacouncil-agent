@@ -207,7 +207,10 @@ test("the npm tarball excludes PersonaPack staging and every raw acquisition art
   assert.ok(packed.includes("docs/persona-v3-deterministic-policy.md"),
     "the package must ship the PersonaPack v3 deterministic policy consumed by operators");
   const reviewJson = packed.filter((path) => path.startsWith("knowledge/ai-assisted-solo/reviews/") && path.endsWith(".json"));
-  assert.equal(reviewJson.length, 185, "the package must ship the complete hash-verifiable AI review capsule");
+  const repoReviewJson = execSync("git ls-files knowledge/ai-assisted-solo/reviews", { cwd: repoFile("."), encoding: "utf8" })
+    .split("\n").filter((path) => path.endsWith(".json"));
+  assert.equal(reviewJson.length, repoReviewJson.length,
+    "the package must ship the complete hash-verifiable AI review capsule");
   assert.equal(packed.some((path) => path.startsWith("knowledge/ai-assisted-solo/host-e2e/")), false,
     "machine-local host failure evidence with workstation paths must not ship");
 });

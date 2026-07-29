@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P1Y"
           },
           "unit": "currency_units",
           "value_kind": "monetary"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_buffett.owner_earnings_yield"
   },
-  "derivation_spec_hash": "sha256:f0b5fd7527863e772e860c413cfcbd2b53f30335153ad4a065f015022a47332c",
+  "derivation_spec_hash": "sha256:bf9af0c7a485960d9fbc7927514c3e5c3c908e4f2236374af71081abcb43c596",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

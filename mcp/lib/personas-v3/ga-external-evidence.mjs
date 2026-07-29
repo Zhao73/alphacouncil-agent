@@ -443,7 +443,7 @@ export function inspectGaExternalEvidence({
   const releasePackHashes = (manifest.packs || []).map((pack) => pack.pack_hash);
   const releaseVersions = (manifest.packs || []).map((pack) => pack.pack_version);
   if (releaseVersions.length !== CANONICAL_MASTER_COUNT || releaseVersions.some((version) => version !== expectedVersion)) {
-    errors.push(`all 26 immutable release pack versions must equal ${expectedVersion}`);
+    errors.push(`all ${CANONICAL_MASTER_COUNT} immutable release pack versions must equal ${expectedVersion}`);
   }
   if (packageEvidence?.artifact) {
     if (!same(packageEvidence.derived_catalog?.selected_master_ids, releaseIds)) errors.push("installed package selected master IDs/order differ from the release manifest");

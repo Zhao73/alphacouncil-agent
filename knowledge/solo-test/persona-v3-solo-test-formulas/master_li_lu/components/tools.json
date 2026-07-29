@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:0c3bc33134485f7db014bff8b7f79c2c0e6d713bd0f1198b9435c6066e78bafa",
-    "derivation_spec_hash": "sha256:aa942b0d8e1c13770722d6e6d06f0b048a10b2c84883f437839d8f04aeb17c41",
+    "derivation_evidence_hash": "sha256:2f980e196503aca214c459ea65bb1b72b709c186a0a57a3422224390d45ec3bb",
+    "derivation_spec_hash": "sha256:7e1f29a8fc40460086e1c01082c7b8e55358640d59e317d3f6ce4f215515b561",
     "derivation_spec_id": "master_li_lu.decade_return_over_long_bond.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_li_lu.decade_return_over_long_bond",
@@ -11,8 +11,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P10Y"
         },
         "unit": "decimal",
         "value_kind": "ratio"
@@ -28,7 +28,7 @@
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:11253621ec8967ebe80ce2c5f22cbb854c82adf8b9f5cd63e35245663b975422",
+    "input_schema_hash": "sha256:73fdaf28389f83eb783a0daa2295a7019f274d595b17781c4d8d35433712f00d",
     "inputs": [
       {
         "fact_id": "financial.return_on_equity_10y"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:bca2b43fc018b057b69de9850dfb659f4b9873cdb2f768d3d75e99bf7cd7d943",
+    "output_schema_hash": "sha256:f5cd5af33569ada5e94f197a181f683670c527635c7ed46e3a6596278751c328",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:05edc7b7c9c63866822a9d29b8a756492eeddb80adde62ad3f219940b89037d0",
-    "derivation_spec_hash": "sha256:f0ac2968bb48c4d3ae58e223ace3e4ff1c75df22d294a87981d9f8f8b95b06fc",
+    "derivation_evidence_hash": "sha256:b1111e2930fc3df25a55e268b8650bf31af6cfe237919cf60371fa5e149e7a39",
+    "derivation_spec_hash": "sha256:ca2e43c99672fda3cc77eb9e50ffb602ab08c4ce220455ff85c76db25bd02d40",
     "derivation_spec_id": "master_li_lu.cash_backed_decade_return.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_li_lu.cash_backed_decade_return",
@@ -70,8 +70,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P10Y"
         },
         "unit": "decimal",
         "value_kind": "ratio"
@@ -80,14 +80,14 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "multiple",
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:f57f903065dbbf901557d2979d2e7d6b5639f15deed870d0a4f48f9d219241fe",
+    "input_schema_hash": "sha256:45bd35609901bde9a5377b042f2c6f80e283f60476559314e9ff37f77fb02840",
     "inputs": [
       {
         "fact_id": "financial.return_on_equity_10y"
@@ -106,7 +106,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:2db51615844e7bdd2ac0997851306fb472d5d33de47257877dd1c9c85febe265",
+    "output_schema_hash": "sha256:a191a7e93006064c1a45c3a1f4bef44eaf170d3e5bc06639c25c27414ad35b88",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

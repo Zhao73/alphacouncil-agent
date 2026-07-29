@@ -17,12 +17,13 @@ import {
   loadCouncilEvaluationProtocol,
   validateCouncilEvaluationProtocol,
 } from "../../scripts/lib/council-evaluation-protocol.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 function canonical() {
   return loadCouncilEvaluationProtocol();
 }
 
-test("canonical draft matches the live analysts, verifier roster, priority 13 and all 26 masters", () => {
+test("canonical draft matches the live analysts, verifier roster, priority 13 and the whole master roster", () => {
   const protocol = canonical();
   const validation = validateCouncilEvaluationProtocol(protocol);
   const reg = registry();
@@ -34,8 +35,8 @@ test("canonical draft matches the live analysts, verifier roster, priority 13 an
     selectRoster(reg, { kind: "verifier", roster: "verify" }).map((persona) => persona.id),
   );
   assert.deepEqual(protocol.registry_snapshot.priority_13_master_ids, PRIORITY_13_MASTER_IDS);
-  assert.deepEqual(protocol.registry_snapshot.canonical_26_master_ids, reg.ids("master"));
-  assert.equal(reg.ids("master").length, 26);
+  assert.deepEqual(protocol.registry_snapshot.canonical_master_ids, reg.ids("master"));
+  assert.equal(reg.ids("master").length, CANONICAL_MASTER_COUNT);
 });
 
 test("the seven arm contracts are exact and preserve E variants plus blinded H", () => {
@@ -45,9 +46,9 @@ test("the seven arm contracts are exact and preserve E variants plus blinded H",
   assert.deepEqual(byId.get("B").analyst_ids, DEFAULT_TASKS);
   assert.deepEqual(byId.get("B").master_ids, []);
   assert.equal(byId.get("C").master_execution_mode, "legacy_prompt_snapshot");
-  assert.equal(byId.get("C").master_ids.length, 26);
+  assert.equal(byId.get("C").master_ids.length, CANONICAL_MASTER_COUNT);
   assert.deepEqual(byId.get("D13").master_ids, PRIORITY_13_MASTER_IDS);
-  assert.equal(byId.get("D26").master_ids.length, 26);
+  assert.equal(byId.get("D26").master_ids.length, CANONICAL_MASTER_COUNT);
   assert.deepEqual(byId.get("E").base_arm_ids, ["D13", "D26"]);
   assert.deepEqual(byId.get("E").verifier_ids, ["source_fidelity", "rederivation", "refuter"]);
   assert.equal(byId.get("E").bounded_repair.maximum_rounds, 2);

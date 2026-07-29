@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P10Y"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_li_lu.decade_return_over_long_bond"
   },
-  "derivation_spec_hash": "sha256:aa942b0d8e1c13770722d6e6d06f0b048a10b2c84883f437839d8f04aeb17c41",
+  "derivation_spec_hash": "sha256:7e1f29a8fc40460086e1c01082c7b8e55358640d59e317d3f6ce4f215515b561",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

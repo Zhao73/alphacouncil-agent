@@ -18,14 +18,14 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:1971ddfef8ee408b2cec0b2c49df7a2560af60306aa0969b49b51394f5ab5733",
+  "input_hash": "sha256:74976320729d75230ee009322babc0ce1fdd2af8abcc06a7edc2c2b614470e82",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
-    "byte_length": 15446,
+    "byte_length": 15513,
     "path": "data/council-evaluation-protocol.v1.json",
-    "physical_file_hash": "sha256:a92412ff624f9a265543bc2d2cac2c5253beb5a8965a6316bfbf5c372ec2ef97",
-    "protocol_hash": "sha256:c5bcaabe1bf312981af52b2c98ad7d2861307252eac2b9d9cff9989cae3d1d0c",
+    "physical_file_hash": "sha256:686571c450d9241b248be22521a8d79e35af92887ef3fc65bd0fab796928fc38",
+    "protocol_hash": "sha256:03cdacb4dcbe073d19c0642de1b2511cbed7fd0ad2e9956304b3fd20f3bc99da",
     "protocol_status": "draft_unregistered"
   },
   "reviewer_kind": "ai",
@@ -36,9 +36,9 @@
       "physical_file_hash": "sha256:ad06e3d004cdb072909fc2fb9cf643dace28ff542a4c7092309fdd53f5623b63"
     },
     {
-      "byte_length": 48718,
+      "byte_length": 49532,
       "path": "mcp/lib/personas-v3/deterministic-executor.mjs",
-      "physical_file_hash": "sha256:ea536902c349981cb94706192034a1c8091a1a4ff37544fa7e6d581d25604f50"
+      "physical_file_hash": "sha256:1222b8c56e5535ec1f446f55aee0a3c1b948f80403e53085de932398ae90f7ef"
     },
     {
       "byte_length": 8032,
@@ -56,7 +56,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:e835000f17401bac800b124cca3506f5bb45be1af0ca77bde14ca9793dda5a89",
+        "fact_pack_hash": "sha256:cc8b2174deea3c9c3e6a2482459b7242e7b9d27a46e933638f0b2da877cddaa7",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -206,8 +206,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -232,8 +232,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": 1,
@@ -383,8 +383,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:e835000f17401bac800b124cca3506f5bb45be1af0ca77bde14ca9793dda5a89",
-      "pack_hash": "sha256:1719a98215cb44368c3e88b780c6527f32a3cfb5759bdaf22bde08b9c5212b30",
+      "fact_pack_hash": "sha256:cc8b2174deea3c9c3e6a2482459b7242e7b9d27a46e933638f0b2da877cddaa7",
+      "pack_hash": "sha256:ca9339a76bd667727346d89cccf391798c19daba8167bc282cbee5ef0fa502a9",
       "pack_manifest_binding": {
         "byte_length": 5472,
         "path": "knowledge/solo-test/masters/master_aschenbrenner/manifest.json",
@@ -395,7 +395,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:58aadbc191adfb2d27631033f573d127b1422a9518087875b6161a5c0f18c446",
+        "fact_pack_hash": "sha256:2887ff3b609b4d2d32b25ec1f81b7a46bea1b1cc1506d31582e6f8517591f907",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -437,8 +437,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -544,8 +544,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": 1,
@@ -668,8 +668,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:58aadbc191adfb2d27631033f573d127b1422a9518087875b6161a5c0f18c446",
-      "pack_hash": "sha256:c27ddd877f8bd801ccbb71dfc4fc4b6ad70edc2902e90848518888bab06ba63f",
+      "fact_pack_hash": "sha256:2887ff3b609b4d2d32b25ec1f81b7a46bea1b1cc1506d31582e6f8517591f907",
+      "pack_hash": "sha256:ddc7163f4e87ab93755fe95371029d811cedc273c14bdc273422eaa4dc370181",
       "pack_manifest_binding": {
         "byte_length": 5392,
         "path": "knowledge/solo-test/masters/master_buffett/manifest.json",
@@ -680,7 +680,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:1c970adaeeee65921751aaaf7df1167a3deabb11f1cf014c499842ee9fc6f658",
+        "fact_pack_hash": "sha256:3933ca1fff73fef89719b9c0630b2b986a08afcaa23b7844d93afbda4004f2fc",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -695,8 +695,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -748,8 +748,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": 1,
@@ -1007,8 +1007,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:1c970adaeeee65921751aaaf7df1167a3deabb11f1cf014c499842ee9fc6f658",
-      "pack_hash": "sha256:857e29cabdd08f6d3fddc53ed42fff91c0bd3475ed3eb685e7ecb7c12d854a7b",
+      "fact_pack_hash": "sha256:3933ca1fff73fef89719b9c0630b2b986a08afcaa23b7844d93afbda4004f2fc",
+      "pack_hash": "sha256:c4b01b9c61c04b4232194f51818ed63409f1da4b0fd61e8f5472b1fa52e0863c",
       "pack_manifest_binding": {
         "byte_length": 5436,
         "path": "knowledge/solo-test/masters/master_graham/manifest.json",
@@ -1568,7 +1568,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:cf42075751f6c32380600f010f5b4b6f82708fcde9cc7cd078684d65d88c74d7",
+        "fact_pack_hash": "sha256:d757c4db706169da878abefd3f34c48a64868cb744fd5a3fd57b1ee397275f1a",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -1583,8 +1583,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -1663,8 +1663,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": 1,
@@ -1868,8 +1868,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:cf42075751f6c32380600f010f5b4b6f82708fcde9cc7cd078684d65d88c74d7",
-      "pack_hash": "sha256:196b2cf31d1a4d8a197f008a503339773e65c38e117e3ed72374eb397e2781ca",
+      "fact_pack_hash": "sha256:d757c4db706169da878abefd3f34c48a64868cb744fd5a3fd57b1ee397275f1a",
+      "pack_hash": "sha256:405941cb7b1b238148ac9e440fe6d58944bbb04e33ea87fdc38afb6e7ba5b64a",
       "pack_manifest_binding": {
         "byte_length": 5656,
         "path": "knowledge/solo-test/masters/master_cathie_wood/manifest.json",
@@ -1880,7 +1880,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:e97ae2677481067510a3c6c6895dd3dd79c15f910d9fc7572ce7cefd0d7c2bff",
+        "fact_pack_hash": "sha256:fcc71151ed05f353b3137bb102817bd84e1fc4ea6d83db25c8bb2ceccc7b3e60",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -1976,8 +1976,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2026-04-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -2156,8 +2156,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:e97ae2677481067510a3c6c6895dd3dd79c15f910d9fc7572ce7cefd0d7c2bff",
-      "pack_hash": "sha256:f0b07c53437fd4523583c638b6e3b9b324291189296c67ff049b862d2ad35697",
+      "fact_pack_hash": "sha256:fcc71151ed05f353b3137bb102817bd84e1fc4ea6d83db25c8bb2ceccc7b3e60",
+      "pack_hash": "sha256:5f0cb50012f5f78ed58c0f4837706b7837192c5b80a90c0eeb2aad462fe4f4e6",
       "pack_manifest_binding": {
         "byte_length": 5477,
         "path": "knowledge/solo-test/masters/master_druckenmiller/manifest.json",
@@ -2168,7 +2168,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:8756b6afce629317fd2e5f6389450d2f8a6dccb78c39460c0c969eea5bcb0ef7",
+        "fact_pack_hash": "sha256:5f28ee5370c3436d8edf61458ead2691c0721b4e0af9e412f0efafdf32dd3880",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -2210,8 +2210,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -2237,8 +2237,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -2264,8 +2264,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -2471,8 +2471,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:8756b6afce629317fd2e5f6389450d2f8a6dccb78c39460c0c969eea5bcb0ef7",
-      "pack_hash": "sha256:c82f0203a13266d8dc7b6cbd5514d4457707e427bf1037e8c5370c3920f680f9",
+      "fact_pack_hash": "sha256:5f28ee5370c3436d8edf61458ead2691c0721b4e0af9e412f0efafdf32dd3880",
+      "pack_hash": "sha256:d5e6c5aac920de602337133198c6d5ec398b1cd30c99ba03f0e52f30751e9715",
       "pack_manifest_binding": {
         "byte_length": 5409,
         "path": "knowledge/solo-test/masters/master_fisher/manifest.json",
@@ -2483,7 +2483,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:02bfdb3fe5bc414c90c58cee0e9c1ea32c2be820db3fd1e3d96bb30e6a37bc62",
+        "fact_pack_hash": "sha256:397649a3efd8f970aa3552575292f27967ac9bef157b05e9ee0bed7002a0fa36",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -2498,8 +2498,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -2633,8 +2633,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -2759,8 +2759,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:02bfdb3fe5bc414c90c58cee0e9c1ea32c2be820db3fd1e3d96bb30e6a37bc62",
-      "pack_hash": "sha256:2a9fb9581abd0f30f810a372d5780356b9ee138ba73df2d2a8439fdae806c050",
+      "fact_pack_hash": "sha256:397649a3efd8f970aa3552575292f27967ac9bef157b05e9ee0bed7002a0fa36",
+      "pack_hash": "sha256:dd6040659730ca96ba728d4a683a21c4d345b01d507853dec772aa7d58345f7a",
       "pack_manifest_binding": {
         "byte_length": 5279,
         "path": "knowledge/solo-test/masters/master_munger/manifest.json",
@@ -3743,7 +3743,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:5ee1b9cab17160f9114e1aa446d98b6129f03d7261d2af94a5a0ec34122fa2b3",
+        "fact_pack_hash": "sha256:30d71cddfca0992dfbdf9ae6545d846532036429e7f9674b4c479dbd9e220fd2",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -3785,8 +3785,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -3865,8 +3865,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -3919,8 +3919,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -4098,8 +4098,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:5ee1b9cab17160f9114e1aa446d98b6129f03d7261d2af94a5a0ec34122fa2b3",
-      "pack_hash": "sha256:9f169d63d64ecee2a15ac187aa38697b4b3522a6388b6824aece9fe3f97d6a3c",
+      "fact_pack_hash": "sha256:30d71cddfca0992dfbdf9ae6545d846532036429e7f9674b4c479dbd9e220fd2",
+      "pack_hash": "sha256:dfb5109f5a0970045fdbfa87f6e8a9c2ef42b339a426c070ee7bb9d633f01cdc",
       "pack_manifest_binding": {
         "byte_length": 5544,
         "path": "knowledge/solo-test/masters/master_duan_yongping/manifest.json",
@@ -4110,7 +4110,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:8417996055d725c276cdb6d727b7e3b42a9495dcfd3ff9b83d045abd3f9b05f2",
+        "fact_pack_hash": "sha256:2f5c572a23df09240ae650852264a2c2e9c82906ec34116ec38506408a3d82b6",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -4125,8 +4125,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -4395,8 +4395,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -4413,8 +4413,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:8417996055d725c276cdb6d727b7e3b42a9495dcfd3ff9b83d045abd3f9b05f2",
-      "pack_hash": "sha256:dd5b89976aa09f5da3016d3ef72d26f49a1a810a9ba85d226b68db421321287b",
+      "fact_pack_hash": "sha256:2f5c572a23df09240ae650852264a2c2e9c82906ec34116ec38506408a3d82b6",
+      "pack_hash": "sha256:40bd8ad12f6969d88385ca920ce2c8038b940b3a1dbb70765ff84f3d3d518858",
       "pack_manifest_binding": {
         "byte_length": 5729,
         "path": "knowledge/solo-test/masters/master_jhunjhunwala/manifest.json",
@@ -4425,7 +4425,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:60a6f0c657b5e4ecbc85ee53c04ed70edb57a17568cd342d378d94535a42a946",
+        "fact_pack_hash": "sha256:c4d47dc5f65a84c9b799f37241e1742054c705af8f23ee5dab4db7e94ae49336",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -4494,8 +4494,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -4574,8 +4574,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": 1,
@@ -4761,8 +4761,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -4779,8 +4779,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:60a6f0c657b5e4ecbc85ee53c04ed70edb57a17568cd342d378d94535a42a946",
-      "pack_hash": "sha256:9da9103bbf948347d767e0ea9baa4b128641f34f404b41b5ce2403e9b74219a0",
+      "fact_pack_hash": "sha256:c4d47dc5f65a84c9b799f37241e1742054c705af8f23ee5dab4db7e94ae49336",
+      "pack_hash": "sha256:ad67afa412a06398f7a8215f51e3257fa71aa11d12a6b849cef7a1fd3e49b5bb",
       "pack_manifest_binding": {
         "byte_length": 5657,
         "path": "knowledge/solo-test/masters/master_lynch/manifest.json",
@@ -4791,7 +4791,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:8f8dafdb93c52fbf2d5d06bc3e24a03fef1df4e73252b17f6b2129825373b0e8",
+        "fact_pack_hash": "sha256:8f8e2555626d6b3a4175bd007fb251c6c085d93b1fb0561fbae75a46b476d0fa",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -4860,8 +4860,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -5040,8 +5040,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:8f8dafdb93c52fbf2d5d06bc3e24a03fef1df4e73252b17f6b2129825373b0e8",
-      "pack_hash": "sha256:b654b32e330cfe9a91bb305b1a77898a2a581bc9ce913cef57bffbd37c416f65",
+      "fact_pack_hash": "sha256:8f8e2555626d6b3a4175bd007fb251c6c085d93b1fb0561fbae75a46b476d0fa",
+      "pack_hash": "sha256:50d206091687ba6eb6a5b0b43508c28cc293072a6f6555ee9835fc67be4d50dd",
       "pack_manifest_binding": {
         "byte_length": 5509,
         "path": "knowledge/solo-test/masters/master_forensic_short/manifest.json",
@@ -5052,7 +5052,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:8f5accbe43c8a401179ad5f2f10a29b0534583a1074a67ebea50d20a5c2d10d2",
+        "fact_pack_hash": "sha256:dba1b7cdf94669b5c25a448ddc33a973053ccf9b556c5e08dfd1d295edfd6f49",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -5067,8 +5067,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2021-07-28",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -5202,8 +5202,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2016-07-29",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -5382,8 +5382,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:8f5accbe43c8a401179ad5f2f10a29b0534583a1074a67ebea50d20a5c2d10d2",
-      "pack_hash": "sha256:37e71357d6d8358b504f5dafa9592d47a4b33e24fe820f2add0250393acdbbab",
+      "fact_pack_hash": "sha256:dba1b7cdf94669b5c25a448ddc33a973053ccf9b556c5e08dfd1d295edfd6f49",
+      "pack_hash": "sha256:58cf20aa4029f93093d12840f3009bcb6e2d93f714a854d886129e209df3bd3b",
       "pack_manifest_binding": {
         "byte_length": 5478,
         "path": "knowledge/solo-test/masters/master_li_lu/manifest.json",
@@ -5682,7 +5682,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:fbd346b509ccd69eb16a1302d93d9ee7f8fae8c28bfb25b594b4898543ea1536",
+        "fact_pack_hash": "sha256:1e0eca353b065d207796002726ad59ede1b445b64997d584c2a7e795ddb40738",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -5751,8 +5751,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -6009,8 +6009,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:fbd346b509ccd69eb16a1302d93d9ee7f8fae8c28bfb25b594b4898543ea1536",
-      "pack_hash": "sha256:880c2d8f293a69541ddd080a2d6cad53488996eb6514cfd565ba0dc4039047ae",
+      "fact_pack_hash": "sha256:1e0eca353b065d207796002726ad59ede1b445b64997d584c2a7e795ddb40738",
+      "pack_hash": "sha256:b4c456b0dfd6540f667feab1a19c6e22e07764952701684f9ae0187b815bf624",
       "pack_manifest_binding": {
         "byte_length": 5684,
         "path": "knowledge/solo-test/masters/master_burry/manifest.json",
@@ -6021,7 +6021,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:0b481c9b13e34ec6465e5007d364473d71c462e3940726744fa6f91b9646f4d3",
+        "fact_pack_hash": "sha256:5a05851a872edd7305aa321e983d8d61ee3d620997dce8efc0bee5e4b1a6fcd5",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -6036,8 +6036,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -6321,8 +6321,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:0b481c9b13e34ec6465e5007d364473d71c462e3940726744fa6f91b9646f4d3",
-      "pack_hash": "sha256:c71dc3fb2042965075386177ee6dad16ff88abb056b8599146117437e0b19f15",
+      "fact_pack_hash": "sha256:5a05851a872edd7305aa321e983d8d61ee3d620997dce8efc0bee5e4b1a6fcd5",
+      "pack_hash": "sha256:f055e441ae2397512f1fd8802e1bae8a3952406886367c303b2001a145721e48",
       "pack_manifest_binding": {
         "byte_length": 5399,
         "path": "knowledge/solo-test/masters/master_klarman/manifest.json",
@@ -6333,7 +6333,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:6735e9705be48f6b9c19db94360b13ad6727db15e288c4e1225664ddd1d1a5a1",
+        "fact_pack_hash": "sha256:4069f11b3a0887487af2c3f2d67eb7652d30fff1418f4532f446e83efc2fb020",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -6348,8 +6348,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -6633,8 +6633,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:6735e9705be48f6b9c19db94360b13ad6727db15e288c4e1225664ddd1d1a5a1",
-      "pack_hash": "sha256:f48324d38fbe0f5b2f68a1c391298c618962f11bec362b83c46d462f5235953f",
+      "fact_pack_hash": "sha256:4069f11b3a0887487af2c3f2d67eb7652d30fff1418f4532f446e83efc2fb020",
+      "pack_hash": "sha256:6f4ae445ef1eca67f7b3c7658506d3f85fc1b9265c27fc659d400cd499e25794",
       "pack_manifest_binding": {
         "byte_length": 5594,
         "path": "knowledge/solo-test/masters/master_pabrai/manifest.json",
@@ -6645,7 +6645,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:1bde34754ccb7053b5cef2750e904b9655a716b62bac88adb9e5ff13821a23e4",
+        "fact_pack_hash": "sha256:3253c293a1bdac8885b6b583f280090fcf6e4a9384ecc6b33389d111d98b2db6",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -6660,8 +6660,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
@@ -6821,8 +6821,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": 1,
@@ -6999,8 +6999,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:1bde34754ccb7053b5cef2750e904b9655a716b62bac88adb9e5ff13821a23e4",
-      "pack_hash": "sha256:9868487f03cb56dbe94c9bc6c1273cb9e79926760ac2293bbd4d4dca0f351504",
+      "fact_pack_hash": "sha256:3253c293a1bdac8885b6b583f280090fcf6e4a9384ecc6b33389d111d98b2db6",
+      "pack_hash": "sha256:e235ce383ece69987f20a09771e6a562afd23e64ef8e7fc15762f0e47b1e1d90",
       "pack_manifest_binding": {
         "byte_length": 5652,
         "path": "knowledge/solo-test/masters/master_ackman/manifest.json",
@@ -7326,7 +7326,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:8558575eb37f95de3f617544534da5b014ef2d52d30b931ceb8495dd35274074",
+        "fact_pack_hash": "sha256:174c385947a58f606a2232666a92a97d493c9f06a5035a16eefdecb105d576b8",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -7395,8 +7395,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -7629,8 +7629,8 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:8558575eb37f95de3f617544534da5b014ef2d52d30b931ceb8495dd35274074",
-      "pack_hash": "sha256:e331c0f175d802b2343f10873602950181e6c8987eb0342dcf611e7af7c3cbb8",
+      "fact_pack_hash": "sha256:174c385947a58f606a2232666a92a97d493c9f06a5035a16eefdecb105d576b8",
+      "pack_hash": "sha256:302ff3318b61c648bf8366619d8df98410165dbea7353451c85bea0fcfeb4576",
       "pack_manifest_binding": {
         "byte_length": 5531,
         "path": "knowledge/solo-test/masters/master_taleb/manifest.json",
@@ -8105,6 +8105,186 @@
         "physical_file_hash": "sha256:1029987eaaf71eb2b69fb15a48d0043ededa830e4d06f7d3ec62cd443bebdcd5"
       },
       "persona_id": "master_sinclair"
+    },
+    {
+      "fact_pack": {
+        "as_of": "2026-07-27",
+        "fact_pack_hash": "sha256:d035c7f7cbace9a80cce787b1ea3204f7b85437e4552dec34681765f0ab3af26",
+        "facts": [
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
+            "fact_id": "fund.top_ten_weight",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": null,
+            "period_start": null,
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal",
+            "value": 1,
+            "value_kind": "ratio"
+          },
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
+            "fact_id": "index.aggregate_earnings_yield",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": null,
+            "period_start": null,
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal",
+            "value": 1,
+            "value_kind": "ratio"
+          },
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
+            "fact_id": "index.dividend_yield",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": null,
+            "period_start": null,
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal",
+            "value": 1,
+            "value_kind": "ratio"
+          },
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
+            "fact_id": "macro.breakeven_inflation",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": null,
+            "period_start": null,
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal",
+            "value": 1,
+            "value_kind": "ratio"
+          },
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
+            "fact_id": "macro.long_bond_yield",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": null,
+            "period_start": null,
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal",
+            "value": 1,
+            "value_kind": "ratio"
+          },
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
+            "fact_id": "valuation.revenue_growth",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal",
+            "value": 1,
+            "value_kind": "ratio"
+          }
+        ],
+        "knowledge_as_of": "2026-07-27",
+        "schema_version": 1
+      },
+      "fact_pack_hash": "sha256:d035c7f7cbace9a80cce787b1ea3204f7b85437e4552dec34681765f0ab3af26",
+      "pack_hash": "sha256:73e829f5d2e3b1124689635cb70bbef8f764559603689a5eae9920716eaf5d1c",
+      "pack_manifest_binding": {
+        "byte_length": 5640,
+        "path": "knowledge/solo-test/masters/master_bogle/manifest.json",
+        "physical_file_hash": "sha256:52249b9d74b31b5106d5b4ed7db59db332b72e74f8abe1940bf710221d812b75"
+      },
+      "persona_id": "master_bogle"
     }
   ]
 }

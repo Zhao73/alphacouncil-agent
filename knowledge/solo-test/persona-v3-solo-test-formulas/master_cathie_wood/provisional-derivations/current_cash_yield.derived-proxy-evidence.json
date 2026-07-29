@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "currency_units",
           "value_kind": "monetary"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_cathie_wood.current_cash_yield"
   },
-  "derivation_spec_hash": "sha256:d44adc14425fefbe69ab8075528e224d00e8f45b479a012bb40d8526769cb90a",
+  "derivation_spec_hash": "sha256:60c95955604fde2ba596e5a34b9ab6857835ebfc5cacdc02dfd23b8af954a26f",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

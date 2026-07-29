@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P1Y"
           },
           "unit": "shares",
           "value_kind": "count"
@@ -71,7 +71,7 @@
     "schema_version": 1,
     "tool_id": "master_graham.defensive_hurdle_base"
   },
-  "derivation_spec_hash": "sha256:054b23001e5493aec8528aa278d1ae4733e6c1af10dc1e9b13d552fab37180c0",
+  "derivation_spec_hash": "sha256:93743011ae0f60856ed031b96996f4d04a611c214cdd7ff2216cbc0f9e3eb90e",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

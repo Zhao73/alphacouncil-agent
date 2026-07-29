@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "multiple",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_jhunjhunwala.cash_quality_gap"
   },
-  "derivation_spec_hash": "sha256:85a7fbb1f06b3815a20a9aa42217d9e9dcdf149b6e031462ef277b340757e5c8",
+  "derivation_spec_hash": "sha256:9c63f0a133850afd359ed9dc015cc4a8fc360f20379bd6cab407f6f3b3e1fb81",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

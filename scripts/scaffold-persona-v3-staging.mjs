@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Create only missing PersonaPack v3 staging artifacts, then validate the full 26-seat tree. */
+/** Create only missing PersonaPack v3 staging artifacts, then validate the full staging tree. */
 
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";

@@ -125,7 +125,7 @@ export function usage() {
   return [
     "Usage: node scripts/check-persona-v3-ga.mjs [options]",
     "",
-    "Read-only PersonaPack v3 GA gate. Defaults to 26 seats at operational or higher.",
+    "Read-only PersonaPack v3 GA gate. Defaults to the full canonical roster at operational or higher.",
     "",
     "Options:",
     "  --json                         Emit the stable JSON report",

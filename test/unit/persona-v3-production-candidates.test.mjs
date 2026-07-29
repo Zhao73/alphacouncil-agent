@@ -32,6 +32,8 @@ import {
   approvedFormulaSpec,
   signedFormulaApprovalBundle,
 } from "../helpers/persona-v3-formula-review-evidence.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../../data/persona-v3-build-specs.v1.mjs";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SCRIPT = join(REPO_ROOT, "scripts/check-persona-v3-production-candidates.mjs");
@@ -136,9 +138,9 @@ test("a missing isolated candidate tree reports zero without creating files", (t
     method_model_count: 0,
     planned_tool_coverage_count: 0,
     formula_approval_evidence_count: 0,
-    missing_physical_candidate_count: 26,
-    missing_planned_tool_count: 52,
-    missing_formula_approval_evidence_count: 52,
+    missing_physical_candidate_count: CANONICAL_MASTER_COUNT,
+    missing_planned_tool_count: PLANNED_TOOL_COUNT,
+    missing_formula_approval_evidence_count: PLANNED_TOOL_COUNT,
     gate_clear: false,
     release_assembled: false,
     production_promoted: false,
@@ -148,7 +150,7 @@ test("a missing isolated candidate tree reports zero without creating files", (t
   assert.deepEqual(readdirSync(paths.staging), []);
 });
 
-test("the gate requires all 26 physical packs and all 52 planned tools", (t) => {
+test("the gate requires every canonical seat physical packs and every planned tool planned tools", (t) => {
   const paths = workspace(t);
   mkdirSync(paths.candidateRoot);
   for (const seat of buildInventory.seats) mkdirSync(join(paths.candidateRoot, seat.persona_id));
@@ -163,17 +165,17 @@ test("the gate requires all 26 physical packs and all 52 planned tools", (t) => 
     now: new Date("2026-07-27T12:00:00.000Z"),
   });
 
-  assert.equal(report.summary.physical_candidate_count, 26);
-  assert.equal(report.summary.candidate_admission_count, 26);
-  assert.equal(report.summary.planned_tool_coverage_count, 52);
-  assert.equal(report.summary.formula_approval_evidence_count, 52);
+  assert.equal(report.summary.physical_candidate_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.candidate_admission_count, CANONICAL_MASTER_COUNT);
+  assert.equal(report.summary.planned_tool_coverage_count, PLANNED_TOOL_COUNT);
+  assert.equal(report.summary.formula_approval_evidence_count, PLANNED_TOOL_COUNT);
   assert.equal(report.summary.gate_clear, true);
   assert.equal(report.summary.release_assembled, false);
   assert.equal(report.summary.production_promoted, false);
   assert.deepEqual(report.seats[0].unexpected_tool_ids, []);
 });
 
-test("duplicates, extras and missing or replayed formula evidence fail the exact 52-tool gate", (t) => {
+test("duplicates, extras and missing or replayed formula evidence fail the exact planned-tool gate", (t) => {
   const paths = workspace(t);
   mkdirSync(paths.candidateRoot);
   for (const seat of buildInventory.seats) mkdirSync(join(paths.candidateRoot, seat.persona_id));
@@ -206,7 +208,7 @@ test("duplicates, extras and missing or replayed formula evidence fail the exact
     now: new Date("2026-07-27T12:00:00.000Z"),
   });
   assert.equal(replay.summary.gate_clear, false);
-  assert.ok(replay.summary.formula_approval_evidence_count < 52);
+  assert.ok(replay.summary.formula_approval_evidence_count < PLANNED_TOOL_COUNT);
 });
 
 test("a loader failure remains a visible invalid physical candidate", (t) => {
@@ -278,7 +280,7 @@ test("CLI check is read-only while gate fails closed for an empty tree", (t) => 
 
   const gated = run(["--gate", "--root", paths.candidateRoot]);
   assert.equal(gated.status, 1, gated.stderr);
-  assert.match(gated.stdout, /Physical candidates: 0\/26/u);
+  assert.match(gated.stdout, new RegExp(`Physical candidates: 0/${CANONICAL_MASTER_COUNT}`, "u"));
   assert.match(gated.stdout, /Gate clear: false/u);
   assert.equal(existsSync(paths.candidateRoot), false);
 });

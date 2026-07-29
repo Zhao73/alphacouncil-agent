@@ -19,9 +19,10 @@ import { verifyPersonaRelease } from "./releases.mjs";
 import { inspectSourceAcquisitions } from "./source-acquisition.mjs";
 import { inspectSourceAdjudications } from "./source-adjudication.mjs";
 import { defaultStagingRoot, inspectPersonaV3Staging } from "./staging.mjs";
+import { CANONICAL_MASTER_COUNT } from "./staging.mjs";
 
 export const GA_REPORT_SCHEMA_VERSION = 1;
-export const GA_DEFAULT_COUNT = 26;
+export const GA_DEFAULT_COUNT = CANONICAL_MASTER_COUNT;
 export const GA_DEFAULT_MIN_ADMISSION = "operational";
 export const GA_TARGET_VERSION = "0.9.0";
 

@@ -16,6 +16,10 @@ export const MASTER_SELECTOR_METHOD_LOCALES = Object.freeze({
     ja: "リターンをバリュー、モメンタム、クオリティ、ベータ、セクター、混雑度へのエクスポージャーに分解し、残差リターンをアルファとみなす前に検証する。",
     ko: "수익률을 가치, 모멘텀, 퀄리티, 베타, 섹터, 쏠림 노출로 분해한 뒤 잔여 성과를 알파로 간주할 수 있는지 검증한다.",
   }),
+  master_bogle: Object.freeze({
+    ja: "一つの事業ではなく一つのバスケットを評価し、長期期待リターンを配当利回り、利益成長、バリュエーション変化に分解したうえで、長期債利回りと保有コストと比較する。",
+    ko: "개별 기업이 아니라 바스켓을 평가하며, 장기 기대수익률을 배당수익률, 이익 성장, 밸류에이션 변화로 분해한 뒤 장기채 금리와 보유 비용에 견주어 판단한다.",
+  }),
   master_buffett: Object.freeze({
     ja: "理解可能な事業会社を、オーナー利益、持続的な競争優位、資本配分、および保守的な事業価値に対する価格から評価する。",
     ko: "이해 가능한 사업을 소유주 이익, 지속 가능한 경쟁 우위, 자본 배분, 보수적으로 산정한 사업 가치 대비 가격을 통해 평가한다.",
@@ -132,6 +136,12 @@ export const MASTER_SELECTOR_BEST_FOR_LOCALES = Object.freeze({
     zh: "因子投资、组合归因、风格周期与拥挤交易。",
     ja: "ファクター投資、ポートフォリオ帰属分析、スタイル循環、ポジションの混雑。",
     ko: "팩터 투자, 포트폴리오 성과 귀속, 스타일 순환, 포지션 쏠림.",
+  }),
+  master_bogle: Object.freeze({
+    en: "Index funds, ETFs, market-wide expected return, and cost of ownership.",
+    zh: "指数基金、ETF、整体市场预期回报与持有成本。",
+    ja: "インデックスファンド、ETF、市場全体の期待リターン、保有コスト。",
+    ko: "인덱스 펀드, ETF, 시장 전체 기대수익률, 보유 비용.",
   }),
   master_buffett: Object.freeze({
     en: "Operating businesses, business quality, capital allocation, and intrinsic value.",

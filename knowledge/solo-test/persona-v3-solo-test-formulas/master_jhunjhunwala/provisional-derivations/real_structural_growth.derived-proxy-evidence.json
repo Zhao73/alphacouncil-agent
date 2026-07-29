@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "ANY"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_jhunjhunwala.real_structural_growth"
   },
-  "derivation_spec_hash": "sha256:abdab9105dff54d6f7cc36d32af1927c09e543a2cf79d937a80fbac11a14a89e",
+  "derivation_spec_hash": "sha256:033e0d68a8aaaa0b473fa7e9921bfcde73436697af03eeeac22395f0b1fe2fec",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

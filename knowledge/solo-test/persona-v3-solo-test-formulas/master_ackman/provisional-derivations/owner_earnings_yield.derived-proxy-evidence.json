@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P1Y"
           },
           "unit": "currency_units",
           "value_kind": "monetary"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_ackman.owner_earnings_yield"
   },
-  "derivation_spec_hash": "sha256:073802b70c27e2ca7a6c5f5d72dbb5967bfeda72a9c66c200a3a399141f419dd",
+  "derivation_spec_hash": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

@@ -123,7 +123,7 @@ function liveSnapshot() {
     reg,
     default_analyst_ids: [...DEFAULT_TASKS],
     verifier_ids: verifiers,
-    canonical_26_master_ids: masters,
+    canonical_master_ids: masters,
   };
 }
 
@@ -233,7 +233,7 @@ function validateMetrics(protocol, errors) {
 
 function expectedArm(id, live) {
   const defaultAnalysts = live.default_analyst_ids;
-  const masters = live.canonical_26_master_ids;
+  const masters = live.canonical_master_ids;
   const common = { verifier_ids: [], bounded_repair: null, human_reference: null };
   if (id === "A") return { execution_mode: "single_agent_baseline", analyst_ids: [], master_ids: [], base_arm_ids: [], master_execution_mode: "none", ...common };
   if (id === "B") return { execution_mode: "machine_council", analyst_ids: defaultAnalysts, master_ids: [], base_arm_ids: [], master_execution_mode: "none", ...common };
@@ -299,12 +299,12 @@ export function validateCouncilEvaluationProtocol(protocol = loadCouncilEvaluati
   exactValue(protocol.canonical_arm_order, CANONICAL_ARM_IDS, "canonical_arm_order", errors);
 
   const live = liveSnapshot();
-  exactFields(protocol.registry_snapshot, ["default_analyst_ids", "verifier_ids", "priority_13_master_ids", "canonical_26_master_ids"], "registry_snapshot", errors);
+  exactFields(protocol.registry_snapshot, ["default_analyst_ids", "verifier_ids", "priority_13_master_ids", "canonical_master_ids"], "registry_snapshot", errors);
   exactValue(protocol.registry_snapshot?.default_analyst_ids, live.default_analyst_ids, "registry_snapshot.default_analyst_ids vs live DEFAULT_TASKS", errors);
   exactValue(protocol.registry_snapshot?.verifier_ids, live.verifier_ids, "registry_snapshot.verifier_ids vs live verify roster", errors);
   exactValue(protocol.registry_snapshot?.priority_13_master_ids, PRIORITY_13_MASTER_IDS, "registry_snapshot.priority_13_master_ids", errors);
-  exactValue(protocol.registry_snapshot?.canonical_26_master_ids, live.canonical_26_master_ids, "registry_snapshot.canonical_26_master_ids vs live master registry", errors);
-  if (live.canonical_26_master_ids.length !== CANONICAL_MASTER_COUNT) errors.push(`live master registry must contain exactly ${CANONICAL_MASTER_COUNT} enabled seats, got ${live.canonical_26_master_ids.length}`);
+  exactValue(protocol.registry_snapshot?.canonical_master_ids, live.canonical_master_ids, "registry_snapshot.canonical_master_ids vs live master registry", errors);
+  if (live.canonical_master_ids.length !== CANONICAL_MASTER_COUNT) errors.push(`live master registry must contain exactly ${CANONICAL_MASTER_COUNT} enabled seats, got ${live.canonical_master_ids.length}`);
   if (live.verifier_ids.length !== 3) errors.push(`live verify roster must contain exactly 3 verifiers, got ${live.verifier_ids.length}`);
   for (const id of live.default_analyst_ids) {
     const persona = live.reg.get(id);
@@ -328,7 +328,7 @@ export function validateCouncilEvaluationProtocol(protocol = loadCouncilEvaluati
     live: {
       default_analyst_ids: live.default_analyst_ids,
       verifier_ids: live.verifier_ids,
-      canonical_26_master_ids: live.canonical_26_master_ids,
+      canonical_master_ids: live.canonical_master_ids,
     },
   };
 }

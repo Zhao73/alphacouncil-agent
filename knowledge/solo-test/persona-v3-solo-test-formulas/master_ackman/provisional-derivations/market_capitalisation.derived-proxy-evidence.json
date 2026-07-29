@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P1Y"
           },
           "unit": "shares",
           "value_kind": "count"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_ackman.market_capitalisation"
   },
-  "derivation_spec_hash": "sha256:5177b07c8b2aa0e5303c3e0e2b0a98ebaf75cf4c1ba5257e327cdd4e10ef486e",
+  "derivation_spec_hash": "sha256:9298a31cf40d017dd49ee0e9c55ee7aef395a9503500c2e74952d2bc11e9ca7e",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

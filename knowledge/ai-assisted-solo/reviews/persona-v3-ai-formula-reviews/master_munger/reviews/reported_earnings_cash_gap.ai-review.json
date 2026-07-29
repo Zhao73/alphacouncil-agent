@@ -11,7 +11,7 @@
   "human_reviewed": false,
   "invariant_summary": {
     "fail": 0,
-    "invariants_hash": "sha256:97445e2b814ccdfc3ff0b83a1ac46c6b7be7d7692ece4d4db7a626a1e401e61a",
+    "invariants_hash": "sha256:8e49b9b8dbc935ef09cd25d807e9b6f5cfc06beb4c9fca21e0c5477a26e93600",
     "pass": 8,
     "total": 8,
     "unknown": 0
@@ -20,31 +20,31 @@
   "persona_id": "master_munger",
   "production_effect": "none",
   "production_eligible": false,
-  "review_artifact_hash": "sha256:25e46a4c2dc74c5a76e321d0eb9c794f88aacc1749b13d7a74fbc67a07467541",
+  "review_artifact_hash": "sha256:0f3f7cd7faa375e57310fd1a9da868b8e2eaeb54d6da7f1cc0f0a57786405f0d",
   "review_schema_hash": "sha256:1b0ef67aafb46755b5a8d4a20e4d40a3c16b7ee9466ad29e4cf978474aaa56cb",
   "review_subject": {
-    "declared_derivation_evidence_hash": "sha256:96e50cdba5a599f5b1e462bb5747a173d3ecd671e1304098adbe3c731fb8fa26",
-    "declared_derivation_spec_hash": "sha256:b55794858458b6fa88bd8afc18c19edc969d16765343a4ed66962862ea6ebabe",
-    "declared_input_schema_hash": "sha256:8d1c454fc53098d13d7630dccbc0130d52dd061da3e75aa87b154029dbef3def",
-    "declared_output_schema_hash": "sha256:a3804a398d53b9888ea35700443662f21cbbcaa0823bf3bc31091e1640ed2354",
-    "derivation_evidence_content_hash": "sha256:96e50cdba5a599f5b1e462bb5747a173d3ecd671e1304098adbe3c731fb8fa26",
-    "derivation_spec_hash": "sha256:b55794858458b6fa88bd8afc18c19edc969d16765343a4ed66962862ea6ebabe",
-    "formula_compilation_hash": "sha256:8708fe5bae03efd518aa21295680bbfca50c28c8d589a6527d2efd7231ab9f61",
-    "formula_content_hash": "sha256:c30d05a0a3be5405c1acbd8099e48232d7b408ab50fdf3c384b1bed74e562e4b",
+    "declared_derivation_evidence_hash": "sha256:70affd27867c58b5b0dce7a1318cd95af402efdd2c1513fbae32b7f5ad48d582",
+    "declared_derivation_spec_hash": "sha256:f1a1bc86653ed606699379f37f452bc93dd099fb1c5f945a442d270841be031b",
+    "declared_input_schema_hash": "sha256:55676f7c335663550027434c226427356e559431906c524b9eda27ead54e313c",
+    "declared_output_schema_hash": "sha256:df32a29a6137f138156006609b45374e1ca3ac1dd5771d15b863d9bad8d69c02",
+    "derivation_evidence_content_hash": "sha256:70affd27867c58b5b0dce7a1318cd95af402efdd2c1513fbae32b7f5ad48d582",
+    "derivation_spec_hash": "sha256:f1a1bc86653ed606699379f37f452bc93dd099fb1c5f945a442d270841be031b",
+    "formula_compilation_hash": "sha256:53f2131c344ecab868c70e13091f7e3d6e0fc1893838934f26658b33e4143fe2",
+    "formula_content_hash": "sha256:18bbb1b8e3eede06f6d67f83eb42a0e1f2fe702e896f4a3c618c4e8ebf9bd70f",
     "persona_id": "master_munger",
-    "recomputed_input_schema_hash": "sha256:8d1c454fc53098d13d7630dccbc0130d52dd061da3e75aa87b154029dbef3def",
-    "recomputed_output_schema_hash": "sha256:a3804a398d53b9888ea35700443662f21cbbcaa0823bf3bc31091e1640ed2354",
+    "recomputed_input_schema_hash": "sha256:55676f7c335663550027434c226427356e559431906c524b9eda27ead54e313c",
+    "recomputed_output_schema_hash": "sha256:df32a29a6137f138156006609b45374e1ca3ac1dd5771d15b863d9bad8d69c02",
     "review_schema_hash": "sha256:1b0ef67aafb46755b5a8d4a20e4d40a3c16b7ee9466ad29e4cf978474aaa56cb",
     "schema_version": 1,
-    "tool_content_hash": "sha256:8e2bfa08ac84d09d1050bb679bd8a91804442932c625329cad4bfafdcf214543",
+    "tool_content_hash": "sha256:380c4210aa0e0a669cdc135056874cbef885750e3599e1642d952a90551414d6",
     "tool_id": "master_munger.reported_earnings_cash_gap"
   },
-  "review_subject_hash": "sha256:9cdeeed2a57e09c6eb53d5cef07ec9704be3bd4c5ae4f5a43b377dfda9828ccd",
+  "review_subject_hash": "sha256:13e9a29099a0bd34f78455b8f932df1d0bc2549a43c603c2506ef933c3573b16",
   "reviewer_kind": "ai",
   "role_artifact_hashes": {
-    "adjudicator": "sha256:39af5e1bd2b62a4343832b9015b622d52eadeae245444491f2934eebf18ee386",
-    "adversarial_checker": "sha256:09b83fb1c1c7842f32f1e46870dfca877320a39013487c7a6ffbd997f80b2340",
-    "deriver": "sha256:cfaf754ff19c4faf75e5f7b9f7c46bff146e3d26ab51c9c145e48eeea58a6a02"
+    "adjudicator": "sha256:869ea8c44a931e4be534c39dc3e6278764e57b633675035ee36294b3e27b06a0",
+    "adversarial_checker": "sha256:ddb276e9e09fb075a335ec8c5fafd48b455f5520741ae2d23b1bf25ad23c40fc",
+    "deriver": "sha256:49f5ba53ac221777e6e084166ffc7f4989181a4bc773a2245fae9c09b17ad46d"
   },
   "role_sequence": [
     "deriver",
@@ -53,15 +53,15 @@
   ],
   "roles": {
     "adjudicator": {
-      "artifact_hash": "sha256:39af5e1bd2b62a4343832b9015b622d52eadeae245444491f2934eebf18ee386",
+      "artifact_hash": "sha256:869ea8c44a931e4be534c39dc3e6278764e57b633675035ee36294b3e27b06a0",
       "human_principal": false,
       "machine_actor_id": "alphacouncil.machine.adjudicator.v1",
       "prompt_hash": "sha256:a04bd88ee1b51c8b011e96de7513c14dcf3ba2417b0c13773d40996dfd831818",
       "prompt_id": "ai_formula_adjudicator_v1",
       "prompt_text": "Compare the two machine records and adjudicate mechanical consistency only. Semantic fidelity to a named investor remains unknown without source and human review; production eligibility must remain false.",
       "result": {
-        "bound_adversarial_checker_artifact_hash": "sha256:09b83fb1c1c7842f32f1e46870dfca877320a39013487c7a6ffbd997f80b2340",
-        "bound_deriver_artifact_hash": "sha256:cfaf754ff19c4faf75e5f7b9f7c46bff146e3d26ab51c9c145e48eeea58a6a02",
+        "bound_adversarial_checker_artifact_hash": "sha256:ddb276e9e09fb075a335ec8c5fafd48b455f5520741ae2d23b1bf25ad23c40fc",
+        "bound_deriver_artifact_hash": "sha256:49f5ba53ac221777e6e084166ffc7f4989181a4bc773a2245fae9c09b17ad46d",
         "disagreements": [],
         "human_review_disposition": "not_performed",
         "mechanical_consistency": "pass",
@@ -77,21 +77,21 @@
       },
       "reviewer_kind": "ai",
       "role_id": "adjudicator",
-      "subject_hash": "sha256:9cdeeed2a57e09c6eb53d5cef07ec9704be3bd4c5ae4f5a43b377dfda9828ccd"
+      "subject_hash": "sha256:13e9a29099a0bd34f78455b8f932df1d0bc2549a43c603c2506ef933c3573b16"
     },
     "adversarial_checker": {
-      "artifact_hash": "sha256:09b83fb1c1c7842f32f1e46870dfca877320a39013487c7a6ffbd997f80b2340",
+      "artifact_hash": "sha256:ddb276e9e09fb075a335ec8c5fafd48b455f5520741ae2d23b1bf25ad23c40fc",
       "human_principal": false,
       "machine_actor_id": "alphacouncil.machine.adversarial_checker.v1",
       "prompt_hash": "sha256:02be6f66cac180e9807ff7dd01d530517c8904a4a93002c6840f2c6fd24e190c",
       "prompt_id": "ai_formula_adversarial_checker_v1",
       "prompt_text": "Independently recompute schema hashes, evidence hashes, test vectors, missing-input behavior, and invariants. Record disagreement or unknown explicitly; never trust the deriver result by assertion.",
       "result": {
-        "bound_deriver_artifact_hash": "sha256:cfaf754ff19c4faf75e5f7b9f7c46bff146e3d26ab51c9c145e48eeea58a6a02",
+        "bound_deriver_artifact_hash": "sha256:49f5ba53ac221777e6e084166ffc7f4989181a4bc773a2245fae9c09b17ad46d",
         "disagreements": [],
         "independently_recomputed_schema_hashes": {
-          "input_schema_hash": "sha256:8d1c454fc53098d13d7630dccbc0130d52dd061da3e75aa87b154029dbef3def",
-          "output_schema_hash": "sha256:a3804a398d53b9888ea35700443662f21cbbcaa0823bf3bc31091e1640ed2354"
+          "input_schema_hash": "sha256:55676f7c335663550027434c226427356e559431906c524b9eda27ead54e313c",
+          "output_schema_hash": "sha256:df32a29a6137f138156006609b45374e1ca3ac1dd5771d15b863d9bad8d69c02"
         },
         "independently_recomputed_vectors": [
           {
@@ -153,27 +153,27 @@
         ],
         "invariants": [
           {
-            "evidence": "sha256:8d1c454fc53098d13d7630dccbc0130d52dd061da3e75aa87b154029dbef3def",
+            "evidence": "sha256:55676f7c335663550027434c226427356e559431906c524b9eda27ead54e313c",
             "invariant_id": "input_schema_hash_exact",
             "status": "pass"
           },
           {
-            "evidence": "sha256:a3804a398d53b9888ea35700443662f21cbbcaa0823bf3bc31091e1640ed2354",
+            "evidence": "sha256:df32a29a6137f138156006609b45374e1ca3ac1dd5771d15b863d9bad8d69c02",
             "invariant_id": "output_schema_hash_exact",
             "status": "pass"
           },
           {
-            "evidence": "sha256:96e50cdba5a599f5b1e462bb5747a173d3ecd671e1304098adbe3c731fb8fa26",
+            "evidence": "sha256:70affd27867c58b5b0dce7a1318cd95af402efdd2c1513fbae32b7f5ad48d582",
             "invariant_id": "derivation_evidence_hash_exact",
             "status": "pass"
           },
           {
-            "evidence": "sha256:b55794858458b6fa88bd8afc18c19edc969d16765343a4ed66962862ea6ebabe",
+            "evidence": "sha256:f1a1bc86653ed606699379f37f452bc93dd099fb1c5f945a442d270841be031b",
             "invariant_id": "derivation_spec_hash_exact",
             "status": "pass"
           },
           {
-            "evidence": "sha256:e77557ff11aa805349af1d8cfcc0a7cd5eb37545a2cbc4762fd7bf0c8aa99c85",
+            "evidence": "sha256:6e8fe49c3738d8abbe782335762c35e48c089bd4c564abc460def9c988e45dfb",
             "invariant_id": "formula_tool_contract_exact",
             "status": "pass"
           },
@@ -204,18 +204,18 @@
       },
       "reviewer_kind": "ai",
       "role_id": "adversarial_checker",
-      "subject_hash": "sha256:9cdeeed2a57e09c6eb53d5cef07ec9704be3bd4c5ae4f5a43b377dfda9828ccd"
+      "subject_hash": "sha256:13e9a29099a0bd34f78455b8f932df1d0bc2549a43c603c2506ef933c3573b16"
     },
     "deriver": {
-      "artifact_hash": "sha256:cfaf754ff19c4faf75e5f7b9f7c46bff146e3d26ab51c9c145e48eeea58a6a02",
+      "artifact_hash": "sha256:49f5ba53ac221777e6e084166ffc7f4989181a4bc773a2245fae9c09b17ad46d",
       "human_principal": false,
       "machine_actor_id": "alphacouncil.machine.deriver.v1",
       "prompt_hash": "sha256:17ddd3b71249532283b685d40b3cae51745eaaf96e4c24fab1f4d6c8f26dedbb",
       "prompt_id": "ai_formula_deriver_v1",
       "prompt_text": "Re-derive test expectations only from the hash-bound DSL formula and executable contracts. Preserve unknown semantic fidelity and never issue a human or production approval.",
       "result": {
-        "executable_contract_hash": "sha256:3288bf6fe66f29e56a3fe37262ac3217ba4a3b9a2285f5e54cfb27738d2053d3",
-        "formula_contract_hash": "sha256:3288bf6fe66f29e56a3fe37262ac3217ba4a3b9a2285f5e54cfb27738d2053d3",
+        "executable_contract_hash": "sha256:3a798dc3be95075c5562a2b871a3092b6d25ceafdd585cee57ff38bb7e500961",
+        "formula_contract_hash": "sha256:3a798dc3be95075c5562a2b871a3092b6d25ceafdd585cee57ff38bb7e500961",
         "production_disposition": "not_eligible",
         "semantic_fidelity": "unknown",
         "status": "derived",
@@ -257,7 +257,7 @@
       },
       "reviewer_kind": "ai",
       "role_id": "deriver",
-      "subject_hash": "sha256:9cdeeed2a57e09c6eb53d5cef07ec9704be3bd4c5ae4f5a43b377dfda9828ccd"
+      "subject_hash": "sha256:13e9a29099a0bd34f78455b8f932df1d0bc2549a43c603c2506ef933c3573b16"
     }
   },
   "schema_version": 1,

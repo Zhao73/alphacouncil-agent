@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Generate or verify all 26 non-production PersonaPack v3 editorial draft slices. */
+/** Generate or verify every non-production PersonaPack v3 editorial draft slices. */
 
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
@@ -55,7 +55,7 @@ export function main(argv = process.argv.slice(2)) {
       "Usage: node scripts/generate-persona-v3-drafts.mjs [--check|--write] [--json|--markdown]",
       "",
       "  --check            verify only (default; never writes)",
-      "  --write            deterministically write all 26 editorial draft slices, then verify",
+      "  --write            deterministically write every editorial draft slice, then verify",
       "  --json             emit the machine-readable inventory",
       "  --markdown         emit the full Markdown inventory report",
       "  --root PATH        override the staging root",

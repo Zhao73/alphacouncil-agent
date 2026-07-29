@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "decimal",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_duan_yongping.margin_retention"
   },
-  "derivation_spec_hash": "sha256:15a2e38f3c0078b94c1548163b7da6fb8b8fd20ff72c4a8217d540b5792e8357",
+  "derivation_spec_hash": "sha256:b1543d78a86822685d586d0fef12ecb68db7f0377fab8303472ec2f99a3b4670",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

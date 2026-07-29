@@ -227,11 +227,11 @@ export function buildSourceReviewBatch({
       prepared_source_count: prepared.length,
       trusted_quorum_source_count: prepared.filter((item) => item.trusted_quorum.satisfied).length,
       invalid_seat_count: personas.filter((seat) => seat.errors.length).length,
-      all_26_seats_acquired: personas.length === CANONICAL_MASTER_COUNT && personas.every((seat) => seat.candidate_count > 0),
+      all_seats_acquired: personas.length === CANONICAL_MASTER_COUNT && personas.every((seat) => seat.candidate_count > 0),
       all_candidates_prepared: candidates.length > 0 && prepared.length === candidates.length,
       all_prepared_sources_have_two_distinct_trusted_principals: prepared.length > 0
         && prepared.every((item) => item.trusted_quorum.satisfied),
-      all_26_seats_have_a_two_principal_quorum_source: personas.length === 26
+      all_seats_have_a_two_principal_quorum_source: personas.length === CANONICAL_MASTER_COUNT
         && personas.every((seat) => seat.candidates.some((item) => item.trusted_quorum.satisfied)),
       production_write_count: 0,
     },

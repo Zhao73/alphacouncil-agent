@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "multiple",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_forensic_short.cash_conversion_gap"
   },
-  "derivation_spec_hash": "sha256:929a930bb27d4c613b84c25dc21ab1df35614dcb85ce3fcbf405aab9727a3ff2",
+  "derivation_spec_hash": "sha256:3fa5877481bf9011bc64df1c913d5a4df961f7e8ec0f516a27c0607ab8377797",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

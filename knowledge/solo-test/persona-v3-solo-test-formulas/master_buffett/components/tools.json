@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:7f122bd9c632386b8d9a42ae236378a5282a6c90aa7a1764a540b105eccf7ede",
-    "derivation_spec_hash": "sha256:cba0709bd7f31f34381a508d326a19f20a09a5dd3e03cfa3a64e2129d3e33ffb",
+    "derivation_evidence_hash": "sha256:81f901ddcf0074860078513ebddb1e97e4490c4ab0e2c81d38cb05e3410789c2",
+    "derivation_spec_hash": "sha256:e2b7d9707d088228b5783a421efb0c2150551f8162409024dfcbbce4d4ff3e99",
     "derivation_spec_id": "master_buffett.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_buffett.market_capitalisation",
@@ -21,14 +21,14 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P1Y"
         },
         "unit": "shares",
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:f46205eeaab3a59c15728a2cff184bb7db6e9be089a70ef797cde7671c2298e1",
+    "input_schema_hash": "sha256:bab2da53aac1739ff03495ba63229b180d37548a8d4671fbd18b611732bafb07",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:0a725164a70741a3217973e519bbf4b99f80f6a66a53b40313f7da6a1e907375",
+    "output_schema_hash": "sha256:0a266028047d6f4cbff992c62ad0368b761bbadbabd66c4134f11343d583e664",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:1fc76abe79b2813988bd159ac4b50c7b522538a3029caadf585ea6d87cd2e72f",
-    "derivation_spec_hash": "sha256:f0b5fd7527863e772e860c413cfcbd2b53f30335153ad4a065f015022a47332c",
+    "derivation_evidence_hash": "sha256:7582e3511648d170d5286bbb0e0585507d67e340eefa0aa8771a32d4a221f765",
+    "derivation_spec_hash": "sha256:bf9af0c7a485960d9fbc7927514c3e5c3c908e4f2236374af71081abcb43c596",
     "derivation_spec_id": "master_buffett.owner_earnings_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_buffett.owner_earnings_yield",
@@ -70,8 +70,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P1Y"
         },
         "unit": "currency_units",
         "value_kind": "monetary"
@@ -87,7 +87,7 @@
         "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:62cf318a1aa72c667d29eb178fd8b69c8b96e92585c215a3824abdc6e84a77f8",
+    "input_schema_hash": "sha256:5c9af7c711dcbb4ba9570f2ff3eec14928b09e5663abda0e919df1335034a4da",
     "inputs": [
       {
         "fact_id": "financial.owner_earnings"
@@ -106,7 +106,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:caa13a5a7a44a37e30f52d408a7817683cce20be85f2414d4c8e6d4ff7a054bf",
+    "output_schema_hash": "sha256:300700c67106e9e07f833453472d7bd1a7693e08910c081f23014dd89f143438",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

@@ -2,7 +2,7 @@
  * PersonaPack v3 immutable release assembly and current-pointer lifecycle.
  *
  * Release assembly is deliberately separate from the production loader root. A caller
- * supplies one complete 26-seat source tree; this module validates it, copies it into a
+ * supplies one complete source tree for the canonical roster; this module validates it, copies it into a
  * same-filesystem transaction, fsyncs it, and publishes one immutable release directory by
  * atomic rename. Cutover changes only a versioned JSON pointer. Existing releases are never
  * modified or deleted by this API.

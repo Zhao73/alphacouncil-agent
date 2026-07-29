@@ -52,11 +52,12 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `master_taleb` | master | yes | masters-options, masters-core | deep | Taleb Lens (Convexity and Tails) | tail-risk, convexity, options | original |
 | `master_natenberg` | master | yes | masters-options, masters-core | deep | Natenberg Lens (Volatility Pricing) | implied-volatility, options-pricing, market-making | original |
 | `master_sinclair` | master | yes | masters-options, masters-core | deep | Sinclair Lens (Volatility Trading and Execution) | volatility-forecasting, edge-measurement, position-sizing, options | original |
+| `master_bogle` | master | yes | masters-value, masters-core | deep | Bogle Lens | investment-vs-speculative-return, cost-matters, own-the-basket | John C. Bogle's published writing on index investing (all-rights-reserved) |
 | `source_fidelity` | verifier | yes | verify | fast | Source Fidelity Verifier | citation, primary-source | original |
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 26 masters, 46 files.
+Totals: 11 evidence analysts, 3 debate roles, 27 masters, 47 files.
 
 ## Provenance
 

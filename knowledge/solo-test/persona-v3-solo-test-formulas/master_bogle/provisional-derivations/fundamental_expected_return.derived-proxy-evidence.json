@@ -1,0 +1,76 @@
+{
+  "artifact_kind": "persona_v3_provisional_formula_derivation_evidence",
+  "assurance_class": "provisional_derived_proxy",
+  "derivation_spec": {
+    "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
+    "assurance_class": "provisional_derived_proxy",
+    "authoring_candidate_hash": "sha256:00a1d843a6dd64b16252b6b65e359c399dd09d78b9e3d38cd8eeff25ad3962a6",
+    "derivation_policy": "ai_authored_method_formula_v1",
+    "derivation_spec_id": "master_bogle.fundamental_expected_return.prototype_v1.derived_proxy_v1",
+    "formula": {
+      "inputs": [
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "index.dividend_yield"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "instant",
+            "window": null
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        },
+        {
+          "on_missing": "fail",
+          "operand": {
+            "fact_id": "valuation.revenue_growth"
+          },
+          "period": {
+            "alignment": "as_of",
+            "basis": "duration",
+            "window": "ANY"
+          },
+          "unit": "decimal",
+          "value_kind": "ratio"
+        }
+      ],
+      "kind": "recomputation",
+      "on_missing": "fail",
+      "operation": "add",
+      "output": {
+        "output_id": "index.fundamental_expected_return.master_bogle",
+        "period": {
+          "alignment": "as_of",
+          "basis": "instant",
+          "window": null
+        },
+        "unit": "decimal",
+        "value_kind": "ratio"
+      },
+      "version": "0.2.0"
+    },
+    "input_contract_source": "grounding_adapter_canonical_contract_v1",
+    "persona_id": "master_bogle",
+    "prototype_content_hash": "sha256:b060e11d5be567146863e14f540bd4fdd9b26c1243890eb0813a63657861e25c",
+    "prototype_id": "master_bogle.fundamental_expected_return.prototype_v1",
+    "schema_version": 1,
+    "tool_id": "master_bogle.fundamental_expected_return"
+  },
+  "derivation_spec_hash": "sha256:d6c5ea2ec3aa187abbcf906959b2a086c4f6bb6c7daed15969133783dd1089ff",
+  "human_reviewer_ids": [],
+  "intended_use": "local_test_only",
+  "limitations": [
+    "ai_authored_candidate_formula_not_human_reviewed",
+    "thresholds_are_derived_from_published_method_writing_not_adjudicated",
+    "no_human_formula_review_or_cryptographic_approval_exists",
+    "must_not_be_used_for_production_admission_release_or_method_model_claims"
+  ],
+  "method_model_eligible": false,
+  "production_effect": "none",
+  "production_eligible": false,
+  "review_status": "not_human_reviewed",
+  "schema_version": 1,
+  "signature_count": 0
+}

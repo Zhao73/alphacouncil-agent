@@ -26,6 +26,7 @@ import {
   stripNpmDryRunEnv,
   validateGaPackageArtifact,
 } from "../../mcp/lib/personas-v3/ga-package-evidence.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 function workspace(t) {
   const root = mkdtempSync(join(tmpdir(), "alphacouncil-ga-evidence-"));
@@ -266,7 +267,7 @@ test("package artifact opens every shipped repository/tarball version surface an
   assert.ok(unshipped.errors.some((error) => /does not contain readable package\/\.codex-plugin\/plugin\.json/u.test(error)));
 });
 
-test("a 26-pack GA claim is derived from a safely installed physical tarball", (t) => {
+test("a full-roster GA claim is derived from a safely installed physical tarball", (t) => {
   const root = workspace(t);
   const packageRoot = join(root, "package");
   const packageValue = { name: "alphacouncil-agent", version: "0.9.0" };
@@ -280,7 +281,7 @@ test("a 26-pack GA claim is derived from a safely installed physical tarball", (
     writeJson(join(root, relativePath), value);
     writeJson(join(packageRoot, relativePath), value);
   }
-  const ids = Array.from({ length: 26 }, (_, index) => `master_fixture_${String(index + 1).padStart(2, "0")}`);
+  const ids = Array.from({ length: CANONICAL_MASTER_COUNT }, (_, index) => `master_fixture_${String(index + 1).padStart(2, "0")}`);
   const packHashes = ids.map((id) => hash(`pack:${id}`));
   const releaseId = "0.9.0-rc.1";
   const catalogHash = hash("installed-canonical-catalog");
@@ -288,7 +289,7 @@ test("a 26-pack GA claim is derived from a safely installed physical tarball", (
     schema_version: 1,
     artifact_kind: "persona_v3_release_manifest",
     release_id: releaseId,
-    canonical_master_count: 26,
+    canonical_master_count: CANONICAL_MASTER_COUNT,
     canonical_master_ids: ids,
     canonical_catalog_hash: catalogHash,
     packs: ids.map((personaId, index) => ({ persona_id: personaId, pack_hash: packHashes[index] })),

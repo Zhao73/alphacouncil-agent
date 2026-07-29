@@ -227,7 +227,7 @@ function validatePeriodContract(period, path, errors) {
   if (!exactFields(period, path, fields, [...fields], errors)) return;
   if (!["instant", "duration", "forecast_horizon", "not_applicable"].includes(period.basis)) add(errors, `${path}.basis`, "is invalid");
   if (!["exact", "same_period", "as_of", "not_applicable"].includes(period.alignment)) add(errors, `${path}.alignment`, "is invalid");
-  if (period.window !== null && (typeof period.window !== "string" || !/^P[1-9]\d*[DMY]$/u.test(period.window))) add(errors, `${path}.window`, "must be null or P<n>D, P<n>M, or P<n>Y");
+  if (period.window !== null && (typeof period.window !== "string" || !/^(P[1-9]\d*[DMY]|ANY)$/u.test(period.window))) add(errors, `${path}.window`, "must be null, ANY, or P<n>D, P<n>M, or P<n>Y");
   if (["instant", "not_applicable"].includes(period.basis) && period.window !== null) add(errors, `${path}.window`, `must be null for ${period.basis}`);
   if (["duration", "forecast_horizon"].includes(period.basis) && period.window === null) add(errors, `${path}.window`, `is required for ${period.basis}`);
   if (period.basis === "not_applicable" && period.alignment !== "not_applicable") add(errors, `${path}.alignment`, "must be not_applicable");
@@ -532,18 +532,29 @@ function periodTuple(fact) {
   return [fact.period_start, fact.period_end, fact.fiscal_year];
 }
 
+/** Window token for a duration whose length is set by data availability, not by the method. */
+export const ANY_REPORTING_INTERVAL = "ANY";
+
 function periodWindowMatches(fact, window) {
   if (!fact.period_start || !fact.period_end) return false;
   const start = Date.parse(fact.period_start);
   const end = Date.parse(fact.period_end);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return false;
+  // Some aggregates cover as many periods as the filings supplied rather than a fixed span --
+  // interest coverage is three years for one issuer and one for the next. Pinning a count there
+  // would reject the fact for being honest about its own coverage; what still has to hold is
+  // that it carries a real interval rather than a stray observation date.
+  if (window === ANY_REPORTING_INTERVAL) return true;
   const match = /^P([1-9]\d*)([DMY])$/u.exec(window || "");
   if (!match) return false;
   const count = Number(match[1]);
   const elapsedDays = (end - start) / 86_400_000;
   if (match[2] === "D") return elapsedDays === count;
   if (match[2] === "M") return elapsedDays >= count * 27 && elapsedDays <= count * 32;
-  return elapsedDays >= count * 365 - 1 && elapsedDays <= count * 366 + 1;
+  // A fiscal year is 52 or 53 weeks, not 365 days, and it is measured between two fiscal
+  // year-end dates -- so a real one-year filing span is routinely 363 or 364 days. Demanding
+  // 365 rejected every issuer whose year ends on a weekday.
+  return elapsedDays >= count * 364 - 2 && elapsedDays <= count * 366 + 1;
 }
 
 function assertFactInputContract(fact, contract, factPackAsOf, path) {

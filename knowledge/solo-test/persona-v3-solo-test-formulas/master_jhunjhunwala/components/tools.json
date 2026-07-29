@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:929b1580a5446123bbce6af5f5546b4becb82a4feddf0fa7a47b056865537d4b",
-    "derivation_spec_hash": "sha256:abdab9105dff54d6f7cc36d32af1927c09e543a2cf79d937a80fbac11a14a89e",
+    "derivation_evidence_hash": "sha256:717d22acdb9fbe995b7504340a8266e7cef34a545f9fc67367c1c3607cd82155",
+    "derivation_spec_hash": "sha256:033e0d68a8aaaa0b473fa7e9921bfcde73436697af03eeeac22395f0b1fe2fec",
     "derivation_spec_id": "master_jhunjhunwala.real_structural_growth.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_jhunjhunwala.real_structural_growth",
@@ -11,8 +11,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "ANY"
         },
         "unit": "decimal",
         "value_kind": "ratio"
@@ -28,7 +28,7 @@
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:0667b6aedfc4ff0a61abb5341e154f6c77d0c30a126c1bd22d2389fdd14d8b8e",
+    "input_schema_hash": "sha256:5a07393ece27f7727a6e3556d4b06f1133976e0595a05d9a68b4a5e66b31269d",
     "inputs": [
       {
         "fact_id": "valuation.revenue_growth"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:172473ac75ff42d1a25e35148743448002d288f22c7ee72b433ad16ef1a4dcd7",
+    "output_schema_hash": "sha256:ed9635d79d9e14612d14e8efa0e5ba988144f7918a05ef3aa02ff5b45551444c",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:f03bebe8a9f9b01a5c3e053968799873fb8c57e9c203485107f32e6ebb334307",
-    "derivation_spec_hash": "sha256:85a7fbb1f06b3815a20a9aa42217d9e9dcdf149b6e031462ef277b340757e5c8",
+    "derivation_evidence_hash": "sha256:5b4afb1d8102b48ae249f3fcb3c4f513baa118e51268836690e6023cef1a7da0",
+    "derivation_spec_hash": "sha256:9c63f0a133850afd359ed9dc015cc4a8fc360f20379bd6cab407f6f3b3e1fb81",
     "derivation_spec_id": "master_jhunjhunwala.cash_quality_gap.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_jhunjhunwala.cash_quality_gap",
@@ -70,8 +70,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "multiple",
         "value_kind": "ratio"
@@ -87,7 +87,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:766f0def95d1d55ce14ca247d66828601537c1c637a7c7213b7dff04e75b725b",
+    "input_schema_hash": "sha256:8bb4641ad583615c92053ca35aa94d85e17fae6e5b99df734ba1856fe400cf01",
     "inputs": [
       {
         "fact_id": "accounting.cash_conversion"
@@ -106,7 +106,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:ae294690cfd9f09074d54271c2bbeddbfc9ceb4c1874f52b1561436cc8b83004",
+    "output_schema_hash": "sha256:7b672f413942922987476c748ce41e81c04bd5243702ff410ad1f4c870d4149b",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

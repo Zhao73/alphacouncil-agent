@@ -25,11 +25,11 @@
     "release_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$" },
     "release_status": { "const": "assembled_immutable" },
     "assembled_at": { "type": "string", "format": "date-time" },
-    "canonical_master_count": { "const": 26 },
+    "canonical_master_count": { "const": 27 },
     "canonical_master_ids": {
       "type": "array",
-      "minItems": 26,
-      "maxItems": 26,
+      "minItems": 27,
+      "maxItems": 27,
       "uniqueItems": true,
       "items": { "type": "string", "pattern": "^master_[a-z0-9_]+$" }
     },
@@ -64,14 +64,14 @@
         "evidence_hash": { "$ref": "#/$defs/hash" },
         "trusted_key_registry_hash": { "$ref": "#/$defs/hash" },
         "formula_binding_inventory_hash": { "$ref": "#/$defs/hash" },
-        "planned_tool_count": { "const": 52 }
+        "planned_tool_count": { "const": 54 }
       }
     },
     "masters_directory": { "const": "masters" },
     "packs": {
       "type": "array",
-      "minItems": 26,
-      "maxItems": 26,
+      "minItems": 27,
+      "maxItems": 27,
       "items": { "$ref": "#/$defs/pack" }
     }
   },

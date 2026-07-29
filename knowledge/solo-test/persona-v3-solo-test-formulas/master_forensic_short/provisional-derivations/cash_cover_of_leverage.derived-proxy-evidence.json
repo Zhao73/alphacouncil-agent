@@ -16,8 +16,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P5Y"
           },
           "unit": "multiple",
           "value_kind": "ratio"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_forensic_short.cash_cover_of_leverage"
   },
-  "derivation_spec_hash": "sha256:acea77c54757bd5e5198bec0ac8868ea74bc9226564d89136334fd118250b3e6",
+  "derivation_spec_hash": "sha256:d0b8c55889efe1bc8c21f223c89f744f990efe3977434d02454888f98c5098e6",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

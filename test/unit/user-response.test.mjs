@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { userResponseMarkdown } from "../../mcp/lib/markdown.mjs";
 import { compiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 function run(language, summary) {
   return {
@@ -160,9 +161,9 @@ test("Korean handoff keeps the price, every analyst seat and the dedicated maste
   assert.doesNotMatch(markdown, /## Analyst Views by Seat|## System-Recorded Price/);
 });
 
-test("a full 26-seat handoff ends with one readable statement for every selected method", () => {
+test("a whole-roster handoff ends with one readable statement for every selected method", () => {
   const ids = compiledPersonaPacks().ids();
-  assert.equal(ids.length, 26);
+  assert.equal(ids.length, CANONICAL_MASTER_COUNT);
   const fixture = localizedRun("zh-CN", "中文分析", "unused");
   fixture.masters = ids;
   fixture.master_status = Object.fromEntries(ids.map((id) => [id, { master: id, status: "completed" }]));
@@ -175,10 +176,10 @@ test("a full 26-seat handoff ends with one readable statement for every selected
     voice_statement: `第 ${index + 1} 席按自己的方法审视 QQQ；因缺少方法关键的时点一致事实，本轮不作方向判断。`,
   }));
   const markdown = userResponseMarkdown(fixture, manager("中文最终判断"));
-  const heading = "## 结尾：逐席方法陈词（不是本人引语） — 26";
+  const heading = `## 结尾：逐席方法陈词（不是本人引语） — ${CANONICAL_MASTER_COUNT}`;
   assert.ok(markdown.includes(heading));
   const tail = markdown.slice(markdown.indexOf(heading));
-  assert.equal((tail.match(/^-/gmu) || []).length, 26);
+  assert.equal((tail.match(/^-/gmu) || []).length, CANONICAL_MASTER_COUNT);
   for (const id of ids) assert.equal((tail.match(new RegExp(`\\b${id}\\b`, "gu")) || []).length, 1, id);
   assert.ok(markdown.trimEnd().endsWith(tail.trimEnd()), "the per-seat statements must be the final handoff section");
 });

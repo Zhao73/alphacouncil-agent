@@ -323,8 +323,13 @@ function validatePackagedSurfaces(pack) {
   }
   const reviewPrefix = "knowledge/ai-assisted-solo/reviews/";
   const packagedReviews = pack.tarFiles.filter((path) => path.startsWith(reviewPrefix) && path.endsWith(".json"));
-  if (packagedReviews.length !== 185) {
-    fail(`installed AI-assisted review capsule must contain exactly 185 JSON files; got ${packagedReviews.length}`);
+  // The capsule is complete when the package carries every review the repository holds. Pinning
+  // a number instead would only restate the roster size, and would have to be edited on the
+  // day a seat is added -- which is exactly when the check should still be meaningful.
+  const repoReviews = walkFiles(resolve(PACKAGED_PARITY_REPO_ROOT, reviewPrefix))
+    .filter((entry) => entry.path.endsWith(".json"));
+  if (packagedReviews.length !== repoReviews.length) {
+    fail(`installed AI-assisted review capsule must contain every one of the ${repoReviews.length} repository review files; got ${packagedReviews.length}`);
   }
   if (pack.tarFiles.some((path) => path.startsWith("knowledge/ai-assisted-solo/host-e2e/"))) {
     fail("local external-host failure evidence must not ship in the npm package");

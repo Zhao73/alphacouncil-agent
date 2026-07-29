@@ -18,29 +18,29 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:1971ddfef8ee408b2cec0b2c49df7a2560af60306aa0969b49b51394f5ab5733",
+    "input_hash": "sha256:74976320729d75230ee009322babc0ce1fdd2af8abcc06a7edc2c2b614470e82",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
   "production_effect": "none",
-  "result_hash": "sha256:70c337b4258bf53391418798d5f1997cb6ca761d74639bdcdf267fa1f5d79a0b",
+  "result_hash": "sha256:b6de9683451d9b4063cbab22561e335d6436637d20fb77baa4f5ad930e043994",
   "results": {
     "blocked_fail_closed_count": 0,
     "completion_status": "completed_machine_simulation",
     "decisions": [
       {
-        "anonymous_method_hash": "sha256:553936092103739d27a555e6bd3d1714c124796b694e09948e177dc7512a09c7",
-        "deterministic_core_hash": "sha256:94ba08f92155767113b04bc0cd0ddcadb804fabe6ce162c20da38e48e9d7677c",
-        "fact_pack_hash": "sha256:58aadbc191adfb2d27631033f573d127b1422a9518087875b6161a5c0f18c446",
-        "frozen_decision_hash": "sha256:556c8b97b45f9c8013672edbd0e70c8bceb39d0f44664a524bf85580560f197e",
+        "anonymous_method_hash": "sha256:ab1138811cd18a46315a4c7f840962dfe643e724c62e1343f35450e4826aac52",
+        "deterministic_core_hash": "sha256:1138841001cf2bf5b3f3faee980b23f36ac693b79cc7832fe90433948600464f",
+        "fact_pack_hash": "sha256:2887ff3b609b4d2d32b25ec1f81b7a46bea1b1cc1506d31582e6f8517591f907",
+        "frozen_decision_hash": "sha256:f758e6c2c6166fcd40ef2cb68dc80402f14c8d8097f90cce629ae7df3e652fde",
         "native_state": "provisional_reject",
-        "pack_hash": "sha256:c27ddd877f8bd801ccbb71dfc4fc4b6ad70edc2902e90848518888bab06ba63f",
+        "pack_hash": "sha256:ddc7163f4e87ab93755fe95371029d811cedc273c14bdc273422eaa4dc370181",
         "persona_id": "master_buffett",
-        "policy_execution_hash": "sha256:75df3a8ad4ad4bed9645282641df5e3fb93cf6ce8ab9ad6e78aef10cae516ea7",
+        "policy_execution_hash": "sha256:e9f632cee5f5527bcfd7af58bfe34a4c085d48e5fe7efce6286b47483c25fd9b",
         "score_ratio": 0.3333333333333333,
         "stance": "opposed",
         "status": "executed",
-        "structured_decision_hash": "sha256:97ce68e5ae1cfb292d9e22f2529ac3f79a5a1e1c68159cd5f4c6a16603714100"
+        "structured_decision_hash": "sha256:57a0f42891d0004baf89a7009aff6e17b504ebf8b8152ab288b54fe08438a4a7"
       }
     ],
     "deterministic_execution_count": 1,
@@ -54,7 +54,7 @@
     "verifier_checks": []
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:8e9b629ca480a26d31a225465460873f57d669b80a0fc1fb2441368b77126eb3",
+  "run_artifact_hash": "sha256:b031c798063e7b1e9a0e5b91d3c04f710c2752f18765ebae98ea8d5b1db74d35",
   "run_id": "A",
   "schema_version": 1,
   "simulation_scope": "single deterministic seat surrogate; formal single-model answer is not simulated"

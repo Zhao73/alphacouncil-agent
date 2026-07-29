@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:be1a19b6df6e6cbdafe6d045da217fb654631c50955c33fe1b1e88578c2a0bc8",
-    "derivation_spec_hash": "sha256:054b23001e5493aec8528aa278d1ae4733e6c1af10dc1e9b13d552fab37180c0",
+    "derivation_evidence_hash": "sha256:58a11a759f6b85265e101f0f52c4e661cc290fce369d102014db2ce093478dbd",
+    "derivation_spec_hash": "sha256:93743011ae0f60856ed031b96996f4d04a611c214cdd7ff2216cbc0f9e3eb90e",
     "derivation_spec_id": "master_graham.defensive_hurdle_base.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_graham.defensive_hurdle_base",
@@ -21,8 +21,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P1Y"
         },
         "unit": "shares",
         "value_kind": "count"
@@ -38,7 +38,7 @@
         "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:ab926637a011e761c71590d636e962c5988a344b3c6b7bc53d19de47dfd32480",
+    "input_schema_hash": "sha256:d0d457946d7c9523b44c2b1bde609284e81b9e37f9d7955e5b0200c7807184e8",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -60,7 +60,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:04c38a96334956c085d516afaf013cac1fffadc874f6902dabcef90ca92c0a5a",
+    "output_schema_hash": "sha256:a074a471a7e1c040c8abe367f868455f0ed5051ce34ca9f95bd6ba45cba3b7d2",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -73,8 +73,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:b6996d3a359a5decac291b1c375d06674140aa0ee5dea1dea30098f3b6926cfd",
-    "derivation_spec_hash": "sha256:fd0500ae9ea78b599e2e85426278a034b073408e323a3390b0857edbb9ceea96",
+    "derivation_evidence_hash": "sha256:c4aa7aeedf15dd3bfd673e08c165abeff468ee6bbf9f87859997238ad5d89cc2",
+    "derivation_spec_hash": "sha256:3a6bfd410cabf900182c9371d308eb071bc1e42688bcb0a9f541e881c95c2ded",
     "derivation_spec_id": "master_graham.half_normalised_earnings_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_graham.half_normalised_earnings_yield",
@@ -83,8 +83,8 @@
         "on_missing": "fail",
         "period": {
           "alignment": "as_of",
-          "basis": "instant",
-          "window": null
+          "basis": "duration",
+          "window": "P5Y"
         },
         "unit": "currency_units",
         "value_kind": "monetary"
@@ -100,7 +100,7 @@
         "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:17b5923881140f2d21af91fcb7e9908d9d2c3ed771875f9792083b105891b3ec",
+    "input_schema_hash": "sha256:b4db42f1cc4be2936bea952b691a63d28bc251511240db06ca3a1807cd833ecf",
     "inputs": [
       {
         "fact_id": "financial.free_cash_flow_5y"
@@ -119,7 +119,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:0e9db417ac6b22f2d6c0203a033b2ed92a1ea807e7eaadbd76094f7d2eda2be0",
+    "output_schema_hash": "sha256:ecd60c47d428bed26e3b1a477a45f78a467474515793ba7217993709ae667317",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

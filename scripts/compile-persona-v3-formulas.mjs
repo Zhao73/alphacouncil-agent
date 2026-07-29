@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-/** Plan/write the 52-entry formula queue, or compile reviewed specs to DSL 1.1 JSON. */
+/** Plan/write the planned formula queue, or compile reviewed specs to DSL 1.1 JSON. */
 
 import { lstatSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { defaultStagingRoot } from "../mcp/lib/personas-v3/staging.mjs";
+import { CANONICAL_MASTER_COUNT, defaultStagingRoot } from "../mcp/lib/personas-v3/staging.mjs";
+import { PLANNED_TOOL_COUNT } from "../data/persona-v3-build-specs.v1.mjs";
 import {
   DEFAULT_FORMULA_CANDIDATE_ROOT,
   DEFAULT_COMPILED_FORMULA_ROOT,
@@ -86,20 +87,20 @@ export function main(argv = process.argv.slice(2)) {
       "       node scripts/compile-persona-v3-formulas.mjs --compile-approved --candidate-root PATH --trusted-formula-reviewer-keys FILE [--write]",
       "       node scripts/compile-persona-v3-formulas.mjs --compile-solo-test --candidate-root PATH [--write]",
       "",
-      "  --check, --plan     inspect and validate the 52-entry authoring queue (default; no writes)",
+      "  --check, --plan     inspect and validate the planned authoring queue (default; no writes)",
       "  --write             write only isolated non-production staging candidate artifacts",
-      "  --compile-approved  require and compile exactly 52 human-edited specs plus dual-signed bundles",
+      "  --compile-approved  require and compile exactly one human-edited spec per planned tool plus dual-signed bundles",
       "  --check-candidates   alias for --compile-approved without writes",
-      "  --compile-solo-test derive 52 executable identity proxies from the exact pending queue; never production eligible",
+      "  --compile-solo-test derive executable identity proxies from the exact pending queue; never production eligible",
       "  --solo-test          alias for --compile-solo-test",
-      "  --candidate-root     root containing specs/ and approvals/ for all 52 planned tools",
+      "  --candidate-root     root containing specs/ and approvals/ for every planned tool",
       "  --trusted-formula-reviewer-keys  Ed25519 public-key registry authorized for formula_review",
       "  --compiled-output-root  isolated staging output for per-persona tools/evidence",
       "  --solo-output-root   isolated staging output for provisional derived-proxy tools/evidence",
-      "  --root PATH         override the 26-seat prototype staging root",
+      "  --root PATH         override the prototype staging root",
       "  --output-root PATH  override write root; basename must be persona-v3-formula-candidates below staging",
       "  --json              emit the machine-readable plan",
-      "  --markdown          emit the complete 52-entry authoring queue",
+      "  --markdown          emit the complete planned authoring queue",
       "",
       "No mode writes knowledge/masters, production manifests, release evidence, registry data, or version metadata.",
       "",
@@ -120,12 +121,12 @@ export function main(argv = process.argv.slice(2)) {
     else process.stdout.write([
       "persona-v3-formulas:",
       `mode=${args.write ? "write_isolated_staging_compilation" : "check_approved_candidates"}`,
-      `tools=${result.compiled_tool_count}/52`,
-      `formula_approvals=${result.formula_approval_binding_count}/52`,
+      `tools=${result.compiled_tool_count}/${PLANNED_TOOL_COUNT}`,
+      `formula_approvals=${result.formula_approval_binding_count}/${PLANNED_TOOL_COUNT}`,
       `hash=${result.compilation_hash}`,
       "",
     ].join(" "));
-    return result.compiled_tool_count === 52 && result.formula_approval_binding_count === 52 ? 0 : 1;
+    return result.compiled_tool_count === PLANNED_TOOL_COUNT && result.formula_approval_binding_count === PLANNED_TOOL_COUNT ? 0 : 1;
   }
 
   if (args.compileSoloTest) {
@@ -140,16 +141,16 @@ export function main(argv = process.argv.slice(2)) {
     else process.stdout.write([
       "persona-v3-formulas:",
       `mode=${args.write ? "write_isolated_solo_test_compilation" : "check_solo_test_compilation"}`,
-      `tools=${result.compiled_tool_count}/52`,
-      `provisional_derivations=${result.provisional_derivation_count}/52`,
-      `formula_approvals=${result.formula_approval_binding_count}/52`,
+      `tools=${result.compiled_tool_count}/${PLANNED_TOOL_COUNT}`,
+      `provisional_derivations=${result.provisional_derivation_count}/${PLANNED_TOOL_COUNT}`,
+      `formula_approvals=${result.formula_approval_binding_count}/${PLANNED_TOOL_COUNT}`,
       `assurance=${result.assurance_class}`,
       `production_eligible=${result.production_eligible}`,
       `hash=${result.compilation_hash}`,
       "",
     ].join(" "));
-    return result.compiled_tool_count === 52
-      && result.provisional_derivation_count === 52
+    return result.compiled_tool_count === PLANNED_TOOL_COUNT
+      && result.provisional_derivation_count === PLANNED_TOOL_COUNT
       && result.formula_approval_binding_count === 0
       && result.production_eligible === false ? 0 : 1;
   }
@@ -163,8 +164,8 @@ export function main(argv = process.argv.slice(2)) {
   else process.stdout.write([
     "persona-v3-formulas:",
     `mode=${args.write ? "write_staging_candidates_then_check" : "check_plan"}`,
-    `seats=${plan.inventory.canonical_seat_count}/26`,
-    `prototypes=${plan.inventory.prototype_count}/52`,
+    `seats=${plan.inventory.canonical_seat_count}/${CANONICAL_MASTER_COUNT}`,
+    `prototypes=${plan.inventory.prototype_count}/${PLANNED_TOOL_COUNT}`,
     `needs_authorship=${plan.inventory.needs_formula_authorship_count}`,
     `executable_candidates=${plan.inventory.executable_candidate_count}`,
     `dedicated_tools=${plan.inventory.dedicated_tool_count}`,

@@ -25,7 +25,6 @@ import { canonicalJson, canonicalValue, sha256 } from "./canonical.mjs";
 import { canDefineMethodRule, validateSourceAnchor } from "./source-anchor.mjs";
 import { defaultKnowledgeDir } from "./admission.mjs";
 
-export const CANONICAL_MASTER_COUNT = 26;
 export const CANONICAL_MASTER_IDS = Object.freeze([
   "master_aschenbrenner",
   "master_buffett",
@@ -53,7 +52,11 @@ export const CANONICAL_MASTER_IDS = Object.freeze([
   "master_taleb",
   "master_natenberg",
   "master_sinclair",
+  "master_bogle",
 ]);
+
+/** Derived, never written twice: the roster above is the only place a seat is added. */
+export const CANONICAL_MASTER_COUNT = CANONICAL_MASTER_IDS.length;
 
 export const STAGING_COMPONENTS = Object.freeze([
   "sources",
@@ -316,6 +319,22 @@ function writeNew(file, content, created, existing) {
   created.push(file);
 }
 
+/**
+ * The seat index is derived from the canonical roster, not authored, so refusing to overwrite
+ * it -- which is the right rule for every other file here -- would leave a seat addition
+ * permanently unrepresentable without a manual delete.
+ */
+function writeDerived(file, content, created, existing) {
+  mkdirSync(dirname(file), { recursive: true });
+  const present = existsSync(file);
+  if (present && readFileSync(file, "utf8") === content) {
+    existing.push(file);
+    return;
+  }
+  writeFileSync(file, content, "utf8");
+  (present ? existing : created).push(file);
+}
+
 function prettyJson(value) {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
@@ -329,7 +348,7 @@ export function scaffoldPersonaV3Staging({
   const blueprints = canonicalMasterBlueprints({ personaDir });
   const created = [];
   const existing = [];
-  writeNew(join(stagingRoot, INDEX_FILE), prettyJson(createStagingIndex(blueprints)), created, existing);
+  writeDerived(join(stagingRoot, INDEX_FILE), prettyJson(createStagingIndex(blueprints)), created, existing);
   writeNew(join(stagingRoot, TEMPLATE_DIR, "source-adjudication-record.template.json"), prettyJson(sourceRecordTemplate()), created, existing);
   writeNew(join(stagingRoot, TEMPLATE_DIR, "human-review-checklist.md"), reviewChecklist(), created, existing);
   for (const blueprint of blueprints) {
@@ -520,7 +539,7 @@ export function inspectPersonaV3Staging({
   else {
     const actualIndex = parseJson(indexFile, INDEX_FILE);
     const expectedIndex = createStagingIndex(blueprints);
-    if (canonicalJson(actualIndex) !== canonicalJson(expectedIndex)) globalErrors.push(`${INDEX_FILE} does not match the canonical 26-seat registry`);
+    if (canonicalJson(actualIndex) !== canonicalJson(expectedIndex)) globalErrors.push(`${INDEX_FILE} does not match the canonical seat registry`);
   }
 
   const expectedIds = new Set(CANONICAL_MASTER_IDS);

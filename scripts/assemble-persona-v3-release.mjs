@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Validate or atomically assemble one immutable 26-seat PersonaPack v3 release. */
+/** Validate or atomically assemble one immutable PersonaPack v3 release covering the full roster. */
 
 import { closeSync, constants as fsConstants, fstatSync, lstatSync, openSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -10,6 +10,7 @@ import {
   defaultPersonaReleaseRoot,
   planPersonaRelease,
 } from "../mcp/lib/personas-v3/releases.mjs";
+import { CANONICAL_MASTER_COUNT } from "../mcp/lib/personas-v3/staging.mjs";
 
 export function parseArgs(argv) {
   const args = {
@@ -114,7 +115,7 @@ export function main(argv = process.argv.slice(2)) {
   const result = args.write ? assemblePersonaRelease(options(args)) : planPersonaRelease(options(args));
   if (args.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   else process.stdout.write(`${renderResult(result)}\n`);
-  return result.canonical_master_count === 26 ? 0 : 1;
+  return result.canonical_master_count === CANONICAL_MASTER_COUNT ? 0 : 1;
 }
 
 const invoked = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

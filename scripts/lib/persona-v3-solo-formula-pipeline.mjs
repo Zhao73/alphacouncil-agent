@@ -14,6 +14,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   realpathSync,
   statSync,
   writeFileSync,
@@ -22,6 +23,7 @@ import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path
 
 import { canonicalValue, sha256 } from "../../mcp/lib/personas-v3/canonical.mjs";
 import {
+  ANY_REPORTING_INTERVAL,
   PROVISIONAL_DERIVED_PROXY_ASSURANCE,
   deterministicToolSchemaHashes,
 } from "../../mcp/lib/personas-v3/deterministic-executor.mjs";
@@ -55,18 +57,28 @@ export const SOLO_TEST_PROXY_UNIT = "derived_proxy_scalar";
 const INSTANT_AS_OF = Object.freeze({ basis: "instant", window: null, alignment: "as_of" });
 
 /**
+ * Some facts genuinely cover a span rather than a moment: a five-year cash-flow total is not an
+ * observation taken on one day. Declaring those as instants made them unusable -- the executor
+ * rejects an instant contract against a fact that carries a reporting interval, so every seat
+ * whose method reads company fundamentals failed closed on live grounding.
+ */
+function duration(window) {
+  return Object.freeze({ basis: "duration", window, alignment: "as_of" });
+}
+
+/**
  * Typed-fact contracts currently emitted by grounding-adapter and safe to bind mechanically.
  * A fact whose physical period differs from this canonical instant snapshot still fails closed.
  */
 export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "market.price": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "market.change_pct": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "financial.return_on_equity_10y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "financial.free_cash_flow_5y": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
-  "financial.interest_coverage": Object.freeze({ value_kind: "ratio", unit: "multiple", period: INSTANT_AS_OF }),
-  "financial.gross_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "financial.net_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "accounting.cash_conversion": Object.freeze({ value_kind: "ratio", unit: "multiple", period: INSTANT_AS_OF }),
+  "financial.return_on_equity_10y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P10Y") }),
+  "financial.free_cash_flow_5y": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: duration("P5Y") }),
+  "financial.interest_coverage": Object.freeze({ value_kind: "ratio", unit: "multiple", period: duration(ANY_REPORTING_INTERVAL) }),
+  "financial.gross_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
+  "financial.net_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
+  "accounting.cash_conversion": Object.freeze({ value_kind: "ratio", unit: "multiple", period: duration("P5Y") }),
   "capital_allocation.share_count_change_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "options.implied_volatility": Object.freeze({ value_kind: "ratio", unit: "decimal_annualized_volatility", period: INSTANT_AS_OF }),
   "options.skew_25d": Object.freeze({ value_kind: "ratio", unit: "decimal_volatility_difference", period: INSTANT_AS_OF }),
@@ -81,20 +93,20 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "macro.breakeven_inflation": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "macro.aaa_corporate_yield": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "macro.credit_spread": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "macro.liquidity_impulse": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "macro.liquidity_impulse": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P3M") }),
   // macro.growth_regime is deliberately absent. A tool contract accepts only monetary, ratio,
   // count or scalar, so a text-valued fact cannot flow through the computation layer at all.
   // It reaches a policy the other way: a condition compares it with `eq` against a state name.
 
   // Company fundamentals derived from filings, beyond the seven the mechanical screen computes.
-  "financial.owner_earnings": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "financial.owner_earnings": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: duration("P1Y") }),
   "financial.net_current_asset_value": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
-  "financial.incremental_return_on_capital": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "financial.incremental_return_on_capital": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
   "financial.leverage": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
-  "valuation.revenue_growth": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "valuation.revenue_growth": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration(ANY_REPORTING_INTERVAL) }),
   "valuation.downside_asset_value": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "valuation.downside_floor": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
-  "capital_allocation.share_count": Object.freeze({ value_kind: "count", unit: "shares", period: INSTANT_AS_OF }),
+  "capital_allocation.share_count": Object.freeze({ value_kind: "count", unit: "shares", period: duration("P1Y") }),
 
   // Basket-level facts. Without these an index or fund method has nothing to reason about,
   // which is why every seat abstained on an ETF regardless of how well it was written.
@@ -399,7 +411,7 @@ export function planSoloTestFormulaCompilation({
   )).sort();
   const actualSpecFiles = collectFiles(resolve(candidate, "specs"));
   if (JSON.stringify(actualSpecFiles) !== JSON.stringify(expectedSpecFiles)) {
-    fail("solo formula compilation requires exactly the 52 planned pending spec files", {
+    fail("solo formula compilation requires exactly the planned pending spec files, one per tool", {
       expected: expectedSpecFiles,
       actual: actualSpecFiles,
     });
@@ -487,6 +499,25 @@ function writeStable(file, content, result) {
   result.written.push(file);
 }
 
+/** Delete every regular file under `root` the compilation did not just account for. */
+function pruneToWritten(root, keep) {
+  const removed = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = resolve(dir, entry.name);
+      if (entry.isSymbolicLink()) fail(`unsafe solo formula entry: ${path}`);
+      if (entry.isDirectory()) {
+        walk(path);
+        if (!readdirSync(path).length) { rmSync(path, { recursive: false }); removed.push(path); }
+        continue;
+      }
+      if (!keep.has(path)) { rmSync(path); removed.push(path); }
+    }
+  };
+  walk(root);
+  return removed;
+}
+
 function evidenceLeaf(personaId, toolId) {
   const prefix = `${personaId}.`;
   if (!toolId.startsWith(prefix)) fail(`tool id is not prefixed by ${personaId}`);
@@ -540,6 +571,11 @@ export function writeSoloTestFormulaCompilation({
     bindings: plan.bindings,
   });
   writeStable(resolve(root, "compilation-manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, result);
+  // A tool that is renamed leaves its old evidence file behind, and the downstream review binds
+  // the tree by exact file list -- so debris from a previous compilation reads as tampering
+  // rather than as staleness. The compilation owns this tree entirely; anything it did not just
+  // write does not belong in it.
+  result.removed = pruneToWritten(root, new Set([...result.written, ...result.unchanged]));
   return Object.freeze(canonicalValue({
     ...manifest,
     mode: "write_isolated_solo_test_compilation",

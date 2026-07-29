@@ -12,6 +12,7 @@ import {
   evaluateCountGate,
   parseArgs,
 } from "../../scripts/compile-persona-packs.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const SCRIPT = join(ROOT, "scripts/compile-persona-packs.mjs");
@@ -67,18 +68,18 @@ test("the count gate never treats zero physical v3 packs as complete", () => {
     actual_count: 0,
     reason: "no_physical_v3_packs",
   });
-  assert.equal(evaluateCountGate(26, 26).status, "passed");
+  assert.equal(evaluateCountGate(CANONICAL_MASTER_COUNT, CANONICAL_MASTER_COUNT).status, "passed");
   assert.equal(evaluateCountGate(25, 26).reason, "required_count_mismatch");
 });
 
-test("argument parsing supports JSON, check mode and the explicit 26-seat GA gate", () => {
-  assert.deepEqual(parseArgs(["--json", "--check", "--require-count", "26"]), {
+test("argument parsing supports JSON, check mode and the explicit canonical-roster GA gate", () => {
+  assert.deepEqual(parseArgs(["--json", "--check", "--require-count", String(CANONICAL_MASTER_COUNT)]), {
     json: true,
     check: true,
     help: false,
-    requiredCount: 26,
+    requiredCount: CANONICAL_MASTER_COUNT,
   });
-  assert.equal(parseArgs(["--require-count=26"]).requiredCount, 26);
+  assert.equal(parseArgs([`--require-count=${CANONICAL_MASTER_COUNT}`]).requiredCount, CANONICAL_MASTER_COUNT);
   assert.throws(() => parseArgs(["--require-count", "0"]), /positive integer/);
   assert.throws(() => parseArgs(["--unknown"]), /unknown argument/);
 });
@@ -114,7 +115,7 @@ test("an empty knowledge directory is incomplete and legacy ids remain visible",
 
 test("--require-count fails closed on a mismatch and --check stays terse", () => {
   const current = JSON.parse(run(["--json"]).stdout);
-  const mismatched = current.physical_v3_count === 26 ? 25 : 26;
+  const mismatched = current.physical_v3_count === CANONICAL_MASTER_COUNT ? CANONICAL_MASTER_COUNT - 1 : CANONICAL_MASTER_COUNT;
   const result = run(["--check", "--require-count", String(mismatched)]);
   assert.equal(result.status, 1, result.stderr);
   assert.match(result.stdout, /persona-v3 compile:/);

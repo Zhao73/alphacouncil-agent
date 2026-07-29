@@ -37,6 +37,7 @@ import {
   TRUSTED_FORMULA_REVIEW_KEYS,
   installFormulaEvidenceIntoPack,
 } from "../helpers/persona-v3-formula-review-evidence.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const RELEASE_SIGNERS = [
   { keyId: "release:key-a", principal: "Release Reviewer A", ...generateKeyPairSync("ed25519") },
@@ -415,12 +416,12 @@ test("promotion CLI exposes verify/cutover/rollback/current and defaults to prev
 test("release manifest schema fixes the count at 26 and admission at operational or higher", () => {
   const schema = JSON.parse(readFileSync(new URL("../../schemas/persona-v3-release-manifest-v1.schema.json", import.meta.url), "utf8"));
   const sourceEvidenceSchema = JSON.parse(readFileSync(new URL("../../schemas/persona-v3-release-source-review-evidence-v1.schema.json", import.meta.url), "utf8"));
-  assert.equal(schema.properties.canonical_master_count.const, 26);
+  assert.equal(schema.properties.canonical_master_count.const, CANONICAL_MASTER_COUNT);
   assert.equal(schema.properties.source_review_evidence.properties.relative_path.const, "source-review-evidence.json");
-  assert.equal(schema.properties.packs.minItems, 26);
+  assert.equal(schema.properties.packs.minItems, CANONICAL_MASTER_COUNT);
   assert.equal(schema.$defs.pack.properties.admission.properties.operational_clear.const, true);
   assert.deepEqual(schema.$defs.pack.properties.admission.properties.level.enum, ["operational", "candidate", "method_model"]);
-  assert.equal(sourceEvidenceSchema.properties.canonical_master_count.const, 26);
-  assert.equal(sourceEvidenceSchema.properties.ledgers.minItems, 26);
+  assert.equal(sourceEvidenceSchema.properties.canonical_master_count.const, CANONICAL_MASTER_COUNT);
+  assert.equal(sourceEvidenceSchema.properties.ledgers.minItems, CANONICAL_MASTER_COUNT);
   assert.equal(sourceEvidenceSchema.$defs.binding.properties.reviewer_principal_ids.minItems, 2);
 });

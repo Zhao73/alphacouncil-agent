@@ -29,8 +29,8 @@
           },
           "period": {
             "alignment": "as_of",
-            "basis": "instant",
-            "window": null
+            "basis": "duration",
+            "window": "P1Y"
           },
           "unit": "shares",
           "value_kind": "count"
@@ -58,7 +58,7 @@
     "schema_version": 1,
     "tool_id": "master_pabrai.market_capitalisation"
   },
-  "derivation_spec_hash": "sha256:20464fce3aa94ceb8173ed418670b029460bd472b798d3a0ae8eeeaeb935643f",
+  "derivation_spec_hash": "sha256:1acefb8accb027d69731ada96a4875aba9f27870c62bf458a95edcf3f1604f02",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

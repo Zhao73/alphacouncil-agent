@@ -13,6 +13,7 @@ import {
   loadHostCapabilities,
   validateHostCapabilities,
 } from "../../scripts/lib/host-capabilities.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const read = (rel) => readFileSync(join(HOST_REPO_ROOT, rel), "utf8");
 
@@ -70,7 +71,7 @@ test("all four hosts resolve one canonical selector ID order and hash semantics"
   const snapshots = contract.hosts.map(() => catalogSnapshot("English"));
   for (const snapshot of snapshots.slice(1)) assert.deepEqual(snapshot, snapshots[0]);
   const catalog = snapshots[0];
-  assert.equal(catalog.count, 26);
+  assert.equal(catalog.count, CANONICAL_MASTER_COUNT);
   assert.deepEqual(catalog.all_master_ids, registry().ids("master"));
   assert.match(catalog.catalog_hash, /^[a-f0-9]{64}$/);
   for (const [index, seat] of catalog.masters.entries()) {
@@ -158,6 +159,6 @@ test("host capability report passes and labels live host E2E not_run", () => {
   });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /4 hosts/);
-  assert.match(result.stdout, /26 selector IDs/);
+  assert.match(result.stdout, new RegExp(`${CANONICAL_MASTER_COUNT} selector IDs`));
   assert.match(result.stdout, /live_e2e=not_run/);
 });
