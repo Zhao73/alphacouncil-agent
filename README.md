@@ -32,7 +32,7 @@
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
   <a href="#-tools--27-all-keyless"><b>Tools</b></a> ·
-  <a href="#-the-bench--26-investor-method-lenses"><b>The bench</b></a> ·
+  <a href="#-the-bench--27-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
   <a href="#-disclaimer"><b>Disclaimer</b></a>
@@ -57,7 +57,11 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 | | |
 |---|---|
 | 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
-| 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai and more read the **same facts** through different stated research priorities. Every council run shows all 26 with actual maturity before research. Full accepts any non-empty selection or `all`; quick requires 1-4 and rejects `all`. |
+| 🎭 **27 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai, Bogle and more read the **same facts** through different stated research priorities. Every council run shows all 27 with actual maturity before research. Full accepts any non-empty selection or `all`; quick requires 1-4 and rejects `all`. |
+| 🧺 **A basket is not a company, and the bench knows it** | An ETF or index is priced by look-through: a fund owning 1% of a business has a claim on 1% of its owner earnings, so a company method reads a basket **without changing its method**. Ratios aggregate by weight; absolute figures become the fund's own dollar claim; a share count is refused because it has no portfolio meaning. |
+| 📰 **A basket gets its own industry news** | `SOX` has no press office. Its industry is derived from the weighted SIC groups of its holdings, so SOXX resolves to semiconductors and survives a rebalance. Where no group dominates, the basket is queried as the several industries it actually is. |
+| 🌏 **What else you are betting on** | Correlation to the broad market, to KOSPI, to KOSDAQ and to the semiconductor cycle, plus dispersion across the eleven sector SPDRs. Sessions pair by date, because Korea and the United States keep different holidays. |
+| 💵 **Fund flow that refuses to be faked** | Creations minus redemptions, priced. Only a filed share count or the issuer's own assets-over-NAV identity may price a flow; a count reconstructed from positions is refused, because a difference cancels the number and keeps the error. |
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
 | ⏱️ **Bounded full headless run** | Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run within 30 minutes. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
@@ -68,14 +72,19 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## What 1.0.0 ships
+## What this ships
 
-`npm install -g alphacouncil-agent` installs 1.0.0.
+`npm install -g alphacouncil-agent` installs the current release.
 
 Twenty-seven method seats, each running its own formulas and its own thresholds against typed
-facts built from SEC filings, FRED series, issuer holdings disclosures and published index
-aggregates. Fifty-four executable tools. Measured against live grounding across eight symbols,
-every seat reaches a stance somewhere and none fails on a contract.
+facts built from SEC filings, FRED series, issuer holdings disclosures, published index
+aggregates, Section 16 ownership, cross-market price history and dated industry news.
+Fifty-four executable tools.
+
+Measured against live grounding, with no fixtures: every one of the 27 seats reaches a stance
+somewhere across a mixed set of symbols, with no contract failures. A basket that had **no data
+path at all** — `SOX` was in neither registry — now produces 40-plus typed facts, and the seats
+that read them are running the same methods they run on a company.
 
 Seats carry the `operator_lens` admission level. Their formulas and thresholds are
 AI-authored and trace to named published work, but have not been through human review, and the
@@ -145,7 +154,7 @@ with analyst Markdown files and `artifact_index.md` in the same run directory. F
 shows the system quote (or an explicit quote-data gap), all eight analyst statuses/summaries,
 and every selected method seat's frozen stance plus readable explanation/status. Its final
 section contains the exact selected-seat count and one statement per stable ID; `all` ends
-with all 26 statements. These are provisional method-seat outputs, never quotes from the
+with all 27 statements. These are provisional method-seat outputs, never quotes from the
 named people.
 
 ### Slash commands
@@ -156,7 +165,7 @@ rather than four in a menu of a hundred.
 | Invocation | What runs | Model spend |
 |---|---|---|
 | `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then full; plugin-managed headless is ≤30m | deterministic stance + one isolated voice worker per selected v3 seat |
-| `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
+| `/alpha <ticker> quick` | Shows all 27, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |
@@ -197,7 +206,7 @@ Japanese and Korean; each worker receives the run language.
 
 Quick is never inferred from impatience or a full-run failure. It runs only through the
 plugin-managed headless `analyze_symbol(council_mode="quick")`; `plan_visible_run` rejects
-quick. After the complete 26-seat display and a 1-4-seat confirmation, it executes:
+quick. After the complete 27-seat display and a 1-4-seat confirmation, it executes:
 
 1. `market_data`, `earnings_deep_dive`, `valuation_long_short` and
    `news_industry_management` in one parallel wave;
@@ -234,7 +243,7 @@ Default stock-analysis runs are full runs, not lite summaries:
 - News, industry context, supply chain, and management's words checked against their actions
 - SEC filings, Form 4 insider transactions, buybacks, dilution, debt and capital allocation
 - Investment-banking event analysis for M&A, ECM, debt, buybacks and strategic transactions
-- A selectable bench of 26 investor method lenses reading the same facts
+- A selectable bench of 27 investor method lenses reading the same facts
 - Bull researcher, bear researcher and portfolio-manager synthesis
 
 Full is fail-fast at its mandatory evidence barrier. If a required evidence role still
@@ -275,7 +284,7 @@ not only in the docs, because the payload is what gets quoted downstream:
   contracts — is dropped rather than averaged in, because a zero does not look like a gap,
   it looks like a calm stock.
 
-## 🏛️ The bench — 26 investor method lenses
+## 🏛️ The bench — 27 investor method lenses
 
 Reconstructions of publicly documented methods, not anything the named people said. Each
 states how it thinks, what it notices first, its characteristic challenge, and **its own
@@ -291,8 +300,8 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
 
-The 1.0.0 `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
-not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
+The `solo_test` catalog has 27 selectable physical v3 packs, but **27 physical packs is
+not 27 approved method models**. Every seat is a provisional `operator_lens` backed by
 project-derived proxy material; the 52 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA
 remains fail-closed.
@@ -312,7 +321,7 @@ the verifier node shown here.
 flowchart TD
     U["@alphacouncil-agent<br/>ticker / question"] --> G[("Established facts<br/>filings · quotes · macro · options")]
     G --> AG{{"Analyst council"}}
-    G --> MS{{"Master bench<br/>26 lenses"}}
+    G --> MS{{"Master bench<br/>27 lenses"}}
     AG --> A1["📈 Market data"]
     AG --> A2["💰 Earnings"]
     AG --> A3["⚖️ Valuation"]

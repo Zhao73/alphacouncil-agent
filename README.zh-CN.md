@@ -47,7 +47,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 | | |
 |---|---|
-| 🏛️ **是委员会,不是一家之言** | 完整模式默认 8 个证据席、最多 11 个；quick 固定 4 个并行证据席。两者都在研究前完整展示 26 个方法席。 |
+| 🏛️ **是委员会,不是一家之言** | 完整模式默认 8 个证据席、最多 11 个；quick 固定 4 个并行证据席。两者都在研究前完整展示 27 个方法席。 |
 | 🐂🐻 **天生对抗式** | 完整模式跑三轮多空交叉质询；quick 只跑一轮并行 Bull/Bear 陈述和短 PM，且明确不声称完成对抗 verifier。 |
 | ⏱️ **完整 headless 有硬时限** | 插件托管 full 将 8 个分析师同波启动、每轮 Bull/Bear 同时启动，并在 30 分钟内保存终态；外部服务故障会明确 `incomplete`，不会静默漏席。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
@@ -61,11 +61,15 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 ## 1.0.0 交付了什么
 
-`npm install -g alphacouncil-agent` 装到的就是 1.0.0。
+`npm install -g alphacouncil-agent` 装到的就是最新正式版。
 
-27 个方法席，每一席跑自己的公式和自己的阈值，读的是从 SEC 申报、FRED 序列、发行商持仓披露
-和公开指数聚合值构建的类型化事实。54 个可执行工具。在 8 个标的的活体行情上实测：每一席都能
-在某个标的上给出立场，没有任何一席因契约失败而崩掉。
+27 个方法席，每一席跑自己的公式和自己的阈值，读的是从 SEC 申报、FRED 序列、发行商持仓披露、
+公开指数聚合值、Section 16 持股、跨市场价格历史和带日期的行业新闻构建的类型化事实。
+54 个可执行工具。
+
+活体行情实测、不用任何 fixture：27 席全部能在混合标的集合中的某个标的上给出立场，零契约失败。
+一个此前**根本没有数据路径**的篮子（`SOX` 两个注册表里都没有）现在能产出 40 多个类型化事实，
+而读它们的席位跑的是和分析个股时**同一套方法**。
 
 席位的 admission 级别是 `operator_lens`。公式与阈值由 AI 撰写、可追溯到具名公开著作，但**尚未
 经过人工评审**，真机四宿主端到端也**尚未执行** —— 所以语料报告的已验证 `method_model` 为
@@ -126,7 +130,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。完整模式的摘要
 会显示系统价格（或明确的行情缺口）、8 个分析师的状态/摘要，以及每个所选方法席冻结的立场
 和可读解释/状态。摘要最后一节给出准确的所选席位数，并逐席输出一个陈词；选择 `all` 时
-结尾就是完整 26 席。它们是项目派生的临时方法席输出，不是本人引语。
+结尾就是完整 27 席。它们是项目派生的临时方法席输出，不是本人引语。
 
 ### 斜杠命令
 
@@ -135,7 +139,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 | 输入 | 跑什么 | 额度消耗 |
 |---|---|---|
 | `/alpha <ticker>` | 逐人展示全部大师，确认后运行 full；插件托管 headless ≤30 分钟 | 每个所选 v3 席为确定性立场 + 一个独立 voice worker |
-| `/alpha <ticker> quick` | 展示全部 26 席，确认 1-4 席（禁用 `all`），再跑插件托管 `quick_v1`（≤10 分钟） | 随选择数量变化 |
+| `/alpha <ticker> quick` | 展示全部 27 席，确认 1-4 席（禁用 `all`），再跑插件托管 `quick_v1`（≤10 分钟） | 随选择数量变化 |
 | `/alpha <ticker> screen` | 只跑机械筛选 | **零** |
 | `/alpha <ticker> options` | 隐含波动率期限结构、偏斜、持仓分布 | **零** |
 | `/alpha <ticker> news` | 带日期的申报与新闻 | **零** |
@@ -166,7 +170,7 @@ full 的交付摘要必须列出全部所选 stable master ID、全部 8 个分�
 ### Quick v1 —— 有界，但不等于完整议会
 
 不会因为用户着急或完整运行失败就自动切换 quick。Quick 只能通过插件托管的 headless
-`analyze_symbol(council_mode="quick")` 运行；`plan_visible_run` 会拒绝 quick。完整展示 26 席并
+`analyze_symbol(council_mode="quick")` 运行；`plan_visible_run` 会拒绝 quick。完整展示 27 席并
 确认 1-4 席后，执行图固定为：
 
 1. `market_data`、`earnings_deep_dive`、`valuation_long_short`、
@@ -203,7 +207,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 - 新闻、行业背景、产业链，以及管理层言行核对
 - SEC 申报、Form 4 内部人交易、回购、稀释、债务与资本配置
 - 并购、股权与债务融资、回购等事件分析
-- 可逐席选择的 26 个投资方法视角读取同一批事实
+- 可逐席选择的 27 个投资方法视角读取同一批事实
 - 多头、空头与 PM 裁决
 
 完整模式在 mandatory evidence barrier 上 fail-fast。任何必需证据席在一次有界 parse-only
@@ -250,7 +254,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
 
 1.0.0 `solo_test` 目录已有 27 个可选的物理 v3 包，但 **27 个物理包不等于 27 个已获批的
-方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个工具是可执行的
+方法模型**。所有 27 席都只是 provisional `operator_lens`；52 个工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。
 
@@ -377,3 +381,7 @@ npm run check
 <a href="#readme-top">↑ 回到顶部</a>
 
 </div>
+| 🧺 **一篮子不是一家公司,而且这套系统知道** | ETF 和指数走穿透定价:持有某公司 1% 的基金,对它 1% 的所有者收益有真实索取权 —— 所以公司方法**不改一个字**就能读一篮子。比率按权重聚合,绝对量变成基金自己的美元索取权,股本被拒绝因为它在组合层面没有意义。 |
+| 📰 **一篮子有自己的行业新闻** | `SOX` 没有新闻发言人。它的行业由持仓的加权 SIC 组推出,所以 SOXX 自动解析成半导体,而且指数调仓后依然成立。没有单一行业占优时,按它**实际横跨的几个行业**分别查。 |
+| 🌏 **你到底在赌什么** | 对大盘、对 KOSPI、对 KOSDAQ、对费城半导体的相关性,以及 11 个板块 SPDR 的离散度。交易日**按日期配对** —— 韩美假期不同,按数组位置压缩会拿周二比周三。 |
+| 💵 **不允许被做假的资金流** | 申购减赎回、按 NAV 计价。只有申报份额或发行商自己的 AUM÷NAV 恒等式可以参与计算;由持仓反推的份额被拒绝,因为相减会把数字消掉、把误差留下。 |
