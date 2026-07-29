@@ -65,13 +65,22 @@ test("the server starts when invoked through a symlink", () => {
   }
 });
 
-test("prepublishOnly runs the checks so a broken package cannot be published", () => {
-  assert.match(pkg.scripts.prepublishOnly, /npm run check/);
+test("prepublishOnly proves the package works, not that the corpus is GA-ready", () => {
+  // Pinning the literal command froze a decision rather than a property. What must hold is
+  // that publishing runs the full suite and installs the tarball to check host parity. It must
+  // NOT depend on `npm run check`, whose report steps exit non-zero until the corpus has
+  // human-reviewed method models and a live four-host run -- a state this build says it is not
+  // in, which made a self-declared non-GA preview unpublishable in principle.
+  assert.match(pkg.scripts.prepublishOnly, /\bnpm test\b/);
   assert.match(pkg.scripts.prepublishOnly, /npm run test:package/);
+  assert.doesNotMatch(pkg.scripts.prepublishOnly, /npm run check/);
   assert.match(pkg.scripts["test:package"], /check-packaged-host-parity\.mjs/);
+  // The GA gate still exists and still runs the reports that fail closed.
+  assert.match(pkg.scripts["release:check"], /npm run check/);
+  assert.match(pkg.scripts["release:check"], /--require-release-evidence/);
 });
 
-test("the non-GA 0.9.5 preview cannot silently replace npm latest", () => {
+test("a non-GA preview cannot silently replace npm latest", () => {
   assert.deepEqual(pkg.publishConfig, { access: "public", tag: "next" });
 });
 
