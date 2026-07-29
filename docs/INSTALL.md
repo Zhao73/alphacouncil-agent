@@ -10,24 +10,20 @@ plain MCP server in the Claude desktop app.
 ---
 
 
-## GitHub v1.0.0 preview
-
-This acceptance release is GitHub-only:
+## Install
 
 ```bash
+npm install -g alphacouncil-agent
+```
+
+That is 1.0.0. To pin the version or install straight from the tag:
+
+```bash
+npm install -g alphacouncil-agent@1.0.0
 npm install -g github:Zhao73/alphacouncil-agent#v1.0.0
 ```
 
-## npm channel
-
-```bash
-npm install -g alphacouncil-agent@next
-```
-
-The GitHub-only 1.0.0 source upgrade does not run `npm publish` or change npm dist-tags.
-`alphacouncil-agent@next` installs whichever preview npm currently serves; verify it with
-`npm view alphacouncil-agent dist-tags --json` rather than assuming it is 1.0.0. The
-unqualified package follows the stable `latest` tag.
+`npm view alphacouncil-agent dist-tags --json` shows what each channel currently serves.
 
 Then point any MCP host at the `alphacouncil-agent` binary. For Claude Code:
 

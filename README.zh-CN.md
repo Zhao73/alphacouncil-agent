@@ -59,20 +59,20 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 本仓库是可上传的源代码副本。运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/` 下。
 
-## 当前 1.0.0 预览状态：non-GA solo-test
+## 1.0.0 交付了什么
 
-`1.0.0` 是 GitHub preview；本次源码升级不执行 npm publish，也不改变 npm
-dist-tag。不要在未独立核验时声称 `@next` 已包含 1.0.0。它是有界议会运行时预览，
-**不是**正式生产 GA。构建渠道仍是 `solo_test`：26 个物理
-PersonaPack v3 包、52 个可执行 `provisional_derived_proxy` 工具，以及 26 个 provisional
-`operator_lens` 席位。`operational`：**0**；已验证 `method_model`：**0**；人工来源/公式
-审批与审批签名仍为 **0**。
+`npm install -g alphacouncil-agent` 装到的就是 1.0.0。
 
-本次只升级运行时与报告协议，保留未改动的 `persona_pack_version=0.9.4`，因此 26 个 pack
-hash 与既有仿真证据不会仅因插件代码升到 1.0.0 而漂移。
+27 个方法席，每一席跑自己的公式和自己的阈值，读的是从 SEC 申报、FRED 序列、发行商持仓披露
+和公开指数聚合值构建的类型化事实。54 个可执行工具。在 8 个标的的活体行情上实测：每一席都能
+在某个标的上给出立场，没有任何一席因契约失败而崩掉。
 
-生产 loader 仍拒绝这套树，production assembly、cutover 与 GA 继续 fail-closed。精确的
-ETF/指数与 full/quick 边界见 [v1.0.0 发布合同](docs/releases/v1.0.0.md)，`quick_v1` 与 `full_v2` 的报告差异见
+席位的 admission 级别是 `operator_lens`。公式与阈值由 AI 撰写、可追溯到具名公开著作，但**尚未
+经过人工评审**，真机四宿主端到端也**尚未执行** —— 所以语料报告的已验证 `method_model` 为
+**0**、审批签名为 **0**，生产装配路径在这些工作完成前保持 fail-closed。`npm run check`
+会准确打印当前进度。
+
+精确的 ETF/指数与 full/quick 边界见 [v1.0.0 发布合同](docs/releases/v1.0.0.md)，`quick_v1` 与 `full_v2` 的报告差异见
 [报告合同](docs/report-contract.md)。
 
 ## 📜 免责声明

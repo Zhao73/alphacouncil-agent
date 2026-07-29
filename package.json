@@ -27,7 +27,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "next"
+    "tag": "latest"
   },
   "scripts": {
     "check": "node scripts/selfcheck.mjs",

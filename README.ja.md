@@ -58,21 +58,22 @@ AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex
 
 このリポジトリはアップロード用のソースコピーです。実行成果物はリポジトリの外、`~/.alphacouncil-agent/runs/<run_id>/` に書き出されます。
 
-## 現在の 1.0.0 プレビュー：non-GA solo-test
+## 1.0.0 で提供されるもの
 
-`1.0.0` は GitHub preview です。このソース更新では npm publish や
-dist-tag の変更を行いません。独立に確認せず `@next` が 1.0.0 を指すと説明してはいけません。
-これは時間制限付き council runtime のプレビューであり、正式な production GA ではありません。
-build channel は引き続き `solo_test` です。物理 PersonaPack v3 は 26、実行可能な
-`provisional_derived_proxy` ツールは 52、provisional `operator_lens` は 26。
-`operational`：**0**、検証済み `method_model`：**0**、人間によるソース/数式承認と承認署名：**0**です。
+`npm install -g alphacouncil-agent` で 1.0.0 が入ります。
 
-この更新はランタイムとレポート契約のみを変更し、未変更の
-`persona_pack_version=0.9.4` を維持します。プラグインコードが 1.0.0 になっただけで
-26 個の pack hash と既存のシミュレーション証拠を変化させません。
+27 の手法シートが、それぞれ自分の数式と自分のしきい値で判断します。読み込むのは SEC 提出書類、
+FRED 系列、発行体の保有銘柄開示、公開されている指数集計値から構築した型付きファクトです。
+実行可能ツールは 54。8 銘柄の実データで計測したところ、すべてのシートがいずれかの銘柄で
+スタンスに到達し、契約違反による失敗は 1 件もありませんでした。
 
-production loader はこのツリーを引き続き拒否し、production assembly、cutover、GA は
-fail-closed のままです。ETF・指数および full/quick の正確な境界は [v1.0.0 リリース契約](docs/releases/v1.0.0.md)、
+シートの admission レベルは `operator_lens` です。数式としきい値は AI が起草し、実名の公開
+著作に遡れますが、**人間によるレビューは未実施**で、実機 4 ホストのエンドツーエンド実行も
+**未実施**です。したがってコーパスは検証済み `method_model` を **0**、承認署名を **0** と
+報告し、production assembly は当該作業が完了するまで fail-closed のままです。
+現状は `npm run check` が正確に出力します。
+
+ETF・指数および full/quick の正確な境界は [v1.0.0 リリース契約](docs/releases/v1.0.0.md)、
 `quick_v1` と `full_v2` の違いは [レポート契約](docs/report-contract.md) を参照してください。
 
 ## 📜 免責事項

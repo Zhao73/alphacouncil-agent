@@ -10,12 +10,11 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.0.0` is a non-GA GitHub preview. This source upgrade does
-not mutate npm dist-tags; verify npm independently before claiming `next` serves 1.0.0. Its
-build channel remains `solo_test`: 26 physical provisional
-PersonaPack v3 packs, 26 `operator_lens` seats, 52 `provisional_derived_proxy` tools,
-0 operational seats and 0 validated `method_model` seats. Do not present this feature
-release, a passing full/quick report or a packaged smoke as PersonaPack production GA.
+Package/plugin version `1.0.0` is the published default install. It carries 27 physical
+PersonaPack v3 packs, 27 `operator_lens` seats and 54 executable tools, with 0 validated
+`method_model` seats. Human review of the authored formulas and the live four-host
+end-to-end run are outstanding, so do not present a passing full/quick report or a packaged
+smoke as evidence that either has been done.
 
 ## Council Modes
 

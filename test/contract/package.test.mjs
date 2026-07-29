@@ -80,8 +80,11 @@ test("prepublishOnly proves the package works, not that the corpus is GA-ready",
   assert.match(pkg.scripts["release:check"], /--require-release-evidence/);
 });
 
-test("a non-GA preview cannot silently replace npm latest", () => {
-  assert.deepEqual(pkg.publishConfig, { access: "public", tag: "next" });
+test("publishing is public and lands on the channel a plain install follows", () => {
+  // This was pinned to `next` while the package described itself as a preview. 1.0.0 is the
+  // release, so the default install is the release -- the guard now records that decision
+  // rather than the earlier one.
+  assert.deepEqual(pkg.publishConfig, { access: "public", tag: "latest" });
 });
 
 test("no dependencies, so an install is the download and nothing else", () => {

@@ -25,13 +25,12 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.0.0`. It is a non-GA GitHub preview; this source
-upgrade does not publish npm or change its dist-tags. The build channel remains
-`solo_test`. The isolated packaged tree contains 26 physical v3 packs and 52 executable
-`provisional_derived_proxy` tools.
-Every seat is still a provisional `operator_lens`: operational = 0, `method_model` = 0,
+The declared package/plugin version is `1.0.0`, published to npm as the default install.
+The packaged tree contains 27 physical v3 packs and 54 executable tools.
+Every seat carries the `operator_lens` admission level: `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
-The production loader rejects these packs and formal production GA remains fail-closed.
+Human review of the authored formulas and the live four-host end-to-end run are the
+outstanding work, so the production assembly path stays fail-closed until both are done.
 See `docs/releases/v1.0.0.md` and `docs/report-contract.md`.
 
 ## Agent-Skills Governance

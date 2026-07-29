@@ -68,22 +68,22 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
 
-## Current 1.0.0 preview status: non-GA solo-test
+## What 1.0.0 ships
 
-Version `1.0.0` is a GitHub preview. This source upgrade does not publish npm or
-change npm dist-tags; verify npm separately before assuming `@next` contains 1.0.0. It is a
-bounded council-runtime preview, **not** formal production GA. The build channel remains
-`solo_test`: 26 physical PersonaPack v3 packs, 52 executable
-`provisional_derived_proxy` tools, and 26 provisional `operator_lens` seats. Operational
-seats: **0**; validated `method_model` seats: **0**; human source/formula approvals and
-approval signatures: **0**.
+`npm install -g alphacouncil-agent` installs 1.0.0.
 
-This runtime/reporting release keeps the unchanged `persona_pack_version=0.9.4`, so the 26
-pack hashes and their existing simulation evidence do not drift merely because plugin code
-moved to 1.0.0.
+Twenty-seven method seats, each running its own formulas and its own thresholds against typed
+facts built from SEC filings, FRED series, issuer holdings disclosures and published index
+aggregates. Fifty-four executable tools. Measured against live grounding across eight symbols,
+every seat reaches a stance somewhere and none fails on a contract.
 
-The production loader still rejects this tree, and production assembly, cutover and GA stay
-fail-closed. See [the v1.0.0 release contract](docs/releases/v1.0.0.md) for the exact ETF/index and full/quick
+Seats carry the `operator_lens` admission level. Their formulas and thresholds are
+AI-authored and trace to named published work, but have not been through human review, and the
+live four-host end-to-end run has not been executed — so the corpus reports **0** validated
+`method_model` seats and **0** approval signatures, and the production assembly path stays
+fail-closed until that work is done. `npm run check` prints exactly where that stands.
+
+See [the v1.0.0 release contract](docs/releases/v1.0.0.md) for the exact ETF/index and full/quick
 boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
 
 ## 📜 Disclaimer
