@@ -2,6 +2,31 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.4] — 2026-07-29
+
+### Fixed
+
+- **Total liabilities had one tag and many filers use none of it.** Net current asset value, the
+  downside asset value and the downside floor all failed on `Liabilities`, silencing Graham,
+  Burry, Klarman and Pabrai. It is now reconstructed where a filer tags the balance-sheet total
+  and equity instead — but only against the equity tag that INCLUDES non-controlling interests,
+  where the identity is exact. With the parent-only tag minority interest lands inside
+  "liabilities" and nothing says so, which is why the previous refusal was right and is kept
+  wherever that tag is absent.
+- **Revenue growth insisted the last eight filings were its window.** One restated quarter, one
+  stub period or one duplicate at the end discarded a company's entire revenue history. It now
+  searches backwards for the most recent clean pair of four-quarter blocks; each window is
+  checked exactly as strictly as before, only the search moved.
+
+Measured: INTC and WMT go from six of eight derived fundamentals to **eight of eight**, GLW to
+seven.
+
+### Changed
+
+- The seat selector labels an `operator_lens` as a method lens rather than leading with
+  "provisional". The machine-verified admission level is unchanged and still published as
+  `admission_level`.
+
 ## [1.0.3] — 2026-07-29
 
 Three real runs are the specification: a GLW run put all eight selected seats at `out_of_scope`

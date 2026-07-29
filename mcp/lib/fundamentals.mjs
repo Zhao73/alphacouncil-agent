@@ -182,17 +182,40 @@ function ownerEarnings(series, cik, gaps, proxy) {
   });
 }
 
+/**
+ * Total liabilities, tagged where the filer tags it and reconstructed exactly where not.
+ *
+ * Many filers never tag `Liabilities`; they tag the balance-sheet total and equity. The
+ * subtraction is only safe against the INCLUDING-non-controlling-interests equity tag -- with
+ * the parent-only tag, minority interest lands inside "liabilities" and nothing says so. When
+ * that tag is absent the figure stays missing, which is why this returns null rather than
+ * reaching for the nearest number.
+ */
+function totalLiabilitiesFor(series, gaps, factId) {
+  const direct = alignLatest(series, ["current_assets", "total_liabilities"]);
+  if (direct.ok) {
+    return { alignment: direct, value: direct.entries.total_liabilities.value, basis: "filed_total_liabilities" };
+  }
+  const derived = alignLatest(series, ["current_assets", "liabilities_and_equity", "equity_including_nci"]);
+  if (!derived.ok) {
+    gaps.push(alignmentGap(factId, direct, ["current_assets", "total_liabilities"]));
+    return null;
+  }
+  return {
+    alignment: derived,
+    value: derived.entries.liabilities_and_equity.value - derived.entries.equity_including_nci.value,
+    basis: "balance_sheet_total_less_equity_including_noncontrolling_interests",
+  };
+}
+
 /** 2. Graham NCAV: current assets - total liabilities. */
 function netCurrentAssetValue(series, cik, gaps) {
   const factId = "financial.net_current_asset_value";
-  const concepts = ["current_assets", "total_liabilities"];
-  const alignment = alignLatest(series, concepts);
-  if (!alignment.ok) {
-    gaps.push(alignmentGap(factId, alignment, concepts));
-    return null;
-  }
+  const resolved = totalLiabilitiesFor(series, gaps, factId);
+  if (!resolved) return null;
+  const alignment = resolved.alignment;
   const currentAssets = alignment.entries.current_assets.value;
-  const liabilities = alignment.entries.total_liabilities.value;
+  const liabilities = resolved.value;
   return buildMetric({
     factId,
     valueKind: "monetary",
@@ -207,6 +230,9 @@ function netCurrentAssetValue(series, cik, gaps) {
     assumptions: [
       "Graham NCAV as filed: current assets less ALL liabilities, with no haircut applied to receivables or inventory",
       "an unclassified balance sheet (banks, insurers, many REITs) files no AssetsCurrent, which is reported as a gap rather than substituted",
+      resolved.basis === "filed_total_liabilities"
+        ? "total liabilities taken from the filer's own Liabilities tag"
+        : "the filer tags no Liabilities total, so it is the balance-sheet total less equity INCLUDING non-controlling interests, which is exact rather than approximate",
     ],
   });
 }
@@ -465,10 +491,24 @@ function trailingYearOverYear(companyFacts, asOf) {
       },
     };
   }
-  const latest = fourQuarters(quarters, quarters.length - 1);
-  const prior = fourQuarters(quarters, quarters.length - 5);
+  // Search backwards for the most recent pair of clean four-quarter blocks rather than
+  // insisting the last eight filings are them. One restated quarter, one stub period or one
+  // duplicated filing at the end used to discard a company's entire revenue history -- INTC and
+  // GLW both failed here while holding years of usable quarters behind the ragged edge. Each
+  // window is still checked exactly as strictly; only the search moved.
+  let latest = null;
+  let prior = null;
+  let offset = 0;
+  for (; offset <= quarters.length - 8; offset += 1) {
+    const end = quarters.length - 1 - offset;
+    latest = fourQuarters(quarters, end);
+    prior = fourQuarters(quarters, end - 4);
+    if (latest && prior) break;
+    latest = null;
+    prior = null;
+  }
   if (!latest || !prior) {
-    return { ...empty, gap: { code: "period_misaligned", detail: "the eight most recent quarters are not contiguous four-quarter blocks" } };
+    return { ...empty, gap: { code: "period_misaligned", detail: `no contiguous pair of four-quarter blocks in the ${quarters.length} tagged quarters` } };
   }
   if (!(prior.total > 0)) {
     return { ...empty, gap: { code: "non_positive_base", detail: `prior-year four-quarter revenue is ${prior.total}` } };

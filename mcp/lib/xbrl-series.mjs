@@ -29,9 +29,14 @@ export const MAX_ALIGNMENT_DRIFT_DAYS = 45;
 /**
  * Concept aliases, ordered by preference, on top of the ones sec.mjs already publishes.
  *
- * Aliases inside one entry are the same economic quantity under different taxonomies. They
- * are never a fallback to a different concept: total liabilities is not reconstructed from
- * an equity subtraction, and a missing depreciation tag stays missing.
+ * Aliases inside one entry are the same economic quantity under different taxonomies. They are
+ * never a fallback to a different concept: a missing depreciation tag stays missing.
+ *
+ * Total liabilities has one sanctioned reconstruction and it is guarded. Subtracting equity
+ * from the balance-sheet total is wrong when the two tags disagree about non-controlling
+ * interests -- the difference then lands inside "liabilities", silently. Done against the
+ * INCLUDING-NCI equity tag the identity is exact, so that tag, and only that tag, may stand in
+ * where a filer never tags `Liabilities` directly. See `totalLiabilitiesFor`.
  */
 export const FUNDAMENTAL_CONCEPTS = Object.freeze({
   revenue: { tags: CONCEPTS.revenue, unit: "USD" },
@@ -50,6 +55,8 @@ export const FUNDAMENTAL_CONCEPTS = Object.freeze({
   },
   current_assets: { tags: ["AssetsCurrent"], unit: "USD" },
   total_liabilities: { tags: ["Liabilities"], unit: "USD" },
+  liabilities_and_equity: { tags: ["LiabilitiesAndStockholdersEquity"], unit: "USD" },
+  equity_including_nci: { tags: ["StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"], unit: "USD" },
   goodwill: { tags: ["Goodwill"], unit: "USD" },
   intangibles: { tags: ["IntangibleAssetsNetExcludingGoodwill", "FiniteLivedIntangibleAssetsNet"], unit: "USD" },
   cash: {

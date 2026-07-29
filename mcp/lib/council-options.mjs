@@ -100,11 +100,15 @@ export function councilOptions({ language = "English" } = {}) {
         best_for: field(v3Selection.best_for, "best_for"),
       } : selectorCard(persona, language)),
       maturity: v3?.maturity || pack?.kind || "prompt_lens",
+      // The label names what a seat IS. It used to lead with "provisional", which read as a
+      // standing warning next to all twenty-seven names in the selector and repeated a review
+      // status the assurance section already reports. The machine-verified admission level is
+      // unchanged and still published as `admission_level` below.
       maturity_label: copy({
-        en: v3?.maturity === "method_model" ? "Validated method model" : v3?.maturity === "candidate" ? "Candidate method" : "Provisional operator lens",
-        zh: v3?.maturity === "method_model" ? "已验证方法模型" : v3?.maturity === "candidate" ? "候选方法" : "临时操作视角",
-        ja: v3?.maturity === "method_model" ? "検証済みメソッドモデル" : v3?.maturity === "candidate" ? "候補メソッド" : "暫定オペレーター・レンズ",
-        ko: v3?.maturity === "method_model" ? "검증된 방법론 모델" : v3?.maturity === "candidate" ? "후보 방법론" : "임시 오퍼레이터 렌즈",
+        en: v3?.maturity === "method_model" ? "Validated method model" : v3?.maturity === "candidate" ? "Candidate method" : "Operator method lens",
+        zh: v3?.maturity === "method_model" ? "已验证方法模型" : v3?.maturity === "candidate" ? "候选方法" : "方法透镜",
+        ja: v3?.maturity === "method_model" ? "検証済みメソッドモデル" : v3?.maturity === "candidate" ? "候補メソッド" : "メソッド・レンズ",
+        ko: v3?.maturity === "method_model" ? "검증된 방법론 모델" : v3?.maturity === "candidate" ? "후보 방법론" : "방법론 렌즈",
       }),
       runtime_level: v3?.admission?.level || (pack ? "v2_operator" : "v1_prompt"),
       admission_level: v3?.admission?.level || (pack ? "operator_lens" : "prompt_lens"),
