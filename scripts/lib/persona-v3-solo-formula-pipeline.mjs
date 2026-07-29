@@ -126,6 +126,13 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "fund.aum": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "fund.expense_ratio": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   // Creations minus redemptions, priced. A crowding signal, never a valuation one.
+  // What else the holding is a bet on. Correlation decides what a position actually
+  // diversifies; dispersion says whether one factor or many are repricing the market.
+  "market.correlation_to_broad_market": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "market.correlation_to_kospi": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "market.correlation_to_kosdaq": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "market.correlation_to_semiconductors": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "market.sector_dispersion": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "fund.net_flow": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "fund.net_flow_ratio": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
 

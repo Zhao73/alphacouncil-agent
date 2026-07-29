@@ -187,9 +187,9 @@ export const coreSeats = Object.freeze({
       {
         veto_id: "master_graham.no_asset_floor",
         rationale:
-          "Graham's floor is what the owners would have left once the current liabilities are paid. When net current assets are zero or negative there is no asset floor at all, and the defensive method has nothing to say about the security at any price (The Intelligent Investor ch. 15; Security Analysis on net current asset value).",
+          "Graham's floor is what the owners would have left once the current liabilities are paid. When net current assets are zero or negative there is no asset floor at all, and the defensive method has nothing to say about the security at any price (The Intelligent Investor ch. 15; Security Analysis on net current asset value). An absent floor is not an absent opinion. Graham's whole construction is a price below a computed floor, and where no floor can be computed there is no margin of safety -- which is his own definition of speculation rather than investment. He passes. Reporting that as out-of-scope hid a decision behind a word that reads as a broken system.",
         condition: { op: "lte", left: { fact_id: "financial.net_current_asset_value" }, right: { literal: 0 } },
-        on_trigger: { common_stance: "out_of_scope", native_state: "insufficient_floor" },
+        on_trigger: { common_stance: "opposed", native_state: "insufficient_floor" },
       },
       {
         veto_id: "master_graham.fixed_charge_coverage_failure",
@@ -604,7 +604,7 @@ export const coreSeats = Object.freeze({
       {
         veto_id: "master_druckenmiller.liquidity_draining_into_inversion",
         rationale:
-          "Liquidity contracting while the curve is inverted is the configuration in which he says there is nothing to do on the long side. The method exists to find an asymmetric setup, and when both primary drivers point the same way against risk there is no inflection to probe.",
+          "Liquidity contracting while the curve is inverted is the configuration in which he says there is nothing to do on the long side. The method exists to find an asymmetric setup, and when both primary drivers point the same way against risk there is no inflection to probe. No inflection is a reason not to have a position, which is itself his most repeated instruction: he sizes hard when he sees the turn and stays out otherwise. Standing aside is the output, not the absence of one.",
         condition: {
           op: "all",
           conditions: [

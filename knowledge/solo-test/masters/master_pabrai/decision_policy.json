@@ -63,7 +63,7 @@
         }
       },
       "on_trigger": {
-        "common_stance": "out_of_scope",
+        "common_stance": "opposed",
         "native_state": "provisional_no_floor"
       },
       "on_uncomputable": {

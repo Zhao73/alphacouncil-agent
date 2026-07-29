@@ -571,6 +571,87 @@ function fundamentalFacts(grounding, context) {
  * across the newest ownership document per reporting owner, and the coverage limits of Section
  * 16 are real. Labelling it reported would claim a document that does not exist.
  */
+/**
+ * What else a basket is a bet on, as typed facts.
+ *
+ * Correlation to the broad market decides how much diversification a position actually buys,
+ * which is the input Dalio's authored policy already asks for and could never get. Correlation
+ * to Korea is the semiconductor cycle read from outside the United States. Sector dispersion is
+ * whether one factor or many are repricing the market.
+ */
+function crossMarketFacts(grounding, context) {
+  const rows = grounding?.cross_market;
+  const stamp = grounding?.gathered_at || context.asOf;
+  const publicAt = timestampAtOrBefore(stamp, context.cutoff);
+  if (Array.isArray(rows) && publicAt) {
+    for (const row of rows) {
+      if (!finite(row?.correlation)) continue;
+      const factId = CROSS_MARKET_FACTS[row.reference];
+      if (!factId) continue;
+      const sourceIdValue = sourceId("market", "cross_correlation", row.reference, row.to);
+      if (!registerSource(context, {
+        source_id: sourceIdValue,
+        source_kind: "market_snapshot",
+        title: `daily closes for ${row.label}`,
+        url: `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(row.reference)}?range=1y&interval=1d`,
+        public_at: publicAt,
+        retrieved_at: stamp,
+        locator: { reference: row.reference, from: row.from, to: row.to, sessions: row.sessions },
+      })) continue;
+      addUnique(context.facts, context.diagnostics, baseFact({
+        factId,
+        valueKind: "ratio",
+        value: row.correlation,
+        unit: "decimal",
+        ratioDenominator: `pearson_over_${row.sessions}_paired_sessions`,
+        asOf: context.asOf,
+        publicAt,
+        sources: [sourceIdValue],
+        confidence: 0.8,
+        derivation: "rederived",
+        derivationToolId: `${ADAPTER_ID}:cross_market:${row.reference}`,
+        derivationInput: { reference: row.reference, from: row.from, to: row.to, relative_return: row.relative_return },
+      }));
+    }
+  }
+  const dispersion = grounding?.sector_dispersion;
+  if (dispersion?.available && finite(dispersion.dispersion) && publicAt) {
+    const sourceIdValue = sourceId("market", "sector_dispersion", dispersion.to);
+    if (registerSource(context, {
+      source_id: sourceIdValue,
+      source_kind: "market_snapshot",
+      title: "Select Sector SPDR daily closes",
+      url: "https://query1.finance.yahoo.com/v8/finance/chart/XLK?range=1y&interval=1d",
+      public_at: publicAt,
+      retrieved_at: stamp,
+      locator: { sectors: dispersion.measured, from: dispersion.from, to: dispersion.to },
+    })) {
+      addUnique(context.facts, context.diagnostics, baseFact({
+        factId: "market.sector_dispersion",
+        valueKind: "ratio",
+        value: dispersion.dispersion,
+        unit: "decimal",
+        ratioDenominator: `stdev_of_${dispersion.measured}_sector_total_returns`,
+        asOf: context.asOf,
+        publicAt,
+        sources: [sourceIdValue],
+        confidence: 0.8,
+        derivation: "rederived",
+        derivationToolId: `${ADAPTER_ID}:sector_dispersion`,
+        derivationInput: { leader: dispersion.leader?.symbol, laggard: dispersion.laggard?.symbol, from: dispersion.from, to: dispersion.to },
+      }));
+    }
+  }
+}
+
+/** Reference market -> the fact id its correlation is published under. */
+const CROSS_MARKET_FACTS = Object.freeze({
+  "^GSPC": "market.correlation_to_broad_market",
+  "^KS11": "market.correlation_to_kospi",
+  "^KQ11": "market.correlation_to_kosdaq",
+  "^SOX": "market.correlation_to_semiconductors",
+});
+
 function insiderOwnershipFacts(grounding, context) {
   const owned = grounding?.insider_ownership;
   if (!owned || !finite(owned.value)) return;
@@ -669,6 +750,7 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   fundamentalFacts(grounding, context);
   instrumentAggregateFacts(grounding, context);
   insiderOwnershipFacts(grounding, context);
+  crossMarketFacts(grounding, context);
   for (const family of ["screen", "macro", "market"]) {
     if (grounding?.[family] && !grounding[family].public_at) {
       if (family === "screen" && context.diagnostics.some((item) => String(item.source || "").startsWith("screen."))) continue;

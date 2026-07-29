@@ -40,6 +40,30 @@ export function parseDailyCloses(json) {
   return clean.length ? clean : null;
 }
 
+/**
+ * Closes paired with the session they belong to.
+ *
+ * `parseDailyCloses` drops the timestamps, which is fine for a moving average over one series
+ * and wrong the moment two series are compared: Korea and the United States keep different
+ * holidays, so aligning by array position compares a Tuesday with a Wednesday and produces a
+ * correlation that is confidently wrong rather than visibly broken.
+ */
+export function parseDatedCloses(json) {
+  const result = json?.chart?.result?.[0];
+  const closes = result?.indicators?.quote?.[0]?.close;
+  const stamps = result?.timestamp;
+  if (!Array.isArray(closes) || !Array.isArray(stamps) || closes.length !== stamps.length) return null;
+  const rows = [];
+  for (let index = 0; index < closes.length; index += 1) {
+    const close = closes[index];
+    const stamp = stamps[index];
+    if (typeof close !== "number" || !Number.isFinite(close) || close <= 0) continue;
+    if (typeof stamp !== "number" || !Number.isFinite(stamp)) continue;
+    rows.push({ date: new Date(stamp * 1000).toISOString().slice(0, 10), close });
+  }
+  return rows.length ? rows : null;
+}
+
 /** Simple moving average of the last `window` closes, or null when there is not enough history. */
 export function movingAverage(closes, window = BREADTH_WINDOW_DAYS) {
   if (!Array.isArray(closes) || closes.length < window) return null;

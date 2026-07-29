@@ -118,25 +118,33 @@ const MASTER_STATEMENT_COPY = Object.freeze({
     heading: "\u9010\u5e2d\u65b9\u6cd5\u8f93\u51fa", acted: "\u6709\u5224\u65ad\u7684\u5e2d\u4f4d", abstained: "\u8bf4\u8fd9\u4e0d\u5f52\u5b83\u7ba1\u7684\u5e2d\u4f4d",
     stance: "\u7acb\u573a", intent: "\u610f\u5411", origin: "\u9648\u8bcd\u6765\u6e90", statement: "\u672c\u8f6e\u53d1\u8a00\uff08\u4e0d\u662f\u672c\u4eba\u5f15\u8bed\uff09",
     findings: "\u5173\u952e\u53d1\u73b0", disagreements: "\u4e0e\u5206\u6790\u5e08\u5206\u6b67", change: "\u6539\u53d8\u5224\u65ad\u6761\u4ef6", sources: "\u6765\u6e90\u6216\u660e\u786e\u7f3a\u53e3",
-    abstainLead: (n) => `\u53e6\u6709 ${n} \u5e2d\u5728\u672c\u8f6e\u4e0d\u7ed9\u65b9\u5411\uff0c\u5404\u81ea\u7f3a\u7684\u662f\u65b9\u6cd5\u5fc5\u9700\u7684\u8f93\u5165\uff0c\u8fd9\u4e0d\u662f\u770b\u7a7a\u7968\uff1a`,
+    abstainLead: (n) => `\u53e6\u6709 ${n} \u5e2d\u672c\u8f6e\u672a\u80fd\u53d6\u5f97\u5176\u65b9\u6cd5\u5fc5\u9700\u7684\u8f93\u5165\uff0c\u56e0\u6b64\u6ca1\u6709\u7ed9\u51fa\u65b9\u5411\u3002\u8fd9\u662f\u6570\u636e\u7f3a\u53e3\uff0c\u4e0d\u662f\u770b\u7a7a\u7968\uff1a`,
+    declined: "\u770b\u8fc7\u4e4b\u540e\u51b3\u5b9a\u4e0d\u53c2\u4e0e\u7684\u5e2d\u4f4d",
+    declinedLead: (n) => `\u4ee5\u4e0b ${n} \u5e2d\u7684\u65b9\u6cd5\u8dd1\u5b8c\u4e86\uff0c\u5e76\u4e14\u5f97\u51fa\u4e86\u201c\u4e0d\u662f\u8fd9\u4e2a\u201d\u3002\u8fd9\u662f\u5224\u65ad\uff0c\u4e0d\u662f\u7f3a\u6570\u636e\uff1a`,
   },
   en: {
     heading: "Method-Seat Outputs", acted: "Seats with a view", abstained: "Seats that say this is not theirs to call",
     stance: "Stance", intent: "Intent", origin: "Statement source", statement: "Recorded statement (not a quote)",
     findings: "Key findings", disagreements: "Disagreements", change: "What would change the view", sources: "Sources or explicit gaps",
-    abstainLead: (n) => `A further ${n} seat(s) issue no direction this round, each missing a method-critical input. These are not bearish votes:`,
+    abstainLead: (n) => `A further ${n} seat(s) issue no direction because a method-critical input did not arrive this round. This is a data gap, not a bearish vote:`,
+    declined: "Seats whose method examined this and declined",
+    declinedLead: (n) => `${n} seat(s) ran their method to completion and it returned "not this one". These are judgments, not missing data:`,
   },
   ja: {
     heading: "\u30e1\u30bd\u30c3\u30c9\u5e2d\u3054\u3068\u306e\u51fa\u529b", acted: "\u5224\u65ad\u3092\u793a\u3057\u305f\u5e2d", abstained: "\u81ea\u5206\u306e\u62c5\u5f53\u3067\u306f\u306a\u3044\u3068\u3057\u305f\u5e2d",
     stance: "\u30b9\u30bf\u30f3\u30b9", intent: "\u610f\u5411", origin: "\u898b\u89e3\u306e\u751f\u6210\u5143", statement: "\u4eca\u56de\u306e\u767a\u8a00\uff08\u672c\u4eba\u306e\u5f15\u7528\u3067\u306f\u3042\u308a\u307e\u305b\u3093\uff09",
     findings: "\u4e3b\u306a\u6240\u898b", disagreements: "\u5206\u6790\u62c5\u5f53\u3068\u306e\u76f8\u9055", change: "\u5224\u65ad\u304c\u5909\u308f\u308b\u6761\u4ef6", sources: "\u51fa\u5178\u307e\u305f\u306f\u660e\u793a\u7684\u306a\u6b20\u843d",
-    abstainLead: (n) => `\u4ed6\u306b ${n} \u5e2d\u306f\u4eca\u56de\u65b9\u5411\u6027\u3092\u793a\u3057\u307e\u305b\u3093\u3002\u3044\u305a\u308c\u3082\u30e1\u30bd\u30c3\u30c9\u306b\u5fc5\u8981\u306a\u5165\u529b\u3092\u6b20\u3044\u3066\u304a\u308a\u3001\u5f31\u6c17\u7968\u3067\u306f\u3042\u308a\u307e\u305b\u3093\uff1a`,
+    abstainLead: (n) => `\u4ed6\u306b ${n} \u5e2d\u306f\u3001\u30e1\u30bd\u30c3\u30c9\u306b\u5fc5\u8981\u306a\u5165\u529b\u304c\u4eca\u56de\u5c4a\u304b\u306a\u304b\u3063\u305f\u305f\u3081\u65b9\u5411\u6027\u3092\u793a\u3057\u307e\u305b\u3093\u3002\u30c7\u30fc\u30bf\u306e\u6b20\u843d\u3067\u3042\u308a\u3001\u5f31\u6c17\u7968\u3067\u306f\u3042\u308a\u307e\u305b\u3093\uff1a`,
+    declined: "\u691c\u8a0e\u3057\u305f\u4e0a\u3067\u898b\u9001\u3063\u305f\u5e2d",
+    declinedLead: (n) => `\u6b21\u306e ${n} \u5e2d\u306f\u30e1\u30bd\u30c3\u30c9\u3092\u6700\u5f8c\u307e\u3067\u5b9f\u884c\u3057\u3001\u300c\u3053\u308c\u3067\u306f\u306a\u3044\u300d\u3068\u7d50\u8ad6\u3057\u307e\u3057\u305f\u3002\u30c7\u30fc\u30bf\u4e0d\u8db3\u3067\u306f\u306a\u304f\u5224\u65ad\u3067\u3059\uff1a`,
   },
   ko: {
     heading: "\ubc29\ubc95\ub860 \uc88c\uc11d\ubcc4 \ucd9c\ub825", acted: "\ud310\ub2e8\uc744 \ub0b8 \uc88c\uc11d", abstained: "\uc790\uae30 \uc18c\uad00\uc774 \uc544\ub2c8\ub77c\uace0 \ubc1d\ud78c \uc88c\uc11d",
     stance: "\uc785\uc7a5", intent: "\uc758\ud5a5", origin: "\ubc1c\uc5b8 \ucd9c\ucc98", statement: "\uc774\ubc88 \ubc1c\uc5b8(\ubcf8\uc778 \uc778\uc6a9\uc774 \uc544\ub2d8)",
     findings: "\ud575\uc2ec \ubc1c\uacac", disagreements: "\ubd84\uc11d\uac00\uc640\uc758 \uc774\uacac", change: "\ud310\ub2e8 \ubcc0\uacbd \uc870\uac74", sources: "\ucd9c\ucc98 \ub610\ub294 \uba85\uc2dc\uc801 \ub370\uc774\ud130 \uacf5\ubc31",
-    abstainLead: (n) => `\uadf8 \uc678 ${n}\uac1c \uc88c\uc11d\uc740 \uc774\ubc88 \ud68c\ucc28\uc5d0 \ubc29\ud5a5\uc744 \uc81c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \uac01\uac01 \ubc29\ubc95\ub860\uc5d0 \ud544\uc694\ud55c \uc785\ub825\uc774 \uc5c6\uc73c\uba70 \uc57d\uc138 \ud22c\ud45c\uac00 \uc544\ub2d9\ub2c8\ub2e4:`,
+    abstainLead: (n) => `\uadf8 \uc678 ${n}\uac1c \uc88c\uc11d\uc740 \ubc29\ubc95\ub860\uc5d0 \ud544\uc694\ud55c \uc785\ub825\uc774 \uc774\ubc88 \ud68c\ucc28\uc5d0 \ub3c4\ucc29\ud558\uc9c0 \uc54a\uc544 \ubc29\ud5a5\uc744 \uc81c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \ub370\uc774\ud130 \uacf5\ubc31\uc774\uba70 \uc57d\uc138 \ud22c\ud45c\uac00 \uc544\ub2d9\ub2c8\ub2e4:`,
+    declined: "\uac80\ud1a0 \ud6c4 \ucc38\uc5ec\ud558\uc9c0 \uc54a\uae30\ub85c \ud55c \uc88c\uc11d",
+    declinedLead: (n) => `\ub2e4\uc74c ${n}\uac1c \uc88c\uc11d\uc740 \ubc29\ubc95\ub860\uc744 \ub05d\uae4c\uc9c0 \uc218\ud589\ud588\uace0 "\uc774\uac83\uc740 \uc544\ub2c8\ub2e4"\ub77c\ub294 \uacb0\ub860\uc5d0 \ub3c4\ub2ec\ud588\uc2b5\ub2c8\ub2e4. \ub370\uc774\ud130 \ubd80\uc871\uc774 \uc544\ub2c8\ub77c \ud310\ub2e8\uc785\ub2c8\ub2e4:`,
   },
 });
 
@@ -183,12 +191,25 @@ function renderMasterStatements(run) {
   const sections = [`### ${copy.heading}`, voiceDisclaimer(run.language)];
   if (acted.length) sections.push(`#### ${copy.acted}`, acted.map(seatBlock).join("\n\n"));
   if (abstained.length) {
-    // One paragraph, not one row per seat. The stable IDs stay visible so the gate and the
-    // reader can both account for every selected seat without twenty-five identical lines.
-    const merged = abstained
+    // Two reasons wear the same word and they are not the same event. A seat whose method
+    // examined the subject and declined has ANSWERED -- Graham finding no asset floor, a
+    // volatility seat finding no testable observation -- and reporting that as "missing an
+    // input" tells a reader the system broke when the method spoke. A seat whose required
+    // fact never arrived genuinely is a gap. Rendering them together made every run read as
+    // the second kind, which is the complaint this split exists to answer.
+    // One paragraph each, not one row per seat: the stable IDs stay visible so the gate and
+    // the reader can both account for every selected seat.
+    const merged = (group) => group
       .map((opinion) => `${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`) \u2014 ${opinion.voice_statement}`)
       .join(" ");
-    sections.push(`#### ${copy.abstained}`, `${copy.abstainLead(abstained.length)}\n\n${merged}`);
+    const declined = abstained.filter((opinion) => methodDeclined(opinion));
+    const ungrounded = abstained.filter((opinion) => !methodDeclined(opinion));
+    if (declined.length) {
+      sections.push(`#### ${copy.declined}`, `${copy.declinedLead(declined.length)}\n\n${merged(declined)}`);
+    }
+    if (ungrounded.length) {
+      sections.push(`#### ${copy.abstained}`, `${copy.abstainLead(ungrounded.length)}\n\n${merged(ungrounded)}`);
+    }
   }
   return sections.join("\n\n");
 }
@@ -202,6 +223,18 @@ function renderMasterStatements(run) {
  * weakest thing a council produces and the dissenting seat is the informative one. Stating
  * this next to the opinions is the difference between a bench and a vote count.
  */
+/**
+ * Did the seat's own method reach this, or did the data never arrive?
+ *
+ * A fired veto and a false eligibility condition are both the method running to completion and
+ * returning "not this one". Anything else -- an unmet required fact type, a coverage shortfall,
+ * an executor refusal -- is the run failing to give the method what it asked for.
+ */
+export function methodDeclined(opinion) {
+  const reason = String(opinion?.decision?.reason || opinion?.reason || "");
+  return reason === "veto" || reason === "eligibility";
+}
+
 export function masterCorrelationNote(run) {
   const opinions = run?.master_opinions || [];
   if (!opinions.length) return "";

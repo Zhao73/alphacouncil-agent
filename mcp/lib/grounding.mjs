@@ -5,6 +5,7 @@ import { fetchMacroSeries } from "./fred.mjs";
 import { fetchFundamentals } from "./fundamentals.mjs";
 import { fetchInsiderOwnership } from "./insider-ownership.mjs";
 import { INDEX_PROXIES, normalizeIndexSymbol } from "./index-aggregate.mjs";
+import { SECTOR_SPDRS, fetchCrossMarket, fetchSectorDispersion } from "./cross-market.mjs";
 import { gatherInstrumentFacts, LOOK_THROUGH_FACT_IDS } from "./instrument-facts.mjs";
 import { fetchOptionsChain } from "./options.mjs";
 import { screenTicker } from "./screen.mjs";
@@ -197,6 +198,22 @@ export async function gatherGrounding({
       zh: "CBOE 股票/ETF 期权链适配器：不支持直接的现金指数代码；请显式使用对应的上市衍生品或 ETF 代理。",
       ja: "CBOE の株式/ETF オプションチェーン・アダプタ：現物指数シンボルには非対応です。対応する上場デリバティブまたは ETF 代理を明示的に使用してください。",
       ko: "CBOE 주식/ETF 옵션 체인 어댑터: 현물 지수 심볼은 지원하지 않습니다. 해당 상장 파생상품 또는 ETF 프록시를 명시적으로 사용하십시오.",
+    }));
+  }
+
+  // What else is this a bet on. Only for baskets: a single company's correlation to KOSPI is a
+  // fact about its sector, not about the company, and the seats that reason about crowding and
+  // position size are asking about the basket.
+  if (symbol && isFundOrIndex(out.instrument)) {
+    jobs.push(safely("cross-market", () => fetchCrossMarket(symbol, { signal })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      if (r.value.facts.length) out.cross_market = r.value.facts;
+      out.unavailable.push(...r.value.unavailable);
+    }));
+    jobs.push(safely("sector dispersion", () => fetchSectorDispersion(SECTOR_SPDRS, { signal })).then((r) => {
+      if (!r.ok) { out.unavailable.push(r.error); return; }
+      if (r.value.available) out.sector_dispersion = r.value;
+      out.unavailable.push(...(r.value.unavailable || []));
     }));
   }
 

@@ -279,7 +279,7 @@ export const quantSeats = Object.freeze({
       {
         veto_id: "master_simons.no_observation_to_test",
         rationale:
-          "A session that did not move is not an observation of anything, and scoring it would be manufacturing a result out of an empty sample. This is the only refusal the available facts can express, which is itself the finding: his real vetoes are leakage, an absent holdout and cost erasure, and not one of the three has a fact in this pack to be tested against.",
+          "A session that did not move is not an observation of anything, and scoring it would be manufacturing a result out of an empty sample. This is the only refusal the available facts can express, which is itself the finding: his real vetoes are leakage, an absent holdout and cost erasure, and not one of the three has a fact in this pack to be tested against. A signal that cannot be tested does not get traded. That is a decision his method reaches, not a subject it fails to recognise, and the honest rendering is standing aside rather than silence.",
         condition: { op: "lte", left: { output_id: "market.session_move_over_implied" }, right: { literal: 0 } },
         on_trigger: { common_stance: "out_of_scope", native_state: "invalid_test" },
       },
@@ -351,7 +351,7 @@ export const quantSeats = Object.freeze({
       {
         veto_id: "master_soros.no_reflexive_link",
         rationale:
-          "The build spec's first veto family and Alchemy's own standard: a reflexivity thesis has to show feedback that reaches the fundamentals, not merely a price that moved. Where leverage is zero the financing burden is zero, credit conditions cannot touch this borrower's economics, and there is no loop to be right or wrong about - a question outside the method rather than a verdict on the security.",
+          "The build spec's first veto family and Alchemy's own standard: a reflexivity thesis has to show feedback that reaches the fundamentals, not merely a price that moved. Where leverage is zero the financing burden is zero, credit conditions cannot touch this borrower's economics, and there is no loop to be right or wrong about - a question outside the method rather than a verdict on the security. No feedback loop means there is nothing here for reflexivity to act on, so he is not in it. That is a stated position on the security rather than a failure to have one.",
         condition: { op: "lte", left: { output_id: "reflexivity.financing_burden" }, right: { literal: 0 } },
         on_trigger: { common_stance: "out_of_scope", native_state: "no_loop" },
       },

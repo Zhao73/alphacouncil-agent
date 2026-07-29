@@ -211,9 +211,9 @@ export const valueSeats = Object.freeze({
       {
         veto_id: "master_klarman.no_reconstructable_downside",
         rationale:
-          "Margin of Safety begins from what an asset is worth on conservative assumptions, and the whole method is the distance between that figure and the price. When tangible book plus cash less debt is zero or negative there is no conservatively assessed value to be safe below, and the correct answer is that the downside cannot be reconstructed -- not that the security is expensive.",
+          "Margin of Safety begins from what an asset is worth on conservative assumptions, and the whole method is the distance between that figure and the price. When tangible book plus cash less debt is zero or negative there is no conservatively assessed value to be safe below, and the correct answer is that the downside cannot be reconstructed -- not that the security is expensive. The first rule Klarman states is not losing money, and it is not satisfiable by an asset whose downside cannot be reconstructed. Declining to own something is a position on it; the seat says so instead of falling silent.",
         condition: { op: "lte", left: { fact_id: "valuation.downside_asset_value" }, right: { literal: 0 } },
-        on_trigger: { common_stance: "out_of_scope", native_state: "downside_unknown" },
+        on_trigger: { common_stance: "opposed", native_state: "downside_unknown" },
       },
       {
         veto_id: "master_klarman.senior_claims_consume_the_assets",
@@ -307,9 +307,9 @@ export const valueSeats = Object.freeze({
       {
         veto_id: "master_pabrai.no_downside_floor",
         rationale:
-          "The first Dhandho question is what the downside is, and the method has no second question until that one is answered. A floor of zero or below means neither net current assets nor tangible book leaves anything recoverable, so \"tails, I don't lose much\" is not a claim the facts support at any price.",
+          "The first Dhandho question is what the downside is, and the method has no second question until that one is answered. A floor of zero or below means neither net current assets nor tangible book leaves anything recoverable, so \"tails, I don't lose much\" is not a claim the facts support at any price. Heads I win, tails I don't lose much presupposes knowing how much tails costs. Without a floor the second half is unevaluated, and the Dhandho answer to that is to pass rather than to abstain.",
         condition: { op: "lte", left: { fact_id: "valuation.downside_floor" }, right: { literal: 0 } },
-        on_trigger: { common_stance: "out_of_scope", native_state: "no_floor" },
+        on_trigger: { common_stance: "opposed", native_state: "no_floor" },
       },
       {
         veto_id: "master_pabrai.financing_fails_before_resolution",
