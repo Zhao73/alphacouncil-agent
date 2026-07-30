@@ -73,6 +73,30 @@ function specFor(id) {
 
 const hex = (c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
 
+/**
+ * Apple Terminal renders 24-bit SGR as garbage, so color depth is detected, not
+ * assumed: truecolor terminals get exact colors, everything else gets the nearest
+ * xterm-256 cube entry. Portraits carry at most 32 colors each, so 256 is plenty.
+ */
+const TRUECOLOR = /truecolor|24bit/i.test(process.env.COLORTERM || "")
+  || /iTerm|WezTerm|vscode|ghostty|kitty|alacritty/i.test(process.env.TERM_PROGRAM || process.env.TERM || "");
+
+function xterm256(r, g, b) {
+  if (r === g && g === b) { // grayscale ramp reads better than the cube for grays
+    if (r < 8) return 16;
+    if (r > 248) return 231;
+    return 232 + Math.round((r - 8) / 10);
+  }
+  const level = (v) => (v < 48 ? 0 : v < 115 ? 1 : Math.min(5, Math.floor((v - 35) / 40)));
+  return 16 + 36 * level(r) + 6 * level(g) + level(b);
+}
+
+const fg = ([r, g, b]) => (TRUECOLOR ? `38;2;${r};${g};${b}` : `38;5;${xterm256(r, g, b)}`);
+const bg = ([r, g, b]) => (TRUECOLOR ? `48;2;${r};${g};${b}` : `48;5;${xterm256(r, g, b)}`);
+
+/** Depth-aware foreground SGR for UI chrome, shared with the TUI. */
+export const colorFg = (rgbTriple) => `\x1b[${fg(rgbTriple)}m`;
+
 export function buildGrid(id) {
   const s = specFor(id);
   const skin = SKIN[s.skin] || SKIN.light;
@@ -141,14 +165,11 @@ function renderGrid(g, w, h) {
       const bot = g[y + 1]?.[x] || null;
       if (!top && !bot) { line += "\x1b[0m "; continue; }
       if (top && bot) {
-        const [tr, tg, tb] = hex(top); const [br, bg, bb] = hex(bot);
-        line += `\x1b[38;2;${tr};${tg};${tb}m\x1b[48;2;${br};${bg};${bb}m▀`;
+        line += `\x1b[${fg(hex(top))};${bg(hex(bot))}m▀`;
       } else if (top) {
-        const [tr, tg, tb] = hex(top);
-        line += `\x1b[0m\x1b[38;2;${tr};${tg};${tb}m▀`;
+        line += `\x1b[0m\x1b[${fg(hex(top))}m▀`;
       } else {
-        const [br, bg, bb] = hex(bot);
-        line += `\x1b[0m\x1b[38;2;${br};${bg};${bb}m▄`;
+        line += `\x1b[0m\x1b[${fg(hex(bot))}m▄`;
       }
     }
     rows.push(`${line}\x1b[0m`);

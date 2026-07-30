@@ -13,7 +13,7 @@
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { renderAvatar, displayName } from "./avatars.mjs";
+import { colorFg, renderAvatar, displayName } from "./avatars.mjs";
 
 const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(homedir(), ".alphacouncil-agent");
 const RUNS_DIR = join(DATA_DIR, "runs");
@@ -166,8 +166,8 @@ function collectSpeeches() {
 
 /* ------------------------------------------------------------ rendering -- */
 
-const rgb = ([r, g, b]) => `\x1b[38;2;${r};${g};${b}m`;
-const DIM = "\x1b[38;2;128;140;135m";
+const rgb = colorFg;
+const DIM = rgb([128, 140, 135]);
 const ACCENT = rgb([53, 184, 145]);
 const GOLD = rgb([201, 162, 39]);
 const RESET = "\x1b[0m";
@@ -238,14 +238,14 @@ function frame(state) {
     const bubble = [top, ...body.map((l) => `│ ${padTo(l, bubbleW - 4)} │`), bottom];
     const header = `${rgb(style.color)}◉ ${speech.name}${RESET} ${rgb(style.color)}〔${style.label}〕${RESET}${state.chars >= speech.len ? `  ${DIM}(${T.full}: ${speech.file})${RESET}` : ""}`;
     lines.push(`  ${" ".repeat(avatarW + 2)}${header}`);
-    // bubble is vertically centered against the tall portrait; the tail points at the face
+    // Top-aligned, no dead rows: the bubble starts level with the face, and rows
+    // that have neither avatar nor bubble content are simply not emitted.
     const rows = Math.max(avatar.length, bubble.length);
-    const bubbleTopAt = Math.max(0, Math.floor((avatar.length - bubble.length) / 2));
-    const tailRow = bubbleTopAt + 1;
     for (let i = 0; i < rows; i += 1) {
       const a = i < avatar.length ? avatar[i] : " ".repeat(avatarW);
-      const b = i >= bubbleTopAt && i - bubbleTopAt < bubble.length ? bubble[i - bubbleTopAt] : "";
-      const tail = i === tailRow && b ? `${DIM}─▷${RESET}` : "  ";
+      const b = i < bubble.length ? bubble[i] : "";
+      if (i >= avatar.length && !b) break;
+      const tail = i === 1 && b ? `${DIM}─▷${RESET}` : "  ";
       lines.push(`  ${padTo(a, avatarW)}${tail}${b}`);
     }
   } else {
