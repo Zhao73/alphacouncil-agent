@@ -56,7 +56,8 @@ test("a symbol never becomes a path outside the ledger", () => {
   for (const unsafe of ["../etc/passwd", "a/b", "", null, "TOOLONGSYMBOLNAMEHERE"]) {
     assert.throws(() => observationFile(unsafe), /unsafe fund symbol|escaped its root/u, String(unsafe));
   }
-  assert.match(observationFile("SOXX", "/tmp/x"), /\/tmp\/x\/fund-observations\/SOXX\.json$/u);
+  // Windows resolves the same arguments with backslashes and a drive prefix.
+  assert.match(observationFile("SOXX", "/tmp/x"), /[\\/]tmp[\\/]x[\\/]fund-observations[\\/]SOXX\.json$/u);
 });
 
 test("a corrupt ledger loses history rather than reporting a flow from garbage", (t) => {
