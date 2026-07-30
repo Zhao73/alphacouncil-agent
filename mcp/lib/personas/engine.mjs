@@ -228,11 +228,26 @@ function uniqueStrings(values) {
  * policy and abstained. On a real seven-seat run four such seats took most of the method phase
  * to report, at length, that they had no opinion.
  *
- * Set ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1 to give every seat a worker again.
+ * Set ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1 to give every seat a worker,
+ * or =0 to never voice an abstention, on any instrument.
+ *
+ * Baskets are the exception to the default. On an operating company an abstention
+ * is the rare case and its deterministic record says everything the contract asks.
+ * On an ETF or index it is the MAJORITY outcome -- most methods' required facts do
+ * not exist for a basket -- so a bench that skips abstention workers there reads as
+ * twenty-five copies of "no data" and the run's whole value collapses to two seats.
+ * There the worker is asked for the method's reading of the facts that DO exist,
+ * labelled as observation rather than a stance, which no template can author.
  */
-export function needsMethodVoiceWorker(opinion, { env = process.env } = {}) {
+export function needsMethodVoiceWorker(opinion, { env = process.env, run = null } = {}) {
   if (env?.ALPHACOUNCIL_VOICE_ABSTAINING_SEATS === "1") return true;
-  return (opinion?.stance || "out_of_scope") !== "out_of_scope";
+  if (env?.ALPHACOUNCIL_VOICE_ABSTAINING_SEATS === "0") {
+    return (opinion?.stance || "out_of_scope") !== "out_of_scope";
+  }
+  if ((opinion?.stance || "out_of_scope") !== "out_of_scope") return true;
+  const instrument = run?.grounding?.instrument;
+  return instrument?.fund_like === true || instrument?.index_like === true
+    || ["etf", "mutual_fund", "index"].includes(instrument?.asset_type);
 }
 
 /** Render a post-freeze, model-free opinion from the DSL result. */

@@ -375,7 +375,10 @@ test("an abstaining seat is published from its frozen record without spending a 
   // out_of_scope seat, so it is published directly.
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir);
-  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  // Pinned to the explicit opt-out: on a basket the DEFAULT now voices abstaining
+  // seats (the bench's value there is each method's reading, not 25 "no data" rows),
+  // and this test proves the frozen-record path still publishes completely.
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver, ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" } });
   try {
     await server.request("initialize", {});
     const prompt = "Prove an abstaining method seat is settled without a voice worker.";

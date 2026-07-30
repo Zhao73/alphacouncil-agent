@@ -396,7 +396,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       // declined seat: the frozen stance is out_of_scope, no worker may change it, and the
       // deterministic statement already names the gate that closed and says an abstention is
       // not a bearish vote. Only seats that reached a stance have a reading to explain.
-      const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id));
+      const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id), { run });
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
         && byId.get(item.id)?.voice_status === "completed";
       run.master_status[item.id] = {
@@ -427,7 +427,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   const v3VoiceAgents = plan.completed
     .filter((item) => item.engine === "v3_method_runtime")
     .filter((item) => run.master_status?.[item.id]?.status !== "completed")
-    .filter((item) => needsMethodVoiceWorker(frozenById.get(item.id)))
+    .filter((item) => needsMethodVoiceWorker(frozenById.get(item.id), { run }))
     .map((item) => {
       const frozenOpinion = frozenById.get(item.id);
       return {
@@ -1825,7 +1825,7 @@ export async function runHeadlessMasters(run, args = {}) {
   // of spending one model turn per seat to restate it.
   const abstainedWithoutWorker = [];
   const votingWorkerItems = workerItems.filter((item) => {
-    if (!item.frozenOpinion || needsMethodVoiceWorker(item.frozenOpinion)) return true;
+    if (!item.frozenOpinion || needsMethodVoiceWorker(item.frozenOpinion, { run })) return true;
     abstainedWithoutWorker.push(item);
     return false;
   });

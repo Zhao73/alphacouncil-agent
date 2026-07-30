@@ -156,6 +156,13 @@ test("a frozen abstention states the closed gate and needs no model worker", () 
   assert.match(opinion.summary, /没有让语言模型选择立场|v3 typed-fact 闸门/);
   assert.ok(!/anon_[0-9a-f]{17}/.test(JSON.stringify(opinion)));
 
-  // The opt-out restores a worker for every seat without touching the frozen record.
+  // The opt-in gives a worker to every seat without touching the frozen record.
   assert.equal(needsMethodVoiceWorker(opinion, { env: { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "1" } }), true);
+
+  // On a basket the default flips: most methods' required facts do not exist for an
+  // index, so abstention is the majority outcome and each seat's reading of what
+  // DOES exist is the bench's whole value there. The explicit opt-out still wins.
+  const basket = { grounding: { instrument: { asset_type: "index", index_like: true } } };
+  assert.equal(needsMethodVoiceWorker(opinion, { env: {}, run: basket }), true);
+  assert.equal(needsMethodVoiceWorker(opinion, { env: { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" }, run: basket }), false);
 });
