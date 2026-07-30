@@ -215,19 +215,54 @@ const ACCENT = rgb([53, 184, 145]);
 const GOLD = rgb([201, 162, 39]);
 const RESET = "\x1b[0m";
 
-/** The mark: a council house with an alpha in the pediment. Gold roof, green columns. */
+/**
+ * The brand mark itself -- assets/logo.png (a handwritten alpha whose tail rises
+ * into a price line) max-pooled to a 58x20 bitmap so the stroke survives the
+ * downsample, rendered as half-blocks in the brand teal.
+ */
+const LOGO_BITMAP = [
+  "......................................................#...",
+  ".....................................................##...",
+  "............######..................................##....",
+  "..........####...##....##..........................##.....",
+  ".........###......##...##.........................###.....",
+  "........##.........##.##....................#.....##......",
+  ".......##..........##.##...................###...##.......",
+  "......##...........####...................##.##.##........",
+  ".....##.............###..................##...###.........",
+  ".....##.............##...................##....##.........",
+  "....##.............##..............##...##................",
+  "....#..............##.............####.##.................",
+  "...##.............###............##..####.................",
+  "...##............##.##..........##...###..................",
+  "...#............##..##.........##.........................",
+  "...#...........##....#........##..........................",
+  "...#..........##.....##......##...........................",
+  "...##........##.......##...###............................",
+  "....##....####.........######.............................",
+  ".....#######..............................................",
+];
 function logo() {
-  return [
-    `${GOLD}              α${RESET}`,
-    `${GOLD}        ▄▄█████████▄▄${RESET}`,
-    `${GOLD}    ▄▄█████████████████▄▄${RESET}`,
-    `${GOLD}   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀${RESET}`,
-    `${ACCENT}     ██    ██    ██    ██${RESET}`,
-    `${ACCENT}     ██    ██    ██    ██${RESET}`,
-    `${ACCENT}     ██    ██    ██    ██${RESET}`,
-    `${GOLD}   ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄${RESET}`,
-    `${BOLD}   A L P H A C O U N C I L${RESET}`,
-  ];
+  const rows = [];
+  for (let y = 0; y < LOGO_BITMAP.length; y += 2) {
+    let line = "  ";
+    for (let x = 0; x < LOGO_BITMAP[y].length; x += 1) {
+      const top = LOGO_BITMAP[y][x] === "#";
+      const bot = LOGO_BITMAP[y + 1]?.[x] === "#";
+      line += top && bot ? "█" : top ? "▀" : bot ? "▄" : " ";
+    }
+    rows.push(`${ACCENT}${line}${RESET}`);
+  }
+  rows.push(`${BOLD}   A L P H A C O U N C I L${RESET}`);
+  return rows;
+}
+
+/** A progress bar that warms from brand teal to gold to red as it fills. */
+function bar(frac, width = 16) {
+  const f = Math.max(0, Math.min(1, frac));
+  const filled = Math.round(f * width);
+  const color = f < 0.7 ? ACCENT : f < 0.9 ? GOLD : rgb([212, 115, 106]);
+  return `${color}${"▰".repeat(filled)}${DIM}${"▱".repeat(width - filled)}${RESET}`;
 }
 
 const wide = (ch) => /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦　-〿]|[\u{1F300}-\u{1FAFF}]/u.test(ch) ? 2 : 1;
@@ -286,17 +321,31 @@ function frame(state) {
   const ss = String(Math.floor(elapsedMs / 1000) % 60).padStart(2, "0");
 
   const header = [];
-  header.push(`🏛 ${ACCENT}${BOLD}ALPHACOUNCIL${RESET} ${BOLD}${status.symbol || RUN_ID}${RESET}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"} · ${mm}:${ss}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
+  header.push(`${ACCENT}${BOLD}α${RESET} ${ACCENT}${BOLD}ALPHACOUNCIL${RESET} ${BOLD}${status.symbol || RUN_ID}${RESET}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
+  // Wall-clock bar against the tier's hard ceiling, when the run declares one.
+  const budgetMs = status.time_budget_ms || (status.deadline_at && status.started_at
+    ? Date.parse(status.deadline_at) - Date.parse(status.started_at) : 0);
+  if (budgetMs > 0 && state.mode === "live") {
+    const bm = String(Math.floor(budgetMs / 60000)).padStart(2, "0");
+    const bs = String(Math.floor(budgetMs / 1000) % 60).padStart(2, "0");
+    header.push(`${DIM}⏱${RESET} ${bar(elapsedMs / budgetMs, 20)} ${DIM}${mm}:${ss} / ${bm}:${bs}${RESET}`);
+  } else {
+    header.push(`${DIM}⏱ ${mm}:${ss}${RESET}`);
+  }
   const agents = status.agents || [];
   const evidence = agents.filter((a) => EVIDENCE_SHORT[a.role]);
   if (evidence.length) {
-    header.push(`${DIM}${T.evidence}${RESET} ` + evidence.map((a) => `${statusDot(a.status)}${DIM}${EVIDENCE_SHORT[a.role]}${RESET}`).join(" "));
+    const done = evidence.filter((a) => a.status === "completed" || a.status === "complete").length;
+    header.push(`${DIM}${T.evidence}${RESET} ${bar(done / evidence.length, 8)} ${DIM}${done}/${evidence.length}${RESET}  ` + evidence.map((a) => `${statusDot(a.status)}${DIM}${EVIDENCE_SHORT[a.role]}${RESET}`).join(" "));
   }
-  const benchTotal = state.speeches.filter((s) => s.id.startsWith("master_")).length;
+  const benchTotal = Math.max(
+    state.speeches.filter((s) => s.id.startsWith("master_")).length,
+    (status.masters || []).length,
+  );
   const benchDone = Math.min(state.cursor + 1, benchTotal);
   const debate = agents.some((a) => a.role === "portfolio_manager" && a.status === "completed") ? T.debate.done
     : agents.some((a) => a.role === "bull_researcher") ? T.debate.running : T.debate.idle;
-  header.push(`${DIM}${T.bench(benchDone, benchTotal)} · ${debate}${RESET}`);
+  header.push(`${DIM}${T.bench(benchDone, benchTotal)}${RESET} ${bar(benchTotal ? benchDone / benchTotal : 0, 8)} ${DIM}· ${debate}${RESET}`);
   header.push(`${DIM}${"─".repeat(Math.min(cols - 2, 96))}${RESET}`);
 
   const footer = [`${DIM}${"─".repeat(Math.min(cols - 2, 96))}${RESET}`, `${DIM} ${T.keys}${RESET}`];
