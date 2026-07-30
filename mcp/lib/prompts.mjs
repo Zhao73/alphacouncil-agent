@@ -91,7 +91,67 @@ function fundOrIndexTaskInstruction(task, instrument, language) {
   });
 }
 
-export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "auto", grounding = null) {
+/**
+ * Output shaping for a depth tier.
+ *
+ * A tier is a timeout, and a timeout is not a plan. Sending the identical prompt with a shorter
+ * fuse does not buy a faster good packet -- it buys a packet the worker could not finish, which
+ * arrives as `degraded` or not at all. For an LLM call the wall clock is dominated by the tokens
+ * it generates, so the way to run faster without losing information is to ask for the same
+ * information in less prose.
+ *
+ * The line every tier holds: claims, numbers, scoped source IDs, required report sections and
+ * the decision itself are never what gets cut. What `fast` removes is restatement -- re-quoting
+ * evidence the packet can cite by ID, recapping an opponent before answering, methodology
+ * preambles. What `slow` buys back is room to write a derivation out in full.
+ */
+export function paceShapingInstruction(pace, role, chinese) {
+  const tier = String(pace || "normal").toLowerCase();
+  if (tier !== "fast" && tier !== "slow") return "";
+  const isReport = role === "portfolio_manager";
+  if (tier === "fast") {
+    if (chinese) {
+      return [
+        "本轮按 fast 档运行。要压缩的是叙述，不是内容：",
+        "- 每一条仍必须带具体数字和作用域来源 ID（`<task>:S<n>`）。少写一条论点比少写一个来源 ID 更可接受，凭记忆补数字则永远不可接受。",
+        "- 不要复述证据原文——引用来源 ID 即可。不要在回答前复述对手立场。不要写方法论开场或结尾总结。",
+        "- 每条论点压到一到两句，只保留「主张 + 数字 + 来源 + 它错在哪」。",
+        isReport
+          ? "- 报告的每一个必需章节仍必须齐备且非空：简洁只能来自散文，不能来自删章节。价位阶梯与失效条件不得压缩成一句话，它们是这份报告唯一可执行的部分。"
+          : "- 论点条数上限 6 条，取信息量最高的 6 条，其余舍弃而不是缩写成半句。",
+        "- 如果时间不足以完成，宁可交一份明确标注缺口的短包，也不要交一份看起来完整但数字来自记忆的包。",
+      ].join("\n");
+    }
+    return [
+      "This round runs at the fast tier. Compress the prose, not the content:",
+      "- Every item still carries its figure and its scoped source ID (`<task>:S<n>`). Dropping one argument is acceptable; dropping a source ID is not, and filling a number from memory never is.",
+      "- Do not re-quote evidence -- cite the source ID. Do not recap the opponent before answering. No methodology preamble and no closing summary.",
+      "- One or two sentences per item: claim, figure, source, and what would break it.",
+      isReport
+        ? "- Every required report section must still be present and non-empty: terseness comes out of prose, never out of sections. Price levels and invalidation conditions may not be compressed to one line -- they are the only actionable part of the report."
+        : "- At most 6 arguments. Keep the six highest-information ones and drop the rest rather than shortening every one into a fragment.",
+      "- If there is not enough time to finish, hand in a short packet that names the gap rather than a complete-looking one built from memory.",
+    ].join("\n");
+  }
+  if (chinese) {
+    return [
+      "本轮按 slow 档运行。这一档买到的是把推导写完整的空间：",
+      "- 多步推算要逐步写出，把每一步的口径、假设与它对结论的敏感度都写明，而不是只给结果。",
+      "- 逐条处置对手的论点：哪一条你接受、哪一条你反驳、反驳依据的是哪个来源 ID 与哪个数字。",
+      "- 明确写出你自己的证伪条件：什么读数会让你放弃这条论点。",
+      "- 更长不等于更好：每一段要么带来新的数字，要么带来新的反驳。重复已说过的内容仍然要删。",
+    ].join("\n");
+  }
+  return [
+    "This round runs at the slow tier. What that budget buys is room to write the derivation out:",
+    "- Show multi-step arithmetic step by step, with the basis, the assumption and the sensitivity of the conclusion to each step, not just the result.",
+    "- Handle the opponent's arguments one by one: which you accept, which you refute, and on which source ID and figure the refutation rests.",
+    "- State your own falsification conditions explicitly: which reading would make you drop the argument.",
+    "- Longer is not better. Every paragraph must add either a new figure or a new refutation; repetition of what you already said still gets cut.",
+  ].join("\n");
+}
+
+export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "auto", grounding = null, pace = null) {
   const resolvedLanguage = resolveLanguage({ language, prompt: userPrompt });
   const chinese = isChineseLanguage(resolvedLanguage);
   const reg = registry();
@@ -112,7 +172,13 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
   // which facts are already settled, or it reads them as the whole assignment.
   const instrumentOverride = fundOrIndexTaskInstruction(task, grounding?.instrument, resolvedLanguage);
   const grounded = groundingBlock(grounding, resolvedLanguage);
-  return [`${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`, instrumentOverride, grounded].filter(Boolean).join("\n\n");
+  return [
+    `${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`,
+    instrumentOverride,
+    grounded,
+    // Last, so it is the final word on form after the role brief and the settled facts.
+    paceShapingInstruction(pace, task, chinese),
+  ].filter(Boolean).join("\n\n");
 }
 
 export function debatePrompt(role, run, context = {}) {
@@ -190,6 +256,8 @@ export function debatePrompt(role, run, context = {}) {
       ].filter(Boolean).join("\n\n")
       : "",
     role === "portfolio_manager" && !quick ? outputModeInstruction(context.outputMode || "chat", language) : "",
+    // The tier's shaping is the final word on form. Quick has its own shaping already.
+    quick ? "" : paceShapingInstruction(run.council_pace, role, chinese),
     `Evidence JSON: ${evidenceJson}`,
   ].filter(Boolean).join("\n\n");
 }
@@ -269,8 +337,9 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
     ].join(" "),
     `\`position_intent\` MUST be one of: ${intentsForStance(frozenOpinion?.stance).join(" | ")}. Those are the only intents the frozen stance admits; anything else is rejected without changing run state.`,
     "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"position_intent\":\"one of the allowed intents above\",\"voice\":{\"what_i_see\":\"string\",\"how_my_method_reads_it\":\"string\",\"would_i_act\":\"string\",\"what_changes_my_mind\":\"string\",\"where_i_disagree\":\"string\"},\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
+    paceShapingInstruction(run.council_pace, masterId, isChineseLanguage(language)),
     `Bounded shared evidence JSON: ${evidence}`,
-  ].join("\n\n");
+  ].filter(Boolean).join("\n\n");
 }
 
 /** The master ids a run has selected, from an explicit list or a roster name. */

@@ -2,6 +2,37 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.11] — 2026-07-30
+
+### Fixed
+
+- **A depth tier was a timeout with no plan behind it, so `fast` bought unfinished work rather
+  than faster work.** 1.0.10 shipped three tiers that all sent the identical prompt: `fast` asked
+  every worker for exactly the same output with 40% less time, which does not produce a faster
+  good packet — it produces one the worker could not finish, arriving `degraded` or not at all.
+  There was no pace awareness anywhere in the prompt layer.
+
+  A tier now shapes the worker's output as well as capping its clock. Because an LLM call's wall
+  clock is dominated by the tokens it generates, running faster without losing information means
+  asking for the same information in less prose:
+
+  - `fast` — at most six arguments, one to two sentences each, cite a source ID instead of
+    re-quoting the evidence, no opponent recap, no methodology preamble. Every figure, every
+    scoped source ID and every required report section stays mandatory; price levels and
+    invalidation conditions may not be compressed, because they are the only actionable part of
+    the report. Dropping an argument is acceptable; dropping a source ID or filling a number from
+    memory never is. A short packet that names its gap beats a complete-looking one built from
+    memory.
+  - `slow` — write the derivation out step by step with its basis, assumptions and sensitivity;
+    handle the opponent's arguments one at a time; state your own falsification conditions.
+    Longer is not better, so repetition still gets cut.
+  - `normal` — adds nothing at all, so its prompts stay byte-identical to the reviewed golden.
+  - Quick keeps its own existing shaping and receives no tier, so no prompt ever carries two
+    different length budgets.
+
+  The shaping reaches the evidence seats, both debaters, the PM and the method voice workers, in
+  the run's language.
+
 ## [1.0.10] — 2026-07-30
 
 ### Added

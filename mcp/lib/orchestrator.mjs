@@ -286,7 +286,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       ja: `AlphaCouncil Agent ${run.symbol} ${task} 証拠サブエージェント`,
       ko: `AlphaCouncil Agent ${run.symbol} ${task} 증거 하위 에이전트`,
     }),
-    prompt: taskPrompt(task, run.symbol, run.as_of, userPrompt, run.language, run.grounding),
+    prompt: taskPrompt(task, run.symbol, run.as_of, userPrompt, run.language, run.grounding, run.council_pace),
     output_contract: localized(run.language, {
       en: `Return one JSON evidence packet with reader-facing fields in ${run.language}.`,
       zh: "只返回一个 JSON evidence packet。",
@@ -1572,7 +1572,7 @@ export async function collectEvidence(args) {
         : "QUICK COUNCIL PRIORITY: return only the 4-6 highest-information claims needed for a directional read. Keep the packet concise, source every claim, and make unknowns explicit."
       : "";
     const workerObjective = [args.prompt || "", quickPriority].filter(Boolean).join("\n\n");
-    const prompt = taskPrompt(task, symbol, asOfDate, workerObjective, language, run.grounding);
+    const prompt = taskPrompt(task, symbol, asOfDate, workerObjective, language, run.grounding, run.council_pace);
     updateTask(run, task, "running", { started_at: new Date().toISOString() });
     if (dryRun) {
       const packet = dryPacket(task, symbol, asOfDate, prompt, language);

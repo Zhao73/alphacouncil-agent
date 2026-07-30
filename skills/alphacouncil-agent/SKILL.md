@@ -146,6 +146,16 @@ Use this contract when full runs through headless `analyze_symbol`:
   than depth; the tier is what buys depth. All three tiers are `full_v2` — same eight evidence
   seats, same three rounds, same PM — so a tier changes how long each seat may think, never what
   the council is. Quick rejects `council_pace`.
+- The tier also shapes each worker's output, and this is the part that makes `fast` fast rather
+  than merely short of time. A cap alone is a timeout, and the same prompt with a shorter fuse
+  produces a packet the worker could not finish. Since an LLM call's wall clock is dominated by
+  the tokens it generates, `fast` asks for the same information in less prose: at most six
+  arguments, one to two sentences each, citing a source ID instead of re-quoting the evidence,
+  no opponent recap and no methodology preamble — while every figure, every scoped source ID and
+  every required report section stays mandatory, and price levels and invalidation conditions may
+  not be compressed. Dropping an argument is acceptable at `fast`; dropping a source ID or
+  filling a number from memory never is. `slow` instead asks for the derivation written out step
+  by step with explicit falsification conditions. `normal` adds nothing.
 - The concise handoff lists every selected stable master ID, frozen stance and voice-worker
   explanation/status; all eight analyst task IDs, statuses and summaries; and a system-owned
   price snapshot with currency/time/source or an explicit unavailable-data gap.

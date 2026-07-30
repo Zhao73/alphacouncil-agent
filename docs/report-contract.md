@@ -102,7 +102,16 @@ persistence. A caller or environment may lower the selected tier's budget, never
 The tier moves every per-stage cap together with the total, because the per-stage caps are what
 bound each worker: a 60-minute total with 150-second debate rounds would finish in twenty
 minutes with forty idle, and a 15-minute total with 6-minute evidence caps would starve the
-debate into `incomplete`. Each tier's stages are proven to fit inside its own budget with
+debate into `incomplete`.
+
+The tier also shapes what each worker is asked to produce. A cap on its own is a timeout, and a
+timeout is not a plan: the identical prompt with a shorter fuse buys a packet the worker could
+not finish rather than a faster good one. Because an LLM call's wall clock is dominated by the
+tokens it generates, `fast` asks for the same information in less prose. What it never cuts is
+claims, figures, scoped source IDs, the required report sections or the decision; what it cuts is
+restatement — re-quoting evidence that could be cited by ID, recapping an opponent before
+answering, methodology preambles. `slow` buys room to write a derivation out step by step.
+`normal` adds no shaping at all, so its prompts remain byte-identical to the reviewed golden. Each tier's stages are proven to fit inside its own budget with
 headroom for queueing, retries and the bounded parse repair. All three tiers are `full_v2`: a
 tier changes how long each seat may think, never which seats run. Quick rejects the field.
 

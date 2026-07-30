@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.0.10`, published to npm as the default install.
+The declared package/plugin version is `1.0.11`, published to npm as the default install.
 The packaged tree contains 27 physical v3 packs and 54 executable tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
@@ -71,6 +71,13 @@ No research, run directory or worker may start before that receipt exists. Data-
   is where the depth difference lives — raising `total_timeout_ms` alone buys idle time, and
   lowering it alone starves the later stages into `incomplete`. Every tier's stages are proven
   to fit inside its own budget with headroom.
+- A tier also shapes the worker's OUTPUT, because a cap alone is a timeout and a timeout is not
+  a plan: the same prompt with a shorter fuse buys a packet the worker could not finish, not a
+  faster good one. For an LLM call the wall clock is dominated by generated tokens, so `fast`
+  asks for the same information in less prose — claims, figures, scoped source IDs, required
+  report sections and the decision are never what gets cut; restatement is. `slow` buys room to
+  write a derivation out in full. `normal` adds nothing, so its prompts stay byte-identical to
+  the reviewed golden. Quick keeps its own shaping and receives no tier.
 - `council_pace` changes depth, never the contract: all three tiers are `full_v2` with eight
   evidence seats, every selected method, three debate rounds and the PM. Quick rejects the field
   — it is a smaller contract, not a slower one. The tier is recorded in `status.json`.
