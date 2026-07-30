@@ -462,6 +462,25 @@ Evidence agents return JSON packets:
 
 All source IDs are task-scoped as `<task>:<source_id>`. Missing data must be reported in `open_questions` and in the final report's data-gap section.
 
+## Terminal Client (TUI)
+
+Watch the council deliberate without leaving the terminal. Each speaking seat appears
+as a 40x40 pixel portrait typing its statement into a speech bubble, above a live
+status strip of the evidence seats:
+
+```bash
+npm run tui                 # latest run; live-tails if still running
+npm run tui -- <run_id>     # a specific run
+npm run tui -- --replay     # animate a finished run in completion order
+```
+
+On start it asks for a UI language (English default · 中文 · 日本語 · 한국어), or pass
+`--lang en|zh|ja|ko`. Statements render in the language the council ran in.
+
+Keys: `q` quit · `space` pause · `→` finish typing · `n` next speaker.
+Portraits are stylized pixel reconstructions, not photographs, and carry the same
+attribution rule as everything else here: a method seat is not the named person.
+
 ## Run Viewer (local GUI)
 
 Every run persists its full artifact tree under `~/.alphacouncil-agent/runs/<run_id>/`.

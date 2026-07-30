@@ -85,7 +85,8 @@
     "evaluation:artifacts:check": "node scripts/council-experiment-artifacts.mjs --check",
     "host:e2e:artifacts": "node scripts/host-e2e-artifacts.mjs --plan",
     "host:e2e:artifacts:check": "node scripts/host-e2e-artifacts.mjs --check",
-    "prepublishOnly": "npm test && npm run test:package"
+    "prepublishOnly": "npm test && npm run test:package",
+    "tui": "node tui/tui.mjs"
   },
   "bin": {
     "alphacouncil-agent": "mcp/server.mjs"
@@ -100,6 +101,7 @@
     "test/fixtures/options-chain-synthetic.json",
     "test/fixtures/nok-grounding-production-shape.json",
     "knowledge/persona-releases/",
+    "tui/",
     "gui/",
     "scripts/",
     "data/",
