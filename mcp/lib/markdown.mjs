@@ -9,7 +9,7 @@ import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
-import { intentLabel, VOICE_FIELDS, voiceDisclaimer, voiceFieldLabel } from "./voice.mjs";
+import { composeVoiceStatement, intentLabel, VOICE_FIELDS, voiceDisclaimer, voiceFieldLabel } from "./voice.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 
@@ -100,7 +100,18 @@ export function renderMasterMarkdown(opinion, lang) {
     opinion.thread_id ? `- Visible thread ID: ${opinion.thread_id}` : "",
     "",
     `### ${labels.statement}`,
-    opinion.voice_statement || opinion.summary || "",
+    // When the statement was composed from the five voice fields, render those fields as
+    // labelled lines -- a person reasoning, not one glued sentence. A statement from any
+    // other origin (a flat worker statement, a deterministic template) is the authored
+    // record and renders verbatim; the fields beside it may be a deterministic fallback
+    // that would silently replace what the worker actually said.
+    ...(opinion.voice && typeof opinion.voice === "object"
+      && composeVoiceStatement(opinion.voice, lang) === opinion.voice_statement
+      ? VOICE_FIELDS
+        .map((field) => [field, String(opinion.voice[field] ?? "").trim()])
+        .filter(([, text]) => text)
+        .map(([field, text]) => `**${voiceFieldLabel(field, lang)}**: ${text}`)
+      : [opinion.voice_statement || opinion.summary || ""]),
     "",
     `### ${labels.summary}`,
     opinion.deterministic_summary || opinion.summary || "",
@@ -207,11 +218,13 @@ function renderMasterStatements(run) {
     // input" tells a reader the system broke when the method spoke. A seat whose required
     // fact never arrived genuinely is a gap. Rendering them together made every run read as
     // the second kind, which is the complaint this split exists to answer.
-    // One paragraph each, not one row per seat: the stable IDs stay visible so the gate and
-    // the reader can both account for every selected seat.
+    // One block per seat, not twenty-five names glued into a run-on paragraph: each seat
+    // speaks its own statement, because a reader asked for the bench precisely to hear each
+    // method say in its own words why this is or is not its call. The stable IDs stay
+    // visible so the gate and the reader can both account for every selected seat.
     const merged = (group) => group
-      .map((opinion) => `${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`) \u2014 ${opinion.voice_statement}`)
-      .join(" ");
+      .map((opinion) => `**${masterTitle(opinion.master, run.language)}** (\`${opinion.master}\`)\n\n> ${opinion.voice_statement}`)
+      .join("\n\n");
     const declined = abstained.filter((opinion) => methodDeclined(opinion));
     const ungrounded = abstained.filter((opinion) => !methodDeclined(opinion));
     if (declined.length) {

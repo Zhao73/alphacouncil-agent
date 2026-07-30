@@ -293,6 +293,8 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 
 大师读到的是**和分析师同一份已确立事实**（申报、行情、财务、宏观），分析师的证据包单独给出并标注为「其他席位的解读」而非事实。这个分离是关键：芒格看激励结构的地方分析师看的是毛利率，只有让他们各自取舍，这个议席才有存在意义。详见 [docs/attribution.md](docs/attribution.md)。
 
+形成立场的席位各自有一个隔离的发声 worker，用第一人称把话说完整——我看到什么、用我的标准怎么读这个数、我会不会动手、什么会让我改主意。弃权席位则以零模型成本发布一段确定性的第一人称陈述；想让弃权席也由 worker 完整开口，设 `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1`（代价是每个弃权席多花一个 worker）。
+
 ## 🧩 架构
 
 下图是完整/deep 路径。Quick 仍包含 Master Bench，但改用固定四证据席、一轮并行

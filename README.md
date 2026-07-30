@@ -354,6 +354,12 @@ macro — and receive the analyst packets separately, labelled as other seats' r
 than as fact. That separation is the point: the bench is worth having only because Munger
 looks at incentives where an analyst looked at margins. See [docs/attribution.md](docs/attribution.md).
 
+A seat that reached a stance gets its own isolated voice worker and speaks in first person —
+what it sees, how its standard reads the number, whether it would act, and what would change
+its mind. A seat that abstained publishes a deterministic first-person statement at zero
+model cost; set `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` to give abstaining seats a full
+voice worker too, at the cost of one worker per abstained seat.
+
 ## 🧩 Architecture
 
 The diagram below is the full/deep path. Quick retains the Master Bench but uses its fixed

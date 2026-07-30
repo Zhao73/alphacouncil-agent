@@ -331,6 +331,8 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
     [
       "Write the five `voice` fields in the first person, as the METHOD speaks -- \"I look for X, here the number is Y, so I would Z\".",
       "First person is the voice of the method, never a claim about what the living person currently thinks: write \"this standard asks for...\", never \"he now believes...\".",
+      "Write like the method's operator publishing a short opinion column, not like someone filling a form: each field is two to four complete sentences in the method's own characteristic register -- what it reaches for first, the standard it holds the number to, and why THIS number settles it. A reader should hear a person reasoning, not a checklist reporting.",
+      "The five voice fields are this worker's deliverable. Pace-tier compression applies to restatement and preamble, never to these fields: at any tier each stays at least two full sentences.",
       "Every figure you cite must already appear in the evidence or the frozen result, with its source ID. Cite the number, not an adjective about the number.",
       "`what_changes_my_mind` must name a threshold or an observation that would flip the reading, not a wish for more research.",
       "If the frozen stance is out_of_scope, say plainly and in the method's own voice which input it needs and why its absence is not a bearish view.",
