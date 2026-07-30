@@ -68,9 +68,28 @@ export const FUNDAMENTAL_CONCEPTS = Object.freeze({
   },
   // Debt buckets are non-overlapping by construction so they can be summed. `debt_combined`
   // is the whole of it in one tag and wins outright when a filer publishes it.
+  //
+  // Within a bucket the tags are ALIASES, not addends: an earlier alias wins a year outright.
+  // The convertible aliases are therefore appended last, which makes them strictly additive --
+  // a filer that already resolves a bucket resolves it to exactly the same number as before,
+  // and only a filer whose sole balance-sheet debt line is a convertible note changes at all.
+  //
+  // That filer is not rare. ServiceNow's FY2020 and FY2025 balance sheets carry no straight
+  // debt tag whatsoever: the only debt instant either year is ConvertibleLongTermNotesPayable
+  // ($1.64bn and $1.491bn). Total debt therefore read as unknown, and because unknown debt is
+  // correctly refused rather than treated as zero, three separate facts died from one absent
+  // alias -- leverage, downside asset value, and incremental return on capital -- which in turn
+  // is why a seat requiring incremental return on capital abstained on a company whose debt is
+  // plainly stated on the face of its balance sheet.
   debt_combined: { tags: ["DebtLongtermAndShorttermCombinedAmount"], unit: "USD" },
-  debt_long_term_noncurrent: { tags: ["LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations"], unit: "USD" },
-  debt_long_term_current: { tags: ["LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent"], unit: "USD" },
+  debt_long_term_noncurrent: {
+    tags: ["LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations", "ConvertibleLongTermNotesPayable"],
+    unit: "USD",
+  },
+  debt_long_term_current: {
+    tags: ["LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent", "ConvertibleNotesPayableCurrent"],
+    unit: "USD",
+  },
   debt_short_term: { tags: ["ShortTermBorrowings", "OtherShortTermBorrowings", "CommercialPaper"], unit: "USD" },
   tax_expense: { tags: ["IncomeTaxExpenseBenefit"], unit: "USD" },
   pretax_income: {

@@ -94,7 +94,15 @@ function readJsonl(path) {
 async function runChineseFullFailure(failureTarget) {
   const dataDir = makeDataDir();
   const fake = languageFailureCodex(dataDir, failureTarget);
-  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  const server = startServer({
+    dataDir,
+    env: {
+      ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver,
+      // The subject here is the voice worker's language gate, so the seat has to get a worker.
+      // On an ETF this seat abstains, and an abstaining seat no longer spends one by default.
+      ...(failureTarget === "master" ? { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "1" } : {}),
+    },
+  });
   await server.request("initialize", {});
   const prompt = "请用中文运行本地固定夹具，并在语言不匹配时失败关闭。";
   const selection = await confirmMasterSelection(server, {

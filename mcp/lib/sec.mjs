@@ -97,20 +97,35 @@ export async function fetchFilingIndex(cik, { signal } = {}) {
   return { cik: padded, name: data?.name || null, filings: rows };
 }
 
-/** One filing document, fetched as text. Same throttle and User-Agent as every other call. */
+/**
+ * One filing document, fetched as text. Same throttle, User-Agent and 429 backoff as the JSON
+ * calls.
+ *
+ * The backoff was the part missing here. Every JSON endpoint retried a rate-limited response
+ * while this one threw on the first 429, so the documents that carry the actual disclosure --
+ * a Form 4's transaction table, an 8-K's item text -- were the easiest evidence in the run to
+ * lose. `www.sec.gov/Archives` is also throttled harder than `data.sec.gov`, which makes this
+ * the path most likely to be limited and was the least protected against it.
+ */
 export async function fetchFilingDocument(cik, accession, document, { signal } = {}) {
-  await throttle();
   const stripped = String(cik).replace(/\D/gu, "").replace(/^0+/u, "");
   const folder = String(accession).replace(/-/gu, "");
   const url = `https://www.sec.gov/Archives/edgar/data/${stripped}/${folder}/${document}`;
-  const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, signal);
-  try {
-    const res = await fetch(url, { signal: abort.signal, headers: { "User-Agent": UA } });
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-    return { url, text: await res.text() };
-  } finally {
-    abort.cleanup();
-  }
+  const outcome = await withRateLimitRetry(async () => {
+    await throttle();
+    const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, signal);
+    try {
+      const res = await fetch(url, { signal: abort.signal, headers: { "User-Agent": UA } });
+      if (isRateLimited(res.status)) {
+        return { rateLimited: true, error: new Error(`HTTP ${res.status} for ${url}`) };
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+      return { rateLimited: false, value: { url, text: await res.text() } };
+    } finally {
+      abort.cleanup();
+    }
+  });
+  return outcome.value;
 }
 
 /** The full US listed universe: ~10k entries of {cik, ticker, title}. */

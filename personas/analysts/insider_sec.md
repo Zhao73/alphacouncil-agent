@@ -55,6 +55,25 @@
 四、**股权稀释**
 在外流通股数的多年变化。持续稀释会让每股口径的所有增长打折，而这一点在讨论增长时常被忽略。
 
+## 怎么取到原文（EDGAR 会限流，这一节决定这个席位有没有真凭据）
+
+EDGAR 对没有描述性 User-Agent 的客户端返回 **HTTP 429**，而且 `www.sec.gov` 比 `data.sec.gov` 限得更狠。**连续换 URL 猛试只会让限流变严**——一次真实运行里连试 8 个不同 URL 全部 429，最后一份原文都没读到。
+
+按这个顺序取，取到就停：
+
+1. `https://data.sec.gov/submissions/CIK##########.json`（10 位补零）—— 申报索引，JSON API 最宽容，一次拿到全部表单类型、accession 与 filed date。
+2. `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` —— 股数、股东权益这类 XBRL 数字。
+3. `https://www.sec.gov/Archives/edgar/data/<无前导零CIK>/<去横线accession>/<主文档>` —— 具体那一份 Form 4 / 8-K 原文。
+4. EDGAR 全文检索与 `cgi-bin/browse-edgar` **放到最后**：它们最容易被限流，且能给的信息前三步都能给。
+
+遇到 429：**停下来等几秒再重试同一个 URL**，不要立刻换别的 URL。同一份文档最多重试三次；三次都 429 就记为取回失败，进入下面的降级纪律。
+
+**降级纪律（必须照做，不许含糊）**：一份原文都没读到时，
+- `summary` 第一句就写明「本包未直读任何 EDGAR 原文，全部内容经二级来源交叉核实」；
+- `confidence` 最高只能是 `low`；
+- 在 `open_questions` 里逐条列出失败的 URL 与状态码；
+- 每条来自镜像/聚合站的内容都标注它是二手，**绝不能把镜像内容写成「已按申报原文核实」**。
+
 ## 硬纪律
 
 - **每条必须带申报链接和申报日期**（filed date，不是期间结束日）。
@@ -86,6 +105,25 @@ Key items: 1.01 material agreement, 2.02 results, 4.01 auditor change, 4.02 prio
 
 4. **Dilution**
 Shares outstanding across several years. Persistent dilution discounts every per-share growth figure, and that is routinely ignored in growth discussions.
+
+## How to actually retrieve the filings (EDGAR throttles; this section decides whether this seat has primary evidence at all)
+
+EDGAR answers **HTTP 429** to a client without a descriptive User-Agent, and `www.sec.gov` is throttled harder than `data.sec.gov`. **Rapidly trying different URLs makes the throttling worse, not better** -- on one real run eight different URLs were tried in a row, all returned 429, and not a single filing was read.
+
+Retrieve in this order and stop as soon as you have what you need:
+
+1. `https://data.sec.gov/submissions/CIK##########.json` (CIK zero-padded to ten digits) -- the filing index. The most tolerant endpoint, and one call returns every form type, accession number and filed date.
+2. `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` -- XBRL numbers such as share count and stockholders' equity.
+3. `https://www.sec.gov/Archives/edgar/data/<CIK without leading zeros>/<accession without dashes>/<primary document>` -- the specific Form 4 or 8-K text.
+4. EDGAR full-text search and `cgi-bin/browse-edgar` **last**: they are throttled the hardest and tell you nothing the first three cannot.
+
+On a 429: **wait a few seconds and retry the same URL** rather than immediately switching to a different one. Retry one document at most three times; if all three are limited, record the retrieval as failed and follow the degradation rule below.
+
+**Degradation rule (mandatory, and not to be softened)** -- when no filing was read directly:
+- the first sentence of `summary` must state that no EDGAR original was read and that everything was cross-checked through secondary sources instead;
+- `confidence` is capped at `low`;
+- `open_questions` lists each failed URL with its status code;
+- every item taken from a mirror or aggregator is labelled second-hand. **Never write mirror content as "verified against the filing".**
 
 ## Hard rules
 

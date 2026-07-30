@@ -142,6 +142,15 @@ async function recordPm(runId) {
   });
 }
 
+// Every contract section is present, so the submission clears the entry check, but the analyst
+// work log never names the planned analyst -- a defect only the assembled report can see, since
+// the check is scoped to that section's body against the run's task list. That keeps the
+// revision path exercised now that a missing report body is rejected at submission time.
+const unloggedReport = completeReport.replace(
+  /### market_data\nThe market_data analyst/,
+  "### Evidence seats\nThe evidence seat",
+);
+
 async function recordThinPm(runId) {
   return server.callTool("record_visible_decision", {
     run_id: runId,
@@ -151,9 +160,9 @@ async function recordThinPm(runId) {
       verdict: "The portfolio manager reaches a balanced conclusion after the complete audited debate.",
       rating: "Hold",
       winner: "balanced",
-      summary: "A submission whose report body is empty, which the structure gate must reject.",
+      summary: "A submission whose analyst work log never names the planned analyst, which the structure gate must reject.",
       confidence: "medium",
-      report_markdown: "",
+      report_markdown: unloggedReport,
     },
   });
 }
@@ -407,4 +416,50 @@ test("a portfolio manager report that fails the structure gate can be revised", 
 
 test("a portfolio manager report that passed stays frozen", () => {
   assert.equal(recorded.pmReplay.idempotent_replay, true);
+});
+
+test("a portfolio manager packet with no report body is rejected at submission, not after assembly", async () => {
+  // On a real run the first PM submission carried no `report_markdown` at all. It was accepted,
+  // the report was assembled from the summary fallback, and the author learned about 21 missing
+  // sections only after the whole PM turn had been spent. Reject it up front and say what is
+  // owed, without taking the idempotency lock.
+  const runId = `SELFTEST-PM-ENTRY-${process.pid}`;
+  await plan(runId);
+  await recordEvidence(runId);
+  await recordMaster(runId);
+  await recordFullDebate(runId);
+
+  const rejected = await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm`,
+    packet: {
+      verdict: "The portfolio manager reaches a balanced conclusion after the complete audited debate.",
+      rating: "Hold",
+      winner: "balanced",
+      summary: "A submission that never carried a report body at all.",
+      confidence: "medium",
+    },
+  });
+  assert.ok(rejected.error, `expected a structured rejection, saw ${JSON.stringify(rejected).slice(0, 300)}`);
+  assert.equal(rejected.error.data.reason, "VISIBLE_PM_REPORT_SECTIONS_MISSING");
+  assert.match(rejected.error.message, /report_markdown/);
+  assert.equal(rejected.error.data.report_markdown_characters, 0);
+  // The rejection must name the headings that are owed, not just that something is wrong.
+  const owed = rejected.error.data.required_sections.map((section) => section.id);
+  assert.ok(owed.includes("conclusion"), JSON.stringify(owed));
+  assert.ok(owed.includes("source_table"));
+  assert.ok(owed.includes("analyst_work_log"));
+  // The system appends these, so an author is never asked for them.
+  assert.ok(!owed.includes("master_bench"), "the bench is system-owned");
+  for (const section of rejected.error.data.required_sections) {
+    assert.ok(section.suggested_heading, `${section.id} must come with a heading to use`);
+  }
+
+  // Nothing was written, so the run is still revisable and the same author can submit properly.
+  assert.ok(!existsSync(join(dataDir, "runs", runId, "decision.json")));
+  const accepted = structured(await recordPm(runId));
+  assert.equal(accepted.report_quality, "passed");
+  assert.equal(accepted.status, "complete");
+  assert.notEqual(accepted.idempotent_replay, true);
 });

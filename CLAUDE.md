@@ -25,13 +25,14 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.0.0`, published to npm as the default install.
+The declared package/plugin version is `1.0.9`, published to npm as the default install.
 The packaged tree contains 27 physical v3 packs and 54 executable tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
 Human review of the authored formulas and the live four-host end-to-end run are the
 outstanding work, so the production assembly path stays fail-closed until both are done.
-See `docs/releases/v1.0.0.md` and `docs/report-contract.md`.
+See `docs/releases/v1.0.0.md`, `CHANGELOG.md` for everything since, and
+`docs/report-contract.md`.
 
 ## Agent-Skills Governance
 
@@ -78,8 +79,23 @@ No research, run directory or worker may start before that receipt exists. Data-
   artifact, not that external search/model/data services will let all seats succeed.
 - The plugin cannot enforce this deadline on `plan_visible_run` host subagents. Visible full
   runs retain the same evidence/report gates but must not be described as 30-minute bounded.
-  Run every returned post-evidence v3 explanation worker, including a frozen
-  `out_of_scope` seat, and record its `acknowledged_stance` before debate.
+  Run every returned post-evidence v3 explanation worker and record its `acknowledged_stance`
+  before debate. A seat frozen `out_of_scope` is returned as already settled and gets no
+  worker: its deterministic statement names the condition that closed the gate and states that
+  an abstention is not a bearish vote, which is the whole of what an out_of_scope seat is asked
+  to say, so a worker there buys prose rather than information. Set
+  `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` to give every seat a worker again. Every selected
+  seat still needs a readable statement in the report either way.
+- `plan_visible_run` always writes each planned prompt to `<run>/prompts/` and returns
+  `prompt_file` beside every agent. It also returns `prompts_inline`: false means the prompt
+  bodies were left out of the result because returning them together would exceed what a host
+  accepts, and the host must read them from `prompt_file`. What drives that size is the
+  grounding each prompt embeds, not the seat count.
+- `record_visible_decision(role: 'portfolio_manager')` rejects a packet whose
+  `report_markdown` does not carry every authored report-contract section, before the packet
+  takes the idempotency lock. The rejection lists the missing sections and the heading to use
+  for each. The master bench and instrument-structure sections are system-appended and are
+  never asked of an author.
 
 ## Quick v1 Fixed Contract
 

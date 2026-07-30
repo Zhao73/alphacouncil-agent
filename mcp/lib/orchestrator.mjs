@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
@@ -6,14 +6,14 @@ import { readJson, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
 import { assertReaderLanguage, isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { cleanLog } from "./text.mjs";
-import { completenessStatus, masterSeatIncomplete, verificationStatus } from "./gates.mjs";
+import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
-import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
+import { completedMasterOpinion, declinedMasterOpinion, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
 import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
@@ -374,16 +374,23 @@ export function visibleAgentSpecs(run, userPrompt = "") {
           item.engine,
         ));
       }
+      // A seat that executed its policy and still abstained is in the same position as a
+      // declined seat: the frozen stance is out_of_scope, no worker may change it, and the
+      // deterministic statement already names the gate that closed and says an abstention is
+      // not a bearish vote. Only seats that reached a stance have a reading to explain.
+      const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id));
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
         && byId.get(item.id)?.voice_status === "completed";
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
         master: item.id,
-        status: alreadyVoiced ? "completed" : "waiting",
+        status: alreadyVoiced || !requiresVisibleVoice ? "completed" : "waiting",
         engine: item.engine,
         deterministic_execution: true,
-        voice_required: true,
-        completed_at: alreadyVoiced ? run.master_status[item.id].completed_at : null,
+        voice_required: requiresVisibleVoice,
+        completed_at: alreadyVoiced || !requiresVisibleVoice
+          ? (run.master_status[item.id]?.completed_at || new Date().toISOString())
+          : null,
       };
     }
     run.master_opinions = selectedMasters(run).map((id) => byId.get(id)).filter(Boolean);
@@ -402,6 +409,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   const v3VoiceAgents = plan.completed
     .filter((item) => item.engine === "v3_method_runtime")
     .filter((item) => run.master_status?.[item.id]?.status !== "completed")
+    .filter((item) => needsMethodVoiceWorker(frozenById.get(item.id)))
     .map((item) => {
       const frozenOpinion = frozenById.get(item.id);
       return {
@@ -432,10 +440,21 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     .map((id) => master_agents.find((agent) => agent.role === id))
     .filter(Boolean);
   saveRun(run);
+  const prompts = externalizeVisiblePrompts(run, [
+    { kind: "evidence", agents: evidence_agents },
+    { kind: "master", agents: orderedMasterAgents },
+    { kind: "debate", agents: debate_agents },
+  ]);
   return {
-    evidence_agents,
-    master_agents: orderedMasterAgents,
-    debate_agents,
+    // Every planned prompt is on disk either way. `prompts_inline` says whether this result
+    // also carries them, so a host never has to guess whether `prompt_template` is missing
+    // because the plan failed or because it was too large to return.
+    prompts_inline: prompts.inline,
+    prompt_dir: prompts.prompt_dir,
+    prompt_chars_total: prompts.prompt_chars_total,
+    evidence_agents: prompts.byKind.get("evidence"),
+    master_agents: prompts.byKind.get("master"),
+    debate_agents: prompts.byKind.get("debate"),
     // Recorded, not hidden: a reader must be able to tell a method that judged from a method
     // that could not look, and neither from a seat that was never offered.
     master_decisions: plan.decisions,
@@ -465,6 +484,67 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       reason: item.reason,
       error: item.error || null,
     })),
+  };
+}
+
+/**
+ * Total prompt characters a visible plan may return inline.
+ *
+ * The plan carries one full prompt per agent, and every prompt embeds the grounding and
+ * evidence JSON. A real eight-seat run returned 311,007 characters in a single tool result and
+ * the host rejected the whole thing for exceeding its result ceiling -- the plan was produced
+ * correctly and then thrown away. Below this budget nothing changes for an existing host;
+ * above it the prompts move to disk and each agent carries the path instead.
+ */
+const VISIBLE_PLAN_INLINE_PROMPT_CHARS = 120000;
+
+/**
+ * The size that decides this is the grounding each prompt embeds, not the number of seats: a
+ * bench-wide plan with no grounding is well inside the budget, while eight seats against a
+ * full macro series is what produced the 311k result. Operators may lower the budget for a
+ * host with a tighter ceiling; they may not raise it past what that host would reject anyway.
+ */
+function inlinePromptBudget(env = process.env) {
+  const requested = Number(env?.ALPHACOUNCIL_VISIBLE_INLINE_PROMPT_CHARS);
+  if (!Number.isFinite(requested) || requested < 0) return VISIBLE_PLAN_INLINE_PROMPT_CHARS;
+  return Math.min(requested, VISIBLE_PLAN_INLINE_PROMPT_CHARS);
+}
+
+/**
+ * Write every planned prompt to the run directory, and drop the inline copies when returning
+ * them all at once would exceed what a host will accept.
+ */
+function externalizeVisiblePrompts(run, groups) {
+  const dir = join(runPath(run.run_id), "prompts");
+  mkdirSync(dir, { recursive: true });
+  // Roles are generated ids, but a filename is still a filename: keep it to one path segment.
+  const fileSafe = (role) => String(role || "agent").replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 80) || "agent";
+  // Evidence agents carry `prompt`; master and debate agents carry `prompt_template`. Reading
+  // only one of them wrote empty files for the other group.
+  const promptKey = (agent) => (typeof agent.prompt_template === "string" ? "prompt_template" : "prompt");
+  const total = groups.reduce((sum, { agents }) => sum + agents
+    .reduce((inner, agent) => inner + String(agent[promptKey(agent)] || "").length, 0), 0);
+  const inline = total <= inlinePromptBudget();
+  const externalized = groups.map(({ kind, agents }) => ({
+    kind,
+    agents: agents.map((agent) => {
+      const key = promptKey(agent);
+      const file = join(dir, `${kind}.${fileSafe(agent.role)}.prompt.md`);
+      const prompt = String(agent[key] || "");
+      writeFileSync(file, prompt.endsWith("\n") ? prompt : `${prompt}\n`, { encoding: "utf8", mode: 0o600 });
+      return {
+        ...agent,
+        prompt_file: file,
+        prompt_chars: prompt.length,
+        ...(inline ? {} : { [key]: null }),
+      };
+    }),
+  }));
+  return {
+    inline,
+    prompt_dir: dir,
+    prompt_chars_total: total,
+    byKind: new Map(externalized.map(({ kind, agents }) => [kind, agents])),
   };
 }
 
@@ -941,6 +1021,27 @@ function recordVisiblePortfolioManager(run, args) {
     execution_mode: "visible_host_threads",
   }, "portfolio_manager", run, rawRecordText(args.packet));
   assertVisibleReaderLanguage(debateReaderText(packet), run, "visible portfolio_manager decision");
+  // Reject a report body that cannot pass the report gate before the packet takes the
+  // idempotency lock, and say which headings are owed. Previously the gate ran only after the
+  // report was assembled, so a submission with no `report_markdown` at all was accepted, the
+  // report was built from the summary fallback, and the author learned about 21 missing
+  // sections only after the entire PM turn had been spent.
+  const authoredGaps = authoredReportSectionGaps(packet.report_markdown, run);
+  if (authoredGaps.length) {
+    rejectVisibleDecision(
+      run,
+      "VISIBLE_PM_REPORT_SECTIONS_MISSING",
+      packet.report_markdown
+        ? "portfolio_manager rejected: report_markdown does not carry every required report-contract section."
+        : "portfolio_manager rejected: packet.report_markdown is required and must be the complete report body, not an execution note.",
+      {
+        report_contract: run.council_mode === "quick" ? "quick_v1" : "full_v2",
+        report_markdown_characters: String(packet.report_markdown || "").length,
+        gaps: authoredGaps,
+        required_sections: requiredReportSectionAliases(run),
+      },
+    );
+  }
   const contentHash = visibleDecisionContentHash(packet);
   if (state.portfolio_manager) {
     // A report that failed the structure gate must stay revisable. The first submission takes
@@ -1701,12 +1802,39 @@ export async function runHeadlessMasters(run, args = {}) {
     })),
     ...plan.to_run,
   ];
+  // A frozen abstention has no reading for a worker to explain, and its deterministic statement
+  // already carries what the contract asks of an out_of_scope seat. Publish it directly instead
+  // of spending one model turn per seat to restate it.
+  const abstainedWithoutWorker = [];
+  const votingWorkerItems = workerItems.filter((item) => {
+    if (!item.frozenOpinion || needsMethodVoiceWorker(item.frozenOpinion)) return true;
+    abstainedWithoutWorker.push(item);
+    return false;
+  });
   for (const item of workerItems) {
     if (!item.frozenOpinion) continue;
     writeJson(join(dir, `${item.id}.deterministic.json`), item.frozenOpinion);
   }
 
-  const outcomes = await mapLimit(workerItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
+  const abstainedOutcomes = abstainedWithoutWorker.map(({ id, engine, frozenOpinion }) => ({
+    id,
+    engine,
+    opinion: {
+      ...frozenOpinion,
+      deterministic_summary: frozenOpinion.summary,
+      voice_statement: frozenOpinion.voice_statement || frozenOpinion.summary,
+      voice_status: "deterministic_scope",
+      voice_language: run.language,
+      statement_origin: "deterministic_scope_fallback",
+      dedicated_worker: {
+        status: "not_required_frozen_abstention",
+        language: run.language,
+        execution_mode: "deterministic_only",
+      },
+    },
+  }));
+
+  const outcomes = await mapLimit(votingWorkerItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
     const prompt = frozenOpinion
       ? masterVoicePrompt(id, run, frozenOpinion)
       : [
@@ -1844,7 +1972,7 @@ export async function runHeadlessMasters(run, args = {}) {
     raw: cleanLog(error?.message || error),
   }));
 
-  for (const outcome of outcomes) {
+  for (const outcome of [...abstainedOutcomes, ...outcomes]) {
     if (!outcome.opinion) {
       const diagnosticPath = join(dir, `${outcome.id}.failure.json`);
       writeJson(diagnosticPath, {

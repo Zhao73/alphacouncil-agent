@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:c67fa26eb06a236c02cd1cac82f8f4d5ded5d7cd6f0661ed801886c56033e7c0",
+  "input_hash": "sha256:26b7780bb848d21960243bfdb499eca231675d68811dae3193c40109240670cf",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -31,9 +31,9 @@
   "reviewer_kind": "ai",
   "runtime_bindings": [
     {
-      "byte_length": 27650,
+      "byte_length": 29277,
       "path": "mcp/lib/personas-v3/runtime.mjs",
-      "physical_file_hash": "sha256:aa32cf59eaec9eeb9583e44b76b31fac8fb8661e49b0b19da6de0f9b4ca5f568"
+      "physical_file_hash": "sha256:6380206817ee6da17dc3d90dde93459d9b7dcc1b88ea92f3d58f8c7b7252f7c3"
     },
     {
       "byte_length": 51789,

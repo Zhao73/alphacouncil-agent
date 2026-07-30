@@ -2,6 +2,63 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.9] — 2026-07-30
+
+Seven fixes found by auditing one real 148-minute visible NOW council against its own
+artifacts. Every one of them was quiet: the run produced a complete report each time.
+
+### Fixed
+
+- **A hashed hard veto made two seats guess, in writing, which condition had vetoed them.**
+  Condition ids are hashed before a policy runs so the decision layer cannot recognise the seat.
+  The voice layer reversed that for scoring conditions but not for vetoes, tool output ids or
+  `common_projection.veto_ids`, so a seat published `anon_e41f54d07b56b0ff5` where it meant
+  `master_marks.euphoria`. Both vetoed seats on NOW speculated their veto came from a
+  424.67% dilution figure that was a stock-split artefact; the actual veto was a market-level
+  reading. Past the freeze the seat is named in the report and in its own worker prompt, so the
+  hash protected nothing. Also fixes a latent mis-mapping: the positional fallback assumed the
+  executor returns hits, misses and uncomputable rules in declaration order, and would have
+  published two condition names swapped for any seat with a mixed split.
+- **`plan_visible_run` returned 311,007 characters and the host rejected the whole plan.**
+  Prompts now always land in `<run>/prompts/` with `prompt_file` on every agent spec, and
+  `prompts_inline: false` says the bodies were left out on purpose. What drives the size is the
+  grounding each prompt embeds, not the seat count.
+- **A portfolio-manager packet with no `report_markdown` was accepted, then failed the report
+  gate with 21 missing sections.** The gate could only run after assembly, so the whole PM turn
+  was spent first. Submission now rejects a body that cannot pass, before the idempotency lock,
+  and names each owed section with the heading to use. System-appended sections are never asked
+  of an author. The revision path stays for defects only the assembled report can see.
+- **One absent XBRL alias killed three facts on a company whose debt is on the face of its
+  balance sheet.** ServiceNow's FY2020 and FY2025 balance sheets carry no straight debt tag: the
+  only debt instant either year is `ConvertibleLongTermNotesPayable`. Total debt therefore read
+  as unknown, and because unknown debt is correctly refused rather than treated as zero,
+  leverage, downside asset value and incremental return on capital all died — which is why a
+  seat requiring incremental return on capital abstained. The convertible aliases are appended
+  last, where an earlier alias still wins a year outright, so coverage is strictly additive: a
+  filer that resolves its debt today resolves to the identical number. On real ServiceNow
+  Company Facts this turns four recorded gaps into one.
+- **A rate-limited filing document was lost where a rate-limited JSON call was retried.** Every
+  SEC JSON endpoint backed off on 429/503; `fetchFilingDocument` threw on the first one, so the
+  documents carrying the actual disclosure were the easiest evidence in a run to lose, on the
+  path SEC throttles hardest.
+
+### Changed
+
+- **A seat's statement reaches the handoff instead of its metadata.** The per-seat line led with
+  the first 520 characters of background and put the frozen-record tag in the same sentence, so
+  the part always cut was the seat's conclusion — seven seats that all spoke read as seven seats
+  that had not. Each seat now leads with the reading that decided it and the action it implies,
+  quotes its statement at a budget that survives a paragraph, and carries provenance on its own
+  line.
+- **A frozen abstention no longer spends a model worker to restate itself.** A seat whose gate
+  never opened has no reading to explain, and its deterministic statement now names the
+  condition that closed the gate and states that an abstention is not a bearish vote — all an
+  `out_of_scope` seat is asked to say. Four such seats took most of the method phase on NOW.
+  `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` restores a worker for every seat.
+- `insider_sec` carries an explicit EDGAR retrieval order, a same-URL backoff rule, and a
+  mandatory degradation rule. On NOW it tried eight different URLs in a row, was rate-limited on
+  all of them, and read no original filing.
+
 ## [1.0.8] — 2026-07-30
 
 ### Changed

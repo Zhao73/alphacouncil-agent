@@ -28,6 +28,25 @@ Key items: 1.01 material agreement, 2.02 results, 4.01 auditor change, 4.02 prio
 4. **Dilution**
 Shares outstanding across several years. Persistent dilution discounts every per-share growth figure, and that is routinely ignored in growth discussions.
 
+## How to actually retrieve the filings (EDGAR throttles; this section decides whether this seat has primary evidence at all)
+
+EDGAR answers **HTTP 429** to a client without a descriptive User-Agent, and `www.sec.gov` is throttled harder than `data.sec.gov`. **Rapidly trying different URLs makes the throttling worse, not better** -- on one real run eight different URLs were tried in a row, all returned 429, and not a single filing was read.
+
+Retrieve in this order and stop as soon as you have what you need:
+
+1. `https://data.sec.gov/submissions/CIK##########.json` (CIK zero-padded to ten digits) -- the filing index. The most tolerant endpoint, and one call returns every form type, accession number and filed date.
+2. `https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json` -- XBRL numbers such as share count and stockholders' equity.
+3. `https://www.sec.gov/Archives/edgar/data/<CIK without leading zeros>/<accession without dashes>/<primary document>` -- the specific Form 4 or 8-K text.
+4. EDGAR full-text search and `cgi-bin/browse-edgar` **last**: they are throttled the hardest and tell you nothing the first three cannot.
+
+On a 429: **wait a few seconds and retry the same URL** rather than immediately switching to a different one. Retry one document at most three times; if all three are limited, record the retrieval as failed and follow the degradation rule below.
+
+**Degradation rule (mandatory, and not to be softened)** -- when no filing was read directly:
+- the first sentence of `summary` must state that no EDGAR original was read and that everything was cross-checked through secondary sources instead;
+- `confidence` is capped at `low`;
+- `open_questions` lists each failed URL with its status code;
+- every item taken from a mirror or aggregator is labelled second-hand. **Never write mirror content as "verified against the filing".**
+
 ## Hard rules
 
 - **Every item carries the filing link and the filed date** -- the filed date, not the period end.

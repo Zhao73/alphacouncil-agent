@@ -197,7 +197,13 @@ function readJsonl(path) {
 test("full council proves dedicated master workers, parallel barriers, exact Q&A, display coverage and no-search parse repair", async () => {
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir);
-  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  // Every seat this fixture selects abstains on an ETF, and an abstaining seat no longer spends
+  // a voice worker. Opt that back in here so the worker-path assertions below keep exercising a
+  // real dedicated worker; the default skip has its own test.
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver, ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "1" },
+  });
   try {
     await server.request("initialize", {});
     const prompt = "Run the complete QQQ full council fixture with every required stage.";
@@ -356,6 +362,62 @@ test("a caller-lowered full-council budget fails closed and persists a terminal 
       ["failed", "timed_out", "skipped", "completed"].includes(state.status)),
     JSON.stringify(result.run.task_status, null, 2));
     assert.match(readFileSync(join(dir, "user_response.md"), "utf8"), /NEEDS_MANAGER_REVIEW/);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("an abstaining seat is published from its frozen record without spending a voice worker", async () => {
+  // Four seats on this ETF fixture all freeze out_of_scope. Each used to get an isolated worker
+  // to write, at length, that it had no opinion -- on a real seven-seat run that consumed most
+  // of the method phase. The frozen record already says everything the contract asks of an
+  // out_of_scope seat, so it is published directly.
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir);
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Prove an abstaining method seat is settled without a voice worker.";
+    const confirmed = await confirmMasterSelection(server, {
+      symbol: "QQQ", language: "English", prompt, selected_master_ids: SELECTED_MASTERS,
+    });
+    const runId = `FULL-ABSTAIN-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+      council_mode: "full", wait_for_completion: true,
+      selection_receipt: confirmed.selection_receipt,
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+    }, { timeoutMs: 90_000 }));
+
+    const dir = join(dataDir, "runs", runId);
+    const finalReport = readFileSync(join(dir, "final_report.md"), "utf8");
+    const userResponse = readFileSync(join(dir, "user_response.md"), "utf8");
+    const launches = readJsonl(fake.log);
+
+    for (const id of SELECTED_MASTERS) {
+      // No worker was launched for the seat, and none was faked into the record.
+      assert.equal(launches.filter((item) => item.role === id).length, 0, `${id} must not launch a worker`);
+      assert.doesNotMatch(finalReport, new RegExp(`MASTER_SENTINEL_${id}`), id);
+
+      // The seat is still fully published: every artifact carries it, with a readable statement.
+      const opinion = result.run.master_opinions.find((item) => item.master === id);
+      assert.ok(opinion, `${id} must still be recorded`);
+      assert.equal(opinion.stance, "out_of_scope");
+      assert.equal(result.run.master_status[id].status, "completed");
+      assert.equal(result.run.master_status[id].voice_status, "deterministic_scope");
+      // Honest provenance: never a claim that a worker ran.
+      assert.equal(opinion.dedicated_worker.status, "not_required_frozen_abstention");
+      assert.ok(opinion.voice_statement.replace(/\s/g, "").length >= 20, `${id} statement too thin`);
+      assert.match(opinion.voice_statement, /neither bearish nor a vote against/);
+      assert.equal(existsSync(join(dir, `${id}.md`)), true, id);
+      assert.match(finalReport, new RegExp(id));
+      assert.match(userResponse, new RegExp(id));
+    }
+
+    // Skipping the workers must not weaken the bench gate or the report contract.
+    assert.equal(result.run.missing_master_count ?? 0, 0);
+    assert.equal(readJson(join(dir, "report_quality.json")).method_statement_coverage.status, "passed");
   } finally {
     await server.close();
     removeDataDir(dataDir);

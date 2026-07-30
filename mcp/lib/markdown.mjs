@@ -13,6 +13,16 @@ import { intentLabel, VOICE_FIELDS, voiceDisclaimer, voiceFieldLabel } from "./v
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 
+/**
+ * Per-seat statement budget in the handoff.
+ *
+ * The governance contract requires every selected seat's statement in the handoff, so this is
+ * the seat's only appearance there. At the old one-line budget a seat's conclusion was always
+ * the part that got cut, which is how seven seats that all spoke read as seven seats that had
+ * not. The complete statement stays in the report and in `master_<id>.md`.
+ */
+const MASTER_STATEMENT_CHARS = 2000;
+
 export function renderPacketMarkdown(packet, index = 0, language = packet?.language) {
   const key = languageKey(language);
   const label = {
@@ -1170,7 +1180,21 @@ export function userResponseMarkdown(run, manager) {
     if (!opinion) return `- ${masterTitle(id, run.language)} (\`${id}\`) [${localizedDisplayValue(state.status, run.language)}]: ${localizedFailure(state.error, run.language) || copy.missing}`;
     const statementSource = opinion.dedicated_worker?.status || opinion.voice_status || "unknown";
     const frozenRecord = opinion.statement_origin || opinion.reason || opinion.engine || "recorded";
-    return `- ${masterTitle(id, run.language)} (\`${id}\`) — ${clipAtBoundary(opinion.voice_statement || opinion.summary || opinion.verdict, 520)} [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${frozenRecord}]`;
+    // A seat's statement opens with the evidence it read and closes with what it would do, so
+    // clipping the opening to one line spent the whole budget on background and cut the
+    // conclusion. Lead with the reading that decided it and the action it implies -- both are
+    // already composed from the frozen decision -- then quote the statement at a budget that
+    // survives a paragraph, and leave provenance to its own line instead of the same sentence.
+    const lead = [opinion.voice?.how_my_method_reads_it, opinion.voice?.would_i_act]
+      .filter((part) => typeof part === "string" && part.trim().length)
+      .join(" ");
+    const statement = opinion.voice_statement || opinion.summary || opinion.verdict || "";
+    return [
+      `- ${masterTitle(id, run.language)} (\`${id}\`)`,
+      lead ? `  - ${clipAtBoundary(lead, 700)}` : "",
+      statement ? `  - ${clipAtBoundary(statement, MASTER_STATEMENT_CHARS)}` : "",
+      `  - [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${frozenRecord}]`,
+    ].filter(Boolean).join("\n");
   }).join("\n") || `- ${copy.missing}`;
   const analystLines = (run.tasks || []).map((task) => {
     const packet = (run.packets || []).find((item) => item.task === task);

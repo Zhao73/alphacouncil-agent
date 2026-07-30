@@ -119,8 +119,11 @@ function copyFor(language) {
  *
  * `result` is the frozen `structured_decision.result`; `policy` is the seat's decision policy,
  * which supplies the human-readable condition ids the result refers to by index.
+ * `readableIds` maps each anonymised id back to the declared one exactly; prefer it over the
+ * positional fallback, which assumes the executor's hits/misses/uncomputable split happens to
+ * come back in declaration order and silently swaps two condition names when it does not.
  */
-export function voiceFromDecision({ result, policy, factPack, language = "English" } = {}) {
+export function voiceFromDecision({ result, policy, factPack, readableIds, language = "English" } = {}) {
   const copy = copyFor(language);
   const facts = new Map((factPack?.facts || []).map((fact) => [fact.fact_id, fact]));
   const stance = result?.common_projection?.stance || "out_of_scope";
@@ -136,7 +139,7 @@ export function voiceFromDecision({ result, policy, factPack, language = "Englis
   const computed = (result?.computations?.trace || [])
     .filter((step) => step.status === "computed" && finite(step.value))
     .slice(0, MAX_ITEMS)
-    .map((step) => `${step.output_id} = ${Number(step.value.toFixed(4))}`)
+    .map((step) => `${readableIds?.get?.(step.output_id) || step.output_id} = ${Number(step.value.toFixed(4))}`)
     .join("; ");
 
   // The executor publishes the rules it evaluated already split into hits, misses and the ones
@@ -157,13 +160,18 @@ export function voiceFromDecision({ result, policy, factPack, language = "Englis
     .map((rule) => rule.rule_id)
     .filter(Boolean)
     .map((id, index) => [id, index]));
+  const declaredName = (anon) => (anon && readableIds?.get?.(anon)) || null;
   const ruleName = (rule) => {
     const anon = rule.rule_id || rule.id;
-    const readable = readableRuleIds.get(anonOrder.get(anon));
-    return readable || anon || "rule";
+    return declaredName(anon) || readableRuleIds.get(anonOrder.get(anon)) || anon || "rule";
   };
 
-  const vetoes = (result?.vetoes_triggered || []).map((veto) => veto.veto_id).filter(Boolean);
+  // Vetoes went unmapped, so a hashed veto reached the reader while the scoring conditions
+  // beside it were readable. That asymmetry is what made two seats speculate about their own
+  // hard veto instead of naming it.
+  const vetoes = (result?.vetoes_triggered || [])
+    .map((veto) => declaredName(veto.veto_id) || veto.veto_id)
+    .filter(Boolean);
 
   const whatISee = [
     readList ? copy.readFacts(readList) : copy.noFacts,

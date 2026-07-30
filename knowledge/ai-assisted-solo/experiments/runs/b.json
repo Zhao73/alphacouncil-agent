@@ -16,7 +16,7 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:c67fa26eb06a236c02cd1cac82f8f4d5ded5d7cd6f0661ed801886c56033e7c0",
+    "input_hash": "sha256:26b7780bb848d21960243bfdb499eca231675d68811dae3193c40109240670cf",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
@@ -37,7 +37,7 @@
     "verifier_checks": []
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:b124da2ab5331d316919089f080267dd019d9091c81aa153c42c922db9fe05b3",
+  "run_artifact_hash": "sha256:e178e52b0d2cc92e59f3ce050c80be5ca789105d6360793393e5944e9f51eab1",
   "run_id": "B",
   "schema_version": 1,
   "simulation_scope": "frozen-input control digest only; eight LLM analyst outputs are not simulated"

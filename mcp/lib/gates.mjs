@@ -260,6 +260,48 @@ function readerLanguageAudit(assigned, language) {
   };
 }
 
+/**
+ * Which contract sections an author still owes, checked against a submitted report body.
+ *
+ * `validateFinalReport` runs against the assembled report, after the system has appended the
+ * price snapshot, the master bench and any instrument-structure block, so it can only answer
+ * once the report already exists. A PM that submits no report body at all cannot be told so
+ * until then: on a real run the first submission carried no `report_markdown`, the report was
+ * assembled from the summary fallback, and the gate came back with 21 missing sections after
+ * the whole PM turn had been spent. This answers the same question at submission time, and
+ * deliberately ignores the sections the system owns.
+ */
+const SYSTEM_OWNED_REPORT_SECTIONS = new Set(["master_bench", "instrument_structure"]);
+
+export function authoredReportSectionGaps(markdown, run) {
+  const gaps = validateFinalReport(markdown, run).missing
+    .filter((entry) => /^(missing|placeholder) section: |^section too thin: /.test(entry));
+  return gaps.filter((entry) => ![...SYSTEM_OWNED_REPORT_SECTIONS]
+    .some((id) => entry.includes(`section: ${id}`) || entry.includes(`section: ${id} (`)));
+}
+
+/** The heading a report must carry for each contract section, in the run's language. */
+export function requiredReportSectionAliases(run) {
+  const quick = run?.council_mode === "quick";
+  const sections = quick ? QUICK_REPORT_SECTIONS : REPORT_SECTIONS;
+  const benchRan = ((run?.masters || []).length > 0) || ((run?.master_opinions || []).length > 0);
+  const fundOrIndex = isFundOrIndex(run?.grounding?.instrument);
+  const key = languageKey(run?.language);
+  const index = { zh: 0, en: 1, ja: 2, ko: 3 }[key] ?? 1;
+  return sections
+    .filter((section) => !SYSTEM_OWNED_REPORT_SECTIONS.has(section.id))
+    .filter((section) => !section.when_masters || benchRan)
+    .filter((section) => !section.when_fund_or_index || fundOrIndex)
+    .map((section) => ({
+      id: section.id,
+      minimum_body_characters: section.min_body,
+      // The catalog lists zh, en, ja and ko variants; offer the one the run reads in, and fall
+      // back to the English alias so the message is never empty.
+      suggested_heading: section.aliases[index] || section.aliases[1] || section.aliases[0],
+      accepted_headings: section.aliases,
+    }));
+}
+
 export function validateFinalReport(markdown, run) {
   const text = String(markdown || "");
   const headings = parseHeadings(text);

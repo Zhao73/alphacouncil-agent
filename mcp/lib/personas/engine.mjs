@@ -10,7 +10,7 @@
 import { compiledPersonaPacks } from "../personas-v3/registry.mjs";
 import { buildFactPack } from "../personas-v3/typed-facts.mjs";
 import { typedFactPackFromGrounding } from "../personas-v3/grounding-adapter.mjs";
-import { buildAnonymousPreDecision, freezeAnonymousDecision } from "../personas-v3/runtime.mjs";
+import { buildAnonymousPreDecision, freezeAnonymousDecision, technicalIdReadableMap } from "../personas-v3/runtime.mjs";
 import { executeDeterministicPersonaPolicy } from "../personas-v3/deterministic-executor.mjs";
 import { languageKey, localized } from "../lang.mjs";
 import { displayMasterLabel } from "../markdown.mjs";
@@ -216,6 +216,25 @@ function uniqueStrings(values) {
   return [...new Set(values.filter((value) => typeof value === "string" && value.length))];
 }
 
+/**
+ * Whether a frozen seat still needs a model worker to become readable.
+ *
+ * A seat that reached a stance has a reading worth explaining: which condition decided it, at
+ * what number, and what would move it. A seat whose gate never opened has no reading. Its
+ * deterministic statement already names the condition that closed the gate and says an
+ * abstention is not a bearish vote, which is the whole of what an out_of_scope seat is asked
+ * to say -- so an isolated worker there buys prose, not information. The declined path reached
+ * this conclusion earlier for the same reason; this applies it to a seat that executed its
+ * policy and abstained. On a real seven-seat run four such seats took most of the method phase
+ * to report, at length, that they had no opinion.
+ *
+ * Set ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1 to give every seat a worker again.
+ */
+export function needsMethodVoiceWorker(opinion, { env = process.env } = {}) {
+  if (env?.ALPHACOUNCIL_VOICE_ABSTAINING_SEATS === "1") return true;
+  return (opinion?.stance || "out_of_scope") !== "out_of_scope";
+}
+
 /** Render a post-freeze, model-free opinion from the DSL result. */
 export function completedMasterOpinion(run, item) {
   if (item?.engine !== "v3_method_runtime" || !item?.completed) {
@@ -230,15 +249,21 @@ export function completedMasterOpinion(run, item) {
   const label = displayMasterLabel(item.pack.admitted_label?.[locale]
     || item.pack.admitted_label?.en || item.id);
   const copy = localized(run.language, {
-    en: { withheld: (pct) => `${pct}% coverage; score withheld`, unscored: "not scored", verdict: (stance, reason) => `${label} frozen decision: ${stance} (${reason})`, summary: (score) => `Using the ${label} method on ${run.symbol}, the PersonaPack v3 deterministic policy executed with score ${score}. Typed facts, hard vetoes, and score bands produced this stance; no language model selected it.`, hit: (id) => `score hit: ${id}`, miss: (id) => `score miss: ${id}`, eligibility: (id) => `eligibility condition ${id} becomes satisfied`, veto: (id) => `hard veto ${id} no longer triggers`, score: (id) => `score condition ${id} becomes satisfied` },
-    zh: { withheld: (pct) => `覆盖率 ${pct}%，分数被保留不发布`, unscored: "未评分", verdict: (stance, reason) => `${label}的冻结结论：${stance}（${reason}）`, summary: (score) => `按${label}方法审视 ${run.symbol}：PersonaPack v3 确定性政策已执行，得分 ${score}。该立场由结构化事实、硬否决和评分带产生，没有让语言模型选择立场。`, hit: (id) => `评分命中：${id}`, miss: (id) => `评分未命中：${id}`, eligibility: (id) => `资格条件 ${id} 变为满足`, veto: (id) => `硬否决 ${id} 不再触发`, score: (id) => `评分条件 ${id} 变为满足` },
-    ja: { withheld: (pct) => `カバレッジ ${pct}% のためスコアは非公開`, unscored: "未採点", verdict: (stance, reason) => `${label}の凍結済み判断：${stance}（${reason}）`, summary: (score) => `${label}の方法で ${run.symbol} を評価し、PersonaPack v3 の決定論的ポリシーを実行した結果、スコアは ${score}。構造化事実、ハード拒否条件、スコア帯がこの立場を生成しており、言語モデルは立場を選択していない。`, hit: (id) => `採点条件を満たす：${id}`, miss: (id) => `採点条件を満たさない：${id}`, eligibility: (id) => `適格条件 ${id} が満たされる`, veto: (id) => `ハード拒否条件 ${id} が解除される`, score: (id) => `採点条件 ${id} が満たされる` },
-    ko: { withheld: (pct) => `커버리지 ${pct}%로 점수를 공개하지 않음`, unscored: "미채점", verdict: (stance, reason) => `${label}의 동결된 판단: ${stance}(${reason})`, summary: (score) => `${label} 방법으로 ${run.symbol}을 검토하여 PersonaPack v3 결정론적 정책을 실행했으며 점수는 ${score}입니다. 구조화된 사실, 하드 거부 조건, 점수 구간이 이 입장을 만들었고 언어 모델은 입장을 선택하지 않았습니다.`, hit: (id) => `점수 조건 충족: ${id}`, miss: (id) => `점수 조건 미충족: ${id}`, eligibility: (id) => `적격 조건 ${id} 충족`, veto: (id) => `하드 거부 조건 ${id} 해제`, score: (id) => `점수 조건 ${id} 충족` },
+    en: { abstain: (reasons) => `Using the ${label} method, I do not issue a directional view on ${run.symbol} in this run: the method gate did not open (${reasons}). This is neither bearish nor a vote against the asset; the seat reassesses only once that gate can be satisfied.`, withheld: (pct) => `${pct}% coverage; score withheld`, unscored: "not scored", verdict: (stance, reason) => `${label} frozen decision: ${stance} (${reason})`, summary: (score) => `Using the ${label} method on ${run.symbol}, the PersonaPack v3 deterministic policy executed with score ${score}. Typed facts, hard vetoes, and score bands produced this stance; no language model selected it.`, hit: (id) => `score hit: ${id}`, miss: (id) => `score miss: ${id}`, eligibility: (id) => `eligibility condition ${id} becomes satisfied`, veto: (id) => `hard veto ${id} no longer triggers`, score: (id) => `score condition ${id} becomes satisfied` },
+    zh: { abstain: (reasons) => `按${label}方法审视 ${run.symbol}，本轮不作方向判断：方法闸门未打开（${reasons}）。这不是看空，也不是一张反对票；只有该闸门可被满足后，该席位才会重新评估。`, withheld: (pct) => `覆盖率 ${pct}%，分数被保留不发布`, unscored: "未评分", verdict: (stance, reason) => `${label}的冻结结论：${stance}（${reason}）`, summary: (score) => `按${label}方法审视 ${run.symbol}：PersonaPack v3 确定性政策已执行，得分 ${score}。该立场由结构化事实、硬否决和评分带产生，没有让语言模型选择立场。`, hit: (id) => `评分命中：${id}`, miss: (id) => `评分未命中：${id}`, eligibility: (id) => `资格条件 ${id} 变为满足`, veto: (id) => `硬否决 ${id} 不再触发`, score: (id) => `评分条件 ${id} 变为满足` },
+    ja: { abstain: (reasons) => `${label}の方法では、メソッドのゲートが開かなかったため（${reasons}）、今回は ${run.symbol} の方向判断を出しません。弱気判断や反対票ではなく、そのゲートが満たせるようになった時点で再評価します。`, withheld: (pct) => `カバレッジ ${pct}% のためスコアは非公開`, unscored: "未採点", verdict: (stance, reason) => `${label}の凍結済み判断：${stance}（${reason}）`, summary: (score) => `${label}の方法で ${run.symbol} を評価し、PersonaPack v3 の決定論的ポリシーを実行した結果、スコアは ${score}。構造化事実、ハード拒否条件、スコア帯がこの立場を生成しており、言語モデルは立場を選択していない。`, hit: (id) => `採点条件を満たす：${id}`, miss: (id) => `採点条件を満たさない：${id}`, eligibility: (id) => `適格条件 ${id} が満たされる`, veto: (id) => `ハード拒否条件 ${id} が解除される`, score: (id) => `採点条件 ${id} が満たされる` },
+    ko: { abstain: (reasons) => `${label} 방법으로는 방법론 게이트가 열리지 않아(${reasons}) 이번 실행에서 ${run.symbol}의 방향 판단을 내리지 않습니다. 이는 약세 판단이나 반대표가 아니며, 해당 게이트가 충족될 수 있을 때에만 재평가합니다.`, withheld: (pct) => `커버리지 ${pct}%로 점수를 공개하지 않음`, unscored: "미채점", verdict: (stance, reason) => `${label}의 동결된 판단: ${stance}(${reason})`, summary: (score) => `${label} 방법으로 ${run.symbol}을 검토하여 PersonaPack v3 결정론적 정책을 실행했으며 점수는 ${score}입니다. 구조화된 사실, 하드 거부 조건, 점수 구간이 이 입장을 만들었고 언어 모델은 입장을 선택하지 않았습니다.`, hit: (id) => `점수 조건 충족: ${id}`, miss: (id) => `점수 조건 미충족: ${id}`, eligibility: (id) => `적격 조건 ${id} 충족`, veto: (id) => `하드 거부 조건 ${id} 해제`, score: (id) => `점수 조건 ${id} 충족` },
   });
-  const vetoIds = (result.vetoes_triggered || []).map((veto) => veto.veto_id);
-  const unmet = result.eligibility?.unmet_condition_ids || [];
-  const hitIds = (result.score?.hits || []).map((rule) => rule.rule_id);
-  const missIds = (result.score?.misses || []).map((rule) => rule.rule_id);
+  // Every condition id in a frozen decision was hashed before the policy ran so the decision
+  // layer could not recognise the seat. Past this point the seat is named in the report and in
+  // the explanation worker's own prompt, so the hash only stops the seat from telling a reader
+  // which condition decided it. Resolve each id back to the one the pack declares.
+  const readableIds = technicalIdReadableMap(item.pack);
+  const readable = (id) => readableIds.get(id) || id;
+  const vetoIds = (result.vetoes_triggered || []).map((veto) => readable(veto.veto_id));
+  const unmet = (result.eligibility?.unmet_condition_ids || []).map(readable);
+  const hitIds = (result.score?.hits || []).map((rule) => readable(rule.rule_id));
+  const missIds = (result.score?.misses || []).map((rule) => readable(rule.rule_id));
   const sourceIds = uniqueStrings([
     ...(result.eligibility?.checks || []).flatMap((check) => check.source_ids || []),
     ...(result.vetoes_triggered || []).flatMap((veto) => veto.source_ids || []),
@@ -250,14 +275,29 @@ export function completedMasterOpinion(run, item) {
     : result.score
       ? `${result.score.score}/${result.score.max_possible} (${Math.round((result.ratio || 0) * 100)}%)`
     : copy.unscored;
-  const deterministicStatement = copy.summary(scoreText);
+  // An eligibility gate that closes produces a frozen out_of_scope with no score band, and the
+  // generic execution sentence says nothing a reader can use: not which condition closed the
+  // gate, and not that an abstention is not a bearish vote. The decline path has said both for
+  // a while; say the same here so no seat has to spend a model worker to state it.
+  const abstained = result.stance === "out_of_scope";
+  const abstainReasons = uniqueStrings([
+    ...(result.eligibility?.unmet_condition_ids || []).map(readable),
+    ...(result.eligibility?.uncomputable_condition_ids || []).map(readable),
+    ...(result.eligibility?.missing_required_fact_types || []),
+  ]);
+  // `summary` stays the provenance sentence -- it is what records that no language model chose
+  // the stance. Only the reader-facing statement changes, exactly as the decline path splits it.
+  const provenanceSummary = copy.summary(scoreText);
+  const deterministicStatement = abstained
+    ? copy.abstain(abstainReasons.join("; ") || result.reason || copy.unscored)
+    : provenanceSummary;
   return {
     master: item.id,
     symbol: run.symbol,
     as_of: run.as_of,
     stance: result.stance,
     verdict: copy.verdict(result.stance, result.reason),
-    summary: deterministicStatement,
+    summary: provenanceSummary,
     voice_statement: deterministicStatement,
     // The five fields, composed from the frozen decision rather than written about it: which
     // facts were read and their values, what the tools produced, which scoring conditions held
@@ -267,6 +307,7 @@ export function completedMasterOpinion(run, item) {
       result,
       policy: item.pack.components?.decision_policy,
       factPack: item.preDecision?.fact_pack,
+      readableIds,
       language: run.language,
     }),
     voice_status: "deterministic_fallback",
@@ -291,7 +332,11 @@ export function completedMasterOpinion(run, item) {
     decision_reason: result.reason,
     native_decision: result.native_decision,
     native_state: result.native_decision.state,
-    common_projection: result.common_projection,
+    // The frozen decision keeps its anonymised ids -- they are inside the hash. This is the
+    // reader-facing copy, so resolve the veto ids here and leave the frozen artifact alone.
+    common_projection: result.common_projection
+      ? { ...result.common_projection, veto_ids: (result.common_projection.veto_ids || []).map(readable) }
+      : result.common_projection,
     pack_hash: item.pack.pack_hash,
     corpus_hash: item.pack.corpus_hash,
     policy_hash: item.pack.policy_hash,

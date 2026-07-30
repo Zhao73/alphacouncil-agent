@@ -153,6 +153,34 @@ function technicalIdentityAliases(value, compiledPack) {
   return aliases;
 }
 
+/**
+ * Reverse the pre-freeze aliasing for anything downstream of the freeze.
+ *
+ * The aliasing exists so the decision layer cannot recognise the seat it is deciding for. A
+ * reader is not the decision layer, and neither is the post-freeze explanation worker: its
+ * prompt opens by naming the persona, so an `anon_<hash>` there hides nothing and costs a
+ * great deal. It cost exactly this: two seats whose hard veto had been hashed guessed in
+ * their own recorded statements which condition had vetoed them, and both guessed wrong.
+ *
+ * Keyed by alias so a caller can resolve the ids that appear in a frozen decision. Only the
+ * seat's own declared condition ids are mapped; nothing else crosses back.
+ */
+export function technicalIdReadableMap(compiledPack) {
+  const policy = compiledPack?.components?.decision_policy || {};
+  const declared = [
+    ...(policy.scoring?.rules || []).map((rule) => rule?.rule_id),
+    ...(policy.hard_vetoes || []).map((veto) => veto?.veto_id),
+    ...(policy.eligibility?.all || [])
+      .map((check) => check?.condition_id || check?.check_id || check?.id),
+    // The computed values a seat cites are named by the tool that produced them, so a hashed
+    // output id turns "it computed credit_spread_gap = -0.038" into "it computed
+    // anon_69f0... = -0.038" -- a number with no stated meaning.
+    ...(compiledPack?.components?.tools || []).flatMap((tool) => [tool?.output_id, tool?.id]),
+  ].filter((id) => nonEmptyString(id));
+  const aliases = technicalIdentityAliases(declared, compiledPack);
+  return new Map([...aliases].map(([physical, alias]) => [alias, physical]));
+}
+
 function applyTechnicalAliases(value, aliases) {
   if (typeof value === "string") return aliases.get(value) || value;
   if (Array.isArray(value)) return value.map((child) => applyTechnicalAliases(child, aliases));

@@ -402,3 +402,46 @@ test("a malformed companyFacts fails closed at the boundary", () => {
   assert.throws(() => deriveFundamentals({ companyFacts: [] }), /needs a companyFacts object/);
   assert.throws(() => deriveFundamentals({ companyFacts: baseFacts(), asOf: "not-a-date" }), /asOf is not a date/);
 });
+
+test("a filer whose only balance-sheet debt line is a convertible note still has computable debt", () => {
+  // ServiceNow's FY2020 and FY2025 balance sheets carry no straight debt tag at all: the only
+  // debt instant either year is ConvertibleLongTermNotesPayable. Total debt therefore read as
+  // unknown, and because unknown debt is correctly refused rather than treated as zero, one
+  // absent alias killed three separate facts -- leverage, downside asset value, and incremental
+  // return on capital -- on a company whose debt is stated on the face of its balance sheet.
+  const convertibleOnly = deriveFundamentals({
+    companyFacts: baseFacts(
+      { ConvertibleLongTermNotesPayable: usd(instantRows(zip(YEARS, [200, 220, 250, 300, 350, 400]))) },
+      { drop: ["LongTermDebtNoncurrent", "LongTermDebtCurrent"] },
+    ),
+    asOf: null,
+  });
+
+  for (const factId of ["financial.leverage", "valuation.downside_asset_value", "financial.incremental_return_on_capital"]) {
+    const metric = convertibleOnly.metrics[factId];
+    assert.ok(metric && Number.isFinite(metric.value), `${factId} must be computable from a convertible note`);
+    assert.deepEqual(gapsFor(convertibleOnly, factId), [], `${factId} must record no gap`);
+  }
+  // 400 / 1000: the convertible note is the whole of total debt.
+  assert.equal(convertibleOnly.metrics["financial.leverage"].value, 0.4);
+});
+
+test("a convertible alias never changes a filer that already reports straight debt", () => {
+  // The aliases are appended last and an earlier alias wins the year outright, so coverage is
+  // strictly additive: a filer resolving its debt today must resolve to the identical number.
+  const straight = derive();
+  const alsoConvertible = deriveFundamentals({
+    companyFacts: baseFacts({
+      ConvertibleLongTermNotesPayable: usd(instantRows(zip(YEARS, [999, 999, 999, 999, 999, 999]))),
+    }),
+    asOf: null,
+  });
+  for (const factId of FUNDAMENTAL_FACT_IDS) {
+    assert.deepEqual(
+      alsoConvertible.metrics[factId]?.value ?? null,
+      straight.metrics[factId]?.value ?? null,
+      `${factId} must be unchanged by an alias the filer does not need`,
+    );
+  }
+  assert.equal(alsoConvertible.metrics["financial.leverage"].value, 0.45);
+});

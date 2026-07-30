@@ -117,10 +117,19 @@ Use this contract when full runs through headless `analyze_symbol`:
 - The eight mandatory evidence roles start together. Each has one bounded parse-only repair;
   repair converts malformed output and does not repeat web research.
 - After the evidence barrier, every selected physical v3 method executes its deterministic
-  policy and freezes its stance. Exactly one isolated voice worker is then launched for that
-  stable ID. It may explain the recorded policy result in the user's language, but cannot
-  change the stance, invent a typed fact or speak as the real named person. A missing voice
-  result remains visible and prevents a false complete bench.
+  policy and freezes its stance. Each seat that reached a stance then gets exactly one isolated
+  voice worker for that stable ID. It may explain the recorded policy result in the user's
+  language, but cannot change the stance, invent a typed fact or speak as the real named person.
+  A missing voice result remains visible and prevents a false complete bench.
+- A seat frozen `out_of_scope` is settled without a worker. Its deterministic statement names
+  the condition that closed its gate and states that an abstention is not a bearish vote, which
+  is all an out_of_scope seat is asked to say; `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` restores
+  a worker for every seat. Such a seat is still published with a readable statement, and its
+  `voice_status` is `deterministic_scope` rather than a claim that a worker ran.
+- Every condition id a seat cites is resolved back to the id its pack declares. The ids are
+  hashed before the policy runs so the decision layer cannot recognise the seat, but past the
+  freeze the seat is named in the report and in its own worker prompt, so a surviving
+  `anon_<hash>` only stopped a seat from telling a reader which condition decided it.
 - Round 1 Bull/Bear run together; after both pass, Round 2 runs together; after both pass,
   Round 3 runs together with exact saved-question bindings. The PM starts after both Round-3
   sides pass.
@@ -320,6 +329,8 @@ Detect the user's language from their request and propagate it to EVERY subagent
 ### Stage 0 — Plan (envelope only)
 Call `plan_visible_run` with `symbol`, `prompt` (original user request), `as_of`, inferred `language`, `council_mode: "full"`, and the Stage 0 `selection_receipt`. It returns `run_id`, the planned evidence agent specs, the selected master specs, the 3 debate agent specs, and artifact paths. This is planning only (SKILL step 9); do not treat it as execution. The tool rejects `council_mode: "quick"`.
 
+Every planned prompt is written to `<run>/prompts/` and each agent spec carries `prompt_file`. Check `prompts_inline`: when it is `false` the prompt bodies were deliberately left out of the result, because returning them together would exceed what a host accepts, and you must `Read` each `prompt_file` instead of the inline field. What drives that size is the grounding each prompt embeds rather than the seat count, so a run with a full macro series crosses the budget where a sparse one does not. A truncated or rejected plan result is never a reason to write prompts from memory.
+
 ### Stage 1 — Evidence fan-out (one turn, isolated context)
 In a SINGLE assistant turn, emit one `Task` (subagent_type: general-purpose) call for every evidence role returned by the plan. The default eight are `market_data`, `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `insider_sec`, and `ib_event_analysis`. Each subagent:
 - May use ONLY `WebSearch` + `WebFetch`. It must NOT call `@alphacouncil-agent`, `collect_evidence`, `analyze_symbol`, or `read_run` (leaf-worker rule, Boundaries).
@@ -353,7 +364,7 @@ Run the documented rounds, each as a parallel fan-out of `bull_researcher` + `be
 Persist each round via `record_visible_decision(run_id, role, packet)` so `all_agents.md` accumulates the full trace. DISPUTED/UNVERIFIABLE claims may appear in a thesis only with an explicit caveat.
 
 ### Stage 4 — Verdict + synthesize
-Run one `portfolio_manager` `Task` fed the verified evidence plus all three debate rounds. Record it via `record_visible_decision(run_id, 'portfolio_manager', packet)`, which writes `decision.json` + `final_report.md` and marks the run complete. A successful PM response has `handoff_contract=inline_user_response_v1` and returns `user_response_markdown`; use that Markdown as the final user-facing response body instead of replacing it with a shorter recap. Its last section is the exact selected-seat count and one readable method statement per seat, including deterministic `out_of_scope` statements. Then link the complete report and audit artifacts in an appendix. The saved full report still contains the Analyst Work Log, Bull/Bear Debate record, verification ledger, all mandated sections, data gaps, horizons and `<task>:<source_id>` source table.
+Run one `portfolio_manager` `Task` fed the verified evidence plus all three debate rounds. Its packet MUST carry `report_markdown` as the complete report body with every authored contract section; the tool rejects a packet that does not, before taking the idempotency lock, and the rejection lists each missing section with the heading to use. Do not send a PM packet without it and expect the report to be assembled from the summary. The master bench and any instrument-structure section are system-appended and are never asked of you. Record it via `record_visible_decision(run_id, 'portfolio_manager', packet)`, which writes `decision.json` + `final_report.md` and marks the run complete. A successful PM response has `handoff_contract=inline_user_response_v1` and returns `user_response_markdown`; use that Markdown as the final user-facing response body instead of replacing it with a shorter recap. Its last section is the exact selected-seat count and one readable method statement per seat, including deterministic `out_of_scope` statements. Then link the complete report and audit artifacts in an appendix. The saved full report still contains the Analyst Work Log, Bull/Bear Debate record, verification ledger, all mandated sections, data gaps, horizons and `<task>:<source_id>` source table.
 
 Honest limits: Task fan-out is best-effort, not a guaranteed workflow engine; enforce the barrier by polling artifacts, not by assuming. WebSearch/WebFetch is the only evidence channel (no financial API), so some numeric claims stay "narratively corroborated, not vendor-verified". This is the same auditable contract as the other paths — a stronger runner, not a different audit story.
 

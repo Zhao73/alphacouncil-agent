@@ -183,3 +183,36 @@ test("a whole-roster handoff ends with one readable statement for every selected
   for (const id of ids) assert.equal((tail.match(new RegExp(`\\b${id}\\b`, "gu")) || []).length, 1, id);
   assert.ok(markdown.trimEnd().endsWith(tail.trimEnd()), "the per-seat statements must be the final handoff section");
 });
+
+test("a seat's own conclusion reaches the handoff instead of being clipped away", () => {
+  // The statement opens with the evidence and closes with the action, so a one-line budget
+  // always cut the conclusion. On a real run this made seven seats that all spoke read as
+  // seven seats that had not.
+  const opening = `${"读到的事实与背景。".repeat(70)}`;
+  const closing = "所以这一档我不建仓，91 美元附近才值得建仓。";
+  const markdown = userResponseMarkdown({
+    run_id: "LEAD-1",
+    symbol: "NOW",
+    language: "zh-CN",
+    tasks: [],
+    packets: [],
+    masters: ["master_marks"],
+    master_status: { master_marks: { master: "master_marks", status: "completed" } },
+    master_opinions: [{
+      master: "master_marks",
+      stance: "opposed",
+      confidence: "medium",
+      voice_statement: `${opening}${closing}`,
+      voice: {
+        how_my_method_reads_it: "在评分之前已由硬否决决定：master_marks.euphoria。",
+        would_i_act: "基于这些证据，本方法的立场是：would_pass。",
+      },
+      dedicated_worker: { status: "completed" },
+    }],
+  }, manager("最终判断"));
+
+  assert.match(markdown, /master_marks\.euphoria/, "the decisive condition must be visible");
+  assert.match(markdown, /本方法的立场是：would_pass/, "the action the seat would take must be visible");
+  assert.ok(markdown.includes(closing), "the seat's closing judgement must survive the budget");
+  assert.match(markdown, /\[冻结记录: 反对\/中; 陈词来源: 已完成; recorded\]/);
+});
