@@ -315,12 +315,30 @@ function selectedRunArgs(args = {}, entryTool) {
       prompt: typeof args.prompt === "string" ? args.prompt : "",
       council_mode: args.council_mode || "full",
     });
+    // The pace was approved at the gate, so the receipt is authoritative: an execution call may
+    // repeat it but not change it. Otherwise a user could approve fifteen minutes and get an
+    // hour, or the reverse, with nothing in the record showing the switch.
+    if (args.council_pace !== undefined
+      && selection.council_pace
+      && String(args.council_pace) !== String(selection.council_pace)) {
+      throw invalidParams(
+        `council_pace ${args.council_pace} does not match the pace confirmed at the selection gate (${selection.council_pace}).`,
+        {
+          reason: "COUNCIL_PACE_RECEIPT_MISMATCH",
+          confirmed_council_pace: selection.council_pace,
+          submitted_council_pace: String(args.council_pace),
+          remedy: "Send the confirmed pace or start a new selection to change it.",
+        },
+      );
+    }
     return {
       ...args,
       run_id: id,
       entry_tool: entryTool,
       masters: selection.selected_master_ids,
       master_selection: selection,
+      // The gate's decision wins when the caller omitted it.
+      council_pace: args.council_pace ?? selection.council_pace ?? undefined,
       existing_run: existing,
       release_run_lock: releaseRunLock,
     };
@@ -484,6 +502,11 @@ export function tools() {
           items: { type: "string", enum: masterIds },
           description: "Optional stable IDs inferred from masters explicitly named in the request. They are highlighted only; the user must still submit this run's selection.",
         },
+        council_pace: {
+          type: "string",
+          enum: COUNCIL_PACE_NAMES,
+          description: "Prefill only, when the request already named a speed such as fast or slow. It highlights that tier in the returned pace_options and never confirms one. Full only.",
+        },
       },
       required: ["symbol"],
     }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
@@ -496,6 +519,11 @@ export function tools() {
         selected_master_ids: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: masterIds } },
         select_all: { type: "boolean", const: true },
         selection: { type: "string", minLength: 1, description: "Text fallback: stable numbers/ranges/IDs, or all." },
+        council_pace: {
+          type: "string",
+          enum: COUNCIL_PACE_NAMES,
+          description: "The depth tier the user picked from the pace_options this selection returned. Full only; omit to accept the default (normal, ~20 min expected, 30 min ceiling). Binds into the receipt, so an execution call may repeat it but never change it.",
+        },
       },
       required: ["selection_id", "catalog_hash", "display_ack"],
       oneOf: [

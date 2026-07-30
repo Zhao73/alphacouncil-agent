@@ -35,8 +35,11 @@ after(async () => {
 async function plan(extra = {}) {
   seq += 1;
   const prompt = `Analyse AAPL with an explicit council pace (${seq}).`;
+  // The tier is confirmed at the gate. Execution may repeat it but never change it, so a
+  // fixture that wants a tier has to ask for it here.
   const confirmed = await confirmMasterSelection(server, {
     symbol: "AAPL", language: "en", prompt, selected_master_ids: ["master_buffett"],
+    council_pace: extra.council_pace,
   });
   const runId = `PACE-TIER-${seq}-${process.pid}`;
   const response = await server.callTool("analyze_symbol", {
@@ -107,7 +110,29 @@ test("quick rejects a pace, because it is a smaller contract rather than a slowe
 });
 
 test("an unrecognised pace is rejected rather than silently run at some other depth", async () => {
-  const { response } = await plan({ council_pace: "glacial" });
+  // The gate rejects it first, which is the earlier and better place: nothing is approved, so
+  // no receipt exists to execute. The execution-layer guard below is the second line.
+  seq += 1;
+  const prompt = `Analyse AAPL with a nonsense pace (${seq}).`;
+  await assert.rejects(
+    () => confirmMasterSelection(server, {
+      symbol: "AAPL", language: "en", prompt, selected_master_ids: ["master_buffett"],
+      council_pace: "glacial",
+    }),
+    /council_pace must be one of/,
+  );
+
+  // A caller that skips the gate's validation still cannot reach a run with a bogus tier.
+  const confirmed = await confirmMasterSelection(server, {
+    symbol: "AAPL", language: "en", prompt, selected_master_ids: ["master_buffett"],
+  });
+  const response = await server.callTool("analyze_symbol", {
+    symbol: "AAPL", language: "en", prompt, council_mode: "full",
+    run_id: `PACE-BOGUS-${seq}-${process.pid}`, dry_run: true, wait_for_completion: true,
+    grounding: { facts_unavailable: true },
+    selection_receipt: confirmed.selection_receipt,
+    council_pace: "glacial",
+  }, { timeoutMs: 60_000 });
   assert.ok(response.error);
   assert.equal(response.error.data.reason, "INVALID_COUNCIL_PACE");
   assert.deepEqual(response.error.data.allowed, ["fast", "normal", "slow"]);

@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.0.11`, published to npm as the default install.
+The declared package/plugin version is `1.0.12`, published to npm as the default install.
 The packaged tree contains 27 physical v3 packs and 54 executable tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
@@ -81,6 +81,14 @@ No research, run directory or worker may start before that receipt exists. Data-
 - `council_pace` changes depth, never the contract: all three tiers are `full_v2` with eight
   evidence seats, every selected method, three debate rounds and the PM. Quick rejects the field
   — it is a smaller contract, not a slower one. The tier is recorded in `status.json`.
+- The tier is ASKED at the selection gate, not typed as an argument.
+  `begin_council_selection` returns `pace_options`, one row per tier carrying both
+  `expected_minutes` and `hard_ceiling_minutes` plus what the extra time buys; a ceiling
+  published alone reads as the estimate. The answer goes to `confirm_master_selection` as
+  `council_pace` and binds into the receipt, so an execution call may repeat the confirmed tier
+  but never change it — a user who approved 15 minutes cannot end up running an hour. A speed
+  named in the request is a prefill exactly like a named master: it highlights the row, the menu
+  is still shown, the answer is still taken. No answer means `normal`.
 - Start the eight mandatory evidence workers in one parallel wave. A failed mandatory role
   after its single bounded parse-only repair closes the evidence barrier and terminates
   `incomplete`; never refill the result from memory.

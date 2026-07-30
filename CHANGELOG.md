@@ -2,6 +2,40 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.12] — 2026-07-30
+
+### Changed
+
+- **The depth tier is asked at the selection gate instead of typed as an argument, and the menu
+  publishes the predicted time.** `begin_council_selection` now returns `pace_options`: one row
+  per tier carrying `expected_minutes`, `hard_ceiling_minutes`, the per-seat evidence budget and
+  the per-round debate budget. Both numbers are published on purpose — a ceiling shown on its own
+  reads as the estimate, and then every `fast` run looks like it takes fifteen minutes when the
+  serial worst case is twelve.
+
+  ```
+  本次分析要跑多深？（默认 2）
+    1. 快速   预计 ~12 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
+    2. 标准   预计 ~20 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
+    3. 深入   预计 ~44 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
+  ```
+
+  The tier is the gate's second decision, so it is taken in the same interaction as the seat
+  catalog and **binds into the receipt**. An execution call may repeat the confirmed tier but
+  never change it: a user who approved fifteen minutes cannot end up running an hour, and the
+  reverse cannot happen either. `status.json` records which tier produced the run.
+
+  A speed named in the request (`/alpha NOW slow`) is now a **prefill**, exactly like a named
+  master: it highlights the row, the menu is still shown, the answer is still taken. No answer
+  means `normal`. Quick returns an empty menu and rejects the field.
+
+### Fixed
+
+- **A tier confirmed at the gate was lost at consumption.** `council_pace` reached the receipt
+  but not the consumed selection, so a run approved as `slow` silently fell back to the
+  30-minute default with nothing in the record showing the switch — and the execution-time
+  mismatch guard could not fire because it had nothing to compare against.
+
 ## [1.0.11] — 2026-07-30
 
 ### Fixed

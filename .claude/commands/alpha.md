@@ -13,8 +13,7 @@ Request: **$ARGUMENTS**
 |---|---|
 | *(empty)* | Print the mode table below and stop. Do not start a run. |
 | a ticker alone, or a question | **Full council** at the `normal` pace. Go to "Full council" below. Plugin-managed headless is bound by the selected pace; visible-host execution has no bound at all. |
-| ticker + `fast` | Full council at `council_pace: "fast"` — same eight analysts, same three debate rounds, 15-minute bound. |
-| ticker + `slow` (or `deep`) | Full council at `council_pace: "slow"` — 60-minute bound, and the tier that actually buys depth: 12 minutes per evidence seat and 6 minutes per side per debate round. |
+| ticker + `fast` / `slow` / `deep` | Full council with that tier **prefilled**. Still show the pace menu and take the answer, exactly as with a named master. |
 | ticker + `quick` | The plugin-managed headless `quick_v1` council: 4 fixed analysts, 1-4 selected methods, one parallel bull/bear round and a short PM inside a hard 10-minute ceiling. |
 | ticker + `screen` | `screen_ticker` only. No language-model judgment, no subagents. |
 | ticker + `options` | `get_options_chain` only. |
@@ -24,16 +23,17 @@ Request: **$ARGUMENTS**
 When `$ARGUMENTS` is empty, print exactly this and stop:
 
 ```
-/alpha <TICKER>          full council, normal pace — shows every master; headless bound <=30m
-/alpha <TICKER> fast     same full council, compressed          (<=15m)
-/alpha <TICKER> slow     same full council, deepest tier        (<=60m)
+/alpha <TICKER>          full council — asks how deep to go, then shows every master
+/alpha <TICKER> fast     same, with the 15-minute tier prefilled
+/alpha <TICKER> slow     same, with the 60-minute tier prefilled
 /alpha <TICKER> quick    quick_v1: 4 analysts incl. news + 1-4 masters + 1 parallel debate round (<=10m)
 /alpha <TICKER> screen   mechanical filings screen only        (no model spend)
 /alpha <TICKER> options  IV term structure, skew, positioning  (no model spend)
 /alpha <TICKER> news     dated filings and headlines           (no model spend)
 /alpha market <theme>    what the market is talking about      (no model spend)
 
-the three paces are the same full_v2 contract at three depths; quick is a SMALLER
+you do not have to type a speed: the run asks, and shows the predicted time for each
+tier. all three tiers are the same full_v2 contract at three depths; quick is a SMALLER
 contract (4 analysts, 1 debate round) and is never full-equivalent
 
 examples
@@ -59,24 +59,40 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
 1. Call `begin_council_selection` with the symbol, original request, language, host and the
    intended `council_mode` (`full` by default; exactly `quick` for quick mode). If
    the request explicitly names masters, also pass those stable IDs as
-   `preselected_master_ids`; this highlights them but does not confirm them.
-2. Show **every returned master individually, in the returned order and with its stable
+   `preselected_master_ids`; if it named a speed, pass `council_pace`. Both highlight a choice
+   without confirming it.
+2. **Ask how deep to go first**, from the returned `pace_options`. It is a three-option
+   question and the catalog is long, so it goes above the catalog. Show BOTH numbers per tier
+   — the expected time and the hard ceiling — because a ceiling alone reads as the estimate:
+
+   ```
+   本次分析要跑多深？（默认 2）
+     1. 快速   预计 ~12 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
+     2. 标准   预计 ~20 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
+     3. 深入   预计 ~44 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
+   三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM，只是每席能想多久不同。
+   ```
+
+   Quick returns an empty menu and rejects the field; say so rather than offering a tier.
+3. Show **every returned master individually, in the returned order and with its stable
    number**. Each row must include `identity`, `method`, `best_for` and `maturity`; a school
    name or a count is not a substitute for the individual catalog.
-3. Ask for one submission. In full mode accept one number from `1..N`, combinations,
+4. Ask for one submission covering both the tier and the seats. In full mode accept one number from `1..N`, combinations,
    ranges, stable IDs/names, or `all`. In quick mode the same complete 26-seat catalog is
    displayed, but the submission must contain **1..4 seats** and `all` / `select_all` is
    forbidden. A host-native multi-select is a convenience only. If it is unavailable or
    cannot show the full catalog, use the numbered text table and plain reply on every host.
-4. If the original full-mode request already named masters or said `all`, prefill that choice but
+5. If the original full-mode request already named masters or said `all`, prefill that choice but
    **still show the full catalog and require this run's submission**. Do not silently reuse a
    prior choice. For quick, prefill at most four named methods and ask the user to reduce an
    oversized/`all` request to 1-4. The submitted choice is the confirmation; do not ask a
    second confirmation.
-5. Call `confirm_master_selection` with the returned `selection_id`, `catalog_hash`,
-   `display_ack: true`, and exactly one of `selected_master_ids`, `select_all: true`, or
-   `selection`. Retain the returned one-use `selection_receipt`.
-6. Only now call `plan_visible_run` (full only), `collect_evidence` (full only), or
+6. Call `confirm_master_selection` with the returned `selection_id`, `catalog_hash`,
+   `display_ack: true`, the answered `council_pace` (omit to accept `normal`), and exactly one
+   of `selected_master_ids`, `select_all: true`, or `selection`. Retain the returned
+   one-use `selection_receipt`. The pace binds into it: an execution call may repeat the confirmed tier
+   but never change it, so a user who approved 15 minutes cannot end up running an hour.
+7. Only now call `plan_visible_run` (full only), `collect_evidence` (full only), or
    `analyze_symbol`, passing that `selection_receipt` and the same symbol, prompt, language
    and `council_mode`. Quick must use `analyze_symbol`. Do not also pass `masters` or
    `masters_roster`; the receipt is authoritative and mode-bound. A full receipt cannot start

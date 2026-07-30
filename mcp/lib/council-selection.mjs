@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { COUNCIL_MODES, LIMITS, SELECTIONS_DIR } from "./constants.mjs";
+import { COUNCIL_MODES, COUNCIL_PACE_NAMES, COUNCIL_PACE_STAGE_TOTAL, DEFAULT_COUNCIL_PACE, LIMITS, SELECTIONS_DIR, councilPaceProfile } from "./constants.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
@@ -128,6 +128,36 @@ export function catalogSnapshot(language = "English") {
   return { ...catalog, catalog_hash: digest(catalog) };
 }
 
+/**
+ * The pace menu shown at the selection gate, with what each tier costs and what it buys.
+ *
+ * `total_ms` is a hard ceiling, not a forecast, so both are published: `expected_ms` is the
+ * serial worst case if every stage uses its whole cap, which is the honest answer to "how long
+ * will this take". A reader given only the ceiling reads it as the estimate and thinks every
+ * fast run takes fifteen minutes.
+ */
+export function councilPaceMenu(mode = "full") {
+  if (councilMode(mode) === "quick") return [];
+  return COUNCIL_PACE_NAMES.map((name) => {
+    const profile = councilPaceProfile(name);
+    return {
+      pace: name,
+      is_default: name === DEFAULT_COUNCIL_PACE,
+      hard_ceiling_ms: profile.total_ms,
+      hard_ceiling_minutes: Math.round(profile.total_ms / 60000),
+      expected_ms: COUNCIL_PACE_STAGE_TOTAL(profile),
+      expected_minutes: Math.round(COUNCIL_PACE_STAGE_TOTAL(profile) / 60000),
+      evidence_seconds_per_seat: Math.round(profile.evidence_ms / 1000),
+      debate_seconds_per_round: Math.round(profile.debate_ms / 1000),
+      // Same contract at every tier: this is what changes and what does not.
+      buys: {
+        en: `${Math.round(profile.evidence_ms / 60000 * 10) / 10} min per evidence seat, ${Math.round(profile.debate_ms / 1000)}s per debate round per side`,
+        zh: `每个证据席 ${Math.round(profile.evidence_ms / 60000 * 10) / 10} 分钟，每轮辩论每侧 ${Math.round(profile.debate_ms / 1000)} 秒`,
+      },
+    };
+  });
+}
+
 export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   ensureStore();
   // Bound expiry cleanup to selections/ and selections/receipts/. It is intentionally
@@ -160,6 +190,10 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     selected_master_ids: [],
     preselected_master_ids: preselected,
     selection_mode: null,
+    // A pace named in the request is a prefill, exactly like a named master: it highlights the
+    // row and never confirms it. The confirmed value lands here at confirm time.
+    preselected_council_pace: COUNCIL_PACE_NAMES.includes(String(args.council_pace || "")) ? String(args.council_pace) : null,
+    council_pace: null,
     selection_receipt: null,
     created_at: createdAt,
     updated_at: createdAt,
@@ -183,6 +217,11 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     masters: catalog.masters,
     master_rosters: catalog.master_rosters,
     preselected_master_ids: preselected,
+    // Ask the pace in the same interaction as the catalog: two decisions, one question. Quick
+    // gets an empty menu because it is a smaller contract rather than a slower one.
+    pace_options: councilPaceMenu(mode),
+    default_council_pace: mode === "quick" ? null : DEFAULT_COUNCIL_PACE,
+    preselected_council_pace: record.preselected_council_pace,
     actions: mode === "quick" ? ["explicit_selection"] : ["explicit_selection", "select_all"],
   };
 }
@@ -341,6 +380,27 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
       reason: "MASTER_CATALOG_NOT_ACKNOWLEDGED",
     });
   }
+  // The pace is the second decision taken at this gate. Quick has no pace to take, and an
+  // unrecognised name is rejected rather than quietly run at some other depth -- a user who
+  // asked for fifteen minutes must not silently get an hour, or the reverse.
+  const quickSelection = (record.council_mode || "full") === "quick";
+  if (args.council_pace !== undefined && args.council_pace !== null) {
+    if (quickSelection) {
+      throw invalidParams("council_pace applies to the full council only. Quick is a smaller contract, not a slower one.", {
+        reason: "QUICK_PACE_FORBIDDEN",
+      });
+    }
+    if (!COUNCIL_PACE_NAMES.includes(String(args.council_pace))) {
+      throw invalidParams(`council_pace must be one of ${COUNCIL_PACE_NAMES.join(", ")}.`, {
+        reason: "INVALID_COUNCIL_PACE",
+        allowed: COUNCIL_PACE_NAMES,
+        pace_options: councilPaceMenu(record.council_mode),
+      });
+    }
+  }
+  const chosenPace = quickSelection
+    ? null
+    : String(args.council_pace || record.preselected_council_pace || DEFAULT_COUNCIL_PACE);
   const resolved = resolveConfirmation(args, record);
   if (record.council_mode === "quick" && resolved.ids.length > QUICK_MASTER_MAX) {
     throw invalidParams(`Quick council accepts at most ${QUICK_MASTER_MAX} selected masters.`, {
@@ -378,6 +438,7 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     selection_receipt: receipt,
     confirmed_at: confirmedAt,
     updated_at: confirmedAt,
+    council_pace: chosenPace,
   });
   const receiptRecord = {
     schema_version: 1,
@@ -386,6 +447,10 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     status: "confirmed",
     symbol: record.symbol,
     council_mode: record.council_mode || "full",
+    // The pace is part of what the user approved for this run, so it travels inside the receipt
+    // and is checked at consumption like every other bound field. A caller cannot approve a
+    // 15-minute run and then execute an hour of it.
+    council_pace: chosenPace,
     catalog_hash: record.catalog_hash,
     request_hash: record.request_hash,
     intent_hash: record.intent_hash,
@@ -435,6 +500,7 @@ function confirmationResult(record) {
         .map((master) => [master.id, master.pack_hash]),
     ),
     selected_count: record.selected_master_ids.length,
+    council_pace: record.council_pace || null,
     expires_at: record.expires_at,
   };
 }
@@ -460,6 +526,7 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     ["selection_receipt", receipt.selection_receipt, selection.selection_receipt],
     ["symbol", receipt.symbol, selection.symbol],
     ["council_mode", receipt.council_mode || "full", selection.council_mode || "full"],
+    ["council_pace", receipt.council_pace || null, selection.council_pace || null],
     ["catalog_hash", receipt.catalog_hash, selection.catalog_hash],
     ["request_hash", receipt.request_hash, selection.request_hash],
     ["intent_hash", receipt.intent_hash, selection.intent_hash],
@@ -601,6 +668,9 @@ function consumedResult(selection, receipt) {
     intent_hash: selection.intent_hash,
     selection_mode: selection.selection_mode,
     council_mode: selection.council_mode || "full",
+    // The pace approved at the gate must survive consumption, or the run silently falls back to
+    // the default and the approved tier is lost with nothing in the record showing the switch.
+    council_pace: selection.council_pace || null,
     selected_master_ids: [...selection.selected_master_ids],
     selected_master_pack_hashes: { ...(receipt.selected_master_pack_hashes || {}) },
     selected_count: selection.selected_master_ids.length,

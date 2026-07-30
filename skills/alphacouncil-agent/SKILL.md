@@ -71,16 +71,44 @@ can do. It does **not** create a selection session, prove that the individual ca
 displayed, or issue a receipt, so it never substitutes for the steps below.
 
 The analysts have a sensible default -- the eight-seat fan-out -- and asking about them every
-time is a question with an obvious answer. Master selection is the one configuration decision:
+time is a question with an obvious answer. The gate takes two decisions in ONE interaction:
+which methods sit on the bench, and which depth tier the run uses.
+
+**Ask the tier; never make the user type `fast` or `slow`.** `begin_council_selection` returns
+`pace_options`, one row per tier with `expected_minutes`, `hard_ceiling_minutes` and what the
+extra time buys. Show it as a short menu ABOVE the seat catalog, because it is a three-option
+question and the catalog is long. Publish BOTH numbers: the ceiling on its own reads as the
+estimate, and then every fast run looks like it takes fifteen minutes. Render it like this, in
+the run's language:
+
+```
+本次分析要跑多深？（默认 2）
+  1. 快速   预计 ~12 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
+  2. 标准   预计 ~20 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
+  3. 深入   预计 ~44 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
+三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM。只有每席能想多久不同。
+```
+
+Pass the answer as `council_pace` to `confirm_master_selection`; it binds into the receipt, so an
+execution call may repeat it but never change it. If the request already said a speed, pass it as
+`council_pace` to `begin_council_selection`: that is a PREFILL exactly like a named master --
+highlight the row, still show the menu, still take the answer. No answer means `normal`.
+
+Quick returns an empty `pace_options` and rejects the field: it is a smaller contract, not a
+slower one. Say that plainly if a user asks for a fast quick run.
+
+Then take this run's method selection:
 
 1. Call `begin_council_selection` with `symbol`, the original `prompt`, inferred `language`,
    the calling `host`, and the intended `council_mode` (`full` by default). If the request
    explicitly names masters, resolve their stable IDs and pass them as
-   `preselected_master_ids`; preselection highlights only and never confirms.
-2. Display **every returned master individually in the returned order**. Preserve the stable
-   number and show `identity`, `method`, `best_for` and `maturity` for every row. A school
-   summary, preset or seat count does not satisfy this step.
-3. Take one submission. The universal fallback is a numbered text reply: one index in
+   `preselected_master_ids`; if it named a speed, pass `council_pace`. Both are prefills that
+   highlight only and never confirm.
+2. Display the `pace_options` menu with both numbers per tier, then **every returned master
+   individually in the returned order**. Preserve the stable number and show `identity`,
+   `method`, `best_for` and `maturity` for every row. A school summary, preset or seat count
+   does not satisfy this step.
+3. Take one submission covering both decisions. The universal fallback is a numbered text reply: one index in
    `1..N`, any comma/space-separated combination, ranges such as `1-4` or `1..4`, or stable
    IDs/names. Full also accepts `all`; quick requires 1-4 distinct methods and rejects `all`.
    - **Claude Code, Codex, OpenCode and Grok Build** may use a native multi-select when it can
@@ -95,7 +123,8 @@ time is a question with an obvious answer. Master selection is the one configura
    The obsolete rule **"Skip the question entirely"** is prohibited for council runs: a
    prefill reduces typing but never replaces this run's displayed catalog and receipt.
 5. Call `confirm_master_selection` with the exact `selection_id`, `catalog_hash`,
-   `display_ack: true`, and exactly one of:
+   `display_ack: true`, the answered `council_pace` (omit to accept `normal`), and exactly one
+   of:
    - `selected_master_ids: [...]` for a native multi-select;
    - `select_all: true` for all in full mode only;
    - `selection: "1,4-6"` (or another supported text selection) for the fallback.
