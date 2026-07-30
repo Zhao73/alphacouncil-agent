@@ -2,6 +2,30 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.14] — 2026-07-30
+
+### Changed
+
+- **Method seats speak like a person with a view, not a form being filled.** The voice
+  worker is now instructed to write each of the five first-person fields as two to four
+  complete sentences in the method's own characteristic register — what it reaches for
+  first, the standard it holds the number to, and why this number settles it — and those
+  five fields are exempt from fast-tier prose compression, because they are the worker's
+  deliverable, not restatement.
+- **An abstaining seat now explains itself in first person instead of reciting a gate
+  code.** Both deterministic abstention templates (gate-closed and record-missing) grew
+  from one formula sentence into a short statement of the method's own discipline: what it
+  checks first, what was absent this round, why guessing without it would stop being a
+  method, and that the seat returns the moment the inputs arrive. The load-bearing
+  sentence — an abstention is neither bearish nor a vote against the asset — is unchanged
+  in every language.
+- **The bench no longer glues twenty-five abstaining seats into one run-on paragraph.**
+  Each abstained or declined seat renders as its own quoted block under its own name, and
+  a per-seat statement composed from the five voice fields renders as labelled lines
+  rather than one joined sentence.
+- The READMEs document `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` for operators who want
+  abstaining seats voiced by a full worker as well.
+
 ## [1.0.13] — 2026-07-30
 
 ### Fixed
