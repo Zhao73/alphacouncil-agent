@@ -16,11 +16,11 @@ plain MCP server in the Claude desktop app.
 npm install -g alphacouncil-agent
 ```
 
-That is 1.0.0. To pin the version or install straight from the tag:
+That installs the current release. To pin a version or install straight from a tag:
 
 ```bash
-npm install -g alphacouncil-agent@1.0.0
-npm install -g github:Zhao73/alphacouncil-agent#v1.0.0
+npm install -g alphacouncil-agent@latest
+npm install -g github:Zhao73/alphacouncil-agent#main
 ```
 
 `npm view alphacouncil-agent dist-tags --json` shows what each channel currently serves.
@@ -115,7 +115,7 @@ runs full. It is managed by the plugin's headless `analyze_symbol` path so the M
 enforce a wall-clock deadline. `plan_visible_run` rejects `council_mode=quick` rather than
 pretending an external host Task can be force-stopped by the plugin.
 
-- Stage 0 still displays the complete 26-seat catalog, but quick accepts exactly 1-4 selected
+- Stage 0 still displays the complete 27-seat catalog, but quick accepts exactly 1-4 selected
   methods and forbids `all` / `select_all`.
 - The receipt is bound to symbol, prompt, language and `council_mode`; it cannot be reused
   across quick and full.

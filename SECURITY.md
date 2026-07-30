@@ -20,9 +20,19 @@ AlphaCouncil Agent runs an autonomous research workflow. Be aware that:
   captured from third-party pages. These are **not** committed (ignored by
   `.gitignore`) — mind what you share.
 - Never commit API keys, tokens, brokerage credentials, or private filings.
+- `preflight_permissions` reads the host's own configuration files
+  (`~/.claude/settings.json`, `~/.claude/settings.local.json`, OpenCode config)
+  **read-only**, to detect whether background agents would silently lose web
+  search and degrade into unsourced reports. Nothing is written and nothing
+  leaves the machine.
+- Worker subprocesses are launched sandboxed: `codex exec` runs with
+  `-s read-only -a never --ephemeral --ignore-user-config`, so an analyst
+  worker cannot write to disk, auto-approve actions, or recursively load the
+  user's own MCP configuration.
 - This software is for educational/research use only and is **not investment
   advice** (see the README disclaimer).
 
 ## Supported versions
 
-This project is pre-1.0. Only the latest `main` is supported.
+Only the latest published release (npm `latest`) and the current `main` branch
+are supported. Older versions receive no fixes.

@@ -15,7 +15,7 @@ The plugin turns `@alphacouncil-agent <ticker/request>` into one of two explicit
   bounded parse-only repair, persist the failure package, skip method/debate/PM model calls,
   and terminate `incomplete` before downstream synthesis.
 - `quick_v1` runs only when explicitly requested and only through plugin-managed headless
-  `analyze_symbol`: display all 26 methods, confirm 1-4, run four fixed evidence roles and the
+  `analyze_symbol`: display all 27 methods, confirm 1-4, run four fixed evidence roles and the
   selected methods in parallel waves, one parallel Bull/Bear statement round, then a short
   PM inside a hard ten-minute ceiling.
 
@@ -181,8 +181,8 @@ Optional analysts, on the `full` roster rather than the default:
 Quick evidence roles are the fixed four-seat subset listed above and always launch in one
 parallel wave.
 
-Master Bench: the complete generated catalog has 26 selectable lenses. Both modes display
-all 26. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
+Master Bench: the complete generated catalog has 27 selectable lenses. Both modes display
+all 27. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
 methods run between evidence and debate. In plugin-managed headless mode, each selected v3
 seat is a frozen deterministic stance plus its own isolated voice worker; this is a
 process-isolated worker, not a persistent sidebar agent and not the real person. Quick runs
@@ -190,8 +190,8 @@ its 1-4 seats in one parallel wave. Full/deep
 verifiers are `source_fidelity`, `rederivation`, and `refuter`; quick does not run this
 adversarial fan-out. See `skills/alphacouncil-agent/SKILL.md` and `docs/personas.md`.
 
-Do not call the 26 solo-test packs approved method models. The explicit solo-test loader
-exposes 26 provisional `operator_lens` packs and 52 executable derived-proxy tools; none is
+Do not call the 27 solo-test packs approved method models. The explicit solo-test loader
+exposes 27 provisional `operator_lens` packs and 54 executable derived-proxy tools; none is
 operational or `method_model`, and none has human source/formula approval or signature.
 
 Debate roles:

@@ -35,9 +35,9 @@
 
 <div align="center">
 
-<img src="assets/run-example.png" alt="A real AlphaCouncil run: six master lenses reaching the same call for different reasons" width="100%" />
+<img src="assets/demo.gif" alt="AlphaCouncil のライブ実行:アナリスト評議会が調査・討論して評決に至る様子" width="100%" />
 
-<sub><i>実際の実行結果。6つのレンズはいずれも強気ではなく、相違は結論ではなく理由にあります。</i></sub>
+<sub><i>実際の実行の録画。静止画版:<a href="assets/run-example.png">6つのレンズが異なる理由で同じ結論へ</a> · <a href="docs/examples/final_report.SOX.zh.md">完全な実レポート</a>(SOX、full council、中国語)</i></sub>
 
 </div>
 
@@ -96,6 +96,18 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 /plugin install alphacouncil-agent@alphacouncil
 /reload-plugins
 ```
+
+**まず 30 秒・コストゼロで動作確認** —— フル評議会を回す前に、データ層の疎通を確認します:
+
+```text
+/alpha AAPL news
+```
+
+これはキー不要のデータツールのみを呼び、サブエージェントを一切起動しません。日付付きの
+ニュースと開示が返ればインストール成功です。その後 `/alpha AAPL` でフル評議会をどうぞ。
+なお headless のフル/クイック経路には認証済みの **Codex CLI** が別途必要です
+(各アナリストワーカーは `codex exec` として動作)。Claude Code のみの場合は可視
+サブエージェント経路になります。詳細は [docs/INSTALL.md](docs/INSTALL.md)。
 
 ## 🚀 使い方
 
@@ -253,11 +265,11 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 | クオンツ | サイモンズ · アスネス · ソープ |
 | オプション | タレブ · ナタンバーグ · シンクレア |
 | 現代 | アッシェンブレナー |
-| v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ジュンジュンワラ |
+| v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ボーグル · ジュンジュンワラ |
 
 1.0.0 `solo_test` カタログには 27 個の選択可能な物理 v3 パックがありますが、
 **27 パックは 27 個の承認済みメソッドモデルを意味しません**。全 27 席は provisional
-`operator_lens` のままです。52 個のツールは実行可能な
+`operator_lens` のままです。54 個のツールは実行可能な
 `provisional_derived_proxy` テスト代理であり、人間が承認した数式帰属ではありません。
 `operational` と `method_model` はともに 0 で、正式な production GA は fail-closed の
 ままです。

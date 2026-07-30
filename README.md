@@ -31,7 +31,7 @@
 <p>
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
-  <a href="#-tools--27-all-keyless"><b>Tools</b></a> ·
+  <a href="#-tools--31-all-keyless"><b>Tools</b></a> ·
   <a href="#-the-bench--27-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
@@ -44,9 +44,9 @@
 
 <div align="center">
 
-<img src="assets/run-example.png" alt="A real AlphaCouncil run: six master lenses reaching the same call for different reasons" width="100%" />
+<img src="assets/demo.gif" alt="AlphaCouncil live: a council of analyst agents researching a ticker and debating to a verdict" width="100%" />
 
-<sub><i>A real run. Six lenses, none constructive — and the disagreement is in the reasons, not the call.</i></sub>
+<sub><i>A real run, in real time. Want the still version? <a href="assets/run-example.png">Six lenses reaching the same call for different reasons</a> · <a href="docs/examples/final_report.SOX.zh.md">a complete real report</a> (SOX, full council, zh)</i></sub>
 
 </div>
 
@@ -86,11 +86,14 @@ somewhere across a mixed set of symbols, with no contract failures. A basket tha
 path at all** — `SOX` was in neither registry — now produces 40-plus typed facts, and the seats
 that read them are running the same methods they run on a company.
 
-Seats carry the `operator_lens` admission level. Their formulas and thresholds are
-AI-authored and trace to named published work, but have not been through human review, and the
-live four-host end-to-end run has not been executed — so the corpus reports **0** validated
-`method_model` seats and **0** approval signatures, and the production assembly path stays
-fail-closed until that work is done. `npm run check` prints exactly where that stands.
+Honesty note: seat formulas are AI-authored reconstructions of named published methods,
+pending human review — the governance status and what remains open are tracked in
+[the v1.0.0 release contract](docs/releases/v1.0.0.md), and `npm run check` prints
+exactly where that stands.
+
+Trust posture: zero runtime dependencies, no install scripts, no telemetry, every data
+source keyless and public; analyst workers run in a read-only sandbox
+(`codex exec -s read-only -a never --ephemeral`). Details in [SECURITY.md](SECURITY.md).
 
 See [the v1.0.0 release contract](docs/releases/v1.0.0.md) for the exact ETF/index and full/quick
 boundary and [the report contract](docs/report-contract.md) for `quick_v1` versus `full_v2`.
@@ -122,6 +125,19 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 /plugin install alphacouncil-agent@alphacouncil
 /reload-plugins
 ```
+
+**First run, 30 seconds, zero model spend** — before committing to a full council,
+verify the data layer works:
+
+```text
+/alpha AAPL news
+```
+
+That calls only keyless data tools and spawns no subagents. When it returns dated
+headlines and filings, the install is good; then try a full council with `/alpha AAPL`.
+Note the headless full/quick paths additionally need an authenticated **Codex CLI**
+(each analyst worker runs as `codex exec`) — Claude Code without Codex uses the
+visible host-subagent path instead, see [docs/INSTALL.md](docs/INSTALL.md).
 
 ## 🚀 Usage
 
@@ -325,11 +341,11 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Quant | Simons · Asness · Thorp |
 | Options | Taleb · Natenberg · Sinclair |
 | Modern | Aschenbrenner |
-| v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Jhunjhunwala |
+| v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Bogle · Jhunjhunwala |
 
 The `solo_test` catalog has 27 selectable physical v3 packs, but **27 physical packs is
 not 27 approved method models**. Every seat is a provisional `operator_lens` backed by
-project-derived proxy material; the 52 tools are executable test proxies, not human-approved
+project-derived proxy material; the 54 tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA
 remains fail-closed.
 

@@ -35,9 +35,9 @@
 
 <div align="center">
 
-<img src="assets/run-example.png" alt="A real AlphaCouncil run: six master lenses reaching the same call for different reasons" width="100%" />
+<img src="assets/demo-zh.gif" alt="AlphaCouncil 实时运行:分析师委员会取证、辩论并给出裁决" width="100%" />
 
-<sub><i>一次真实运行。六位大师无一支持买入 —— 而分歧不在结论，在理由。</i></sub>
+<sub><i>一次真实运行的实录。静态版:<a href="assets/run-example.png">六位大师殊途同归</a> · <a href="docs/examples/final_report.SOX.zh.md">一份完整真实报告</a>(SOX,full council)</i></sub>
 
 </div>
 
@@ -52,7 +52,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 | ⏱️ **完整 headless 有硬时限，且有三档深度** | 开场问答里选 fast / normal / slow（预计 ~12 / ~20 / ~44 分钟，上限 15 / 30 / 60），三档都是同一个完整契约，只改每席能想多久。8 个分析师同波启动、每轮 Bull/Bear 同时启动、在所选档位内保存终态；外部服务故障会明确 `incomplete`，不会静默漏席。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
-| 🔑 **不依赖金融 API,无需任何密钥** | 不需要金融数据 API、行情源或券商账号。分析师通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
+| 🔑 **31 个工具,零 API 密钥,零依赖** | 数据全部来自免密钥公开源(SEC EDGAR、CBOE、Yahoo/Stooq、21 组宏观序列),不需要付费行情或券商账号;分析师另通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
 | 📚 **内置研究方法论** | 股票研究与投行事件分析的方法论以**本地 skill** 形式打包(`skills/public-equity-investing`、`skills/investment-banking`)——不依赖 Codex 专属远程工作流,Claude Code 也能获得同等研究深度。 |
 | 📈 **真实行情兜底,免 key** | 内置 `get_quote` 通过 Yahoo + Stooq 拉延迟(~15分钟)的指数 / 股指期货(含夜盘)/ 汇率 / 利率 / 波动率 / 商品 / 个股点位——不用 API key,分析师引用真实数字而非猜测。 |
 | 🧭 **公司、ETF 与指数正确分流** | 先识别资产再研究：公司走发行人财务，ETF 走带时点持仓穿透，指数走聚合方法；QQQ/SPY 不会再被当成有自身营收和 EPS 的公司。 |
@@ -99,6 +99,17 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 /plugin install alphacouncil-agent@alphacouncil
 /reload-plugins
 ```
+
+**装完先花 30 秒零成本验证** —— 在跑完整委员会之前,先确认数据层通了:
+
+```text
+/alpha AAPL news
+```
+
+这条只调用免密钥数据工具、不派生任何子代理,返回带日期的新闻和公告即说明安装成功;
+然后再跑 `/alpha AAPL` 完整委员会。注意 headless 全量/快速路径还需要已登录的
+**Codex CLI**(每个分析师 worker 都是 `codex exec`);只有 Claude Code 时走可见
+子代理路径,见 [docs/INSTALL.md](docs/INSTALL.md)。
 
 ## 🚀 用法
 
@@ -273,10 +284,10 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 量化 | 西蒙斯 · Asness · 索普 |
 | 期权 | 塔勒布 · 纳坦伯格 · 辛克莱 |
 | 现代 | Aschenbrenner |
-| v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 琼琼瓦拉 |
+| v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 博格 · 琼琼瓦拉 |
 
 1.0.0 `solo_test` 目录已有 27 个可选的物理 v3 包，但 **27 个物理包不等于 27 个已获批的
-方法模型**。所有 27 席都只是 provisional `operator_lens`；52 个工具是可执行的
+方法模型**。所有 27 席都只是 provisional `operator_lens`；54 个工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。
 
