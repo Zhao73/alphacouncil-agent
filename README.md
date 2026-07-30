@@ -464,9 +464,10 @@ All source IDs are task-scoped as `<task>:<source_id>`. Missing data must be rep
 
 ## Terminal Client (TUI)
 
-Watch the council deliberate without leaving the terminal. Each speaking seat appears
-as a 40x40 pixel portrait typing its statement into a speech bubble, above a live
-status strip of the evidence seats:
+Watch the council deliberate as a live meeting transcript, without leaving the
+terminal. Each seat speaks under its own name with a stance-colored tag, the current
+statement types out character by character, and finished statements collapse to an
+excerpt and scroll up — plain text that renders identically on every terminal:
 
 ```bash
 npm run tui                 # latest run; live-tails if still running
@@ -475,11 +476,11 @@ npm run tui -- --replay     # animate a finished run in completion order
 ```
 
 On start it asks for a UI language (English default · 中文 · 日本語 · 한국어), or pass
-`--lang en|zh|ja|ko`. Statements render in the language the council ran in.
+`--lang en|zh|ja|ko` — Chinese and Japanese localize the master names too
+(芒格、タレブ…). Statements render in the language the council ran in.
 
 Keys: `q` quit · `space` pause · `→` finish typing · `n` next speaker.
-Portraits are stylized pixel reconstructions, not photographs, and carry the same
-attribution rule as everything else here: a method seat is not the named person.
+A statement is a recorded provisional method output; the named person never spoke it.
 
 ## Run Viewer (local GUI)
 

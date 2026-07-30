@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 /**
- * AlphaCouncil terminal client -- watch a council deliberate, in the terminal.
+ * AlphaCouncil terminal client -- the council as a live meeting transcript.
  *
- * Live mode tails a running council; replay mode animates a finished run in
- * completion order. Either way, each speaking seat appears as a pixel avatar
- * with its statement typed into a speech bubble -- the reader watches the
- * committee argue instead of scrolling a markdown file.
+ * Each seat speaks under its own name with a stance-colored tag; the current
+ * statement types out character by character, finished statements collapse to
+ * a short excerpt and scroll up. Plain text on purpose: it reads identically
+ * on every terminal, including ones without truecolor.
  *
- * Zero dependencies, read-only: the MCP server owns the run directory.
- *   node tui/tui.mjs [run_id] [--replay] [--speed 1..9] [--demo N]
+ * Live mode tails a running council; replay animates a finished run in
+ * completion order. Zero dependencies, read-only.
+ *   node tui/tui.mjs [run_id] [--replay] [--lang en|zh|ja|ko] [--speed 1..9]
  */
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { colorFg, renderAvatar, displayName } from "./avatars.mjs";
 
 const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(homedir(), ".alphacouncil-agent");
 const RUNS_DIR = join(DATA_DIR, "runs");
@@ -26,7 +26,7 @@ const opt = (name, dflt) => {
 };
 const SPEED = Math.max(1, Math.min(9, Number(opt("speed", 3))));
 const DEMO_FRAMES = Number(opt("demo", 0));
-const runArg = args.find((a) => !a.startsWith("--") && a !== opt("speed", null) && a !== opt("demo", null));
+const runArg = args.find((a) => !a.startsWith("--") && a !== opt("speed", null) && a !== opt("demo", null) && a !== opt("lang", null));
 
 /* ------------------------------------------------------------------ data -- */
 
@@ -59,46 +59,76 @@ const L10N = {
   en: {
     replay: "replay", evidence: "evidence", bench: (d, t) => `bench ${d}/${t} spoke`,
     debate: { done: "verdict in", running: "debate running", idle: "debate pending" },
-    waiting: "(waiting for a speaker…)", spoken: "── already spoke ──", full: "full text",
-    keys: "q quit · space pause · → finish typing · n next speaker", speaking: "speaking",
+    waiting: "(waiting for a speaker…)", full: "full text", collapsed: "…",
+    keys: "q quit · space pause · → finish typing · n next speaker",
     stances: { constructive: "BULLISH", cautious: "CAUTIOUS", opposed: "BEARISH", out_of_scope: "ABSTAIN", bull: "BULL", bear: "BEAR", pm: "VERDICT" },
     voice: { what_i_see: "What I see", how_my_method_reads_it: "My standard", would_i_act: "Would I act", what_changes_my_mind: "What changes my mind", where_i_disagree: "Where I disagree" },
-    bullName: "Bull", bearName: "Bear",
+    bullName: "Bull", bearName: "Bear", pmName: "Portfolio Manager",
     pm: { rating: "Final rating", conf: "confidence", position: "Position", invalidation: "Invalidation" },
     pick: "Language / 语言 / 言語 / 언어:",
   },
   zh: {
     replay: "重放", evidence: "证据席", bench: (d, t) => `方法席 ${d}/${t} 已发言`,
     debate: { done: "已裁决", running: "辩论进行中", idle: "辩论未开始" },
-    waiting: "（等待发言…）", spoken: "── 已发言 ──", full: "全文",
-    keys: "q 退出 · 空格 暂停 · → 跳过打字 · n 下一位", speaking: "发言中",
+    waiting: "（等待发言…）", full: "全文", collapsed: "…",
+    keys: "q 退出 · 空格 暂停 · → 跳过打字 · n 下一位",
     stances: { constructive: "看多", cautious: "谨慎", opposed: "看空", out_of_scope: "弃权", bull: "多方", bear: "空方", pm: "决策" },
     voice: { what_i_see: "我看到的", how_my_method_reads_it: "用我的标准", would_i_act: "我会不会动手", what_changes_my_mind: "什么会让我改主意", where_i_disagree: "我的分歧" },
-    bullName: "多方 Bull", bearName: "空方 Bear",
+    bullName: "多方", bearName: "空方", pmName: "组合经理",
     pm: { rating: "最终评级", conf: "置信度", position: "仓位", invalidation: "失效条件" },
   },
   ja: {
     replay: "リプレイ", evidence: "証拠席", bench: (d, t) => `メソッド席 ${d}/${t} 発言済み`,
     debate: { done: "裁定済み", running: "討論進行中", idle: "討論未開始" },
-    waiting: "（発言待ち…）", spoken: "── 発言済み ──", full: "全文",
-    keys: "q 終了 · スペース 一時停止 · → 表示を完了 · n 次へ", speaking: "発言中",
+    waiting: "（発言待ち…）", full: "全文", collapsed: "…",
+    keys: "q 終了 · スペース 一時停止 · → 表示を完了 · n 次へ",
     stances: { constructive: "強気", cautious: "慎重", opposed: "弱気", out_of_scope: "棄権", bull: "強気側", bear: "弱気側", pm: "裁定" },
     voice: { what_i_see: "私が見ているもの", how_my_method_reads_it: "私の基準では", would_i_act: "私なら動くか", what_changes_my_mind: "考えを変える条件", where_i_disagree: "意見の相違" },
-    bullName: "Bull 強気", bearName: "Bear 弱気",
+    bullName: "強気側", bearName: "弱気側", pmName: "ポートフォリオ・マネージャー",
     pm: { rating: "最終評価", conf: "信頼度", position: "ポジション", invalidation: "無効化条件" },
   },
   ko: {
     replay: "리플레이", evidence: "증거석", bench: (d, t) => `방법석 ${d}/${t} 발언 완료`,
     debate: { done: "판정 완료", running: "토론 진행 중", idle: "토론 대기" },
-    waiting: "(발언 대기 중…)", spoken: "── 발언 완료 ──", full: "전문",
-    keys: "q 종료 · 스페이스 일시정지 · → 타이핑 건너뛰기 · n 다음", speaking: "발언 중",
+    waiting: "(발언 대기 중…)", full: "전문", collapsed: "…",
+    keys: "q 종료 · 스페이스 일시정지 · → 타이핑 건너뛰기 · n 다음",
     stances: { constructive: "강세", cautious: "신중", opposed: "약세", out_of_scope: "기권", bull: "강세측", bear: "약세측", pm: "판정" },
     voice: { what_i_see: "내가 보는 것", how_my_method_reads_it: "내 기준으로는", would_i_act: "나라면 움직이는가", what_changes_my_mind: "생각을 바꾸는 조건", where_i_disagree: "의견 차이" },
-    bullName: "Bull 강세", bearName: "Bear 약세",
+    bullName: "강세측", bearName: "약세측", pmName: "포트폴리오 매니저",
     pm: { rating: "최종 평가", conf: "신뢰도", position: "포지션", invalidation: "무효화 조건" },
   },
 };
 let T = L10N.en;
+
+/** Localized master names, so the transcript reads "芒格：" rather than "Munger:". */
+const ZH_NAMES = {
+  master_buffett: "巴菲特", master_munger: "芒格", master_graham: "格雷厄姆", master_fisher: "费雪",
+  master_lynch: "林奇", master_marks: "霍华德·马克斯", master_klarman: "卡拉曼", master_soros: "索罗斯",
+  master_druckenmiller: "德鲁肯米勒", master_dalio: "达利欧", master_burry: "迈克尔·伯里",
+  master_forensic_short: "做空研究员", master_simons: "西蒙斯", master_asness: "阿斯内斯",
+  master_thorp: "索普", master_taleb: "塔勒布", master_natenberg: "纳滕伯格", master_sinclair: "辛克莱",
+  master_aschenbrenner: "阿申布伦纳", master_damodaran: "达莫达兰", master_ackman: "阿克曼",
+  master_cathie_wood: "凯茜·伍德", master_pabrai: "帕伯莱", master_jhunjhunwala: "琼琼瓦拉",
+  master_bogle: "博格", master_duan_yongping: "段永平", master_li_lu: "李录",
+};
+const JA_NAMES = {
+  master_buffett: "バフェット", master_munger: "マンガー", master_graham: "グレアム", master_fisher: "フィッシャー",
+  master_lynch: "リンチ", master_marks: "ハワード・マークス", master_klarman: "クラーマン", master_soros: "ソロス",
+  master_druckenmiller: "ドラッケンミラー", master_dalio: "ダリオ", master_burry: "マイケル・バーリ",
+  master_forensic_short: "空売りリサーチャー", master_simons: "シモンズ", master_asness: "アスネス",
+  master_thorp: "ソープ", master_taleb: "タレブ", master_natenberg: "ナテンバーグ", master_sinclair: "シンクレア",
+  master_aschenbrenner: "アッシェンブレナー", master_damodaran: "ダモダラン", master_ackman: "アックマン",
+  master_cathie_wood: "キャシー・ウッド", master_pabrai: "パブライ", master_jhunjhunwala: "ジュンジュンワラ",
+  master_bogle: "ボーグル", master_duan_yongping: "段永平", master_li_lu: "李録",
+};
+let LOCAL_NAMES = {};
+
+/** "master_cathie_wood" -> localized name, or "Cathie Wood". */
+function displayName(id) {
+  if (LOCAL_NAMES[id]) return LOCAL_NAMES[id];
+  const base = String(id).replace(/^master_/, "").replace(/_/g, " ");
+  return base.replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const STANCE_COLOR = {
   constructive: [53, 184, 145], cautious: [201, 162, 39], opposed: [212, 115, 106],
@@ -159,20 +189,32 @@ function collectSpeeches() {
       asText(pm.position) ? `${T.pm.position}: ${asText(pm.position)}` : "",
       asText(pm.invalidation) ? `${T.pm.invalidation}: ${asText(pm.invalidation)}` : "",
     ].filter(Boolean).join("\n");
-    speeches.push({ id: "portfolio_manager", name: "Portfolio Manager", stance: "pm", text: parts, when: when("portfolio_manager", p) + 1, file: "portfolio_manager.md" });
+    speeches.push({ id: "portfolio_manager", name: T.pmName, stance: "pm", text: parts, when: when("portfolio_manager", p) + 1, file: "portfolio_manager.md" });
   }
   return speeches.sort((a, b) => a.when - b.when).filter((s) => s.text);
 }
 
 /* ------------------------------------------------------------ rendering -- */
 
-const rgb = colorFg;
+/** Apple Terminal renders 24-bit SGR as garbage, so depth is detected, not assumed. */
+const TRUECOLOR = /truecolor|24bit/i.test(process.env.COLORTERM || "")
+  || /iTerm|WezTerm|vscode|ghostty|kitty|alacritty/i.test(process.env.TERM_PROGRAM || process.env.TERM || "");
+function xterm256(r, g, b) {
+  if (r === g && g === b) {
+    if (r < 8) return 16;
+    if (r > 248) return 231;
+    return 232 + Math.round((r - 8) / 10);
+  }
+  const level = (v) => (v < 48 ? 0 : v < 115 ? 1 : Math.min(5, Math.floor((v - 35) / 40)));
+  return 16 + 36 * level(r) + 6 * level(g) + level(b);
+}
+const rgb = ([r, g, b]) => (TRUECOLOR ? `\x1b[38;2;${r};${g};${b}m` : `\x1b[38;5;${xterm256(r, g, b)}m`);
+const BOLD = "\x1b[1m";
 const DIM = rgb([128, 140, 135]);
 const ACCENT = rgb([53, 184, 145]);
-const GOLD = rgb([201, 162, 39]);
 const RESET = "\x1b[0m";
 
-const wide = (ch) => /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦　-〿]/.test(ch) ? 2 : 1;
+const wide = (ch) => /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦　-〿]/.test(ch) ? 2 : 1;
 const visWidth = (s) => [...s.replace(/\x1b\[[0-9;]*m/g, "")].reduce((a, c) => a + wide(c), 0);
 
 function wrap(text, width) {
@@ -198,80 +240,84 @@ function statusDot(state) {
   if (state === "completed" || state === "complete") return `${ACCENT}●${RESET}`;
   if (state === "failed" || state === "timed_out") return `${rgb([212, 115, 106])}✗${RESET}`;
   if (!state || state === "pending" || state === "queued") return `${DIM}○${RESET}`;
-  return `${GOLD}◐${RESET}`; // anything in flight
+  return `${rgb([201, 162, 39])}◐${RESET}`;
+}
+
+/** One transcript entry: "◆ 芒格〔弃权〕" + indented, wrapped statement lines. */
+function speechBlock(s, text, cols, maxBodyLines, typing) {
+  const st = styleFor(s.stance);
+  const head = `${rgb(st.color)}${BOLD}◆ ${s.name}${RESET}${rgb(st.color)}〔${st.label}〕${RESET}${!typing ? `  ${DIM}(${T.full}: ${s.file})${RESET}` : ""}`;
+  let body = wrap(text, cols - 6);
+  let truncated = false;
+  if (body.length > maxBodyLines) {
+    body = typing ? body.slice(-maxBodyLines) : body.slice(0, maxBodyLines);
+    truncated = true;
+  }
+  const lines = [head, ...body.map((l) => `  ${l}`)];
+  if (truncated && !typing) lines.push(`  ${DIM}${T.collapsed}${RESET}`);
+  if (typing) lines[lines.length - 1] += `${ACCENT}▌${RESET}`;
+  return lines;
 }
 
 function frame(state) {
-  const cols = Math.max(84, process.stdout.columns || 100);
+  const cols = Math.max(70, process.stdout.columns || 100);
+  const rows = Math.max(24, process.stdout.rows || 40);
   const status = state.status || {};
-  const lines = [];
   const elapsedMs = status.completed_at && status.started_at
     ? Date.parse(status.completed_at) - Date.parse(status.started_at)
     : status.started_at ? Date.now() - Date.parse(status.started_at) : 0;
   const mm = String(Math.floor(elapsedMs / 60000)).padStart(2, "0");
   const ss = String(Math.floor(elapsedMs / 1000) % 60).padStart(2, "0");
 
-  lines.push(`${ACCENT}▌ALPHACOUNCIL▐${RESET} ${status.symbol || RUN_ID}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"} · ${mm}:${ss}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
-
+  const header = [];
+  header.push(`${ACCENT}${BOLD}▌ALPHACOUNCIL▐${RESET} ${BOLD}${status.symbol || RUN_ID}${RESET}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"} · ${mm}:${ss}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
   const agents = status.agents || [];
   const evidence = agents.filter((a) => EVIDENCE_SHORT[a.role]);
   if (evidence.length) {
-    lines.push(`${DIM}${T.evidence}${RESET} ` + evidence.map((a) => `${statusDot(a.status)}${DIM}${EVIDENCE_SHORT[a.role]}${RESET}`).join("  "));
+    header.push(`${DIM}${T.evidence}${RESET} ` + evidence.map((a) => `${statusDot(a.status)}${DIM}${EVIDENCE_SHORT[a.role]}${RESET}`).join(" "));
   }
   const benchTotal = state.speeches.filter((s) => s.id.startsWith("master_")).length;
   const benchDone = Math.min(state.cursor + 1, benchTotal);
   const debate = agents.some((a) => a.role === "portfolio_manager" && a.status === "completed") ? T.debate.done
     : agents.some((a) => a.role === "bull_researcher") ? T.debate.running : T.debate.idle;
-  lines.push(`${DIM}${T.bench(benchDone, benchTotal)} · ${debate}${RESET}`);
-  lines.push("");
+  header.push(`${DIM}${T.bench(benchDone, benchTotal)} · ${debate}${RESET}`);
+  header.push(`${DIM}${"─".repeat(Math.min(cols - 2, 96))}${RESET}`);
 
-  const speech = state.speeches[state.cursor];
-  if (speech) {
-    const style = styleFor(speech.stance);
-    const avatar = renderAvatar(speech.id);
-    const avatarW = Math.max(...avatar.map(visWidth));
-    const bubbleW = Math.max(30, Math.min(cols - avatarW - 8, 78));
-    const shown = [...speech.text].slice(0, state.chars).join("");
-    const body = wrap(shown, bubbleW - 4).slice(-Math.max(6, avatar.length - 2));
-    const top = `╭${"─".repeat(bubbleW - 2)}╮`;
-    const bottom = `╰${"─".repeat(bubbleW - 2)}╯`;
-    const bubble = [top, ...body.map((l) => `│ ${padTo(l, bubbleW - 4)} │`), bottom];
-    const header = `${rgb(style.color)}◉ ${speech.name}${RESET} ${rgb(style.color)}〔${style.label}〕${RESET}${state.chars >= speech.len ? `  ${DIM}(${T.full}: ${speech.file})${RESET}` : ""}`;
-    lines.push(`  ${" ".repeat(avatarW + 2)}${header}`);
-    // Top-aligned, no dead rows: the bubble starts level with the face, and rows
-    // that have neither avatar nor bubble content are simply not emitted.
-    const rows = Math.max(avatar.length, bubble.length);
-    for (let i = 0; i < rows; i += 1) {
-      const a = i < avatar.length ? avatar[i] : " ".repeat(avatarW);
-      const b = i < bubble.length ? bubble[i] : "";
-      if (i >= avatar.length && !b) break;
-      const tail = i === 1 && b ? `${DIM}─▷${RESET}` : "  ";
-      lines.push(`  ${padTo(a, avatarW)}${tail}${b}`);
-    }
+  const footer = [`${DIM}${"─".repeat(Math.min(cols - 2, 96))}${RESET}`, `${DIM} ${T.keys}${RESET}`];
+  const budget = rows - header.length - footer.length - 1;
+
+  // Transcript, bottom-up: the current speaker gets the room it needs, history
+  // fills whatever is left above it, newest first, each entry collapsed.
+  const blocks = [];
+  const current = state.speeches[state.cursor];
+  let used = 0;
+  if (current) {
+    const shown = [...current.text].slice(0, state.chars).join("");
+    const block = speechBlock(current, shown, cols, Math.max(6, budget - 8), true);
+    blocks.push(block);
+    used += block.length;
   } else {
-    lines.push(`${DIM}  ${T.waiting}${RESET}`);
+    blocks.push([`${DIM}  ${T.waiting}${RESET}`]);
+    used += 1;
+  }
+  for (let i = state.cursor - 1; i >= 0 && used + 4 <= budget; i -= 1) {
+    const s = state.speeches[i];
+    const excerptLines = Math.min(2, budget - used - 2);
+    if (excerptLines < 1) break;
+    const block = speechBlock(s, s.text, cols, excerptLines, false);
+    blocks.unshift(block, [""]);
+    used += block.length + 1;
   }
 
-  lines.push("");
-  const recent = state.speeches.slice(Math.max(0, state.cursor - 4), state.cursor).reverse();
-  if (recent.length) {
-    lines.push(`${DIM}${T.spoken}${RESET}`);
-    for (const s of recent) {
-      const st = styleFor(s.stance);
-      const first = [...s.text.replace(/\n/g, " ")].slice(0, 46).join("");
-      lines.push(` ${rgb(st.color)}▪${RESET} ${padTo(s.name, 20)} ${rgb(st.color)}${st.label}${RESET}  ${DIM}${first}…${RESET}`);
-    }
-  }
-  lines.push("");
-  lines.push(`${DIM} ${T.keys}${RESET}`);
+  const lines = [...header, ...blocks.flat(), ...footer];
   return lines.map((l) => padTo(l, cols)).join("\n");
 }
 
 /* ----------------------------------------------------------------- loop -- */
 
-// Language is chosen before anything is collected: bull/bear display names and the
-// five voice-field labels bake into the speech texts. Statements themselves stay in
-// the run's own language -- they are recorded artifacts, not UI copy.
+// Language is chosen before anything is collected: localized names, bull/bear
+// labels and the five voice-field labels bake into the speech texts. Statements
+// themselves stay in the run's own language -- they are recorded artifacts.
 async function pickLang() {
   const cli = String(opt("lang", "")).toLowerCase();
   if (L10N[cli]) return cli;
@@ -283,7 +329,9 @@ async function pickLang() {
   if (key === "\x03") process.exit(0);
   return { 1: "en", 2: "zh", 3: "ja", 4: "ko" }[key.trim()] || "en";
 }
-T = L10N[await pickLang()];
+const lang = await pickLang();
+T = L10N[lang];
+LOCAL_NAMES = lang === "zh" ? ZH_NAMES : lang === "ja" ? JA_NAMES : {};
 
 const state = {
   status: readJson(join(RUN_DIR, "status.json")) || {},
@@ -307,7 +355,7 @@ function tick() {
   const speech = state.speeches[state.cursor];
   if (speech && !state.paused) {
     if (state.chars < speech.len) state.chars = Math.min(speech.len, state.chars + SPEED * 2);
-    else if (!state.holdUntil) state.holdUntil = Date.now() + 1600;
+    else if (!state.holdUntil) state.holdUntil = Date.now() + 1400;
     else if (Date.now() > state.holdUntil && state.cursor < state.speeches.length - 1) {
       state.cursor += 1; state.chars = 0; state.holdUntil = 0;
     }
