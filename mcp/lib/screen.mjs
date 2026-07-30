@@ -18,6 +18,21 @@ const last = (series, n) => series.slice(-n);
 const sum = (xs) => xs.reduce((a, b) => a + b, 0);
 
 /**
+ * Pair two annual series by fiscal period end, newest last, capped at n pairs.
+ *
+ * Pairing by array position instead put every year after a gap onto the wrong
+ * counterpart -- a filer that stopped tagging InterestExpense had this year's EBIT
+ * divided by a two-year-old interest figure, and an equity series missing one middle
+ * year shifted a decade of ROE by one year -- while the provenance block still showed
+ * a clean range. A year present on only one side is dropped, never matched to a
+ * neighbour; the pair count is what the rule reports as its coverage.
+ */
+const pairByEnd = (a, b, n) => {
+  const byEnd = new Map(b.map((row) => [row.end, row]));
+  return a.filter((row) => byEnd.has(row.end)).slice(-n).map((row) => [row, byEnd.get(row.end)]);
+};
+
+/**
  * XBRL reports share counts under the `shares` unit, not `USD`. Requesting the default unit
  * for a share concept returns nothing, so the dilution rule reported `skipped` for every
  * company that has ever been screened -- seven rules advertised, six ever computed, and the
@@ -117,41 +132,36 @@ export function evaluateRules(facts, { asOf = null } = {}) {
   };
 
   add("roe_10y", { en: "10-year average ROE", zh: "10年平均ROE" }, () => {
-    const ni = last(netIncome, 10);
-    const eq = last(equity, 10);
-    if (ni.length < 5 || eq.length < 5) return null;
-    const n = Math.min(ni.length, eq.length);
-    const roes = [];
-    for (let i = 0; i < n; i += 1) {
-      const e = eq[eq.length - n + i].val;
-      if (e > 0) roes.push(ni[ni.length - n + i].val / e);
-    }
+    const pairs = pairByEnd(netIncome, equity, 10);
+    if (pairs.length < 5) return null;
+    const roes = pairs.filter(([, e]) => e.val > 0).map(([n, e]) => n.val / e.val);
     if (roes.length < 5) return null;
     const avg = sum(roes) / roes.length;
     return {
       passed: avg >= 0.08, value: pct(avg), unit: "%", threshold: 8, direction: "min", years: roes.length,
-      ...ruleProvenance([ni.slice(-n), eq.slice(-n)]),
+      ...ruleProvenance([pairs.map(([n]) => n), pairs.map(([, e]) => e)]),
     };
   });
 
   add("fcf_5y", { en: "5-year cumulative free cash flow", zh: "5年累计自由现金流" }, () => {
-    const o = last(ocf, 5);
-    const c = last(capex, 5);
-    if (o.length < 3 || c.length < 3) return null;
-    const n = Math.min(o.length, c.length);
-    const total = sum(o.slice(-n).map((x) => x.val)) - sum(c.slice(-n).map((x) => x.val));
+    const pairs = pairByEnd(ocf, capex, 5);
+    if (pairs.length < 3) return null;
+    const total = sum(pairs.map(([o, c]) => o.val - c.val));
     // Raw dollars, not billions rounded to two places: rounding erased the entire figure
     // for anything below ~$5m, which is most of the small-cap universe.
     return {
-      passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, direction: "min", years: n,
-      ...ruleProvenance([o.slice(-n), c.slice(-n)]),
+      passed: total >= 0, value: Math.round(total), unit: "USD", threshold: 0, direction: "min", years: pairs.length,
+      ...ruleProvenance([pairs.map(([o]) => o), pairs.map(([, c]) => c)]),
     };
   });
 
   add("interest_cover", { en: "EBIT / interest cover", zh: "利息保障倍数" }, () => {
-    const ebit = last(operatingIncome, 1)[0];
-    const int = last(interest, 1)[0];
-    if (!ebit || !int || int.val === 0) return null;
+    // The interest figure must belong to the same period as the latest EBIT. A filer that
+    // stops tagging InterestExpense gets a skip here, not a ratio built on old debt.
+    const pairs = pairByEnd(last(operatingIncome, 1), interest, 1);
+    if (!pairs.length) return null;
+    const [ebit, int] = pairs[0];
+    if (int.val === 0) return null;
     const cover = ebit.val / Math.abs(int.val);
     return {
       passed: cover >= 2, value: Number(cover.toFixed(2)), unit: "x", threshold: 2, direction: "min",
@@ -160,48 +170,38 @@ export function evaluateRules(facts, { asOf = null } = {}) {
   });
 
   add("gross_margin", { en: "long-run gross margin", zh: "长期毛利率" }, () => {
-    const gp = last(grossProfit, 5);
-    const rev = last(revenue, 5);
-    if (gp.length < 3 || rev.length < 3) return null;
-    const n = Math.min(gp.length, rev.length);
-    const margins = [];
-    for (let i = 0; i < n; i += 1) {
-      const r = rev[rev.length - n + i].val;
-      if (r > 0) margins.push(gp[gp.length - n + i].val / r);
-    }
+    const pairs = pairByEnd(grossProfit, revenue, 5);
+    if (pairs.length < 3) return null;
+    const margins = pairs.filter(([, r]) => r.val > 0).map(([g, r]) => g.val / r.val);
     if (!margins.length) return null;
     const avg = sum(margins) / margins.length;
     return {
       passed: avg >= 0.15, value: pct(avg), unit: "%", threshold: 15, direction: "min", years: margins.length,
-      ...ruleProvenance([gp.slice(-n), rev.slice(-n)]),
+      ...ruleProvenance([pairs.map(([g]) => g), pairs.map(([, r]) => r)]),
     };
   });
 
   add("ocf_over_ni", { en: "5-year OCF / net income", zh: "5年经营现金流/净利" }, () => {
-    const o = last(ocf, 5);
-    const ni = last(netIncome, 5);
-    if (o.length < 3 || ni.length < 3) return null;
-    const n = Math.min(o.length, ni.length);
-    const totalNi = sum(ni.slice(-n).map((x) => x.val));
+    const pairs = pairByEnd(ocf, netIncome, 5);
+    if (pairs.length < 3) return null;
+    const totalNi = sum(pairs.map(([, n]) => n.val));
     if (totalNi <= 0) return null;
-    const ratio = sum(o.slice(-n).map((x) => x.val)) / totalNi;
+    const ratio = sum(pairs.map(([o]) => o.val)) / totalNi;
     return {
-      passed: ratio >= 0.7, value: Number(ratio.toFixed(2)), unit: "x", threshold: 0.7, direction: "min", years: n,
-      ...ruleProvenance([o.slice(-n), ni.slice(-n)]),
+      passed: ratio >= 0.7, value: Number(ratio.toFixed(2)), unit: "x", threshold: 0.7, direction: "min", years: pairs.length,
+      ...ruleProvenance([pairs.map(([o]) => o), pairs.map(([, n]) => n)]),
     };
   });
 
   add("net_margin", { en: "long-run net margin", zh: "长期净利率" }, () => {
-    const ni = last(netIncome, 5);
-    const rev = last(revenue, 5);
-    if (ni.length < 3 || rev.length < 3) return null;
-    const n = Math.min(ni.length, rev.length);
-    const totalRev = sum(rev.slice(-n).map((x) => x.val));
+    const pairs = pairByEnd(netIncome, revenue, 5);
+    if (pairs.length < 3) return null;
+    const totalRev = sum(pairs.map(([, r]) => r.val));
     if (totalRev <= 0) return null;
-    const margin = sum(ni.slice(-n).map((x) => x.val)) / totalRev;
+    const margin = sum(pairs.map(([n]) => n.val)) / totalRev;
     return {
-      passed: margin >= 0.05, value: pct(margin), unit: "%", threshold: 5, direction: "min", years: n,
-      ...ruleProvenance([ni.slice(-n), rev.slice(-n)]),
+      passed: margin >= 0.05, value: pct(margin), unit: "%", threshold: 5, direction: "min", years: pairs.length,
+      ...ruleProvenance([pairs.map(([n]) => n), pairs.map(([, r]) => r)]),
     };
   });
 

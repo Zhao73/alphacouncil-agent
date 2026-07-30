@@ -169,7 +169,12 @@ export function sicGroupFor(sic) {
   return matches.sort((a, b) => (a.range[1] - a.range[0]) - (b.range[1] - b.range[0]))[0];
 }
 
+// Refreshed on the same cadence as the TWSE dataset: a resident MCP process that never
+// re-reads the SEC ticker file silently loses every new listing and rename from peer
+// matching, with no gap recorded anywhere.
+const UNIVERSE_TTL_MS = 6 * 60 * 60 * 1000;
 let universeCache = null;
+let universeCachedAt = 0;
 
 /**
  * Every US filer whose SIC matches a query, with no curation involved.
@@ -186,7 +191,10 @@ export async function peersBySic({ cik, limit = 25 } = {}) {
   }
   const group = sicGroupFor(anchor.sic);
 
-  if (!universeCache) universeCache = await fetchUniverse();
+  if (!universeCache || Date.now() - universeCachedAt > UNIVERSE_TTL_MS) {
+    universeCache = await fetchUniverse();
+    universeCachedAt = Date.now();
+  }
   // Company names are the only universe-wide signal available without 10k requests.
   const words = anchor.name.toLowerCase().split(/\s+/).filter((w) => w.length > 4 && !/corp|inc|company|holdings|group|technologies/.test(w));
   const nameMatched = words.length

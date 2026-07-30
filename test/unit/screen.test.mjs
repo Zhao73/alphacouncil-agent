@@ -230,6 +230,65 @@ test("the dilution rule actually computes, rather than skipping forever", async 
   assert.equal(dilution.passed, false);
 });
 
+// Two-series rules paired by array position, not by fiscal period. A gap in one series --
+// a tag the filer stopped using, a year reported under an out-of-catalog alias -- shifted
+// every later year onto the wrong counterpart, and the provenance block still showed a
+// clean year range. The ratio looked exactly like a computed one because it was computed,
+// just from two different years.
+const rowsFor = (concepts) => ({
+  facts: {
+    "us-gaap": Object.fromEntries(Object.entries(concepts).map(([tag, rows]) => [
+      tag,
+      { units: { USD: rows.map(([y, val]) => ({ val, start: `${y}-01-01`, end: `${y}-12-31`, filed: `${y + 1}-02-15`, form: "10-K" })) } },
+    ])),
+  },
+});
+
+test("roe pairs net income with the same year's equity even across a gap", () => {
+  const years = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+  const result = evaluateRules(rowsFor({
+    NetIncomeLoss: years.map((y) => [y, (y - 2015) * 10]),
+    // 2019 equity is missing; every year's true ROE is exactly 10%.
+    StockholdersEquity: years.filter((y) => y !== 2019).map((y) => [y, (y - 2015) * 100]),
+  }));
+  const roe = rule(result, "roe_10y");
+  assert.equal(roe.value, 10, "each year's income must divide by the same year's equity");
+  assert.equal(roe.years, 7, "the gap year is dropped, not matched to a neighbour");
+});
+
+test("interest cover is skipped when the latest EBIT year has no interest figure", () => {
+  const result = evaluateRules(rowsFor({
+    OperatingIncomeLoss: [[2021, 50], [2022, 60], [2023, 100]],
+    // The filer stopped tagging InterestExpense after 2021. Dividing 2023 EBIT by
+    // 2021 interest reported a confident 2.5x for a period nobody measured.
+    InterestExpense: [[2020, 40], [2021, 40]],
+  }));
+  assert.ok(rule(result, "interest_cover").skipped, "a stale denominator is a gap, not a cover ratio");
+});
+
+test("gross margin pairs each year's profit with that year's revenue", () => {
+  const result = evaluateRules(rowsFor({
+    GrossProfit: [[2019, 40], [2020, 40], [2022, 40], [2023, 40]],
+    Revenues: [[2019, 100], [2020, 100], [2021, 200], [2022, 200], [2023, 200]],
+  }));
+  const gm = rule(result, "gross_margin");
+  // (40% + 40% + 20% + 20%) / 4. Position-based pairing read 25% instead.
+  assert.equal(gm.value, 30);
+  assert.equal(gm.years, 4);
+});
+
+test("cumulative rules sum over the same fiscal window on both sides", () => {
+  const result = evaluateRules(rowsFor({
+    NetCashProvidedByUsedInOperatingActivities: [[2019, 10], [2020, 10], [2021, 10], [2022, 10], [2023, 10]],
+    PaymentsToAcquirePropertyPlantAndEquipment: [[2017, 3], [2018, 3], [2019, 3], [2020, 3], [2021, 3]],
+  }));
+  const fcf = rule(result, "fcf_5y");
+  // Only 2019-2021 exist on both sides: 3 x (10 - 3). Independent five-entry slices
+  // subtracted 2017-2021 capex from 2019-2023 cash flow and called it one window.
+  assert.equal(fcf.value, 21);
+  assert.equal(fcf.years, 3);
+});
+
 // Nothing in the reader caches one company's facts, so a second company cannot leak into a
 // first. This pins that: fetchCompanyFacts takes a CIK and returns fresh data, and the
 // module-level state that does exist is the SEC ticker list, the TWSE dataset and a rate
