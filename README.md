@@ -63,7 +63,7 @@ AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research 
 | 🌏 **What else you are betting on** | Correlation to the broad market, to KOSPI, to KOSDAQ and to the semiconductor cycle, plus dispersion across the eleven sector SPDRs. Sessions pair by date, because Korea and the United States keep different holidays. |
 | 💵 **Fund flow that refuses to be faked** | Creations minus redemptions, priced. Only a filed share count or the issuer's own assets-over-NAV identity may price a flow; a count reconstructed from positions is refused, because a difference cancels the number and keeps the error. |
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
-| ⏱️ **Bounded full headless run** | Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run within 30 minutes. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
+| ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the expected time beside the hard ceiling for each tier — you never type a speed. All three are the same full contract: eight analysts, three debate rounds, the PM. What changes is how long each seat may think, and a tier shapes the output too, because a shorter fuse on the same prompt buys unfinished work rather than faster work. Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run inside the chosen tier. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
@@ -182,19 +182,46 @@ show the catalog and confirm a fresh, one-use, mode-bound receipt before researc
 Any listed equity: `/alpha AAPL` · `/alpha 0700.HK quick` · `/alpha 7203.T news` · `/alpha market rates`.
 Filings-based modes need a US filer; other markets are reported through `market_coverage` rather than silently returning nothing.
 
-### Full v2 — 30-minute plugin-managed bound
+### Full v2 — three depth tiers, chosen at the gate
 
-Plugin-managed headless `analyze_symbol(council_mode="full")` uses one global maximum of
-**1800000 ms** from durable queueing through terminal artifact persistence. All eight
-mandatory evidence workers start in one parallel wave. After the evidence barrier, each
-selected physical v3 method freezes its deterministic stance and gets one isolated voice
-worker that can explain, but cannot change, that result. Bull and Bear run in parallel within
-each of the three rounds, with a barrier between rounds, followed by the PM.
+The run asks how deep to go before it asks which methods to seat. You never type a speed:
+`begin_council_selection` returns the menu, with the expected time and the hard ceiling for each
+tier side by side.
 
-At expiry the server persists `incomplete` with every timed-out, failed and skipped role.
-Thirty minutes is a terminal-persistence guarantee, not a promise that search, model
-transport or data providers will let every seat succeed. A visible-host `plan_visible_run`
-is scheduled outside the plugin and cannot be force-stopped, so it has no 30-minute claim.
+| tier | expected | ceiling | evidence / seat | debate / round / side |
+| --- | --- | --- | --- | --- |
+| `fast` | ~12 min | 15 min | 3.5 min | 90 s |
+| `normal` (default) | ~20 min | 30 min | 6 min | 150 s |
+| `slow` | ~44 min | 60 min | 12 min | 6 min |
+
+**All three are the same `full_v2` contract** — eight evidence seats, every selected method,
+three debate rounds, the PM. A tier changes how long each seat may think, never which seats run.
+Both numbers are published because a ceiling shown alone reads as the estimate, and then every
+fast run looks like it takes fifteen minutes.
+
+A tier moves every per-stage cap together with the total, and it also shapes what each worker is
+asked to produce. That second half matters: a cap on its own is a timeout, and the same prompt
+with a shorter fuse buys a packet the worker could not finish rather than a faster good one.
+Since an LLM call's wall clock is dominated by the tokens it generates, `fast` asks for the same
+information in less prose — claims, figures, scoped source IDs, required report sections and the
+decision are never what gets cut; restatement is. `slow` buys room to write a derivation out
+step by step.
+
+The chosen tier binds into the one-use `selection_receipt`, so an execution call may repeat it
+but never change it: a run approved as fifteen minutes cannot become an hour, and `status.json`
+records which tier produced it. Quick has no tier — it is a smaller contract, not a slower one.
+
+All eight mandatory evidence workers start in one parallel wave. After the evidence barrier,
+each selected physical v3 method freezes its deterministic stance; a method that reached a
+stance gets one isolated voice worker that can explain, but cannot change, that result, while a
+frozen abstention is published from its deterministic record without spending a worker. Bull and
+Bear run in parallel within each of the three rounds, with a barrier between rounds, followed by
+the PM.
+
+At expiry the server persists `incomplete` with every timed-out, failed and skipped role. The
+tier's ceiling is a terminal-persistence guarantee, not a promise that search, model transport or
+data providers will let every seat succeed. A visible-host `plan_visible_run` is scheduled
+outside the plugin and cannot be force-stopped, so it carries no time claim at all.
 
 The resulting full handoff names every selected stable master ID and all eight analysts, and
 includes a system-owned price snapshot or explicit unavailable-data record. Method-seat
@@ -346,7 +373,7 @@ flowchart TD
     PM --> R[["final_report.md<br/>verdict + entry price bands"]]
 ```
 
-The masters branch off the facts, not off the packets. Feeding 26 lenses one analyst's
+The masters branch off the facts, not off the packets. Feeding 27 lenses one analyst's
 selection of what mattered would give them all the same blind spot — a large and perfectly
 correlated error — and would remove the reason for having a bench at all.
 
