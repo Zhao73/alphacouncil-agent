@@ -50,7 +50,20 @@
 
 </div>
 
-AlphaCouncil Agent is a Codex and Claude Code plugin for public-equity research councils. Full council is the default; an explicitly requested `quick` run uses a smaller, plugin-managed headless contract. Both gather sourced evidence, run selected method seats and produce an auditable portfolio-manager report.
+**Ask an LLM "is this stock a buy" and you get one confident paragraph of training-data
+vibes. Ask AlphaCouncil and you get an argument** — eight evidence agents pull the primary
+sources, twenty-seven investor-method lenses read the same facts and disagree in public,
+bull and bear cross-examine each other for three rounds, and a portfolio manager signs a
+verdict with entry bands and the conditions that would invalidate it. Every claim traces
+to a source ID; a method whose inputs are missing says so instead of guessing.
+
+Watch it happen live: the bundled [terminal client](#terminal-client-tui) plays the
+council as a meeting transcript — each master speaking under a stance-colored name,
+statements typing out character by character.
+
+AlphaCouncil is a Codex and Claude Code plugin. Full council is the default; an explicitly
+requested `quick` run uses a smaller, plugin-managed headless contract. Both gather sourced
+evidence, run selected method seats and produce an auditable portfolio-manager report.
 
 ### ✨ Why AlphaCouncil
 
