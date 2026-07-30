@@ -212,9 +212,25 @@ const rgb = ([r, g, b]) => (TRUECOLOR ? `\x1b[38;2;${r};${g};${b}m` : `\x1b[38;5
 const BOLD = "\x1b[1m";
 const DIM = rgb([128, 140, 135]);
 const ACCENT = rgb([53, 184, 145]);
+const GOLD = rgb([201, 162, 39]);
 const RESET = "\x1b[0m";
 
-const wide = (ch) => /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦　-〿]/.test(ch) ? 2 : 1;
+/** The mark: a council house with an alpha in the pediment. Gold roof, green columns. */
+function logo() {
+  return [
+    `${GOLD}              α${RESET}`,
+    `${GOLD}        ▄▄█████████▄▄${RESET}`,
+    `${GOLD}    ▄▄█████████████████▄▄${RESET}`,
+    `${GOLD}   ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀${RESET}`,
+    `${ACCENT}     ██    ██    ██    ██${RESET}`,
+    `${ACCENT}     ██    ██    ██    ██${RESET}`,
+    `${ACCENT}     ██    ██    ██    ██${RESET}`,
+    `${GOLD}   ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄${RESET}`,
+    `${BOLD}   A L P H A C O U N C I L${RESET}`,
+  ];
+}
+
+const wide = (ch) => /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦　-〿]|[\u{1F300}-\u{1FAFF}]/u.test(ch) ? 2 : 1;
 const visWidth = (s) => [...s.replace(/\x1b\[[0-9;]*m/g, "")].reduce((a, c) => a + wide(c), 0);
 
 function wrap(text, width) {
@@ -270,7 +286,7 @@ function frame(state) {
   const ss = String(Math.floor(elapsedMs / 1000) % 60).padStart(2, "0");
 
   const header = [];
-  header.push(`${ACCENT}${BOLD}▌ALPHACOUNCIL▐${RESET} ${BOLD}${status.symbol || RUN_ID}${RESET}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"} · ${mm}:${ss}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
+  header.push(`🏛 ${ACCENT}${BOLD}ALPHACOUNCIL${RESET} ${BOLD}${status.symbol || RUN_ID}${RESET}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"} · ${mm}:${ss}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
   const agents = status.agents || [];
   const evidence = agents.filter((a) => EVIDENCE_SHORT[a.role]);
   if (evidence.length) {
@@ -297,8 +313,10 @@ function frame(state) {
     blocks.push(block);
     used += block.length;
   } else {
-    blocks.push([`${DIM}  ${T.waiting}${RESET}`]);
-    used += 1;
+    // Nothing has spoken yet: the council house stands in for the empty floor.
+    const splash = [...logo(), "", `${DIM}  ${T.waiting}${RESET}`];
+    blocks.push(splash);
+    used += splash.length;
   }
   for (let i = state.cursor - 1; i >= 0 && used + 4 <= budget; i -= 1) {
     const s = state.speeches[i];
@@ -322,7 +340,7 @@ async function pickLang() {
   const cli = String(opt("lang", "")).toLowerCase();
   if (L10N[cli]) return cli;
   if (!process.stdin.isTTY || DEMO_FRAMES > 0) return "en";
-  process.stdout.write(`\n  ${L10N.en.pick}\n  1) English (default)   2) 中文   3) 日本語   4) 한국어\n  > `);
+  process.stdout.write(`\n${logo().join("\n")}\n\n  ${L10N.en.pick}\n  1) English (default)   2) 中文   3) 日本語   4) 한국어\n  > `);
   process.stdin.setRawMode(true);
   const key = await new Promise((resolve) => process.stdin.once("data", (b) => resolve(b.toString())));
   process.stdin.setRawMode(false);
