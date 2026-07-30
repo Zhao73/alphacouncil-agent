@@ -462,6 +462,20 @@ Evidence agents return JSON packets:
 
 All source IDs are task-scoped as `<task>:<source_id>`. Missing data must be reported in `open_questions` and in the final report's data-gap section.
 
+## Run Viewer (local GUI)
+
+Every run persists its full artifact tree under `~/.alphacouncil-agent/runs/<run_id>/`.
+The bundled viewer makes those reports browsable — a zero-dependency local server,
+loopback-only, strictly read-only:
+
+```bash
+npm run gui
+# → http://127.0.0.1:7999
+```
+
+It lists every run with status and mode, renders `final_report.md`, per-seat statements
+and the debate record, and can auto-refresh while a council is still running.
+
 ## Run Locally
 
 ```bash

@@ -31,6 +31,7 @@
   },
   "scripts": {
     "check": "node scripts/selfcheck.mjs",
+    "gui": "node gui/server.mjs",
     "test": "node scripts/run-tests.mjs",
     "test:source": "node --test",
     "test:package": "node scripts/check-packaged-host-parity.mjs --check",
@@ -99,6 +100,7 @@
     "test/fixtures/options-chain-synthetic.json",
     "test/fixtures/nok-grounding-production-shape.json",
     "knowledge/persona-releases/",
+    "gui/",
     "scripts/",
     "data/",
     "skills/",
