@@ -164,7 +164,7 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then full; plugin-managed headless is ≤30m | deterministic stance + one isolated voice worker per selected v3 seat |
+| `/alpha <ticker>` | Asks the depth tier with its expected time, shows every master, confirms `1..N`/ranges/`all`, then full; headless is bounded by the chosen tier (15/30/60m) | deterministic stance + one isolated voice worker per v3 seat that reached a stance; a frozen abstention is published without one |
 | `/alpha <ticker> quick` | Shows all 27, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
@@ -392,7 +392,7 @@ For full council, both editions share the same workflow, JSON packet contract, a
 
 | | Codex edition | Claude Code edition |
 |---|---|---|
-| Council execution | plugin-managed `codex exec` workers; full headless ≤30m | Host-owned `Task` subagents; no plugin-enforced deadline |
+| Council execution | plugin-managed `codex exec` workers; full headless ≤15/30/60m by chosen tier | Host-owned `Task` subagents; no plugin-enforced deadline at all |
 | Quick `quick_v1` | Plugin-managed headless `analyze_symbol` | Same plugin-managed headless `analyze_symbol` |
 | Per-analyst context | Separate process | Separate subagent, full isolated context window |
 | Evidence | `codex exec --search` | `WebSearch` + `WebFetch` in each analyst's own context |
