@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { COUNCIL_MODES, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION } from "./constants.mjs";
+import { COUNCIL_MODES, COUNCIL_PACE_NAMES, DEFAULT_COUNCIL_PACE, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION, councilPaceProfile } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { localized, resolveLanguage } from "./lang.mjs";
@@ -227,11 +227,33 @@ function startValidation(args, entryTool) {
       maximum_ms: LIMITS.QUICK_HARD_MAX_MS,
     });
   }
-  if (mode === "full" && args.total_timeout_ms > LIMITS.FULL_HARD_MAX_MS) {
-    throw invalidParams(`Full council total_timeout_ms cannot exceed ${LIMITS.FULL_HARD_MAX_MS}.`, {
-      reason: "FULL_TOTAL_TIMEOUT_EXCEEDS_MAX",
-      maximum_ms: LIMITS.FULL_HARD_MAX_MS,
+  if (args.council_pace !== undefined && !COUNCIL_PACE_NAMES.includes(String(args.council_pace))) {
+    throw invalidParams(`council_pace must be one of ${COUNCIL_PACE_NAMES.join(", ")}.`, {
+      reason: "INVALID_COUNCIL_PACE",
+      allowed: COUNCIL_PACE_NAMES,
     });
+  }
+  if (mode === "quick" && args.council_pace !== undefined) {
+    throw invalidParams("council_pace applies to the full council only. Quick is a smaller contract, not a slower one.", {
+      reason: "QUICK_PACE_FORBIDDEN",
+    });
+  }
+  // A call is held to its own pace's budget, not to the outer bound of the schema: asking for
+  // an hour at the fast pace would buy idle time, because what bounds each worker is its
+  // per-stage cap and those are set by the pace.
+  if (mode === "full" && args.total_timeout_ms !== undefined) {
+    const profile = councilPaceProfile(args.council_pace);
+    if (args.total_timeout_ms > profile.total_ms) {
+      throw invalidParams(
+        `Full council total_timeout_ms cannot exceed ${profile.total_ms} at the ${profile.pace} pace. Raise council_pace to buy more time.`,
+        {
+          reason: "FULL_TOTAL_TIMEOUT_EXCEEDS_MAX",
+          council_pace: profile.pace,
+          maximum_ms: profile.total_ms,
+          paces: Object.fromEntries(COUNCIL_PACE_NAMES.map((name) => [name, councilPaceProfile(name).total_ms])),
+        },
+      );
+    }
   }
   if (mode === "quick" && args.synthesis === false) {
     throw invalidParams("Quick council requires its one-round bull/bear and portfolio-manager synthesis.", {
@@ -430,10 +452,16 @@ export function tools() {
     timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
     synthesis: { type: "boolean", default: true, description: "Run bull, bear, and portfolio-manager synthesis after evidence collection." },
     synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
+    council_pace: {
+      type: "string",
+      enum: COUNCIL_PACE_NAMES,
+      default: DEFAULT_COUNCIL_PACE,
+      description: "Full-council depth/time tier. fast = 15 minutes, normal = 30, slow = 60. The tier sets the total budget AND every per-stage cap together: slow gives each evidence seat 12 minutes instead of 6 and each debate round 6 minutes per side instead of 150 seconds, which is where the extra depth comes from. Raising total_timeout_ms alone buys idle time, not depth. Quick rejects this field.",
+    },
     total_timeout_ms: {
       type: "number",
       maximum: LIMITS.FULL_HARD_MAX_MS,
-      description: "Hard queue-to-persistence wall-clock budget. quick defaults to and cannot exceed ten minutes; full defaults to and cannot exceed thirty minutes. Callers may lower the applicable ceiling, never raise it.",
+      description: "Hard queue-to-persistence wall-clock budget. Cannot exceed the selected council_pace's total (fast 900000, normal 1800000, slow 3600000) or ten minutes for quick. Callers may lower the applicable ceiling, never raise it.",
     },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
     selection_receipt: { type: "string", description: "One-run receipt returned by confirm_master_selection. Required for every council run and consumed exactly once." },

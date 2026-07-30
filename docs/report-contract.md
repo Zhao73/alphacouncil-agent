@@ -89,9 +89,24 @@ downstream roles named. A partial PM opinion never converts that run to complete
 
 ## Full Runtime Budget
 
-Plugin-managed headless `analyze_symbol(council_mode="full")` has a non-overridable maximum
-of 1800000 ms from durable queueing through terminal artifact persistence. A caller or
-environment may lower it, never raise it. The execution topology is:
+Plugin-managed headless `analyze_symbol(council_mode="full")` runs at one of three depth tiers
+chosen with `council_pace`, measured from durable queueing through terminal artifact
+persistence. A caller or environment may lower the selected tier's budget, never raise it.
+
+| `council_pace` | total | evidence / seat | method / seat | debate / round | PM |
+| --- | --- | --- | --- | --- | --- |
+| `fast` | 15 min | 3.5 min | 1 min | 90 s | 2 min |
+| `normal` (default) | 30 min | 6 min | 2 min | 150 s | 3 min |
+| `slow` | 60 min | 12 min | 4 min | 6 min | 8 min |
+
+The tier moves every per-stage cap together with the total, because the per-stage caps are what
+bound each worker: a 60-minute total with 150-second debate rounds would finish in twenty
+minutes with forty idle, and a 15-minute total with 6-minute evidence caps would starve the
+debate into `incomplete`. Each tier's stages are proven to fit inside its own budget with
+headroom for queueing, retries and the bounded parse repair. All three tiers are `full_v2`: a
+tier changes how long each seat may think, never which seats run. Quick rejects the field.
+
+The execution topology is:
 
 1. the eight mandatory evidence workers start in one parallel wave;
 2. after the evidence barrier, every selected physical v3 method runs its deterministic

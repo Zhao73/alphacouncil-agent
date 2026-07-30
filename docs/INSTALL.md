@@ -83,8 +83,11 @@ voice is a recorded provisional method result, not the named person's words.
 ### What full headless means
 
 Full remains `full_v2`. When launched through plugin-managed headless
-`analyze_symbol(council_mode="full")`, it has a hard maximum of 1800000 ms from durable
-queueing through terminal artifact persistence:
+`analyze_symbol(council_mode="full")`, it runs at one of three depth tiers selected with
+`council_pace` -- `fast` 15 minutes, `normal` (default) 30, `slow` 60 -- measured from durable
+queueing through terminal artifact persistence. The tier raises every per-stage cap with the
+total, which is where the depth difference lives; all three are the same eight-seat,
+three-round `full_v2` contract:
 
 - all eight mandatory evidence workers start in one parallel wave;
 - after the fail-closed evidence barrier, each selected physical v3 method freezes its

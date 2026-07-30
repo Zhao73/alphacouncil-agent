@@ -2,6 +2,40 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.10] — 2026-07-30
+
+### Added
+
+- **Three full-council depth tiers, selected with `council_pace`: `fast` 15 minutes, `normal`
+  (default) 30, `slow` 60.** All three are the same `full_v2` contract — eight evidence seats,
+  every selected method, three debate rounds, the PM — so a tier changes how long each seat may
+  think, never which seats run. Quick rejects the field: it is a smaller contract, not a slower
+  one. The tier is recorded in `status.json`, because two runs of one symbol at different paces
+  are not the same analysis.
+
+  A tier moves every per-stage cap together with the total, which is the part that actually buys
+  depth. Raising only the total would leave a 60-minute run finishing in twenty minutes with
+  forty idle, because what bounds each worker is its per-stage cap; lowering only the total would
+  starve the later stages and terminate `incomplete` with the debate missing.
+
+  | `council_pace` | total | evidence / seat | method / seat | debate / round | PM |
+  | --- | --- | --- | --- | --- | --- |
+  | `fast` | 15 min | 3.5 min | 1 min | 90 s | 2 min |
+  | `normal` | 30 min | 6 min | 2 min | 150 s | 3 min |
+  | `slow` | 60 min | 12 min | 4 min | 6 min | 8 min |
+
+  `/alpha <TICKER> fast` and `/alpha <TICKER> slow` reach it from the command surface. A test
+  pins the property that makes a tier coherent: every tier's stages fit inside its own budget
+  with headroom, and no stage cap is allowed to stay flat as the tier widens.
+
+### Changed
+
+- **The full-council ceiling is now the selected tier's total rather than a single 30-minute
+  maximum.** A caller or environment may still only lower the applicable budget; a
+  `total_timeout_ms` above the tier's total is rejected and names the tier that would allow it.
+  `ALPHACOUNCIL_FULL_TOTAL_MS` becomes an operator cap that only ever lowers a tier, instead of
+  doubling as the default budget — as the default it silently held the 60-minute tier to 30.
+
 ## [1.0.9] — 2026-07-30
 
 Seven fixes found by auditing one real 148-minute visible NOW council against its own

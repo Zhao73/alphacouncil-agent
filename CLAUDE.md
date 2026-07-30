@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.0.9`, published to npm as the default install.
+The declared package/plugin version is `1.0.10`, published to npm as the default install.
 The packaged tree contains 27 physical v3 packs and 54 executable tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
@@ -59,10 +59,21 @@ No research, run directory or worker may start before that receipt exists. Data-
 
 ## Full v2 Runtime Contract
 
-- Plugin-managed headless `analyze_symbol(council_mode="full")` has a hard 1800000 ms
-  queue-to-terminal-persistence ceiling. Queueing, grounding, bounded repair, all workers,
-  synthesis and artifact persistence share that clock. A caller or environment may lower
-  the limit, never raise it.
+- Plugin-managed headless `analyze_symbol(council_mode="full")` runs at one of three depth
+  tiers, selected by `council_pace`: `fast` = 900000 ms, `normal` (default) = 1800000 ms,
+  `slow` = 3600000 ms, queue-to-terminal-persistence. Queueing, grounding, bounded repair, all
+  workers, synthesis and artifact persistence share that clock. A caller or environment may
+  lower the selected tier's budget, never raise it; `total_timeout_ms` above the tier's total is
+  rejected and names the tier that would allow it.
+- A tier sets the total AND every per-stage cap together, because the per-stage caps are what
+  bound each worker. `slow` gives each evidence seat 12 minutes instead of 6 and each debate
+  round 6 minutes per side instead of 150 seconds; `fast` gives 3.5 minutes and 90 seconds. That
+  is where the depth difference lives — raising `total_timeout_ms` alone buys idle time, and
+  lowering it alone starves the later stages into `incomplete`. Every tier's stages are proven
+  to fit inside its own budget with headroom.
+- `council_pace` changes depth, never the contract: all three tiers are `full_v2` with eight
+  evidence seats, every selected method, three debate rounds and the PM. Quick rejects the field
+  — it is a smaller contract, not a slower one. The tier is recorded in `status.json`.
 - Start the eight mandatory evidence workers in one parallel wave. A failed mandatory role
   after its single bounded parse-only repair closes the evidence barrier and terminates
   `incomplete`; never refill the result from memory.

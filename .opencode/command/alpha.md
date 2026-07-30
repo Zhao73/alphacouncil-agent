@@ -1,6 +1,6 @@
 ---
 description: Equity research council — full run, quick read, mechanical screen, or market narrative
-argument-hint: [ticker] [quick|screen|market|options|news] · or just a question
+argument-hint: [ticker] [fast|slow|quick|screen|market|options|news] · or just a question
 ---
 
 # /alpha
@@ -12,7 +12,9 @@ Request: **$ARGUMENTS**
 | `$ARGUMENTS` looks like | Do this |
 |---|---|
 | *(empty)* | Print the mode table below and stop. Do not start a run. |
-| a ticker alone, or a question | **Full council.** Go to "Full council" below. Plugin-managed headless has a hard 30-minute queue-to-terminal bound; visible-host execution does not. |
+| a ticker alone, or a question | **Full council** at the `normal` pace. Go to "Full council" below. Plugin-managed headless is bound by the selected pace; visible-host execution has no bound at all. |
+| ticker + `fast` | Full council at `council_pace: "fast"` — same eight analysts, same three debate rounds, 15-minute bound. |
+| ticker + `slow` (or `deep`) | Full council at `council_pace: "slow"` — 60-minute bound, and the tier that actually buys depth: 12 minutes per evidence seat and 6 minutes per side per debate round. |
 | ticker + `quick` | The plugin-managed headless `quick_v1` council: 4 fixed analysts, 1-4 selected methods, one parallel bull/bear round and a short PM inside a hard 10-minute ceiling. |
 | ticker + `screen` | `screen_ticker` only. No language-model judgment, no subagents. |
 | ticker + `options` | `get_options_chain` only. |
@@ -22,15 +24,21 @@ Request: **$ARGUMENTS**
 When `$ARGUMENTS` is empty, print exactly this and stop:
 
 ```
-/alpha <TICKER>          full council — shows every master; headless run is bounded <=30m
+/alpha <TICKER>          full council, normal pace — shows every master; headless bound <=30m
+/alpha <TICKER> fast     same full council, compressed          (<=15m)
+/alpha <TICKER> slow     same full council, deepest tier        (<=60m)
 /alpha <TICKER> quick    quick_v1: 4 analysts incl. news + 1-4 masters + 1 parallel debate round (<=10m)
 /alpha <TICKER> screen   mechanical filings screen only        (no model spend)
 /alpha <TICKER> options  IV term structure, skew, positioning  (no model spend)
 /alpha <TICKER> news     dated filings and headlines           (no model spend)
 /alpha market <theme>    what the market is talking about      (no model spend)
 
+the three paces are the same full_v2 contract at three depths; quick is a SMALLER
+contract (4 analysts, 1 debate round) and is never full-equivalent
+
 examples
   /alpha AAPL            /alpha 0700.HK quick     /alpha 7203.T news
+  /alpha NVDA slow       /alpha MSFT fast
   /alpha NVDA screen     /alpha market rates      /alpha "is TSM cheap?"
 ```
 
@@ -97,14 +105,19 @@ master-selection contract.
    fails after its bounded parse repair, do not spend more model calls on masters, bull/bear
    or PM. Persist an `incomplete` run naming the failed evidence and skipped downstream roles.
 7. For the hard runtime contract, call plugin-managed headless `analyze_symbol` once with
-   `council_mode:"full"`, `wait_for_completion:false`, the full-mode receipt and optionally
-   `total_timeout_ms` no greater than `1800000`. Poll the same durable `run_id` to terminal.
-   All eight mandatory evidence roles start in one wave; every selected v3 method gets a
-   frozen deterministic stance plus its own isolated voice worker; Bull/Bear run in parallel
-   within each of three rounds with a barrier between rounds; then the PM runs. Queueing,
-   retries and final persistence share the 30-minute clock. At expiry the saved run is
-   `incomplete`, never silently shortened or relabeled complete. This guarantees terminal
-   persistence, not all-seat success during search/model/data-provider degradation.
+   `council_mode:"full"`, `wait_for_completion:false`, the full-mode receipt, and
+   `council_pace` when the arguments asked for a speed: `fast` for 15 minutes, `slow` (or
+   `deep`) for 60, omitted for the 30-minute default. Poll the same durable `run_id` to
+   terminal. All eight mandatory evidence roles start in one wave; every selected v3 method
+   gets a frozen deterministic stance plus its own isolated voice worker; Bull/Bear run in
+   parallel within each of three rounds with a barrier between rounds; then the PM runs.
+   Queueing, retries and final persistence share the selected tier's clock. At expiry the
+   saved run is `incomplete`, never silently shortened or relabeled complete. This guarantees
+   terminal persistence, not all-seat success during search/model/data-provider degradation.
+   Pass `total_timeout_ms` only to LOWER the tier's budget; above it the call is rejected.
+   Tell the user which pace ran and what it bought: the tier raises every per-stage cap, so
+   `slow` gives each evidence seat 12 minutes instead of 6 and each debate round 6 minutes per
+   side instead of 150 seconds. All three paces are the same `full_v2` contract.
 8. `plan_visible_run` is owned by the external host. The plugin cannot force-stop its Task
    agents, so visible-host full must not be advertised as meeting the 30-minute deadline.
 9. The terminal full handoff must include the system price snapshot (or explicit unavailable

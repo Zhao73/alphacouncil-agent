@@ -70,6 +70,9 @@ export function statusSnapshot(run) {
     language: run.language,
     execution_mode: run.execution_mode,
     council_mode: run.council_mode || "full",
+    // Which depth/time tier produced this run. Two runs of the same symbol at different paces
+    // are not the same analysis, so the pace belongs in the audit record beside the budget.
+    council_pace: run.council_pace || null,
     debate_format: run.debate_format || "three_round_cross_exam",
     visible_debate_contract: visibleDebate?.contract || null,
     visible_debate_rounds_expected: visibleDebate?.rounds_expected || null,

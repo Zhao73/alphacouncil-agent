@@ -27,8 +27,9 @@ after Stage 0.
   explicitly adds optional analyst seats, every added seat is equally mandatory. A mandatory
   evidence failure is a fail-fast barrier: persist the failure and final diagnostic artifacts,
   skip masters/debate/PM model calls, and terminate `incomplete`; do not synthesize around it.
-  Headless full has a hard 1800000 ms queue-to-terminal-persistence ceiling. It fails closed
-  at expiry and does not promise all-seat success when external services deteriorate.
+  Headless full runs at one of three depth tiers set by `council_pace`: `fast` 900000 ms,
+  `normal` (default) 1800000 ms, `slow` 3600000 ms, queue-to-terminal-persistence. It fails
+  closed at expiry and does not promise all-seat success when external services deteriorate.
 - **Quick council (`quick_v1`)**: only the plugin-managed headless `analyze_symbol` path may
   execute it. It runs the four fixed evidence roles in parallel, 1-4 selected methods in
   parallel, one parallel bull/bear statement, and one short PM inside the hard 600000 ms
@@ -133,11 +134,18 @@ Use this contract when full runs through headless `analyze_symbol`:
 - Round 1 Bull/Bear run together; after both pass, Round 2 runs together; after both pass,
   Round 3 runs together with exact saved-question bindings. The PM starts after both Round-3
   sides pass.
-- The hard ceiling is 1800000 ms from durable queueing through terminal artifact persistence,
-  including queueing, retries, all workers and deterministic finalization. A caller or
-  environment may lower it, never raise it. At expiry persist `incomplete` and name every
+- The ceiling is the selected tier's total from durable queueing through terminal artifact
+  persistence, including queueing, retries, all workers and deterministic finalization: `fast`
+  900000 ms, `normal` 1800000 ms, `slow` 3600000 ms. A caller or environment may lower the
+  selected tier's budget, never raise it. At expiry persist `incomplete` and name every
   timed-out/failed/skipped role. The deadline guarantees a terminal saved run, not successful
   completion under provider/search/data degradation.
+- The tier moves every per-stage cap with the total, because those caps are what bound each
+  worker: evidence 3.5/6/12 minutes per seat, method 1/2/4 minutes per seat, debate 90/150/360
+  seconds per round, PM 2/3/8 minutes. Raising `total_timeout_ms` alone buys idle time rather
+  than depth; the tier is what buys depth. All three tiers are `full_v2` — same eight evidence
+  seats, same three rounds, same PM — so a tier changes how long each seat may think, never what
+  the council is. Quick rejects `council_pace`.
 - The concise handoff lists every selected stable master ID, frozen stance and voice-worker
   explanation/status; all eight analyst task IDs, statuses and summaries; and a system-owned
   price snapshot with currency/time/source or an explicit unavailable-data gap.
@@ -274,8 +282,11 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
    `wait_for_completion=false` when the user wants a long/short or portfolio decision saved
    under `~/.alphacouncil-agent/runs/`. This returns a small durable accepted response with
    `run_id`, `status_json`, and `events_jsonl`; acceptance does not mean the report is done.
-   For quick, do not pass task overrides and do not request `synthesis=false`. For full, the
-   1800000 ms global maximum and parallel/barrier topology in the full contract above apply.
+   For quick, do not pass task overrides and do not request `synthesis=false`. For full, pass
+   `council_pace` when the user asked for a speed (fast 15 min / normal 30 / slow 60); the
+   selected tier's global maximum and the parallel/barrier topology in the full contract above
+   apply. `total_timeout_ms` above the tier's total is rejected and names the tier that allows
+   it.
 3. Poll `read_run(run_id)` at a bounded interval until `status.status` is terminal:
    `complete`, `degraded`, `incomplete`, `needs_verification`, `needs_revision`, or `failed`.
    Surface meaningful phase changes, not every unchanged poll. Poll the same `run_id`; never

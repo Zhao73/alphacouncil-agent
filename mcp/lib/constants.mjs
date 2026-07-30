@@ -174,12 +174,27 @@ export const LIMITS = Object.freeze({
   SIGKILL_GRACE_MS: 5000,
   /** Default per-subagent Codex timeout. */
   CODEX_TIMEOUT_MS: Number(process.env.ALPHACOUNCIL_AGENT_TIMEOUT_MS) || 600000,
-  /** Non-overridable public ceiling for a plugin-managed full council. */
-  FULL_HARD_MAX_MS: 30 * 60 * 1000,
-  /** Default full-council queue-to-persistence budget. Operators may only lower it. */
+  /**
+   * Non-overridable public ceiling for a plugin-managed full council: the slowest pace's
+   * budget. The ceiling a given call is actually held to is its pace's `total_ms`, which is
+   * lower for `fast` and `normal`; this is only the outer bound of the schema.
+   */
+  FULL_HARD_MAX_MS: 60 * 60 * 1000,
+  /**
+   * An operator cap on the full-council budget, or null when unset.
+   *
+   * This used to double as the default budget with a hard 30-minute clamp, which silently held
+   * the 60-minute pace to 30. The default now comes from the selected pace; this only ever
+   * lowers it, which is what "operators may only lower it" was always meant to say.
+   */
+  FULL_TOTAL_OVERRIDE_MS: Number.isFinite(Number(process.env.ALPHACOUNCIL_FULL_TOTAL_MS))
+    && Number(process.env.ALPHACOUNCIL_FULL_TOTAL_MS) > 0
+    ? Math.max(1_000, Number(process.env.ALPHACOUNCIL_FULL_TOTAL_MS))
+    : null,
+  /** Fallback budget for a code path that has no run budget to read. Not a ceiling. */
   FULL_TOTAL_MS: Math.max(1_000, Math.min(
     Number(process.env.ALPHACOUNCIL_FULL_TOTAL_MS) || 30 * 60 * 1000,
-    30 * 60 * 1000,
+    60 * 60 * 1000,
   )),
   /** Deterministic grounding is useful, but it may not hold the whole run hostage. */
   FULL_GROUNDING_MS: 30 * 1000,
@@ -268,3 +283,66 @@ export const LIMITS = Object.freeze({
   /** Age after which a leftover Codex output file is swept at startup. */
   STALE_OUTPUT_MS: 24 * 60 * 60 * 1000,
 });
+
+/**
+ * Full-council pace profiles.
+ *
+ * A total budget alone does not change how deep an analysis goes. What bounds each worker is
+ * its per-stage cap, so raising only the total leaves a 60-minute run finishing in twenty
+ * minutes with forty idle, and lowering only the total starves the later stages and terminates
+ * `incomplete` with the debate missing. Each pace therefore carries a complete, self-consistent
+ * set of caps, and `COUNCIL_PACE_STAGE_TOTAL` proves the stages fit inside the total.
+ *
+ * Bull and bear run together inside a round, so three rounds cost `3 * debate_ms`, not six.
+ *
+ * `slow` is where depth actually comes from: six minutes per side per round instead of 150
+ * seconds, and twelve minutes per evidence seat instead of six.
+ */
+export const COUNCIL_PACES = Object.freeze({
+  fast: Object.freeze({
+    pace: "fast",
+    total_ms: 15 * 60 * 1000,
+    grounding_ms: 20 * 1000,
+    evidence_ms: 210 * 1000,
+    master_ms: 60 * 1000,
+    debate_ms: 90 * 1000,
+    pm_ms: 120 * 1000,
+    finalize_reserve_ms: 45 * 1000,
+  }),
+  normal: Object.freeze({
+    pace: "normal",
+    total_ms: 30 * 60 * 1000,
+    grounding_ms: 30 * 1000,
+    evidence_ms: 6 * 60 * 1000,
+    master_ms: 2 * 60 * 1000,
+    debate_ms: 150 * 1000,
+    pm_ms: 180 * 1000,
+    finalize_reserve_ms: 45 * 1000,
+  }),
+  slow: Object.freeze({
+    pace: "slow",
+    total_ms: 60 * 60 * 1000,
+    grounding_ms: 45 * 1000,
+    evidence_ms: 12 * 60 * 1000,
+    master_ms: 4 * 60 * 1000,
+    debate_ms: 6 * 60 * 1000,
+    pm_ms: 8 * 60 * 1000,
+    finalize_reserve_ms: 60 * 1000,
+  }),
+});
+
+export const DEFAULT_COUNCIL_PACE = "normal";
+export const COUNCIL_PACE_NAMES = Object.freeze(Object.keys(COUNCIL_PACES));
+
+/** Serial worst case for one full council at a pace: grounding, evidence wave, method wave, three debate rounds, PM, persistence. */
+export const COUNCIL_PACE_STAGE_TOTAL = (profile) => profile.grounding_ms
+  + profile.evidence_ms
+  + profile.master_ms
+  + (3 * profile.debate_ms)
+  + profile.pm_ms
+  + profile.finalize_reserve_ms;
+
+/** The pace a call runs at. An unknown or absent name is the default, never an error. */
+export function councilPaceProfile(name) {
+  return COUNCIL_PACES[String(name || "").toLowerCase()] || COUNCIL_PACES[DEFAULT_COUNCIL_PACE];
+}

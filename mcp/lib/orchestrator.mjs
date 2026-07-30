@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS } from "./constants.mjs";
+import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS, councilPaceProfile } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
@@ -28,11 +28,28 @@ function plannedTasks(args = {}) {
   return DEFAULT_TASKS;
 }
 
+/**
+ * The pace a run executes at, and the per-stage caps that come with it.
+ *
+ * Quick has one fixed shape and does not take a pace: it is a smaller contract, not a slower
+ * one. Full carries the pace on the run so every stage reads the same profile and `status.json`
+ * records which one was used.
+ */
+export function runPace(run) {
+  if (run?.council_mode === "quick") return null;
+  return councilPaceProfile(run?.council_pace);
+}
+
 function councilTiming(args, startedAt) {
   const mode = councilMode(args);
   const requested = Number(args.total_timeout_ms);
-  const hardMaximum = mode === "quick" ? LIMITS.QUICK_HARD_MAX_MS : LIMITS.FULL_HARD_MAX_MS;
-  const defaultBudget = mode === "quick" ? LIMITS.QUICK_TOTAL_MS : LIMITS.FULL_TOTAL_MS;
+  const profile = mode === "quick" ? null : councilPaceProfile(args.council_pace);
+  // The ceiling a call is held to is its own pace's total, not the outer bound of the schema.
+  // A caller may still lower it; `LIMITS.FULL_TOTAL_MS` keeps the operator env override.
+  const hardMaximum = mode === "quick" ? LIMITS.QUICK_HARD_MAX_MS : profile.total_ms;
+  const defaultBudget = mode === "quick"
+    ? LIMITS.QUICK_TOTAL_MS
+    : Math.min(profile.total_ms, LIMITS.FULL_TOTAL_OVERRIDE_MS ?? profile.total_ms);
   const timeBudgetMs = Number.isFinite(requested) && requested > 0
     ? Math.min(requested, hardMaximum)
     : defaultBudget;
@@ -40,6 +57,7 @@ function councilTiming(args, startedAt) {
     || new Date(Date.parse(startedAt) + timeBudgetMs).toISOString();
   return {
     council_mode: mode,
+    council_pace: profile?.pace || null,
     debate_format: mode === "quick" ? "single_round_parallel" : "three_round_cross_exam_parallel_per_round",
     time_budget_ms: timeBudgetMs,
     deadline_at: deadlineAt,
@@ -62,7 +80,7 @@ function remainingCouncilBudget(run, capMs) {
   if (!run.deadline_at) return capMs;
   const configuredReserve = run.council_mode === "quick"
     ? LIMITS.QUICK_FINALIZE_RESERVE_MS
-    : LIMITS.FULL_FINALIZE_RESERVE_MS;
+    : runPace(run).finalize_reserve_ms;
   const reserve = Math.min(
     configuredReserve,
     Math.max(100, Math.floor(Number(run.time_budget_ms || LIMITS.FULL_TOTAL_MS) * 0.1)),
@@ -1432,7 +1450,7 @@ export async function collectEvidence(args) {
   const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
   const timeoutMs = timing.council_mode === "quick"
     ? Math.min(requestedTimeoutMs, LIMITS.QUICK_EVIDENCE_MS)
-    : Math.min(requestedTimeoutMs, LIMITS.FULL_EVIDENCE_MS);
+    : Math.min(requestedTimeoutMs, councilPaceProfile(timing.council_pace).evidence_ms);
   const defaultConcurrency = timing.council_mode === "quick"
     ? QUICK_TASKS.length
     : Math.min(tasks.length, LIMITS.FULL_EVIDENCE_CONCURRENCY);
@@ -1452,7 +1470,7 @@ export async function collectEvidence(args) {
     dryRun,
     timeoutMs: remainingCouncilBudget(
       timing,
-      timing.council_mode === "quick" ? LIMITS.QUICK_GROUNDING_MS : LIMITS.FULL_GROUNDING_MS,
+      timing.council_mode === "quick" ? LIMITS.QUICK_GROUNDING_MS : councilPaceProfile(timing.council_pace).grounding_ms,
     ),
   });
   const dir = runPath(id);
@@ -1755,7 +1773,7 @@ export async function runHeadlessMasters(run, args = {}) {
   const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
   const timeoutMs = run.council_mode === "quick"
     ? Math.min(requestedTimeoutMs, LIMITS.QUICK_MASTER_MS)
-    : Math.min(requestedTimeoutMs, LIMITS.FULL_MASTER_MS);
+    : Math.min(requestedTimeoutMs, runPace(run).master_ms);
   const defaultConcurrency = run.council_mode === "quick"
     ? 4
     : Math.min(selected.length, LIMITS.FULL_MASTER_CONCURRENCY);
@@ -2298,7 +2316,7 @@ export async function synthesizeDecision(run, args) {
     : Number(args.timeout_ms || LIMITS.CODEX_TIMEOUT_MS);
   const timeoutMs = run.council_mode === "quick"
     ? Math.min(requestedSynthesisMs, LIMITS.QUICK_SYNTHESIS_MS)
-    : Math.min(requestedSynthesisMs, LIMITS.FULL_DEBATE_MS);
+    : Math.min(requestedSynthesisMs, runPace(run).debate_ms);
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
   run.phase = "debate";
   run.status = "running";
@@ -2464,7 +2482,7 @@ export async function synthesizeDecision(run, args) {
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 
-  const pmBudget = remainingCouncilBudget(run, Math.min(requestedSynthesisMs, LIMITS.FULL_PM_MS));
+  const pmBudget = remainingCouncilBudget(run, Math.min(requestedSynthesisMs, runPace(run).pm_ms));
   const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode }, pmBudget);
   const managerOk = !debateFailure(managerStep);
   const manager = managerOk ? managerStep.packet : managerFallback(run, args.prompt || "");
