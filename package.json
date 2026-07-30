@@ -127,6 +127,7 @@
     ".opencode/command/",
     ".grok/commands/",
     "docs/INSTALL.md",
+    "docs/examples/",
     "docs/plans/",
     "docs/releases/",
     "docs/evaluation/",

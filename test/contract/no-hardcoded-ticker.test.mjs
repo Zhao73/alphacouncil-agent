@@ -60,6 +60,10 @@ function offendersFor(pattern) {
     // This file necessarily contains the banned strings; excluding it keeps the rule
     // self-consistent rather than requiring obfuscated regexes.
     if (file.endsWith("no-hardcoded-ticker.test.mjs")) continue;
+    // A captured real run output names the issuers it researched, which is the whole
+    // point of shipping it. The ban is on scaffolding -- prompts, schemas, headings --
+    // choosing a company; it is not on a report having analyzed one.
+    if (/docs\/examples\/final_report\./.test(relative(repoRoot, file))) continue;
     text.split("\n").forEach((line, index) => {
       if (pattern.test(line)) hits.push(`${relative(repoRoot, file)}:${index + 1}: ${line.trim().slice(0, 120)}`);
     });
