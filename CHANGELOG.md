@@ -2,6 +2,14 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.15] — 2026-07-30
+
+### Changed
+
+- **Listed in the official MCP Registry** as `io.github.Zhao73/alphacouncil-agent`:
+  `server.json` added, and package.json carries the `mcpName` field the registry uses to
+  verify npm ownership. No runtime change.
+
 ## [1.0.14] — 2026-07-30
 
 ### Changed

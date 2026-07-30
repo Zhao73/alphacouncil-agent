@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Multi-agent company, ETF and market-index research workflow for Codex & Claude Code: sourced evidence, method seats, bull/bear debate and portfolio-manager synthesis.",
   "type": "module",
   "license": "MIT",
@@ -145,5 +145,6 @@
     "docs/persona-v2-spec.md",
     "SECURITY.md",
     "CONTRIBUTING.md"
-  ]
+  ],
+  "mcpName": "io.github.Zhao73/alphacouncil-agent"
 }

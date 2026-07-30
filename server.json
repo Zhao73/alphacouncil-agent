@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Zhao73/alphacouncil-agent",
+  "description": "Simulated investment committee: 27 investor-method lenses read the same filings and disagree, then bull/bear debate and a PM verdict. 31 keyless tools, zero dependencies.",
+  "repository": {
+    "url": "https://github.com/Zhao73/alphacouncil-agent",
+    "source": "github"
+  },
+  "version": "1.0.15",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "alphacouncil-agent",
+      "version": "1.0.15",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
