@@ -2,6 +2,41 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.0.13] — 2026-07-30
+
+### Fixed
+
+- **Screen rules pair both series by fiscal period end, never by array position.** Every
+  two-series elimination rule (`roe_10y`, `gross_margin`, `interest_cover`, `fcf_5y`,
+  `ocf_over_ni`, `net_margin`) used to slice the last N entries of each series independently
+  and divide position-by-position. A gap in one series — a tag the filer stopped using, a
+  year reported under an out-of-catalog alias — shifted every later year onto the wrong
+  counterpart while the provenance block still showed a clean range: this year's EBIT divided
+  by a two-year-old interest figure read as a confident 2.5x cover, and an equity series
+  missing one middle year shifted a decade of ROE by one year. Rules now drop a year present
+  on only one side, report the pair count as their coverage, and `interest_cover` is
+  `skipped` when the latest EBIT year has no same-period interest figure — a stale
+  denominator is a gap, not a cover ratio. Four regression tests pin the misalignment
+  scenarios.
+- **The SEC universe cache in peer matching expires after six hours** instead of living for
+  the whole MCP process. A resident server that never re-read the ticker file silently lost
+  every new listing and rename from `industry_peers`, with no gap recorded anywhere.
+
+### Changed
+
+- **The three READMEs, CLAUDE.md and INSTALL.md now agree on the counts**: 27 selectable
+  lenses (the bench table had listed 26 — Bogle was missing), 31 keyless MCP tools, 54
+  solo-test proxy tools. INSTALL.md no longer pins its examples to 1.0.0.
+- **README leads with the recorded demo and a 30-second zero-cost first run** (`/alpha AAPL
+  news`), links a complete real full-council report
+  (`docs/examples/final_report.SOX.zh.md`), states the Codex CLI prerequisite for headless
+  paths next to the install commands instead of below the fold, and compresses the
+  governance status into one honest sentence linking the release contract.
+- **SECURITY.md discloses what was already true**: `preflight_permissions` reads host
+  configuration files read-only to detect silent web-search downgrades, workers run in a
+  read-only sandbox, and the supported-versions line no longer claims the project is
+  pre-1.0.
+
 ## [1.0.12] — 2026-07-30
 
 ### Changed
