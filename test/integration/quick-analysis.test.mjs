@@ -143,7 +143,7 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
     await server.request("initialize", {});
     const prompt = "Give me the bounded master, analyst and recent industry-news read.";
     const openedResponse = await server.callTool("begin_council_selection", {
-      symbol: "RKLB", language: "English", host: "test", prompt, council_mode: "quick",
+      symbol: "RKLB", as_of: "2026-07-28", language: "English", host: "test", prompt, council_mode: "quick",
     });
     const opened = structured(openedResponse);
     assert.equal(opened.council_mode, "quick");
@@ -171,7 +171,7 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
 
     const runId = `QUICK-ANALYSIS-${process.pid}`;
     const response = await server.callTool("analyze_symbol", {
-      symbol: "RKLB", run_id: runId, language: "English", prompt,
+      symbol: "RKLB", as_of: "2026-07-28", run_id: runId, language: "English", prompt,
       council_mode: "quick", total_timeout_ms: 30_000,
       timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,

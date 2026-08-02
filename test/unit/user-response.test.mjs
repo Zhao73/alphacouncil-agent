@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
+import { validateUserResponse } from "../../mcp/lib/gates.mjs";
 import { userResponseMarkdown } from "../../mcp/lib/markdown.mjs";
 import { compiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
@@ -180,15 +181,16 @@ test("a whole-roster handoff ends with one readable statement for every selected
   assert.ok(markdown.includes(heading));
   const tail = markdown.slice(markdown.indexOf(heading));
   assert.equal((tail.match(/^-/gmu) || []).length, CANONICAL_MASTER_COUNT);
-  for (const id of ids) assert.equal((tail.match(new RegExp(`\\b${id}\\b`, "gu")) || []).length, 1, id);
-  assert.ok(markdown.trimEnd().endsWith(tail.trimEnd()), "the per-seat statements must be the final handoff section");
+  for (const id of ids) assert.equal(tail.split(`(\`${id}\`)`).length - 1, 1, id);
+  assert.ok(markdown.trimEnd().endsWith("<!-- alphacouncil:handoff-method-seat-tail:v1:end -->"), "the per-seat statements must be the final handoff section");
+  assert.equal(validateUserResponse(markdown, fixture).status, "passed");
 });
 
 test("a seat's own conclusion reaches the handoff instead of being clipped away", () => {
   // The statement opens with the evidence and closes with the action, so a one-line budget
   // always cut the conclusion. On a real run this made seven seats that all spoke read as
   // seven seats that had not.
-  const opening = `${"读到的事实与背景。".repeat(70)}`;
+  const opening = `${"读到的事实与背景。".repeat(400)}`;
   const closing = "所以这一档我不建仓，91 美元附近才值得建仓。";
   const markdown = userResponseMarkdown({
     run_id: "LEAD-1",
@@ -213,6 +215,63 @@ test("a seat's own conclusion reaches the handoff instead of being clipped away"
 
   assert.match(markdown, /master_marks\.euphoria/, "the decisive condition must be visible");
   assert.match(markdown, /本方法的立场是：would_pass/, "the action the seat would take must be visible");
+  assert.ok(markdown.includes(`${opening}${closing}`), "the full recorded statement must be preserved verbatim");
   assert.ok(markdown.includes(closing), "the seat's closing judgement must survive the budget");
   assert.match(markdown, /\[冻结记录: 反对\/中; 陈词来源: 已完成; recorded\]/);
+});
+
+test("an incomplete handoff ends with every selected seat and diagnoses a failed seat without inventing a view", () => {
+  const run = {
+    run_id: "FAILED-METHOD-TAIL",
+    symbol: "IREN",
+    language: "zh-CN",
+    council_mode: "full",
+    status: "incomplete",
+    tasks: [],
+    packets: [],
+    masters: ["master_marks", "master_graham"],
+    master_status: {
+      master_marks: { master: "master_marks", status: "completed" },
+      master_graham: {
+        master: "master_graham",
+        status: "failed",
+        error: "v3_policy_execution_failed",
+        error_code: "MISSING_NATIVE_OUTPUT",
+      },
+    },
+    master_opinions: [{
+      master: "master_marks",
+      stance: "cautious",
+      confidence: "medium",
+      voice_statement: "Marks 方法席完整记录了周期位置、风险补偿和不建仓条件。",
+      dedicated_worker: { status: "completed" },
+    }, {
+      master: "master_graham",
+      stance: "constructive",
+      confidence: "low",
+      voice_statement: "这是未完成席位的中间记录，绝不能在失败终态冒充最终方法陈词。",
+    }],
+  };
+  const markdown = userResponseMarkdown(run, { ...manager("NEEDS_MANAGER_REVIEW"), decision_available: false, rating: null });
+  const tail = markdown.slice(markdown.indexOf("## 结尾：逐席方法陈词"));
+  assert.match(tail, /Marks 方法席完整记录了周期位置、风险补偿和不建仓条件/);
+  assert.match(tail, /master_graham/);
+  assert.match(tail, /本席未产生方法陈词，也没有方向性观点；这不是看空票/);
+  assert.match(tail, /确定性方法政策执行失败 \(MISSING_NATIVE_OUTPUT\)/);
+  assert.match(tail, /statement_status=not_produced; seat_status=failed; not_a_directional_view=true/);
+  assert.doesNotMatch(tail, /这是未完成席位的中间记录/);
+  assert.doesNotMatch(tail, /master_graham.*建设性|master_graham.*反对/s);
+  const quality = validateUserResponse(markdown, run);
+  assert.equal(quality.status, "passed", quality.missing.join("; "));
+  assert.deepEqual(quality.full_statement_master_ids, ["master_marks"]);
+  assert.deepEqual(quality.explicit_failure_master_ids, ["master_graham"]);
+});
+
+test("the handoff gate rejects a clipped method statement even when the seat marker remains", () => {
+  const fixture = localizedRun("zh-CN", "中文分析", "这是必须完整保留的逐席方法陈词，结尾包含不可丢失的行动判断。不要截断这句话。");
+  const markdown = userResponseMarkdown(fixture, manager("中文最终判断"));
+  const clipped = markdown.replace("结尾包含不可丢失的行动判断。不要截断这句话。", "…");
+  const quality = validateUserResponse(clipped, fixture);
+  assert.equal(quality.status, "needs_revision");
+  assert.ok(quality.missing.includes("handoff truncated or replaced method-seat statement: master_buffett"));
 });

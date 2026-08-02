@@ -73,10 +73,12 @@ recorded as not applicable for funds and indices, not as research failures.
 Every terminal full handoff must show a system-owned price snapshot (price, currency,
 timestamp and source when available, otherwise an explicit unavailable-data record), every
 selected stable master ID with its frozen stance and readable explanation/status, and all
-eight mandatory analyst statuses and summaries. The handoff's final section carries the
-exact selected-seat count and one statement per selected ID. Visible PM completion returns
-`handoff_contract=inline_user_response_v1`; deliver its `user_response_markdown` instead of
-an ACK-only recap. System-owned report/handoff prose is localized for `zh-CN`, `en`, `ja`
+eight mandatory analyst statuses and summaries. The handoff's machine-gated final section
+carries the exact selected-seat count and each complete, untruncated statement; a failed seat
+appears as a non-directional `statement_status=not_produced` diagnostic. Visible PM completion
+and `finalize_visible_run` return `handoff_contract=inline_user_response_v1`; deliver their
+`user_response_markdown` instead of an ACK-only or manual recap, and append nothing after the
+method-seat ledger. System-owned report/handoff prose is localized for `zh-CN`, `en`, `ja`
 and `ko`; workers receive the run language. Never present a method-seat explanation as the
 real person's current words, quote or endorsement.
 

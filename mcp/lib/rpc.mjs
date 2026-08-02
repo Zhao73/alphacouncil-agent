@@ -26,7 +26,7 @@ import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
 import { table, mark, metricValue, groundingDashboard, label, threshold, skippedMark } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
-import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, queueHeadlessRun, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, finalizeVisibleRun, queueHeadlessRun, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
@@ -560,6 +560,20 @@ export function tools() {
       },
       required: ["run_id", "task", "packet"],
     }),
+    tool("finalize_visible_run", "MANDATORY terminal fallback when a visible-host run cannot cross its next hard gate. It irreversibly closes the run as incomplete, preserves completed records, writes the standard no-rating report and handoff, and returns user_response_markdown whose final section accounts for every selected method seat. Never use it to turn a failed seat into an opinion.", {
+      type: "object",
+      properties: {
+        run_id: { type: "string" },
+        reason: {
+          type: "string",
+          enum: ["host_cancelled", "host_timeout", "evidence_worker_failed", "method_worker_failed", "debate_worker_failed", "host_unavailable"],
+        },
+        failed_tasks: { type: "array", items: { type: "string", enum: analystIds }, uniqueItems: true },
+        failed_masters: { type: "array", items: { type: "string", enum: masterIds }, uniqueItems: true },
+        failed_roles: { type: "array", items: { type: "string", enum: debateIds }, uniqueItems: true },
+      },
+      required: ["run_id", "reason"],
+    }, { readOnlyHint: false, destructiveHint: true, openWorldHint: false }),
     tool("record_visible_decision", "Record exactly one visible decision step. Full visible bull_researcher and bear_researcher calls MUST supply round=1, then round=2, then round=3; both sides of the prior round are required before advancing. Round 2 asks exactly three questions; Round 3 preserves its own questions and answers the opponent's questions with exact bindings. Packets are persisted by role+round: an identical replay is idempotent and conflicting content is rejected. portfolio_manager accepts no round and is rejected until all evidence, selected masters, both three-round sides, and the exact Q&A gate are complete. Every reader-facing field must use the run language.", {
       type: "object",
       properties: {
@@ -853,6 +867,20 @@ export async function handleToolCall(id, params) {
   if (name === "plan_visible_run") {
     const result = await withSelectedRun(args, "plan_visible_run", async (runArgs) => {
       const run = runArgs.existing_run || visibleRun(runArgs);
+      if (run.visible_finalization) {
+        const handoffPath = join(runPath(run.run_id), "user_response.md");
+        return jsonContent(
+          `Loaded finalized visible AlphaCouncil Agent run for ${run.symbol}: ${run.run_id}. Deliver the persisted handoff; start a new selected run to continue research.`,
+          {
+            run: { ...run, grounding: compactGrounding(run) },
+            idempotent_replay: true,
+            finalized: true,
+            handoff_contract: "inline_user_response_v1",
+            user_response_markdown: existsSync(handoffPath) ? readFileSync(handoffPath, "utf8") : "",
+            artifacts: artifactPaths(run),
+          },
+        );
+      }
       // Gather the established facts here rather than accepting them only when a host
       // remembers to pass them. Without this the whole visible path -- which is the path
       // Claude Code uses -- runs every analyst and every master with no filings, no quote and
@@ -900,6 +928,21 @@ export async function handleToolCall(id, params) {
   if (name === "record_visible_packet") {
     const run = recordVisiblePacket(args);
     sendResult(id, jsonContent(`Recorded visible evidence packet ${args.task} for ${run.symbol}: ${run.run_id}`, recordAck(run)));
+    return;
+  }
+  if (name === "finalize_visible_run") {
+    const result = finalizeVisibleRun(args);
+    sendResult(id, jsonContent(
+      `Finalized visible AlphaCouncil Agent run as incomplete for ${result.run.symbol}: ${result.run.run_id}. Deliver user_response_markdown without replacing its final method-seat ledger.`,
+      recordAck(result.run, {
+        decision: result.decision,
+        idempotent_replay: result.idempotent_replay === true,
+        report_quality: result.report_quality?.status,
+        missing_report_items: result.report_quality?.missing || [],
+        handoff_contract: "inline_user_response_v1",
+        user_response_markdown: result.user_response_markdown || "",
+      }),
+    ));
     return;
   }
   if (name === "record_visible_decision") {

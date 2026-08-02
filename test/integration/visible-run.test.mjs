@@ -16,6 +16,9 @@ const languageRunId = `SELFTEST-LANGUAGE-${process.pid}`;
 const barrierRunId = `SELFTEST-BARRIER-${process.pid}`;
 const citationRunId = `SELFTEST-CITATION-${process.pid}`;
 const reviseRunId = `SELFTEST-REVISE-${process.pid}`;
+const finalizedRunId = `SELFTEST-FINALIZED-${process.pid}`;
+const reorderedFinalizationRunId = `SELFTEST-FINALIZED-REORDERED-${process.pid}`;
+const invalidFinalizationTargetRunId = `SELFTEST-FINALIZED-INVALID-TARGET-${process.pid}`;
 const recorded = {};
 
 const bullQuestions = [
@@ -202,6 +205,40 @@ before(async () => {
   await recordMaster(noPmRunId);
   await recordFullDebate(noPmRunId);
 
+  await plan(finalizedRunId);
+  await recordEvidence(finalizedRunId);
+  recorded.finalized = structured(await server.callTool("finalize_visible_run", {
+    run_id: finalizedRunId,
+    reason: "debate_worker_failed",
+    failed_roles: ["bull_researcher"],
+  }));
+  recorded.finalizedReplay = structured(await server.callTool("finalize_visible_run", {
+    run_id: finalizedRunId,
+    reason: "debate_worker_failed",
+    failed_roles: ["bull_researcher"],
+  }));
+  recorded.lateFinalizedDecision = await recordRound(finalizedRunId, "bear_researcher", 1);
+
+  await plan(reorderedFinalizationRunId);
+  recorded.reorderedFinalization = structured(await server.callTool("finalize_visible_run", {
+    run_id: reorderedFinalizationRunId,
+    reason: "debate_worker_failed",
+    failed_roles: ["bear_researcher", "bull_researcher"],
+  }));
+  recorded.reorderedFinalizationReplay = structured(await server.callTool("finalize_visible_run", {
+    run_id: reorderedFinalizationRunId,
+    reason: "debate_worker_failed",
+    failed_roles: ["bull_researcher", "bear_researcher"],
+  }));
+
+  await plan(invalidFinalizationTargetRunId);
+  await recordEvidence(invalidFinalizationTargetRunId);
+  recorded.invalidFinalizationTarget = await server.callTool("finalize_visible_run", {
+    run_id: invalidFinalizationTargetRunId,
+    reason: "evidence_worker_failed",
+    failed_tasks: ["market_data"],
+  });
+
   await plan(shortcutRunId);
   await recordEvidence(shortcutRunId);
   await recordMaster(shortcutRunId);
@@ -332,6 +369,55 @@ test("a full three-round debate without portfolio_manager remains incomplete", (
   assert.equal(existsSync(join(dataDir, "runs", noPmRunId, "manager_synthesis.json")), false);
 });
 
+test("a blocked visible run finalizes once and returns the mandatory method-seat handoff", () => {
+  assert.equal(recorded.finalized.status, "incomplete");
+  assert.equal(recorded.finalized.decision?.decision_available, false);
+  assert.equal(recorded.finalized.decision?.rating, null);
+  assert.equal(recorded.finalized.handoff_contract, "inline_user_response_v1");
+  assert.match(recorded.finalized.user_response_markdown, /Final Per-Seat Method Statements/);
+  assert.match(recorded.finalized.user_response_markdown, new RegExp(selectedMaster));
+  assert.ok(recorded.finalized.user_response_markdown.trimEnd().endsWith("<!-- alphacouncil:handoff-method-seat-tail:v1:end -->"));
+
+  const dir = join(dataDir, "runs", finalizedRunId);
+  for (const file of ["decision.json", "manager_synthesis.json", "final_report.md", "user_response.md", "report_quality.json", "artifact_index.md"]) {
+    assert.equal(existsSync(join(dir, file)), true, file);
+  }
+  const status = JSON.parse(readFileSync(join(dir, "status.json"), "utf8"));
+  assert.equal(status.status, "incomplete");
+  assert.equal(status.agents.find((agent) => agent.role === "bull_researcher").status, "failed");
+  assert.equal(status.agents.find((agent) => agent.role === "bear_researcher").status, "skipped");
+  assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "skipped");
+  const quality = JSON.parse(readFileSync(join(dir, "report_quality.json"), "utf8"));
+  assert.equal(quality.handoff_method_statement_coverage.status, "passed", quality.handoff_method_statement_coverage.missing.join("; "));
+});
+
+test("visible finalization is idempotent and rejects late worker writes", () => {
+  assert.equal(recorded.finalizedReplay.idempotent_replay, true);
+  assert.equal(recorded.finalizedReplay.user_response_markdown.trimEnd(), recorded.finalized.user_response_markdown.trimEnd());
+  assert.equal(recorded.lateFinalizedDecision.error?.data?.reason, "VISIBLE_RUN_FINALIZED");
+});
+
+test("visible finalization treats failed target arrays as order-independent sets", () => {
+  assert.equal(recorded.reorderedFinalizationReplay.idempotent_replay, true);
+  assert.equal(
+    recorded.reorderedFinalizationReplay.user_response_markdown.trimEnd(),
+    recorded.reorderedFinalization.user_response_markdown.trimEnd(),
+  );
+  const run = JSON.parse(readFileSync(join(dataDir, "runs", reorderedFinalizationRunId, "evidence.json"), "utf8"));
+  assert.deepEqual(run.visible_finalization.failed.roles, [
+    "bear_researcher",
+    "bull_researcher",
+  ]);
+});
+
+test("visible finalization cannot mislabel a completed seat as failed", () => {
+  assert.equal(recorded.invalidFinalizationTarget.error?.data?.reason, "VISIBLE_FINALIZE_TARGET_NOT_OPEN");
+  const run = JSON.parse(readFileSync(join(dataDir, "runs", invalidFinalizationTargetRunId, "evidence.json"), "utf8"));
+  assert.equal(run.task_status.market_data.status, "completed");
+  assert.equal(run.visible_finalization, undefined);
+  assert.equal(run.status, "running");
+});
+
 test("single-round plus PM is rejected without writing a decision", () => {
   assert.equal(recorded.shortcut.error?.data?.reason, "VISIBLE_PM_PREREQUISITES_INCOMPLETE");
   const dir = join(dataDir, "runs", shortcutRunId);
@@ -377,7 +463,8 @@ test("portfolio-manager completion returns the saved handoff inline, including t
     assert.equal(response.handoff_contract, "inline_user_response_v1");
     assert.match(response.user_response_markdown, /Final Per-Seat Method Statements/);
     assert.match(response.user_response_markdown, new RegExp(selectedMaster));
-    assert.ok(response.user_response_markdown.trimEnd().endsWith("]"));
+    assert.ok(response.user_response_markdown.trimEnd().endsWith("<!-- alphacouncil:handoff-method-seat-tail:v1:end -->"));
+    assert.equal(response.report_quality, "passed");
   }
   assert.equal(recorded.pmReplay.idempotent_replay, true);
 });

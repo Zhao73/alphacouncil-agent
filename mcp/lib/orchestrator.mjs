@@ -420,6 +420,8 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       status: "failed",
       engine: item.engine,
       error: item.reason,
+      error_code: item.error_code || "V3_POLICY_EXECUTION_FAILED",
+      diagnostic: item.error || undefined,
       updated_at: new Date().toISOString(),
     };
   }
@@ -602,6 +604,7 @@ export function recordMasterOpinion(args) {
   if (run.execution_mode !== "visible_host_threads") {
     throw invalidParams("record_master_opinion requires a run created by plan_visible_run.");
   }
+  assertVisibleRunOpen(run, "record a master opinion");
   const allowed = selectedMasters(run);
   if (!allowed.includes(args.master)) {
     throw invalidParams(`master ${args.master} was not selected for this run. Selected: ${allowed.join(", ") || "none"}`);
@@ -727,6 +730,7 @@ export function recordVisiblePacket(args) {
   if (run.execution_mode !== "visible_host_threads") {
     throw invalidParams("record_visible_packet requires a run created by plan_visible_run.");
   }
+  assertVisibleRunOpen(run, "record a visible evidence packet");
   const task = args.task;
   if (!run.tasks.includes(task)) throw invalidParams(`Unknown task for this run: ${task}`);
   const dir = runPath(run.run_id);
@@ -1159,11 +1163,172 @@ export function recordVisibleDecision(args) {
   if (run.execution_mode !== "visible_host_threads") {
     throw invalidParams("record_visible_decision requires a run created by plan_visible_run.");
   }
+  assertVisibleRunOpen(run, "record a visible decision");
   const role = args.role;
   if (!DEBATE_ROLES.includes(role)) throw invalidParams(`Unknown decision role: ${role}`);
   return role === "portfolio_manager"
     ? recordVisiblePortfolioManager(run, args)
     : recordVisibleDebateRound(run, args);
+}
+
+const VISIBLE_FINALIZE_REASONS = new Set([
+  "host_cancelled",
+  "host_timeout",
+  "evidence_worker_failed",
+  "method_worker_failed",
+  "debate_worker_failed",
+  "host_unavailable",
+]);
+
+function finalizedVisibleReplay(run, idempotentReplay = true) {
+  const dir = runPath(run.run_id);
+  const managerPath = join(dir, "manager_synthesis.json");
+  const reportPath = join(dir, "final_report.md");
+  const handoffPath = join(dir, "user_response.md");
+  const qualityPath = join(dir, "report_quality.json");
+  return {
+    run,
+    decision: existsSync(managerPath) ? readJson(managerPath) : null,
+    idempotent_replay: idempotentReplay,
+    final_report_markdown: existsSync(reportPath) ? readFileSync(reportPath, "utf8") : "",
+    user_response_markdown: existsSync(handoffPath) ? readFileSync(handoffPath, "utf8") : "",
+    report_quality: existsSync(qualityPath) ? readJson(qualityPath) : null,
+    artifacts: artifactPaths(run),
+  };
+}
+
+/**
+ * Close a visible-host run that cannot cross its next hard gate.
+ *
+ * External threads cannot report transport failure through the normal record calls, and PM
+ * correctly refuses to run while a selected seat is missing. Without this terminal path the
+ * run stays `running` forever and no user_response.md exists, inviting the host to improvise a
+ * shorter recap. Finalization preserves every completed record, marks only open work terminal,
+ * creates a no-rating manager fallback, and returns the standard system-owned handoff. It never
+ * creates a master opinion or directional stance for a failed seat.
+ */
+export function finalizeVisibleRun(args) {
+  const run = readJson(join(runPath(args.run_id), "evidence.json"));
+  if (run.execution_mode !== "visible_host_threads") {
+    throw invalidParams("finalize_visible_run requires a run created by plan_visible_run.", {
+      reason: "VISIBLE_FINALIZE_WRONG_EXECUTION_MODE",
+      run_id: run.run_id,
+    });
+  }
+  if (!VISIBLE_FINALIZE_REASONS.has(args.reason)) {
+    throw invalidParams(`reason must be one of ${[...VISIBLE_FINALIZE_REASONS].join(", ")}.`, {
+      reason: "VISIBLE_FINALIZE_REASON_INVALID",
+      run_id: run.run_id,
+    });
+  }
+  // Failure targets are sets, not ordered execution plans. Canonicalize them before hashing
+  // so a host can replay the same finalization with a different array order.
+  const unique = (values) => [...new Set(Array.isArray(values) ? values : [])].sort();
+  const targets = {
+    tasks: unique(args.failed_tasks),
+    masters: unique(args.failed_masters),
+    roles: unique(args.failed_roles),
+  };
+  const unknown = {
+    tasks: targets.tasks.filter((id) => !(run.tasks || []).includes(id)),
+    masters: targets.masters.filter((id) => !(run.masters || []).includes(id)),
+    roles: targets.roles.filter((id) => !DEBATE_ROLES.includes(id)),
+  };
+  if (Object.values(unknown).some((ids) => ids.length)) {
+    throw invalidParams("finalize_visible_run named a seat that is not part of this run.", {
+      reason: "VISIBLE_FINALIZE_TARGET_INVALID",
+      run_id: run.run_id,
+      unknown,
+    });
+  }
+  const canonicalRequest = { reason: args.reason, failed: targets };
+  const requestHash = sha256(canonicalRequest);
+  if (run.visible_finalization) {
+    if (run.visible_finalization.request_hash !== requestHash) {
+      throw invalidParams("Conflicting finalize_visible_run replay.", {
+        reason: "VISIBLE_FINALIZE_CONFLICT",
+        run_id: run.run_id,
+        existing_request_hash: run.visible_finalization.request_hash,
+        submitted_request_hash: requestHash,
+      });
+    }
+    return finalizedVisibleReplay(run, true);
+  }
+  if (!["planned", "running"].includes(run.status)) {
+    throw invalidParams(`Visible run ${run.run_id} is already terminal (${run.status}).`, {
+      reason: "VISIBLE_FINALIZE_ALREADY_TERMINAL",
+      run_id: run.run_id,
+      status: run.status,
+    });
+  }
+
+  const completedAt = new Date().toISOString();
+  const terminal = new Set(["completed", "degraded", "failed", "timed_out", "skipped"]);
+  const failureTerminal = new Set(["failed", "timed_out"]);
+  const targetState = {
+    tasks: (id) => run.task_status?.[id] || { task: id, status: "pending" },
+    masters: (id) => run.master_status?.[id] || { master: id, status: "pending" },
+    roles: (id) => run.agent_status?.[id] || { role: id, status: "pending" },
+  };
+  const notOpen = Object.fromEntries(Object.entries(targets).map(([kind, ids]) => [
+    kind,
+    ids.map((id) => ({ id, status: targetState[kind](id).status }))
+      .filter(({ status }) => terminal.has(status) && !failureTerminal.has(status)),
+  ]));
+  if (Object.values(notOpen).some((items) => items.length)) {
+    throw invalidParams("finalize_visible_run cannot relabel a completed, degraded, or skipped seat as failed.", {
+      reason: "VISIBLE_FINALIZE_TARGET_NOT_OPEN",
+      run_id: run.run_id,
+      targets: notOpen,
+    });
+  }
+  const closeStates = (states, ids, failed, identity) => Object.fromEntries(ids.map((id) => {
+    const state = states?.[id] || { [identity]: id, status: "pending" };
+    if (terminal.has(state.status)) return [id, state];
+    const explicitlyFailed = failed.includes(id);
+    return [id, {
+      ...state,
+      [identity]: id,
+      status: explicitlyFailed ? "failed" : "skipped",
+      error: `${explicitlyFailed ? "visible_finalize" : "visible_finalize_upstream"}:${args.reason}`,
+      completed_at: completedAt,
+      updated_at: completedAt,
+    }];
+  }));
+  run.task_status = closeStates(run.task_status, run.tasks || [], targets.tasks, "task");
+  run.master_status = closeStates(run.master_status, run.masters || [], targets.masters, "master");
+  run.agent_status = closeStates(run.agent_status, DEBATE_ROLES, targets.roles, "role");
+  run.status = "incomplete";
+  run.phase = "incomplete";
+  run.completed_at = completedAt;
+  run.visible_finalization = {
+    contract: "visible_finalize_v1",
+    request_hash: requestHash,
+    reason: args.reason,
+    failed: targets,
+    finalized_at: completedAt,
+  };
+
+  const dir = runPath(run.run_id);
+  const manager = managerFallback(run, "");
+  manager.failure_reason = `visible_host_${args.reason}`;
+  manager.visible_finalization = run.visible_finalization;
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  const completeness = completenessStatus(run);
+  appendEvent(run, "visible_run_finalized", {
+    reason: args.reason,
+    failed: targets,
+    missing_evidence: completeness.missing_evidence,
+    missing_masters: completeness.missing_masters,
+    missing_debate: completeness.missing_debate,
+  });
+  saveRun(run);
+  const debate = { ...existingDebate(dir), manager };
+  const artifacts = writeFinalArtifacts(run, debate);
+  saveRun(run);
+  writeAllAgentsMarkdown(run, debate);
+  return { run, decision: manager, idempotent_replay: false, ...artifacts };
 }
 
 export function isDryRun(args = {}) {
@@ -1310,6 +1475,17 @@ function assertVisibleReaderLanguage(text, run, label) {
       ...error.data,
     });
   }
+}
+
+function assertVisibleRunOpen(run, operation) {
+  if (!run?.visible_finalization) return;
+  throw invalidParams(`Cannot ${operation}: visible run ${run.run_id} was already finalized.`, {
+    reason: "VISIBLE_RUN_FINALIZED",
+    run_id: run.run_id,
+    finalization_reason: run.visible_finalization.reason,
+    finalized_at: run.visible_finalization.finalized_at,
+    remedy: "Read and deliver the persisted user_response_markdown; start a new selected run to continue research.",
+  });
 }
 
 function outputFailureKind(error) {
@@ -1803,7 +1979,8 @@ export async function runHeadlessMasters(run, args = {}) {
     updateMasterStatus(run, item.id, "failed", {
       engine: item.engine,
       error: item.reason,
-      output: item.error || undefined,
+      error_code: item.error_code || "V3_POLICY_EXECUTION_FAILED",
+      diagnostic: item.error || undefined,
     });
   }
 
@@ -2618,6 +2795,7 @@ export function recordVerifierVerdict(args) {
   if (run.execution_mode !== "visible_host_threads") {
     throw invalidParams("record_verifier_verdict requires a run created by plan_visible_run.");
   }
+  assertVisibleRunOpen(run, "record a verifier verdict");
   const verifier = registry().get(args.verifier);
   if (!verifier || verifier.kind !== "verifier") {
     throw invalidParams(`unknown verifier: ${args.verifier}`);

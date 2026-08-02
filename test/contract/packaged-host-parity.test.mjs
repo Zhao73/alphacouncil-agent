@@ -65,7 +65,7 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   assert.equal(report.packaged_adapter_e2e.status, "passed");
   assert.deepEqual(report.packaged_adapter_e2e.host_order, ["claude_code", "codex", "opencode", "grok"]);
   assert.equal(report.packaged_adapter_e2e.host_count, 4);
-  assert.equal(report.packaged_adapter_e2e.tool_count, 31);
+  assert.equal(report.packaged_adapter_e2e.tool_count, 32);
   assert.equal(report.packaged_adapter_e2e.locale_count, 4);
   assert.equal(report.packaged_adapter_e2e.selection_input_type, "stable_ids");
   assert.deepEqual(report.packaged_adapter_e2e.selection_input, [
@@ -81,7 +81,7 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   assert.ok(Object.values(report.packaged_adapter_e2e.parity).every(Boolean));
   for (const host of report.packaged_adapter_e2e.hosts) {
     assert.equal(host.adapter_status, "passed", host.host_id);
-    assert.equal(host.tool_count, 31, host.host_id);
+    assert.equal(host.tool_count, 32, host.host_id);
     assert.equal(host.catalog_count, CANONICAL_MASTER_COUNT, host.host_id);
     assert.equal(host.receipt_consumption, "one_run_only", host.host_id);
     assert.equal(host.cross_host_reuse, "SELECTION_RECEIPT_UNKNOWN", host.host_id);

@@ -1,4 +1,14 @@
-import { DEBATE_ROLES, LIMITS, PLACEHOLDER_BODIES, QUICK_REPORT_SECTIONS, RECORDED_BENCH_MARKER_PREFIX, REPORT_SECTIONS } from "./constants.mjs";
+import {
+  DEBATE_ROLES,
+  HANDOFF_METHOD_SEAT_MARKER_PREFIX,
+  HANDOFF_METHOD_TAIL_END_MARKER,
+  HANDOFF_METHOD_TAIL_MARKER,
+  LIMITS,
+  PLACEHOLDER_BODIES,
+  QUICK_REPORT_SECTIONS,
+  RECORDED_BENCH_MARKER_PREFIX,
+  REPORT_SECTIONS,
+} from "./constants.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, readerLanguageStatus } from "./lang.mjs";
@@ -444,5 +454,80 @@ export function validateFinalReport(markdown, run) {
       .filter((section) => (!section.when_masters || benchRan)
         && (!section.when_fund_or_index || fundOrIndex))
       .map((section) => section.id),
+  };
+}
+
+/**
+ * Validate the system-owned final method-seat ledger in the chat handoff.
+ *
+ * Report quality and handoff quality are different publication surfaces. A complete Master
+ * Bench in final_report.md does not prove that the host-facing summary retained it, and that
+ * was the exact gap that let a shorter recap hide every method statement. The handoff tail is
+ * therefore anchored, ordered by the frozen selection, and required to account for every seat.
+ * A failed seat may be represented only by an explicit `not_produced` diagnostic; that makes
+ * the failure visible without manufacturing a stance or allowing the completeness gate to pass.
+ */
+export function validateUserResponse(markdown, run) {
+  const text = String(markdown || "");
+  const begin = `<!-- ${HANDOFF_METHOD_TAIL_MARKER} -->`;
+  const end = `<!-- ${HANDOFF_METHOD_TAIL_END_MARKER} -->`;
+  const selected = [...new Set((run?.masters || []).filter((id) => typeof id === "string" && id.length))];
+  const opinions = new Map((run?.master_opinions || []).map((opinion) => [opinion?.master, opinion]));
+  const missing = [];
+  const beginCount = text.split(begin).length - 1;
+  const endCount = text.split(end).length - 1;
+  if (beginCount !== 1) missing.push(`handoff method-seat tail begin marker count is ${beginCount}, expected 1`);
+  if (endCount !== 1) missing.push(`handoff method-seat tail end marker count is ${endCount}, expected 1`);
+  if (!text.trimEnd().endsWith(end)) missing.push("handoff method-seat ledger is not the final section");
+
+  const beginAt = text.indexOf(begin);
+  const endAt = text.lastIndexOf(end);
+  const tail = beginAt >= 0 && endAt > beginAt ? text.slice(beginAt, endAt + end.length) : "";
+  let priorSeatAt = -1;
+  const rendered = [];
+  const fullStatements = [];
+  const explicitFailures = [];
+  for (const id of selected) {
+    const marker = `<!-- ${HANDOFF_METHOD_SEAT_MARKER_PREFIX}${id} -->`;
+    const count = tail.split(marker).length - 1;
+    if (count !== 1) {
+      missing.push(`handoff method-seat marker count for ${id} is ${count}, expected 1`);
+      continue;
+    }
+    const seatAt = tail.indexOf(marker);
+    if (seatAt <= priorSeatAt) missing.push(`handoff method-seat order mismatch: ${id}`);
+    priorSeatAt = seatAt;
+    rendered.push(id);
+    const nextSeatAt = selected
+      .map((candidate) => tail.indexOf(`<!-- ${HANDOFF_METHOD_SEAT_MARKER_PREFIX}${candidate} -->`, seatAt + marker.length))
+      .filter((index) => index > seatAt)
+      .sort((left, right) => left - right)[0];
+    const seatBlock = tail.slice(seatAt, nextSeatAt ?? tail.indexOf(end, seatAt));
+    const statement = String(opinions.get(id)?.voice_statement || "").trim();
+    const explicitState = run?.master_status?.[id];
+    const mayPublishStatement = Boolean(statement) && (!explicitState || explicitState.status === "completed");
+    if (mayPublishStatement) {
+      if (!seatBlock.includes(statement)) missing.push(`handoff truncated or replaced method-seat statement: ${id}`);
+      else fullStatements.push(id);
+    } else if (!seatBlock.includes("statement_status=not_produced")) {
+      missing.push(`handoff does not explicitly diagnose the missing method-seat statement: ${id}`);
+    } else {
+      explicitFailures.push(id);
+    }
+  }
+
+  return {
+    schema_version: 1,
+    contract_id: "inline_user_response_v1",
+    selected_count: selected.length,
+    rendered_count: rendered.length,
+    full_statement_count: fullStatements.length,
+    explicit_failure_count: explicitFailures.length,
+    rendered_master_ids: rendered,
+    full_statement_master_ids: fullStatements,
+    explicit_failure_master_ids: explicitFailures,
+    final_section: text.trimEnd().endsWith(end),
+    status: missing.length ? "needs_revision" : "passed",
+    missing,
   };
 }

@@ -31,7 +31,7 @@
 <p>
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
-  <a href="#-tools--31-all-keyless"><b>Tools</b></a> ·
+  <a href="#-tools--32-all-keyless"><b>Tools</b></a> ·
   <a href="#-the-bench--27-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
@@ -80,7 +80,7 @@ evidence, run selected method seats and produce an auditable portfolio-manager r
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
-| 🔑 **31 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🔑 **32 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
 | 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
@@ -182,9 +182,12 @@ The full report is written to `~/.alphacouncil-agent/runs/<run_id>/final_report.
 with analyst Markdown files and `artifact_index.md` in the same run directory. Full handoff
 shows the system quote (or an explicit quote-data gap), all eight analyst statuses/summaries,
 and every selected method seat's frozen stance plus readable explanation/status. Its final
-section contains the exact selected-seat count and one statement per stable ID; `all` ends
-with all 27 statements. These are provisional method-seat outputs, never quotes from the
-named people.
+section is a system-gated ledger: completed seats retain their full, untruncated statement;
+failed seats explicitly say that no directional view was produced and why. `all` therefore
+accounts for all 27 selected IDs without manufacturing votes. These are provisional
+method-seat outputs, never quotes from the named people. If a visible hard gate fails,
+`finalize_visible_run` closes the run as `incomplete` and returns this same handoff; the host
+must not replace it with a shorter manual recap.
 
 ### Slash commands
 
@@ -311,7 +314,7 @@ The final report is readable directly in chat. It carries analyst work logs, dat
 summaries, the bull/bear debate, the PM verdict, entry price bands, short/medium/long-term
 views, data gaps, confidence and a source table.
 
-## 🔧 Tools — 31, all keyless
+## 🔧 Tools — 32, all keyless
 
 Nothing below needs an API key, an account, or a config file. Install and run.
 

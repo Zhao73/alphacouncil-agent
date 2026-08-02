@@ -45,7 +45,7 @@ const PROMPT = "packaged adapter parity fixture";
 const TASKS = Object.freeze(["market_data"]);
 const REQUEST_TIMEOUT_MS = 30_000;
 const PROCESS_TIMEOUT_MS = 120_000;
-const EXPECTED_TOOL_COUNT = 31;
+const EXPECTED_TOOL_COUNT = 32;
 const INSTALLED_LOCALE_CASES = Object.freeze([
   Object.freeze({ language: "en-US", prompt: "installed package locale smoke", key: "en", script: /[A-Za-z]/u }),
   Object.freeze({ language: "zh-CN", prompt: "安装包语言烟雾测试", key: "zh", script: /\p{Script=Han}/u }),

@@ -70,17 +70,20 @@ Its `user_response.md` must also visibly carry:
 
 - a system-owned price snapshot with price, currency, quote timestamp, exchange/feed and
   source when available, or an explicit statement that the quote is unavailable;
-- every selected stable master ID, its frozen deterministic stance, its readable
-  explanation/status and a clear `not a quote` attribution boundary;
+- every selected stable master ID, its frozen deterministic stance and its complete,
+  untruncated recorded statement, or an explicit non-directional terminal failure record;
 - all eight mandatory analyst task IDs, statuses and summaries, including failures or gaps;
 - terminal status, contract, report quality, elapsed time, deadline state and artifact paths.
-- a final section with the exact selected-seat count and one readable statement per selected
-  stable ID. Full `all` therefore ends with 26 statements; quick reports its actual 1–4.
+- a machine-marked final section with the exact selected-seat count. Every speaking seat keeps
+  its complete recorded statement; every failed/unavailable seat instead carries
+  `statement_status=not_produced` plus status/reason and never counts as a directional view.
+  Full `all` therefore accounts for all 27 selected IDs; quick reports its actual 1–4.
 
 Visible PM completion returns `handoff_contract=inline_user_response_v1` plus the persisted
-`user_response_markdown`. The host uses that body for the final reply instead of reducing it
-to a compact ACK and hiding the method-seat tail. An idempotent PM replay returns the same
-handoff.
+`user_response_markdown`. When a visible barrier cannot complete, the host must call
+`finalize_visible_run`; it closes the run as `incomplete` and returns the same handoff contract.
+The host uses that body for the final reply instead of reducing it to a compact ACK or manual
+recap, and appends nothing after the method-seat tail. Idempotent replays return the same handoff.
 
 All mandatory full evidence roles must be completed. If one still fails after the one bounded
 parse-only repair, full fails closed at the evidence barrier: no master, bull/bear or PM model
@@ -243,7 +246,9 @@ one judgment paragraph, valuation/position, material gaps and file locations.
 A full handoff additionally carries the key earnings result, forward setup, news/voice
 signals and top invalidation conditions. It lists every selected method seat and all eight
 mandatory analysts rather than sampling a subset, and includes the system-owned price
-snapshot or an explicit quote-data gap. The method-seat list is the final handoff section.
+  snapshot or an explicit quote-data gap. The system-owned method-seat ledger is the final
+  handoff section; recorded statements are not clipped and missing statements are explicit
+  non-directional failure entries rather than summary/verdict fallbacks.
 
 A quick handoff instead names:
 
@@ -269,14 +274,17 @@ Both handoffs list `final_report.md`, `artifact_index.md`, `all_agents.md`, and
 | "The source table mentions the news, so the news section can be skipped." | News findings need their own visible section; quick recent news must also pass its date window. |
 | "The final report exists, so chat can hide file locations." | The handoff lists the saved report, index, trace and quality file. |
 | "The master said this." | Call it a recorded method-seat result, never a quote from the named person. |
-| "The full report has a bench table, so the handoff can hide the individual seats." | Full handoff ends with every selected stable ID, stance and readable result/status. |
+| "The full report has a bench table, so the handoff can hide the individual seats." | Full handoff ends with every selected stable ID and its complete statement or explicit non-directional failure status. |
 | "The PM tool returned success, so its small ACK is enough." | Deliver `user_response_markdown`; success metadata is not the user-facing report. |
+| "A visible worker failed, so I will summarize the partial run myself." | Call `finalize_visible_run` and deliver its persisted handoff; never leave the run open or bypass the final ledger. |
 | "QQQ has a ticker and SEC CIK, so run the company screen." | Classify first. ETF/fund/index company financial routes are not applicable; use look-through or aggregate evidence. |
 
 ## How the Quality Gate Checks Reports
 
-`validateFinalReport` writes `report_quality.json` with `schema_version: 2` and the applicable
-`contract_id`. A section counts only when:
+`validateFinalReport` retains its report-only `schema_version: 2` result. Artifact publication
+writes `report_quality.json` with `schema_version: 3`, the applicable `contract_id`, and a
+`handoff_method_statement_coverage` result from `validateUserResponse`. A report section counts
+only when:
 
 - it is a real Markdown ATX heading (`##` or `###`), not bold text or a heading inside a code
   fence;
@@ -295,3 +303,8 @@ seat; `report_quality.json.method_statement_coverage` records selected/readable/
 counts and IDs. A missing statement or ID forces `needs_revision`. Fund/index runs also
 require the system-owned instrument-structure section. The authoritative lists are
 `REPORT_SECTIONS` and `QUICK_REPORT_SECTIONS` in `mcp/lib/constants.mjs`.
+
+The handoff gate independently requires one begin/end ledger marker, the end marker as the
+last non-whitespace content, exactly one ordered seat marker for every selected stable ID, and
+the full original `voice_statement` inside each speaking block. A non-speaking block passes
+only with `statement_status=not_produced`; it remains incomplete at the execution gate.

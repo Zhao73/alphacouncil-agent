@@ -54,7 +54,7 @@ test("tools/list exposes a coherent tool surface", () => {
   // just means every new tool arrives with a failing test that says nothing useful.
   const mustHave = [
     "begin_council_selection", "confirm_master_selection",
-    "plan_visible_run", "record_visible_packet", "record_visible_decision",
+    "plan_visible_run", "record_visible_packet", "finalize_visible_run", "record_visible_decision",
     "collect_evidence", "analyze_symbol", "read_run",
   ];
   for (const name of mustHave) assert.ok(names.includes(name), `missing core tool: ${name}`);

@@ -56,8 +56,10 @@ Before giving a final investment answer, all gates below must be satisfied:
     also carries forward setup and invalidations. Quick names all four analyst statuses,
     selected method IDs/stances, dated recent company/industry news, every degraded item,
     and that it is not equivalent to full council. Full handoff ends with the exact selected
-    seat count and every per-seat method statement; use returned `user_response_markdown`
-    rather than an ACK-only recap.
+    seat count and every complete, untruncated per-seat method statement. A failed seat is
+    retained in that final ledger as `statement_status=not_produced`, never as a fabricated
+    stance. Use returned `user_response_markdown` rather than an ACK-only or manually authored
+    recap. If a visible barrier fails, call `finalize_visible_run` first so that handoff exists.
 12. Deadline gate: plugin-managed quick uses headless `analyze_symbol`; `plan_visible_run`
     quick is rejected. Never extend its end-to-end deadline above 600000 ms or silently
     omit work to appear complete.

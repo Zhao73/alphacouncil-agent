@@ -134,7 +134,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 └─ 出典テーブル .......... すべての主張を <task>:<source_id> に対応付け
 ```
 
-簡潔なユーザー向け要約は `~/.alphacouncil-agent/runs/<run_id>/user_response.md` に書き出されます。
+簡潔なユーザー向け要約は `~/.alphacouncil-agent/runs/<run_id>/user_response.md` に書き出されます。最後はシステム検証済みの席別台帳で、完了した席は全文を省略せず表示し、失敗した席は方向性判断を生成していないことと終了理由を明示します。可視実行のハードゲートが失敗した場合は `finalize_visible_run` が `incomplete` として正式に終了し、同じ要約を返します。ホストは短い手動要約に置き換えません。
 完全なレポートは `~/.alphacouncil-agent/runs/<run_id>/final_report.md` に書き出され、
 同じディレクトリに各アナリストの Markdown ファイルと `artifact_index.md` も保存されます。フルの要約には、システム価格（または明示的な価格データ欠落）、8 アナリスト全員の状態/要約、選択した各メソッド席の凍結 stance と独立 worker の説明/状態が表示されます。
 

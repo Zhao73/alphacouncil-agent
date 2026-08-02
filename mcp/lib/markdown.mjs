@@ -1,27 +1,25 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEBATE_ROLES, RECORDED_BENCH_MARKER_PREFIX, RECORDED_INSTRUMENT_MARKER_PREFIX, REPORT_SECTIONS } from "./constants.mjs";
+import {
+  DEBATE_ROLES,
+  HANDOFF_METHOD_SEAT_MARKER_PREFIX,
+  HANDOFF_METHOD_TAIL_END_MARKER,
+  HANDOFF_METHOD_TAIL_MARKER,
+  RECORDED_BENCH_MARKER_PREFIX,
+  RECORDED_INSTRUMENT_MARKER_PREFIX,
+  REPORT_SECTIONS,
+} from "./constants.mjs";
 import { writeJson } from "./fsutil.mjs";
 import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
-import { completenessStatus, validateFinalReport, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
+import { completenessStatus, validateFinalReport, validateUserResponse, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { composeVoiceStatement, intentLabel, VOICE_FIELDS, voiceDisclaimer, voiceFieldLabel } from "./voice.mjs";
 import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
-
-/**
- * Per-seat statement budget in the handoff.
- *
- * The governance contract requires every selected seat's statement in the handoff, so this is
- * the seat's only appearance there. At the old one-line budget a seat's conclusion was always
- * the part that got cut, which is how seven seats that all spoke read as seven seats that had
- * not. The complete statement stays in the report and in `master_<id>.md`.
- */
-const MASTER_STATEMENT_CHARS = 2000;
 
 export function renderPacketMarkdown(packet, index = 0, language = packet?.language) {
   const key = languageKey(language);
@@ -595,8 +593,20 @@ export function writeAnalystMarkdownFiles(run, debate = {}) {
   }
 }
 
-export function writeReportQuality(run, markdown) {
-  const quality = validateFinalReport(markdown, run);
+export function writeReportQuality(run, markdown, handoffMarkdown) {
+  const report = validateFinalReport(markdown, run);
+  const handoff = handoffMarkdown === undefined ? null : validateUserResponse(handoffMarkdown, run);
+  const quality = handoff ? {
+    ...report,
+    schema_version: 3,
+    final_report_status: report.status,
+    handoff_method_statement_coverage: handoff,
+    status: report.status === "passed" && handoff.status === "passed" ? "passed" : "needs_revision",
+    missing: [
+      ...report.missing,
+      ...handoff.missing.map((item) => `handoff: ${item}`),
+    ],
+  } : report;
   run.report_quality = quality;
   writeJson(join(runPath(run.run_id), "report_quality.json"), quality);
   return quality;
@@ -1105,38 +1115,41 @@ function legacyUserResponseMarkdown(run, manager) {
 }
 
 function handoffCopy(language) {
-  return {
+  const shared = {
     zh: {
       title: "AlphaCouncil 运行摘要", status: "运行状态与时限", statusLabel: "状态", contract: "报告契约", scope: "执行范围", elapsed: "耗时", deadline: "硬截止时间", deadlineMet: "是否在截止前落盘",
       fullScope: "full_v2：8 个证据席、全部已选方法席的可审计终局陈词、三轮多空交叉问答和 PM；插件托管运行硬上限 30 分钟。", quickScope: "quick_v1：4 个证据席、1–4 个方法席、单轮多空和短 PM；不等同 full council。",
       price: "系统记录价格", noPrice: "未取得可验证报价；没有补造价格。", delayed: "延迟行情", instrument: "资产识别与研究路径", assetType: "资产类型", researchModel: "研究模型", classifiedBy: "识别来源", conclusion: "结论", rating: "评级", winner: "多空胜负", confidence: "置信度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW；工具或 PM 失败不能转换成投资评级。",
-      masters: "结尾：逐席方法陈词（不是本人引语）", analysts: "分析师逐席内容", worker: "陈词来源", record: "冻结记录", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
+      masters: "结尾：逐席方法陈词（不是本人引语）", analysts: "分析师逐席内容", worker: "陈词来源", record: "冻结记录", statement: "完整陈词", notProduced: "本席未产生方法陈词，也没有方向性观点；这不是看空票。", failure: "终止原因", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
     },
     en: {
       title: "AlphaCouncil Run Summary", status: "Run Status and Deadline", statusLabel: "Status", contract: "Report contract", scope: "Execution scope", elapsed: "Elapsed", deadline: "Hard deadline", deadlineMet: "Persisted before deadline",
       fullScope: "full_v2: eight evidence seats, an auditable final statement for every selected method seat, three-round cross-examination and PM; plugin-managed runs have a hard thirty-minute ceiling.", quickScope: "quick_v1: four evidence seats, one to four method seats, one debate round and short PM; not equivalent to full council.",
       price: "System-Recorded Price", noPrice: "No verifiable quote was retrieved; no price was invented.", delayed: "delayed quote", instrument: "Instrument Classification and Research Path", assetType: "Asset type", researchModel: "Research model", classifiedBy: "Classified by", conclusion: "Conclusion", rating: "Rating", winner: "Debate winner", confidence: "Confidence", judgment: "Judgment", noDecision: "NEEDS_MANAGER_REVIEW; a tool or PM failure cannot be converted into an investment rating.",
-      masters: "Final Per-Seat Method Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", worker: "statement source", record: "Frozen record", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
+      masters: "Final Per-Seat Method Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", worker: "statement source", record: "Frozen record", statement: "Full statement", notProduced: "This seat produced no method statement and no directional view; this is not a bearish vote.", failure: "Terminal reason", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
     },
     ja: {
-      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: "full_v2：8つの証拠席、選択された全メソッド席の監査可能な最終見解、3ラウンドの多空質疑、PM。プラグイン管理実行は30分で必ず終端状態になります。", quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", instrument: "銘柄分類と調査経路", assetType: "資産タイプ", researchModel: "調査モデル", classifiedBy: "分類根拠", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "最後：メソッド席ごとの最終見解（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "見解の生成元", record: "凍結済み記録", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", index: "代理成果物一覧", trace: "全代理トレース", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
+      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: "full_v2：8つの証拠席、選択された全メソッド席の監査可能な最終見解、3ラウンドの多空質疑、PM。プラグイン管理実行は30分で必ず終端状態になります。", quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", instrument: "銘柄分類と調査経路", assetType: "資産タイプ", researchModel: "調査モデル", classifiedBy: "分類根拠", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "最後：メソッド席ごとの最終見解（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "見解の生成元", record: "凍結済み記録", statement: "完全な見解", notProduced: "この席はメソッド見解も方向性判断も生成していません。弱気票ではありません。", failure: "終了理由", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", index: "代理成果物一覧", trace: "全代理トレース", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
     },
     ko: {
-      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: "full_v2: 8개 증거 좌석, 선택된 모든 방법론 좌석의 감사 가능한 최종 발언, 3라운드 롱/숏 질의응답, PM. 플러그인 관리 실행은 30분 안에 반드시 종단 상태가 됩니다.", quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", instrument: "종목 분류 및 조사 경로", assetType: "자산 유형", researchModel: "조사 모델", classifiedBy: "분류 근거", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "마지막: 방법론 좌석별 최종 발언(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "발언 출처", record: "동결 기록", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
+      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: "full_v2: 8개 증거 좌석, 선택된 모든 방법론 좌석의 감사 가능한 최종 발언, 3라운드 롱/숏 질의응답, PM. 플러그인 관리 실행은 30분 안에 반드시 종단 상태가 됩니다.", quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", instrument: "종목 분류 및 조사 경로", assetType: "자산 유형", researchModel: "조사 모델", classifiedBy: "분류 근거", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "마지막: 방법론 좌석별 최종 발언(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "발언 출처", record: "동결 기록", statement: "전체 발언", notProduced: "이 좌석은 방법론 발언이나 방향성 판단을 생성하지 않았습니다. 약세 표가 아닙니다.", failure: "종료 사유", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
     },
-  }[languageKey(language)];
+  };
+  return shared[languageKey(language)] || shared.en;
 }
 
 function localizedFailure(error, language) {
   const value = String(error || "");
   const key = languageKey(language);
   const labels = {
-    zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", qna_incomplete: "问答不完整", unexpected_error: "意外工具错误", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
-    en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", qna_incomplete: "Q&A was incomplete", unexpected_error: "unexpected tool error", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
-    ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", qna_incomplete: "質疑応答が不完全", unexpected_error: "予期しないツールエラー", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
-    ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", qna_incomplete: "질의응답 불완전", unexpected_error: "예기치 않은 도구 오류", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
+    zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", qna_incomplete: "问答不完整", unexpected_error: "意外工具错误", v3_policy_execution_failed: "确定性方法政策执行失败", invalid_typed_grounding: "类型化事实输入无效", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
+    en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", qna_incomplete: "Q&A was incomplete", unexpected_error: "unexpected tool error", v3_policy_execution_failed: "deterministic method policy execution failed", invalid_typed_grounding: "typed grounding was invalid", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
+    ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", qna_incomplete: "質疑応答が不完全", unexpected_error: "予期しないツールエラー", v3_policy_execution_failed: "決定論的メソッド方針の実行に失敗", invalid_typed_grounding: "型付き根拠データが無効", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
+    ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", qna_incomplete: "질의응답 불완전", unexpected_error: "예기치 않은 도구 오류", v3_policy_execution_failed: "결정론적 방법론 정책 실행 실패", invalid_typed_grounding: "형식화된 근거 입력이 잘못됨", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
   }[key];
   if (value.startsWith("exit code")) return labels.failed;
+  if (value.startsWith("visible_finalize_upstream:")) return labels.skipped;
+  if (value.startsWith("visible_finalize:")) return labels.failed;
   if (value.includes("gate_failed") || value.startsWith("global_deadline_before")) return labels.skipped;
   return labels[value] || labels.missing;
 }
@@ -1178,6 +1191,63 @@ function localizedDisplayValue(value, language) {
   return maps[key]?.[token] || token;
 }
 
+/**
+ * The system-owned final handoff section.
+ *
+ * This is intentionally a ledger, not a prose recap. Every frozen selected ID appears once
+ * and in order. A completed seat gets its full recorded statement with no character budget;
+ * a failed or non-speaking seat gets an explicit terminal diagnostic and never a synthetic
+ * stance. Stable HTML markers let the publication gate prove that the ledger survived as the
+ * final section even when a host or localization changes the visible heading.
+ */
+function handoffMethodTail(run, copy) {
+  const selected = [...new Set((run.masters || []).filter((id) => typeof id === "string" && id.length))];
+  const opinions = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
+  const blocks = selected.map((id) => {
+    const opinion = opinions.get(id);
+    const explicitState = run.master_status?.[id];
+    const state = explicitState || { master: id, status: opinion ? "completed" : "pending" };
+    const statement = String(opinion?.voice_statement || "").trim();
+    const mayPublishStatement = Boolean(statement) && (!explicitState || state.status === "completed");
+    const lines = [
+      `<!-- ${HANDOFF_METHOD_SEAT_MARKER_PREFIX}${id} -->`,
+      `- ${masterTitle(id, run.language)} (\`${id}\`)`,
+    ];
+    if (!mayPublishStatement) {
+      const reason = localizedFailure(state.error || state.status, run.language);
+      const code = state.error_code ? ` (${state.error_code})` : "";
+      lines.push(
+        `  - ${copy.statement}: ${copy.notProduced}`,
+        `  - ${copy.failure}: ${reason}${code}`,
+        `  - [statement_status=not_produced; seat_status=${state.status || "missing"}; not_a_directional_view=true]`,
+      );
+      if (state.diagnostic) lines.push(`  - ${clipAtBoundary(state.diagnostic, 360)}`);
+      return lines.join("\n");
+    }
+
+    const statementSource = opinion.dedicated_worker?.status || opinion.voice_status || "unknown";
+    const frozenRecord = opinion.statement_origin || opinion.reason || opinion.engine || "recorded";
+    lines.push(`  - ${copy.statement}: ${statement}`);
+    // Legacy and repair records can carry method/action fields that are not part of their flat
+    // authored statement. Keep those full too; do not let repairing truncation hide a decisive
+    // condition that is already present in the immutable opinion record.
+    if (opinion.voice && typeof opinion.voice === "object") {
+      for (const field of VOICE_FIELDS) {
+        const text = String(opinion.voice[field] ?? "").trim();
+        if (text && !statement.includes(text)) lines.push(`  - **${voiceFieldLabel(field, run.language)}**: ${text}`);
+      }
+    }
+    lines.push(`  - [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${frozenRecord}]`);
+    return lines.join("\n");
+  });
+  return [
+    `<!-- ${HANDOFF_METHOD_TAIL_MARKER} -->`,
+    `## ${copy.masters} — ${selected.length}`,
+    blocks.join("\n") || `- ${copy.missing}`,
+    `<!-- ${HANDOFF_METHOD_TAIL_END_MARKER} -->`,
+  ].join("\n");
+}
+
 export function userResponseMarkdown(run, manager) {
   const artifacts = artifactPaths(run);
   const copy = handoffCopy(run.language);
@@ -1187,28 +1257,7 @@ export function userResponseMarkdown(run, manager) {
   const priceLine = quote && Number.isFinite(Number(quote.price))
     ? `${quote.price} ${quote.currency || ""}; ${quote.quote_time || localizedDisplayValue("unknown", run.language)}; ${quote.exchange || localizedDisplayValue("unknown", run.language)}; ${copy.delayed}; ${quote.source_url || localizedDisplayValue("unavailable", run.language)}`
     : copy.noPrice;
-  const masterLines = (run.masters || []).map((id) => {
-    const opinion = (run.master_opinions || []).find((item) => item.master === id);
-    const state = run.master_status?.[id] || { status: "pending" };
-    if (!opinion) return `- ${masterTitle(id, run.language)} (\`${id}\`) [${localizedDisplayValue(state.status, run.language)}]: ${localizedFailure(state.error, run.language) || copy.missing}`;
-    const statementSource = opinion.dedicated_worker?.status || opinion.voice_status || "unknown";
-    const frozenRecord = opinion.statement_origin || opinion.reason || opinion.engine || "recorded";
-    // A seat's statement opens with the evidence it read and closes with what it would do, so
-    // clipping the opening to one line spent the whole budget on background and cut the
-    // conclusion. Lead with the reading that decided it and the action it implies -- both are
-    // already composed from the frozen decision -- then quote the statement at a budget that
-    // survives a paragraph, and leave provenance to its own line instead of the same sentence.
-    const lead = [opinion.voice?.how_my_method_reads_it, opinion.voice?.would_i_act]
-      .filter((part) => typeof part === "string" && part.trim().length)
-      .join(" ");
-    const statement = opinion.voice_statement || opinion.summary || opinion.verdict || "";
-    return [
-      `- ${masterTitle(id, run.language)} (\`${id}\`)`,
-      lead ? `  - ${clipAtBoundary(lead, 700)}` : "",
-      statement ? `  - ${clipAtBoundary(statement, MASTER_STATEMENT_CHARS)}` : "",
-      `  - [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${frozenRecord}]`,
-    ].filter(Boolean).join("\n");
-  }).join("\n") || `- ${copy.missing}`;
+  const masterTail = handoffMethodTail(run, copy);
   const analystLines = (run.tasks || []).map((task) => {
     const packet = (run.packets || []).find((item) => item.task === task);
     const state = taskState(run, task);
@@ -1279,13 +1328,12 @@ export function userResponseMarkdown(run, manager) {
     `- ${copy.trace}: ${artifacts.all_agents_md}`,
     `- ${copy.quality}: ${artifacts.report_quality_json}`,
     "",
-    `## ${copy.masters} — ${(run.masters || []).length}`,
-    masterLines,
+    masterTail,
   ].join("\n");
 }
 
-export function writeUserResponse(run, manager) {
-  const markdown = userResponseMarkdown(run, manager);
+export function writeUserResponse(run, manager, renderedMarkdown) {
+  const markdown = renderedMarkdown ?? userResponseMarkdown(run, manager);
   writeFileSync(artifactPaths(run).user_response_md, `${markdown}\n`);
   return markdown;
 }
@@ -1299,14 +1347,27 @@ export function writeFinalArtifacts(run, debate = {}) {
   }
   const finalMarkdown = finalReportMarkdown(run, manager);
   writeFileSync(artifactPaths(run).final_report_md, `${finalMarkdown}\n`);
-  const quality = writeReportQuality(run, finalMarkdown);
-  if (quality.status !== "passed" && completenessStatus(run).completeness === "complete" && verificationStatus(run).verification === "passed") {
+  const preliminaryReportQuality = validateFinalReport(finalMarkdown, run);
+  let user_response_markdown = userResponseMarkdown(run, manager);
+  const preliminaryHandoffQuality = validateUserResponse(user_response_markdown, run);
+  if ((preliminaryReportQuality.status !== "passed" || preliminaryHandoffQuality.status !== "passed")
+    && completenessStatus(run).completeness === "complete"
+    && verificationStatus(run).verification === "passed") {
     run.status = "needs_revision";
     run.phase = "needs_revision";
-    appendEvent(run, "needs_revision", { missing: quality.missing });
+    appendEvent(run, "needs_revision", {
+      missing: [
+        ...preliminaryReportQuality.missing,
+        ...preliminaryHandoffQuality.missing.map((item) => `handoff: ${item}`),
+      ],
+    });
+    // The handoff status is reader-facing. Regenerate it after the publication gate changes
+    // the run state so a rejected output cannot still tell the reader it is complete.
+    user_response_markdown = userResponseMarkdown(run, manager);
   }
+  const quality = writeReportQuality(run, finalMarkdown, user_response_markdown);
   writeAnalystMarkdownFiles(run, debate);
-  const user_response_markdown = writeUserResponse(run, manager);
+  writeUserResponse(run, manager, user_response_markdown);
   writeArtifactIndex(run, debate);
   return { final_report_markdown: finalMarkdown, user_response_markdown, report_quality: quality, artifacts: artifactPaths(run) };
 }

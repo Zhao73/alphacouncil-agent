@@ -112,6 +112,10 @@ No research, run directory or worker may start before that receipt exists. Data-
   to say, so a worker there buys prose rather than information. Set
   `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` to give every seat a worker again. Every selected
   seat still needs a readable statement in the report either way.
+- If any visible evidence, selected method or debate worker cannot pass its bounded repair,
+  call `finalize_visible_run` with the failed IDs. It closes the run as `incomplete`, writes
+  the standard artifacts and returns `user_response_markdown`; do not substitute a manual
+  verdict or leave the run in `running`.
 - `plan_visible_run` always writes each planned prompt to `<run>/prompts/` and returns
   `prompt_file` beside every agent. It also returns `prompts_inline`: false means the prompt
   bodies were left out of the result because returning them together would exceed what a host
@@ -155,9 +159,10 @@ No research, run directory or worker may start before that receipt exists. Data-
 - Never create fund/index revenue, company EPS, management guidance, fund-insider Form 4
   activity, or a portfolio financial statement by adding a few constituents.
 - Every selected physical v3 method gets a readable final statement, including deterministic
-  `out_of_scope` results. Full handoff ends with the exact selected-seat count and all of
-  those statements. Visible PM completion returns `user_response_markdown`; use it as the
-  final response body rather than reducing it to an ACK.
+  `out_of_scope` results. Full handoff ends with the exact selected-seat count and all complete,
+  untruncated statements; failed seats remain visible as non-directional terminal diagnostics.
+  Visible PM completion and `finalize_visible_run` return `user_response_markdown`; use it as
+  the final response body rather than reducing it to an ACK or manual recap.
 
 ## Analyst Roles
 

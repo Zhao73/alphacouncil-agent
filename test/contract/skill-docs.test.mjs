@@ -35,7 +35,7 @@ test("every data tool the server exposes is named in the runtime skill", async (
   // by name are the tools that fetch facts, because the alternative to calling them is
   // answering from memory.
   const PLUMBING = new Set([
-    "plan_visible_run", "record_visible_packet", "record_visible_decision",
+    "plan_visible_run", "record_visible_packet", "finalize_visible_run", "record_visible_decision",
     "record_master_opinion", "record_verifier_verdict", "collect_evidence",
     "analyze_symbol", "read_run", "compare_summary_modes", "preflight_permissions",
     "list_industries",

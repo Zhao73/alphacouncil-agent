@@ -243,8 +243,10 @@ claude mcp add alphacouncil-agent -- node /absolute/path/to/alphacouncil-agent/m
    path works as-is (it shells out to `codex exec`).
 2. **Without Codex** — use the visible path: let Claude Code's own subagents act
    as the analysts, then record their JSON with `record_visible_packet` /
-   `record_visible_decision`. The MCP tools `plan_visible_run` /
-   `record_visible_*` never call `codex`, so this runs fully inside Claude.
+   `record_visible_decision`. If a visible worker cannot complete, call
+   `finalize_visible_run` so the run becomes terminal and returns the mandatory handoff instead
+   of remaining `running`. The MCP tools `plan_visible_run` / `record_visible_*` /
+   `finalize_visible_run` never call `codex`, so this runs fully inside Claude.
 
 ---
 

@@ -70,6 +70,9 @@ export const OUTPUT_MODES = [
  */
 export const RECORDED_BENCH_MARKER_PREFIX = "alphacouncil:recorded-master-bench:v1:";
 export const RECORDED_INSTRUMENT_MARKER_PREFIX = "alphacouncil:recorded-instrument-structure:v1:";
+export const HANDOFF_METHOD_TAIL_MARKER = "alphacouncil:handoff-method-seat-tail:v1:begin";
+export const HANDOFF_METHOD_TAIL_END_MARKER = "alphacouncil:handoff-method-seat-tail:v1:end";
+export const HANDOFF_METHOD_SEAT_MARKER_PREFIX = "alphacouncil:handoff-method-seat:v1:";
 
 export const REPORT_SECTIONS = [
   { id: "conclusion", aliases: ["结论", "conclusion", "結論", "결론"], min_body: 6 },

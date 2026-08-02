@@ -2,6 +2,39 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.0] — 2026-08-02
+
+### Added
+
+- **Visible runs now have a real fail-closed terminal operation.** `finalize_visible_run`
+  closes a host-orchestrated run as `incomplete` when an evidence, method or debate worker
+  cannot cross its barrier. It preserves completed records, writes the standard no-rating
+  report/artifact package, returns `inline_user_response_v1`, is idempotent, and rejects late
+  worker writes instead of letting a terminal run drift back to `running`.
+- **Local GUI and TUI clients.** The run viewer exposes saved council artifacts without
+  digging through the hidden data directory, while the terminal meeting view carries the
+  project mark, progress, readable portraits and transcript-style council output.
+
+### Fixed
+
+- **Every selected method seat is now forced into the final handoff ledger.** Completed seats
+  retain the full recorded `voice_statement` with no character clipping. Failed or unavailable
+  seats remain visible as `statement_status=not_produced` with status/reason and explicitly do
+  not become a directional vote.
+- **Handoff quality is independently gated.** `report_quality.json` schema 3 verifies the
+  system-owned tail markers, selected-seat count, frozen order, per-seat coverage, verbatim
+  statement preservation and that no section follows the method ledger. A valid full report
+  can no longer hide a shortened or truncated chat handoff.
+- Visible v3 policy failures retain their stable error code and bounded diagnostic, so input
+  contract and deterministic-policy failures are distinguishable without inventing an opinion.
+- Quick recent-news regression coverage now uses a fixed `as_of`, so the future-source gate
+  does not change merely because the calendar advanced.
+
+### Changed
+
+- The MCP surface now contains 32 tools after adding `finalize_visible_run`; packaged host
+  parity, smoke tests and all three READMEs carry the same count.
+
 ## [1.0.15] — 2026-07-30
 
 ### Changed

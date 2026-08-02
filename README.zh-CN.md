@@ -52,7 +52,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 | ⏱️ **完整 headless 有硬时限，且有三档深度** | 开场问答里选 fast / normal / slow（预计 ~12 / ~20 / ~44 分钟，上限 15 / 30 / 60），三档都是同一个完整契约，只改每席能想多久。8 个分析师同波启动、每轮 Bull/Bear 同时启动、在所选档位内保存终态；外部服务故障会明确 `incomplete`，不会静默漏席。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
-| 🔑 **31 个工具,零 API 密钥,零依赖** | 数据全部来自免密钥公开源(SEC EDGAR、CBOE、Yahoo/Stooq、21 组宏观序列),不需要付费行情或券商账号;分析师另通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
+| 🔑 **32 个工具,零 API 密钥,零依赖** | 数据全部来自免密钥公开源(SEC EDGAR、CBOE、Yahoo/Stooq、21 组宏观序列),不需要付费行情或券商账号;分析师另通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
 | 📚 **内置研究方法论** | 股票研究与投行事件分析的方法论以**本地 skill** 形式打包(`skills/public-equity-investing`、`skills/investment-banking`)——不依赖 Codex 专属远程工作流,Claude Code 也能获得同等研究深度。 |
 | 📈 **真实行情兜底,免 key** | 内置 `get_quote` 通过 Yahoo + Stooq 拉延迟(~15分钟)的指数 / 股指期货(含夜盘)/ 汇率 / 利率 / 波动率 / 商品 / 个股点位——不用 API key,分析师引用真实数字而非猜测。 |
 | 🧭 **公司、ETF 与指数正确分流** | 先识别资产再研究：公司走发行人财务，ETF 走带时点持仓穿透，指数走聚合方法；QQQ/SPY 不会再被当成有自身营收和 EPS 的公司。 |
@@ -140,8 +140,10 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 完整报告写入 `~/.alphacouncil-agent/runs/<run_id>/final_report.md`。
 同一目录还会写入每个分析师的 Markdown 文件和 `artifact_index.md` 文件索引。完整模式的摘要
 会显示系统价格（或明确的行情缺口）、8 个分析师的状态/摘要，以及每个所选方法席冻结的立场
-和可读解释/状态。摘要最后一节给出准确的所选席位数，并逐席输出一个陈词；选择 `all` 时
-结尾就是完整 27 席。它们是项目派生的临时方法席输出，不是本人引语。
+和可读解释/状态。摘要最后一节是系统强制校验的逐席台账：已完成席位输出完整、不截断的陈词；
+失败席位明确显示“未产生方向性观点”和终止原因，不会被伪造成投票。选择 `all` 时结尾完整
+交代 27 席。它们是项目派生的临时方法席输出，不是本人引语。可见运行中任一硬门禁失败时，
+`finalize_visible_run` 会先把运行正式收口为 `incomplete` 并生成同一份交付摘要，宿主不得另写短总结替代。
 
 ### 斜杠命令
 
@@ -249,7 +251,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 
 最终报告可直接在对话中阅读，包含分析师工作记录、数据与申报摘要、多空辩论记录、PM 裁决、入场价格区间、短中长期观点、数据缺口、置信度和来源表。
 
-## 🔧 工具 —— 31 个，全部免 key
+## 🔧 工具 —— 32 个，全部免 key
 
 以下没有一项需要 API key、账号或配置文件。装完直接跑。
 
