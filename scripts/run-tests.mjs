@@ -12,7 +12,7 @@ import { spawnSync } from "node:child_process";
 import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { hasSourceTests, repoRoot, stagingState } from "./selfcheck.mjs";
+import { hasRunnableSourceTests, repoRoot, stagingState } from "./selfcheck.mjs";
 
 export const SOURCE_PORTABLE_EXCLUDED_TESTS = Object.freeze([
   "test/integration/persona-v3-solo-formula-execution.test.mjs",
@@ -89,7 +89,7 @@ export function validatePortableExclusions(root = repoRoot) {
 }
 
 export function buildTestPlan(root = repoRoot) {
-  const tests = hasSourceTests(root);
+  const tests = hasRunnableSourceTests(root);
   const staging = stagingState(root);
   if (staging === "partial") {
     throw new Error("private staging is partial: personas-v3 and persona-v3-formula-candidates must both exist or both be absent");

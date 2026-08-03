@@ -45,6 +45,11 @@ function createSourceTree(root) {
   for (const directory of ["test/unit", "test/integration", "test/contract"]) {
     mkdirSync(join(root, directory), { recursive: true });
   }
+  for (const dependency of ["ajv", "fast-check", "jsonrepair"]) {
+    const directory = join(root, "node_modules", dependency);
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(join(directory, "package.json"), `${JSON.stringify({ name: dependency, version: "0.0.0-fixture" })}\n`);
+  }
 }
 
 test("bounded test concurrency degrades safely on older supported Node releases", () => {
@@ -59,6 +64,16 @@ test("test runner selects installed-package smoke without source tests", (t) => 
   const plan = buildTestPlan(temporaryRoot(t));
   assert.equal(plan.mode, "installed_package");
   assert.deepEqual(plan.excluded, []);
+  assert.deepEqual(plan.args, ["scripts/package-smoke.mjs"]);
+});
+
+test("test runner selects installed-package smoke when a plugin cache has tests but no dev dependencies", (t) => {
+  const root = temporaryRoot(t);
+  for (const directory of ["test/unit", "test/integration", "test/contract"]) {
+    mkdirSync(join(root, directory), { recursive: true });
+  }
+  const plan = buildTestPlan(root);
+  assert.equal(plan.mode, "installed_package");
   assert.deepEqual(plan.args, ["scripts/package-smoke.mjs"]);
 });
 

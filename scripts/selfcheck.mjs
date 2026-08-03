@@ -43,6 +43,19 @@ export function hasSourceTests(root = repoRoot) {
     && existsSync(join(root, "test", "contract"));
 }
 
+const SOURCE_TEST_DEPENDENCIES = Object.freeze(["ajv", "fast-check", "jsonrepair"]);
+
+/**
+ * Codex installs a source snapshot (including test/) without npm devDependencies. Test folders
+ * alone therefore do not prove the source suite is runnable; treating that cache as a developer
+ * checkout makes installed selfcheck fail while the dependency-free runtime itself is healthy.
+ */
+export function hasRunnableSourceTests(root = repoRoot) {
+  return hasSourceTests(root) && SOURCE_TEST_DEPENDENCIES.every((name) => (
+    existsSync(join(root, "node_modules", name, "package.json"))
+  ));
+}
+
 export function stagingState(root = repoRoot) {
   const personas = existsSync(join(root, "knowledge", "staging", "personas-v3"));
   const formulas = existsSync(join(root, "knowledge", "staging", "persona-v3-formula-candidates"));
@@ -55,7 +68,7 @@ export function buildCheckPlan(root = repoRoot) {
   if (staging === "partial") {
     throw new Error("private staging is partial: personas-v3 and persona-v3-formula-candidates must both exist or both be absent");
   }
-  const tests = hasSourceTests(root);
+  const tests = hasRunnableSourceTests(root);
   return Object.freeze({
     mode: tests ? (staging === "present" ? "source_with_staging" : "source_portable") : "installed_package",
     staging,

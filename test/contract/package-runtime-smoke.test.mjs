@@ -25,3 +25,15 @@ test("selfcheck never treats partial private staging as a valid source tree", (t
   mkdirSync(join(root, "knowledge", "staging", "personas-v3"), { recursive: true });
   assert.throws(() => buildCheckPlan(root), /private staging is partial/);
 });
+
+test("selfcheck treats a Codex source cache without devDependencies as an installed package", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "alphacouncil-installed-cache-plan-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const directory of ["test/unit", "test/integration", "test/contract"]) {
+    mkdirSync(join(root, directory), { recursive: true });
+  }
+  const plan = buildCheckPlan(root);
+  assert.equal(plan.mode, "installed_package");
+  assert.equal(plan.tests, false);
+  assert.deepEqual(plan.steps.at(-1), ["scripts/run-tests.mjs"]);
+});

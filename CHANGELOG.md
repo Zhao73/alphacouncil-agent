@@ -2,6 +2,17 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.2] — 2026-08-03
+
+### Fixed
+
+- Installed Codex source caches now run the dependency-free package smoke instead of mistaking
+  bundled test folders for a developer checkout and trying to import absent AJV/fast-check
+  devDependencies.
+- The Codex plugin manifest carries its MCP server entry inline, satisfying current plugin
+  ingestion without adding a root `.mcp.json` that OpenCode would auto-import as a duplicate
+  server. `codex.mcp.json` remains as the explicit compatibility wiring.
+
 ## [1.1.1] — 2026-08-03
 
 ### Fixed
