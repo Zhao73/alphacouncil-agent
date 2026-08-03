@@ -47,7 +47,8 @@
         "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
       }
     },
-    "confidence": { "enum": ["high", "medium", "low"] }
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "company_dossier_hash_ack": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
   },
   "allOf": [
     {

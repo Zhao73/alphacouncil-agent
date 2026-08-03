@@ -12,6 +12,7 @@ import {
 import { isFundOrIndex } from "./instruments.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, readerLanguageStatus } from "./lang.mjs";
+import { companyDossierCoverageStatus } from "./company-dossier.mjs";
 
 export function withDisclaimer(markdown, language) {
   const text = typeof markdown === "string" ? markdown : "";
@@ -201,7 +202,10 @@ export function completenessStatus(run) {
   // because the reader believes the verdict survived twenty-one lenses.
   const selected = Array.isArray(run.masters) ? run.masters : [];
   const missing_masters = selected.filter((id) => masterSeatIncomplete(run, id));
-  const complete = missing_evidence.length === 0 && missing_debate.length === 0 && missing_masters.length === 0;
+  const company_dossier = companyDossierCoverageStatus(run);
+  const dossierIncomplete = company_dossier.required && !company_dossier.decision_barrier_ready;
+  const complete = missing_evidence.length === 0 && missing_debate.length === 0
+    && missing_masters.length === 0 && !dossierIncomplete;
   return {
     completeness: complete ? "complete" : "incomplete",
     missing_evidence,
@@ -218,6 +222,8 @@ export function completenessStatus(run) {
     missing_evidence_count: missing_evidence.length,
     missing_debate_count: missing_debate.length,
     missing_masters_count: missing_masters.length,
+    company_dossier,
+    company_dossier_incomplete: dossierIncomplete,
   };
 }
 

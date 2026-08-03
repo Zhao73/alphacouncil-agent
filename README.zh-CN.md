@@ -145,6 +145,11 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 交代 26 席。它们是项目派生的临时方法席输出，不是本人引语。可见运行中任一硬门禁失败时，
 `finalize_visible_run` 会先把运行正式收口为 `incomplete` 并生成同一份交付摘要，宿主不得另写短总结替代。
 
+完整公司决策还会写出 `company_dossier.json`：8 个证据包共同覆盖固定 52 项公司资料清单，
+每项都明确为已覆盖、实际检索后不可得或确实不适用，并保留来源/主张链和统一 SHA-256。
+全部所选方法席、三轮多空和 PM 必须读取并确认同一份完整档案；关键资料缺失时停止决策，
+不会让被截断的提示摘要冒充“全部信息”。
+
 ### 斜杠命令
 
 **一个命令，`/alpha`。** 模式当参数 —— 只用记一个名字，而不是在上百条命令的菜单里找四个。
@@ -396,7 +401,7 @@ flowchart TD
 }
 ```
 
-所有 source ID 都按 `<task>:<source_id>` 全局作用域。缺失数据必须写进 `open_questions`,并体现在最终报告的数据缺口章节。
+所有 source ID 都按 `<task>:<source_id>` 全局作用域。缺失数据必须写进 `open_questions`,并体现在最终报告的数据缺口章节。完整公司运行的 `company_dossier.json` 还会保存 52 项覆盖台账及同一份下游消费哈希。
 
 ## 本地运行
 

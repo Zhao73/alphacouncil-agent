@@ -5,7 +5,14 @@ import { appendFileSync, readFileSync, readdirSync, statSync, writeFileSync } fr
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { jsonlEntryHash, readJson, readJsonl, writeJson, writeTextAtomic } from "../../mcp/lib/fsutil.mjs";
+import {
+  __test__ as fsutilTest,
+  jsonlEntryHash,
+  readJson,
+  readJsonl,
+  writeJson,
+  writeTextAtomic,
+} from "../../mcp/lib/fsutil.mjs";
 import { RpcCode } from "../../mcp/lib/errors.mjs";
 
 const dir = makeDataDir();
@@ -36,6 +43,29 @@ test("concurrent atomic writers use unique temp files and publish one complete v
   await Promise.all(bodies.map((body) => childAtomicWrite(path, body)));
   assert.ok(bodies.includes(readFileSync(path, "utf8")), "the winner must be one complete writer payload");
   assert.equal(readdirSync(dir).filter((file) => file.includes("concurrent.md") && file.endsWith(".tmp")).length, 0);
+});
+
+test("Windows atomic rename retries transient replacement contention", () => {
+  const calls = [];
+  const waits = [];
+  fsutilTest.renameAtomicSync("staged.tmp", "published.md", {
+    platform: "win32",
+    rename: (source, destination) => {
+      calls.push([source, destination]);
+      if (calls.length < 3) {
+        const error = new Error("replacement is momentarily busy");
+        error.code = "EPERM";
+        throw error;
+      }
+    },
+    wait: (delayMs) => waits.push(delayMs),
+  });
+  assert.deepEqual(calls, [
+    ["staged.tmp", "published.md"],
+    ["staged.tmp", "published.md"],
+    ["staged.tmp", "published.md"],
+  ]);
+  assert.deepEqual(waits, [1, 2]);
 });
 
 test("atomic text writes preserve an existing mode and ignore an unrelated half-written temp", () => {

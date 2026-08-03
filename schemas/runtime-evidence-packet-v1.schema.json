@@ -52,6 +52,35 @@
       "type": "array",
       "items": { "type": "string", "pattern": "\\S" }
     },
+    "coverage_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "source_ids"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9_.]+$" },
+          "status": { "enum": ["covered", "unavailable", "not_applicable"] },
+          "source_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "maxLength": 512,
+              "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
+            }
+          },
+          "note": { "type": "string" },
+          "attempted": { "type": "string" },
+          "attempted_urls": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "format": "uri", "pattern": "^https?://" }
+          },
+          "gap": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
     "confidence": { "enum": ["high", "medium", "low"] },
     "information_richness": { "enum": ["A", "B", "C", "unrated"] }
   },

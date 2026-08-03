@@ -38,6 +38,20 @@ test("an unexpected background orchestrator error still writes the standard fail
     grounding: { facts_unavailable: true },
     seat_weight_overrides: {},
   }, null, 2)}\n`);
+  writeFileSync(join(dir, "status.json"), `${JSON.stringify({
+    tasks: [{
+      task: "market_data",
+      status: "completed",
+      completed_at: "2026-07-28T00:01:00.000Z",
+      updated_at: "2026-07-28T00:01:00.000Z",
+    }],
+    agents: [
+      { role: "bull_researcher", status: "pending" },
+      { role: "bear_researcher", status: "pending" },
+      { role: "portfolio_manager", status: "pending" },
+    ],
+    masters: [{ master: "master_buffett", status: "pending" }],
+  }, null, 2)}\n`);
   try {
     const moduleUrl = new URL("../../mcp/lib/orchestrator.mjs", import.meta.url).href;
     const script = `import { finalizeUnhandledBackgroundFailure } from ${JSON.stringify(moduleUrl)}; finalizeUnhandledBackgroundFailure(${JSON.stringify(runId)}, "fixture", new Error("SECRET_INTERNAL_STACK"));`;
@@ -56,6 +70,10 @@ test("an unexpected background orchestrator error still writes the standard fail
     assert.equal(decision.rating, null);
     assert.equal(status.status, "failed");
     assert.equal(status.phase, "failed");
+    assert.equal(status.tasks[0].status, "completed", "a newer terminal task state must survive finalization");
+    assert.equal(status.masters[0].status, "skipped");
+    assert.equal(status.masters[0].error, "not_run_upstream_evidence_failure");
+    assert.equal(status.agents[0].status, "skipped");
     assert.doesNotMatch(readFileSync(join(dir, "final_report.md"), "utf8"), /SECRET_INTERNAL_STACK/);
   } finally {
     removeDataDir(dataDir);

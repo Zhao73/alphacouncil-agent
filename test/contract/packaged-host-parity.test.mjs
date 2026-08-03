@@ -22,6 +22,33 @@ const REPO_REVIEW_JSON_COUNT = execSync("git ls-files knowledge/ai-assisted-solo
 
 /** Seats whose legacy v2 operator material survives in the production fallback profile. */
 const LEGACY_OPERATOR_SEATS = 4;
+const PACKAGED_PARITY_PROCESS_TIMEOUT_MS = 180_000;
+const PACKAGED_PARITY_TEST_TIMEOUT_MS = process.platform === "win32" ? 400_000 : 200_000;
+
+function resultOutput(result) {
+  return [result.error?.stack || result.error?.message, result.stdout, result.stderr].filter(Boolean).join("\n");
+}
+
+function runPackagedParity(env) {
+  const attempts = [];
+  while (attempts.length < 2) {
+    const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
+      cwd: PACKAGED_PARITY_REPO_ROOT,
+      encoding: "utf8",
+      env,
+      maxBuffer: 32 * 1024 * 1024,
+      timeout: PACKAGED_PARITY_PROCESS_TIMEOUT_MS,
+    });
+    attempts.push(result);
+    const transientWindowsInstallTimeout = process.platform === "win32"
+      && /offline npm install from tarball.*ETIMEDOUT/su.test(resultOutput(result));
+    if (!transientWindowsInstallTimeout) break;
+  }
+  return {
+    result: attempts.at(-1),
+    diagnostics: attempts.map((attempt, index) => `attempt ${index + 1}:\n${resultOutput(attempt)}`).join("\n"),
+  };
+}
 
 test("packaged parity CLI defaults to a read-only temporary check", () => {
   assert.deepEqual(parseArgs([]), { json: false, markdown: false, help: false, checkOnly: true });
@@ -49,20 +76,14 @@ test("npm execution never spawns a cmd shim directly on Windows", () => {
   });
 });
 
-test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: 200_000 }, () => {
-  const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
-    cwd: PACKAGED_PARITY_REPO_ROOT,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      npm_config_dry_run: "true",
-      NPM_CONFIG_DRY_RUN: "true",
-      Npm_Config_Dry_Run: "true",
-    },
-    maxBuffer: 32 * 1024 * 1024,
-    timeout: 180_000,
+test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: PACKAGED_PARITY_TEST_TIMEOUT_MS }, () => {
+  const { result, diagnostics } = runPackagedParity({
+    ...process.env,
+    npm_config_dry_run: "true",
+    NPM_CONFIG_DRY_RUN: "true",
+    Npm_Config_Dry_Run: "true",
   });
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.equal(result.status, 0, diagnostics);
   const report = JSON.parse(result.stdout);
   assert.equal(report.evidence_scope, "installed_npm_tarball_mcp_stdio_adapters_only");
   assert.equal(report.packaged_adapter_e2e.status, "passed");
@@ -129,15 +150,12 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
   assert.equal(report.temporary_workspace_cleanup, "completed");
 });
 
-test("an explicit production profile keeps the packaged legacy fallback separate from solo-test runtime", { timeout: 200_000 }, () => {
-  const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
-    cwd: PACKAGED_PARITY_REPO_ROOT,
-    encoding: "utf8",
-    maxBuffer: 32 * 1024 * 1024,
-    timeout: 180_000,
-    env: { ...process.env, ALPHACOUNCIL_PERSONA_BUILD_PROFILE: "production" },
+test("an explicit production profile keeps the packaged legacy fallback separate from solo-test runtime", { timeout: PACKAGED_PARITY_TEST_TIMEOUT_MS }, () => {
+  const { result, diagnostics } = runPackagedParity({
+    ...process.env,
+    ALPHACOUNCIL_PERSONA_BUILD_PROFILE: "production",
   });
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.equal(result.status, 0, diagnostics);
   const report = JSON.parse(result.stdout);
   assert.deepEqual(report.packaged_adapter_e2e.maturity_counts, { operator_lens: LEGACY_OPERATOR_SEATS, prompt_lens: CANONICAL_MASTER_COUNT - LEGACY_OPERATOR_SEATS });
   assert.deepEqual(report.physical_v3_decision_parity, {

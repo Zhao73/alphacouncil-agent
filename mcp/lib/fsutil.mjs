@@ -15,6 +15,39 @@ import { createHash, randomBytes } from "node:crypto";
 import { basename, dirname, join, resolve } from "node:path";
 import { internalError, invalidParams } from "./errors.mjs";
 
+const WINDOWS_RENAME_RETRY_DELAYS_MS = Object.freeze([1, 2, 4, 8, 16, 32, 64, 128]);
+const WINDOWS_TRANSIENT_RENAME_CODES = new Set(["EACCES", "EBUSY", "EPERM"]);
+const renameRetrySignal = new Int32Array(new SharedArrayBuffer(4));
+
+function waitForRenameRetry(delayMs) {
+  Atomics.wait(renameRetrySignal, 0, 0, delayMs);
+}
+
+function renameAtomicSync(source, destination, {
+  platform = process.platform,
+  rename = renameSync,
+  wait = waitForRenameRetry,
+} = {}) {
+  let attempt = 0;
+  while (true) {
+    try {
+      rename(source, destination);
+      return;
+    } catch (error) {
+      const delayMs = WINDOWS_RENAME_RETRY_DELAYS_MS[attempt];
+      if (
+        platform !== "win32"
+        || delayMs === undefined
+        || !WINDOWS_TRANSIENT_RENAME_CODES.has(error.code)
+      ) {
+        throw error;
+      }
+      attempt += 1;
+      wait(delayMs);
+    }
+  }
+}
+
 function existingMode(path, requestedMode) {
   if (Number.isInteger(requestedMode)) return requestedMode & 0o777;
   try {
@@ -84,7 +117,10 @@ export function writeTextAtomic(path, text, { mode } = {}) {
     fsyncSync(fd);
     closeSync(fd);
     fd = undefined;
-    renameSync(tmp, path);
+    // Windows can briefly reject one replace while another process is renaming the same
+    // destination. Retrying the same same-filesystem rename preserves atomic publication;
+    // unlinking the destination first would create a visible missing-file window.
+    renameAtomicSync(tmp, path);
     renamed = true;
     fsyncParentDirectory(path);
   } catch (error) {
@@ -125,6 +161,8 @@ export function readJson(path) {
     throw internalError(`corrupt JSON at ${path}: ${error.message}`);
   }
 }
+
+export const __test__ = { renameAtomicSync };
 
 /** Hash every event field except the hash itself, preserving its serialized key order. */
 export function jsonlEntryHash(entry) {

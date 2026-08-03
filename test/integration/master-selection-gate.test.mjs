@@ -4,10 +4,35 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { RpcCode } from "../../mcp/lib/errors.mjs";
 
 let dataDir;
 let server;
+
+function idempotencyEvidencePacket(task) {
+  const packet = {
+    summary: `${task} state that must survive an idempotent replay of this fund fixture.`,
+    claims: [{
+      claim: `The ${task} idempotency fixture records one bounded fund observation.`,
+      claim_type: "event_or_observation",
+      evidence: "The dated fixture source directly supports the bounded observation.",
+      confidence: "medium",
+      source_ids: ["S1"],
+    }],
+    metrics: {},
+    sources: [{
+      id: "S1",
+      title: `${task} idempotent selection fixture source`,
+      url: `https://example.com/selection-idempotency-${task}`,
+      published_at: "2026-08-01",
+      retrieved_at: "2026-08-03",
+    }],
+    open_questions: [],
+    confidence: "medium",
+  };
+  return packet;
+}
 
 before(async () => {
   dataDir = makeDataDir();
@@ -327,80 +352,45 @@ test("a receipt file swapped across selection records is rejected without consum
 });
 
 test("the same consumed receipt is idempotent only for the same run id", async () => {
-  const selection = await confirmMasterSelection(server, { symbol: "ORCL", selection: "1" });
+  // This test targets receipt idempotency, not operating-company research. Use an explicit
+  // fund classification instead of inventing a one-seat company dossier for ORCL.
+  const selection = await confirmMasterSelection(server, { symbol: "QQQ", selection: "1" });
   const runId = `SELECTION-IDEMPOTENT-${process.pid}`;
   const args = {
-    symbol: "ORCL",
+    symbol: "QQQ",
     run_id: runId,
-    tasks: ["market_data"],
-    grounding: { facts_unavailable: true },
+    tasks: DEFAULT_TASKS,
+    grounding: {
+      facts_unavailable: true,
+      instrument: {
+        asset_type: "etf",
+        research_model: "fund_lookthrough",
+        classification_source: "selection_idempotency_fixture",
+      },
+    },
     selection_receipt: selection.selection_receipt,
   };
   const first = await server.callTool("plan_visible_run", args);
   const firstPlan = structured(first);
+  assert.equal(firstPlan.run.grounding.instrument.research_model, "fund_lookthrough");
   const recordedEvidence = structured(await server.callTool("record_visible_packet", {
     run_id: runId,
     task: "market_data",
-    packet: {
-      summary: "state that must survive an idempotent replay",
-      claims: [{
-        claim: "The idempotency fixture records one bounded market-data fact.",
-        evidence: "The dated fixture source directly supports the bounded fact.",
-        confidence: "medium",
-        source_ids: ["S1"],
-      }],
-      metrics: {},
-      sources: [{
-        id: "S1",
-        title: "Idempotent selection fixture source",
-        url: "https://example.com/selection-idempotency",
-        published_at: "2026-08-01",
-        retrieved_at: "2026-08-03",
-      }],
-      open_questions: [],
-      confidence: "medium",
-    },
+    packet: idempotencyEvidencePacket("market_data"),
   }));
   assert.deepEqual(recordedEvidence.recorded_tasks, ["market_data"]);
 
   const selectedMaster = selection.selected_master_ids[0];
   const frozen = firstPlan.run.master_opinions.find((opinion) => opinion.master === selectedMaster);
   assert.ok(frozen, "the selected v3 method must have a frozen deterministic record");
-  const recordedMaster = structured(await server.callTool("record_master_opinion", {
-    run_id: runId,
-    master: selectedMaster,
-    packet: {
-      master: selectedMaster,
-      acknowledged_stance: frozen.stance,
-      voice_mode: "first_person_public_method_simulation_v1",
-      disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
-      position_intent: ({
-        constructive: "would_buy",
-        cautious: "would_hold",
-        opposed: "would_pass",
-        out_of_scope: "not_in_my_circle",
-      })[frozen.stance],
-      voice: {
-        would_i_act: "I would preserve only the frozen method stance in this replay fixture.",
-        what_i_see: "I see one bounded fact linked to market_data:S1.",
-        how_my_method_reads_it: "I apply my declared method without changing the frozen record.",
-        where_i_disagree: "I disagree with replacing the frozen record during an idempotent replay.",
-        what_changes_my_mind: "I would change my mind only if the cited primary evidence changes.",
-      },
-      key_findings: ["The replay fixture is bound to one recorded source."],
-      disagreements: [],
-      what_would_change_my_mind: ["A changed primary source could reopen the method decision."],
-      source_ids: ["market_data:S1"],
-      confidence: "low",
-    },
-  }));
-  assert.equal(recordedMaster.opinion.master, selectedMaster);
+  assert.equal(firstPlan.run.master_status[selectedMaster].status, "waiting");
   const second = await server.callTool("plan_visible_run", args);
   const replay = structured(second);
   assert.ok(firstPlan.run);
   assert.equal(replay.idempotent_replay, true);
-  assert.equal(replay.run.packets.length, 1, "retry must not reset completed evidence");
-  assert.equal(replay.run.master_opinions.length, 1, "retry must not reset completed master opinions");
+  assert.equal(replay.run.packets.length, 1, "retry must not reset partial evidence");
+  assert.equal(replay.run.master_opinions.length, 1, "retry must not reset the frozen master opinion");
+  assert.equal(replay.run.master_status[selectedMaster].status, "waiting", "replay must not bypass the evidence barrier");
 });
 
 test("ten seats and all seats materialize in stable catalog order", async () => {
@@ -483,6 +473,56 @@ test("headless visibility validation happens before receipt consumption", async 
     selection_receipt: selection.selection_receipt,
   });
   assert.ok(planned.result, "a pre-consumption validation error must not burn the receipt");
+});
+
+test("full analyze_symbol cannot masquerade as a complete council with synthesis disabled", async () => {
+  const selection = await confirmMasterSelection(server, { symbol: "CSCO" });
+  const blocked = await server.callTool("analyze_symbol", {
+    symbol: "CSCO",
+    synthesis: false,
+    dry_run: true,
+    tasks: ["market_data"],
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.equal(blocked.error?.data?.reason, "FULL_SYNTHESIS_REQUIRED");
+  assert.equal(blocked.error?.data?.alternative_tool, "collect_evidence");
+
+  const evidenceOnly = await server.callTool("collect_evidence", {
+    symbol: "CSCO",
+    run_id: `SELECTION-EVIDENCE-ONLY-${process.pid}`,
+    dry_run: true,
+    tasks: ["market_data"],
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.ok(evidenceOnly.result, "pre-consumption synthesis rejection must leave the receipt usable by collect_evidence");
+  const evidenceOnlyStatus = JSON.parse(readFileSync(
+    join(dataDir, "runs", `SELECTION-EVIDENCE-ONLY-${process.pid}`, "status.json"),
+    "utf8",
+  ));
+  assert.equal(evidenceOnlyStatus.report_contract, "evidence_only_v1");
+  assert.equal(evidenceOnlyStatus.full_council_equivalent, false);
+  assert.equal(evidenceOnlyStatus.master_worker_contract, "not_requested_evidence_only");
+});
+
+test("visible full planning rejects synthesis overrides before consuming the receipt", async () => {
+  const selection = await confirmMasterSelection(server, { symbol: "TXN" });
+  const blocked = await server.callTool("plan_visible_run", {
+    symbol: "TXN",
+    synthesis: false,
+    tasks: ["market_data"],
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.equal(blocked.error?.data?.reason, "VISIBLE_SYNTHESIS_OVERRIDE_FORBIDDEN");
+
+  const planned = await server.callTool("plan_visible_run", {
+    symbol: "TXN",
+    run_id: `SELECTION-VISIBLE-NO-BYPASS-${process.pid}`,
+    tasks: ["market_data"],
+    grounding: { facts_unavailable: true },
+    selection_receipt: selection.selection_receipt,
+  });
+  const result = structured(planned);
+  assert.deepEqual(result.run.tasks, DEFAULT_TASKS);
 });
 
 test("concurrent retries create at most one council lifecycle", async () => {

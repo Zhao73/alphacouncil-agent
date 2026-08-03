@@ -16,6 +16,12 @@ const SELECTED_MASTERS = [
   "master_taleb",
 ];
 
+const QQQ_INDEX_INSTRUMENT = Object.freeze({
+  asset_type: "etf",
+  research_model: "fund_lookthrough",
+  classification_source: "full_analysis_fixture",
+});
+
 function fullReportBody() {
   const work = DEFAULT_TASKS
     .map((task) => `- ${task}: ANALYST_SENTINEL_${task}; completed the sourced fixture packet and preserved its explicit confidence and gaps.`)
@@ -297,6 +303,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
       max_concurrency: 1,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: {
+        instrument: QQQ_INDEX_INSTRUMENT,
         quote: {
           price: 512.34, currency: "USD", quote_time: "2026-07-28T20:00:00Z", exchange: "NASDAQ",
           note: "fixture close", source_url: "https://example.com/qqq-quote",
@@ -494,7 +501,7 @@ for (const [label, pmContractFailureMode, expectedPath] of [
         symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
         council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
         wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
-        grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+        grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
       }, { timeoutMs: 45_000 }));
 
       const dir = join(dataDir, "runs", runId);
@@ -537,7 +544,7 @@ test("full headless PM repairs one malformed decision without regenerating the l
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
       council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
-      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
     }, { timeoutMs: 45_000 }));
 
     const dir = join(dataDir, "runs", runId);
@@ -587,7 +594,7 @@ test("two malformed full PM attempts persist sanitized diagnostics and never man
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
       council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
-      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
     }, { timeoutMs: 45_000 }));
 
     const dir = join(dataDir, "runs", runId);
@@ -638,7 +645,7 @@ test("a caller-lowered full-council budget fails closed and persists a terminal 
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
       council_mode: "full", total_timeout_ms: 20_000, timeout_ms: 300, synthesis_timeout_ms: 300,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
-      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
     }, { timeoutMs: 15_000 }));
     const elapsed = Date.now() - started;
     const dir = join(dataDir, "runs", runId);
@@ -682,7 +689,7 @@ test("every abstaining seat receives and publishes its strong first-person metho
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
       council_mode: "full", wait_for_completion: true,
       selection_receipt: confirmed.selection_receipt,
-      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
     }, { timeoutMs: 90_000 }));
 
     const dir = join(dataDir, "runs", runId);

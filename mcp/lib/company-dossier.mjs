@@ -1,0 +1,618 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { canonicalJson } from "./personas-v3/canonical.mjs";
+import { internalError, invalidParams } from "./errors.mjs";
+import { isChineseLanguage, localized } from "./lang.mjs";
+
+export const COMPANY_DOSSIER_CONTRACT_ID = "operating_company_dossier_v1";
+
+// Missing one of these surfaces means the council cannot make a decision-grade company call.
+// Other unavailable fields remain visible as limitations but do not erase otherwise usable
+// evidence (for example, a company may have no listed options or no recent transaction).
+export const CRITICAL_COMPANY_COVERAGE_IDS = Object.freeze([
+  "market.identity_listing_currency",
+  "market.quote_snapshot",
+  "market.price_history_range",
+  "financials.business_model",
+  "financials.latest_reported_period",
+  "financials.historical_statements",
+  "financials.balance_sheet_liquidity",
+  "financials.cash_flow_capex",
+  "financials.segments_geography",
+  "expectations.consensus_revenue_eps",
+  "expectations.next_reporting_date",
+  "valuation.trading_multiples",
+  "valuation.bear_base_bull",
+  "news.regulator_timeline",
+  "news.issuer_ir_newsroom",
+  "news.recent_company_developments",
+  "ownership.debt_liquidity_capital_allocation",
+]);
+
+const CRITICAL_COMPANY_COVERAGE = new Set(CRITICAL_COMPANY_COVERAGE_IDS);
+const DYNAMIC_SOURCE_KIND = "dynamic_snapshot";
+const COVERAGE_REQUIRING_DATED_SOURCE = (id) => (
+  id.startsWith("news.") || (id.startsWith("events.") && id !== "events.event_calendar")
+);
+
+/**
+ * Machine-checkable coverage owned by the eight mandatory full-council evidence roles.
+ *
+ * "All company information" cannot mean every page on the public internet. It means every
+ * decision-relevant domain below is either sourced, explicitly unavailable after a named
+ * attempt, or genuinely not applicable. A worker may not silently omit a domain.
+ */
+export const OPERATING_COMPANY_COVERAGE = Object.freeze({
+  market_data: Object.freeze([
+    "market.identity_listing_currency",
+    "market.quote_snapshot",
+    "market.price_history_range",
+    "market.liquidity_volume",
+    "market.technical_levels",
+    "market.relative_performance",
+  ]),
+  earnings_deep_dive: Object.freeze([
+    "financials.business_model",
+    "financials.latest_reported_period",
+    "financials.historical_statements",
+    "financials.balance_sheet_liquidity",
+    "financials.cash_flow_capex",
+    "financials.segments_geography",
+    "financials.margins_returns_quality",
+    "financials.customer_supplier_concentration",
+    "financials.guidance",
+    "financials.earnings_call_qna",
+  ]),
+  forward_expectations: Object.freeze([
+    "expectations.consensus_revenue_eps",
+    "expectations.estimate_dispersion_revisions",
+    "expectations.implied_beat_miss_thresholds",
+    "expectations.ratings_target_changes",
+    "expectations.next_reporting_date",
+  ]),
+  quant_factor: Object.freeze([
+    "quant.momentum_trend_volatility",
+    "quant.relative_strength_factors",
+    "quant.liquidity_volume_regime",
+    "quant.short_interest_borrow",
+    "quant.options_iv_skew_expected_move",
+    "quant.peer_cross_section",
+  ]),
+  valuation_long_short: Object.freeze([
+    "valuation.trading_multiples",
+    "valuation.peer_comparables",
+    "valuation.dcf_reverse_dcf",
+    "valuation.bear_base_bull",
+    "valuation.catalysts_invalidation",
+    "valuation.long_short_asymmetry",
+  ]),
+  news_industry_management: Object.freeze([
+    "news.regulator_timeline",
+    "news.issuer_ir_newsroom",
+    "news.recent_company_developments",
+    "news.industry_competition",
+    "news.customers_suppliers_partners",
+    "news.management_board_changes",
+    "news.regulation_litigation",
+    "news.disconfirming_search",
+  ]),
+  insider_sec: Object.freeze([
+    "ownership.insider_transactions",
+    "ownership.ownership_control",
+    "ownership.buybacks_dilution",
+    "ownership.debt_liquidity_capital_allocation",
+    "ownership.governance_related_parties",
+    "ownership.accounting_controls_restatements",
+  ]),
+  ib_event_analysis: Object.freeze([
+    "events.mna_strategic_transactions",
+    "events.capital_markets_financing",
+    "events.restructuring_spinoff",
+    "events.material_contracts_commitments",
+    "events.event_calendar",
+  ]),
+});
+
+export function requiresOperatingCompanyDossier(run = {}) {
+  if (run.council_mode === "quick" || run.dry_run === true) return false;
+  // Task-selective evidence diagnostics cannot publish a dossier-backed investment decision.
+  // Keep them usable for repair and provenance checks without weakening a real full council.
+  if (run.decision_requested === false || run.entry_tool === "collect_evidence") return false;
+  const researchModel = run?.grounding?.instrument?.research_model;
+  if (researchModel === "operating_company") return true;
+  if (["fund_lookthrough", "index_aggregate"].includes(researchModel)) return false;
+  // Public selected runs carry entry_tool. Unknown classification must fail closed into the
+  // company dossier contract rather than letting a caller omit `instrument` to bypass it.
+  // Direct library tests may still construct minimal run objects without entry_tool.
+  return Boolean(run.entry_tool);
+}
+
+export function expectedCoverageItems(task) {
+  return OPERATING_COMPANY_COVERAGE[task] || [];
+}
+
+export function normalizeCompanyCoverageItems(items, task, sourceIdMap = new Map()) {
+  if (!Array.isArray(items)) return [];
+  return items.map((item) => ({
+    ...(item && typeof item === "object" ? item : {}),
+    id: String(item?.id || "").trim(),
+    status: typeof item?.status === "string" ? item.status.trim() : item?.status,
+    source_ids: Array.isArray(item?.source_ids)
+      ? [...new Set(item.source_ids.map((id) => {
+        const raw = String(id || "").trim();
+        if (!raw) return "";
+        return sourceIdMap.get(raw) || (raw.includes(":") ? raw : `${task}:${raw}`);
+      }).filter(Boolean))]
+      : [],
+    note: typeof item?.note === "string" ? item.note : "",
+    attempted: typeof item?.attempted === "string" ? item.attempted : "",
+    attempted_urls: Array.isArray(item?.attempted_urls)
+      ? [...new Set(item.attempted_urls.map((value) => String(value || "").trim()).filter(Boolean))]
+      : [],
+    gap: typeof item?.gap === "string" ? item.gap : "",
+  }));
+}
+
+function packetSourceMap(packet) {
+  return new Map((packet?.sources || [])
+    .map((source) => [String(source?.id || "").trim(), source])
+    .filter(([id]) => Boolean(id)));
+}
+
+function methodOnlyEvidenceSource(source) {
+  const id = String(source?.id || "").trim();
+  const kind = String(source?.source_kind || "").trim().toLowerCase();
+  return /^proxy:/iu.test(id)
+    || /^(?:method|methodology|persona_method)(?:_|$)/u.test(kind)
+    || new Set([
+      "derived_proxy", "editorial_choice", "method_definition", "method_provenance",
+      "method_rule", "method_source", "methodology_definition", "persona_method_definition",
+    ]).has(kind);
+}
+
+function packetCoverageStatus(packet, expected = expectedCoverageItems(packet?.task), asOfDate = null) {
+  const supplied = Array.isArray(packet?.coverage_items) ? packet.coverage_items : [];
+  const byId = new Map();
+  const duplicates = [];
+  const unexpected = [];
+  for (const item of supplied) {
+    const id = String(item?.id || "").trim();
+    if (!expected.includes(id)) {
+      if (id) unexpected.push(id);
+      continue;
+    }
+    if (byId.has(id)) duplicates.push(id);
+    else byId.set(id, item);
+  }
+  const sourceById = packetSourceMap(packet);
+  const missing = expected.filter((id) => !byId.has(id));
+  const invalid = [];
+  let covered = 0;
+  let unavailable = 0;
+  let notApplicable = 0;
+  for (const id of expected) {
+    const item = byId.get(id);
+    if (!item) continue;
+    const status = item.status;
+    const ids = Array.isArray(item.source_ids)
+      ? [...new Set(item.source_ids.map((value) => String(value || "").trim()).filter(Boolean))]
+      : [];
+    const unknown = ids.filter((sourceId) => !sourceById.has(sourceId));
+    if (unknown.length) invalid.push({ id, reason: "unknown_source_ids", source_ids: unknown });
+    if (status === "covered") {
+      covered += 1;
+      if (!ids.length) invalid.push({ id, reason: "covered_without_source" });
+      let validDatedSourceCount = 0;
+      for (const sourceId of ids.filter((value) => sourceById.has(value))) {
+        const source = sourceById.get(sourceId);
+        if (!sourceId.startsWith(`${packet.task}:`)) {
+          invalid.push({ id, reason: "covered_source_wrong_task_scope", source_id: sourceId });
+        }
+        if (methodOnlyEvidenceSource(source)) {
+          invalid.push({ id, reason: "covered_source_not_in_evidence_domain", source_id: sourceId });
+        }
+        let urlValid = false;
+        try {
+          const parsed = new URL(String(source?.url || ""));
+          urlValid = parsed.protocol === "http:" || parsed.protocol === "https:";
+        } catch {
+          urlValid = false;
+        }
+        if (!urlValid) invalid.push({ id, reason: "covered_source_without_valid_url", source_id: sourceId });
+        const publishedAt = Date.parse(String(source?.published_at || ""));
+        const observedAt = Date.parse(String(source?.observed_at || ""));
+        const dynamicSnapshot = String(source?.source_kind || "").trim().toLowerCase() === DYNAMIC_SOURCE_KIND;
+        const sourceTime = Number.isFinite(publishedAt)
+          ? publishedAt
+          : dynamicSnapshot ? observedAt : NaN;
+        const timeField = Number.isFinite(publishedAt) ? "published_at" : "observed_at";
+        if (!Number.isFinite(publishedAt) && !dynamicSnapshot) {
+          invalid.push({ id, reason: "covered_undated_source_not_dynamic_snapshot", source_id: sourceId });
+        } else if (!Number.isFinite(sourceTime)) {
+          invalid.push({ id, reason: "covered_source_without_publication_or_observation_time", source_id: sourceId });
+        } else if (asOfDate) {
+          const cutoff = Date.parse(`${asOfDate}T23:59:59.999Z`);
+          if (Number.isFinite(cutoff) && sourceTime > cutoff) {
+            invalid.push({
+              id,
+              reason: "covered_source_after_as_of",
+              source_id: sourceId,
+              time_field: timeField,
+              source_time: source?.[timeField],
+              as_of: asOfDate,
+            });
+          } else if (Number.isFinite(publishedAt)) {
+            validDatedSourceCount += 1;
+          }
+        } else if (Number.isFinite(publishedAt)) {
+          validDatedSourceCount += 1;
+        }
+      }
+      if (COVERAGE_REQUIRING_DATED_SOURCE(id) && ids.length && validDatedSourceCount === 0) {
+        invalid.push({ id, reason: "covered_event_or_news_without_dated_source" });
+      }
+      continue;
+    }
+    if (status === "unavailable") {
+      unavailable += 1;
+      const attempted = String(item.attempted || "").trim();
+      const attemptedUrls = Array.isArray(item.attempted_urls)
+        ? [...new Set(item.attempted_urls.map((value) => String(value || "").trim()).filter(Boolean))]
+        : [];
+      const gap = String(item.gap || "").trim();
+      if (!attempted) invalid.push({ id, reason: "unavailable_without_attempt" });
+      if (!attemptedUrls.length || attemptedUrls.some((value) => {
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol !== "http:" && parsed.protocol !== "https:";
+        } catch {
+          return true;
+        }
+      })) {
+        invalid.push({ id, reason: "unavailable_without_valid_attempted_urls" });
+      }
+      if (!gap) invalid.push({ id, reason: "unavailable_without_gap" });
+      if (gap && !(packet.open_questions || []).includes(gap)) {
+        invalid.push({ id, reason: "gap_not_in_open_questions" });
+      }
+      continue;
+    }
+    if (status === "not_applicable") {
+      notApplicable += 1;
+      if (!String(item.note || "").trim()) invalid.push({ id, reason: "not_applicable_without_reason" });
+      continue;
+    }
+    invalid.push({ id, reason: "invalid_status" });
+  }
+  const complete = missing.length === 0 && duplicates.length === 0
+    && unexpected.length === 0 && invalid.length === 0;
+  return {
+    task: packet?.task || null,
+    expected_count: expected.length,
+    supplied_count: supplied.length,
+    covered_count: covered,
+    unavailable_count: unavailable,
+    not_applicable_count: notApplicable,
+    missing,
+    duplicates: [...new Set(duplicates)],
+    unexpected: [...new Set(unexpected)],
+    invalid,
+    status: complete ? "complete" : "incomplete",
+  };
+}
+
+export function companyDossierCoverageStatus(run = {}) {
+  if (!requiresOperatingCompanyDossier(run)) {
+    return {
+      contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+      required: false,
+      status: "not_applicable",
+      retrieval_status: "not_applicable",
+      sufficiency: "not_applicable",
+      decision_barrier_ready: true,
+      expected_count: 0,
+      covered_count: 0,
+      unavailable_count: 0,
+      not_applicable_count: 0,
+      missing: [],
+      invalid: [],
+      tasks: [],
+    };
+  }
+  const packets = new Map((run.packets || []).map((packet) => [packet.task, packet]));
+  // The contract owns the mandatory task list. It must not become weaker if a caller mutates
+  // run.tasks or replays an older run that planned only a subset.
+  const taskStatuses = Object.keys(OPERATING_COMPANY_COVERAGE)
+    .map((task) => packetCoverageStatus(
+      packets.get(task) || { task },
+      expectedCoverageItems(task),
+      run.as_of,
+    ));
+  const missing = taskStatuses.flatMap((entry) => entry.missing.map((id) => ({ task: entry.task, id })));
+  const invalid = taskStatuses.flatMap((entry) => [
+    ...entry.duplicates.map((id) => ({ task: entry.task, id, reason: "duplicate" })),
+    ...entry.unexpected.map((id) => ({ task: entry.task, id, reason: "unexpected" })),
+    ...entry.invalid.map((item) => ({ task: entry.task, ...item })),
+  ]);
+  const expectedCount = taskStatuses.reduce((sum, entry) => sum + entry.expected_count, 0);
+  const coveredCount = taskStatuses.reduce((sum, entry) => sum + entry.covered_count, 0);
+  const unavailableCount = taskStatuses.reduce((sum, entry) => sum + entry.unavailable_count, 0);
+  const notApplicableCount = taskStatuses.reduce((sum, entry) => sum + entry.not_applicable_count, 0);
+  const complete = taskStatuses.length > 0 && taskStatuses.every((entry) => entry.status === "complete");
+  const unavailableItems = taskStatuses.flatMap((entry) => {
+    const packet = packets.get(entry.task);
+    return (packet?.coverage_items || [])
+      .filter((item) => item?.status === "unavailable")
+      .map((item) => ({ task: entry.task, id: String(item.id || "") }));
+  });
+  const criticalUnavailable = unavailableItems.filter((item) => CRITICAL_COMPANY_COVERAGE.has(item.id));
+  const criticalNotApplicable = taskStatuses.flatMap((entry) => {
+    const packet = packets.get(entry.task);
+    return (packet?.coverage_items || [])
+      .filter((item) => item?.status === "not_applicable" && CRITICAL_COMPANY_COVERAGE.has(String(item.id || "")))
+      .map((item) => ({ task: entry.task, id: String(item.id || ""), status: "not_applicable" }));
+  });
+  const criticalGaps = [
+    ...criticalUnavailable.map((item) => ({ ...item, status: "unavailable" })),
+    ...criticalNotApplicable,
+  ];
+  const sufficiency = !complete
+    ? "insufficient"
+    : criticalGaps.length
+      ? "insufficient"
+      : unavailableItems.length
+        ? "limited"
+        : "sufficient";
+  return {
+    contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+    required: true,
+    status: complete ? "complete" : "incomplete",
+    retrieval_status: complete
+      ? (unavailableCount ? "complete_with_explicit_unavailable_data" : "complete")
+      : "incomplete",
+    sufficiency,
+    decision_barrier_ready: complete && sufficiency !== "insufficient",
+    expected_count: expectedCount,
+    covered_count: coveredCount,
+    unavailable_count: unavailableCount,
+    not_applicable_count: notApplicableCount,
+    missing,
+    invalid,
+    critical_unavailable: criticalUnavailable,
+    critical_not_applicable: criticalNotApplicable,
+    critical_gaps: criticalGaps,
+    tasks: taskStatuses,
+  };
+}
+
+export function assertCompanyCoveragePacket(packet, run, { client = false } = {}) {
+  if (!requiresOperatingCompanyDossier(run)) return packet;
+  const status = packetCoverageStatus(packet, expectedCoverageItems(packet?.task), run?.as_of);
+  if (status.status === "complete") return packet;
+  const error = `${packet.task} did not satisfy ${COMPANY_DOSSIER_CONTRACT_ID}`;
+  const data = {
+    reason: "COMPANY_DOSSIER_COVERAGE_MISMATCH",
+    contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+    task: packet.task,
+    coverage: status,
+  };
+  throw (client ? invalidParams(error, data) : internalError(error, data));
+}
+
+function withoutRawText(packet) {
+  // Hash exactly the JSON value that can be persisted. Runtime objects may carry optional
+  // properties with value `undefined`; those are absent from a JSON artifact and must not turn
+  // an otherwise valid quick/company packet into a canonicalization exception.
+  const copy = JSON.parse(JSON.stringify(packet || {}));
+  delete copy.raw_text;
+  return copy;
+}
+
+function jsonClone(value) {
+  return JSON.parse(JSON.stringify(value ?? null));
+}
+
+function hashCanonical(value) {
+  return `sha256:${createHash("sha256").update(canonicalJson(value)).digest("hex")}`;
+}
+
+/** Stable evidence identity used to make visible packet recording append-only. */
+export function companyEvidencePacketHash(packet) {
+  const normalized = withoutRawText(packet);
+  delete normalized.thread_id;
+  delete normalized.thread_title;
+  delete normalized.execution_mode;
+  return hashCanonical(normalized);
+}
+
+function packetManifest(packet) {
+  const normalized = withoutRawText(packet);
+  return {
+    task: packet?.task || null,
+    packet_hash: hashCanonical(normalized),
+    claim_count: Array.isArray(packet?.claims) ? packet.claims.length : 0,
+    source_count: Array.isArray(packet?.sources) ? packet.sources.length : 0,
+    coverage_item_count: Array.isArray(packet?.coverage_items) ? packet.coverage_items.length : 0,
+  };
+}
+
+function claimLedger(packets) {
+  return packets.flatMap((packet) => (packet?.claims || []).map((claim, index) => ({
+    claim_id: `${packet.task}:C${index + 1}`,
+    task: packet.task,
+    claim_index: index,
+    claim: claim?.claim || "",
+    evidence: claim?.evidence || "",
+    confidence: claim?.confidence || packet?.confidence || "low",
+    source_ids: Array.isArray(claim?.source_ids) ? claim.source_ids : [],
+  })));
+}
+
+function sourceLedger(sourceManifest) {
+  return (sourceManifest?.sources || []).map((source) => {
+    const normalized = jsonClone(source);
+    return {
+      ...normalized,
+      // This hashes the stored source record and locator, not the remote page body. The dossier
+      // never claims to have archived a webpage it did not actually persist.
+      source_record_hash: hashCanonical(normalized),
+    };
+  });
+}
+
+function dossierInputBinding(run) {
+  return {
+    run_id: run.run_id,
+    symbol: run.symbol,
+    as_of: run.as_of,
+    language: run.language,
+    tasks: Array.isArray(run.tasks) ? run.tasks : [],
+    masters: Array.isArray(run.masters) ? run.masters : [],
+    grounding: jsonClone(run.grounding || null),
+    packets: (run.packets || []).map(withoutRawText),
+  };
+}
+
+export function buildCompanyDossier(run, sourceManifest = null) {
+  const coverage = companyDossierCoverageStatus(run);
+  const packets = (run.packets || []).map(withoutRawText);
+  const grounding = jsonClone(run.grounding || null);
+  const normalizedSourceManifest = jsonClone(sourceManifest || null);
+  const inputBindingHash = hashCanonical(dossierInputBinding(run));
+  const content = {
+    schema_version: 1,
+    contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+    run_id: run.run_id,
+    symbol: run.symbol,
+    as_of: run.as_of,
+    language: run.language,
+    input_binding_hash: inputBindingHash,
+    instrument: grounding?.instrument || null,
+    coverage,
+    grounding,
+    typed_fact_pack: grounding?.typed_fact_pack || null,
+    packets,
+    packet_manifest: packets.map(packetManifest),
+    claim_ledger: claimLedger(packets),
+    source_ledger: sourceLedger(normalizedSourceManifest),
+    source_manifest: normalizedSourceManifest,
+    consumer_contract: {
+      method_seats: Array.isArray(run.masters) ? run.masters.length : null,
+      evidence_roles: Object.keys(OPERATING_COMPANY_COVERAGE),
+      downstream_roles: ["bull_researcher", "bear_researcher", "portfolio_manager"],
+      read_mode: "full_artifact_by_path_and_hash",
+      acknowledgement_field: "company_dossier_hash_ack",
+    },
+  };
+  const contentHash = hashCanonical(content);
+  return { ...content, content_hash: contentHash };
+}
+
+export function companyCoverageInstruction(task, run) {
+  if (!requiresOperatingCompanyDossier(run)) return "";
+  const ids = expectedCoverageItems(task);
+  if (!ids.length) return "";
+  const chinese = isChineseLanguage(run.language);
+  const instructions = localized(run.language, {
+    zh: [
+      "## 公司资料覆盖契约（强制）",
+      "这不是可选摘要。完成检索后，在顶层返回 `coverage_items`，下列每个 ID 必须恰好出现一次，不得增删或改名。",
+      "每项必须带齐 `{id,status,source_ids,note,attempted,attempted_urls,gap}`；`note`、`attempted`、`gap` 必须是单个字符串（不用时写空字符串，绝不能写成数组），只有 `source_ids` 与 `attempted_urls` 是数组（不用时写空数组）。例如：`{\"attempted\":\"检索公司 IR 与 SEC 原文\",\"attempted_urls\":[\"https://example.com/ir\"]}`。`status` 只能是 `covered|unavailable|not_applicable`。",
+      "- `covered`：至少一个 `source_ids`，并且都存在于本包 `sources`。来源必须是本席实际访问的 http(s) 证据，不得引用方法/代理来源；静态文件要给不晚于 as_of 的 `published_at`。动态行情、历史表、实时共识/申报索引若确实没有发布日期，保留 `published_at: \"unknown\"`，并在该 source 增加 `source_kind: \"dynamic_snapshot\"` 与本次实际观察的 `observed_at`（ISO 日期/时间且不晚于 as_of）；不得把普通无日期文章标成动态快照。news.* 和除 event_calendar 外的 events.* 每项仍至少引用一条有真实 `published_at` 的来源。",
+      "- `unavailable`：只有实际检索过仍无法取得时才可使用；必须填写具体 `attempted`、至少一个实际访问的 http(s) `attempted_urls` 与 `gap`，并把完全相同的 gap 写进 `open_questions`。没有检索不等于 unavailable。",
+      "- `not_applicable`：必须写明具体原因。不得用它逃避应查项目。",
+      "任何遗漏都会让 full run 在证据门失败，后续方法视角、多空和 PM 不会运行。",
+    ].join("\n"),
+    en: [
+      "## Mandatory company-dossier coverage contract",
+      "This is not an optional recap. After research, return top-level `coverage_items`; every ID below must appear exactly once, unchanged, with no extras.",
+      "Every item must include `{id,status,source_ids,note,attempted,attempted_urls,gap}`. `note`, `attempted`, and `gap` are single strings (empty when unused; never arrays). Only `source_ids` and `attempted_urls` are arrays (empty when unused). Example: `{\"attempted\":\"Searched issuer IR and SEC originals\",\"attempted_urls\":[\"https://example.com/ir\"]}`. Status is only `covered|unavailable|not_applicable`.",
+      "- `covered`: cite at least one packet-local http(s) evidence source, never a method/proxy source. Static documents need `published_at` no later than as_of. For a dynamic quote, history table, live consensus or filing index with no publication date, keep `published_at: \"unknown\"` and add `source_kind: \"dynamic_snapshot\"` plus the actual `observed_at` (ISO date/time no later than as_of). Never label an ordinary undated article as dynamic. Every news.* row and every events.* row except event_calendar still needs at least one genuinely dated source.",
+      "- `unavailable`: only after an actual retrieval attempt; include concrete `attempted`, at least one http(s) URL actually attempted in `attempted_urls`, and `gap`; repeat the exact gap in `open_questions`. Not researched is not unavailable.",
+      "- `not_applicable`: give a concrete reason. Never use it to avoid an applicable check.",
+      "Any omission fails the full evidence barrier, so methods, debate and PM will not run.",
+    ].join("\n"),
+    ja: "会社資料カバレッジ契約：以下の全 ID を coverage_items に一度ずつ記録してください。note、attempted、gap は単一文字列（配列不可）、source_ids と attempted_urls のみ配列です。covered は本 packet の出典 ID、unavailable は具体的な attempted、実際に試した HTTP(S) URL を1件以上含む attempted_urls、gap と完全一致する open_questions、not_applicable は具体的理由が必須です。欠落時は full run を停止します。",
+    ko: "회사 자료 커버리지 계약: 아래 모든 ID를 coverage_items에 정확히 한 번 기록하십시오. note, attempted, gap은 단일 문자열이며 배열이 아니고, source_ids와 attempted_urls만 배열입니다. covered는 이 packet의 출처 ID, unavailable은 구체적인 attempted, 실제 시도한 HTTP(S) URL이 하나 이상인 attempted_urls, gap과 완전히 같은 open_questions, not_applicable은 구체적 사유가 필수입니다. 누락 시 full run을 중단합니다.",
+  });
+  return `${instructions}\n\nRequired coverage IDs JSON: ${JSON.stringify(ids)}\nReader language: ${run.language}; task: ${task}; contract: ${COMPANY_DOSSIER_CONTRACT_ID}; chinese=${chinese}`;
+}
+
+export function companyDossierPromptBlock(run) {
+  const ref = run?.company_dossier;
+  if (!requiresOperatingCompanyDossier(run) || !ref?.path || !ref?.content_hash) return "";
+  verifyCompanyDossierArtifact(run);
+  return localized(run.language, {
+    zh: [
+      "## 统一公司资料包（强制读取）",
+      `完整资料包：${ref.path}`,
+      `内容哈希：${ref.content_hash}`,
+      "下面内嵌的 bounded evidence 只是索引，不是完整资料。回答前必须读取上述 JSON 全文；不得只依据被截断的索引。",
+      `输出必须原样带回 \`company_dossier_hash_ack\`: \`${ref.content_hash}\`。哈希缺失或不一致会使该席位失败。`,
+    ].join("\n"),
+    en: [
+      "## Shared company dossier (mandatory read)",
+      `Full dossier: ${ref.path}`,
+      `Content hash: ${ref.content_hash}`,
+      "The bounded evidence embedded below is an index, not the full dossier. Read the JSON file in full before answering; do not reason only from the truncated index.",
+      `Return \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`; a missing or different hash fails this worker.`,
+    ].join("\n"),
+    ja: `完全な会社資料 ${ref.path}（${ref.content_hash}）を回答前に全文読み、company_dossier_hash_ack に同じハッシュを返してください。埋め込み evidence は索引にすぎません。`,
+    ko: `답변 전에 전체 회사 자료 ${ref.path} (${ref.content_hash})를 모두 읽고 company_dossier_hash_ack에 같은 해시를 반환하십시오. 내장 evidence는 색인일 뿐입니다.`,
+  });
+}
+
+/** Re-hash the frozen on-disk artifact before any downstream worker consumes or acknowledges it. */
+export function verifyCompanyDossierArtifact(run, { client = false } = {}) {
+  if (!requiresOperatingCompanyDossier(run)) return null;
+  const ref = run?.company_dossier;
+  let parsed = null;
+  let failure = null;
+  if (!ref?.path || !ref?.content_hash) {
+    failure = "company dossier reference is missing";
+  } else {
+    try {
+      parsed = JSON.parse(readFileSync(ref.path, "utf8"));
+      const { content_hash: embeddedHash, ...content } = parsed;
+      const computed = hashCanonical(content);
+      if (embeddedHash !== computed || ref.content_hash !== computed) {
+        failure = "company dossier content hash does not match the frozen reference";
+      } else if (parsed.run_id !== run.run_id || parsed.symbol !== run.symbol || parsed.as_of !== run.as_of) {
+        failure = "company dossier identity does not match the run";
+      } else if (parsed.contract_id !== COMPANY_DOSSIER_CONTRACT_ID) {
+        failure = "company dossier contract id is invalid";
+      } else if (parsed.input_binding_hash !== hashCanonical(dossierInputBinding(run))) {
+        failure = "current run evidence no longer matches the frozen company dossier input binding";
+      }
+    } catch (error) {
+      failure = `company dossier cannot be read: ${error.message}`;
+    }
+  }
+  if (!failure) return parsed;
+  const data = {
+    reason: "COMPANY_DOSSIER_ARTIFACT_INTEGRITY_FAILURE",
+    contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+    path: ref?.path || null,
+    expected_company_dossier_hash: ref?.content_hash || null,
+    diagnostic: failure,
+  };
+  throw (client ? invalidParams(failure, data) : internalError(failure, data));
+}
+
+export function assertCompanyDossierAck(packet, run, label, { client = false } = {}) {
+  if (!requiresOperatingCompanyDossier(run)) return packet;
+  verifyCompanyDossierArtifact(run, { client });
+  const expected = run?.company_dossier?.content_hash;
+  const actual = packet?.company_dossier_hash_ack;
+  if (expected && actual === expected) return packet;
+  const data = {
+    reason: "COMPANY_DOSSIER_HASH_ACK_MISMATCH",
+    contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+    label,
+    expected_company_dossier_hash: expected || null,
+    supplied_company_dossier_hash: actual || null,
+  };
+  throw (client
+    ? invalidParams(`${label} did not acknowledge the shared company dossier hash`, data)
+    : internalError(`${label} did not acknowledge the shared company dossier hash`, data));
+}

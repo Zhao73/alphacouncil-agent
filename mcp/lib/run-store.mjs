@@ -68,6 +68,7 @@ export function statusSnapshot(run) {
         Object.keys(visibleDebate.rounds?.[role] || {}).map(Number).filter(Number.isInteger).sort((a, b) => a - b),
       ]))
     : null;
+  const evidenceOnly = run.decision_requested === false || run.entry_tool === "collect_evidence";
   return {
     run_id: run.run_id,
     symbol: run.symbol,
@@ -86,9 +87,11 @@ export function statusSnapshot(run) {
     visible_debate_rounds_expected: visibleDebate?.rounds_expected || null,
     visible_debate_rounds_recorded: visibleDebateRounds,
     visible_debate_qna_gate: visibleDebate?.qna_gate?.status || null,
-    report_contract: run.council_mode === "quick" ? "quick_v1" : "full_v2",
-    full_council_equivalent: run.council_mode !== "quick",
-    master_worker_contract: run.execution_mode === "background_codex_exec"
+    report_contract: evidenceOnly ? "evidence_only_v1" : run.council_mode === "quick" ? "quick_v1" : "full_v2",
+    full_council_equivalent: !evidenceOnly && run.council_mode !== "quick",
+    master_worker_contract: evidenceOnly
+      ? "not_requested_evidence_only"
+      : run.execution_mode === "background_codex_exec"
       ? "one_isolated_worker_per_selected_method_v1"
       : run.execution_mode === "dry_run"
         ? "planned_not_executed"
@@ -107,6 +110,7 @@ export function statusSnapshot(run) {
       : null,
     visibility_required: run.visibility_required,
     dry_run: run.dry_run,
+    decision_requested: run.decision_requested !== false,
     status: run.status,
     phase: run.phase,
     verification: gate.verification,
@@ -116,6 +120,20 @@ export function statusSnapshot(run) {
     missing_source_count: gate.missing_claim_source_ids.length,
     completeness: completeness.completeness,
     evidence_coverage: completeness.evidence_coverage,
+    company_dossier_contract: completeness.company_dossier.contract_id,
+    company_dossier_required: completeness.company_dossier.required,
+    company_dossier_coverage: completeness.company_dossier.status,
+    company_dossier_retrieval_status: completeness.company_dossier.retrieval_status,
+    company_dossier_sufficiency: completeness.company_dossier.sufficiency,
+    company_dossier_decision_barrier_ready: completeness.company_dossier.decision_barrier_ready,
+    company_dossier_critical_gap_count: completeness.company_dossier.critical_gaps?.length || 0,
+    company_dossier_expected_count: completeness.company_dossier.expected_count,
+    company_dossier_covered_count: completeness.company_dossier.covered_count,
+    company_dossier_unavailable_count: completeness.company_dossier.unavailable_count,
+    company_dossier_missing_count: completeness.company_dossier.missing.length,
+    company_dossier_invalid_count: completeness.company_dossier.invalid.length,
+    company_dossier_hash: run.company_dossier?.content_hash || null,
+    company_dossier_path: run.company_dossier?.path || null,
     degraded_evidence_count: completeness.degraded_evidence.length,
     degraded_evidence: completeness.degraded_evidence,
     degraded_debate_count: completeness.degraded_debate.length,
@@ -217,6 +235,7 @@ export function artifactPaths(run) {
     artifact_index_md: join(dir, "artifact_index.md"),
     all_agents_md: join(dir, "all_agents.md"),
     evidence_json: join(dir, "evidence.json"),
+    company_dossier_json: join(dir, "company_dossier.json"),
     source_manifest_json: join(dir, "source_manifest.json"),
     status_json: join(dir, "status.json"),
     events_jsonl: join(dir, "events.jsonl"),
@@ -254,6 +273,9 @@ function publicationArtifactPaths(run, debate = {}) {
     report_quality_json: artifacts.report_quality_json,
     decision_json: artifacts.decision_json,
   };
+  if (existsSync(artifacts.company_dossier_json)) {
+    files.company_dossier_json = artifacts.company_dossier_json;
+  }
   for (const packet of run.packets || []) files[`seat_${packet.task}_md`] = join(artifacts.run_dir, `${packet.task}.md`);
   if (debate.bull) files.seat_bull_researcher_md = artifacts.analyst_markdown.bull_researcher;
   if (debate.bear) files.seat_bear_researcher_md = artifacts.analyst_markdown.bear_researcher;

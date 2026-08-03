@@ -78,6 +78,7 @@ evidence, run selected method seats and produce an auditable portfolio-manager r
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
 | ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the expected time beside the hard ceiling for each tier — you never type a speed. All three are the same full contract: eight analysts, three debate rounds, the PM. What changes is how long each seat may think, and a tier shapes the output too, because a shorter fuse on the same prompt buys unfinished work rather than faster work. Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run inside the chosen tier. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
+| 📚 **One complete company dossier for every downstream seat** | A full operating-company run accounts for a fixed 52-item roster across eight analysts, freezes `company_dossier.json`, and gives the same hash-bound artifact to every selected method, every Bull/Bear round and the PM. Critical missing data stops the decision instead of disappearing inside a summary. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
 | 🔑 **32 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
@@ -188,6 +189,11 @@ accounts for all 26 selected IDs without manufacturing votes. These are provisio
 method-seat outputs, never quotes from the named people. If a visible hard gate fails,
 `finalize_visible_run` closes the run as `incomplete` and returns this same handoff; the host
 must not replace it with a shorter manual recap.
+
+For a full operating-company decision, the directory also contains `company_dossier.json`:
+all eight normalized evidence packets, the fixed 52-item coverage ledger, source/claim lineage,
+typed facts and one canonical hash. Compact prompt evidence is only an index; downstream seats
+must read and acknowledge this same complete artifact before their output is accepted.
 
 ### Slash commands
 
@@ -302,6 +308,8 @@ Default stock-analysis runs are full runs, not lite summaries:
 - News, industry context, supply chain, and management's words checked against their actions
 - SEC filings, Form 4 insider transactions, buybacks, dilution, debt and capital allocation
 - Investment-banking event analysis for M&A, ECM, debt, buybacks and strategic transactions
+- A fixed 52-item operating-company dossier with explicit covered, unavailable or genuinely
+  not-applicable status for every decision-relevant domain
 - A selectable bench of 26 investor method lenses reading the same facts
 - Bull researcher, bear researcher and portfolio-manager synthesis
 

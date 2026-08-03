@@ -2,6 +2,29 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.9] — 2026-08-03
+
+### Added
+
+- Full operating-company decisions now freeze an auditable 52-item
+  `operating_company_dossier_v1` across the eight mandatory evidence roles. The same complete
+  `company_dossier.json` revision and SHA-256 binding reaches every selected method voice,
+  all three Bull/Bear rounds and the portfolio manager.
+
+### Fixed
+
+- Missing, duplicated, cross-task, proxy, undated/future or unresolved dossier coverage fails
+  closed before a rating. Dynamic quote and history pages use an explicit retrieval observation
+  instead of a fabricated publication date, while genuine retrieval gaps remain visible.
+- Evidence-only calls are labelled `evidence_only_v1`; public full `analyze_symbol` can no
+  longer disable synthesis or shrink the mandatory eight-role roster through an override.
+- Dossier hashing now removes runtime-only `undefined` values from grounding and source
+  records, preventing a valid evidence run from crashing during artifact materialization.
+  Nullable unused coverage fields receive only a deterministic empty transport normalization,
+  and coverage failures expose exact bounded repair paths.
+- Skill validation is repository-local and dependency-free instead of relying on one developer
+  machine's absolute `quick_validate.py` path, restoring clean-checkout and multi-platform CI.
+
 ## [1.1.8] — 2026-08-03
 
 ### Fixed

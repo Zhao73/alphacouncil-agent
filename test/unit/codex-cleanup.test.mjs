@@ -102,11 +102,11 @@ test("runCodex rejects and removes an output beyond the UTF-8-safe character env
     }
   }
   try {
-    const result = await runCodex("fixture", 1000, () => {}, () => {}, {
+    let outFile;
+    const result = await runCodex("fixture", 1000, ({ output }) => { outFile = output; }, () => {}, {
       dataDir: dir,
-      spawn: (_command, args) => {
+      spawn: () => {
         const child = new ClosingChild();
-        const outFile = args[args.length - 2];
         queueMicrotask(() => {
           writeFileSync(outFile, Buffer.alloc(MAX_WORKER_OUTPUT_BYTES + 1, 0x78));
           child.emit("close", 0);
@@ -142,11 +142,11 @@ test("runCodex does not reject valid CJK text merely because UTF-8 uses more byt
   assert.ok(payload.length < 512_000);
   assert.ok(Buffer.byteLength(payload) > 512_000);
   try {
-    const result = await runCodex("fixture", 1000, () => {}, () => {}, {
+    let outFile;
+    const result = await runCodex("fixture", 1000, ({ output }) => { outFile = output; }, () => {}, {
       dataDir: dir,
-      spawn: (_command, args) => {
+      spawn: () => {
         const child = new ClosingChild();
-        const outFile = args[args.length - 2];
         queueMicrotask(() => {
           writeFileSync(outFile, payload);
           child.emit("close", 0);

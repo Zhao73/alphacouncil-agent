@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
@@ -163,7 +164,7 @@ test("headless failures stay out of evidence and full council stops before expen
     assert.deepEqual(
       events.filter((event) => event.type === "evidence_partial")
         .map(({ successful, failed, total }) => ({ successful, failed, total })),
-      [{ successful: 0, failed: 1, total: 1 }],
+      [{ successful: 0, failed: DEFAULT_TASKS.length, total: DEFAULT_TASKS.length }],
       "a failure packet must not be reported as completed evidence",
     );
     assert.equal(events.some((event) => event.type === "debate_started"), false);
@@ -172,7 +173,7 @@ test("headless failures stay out of evidence and full council stops before expen
     const terminal = events.findLast((event) => event.type === "incomplete");
     assert.equal(terminal?.reason, "evidence_gate_failed");
     assert.equal(terminal?.downstream_model_calls_skipped, true);
-    assert.deepEqual(terminal?.missing_evidence, ["market_data"]);
+    assert.deepEqual(terminal?.missing_evidence, DEFAULT_TASKS);
     for (const role of ["bull_researcher", "bear_researcher", "portfolio_manager"]) {
       assert.equal(result.run.agent_status[role].status, "skipped");
     }
