@@ -40,6 +40,16 @@ const pairByEnd = (a, b, n) => {
  */
 const UNIT_BY_CONCEPT = { sharesOutstanding: "shares" };
 
+// SEC CompanyFacts exposes the declared split conversion ratio as a dimensionless
+// us-gaap fact. It is intentionally kept separate from CONCEPTS: this is not an annual
+// operating metric, and 10-Q/8-K facts can be the first official record of the split.
+const SPLIT_RATIO_TAGS = [
+  "StockholdersEquityNoteStockSplitConversionRatio1",
+  "StockholdersEquityNoteStockSplitConversionRatio",
+];
+const SPLIT_LIKE_TOLERANCE = 0.08;
+const SPLIT_EVENT_CLUSTER_DAYS = 93;
+
 function values(facts, key, asOf) {
   const found = annualSeries(facts, CONCEPTS[key], { asOf, unit: UNIT_BY_CONCEPT[key] || "USD" });
   return found ? found.series.map((e) => ({
@@ -76,6 +86,162 @@ function ruleProvenance(series) {
     fiscal_year: ends.length ? Number(ends.at(-1).slice(0, 4)) : null,
     public_at: filed.at(-1) || null,
     source_records: sourceRecords,
+  };
+}
+
+const relativeError = (actual, expected) => Math.abs(actual / expected - 1);
+
+/**
+ * A discontinuity close to an integer multiple is split-like, not proof of a split.
+ * Without an official conversion ratio it must trigger manual review rather than being
+ * scored as dilution. Ordinary issuance such as 1.5x remains an economic share change.
+ */
+function splitLikeTransition(previous, current) {
+  if (!(previous?.val > 0) || !(current?.val > 0)) return null;
+  const ratio = current.val / previous.val;
+  const magnitude = Math.max(ratio, 1 / ratio);
+  const nearestInteger = Math.round(magnitude);
+  if (nearestInteger < 2 || nearestInteger > 100) return null;
+  if (relativeError(magnitude, nearestInteger) > SPLIT_LIKE_TOLERANCE) return null;
+  return {
+    from_period: previous.end,
+    to_period: current.end,
+    observed_ratio: Number(ratio.toFixed(6)),
+    near_integer_factor: nearestInteger,
+  };
+}
+
+/**
+ * Read dated, public SEC XBRL split-ratio facts and collapse repeated contexts for the
+ * same event. A cluster with conflicting ratios is retained but marked unreliable.
+ */
+function splitRatioEvents(facts, shares, asOf) {
+  const cutoff = asOf ? Date.parse(asOf) : null;
+  const windowStart = Date.parse(shares[0]?.end);
+  const windowEnd = Math.max(
+    ...shares.flatMap((row) => [Date.parse(row.end), Date.parse(row.filed)]).filter(Number.isFinite),
+  );
+  const rows = [];
+
+  for (const tag of SPLIT_RATIO_TAGS) {
+    const entries = facts?.facts?.["us-gaap"]?.[tag]?.units?.pure;
+    if (!Array.isArray(entries)) continue;
+    for (const entry of entries) {
+      const eventTime = Date.parse(entry.end);
+      const filedTime = Date.parse(entry.filed);
+      if (!Number.isFinite(entry.val) || !(entry.val > 0) || relativeError(entry.val, 1) < 0.001) continue;
+      if (!Number.isFinite(eventTime) || !Number.isFinite(filedTime)) continue;
+      if (cutoff && filedTime > cutoff) continue;
+      // A later filing may retrospectively restate a pre-split comparison, so the event
+      // may occur after that comparison's period end but never after its filing date.
+      if (eventTime < windowStart || eventTime > windowEnd) continue;
+      rows.push({
+        start: entry.start || null,
+        end: entry.end,
+        filed: entry.filed,
+        val: entry.val,
+        accn: entry.accn || null,
+        form: entry.form || null,
+        tag,
+      });
+    }
+  }
+
+  rows.sort((a, b) => Date.parse(a.end) - Date.parse(b.end));
+  const clusters = [];
+  for (const row of rows) {
+    const prior = clusters.at(-1);
+    const daysSincePrior = prior
+      ? (Date.parse(row.end) - Date.parse(prior.rows.at(-1).end)) / 86400000
+      : Infinity;
+    if (!prior || daysSincePrior > SPLIT_EVENT_CLUSTER_DAYS) {
+      clusters.push({ rows: [row] });
+    } else {
+      prior.rows.push(row);
+    }
+  }
+
+  return clusters.map((cluster) => {
+    const factors = [];
+    for (const row of cluster.rows) {
+      if (!factors.some((factor) => relativeError(row.val, factor) <= 0.01)) factors.push(row.val);
+    }
+    return {
+      rows: cluster.rows,
+      reliable: factors.length === 1,
+      factor: factors.length === 1 ? factors[0] : null,
+      reported_factors: factors,
+      event_period_end: cluster.rows.map((row) => row.end).sort().at(-1),
+    };
+  });
+}
+
+/**
+ * Match official split events to the discontinuities they explain. Blindly dividing by
+ * every split fact is unsafe because many filers restate every historical share value onto
+ * the current basis, leaving no discontinuity to adjust.
+ */
+function reviewSplitAdjustments(facts, shares, asOf) {
+  const transitions = shares.slice(1).map((current, index) => ({
+    previous: shares[index],
+    current,
+    ratio: current.val / shares[index].val,
+    splitLike: splitLikeTransition(shares[index], current),
+  })).filter((transition) => Number.isFinite(transition.ratio) && transition.ratio > 0);
+  const splitLike = transitions.filter((transition) => transition.splitLike);
+  if (!splitLike.length) return { status: "not_needed", factor: 1, sourceRows: [] };
+
+  const events = splitRatioEvents(facts, shares, asOf);
+  const reliableEvents = events.filter((event) => event.reliable);
+  const usedTransitions = new Set();
+  const matched = [];
+
+  for (const event of reliableEvents) {
+    let best = null;
+    for (let index = 0; index < transitions.length; index += 1) {
+      if (usedTransitions.has(index)) continue;
+      const transition = transitions[index];
+      for (const effectiveFactor of [event.factor, 1 / event.factor]) {
+        const error = relativeError(transition.ratio, effectiveFactor);
+        if (error <= SPLIT_LIKE_TOLERANCE && (!best || error < best.error)) {
+          best = { index, transition, effectiveFactor, error };
+        }
+      }
+    }
+    if (best) {
+      usedTransitions.add(best.index);
+      matched.push({ event, ...best });
+    }
+  }
+
+  const unmatchedSplitLike = splitLike.filter((transition) =>
+    !matched.some((item) => item.transition === transition));
+  if (unmatchedSplitLike.length) {
+    const conflicting = events.filter((event) => !event.reliable);
+    const reason = conflicting.length
+      ? `split-like share-count jump found, but official XBRL split ratios conflict (${conflicting.flatMap((event) => event.reported_factors).join(", ")})`
+      : reliableEvents.length
+        ? "split-like share-count jump found, but no official XBRL split ratio consistently matches it"
+        : "split-like share-count jump found without a reliable official XBRL split ratio";
+    return {
+      status: "needs_manual_adjustment",
+      reason,
+      transitions: unmatchedSplitLike.map((transition) => transition.splitLike),
+      sourceRows: events.flatMap((event) => event.rows),
+    };
+  }
+
+  const factor = matched.reduce((product, item) => product * item.effectiveFactor, 1);
+  return {
+    status: "verified_xbrl",
+    factor,
+    sourceRows: matched.flatMap((item) => item.event.rows),
+    events: matched.map((item) => ({
+      reported_factor: item.event.factor,
+      effective_factor: Number(item.effectiveFactor.toFixed(6)),
+      event_period_end: item.event.event_period_end,
+      observed_ratio: Number(item.transition.ratio.toFixed(6)),
+    })),
   };
 }
 
@@ -210,11 +376,37 @@ export function evaluateRules(facts, { asOf = null } = {}) {
     if (s.length < 3) return null;
     const first = s[0].val;
     const latest = s[s.length - 1].val;
-    if (!(first > 0)) return null;
-    const change = latest / first - 1;
+    if (!(first > 0) || !(latest > 0)) return null;
+    const rawChange = latest / first - 1;
+    const splitReview = reviewSplitAdjustments(facts, s, asOf);
+    if (splitReview.status === "needs_manual_adjustment") {
+      return {
+        skipped: true,
+        reason: splitReview.reason,
+        adjustment_status: "needs_manual_adjustment",
+        raw_value: pct(rawChange),
+        unit: "%",
+        threshold: 20,
+        direction: "max",
+        years: s.length,
+        split_like_transitions: splitReview.transitions,
+        ...ruleProvenance([s, splitReview.sourceRows]),
+      };
+    }
+    const change = latest / (first * splitReview.factor) - 1;
     return {
       passed: change <= 0.20, value: pct(change), unit: "%", threshold: 20, direction: "max", years: s.length,
-      ...ruleProvenance([s]),
+      ...(splitReview.status === "verified_xbrl" ? {
+        raw_value: pct(rawChange),
+        adjustment_status: "verified_xbrl",
+        split_adjustment: {
+          factor: Number(splitReview.factor.toFixed(6)),
+          source: "SEC CompanyFacts us-gaap split conversion ratio",
+          reason: "official XBRL split ratio aligns with the observed share-count discontinuity",
+          events: splitReview.events,
+        },
+      } : {}),
+      ...ruleProvenance([s, splitReview.sourceRows]),
     };
   });
 
@@ -269,6 +461,9 @@ export function explainResult(result, ticker) {
   }
   if (result.skipped_count) {
     lines.push(`${result.skipped_count} of ${result.rules.length} rules could not be computed from filings and were NOT treated as passes.`);
+    for (const skipped of result.rules.filter((rule) => rule.skipped)) {
+      lines.push(`  - ${typeof skipped.label === "string" ? skipped.label : skipped.label.en}: ${skipped.reason}`);
+    }
   }
   return lines.join("\n");
 }

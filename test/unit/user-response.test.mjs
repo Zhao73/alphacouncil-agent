@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
-import { validateUserResponse } from "../../mcp/lib/gates.mjs";
-import { userResponseMarkdown } from "../../mcp/lib/markdown.mjs";
+import { validateFinalReport, validateUserResponse } from "../../mcp/lib/gates.mjs";
+import { finalReportMarkdown, userResponseMarkdown } from "../../mcp/lib/markdown.mjs";
 import { compiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
@@ -307,6 +307,45 @@ test("an incomplete handoff ends with every selected seat and diagnoses a failed
   assert.equal(quality.status, "passed", quality.missing.join("; "));
   assert.deepEqual(quality.full_statement_master_ids, ["master_marks"]);
   assert.deepEqual(quality.explicit_failure_master_ids, ["master_graham"]);
+});
+
+test("an evidence-gate failure gives final_report and user_response the same complete 26-seat non-directional tail", () => {
+  const ids = compiledPersonaPacks().ids();
+  assert.equal(ids.length, CANONICAL_MASTER_COUNT);
+  const fixture = localizedRun("zh-CN", "已完成证据席摘要", "unused");
+  fixture.status = "incomplete";
+  fixture.phase = "incomplete";
+  fixture.task_status.insider_sec = {
+    task: "insider_sec", status: "timed_out", error: "timeout", attempts: 2,
+  };
+  fixture.masters = ids;
+  fixture.master_status = Object.fromEntries(ids.map((id) => [id, {
+    master: id, status: "skipped", error: "evidence_gate_failed",
+  }]));
+  fixture.master_opinions = [];
+  const fallback = { ...manager("NEEDS_MANAGER_REVIEW"), decision_available: false, rating: null };
+  const finalReport = finalReportMarkdown(fixture, fallback);
+  const handoff = userResponseMarkdown(fixture, fallback);
+  const begin = "<!-- alphacouncil:handoff-method-seat-tail:v1:begin -->";
+  const end = "<!-- alphacouncil:handoff-method-seat-tail:v1:end -->";
+  const finalTail = finalReport.slice(finalReport.indexOf(begin));
+  const handoffTail = handoff.slice(handoff.indexOf(begin));
+
+  assert.equal(finalTail, handoffTail);
+  assert.ok(finalReport.trimEnd().endsWith(end));
+  assert.ok(handoff.trimEnd().endsWith(end));
+  assert.equal((finalTail.match(/statement_status=not_produced/g) || []).length, CANONICAL_MASTER_COUNT);
+  assert.equal((finalTail.match(/not_a_directional_view=true/g) || []).length, CANONICAL_MASTER_COUNT);
+  assert.doesNotMatch(finalTail, /冻结记录:/);
+  for (const id of ids) {
+    assert.equal(finalTail.split(`<!-- alphacouncil:handoff-method-seat:v1:${id} -->`).length - 1, 1, id);
+  }
+  assert.equal(validateUserResponse(finalReport, fixture).status, "passed");
+  const reportQuality = validateFinalReport(finalReport, fixture);
+  assert.equal(reportQuality.status, "needs_revision");
+  assert.equal(reportQuality.method_statement_coverage.selected_count, CANONICAL_MASTER_COUNT);
+  assert.equal(reportQuality.method_statement_coverage.readable_count, 0);
+  assert.equal(reportQuality.method_statement_coverage.rendered_count, 0);
 });
 
 test("the handoff gate rejects a clipped method statement even when the seat marker remains", () => {

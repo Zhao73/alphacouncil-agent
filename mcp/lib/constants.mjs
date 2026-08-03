@@ -226,8 +226,10 @@ export const LIMITS = Object.freeze({
   )),
   /** Reserved for forced child settlement, deterministic assembly and atomic persistence. */
   FULL_FINALIZE_RESERVE_MS: 45 * 1000,
-  /** A malformed response gets one short, no-search transport-only repair. */
-  PARSE_REPAIR_MS: 30 * 1000,
+  /** Absolute ceiling for one no-search transport/schema repair; the stage helper usually lowers it. */
+  PARSE_REPAIR_MS: 4 * 60 * 1000,
+  /** A repair may consume at most this fraction of its pace-specific stage budget. */
+  PARSE_REPAIR_STAGE_FRACTION: 2 / 3,
   PARSE_REPAIR_INPUT_CHARS: 80 * 1000,
   FULL_EVIDENCE_CONCURRENCY: 8,
   FULL_MASTER_CONCURRENCY: 13,

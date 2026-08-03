@@ -156,7 +156,10 @@ export function completenessStatus(run) {
     missing_masters,
     degraded_evidence,
     degraded_debate,
-    evidence_coverage: degraded_evidence.length ? "degraded" : "complete",
+    // Missing/failed mandatory evidence is not complete coverage. Quick keeps its explicit
+    // degraded axis only when the minimum-coverage rule converted every affected seat into
+    // an allowed degraded record; otherwise the missing gate wins and coverage is incomplete.
+    evidence_coverage: missing_evidence.length ? "incomplete" : degraded_evidence.length ? "degraded" : "complete",
     quick_minimum_successful_tasks: quick ? LIMITS.QUICK_MIN_SUCCESSFUL_TASKS : null,
     successful_evidence_count: successfulEvidence.length,
     missing_evidence_count: missing_evidence.length,
@@ -370,7 +373,12 @@ export function validateFinalReport(markdown, run) {
   // seat here against PM prose. The marker only ever appears in the system-generated bench,
   // which assembly appends last, so everything from it onwards is system-owned output.
   const benchMarkerAt = text.indexOf(`<!-- ${RECORDED_BENCH_MARKER_PREFIX}`);
-  const benchBody = benchMarkerAt >= 0 ? text.slice(benchMarkerAt) : (assigned.get("master_bench")?.body || "");
+  const methodTailAt = benchMarkerAt >= 0
+    ? text.indexOf(`<!-- ${HANDOFF_METHOD_TAIL_MARKER} -->`, benchMarkerAt)
+    : -1;
+  const benchBody = benchMarkerAt >= 0
+    ? text.slice(benchMarkerAt, methodTailAt > benchMarkerAt ? methodTailAt : undefined)
+    : (assigned.get("master_bench")?.body || "");
   const readableMethodStatements = [];
   const renderedMethodStatements = [];
   for (const id of selectedMethodSeats) {

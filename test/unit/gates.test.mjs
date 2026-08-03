@@ -71,7 +71,18 @@ test("completenessStatus flags a pending evidence task", () => {
     task_status: { market_data: { task: "market_data", status: "pending" } },
   });
   assert.equal(gate.completeness, "incomplete");
+  assert.equal(gate.evidence_coverage, "incomplete");
   assert.equal(gate.missing_evidence_count, 1);
+});
+
+test("completenessStatus never labels failed mandatory evidence as complete coverage", () => {
+  const gate = completenessStatus({
+    ...completeRun(),
+    task_status: { market_data: { task: "market_data", status: "failed", error: "parse_failed" } },
+  });
+  assert.equal(gate.completeness, "incomplete");
+  assert.equal(gate.evidence_coverage, "incomplete");
+  assert.deepEqual(gate.missing_evidence, ["market_data"]);
 });
 
 test("completenessStatus flags a missing debate researcher", () => {

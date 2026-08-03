@@ -54,6 +54,11 @@
 三、**拥挤度线索**
 能拿到就报：空头占流通股比例、借券费率、期权未平仓量的看跌看涨分布（可调 get_options_chain）。**拥挤的多头和拥挤的空头都是风险，方向相反。**
 
+先检查已建立的 grounding，不要把已经提供的期权事实误报为缺失：
+- 若 `grounding.options.open_interest` 存在，**必须**报告 calls、puts 和 put/call OI ratio。
+- 若 `grounding.options.largest_open_interest_strikes` 存在，**必须**报告最大未平仓量的执行价及其 OI 集中度。
+- 上述字段存在时，不得声称期权链缺少执行价或到期日 OI。只能把 grounding 中真正没有的 IV 历史、IV rank / percentile 等字段标为 unavailable。
+
 ## 硬纪律
 
 - **禁止形态学预测**。「金叉」「三角形整理」「即将突破」这类论断不可证伪，不属于证据。你报的是位置和统计量。
@@ -84,6 +89,11 @@ You cover factor exposure and technical risk. What you produce are **measurable 
 
 3. **Crowding evidence**
 Report where obtainable: short interest as a share of float, borrow fee, the put/call distribution of open interest (get_options_chain provides it). **A crowded long and a crowded short are both risks, pointing opposite ways.**
+
+Inspect the established grounding before using another tool or declaring options data unavailable:
+- If `grounding.options.open_interest` exists, you **MUST** report calls, puts, and the put/call OI ratio.
+- If `grounding.options.largest_open_interest_strikes` exists, you **MUST** report the largest-OI strikes and their OI concentrations.
+- When those fields exist, never claim the chain lacks strike- or expiry-level OI. Only genuinely absent fields such as IV history, IV rank, or IV percentile may be marked unavailable.
 
 ## Hard rules
 

@@ -1,6 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { evaluateRules, explainResult } from "../../mcp/lib/screen.mjs";
+import { repoFile } from "../helpers/paths.mjs";
 
 /**
  * Minimal companyfacts shape, so the rules can be tested without touching the network.
@@ -104,8 +106,37 @@ test("a heavy non-cash charge exempts a thin net margin", () => {
 test("dilution beyond the threshold eliminates", () => {
   const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 120, 150] }));
   const dilution = rule(result, "dilution");
+  assert.equal(dilution.skipped, undefined, "ordinary 50% issuance is economic dilution, not split-like");
   assert.equal(dilution.passed, false);
   assert.equal(dilution.value, 50);
+});
+
+test("a verified 10-for-1 split is removed from five-year economic dilution", () => {
+  const companyFacts = JSON.parse(readFileSync(repoFile("test/fixtures/split-restatement-companyfacts-shape.json"), "utf8"));
+  const result = evaluateRules(companyFacts);
+  const dilution = rule(result, "dilution");
+
+  assert.equal(dilution.skipped, undefined);
+  assert.equal(dilution.passed, true);
+  assert.equal(dilution.raw_value, 869.83, "the unadjusted filing-shape jump is retained for audit");
+  assert.equal(dilution.value, -3.02, "a roughly 3% buyback must not be reported as 869% dilution");
+  assert.equal(dilution.adjustment_status, "verified_xbrl");
+  assert.equal(dilution.split_adjustment.factor, 10);
+  assert.ok(dilution.source_records.some((source) => source.tag === "CommonStockSharesOutstanding"));
+  assert.ok(dilution.source_records.some((source) => source.tag === "StockholdersEquityNoteStockSplitConversionRatio1"));
+});
+
+test("a split-like jump without a reliable official factor is skipped for manual adjustment", () => {
+  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 1000, 970] }));
+  const dilution = rule(result, "dilution");
+
+  assert.equal(dilution.skipped, true);
+  assert.equal(dilution.passed, undefined, "an unresolved split must be neither a pass nor a failure");
+  assert.equal(dilution.adjustment_status, "needs_manual_adjustment");
+  assert.match(dilution.reason, /split-like.*without a reliable official XBRL split ratio/i);
+  assert.equal(dilution.raw_value, 870);
+  assert.ok(dilution.source_records.some((source) => source.tag === "CommonStockSharesOutstanding"));
+  assert.match(explainResult(result, "TEST"), /split-like share-count jump/i);
 });
 
 test("a restated period uses the most recently filed value", () => {

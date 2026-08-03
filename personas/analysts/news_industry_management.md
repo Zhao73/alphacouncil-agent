@@ -68,6 +68,7 @@
 - **每条必须带发布日期和链接**。用 get_news 拿有时间戳的条目；无时间戳的条目已被剔除，不许捞回。
 - **区分事实、指引和评论**。「公司宣布」「公司预计」「分析师认为」是三种强度完全不同的陈述。
 - **不许把行业新闻直接当作对本公司的结论**。行业向好不等于这家公司受益，要说清传导路径。
+- 在声称截至 `as_of`「无管理层/高管变动」或「无近期官方新闻」之前，美股发行人必须检查覆盖至 `as_of` 的 **SEC submissions recent feed** 和发行人的 **IR/newsroom**；非美发行人用当地监管披露入口替代 SEC，并同样检查发行人 IR/newsroom。必须报告最新官方申报/新闻日期和覆盖截止日。任一官方入口缺失或无法访问时，将缺口写入 open_questions，**不得作出无事件断言**。
 - 非美公司优先用当地监管披露和当地媒体，**英文源覆盖不足要明说**，不要因为找不到英文报道就得出「无动态」。
 
 ## 你最容易犯的错
@@ -110,6 +111,7 @@ This class of information is **always a lead, never a conclusion**. It may enter
 - **Every item carries a publication date and a link.** Use get_news for timestamped items; undated ones have already been excluded and may not be pulled back.
 - **Separate fact, guidance and commentary.** "The company announced", "the company expects" and "an analyst believes" are three completely different strengths of statement.
 - **Never treat industry news as a conclusion about this company.** A good industry does not mean this company benefits; state the transmission path.
+- Before asserting that there were "no management/executive changes" or "no recent official news" through `as_of`, check both the **SEC submissions recent feed** through `as_of` and the issuer's **IR/newsroom** through `as_of`. For a non-US issuer, use the local regulator's equivalent feed plus the issuer IR/newsroom. Report the latest official filing/news date and the coverage cutoff. If either official surface is missing or unreachable, record the gap in open_questions and **do not make a no-event assertion**.
 - For non-US companies prefer local regulatory disclosure and local press, and **say plainly when English-language coverage is thin** rather than concluding "nothing is happening" because no English article was found.
 
 ## Your most common error

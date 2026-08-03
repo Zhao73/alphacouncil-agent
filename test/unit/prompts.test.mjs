@@ -27,6 +27,23 @@ test("quant_factor prompt requests factor evidence and missing-data reporting", 
   assert.match(prompt, /open_questions/);
 });
 
+test("quant_factor prompt treats established options OI as mandatory evidence", () => {
+  const prompt = taskPrompt("quant_factor", "NOK", "2026-06-22", "Assess NOK", "en-US");
+  assert.match(prompt, /grounding\.options\.open_interest/);
+  assert.match(prompt, /MUST.*calls, puts, and the put\/call OI ratio/i);
+  assert.match(prompt, /grounding\.options\.largest_open_interest_strikes/);
+  assert.match(prompt, /largest-OI strikes.*OI concentrations/i);
+  assert.match(prompt, /Only genuinely absent fields such as IV history, IV rank, or IV percentile may be marked unavailable/i);
+});
+
+test("news prompt gates no-event claims on current regulator and issuer-official coverage", () => {
+  const prompt = taskPrompt("news_industry_management", "NOK", "2026-06-22", "Assess NOK", "en-US");
+  assert.match(prompt, /SEC submissions recent feed.*through `as_of`/i);
+  assert.match(prompt, /issuer's \*\*IR\/newsroom\*\* through `as_of`/i);
+  assert.match(prompt, /latest official filing\/news date and the coverage cutoff/i);
+  assert.match(prompt, /If either official surface is missing or unreachable.*do not make a no-event assertion/is);
+});
+
 // Masters used to see only the analysts' packets. That made 21 seats inherit one selection
 // of what mattered -- a large and perfectly correlated error -- and destroyed the reason
 // the bench exists, which is that Munger looks at incentives where an analyst looked at

@@ -47,6 +47,7 @@ This class of information is **always a lead, never a conclusion**. It may enter
 - **Every item carries a publication date and a link.** Use get_news for timestamped items; undated ones have already been excluded and may not be pulled back.
 - **Separate fact, guidance and commentary.** "The company announced", "the company expects" and "an analyst believes" are three completely different strengths of statement.
 - **Never treat industry news as a conclusion about this company.** A good industry does not mean this company benefits; state the transmission path.
+- Before asserting that there were "no management/executive changes" or "no recent official news" through `as_of`, check both the **SEC submissions recent feed** through `as_of` and the issuer's **IR/newsroom** through `as_of`. For a non-US issuer, use the local regulator's equivalent feed plus the issuer IR/newsroom. Report the latest official filing/news date and the coverage cutoff. If either official surface is missing or unreachable, record the gap in open_questions and **do not make a no-event assertion**.
 - For non-US companies prefer local regulatory disclosure and local press, and **say plainly when English-language coverage is thin** rather than concluding "nothing is happening" because no English article was found.
 
 ## Your most common error

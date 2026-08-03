@@ -250,7 +250,8 @@ test("localized method-seat subheadings do not break Japanese bench idempotency"
   const once = finalReportMarkdown(run, { report_markdown: reportWithout(null) });
   const twice = finalReportMarkdown(run, { report_markdown: once });
   assert.equal((twice.match(/alphacouncil:recorded-master-bench:v1:/g) || []).length, 1);
-  assert.equal((twice.match(/日本語の専用方法席センチネル/g) || []).length, 1);
+  assert.equal((twice.match(/日本語の専用方法席センチネル/g) || []).length, 2, "full statement appears once in the bench and once in the terminal tail");
+  assert.equal((twice.match(/alphacouncil:handoff-method-seat-tail:v1:begin/g) || []).length, 1);
   assert.match(twice, /## マスター・ベンチ/);
 });
 

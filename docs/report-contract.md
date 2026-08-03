@@ -19,6 +19,10 @@ writes the mode-appropriate versions of:
 - `status.json`, `events.jsonl`, `evidence.json`, and `source_manifest.json`.
 - `<task>.failure.json` for a worker failure, kept separate from investment evidence.
 
+`artifact_index.md` lists `publication_manifest.json` only when report quality has passed and
+the terminal publication step is expected to create that commit marker. An incomplete or
+`needs_revision` package does not publish a dangling path to a marker that does not exist.
+
 The report and handoff must call a named master result a recorded method-seat or lens result.
 It is not a quote from, endorsement by, or current statement of the named person.
 
@@ -78,6 +82,11 @@ Its `user_response.md` must also visibly carry:
   its complete recorded statement; every failed/unavailable seat instead carries
   `statement_status=not_produced` plus status/reason and never counts as a directional view.
   Full `all` therefore accounts for all 26 selected IDs; quick reports its actual 1–4.
+
+`final_report.md` and `user_response.md` both end with that same complete system-owned
+method-seat ledger. The tail end marker is the last non-whitespace content in each file. An
+evidence-gate failure therefore still accounts for every selected seat as
+`statement_status=not_produced`; it never converts a skipped seat into a directional view.
 
 Visible PM completion returns `handoff_contract=inline_user_response_v1` plus the persisted
 `user_response_markdown`. When a visible barrier cannot complete, the host must call
@@ -224,7 +233,8 @@ Do not collapse these axes:
 
 - `status`: terminal orchestration result.
 - `completeness`: whether the applicable structural gates were satisfied.
-- `evidence_coverage`: `complete` or quick-only `degraded`.
+- `evidence_coverage`: `complete`, quick-only `degraded`, or `incomplete` when mandatory
+  evidence is missing or failed.
 - `verification`: scoped source-ID presence; adversarial verification is reported separately.
 - `report_quality`: whether `quick_v1` or `full_v2` report structure passed.
 

@@ -12,9 +12,11 @@ function scriptedCodexCommand(dataDir, {
   lateValidOnSecondAttempt = false,
   wrongLanguageBoth = false,
   locallyRepairableFirst = false,
+  schemaInvalidFirst = false,
 } = {}) {
   const driver = join(dataDir, "fake-codex-malformed.mjs");
   const counter = join(dataDir, "fake-codex-attempts.txt");
+  const promptLog = join(dataDir, "fake-codex-prompts.jsonl");
   const malformed = '{"summary":"first-object"}{"summary":"second-object"}';
   const recovered = JSON.stringify({
     summary: "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.",
@@ -26,6 +28,20 @@ function scriptedCodexCommand(dataDir, {
     information_richness: "C",
   });
   const locallyRepairable = `${recovered.slice(0, -1)},}`;
+  const schemaInvalid = JSON.stringify({
+    summary: "The first packet is valid JSON but violates the evidence schema.",
+    claims: [{
+      claim: "A claim cannot be accepted without at least one source id.",
+      evidence: "The fixture deliberately leaves source_ids empty.",
+      confidence: "low",
+      source_ids: [],
+    }],
+    metrics: {},
+    sources: [],
+    open_questions: [],
+    confidence: "low",
+    information_richness: "C",
+  });
   const wrongLanguage = JSON.stringify({
     summary: "This valid evidence packet uses the wrong reader language on every bounded attempt.",
     claims: [{
@@ -49,8 +65,9 @@ function scriptedCodexCommand(dataDir, {
   // Pre-create the counter so a heavily loaded test runner reports an informative 0/1
   // attempt mismatch instead of ENOENT if process startup itself exceeds the fixture cap.
   writeFileSync(counter, "0");
+  writeFileSync(promptLog, "");
   writeFileSync(driver, `#!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 const args = process.argv.slice(2);
 const outputIndex = args.indexOf("-o");
 if (outputIndex === -1 || !args[outputIndex + 1]) process.exit(2);
@@ -58,6 +75,9 @@ const outputPath = args[outputIndex + 1];
 const counterPath = ${JSON.stringify(counter)};
 const attempt = existsSync(counterPath) ? Number(readFileSync(counterPath, "utf8")) + 1 : 1;
 writeFileSync(counterPath, String(attempt));
+let prompt = "";
+for await (const chunk of process.stdin) prompt += chunk.toString();
+appendFileSync(${JSON.stringify(promptLog)}, JSON.stringify({ attempt, search: args.includes("--search"), prompt }) + "\\n");
 if (${JSON.stringify(failOnSecondAttempt)} && attempt === 2) process.exit(17);
 if (${JSON.stringify(lateValidOnSecondAttempt)} && attempt === 2) {
   process.on("SIGTERM", () => {
@@ -78,6 +98,8 @@ const output = ${wrongLanguageBoth
   ? JSON.stringify(wrongLanguage)
   : locallyRepairableFirst
     ? JSON.stringify(locallyRepairable)
+  : schemaInvalidFirst
+    ? `attempt === 1 ? ${JSON.stringify(schemaInvalid)} : ${JSON.stringify(recovered)}`
   : recoverOnSecondAttempt
     ? `attempt === 2 ? ${JSON.stringify(recovered)} : ${JSON.stringify(malformed)}`
     : JSON.stringify(malformed)};
@@ -85,11 +107,11 @@ writeFileSync(outputPath, output);
 `);
   if (process.platform !== "win32") {
     chmodSync(driver, 0o755);
-    return { command: driver, counter };
+    return { command: driver, counter, promptLog };
   }
   const wrapper = join(dataDir, "fake-codex-malformed.cmd");
   writeFileSync(wrapper, `@"${process.execPath}" "${driver}" %*\r\n`);
-  return { command: wrapper, counter };
+  return { command: wrapper, counter, promptLog };
 }
 
 test("headless failures stay out of evidence and full council stops before expensive downstream synthesis", async () => {
@@ -188,6 +210,63 @@ test("a safe local syntax repair avoids a second Codex worker", async () => {
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
     assert.equal(events.some((event) => event.type === "task_retry"), false);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("schema repair receives bounded validator paths and a pace-aware budget", async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir, { schemaInvalidFirst: true });
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "TST",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-SCHEMA-GUIDANCE-${process.pid}`;
+    const run = structured(await server.callTool("collect_evidence", {
+      symbol: "TST",
+      run_id: runId,
+      tasks: ["insider_sec"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+    }));
+    assert.equal(run.status, "evidence_complete");
+    assert.equal(run.task_status.insider_sec.attempts, 2);
+
+    const dir = join(dataDir, "runs", runId);
+    const diagnostic = JSON.parse(readFileSync(join(dir, "insider_sec.attempt-1.failure.json"), "utf8"));
+    assert.equal(diagnostic.schema_id, "runtime-evidence-packet-v1");
+    assert.equal(diagnostic.schema_kind, "evidence");
+    assert.ok(diagnostic.schema_error_count >= diagnostic.schema_errors.length);
+    assert.ok(diagnostic.schema_errors.length >= 1 && diagnostic.schema_errors.length <= 8);
+    assert.ok(diagnostic.schema_errors.some((issue) => (
+      issue.path === "/claims/0/source_ids"
+      && issue.keyword === "minItems"
+      && /fewer than 1/u.test(issue.message)
+    )));
+
+    const launches = readFileSync(fake.promptLog, "utf8")
+      .trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
+    const repair = launches.find((item) => item.attempt === 2);
+    assert.ok(repair);
+    assert.equal(repair.search, false);
+    assert.match(repair.prompt, /\/claims\/0\/source_ids \[minItems\]/u);
+    assert.match(repair.prompt, /required top-level fields are summary/u);
+    assert.match(repair.prompt, /source_ids containing at least one non-empty source id/u);
+    assert.match(repair.prompt, /Never invent a source id or fact/u);
+
+    const events = readFileSync(join(dir, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    const retry = events.find((event) => event.type === "task_retry" && event.task === "insider_sec");
+    assert.ok(retry.remaining_ms > 30_000, `repair budget stayed fixed at ${retry.remaining_ms}ms`);
+    assert.ok(retry.remaining_ms <= 4 * 60 * 1_000);
   } finally {
     await server.close();
     removeDataDir(dataDir);

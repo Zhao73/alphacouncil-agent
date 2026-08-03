@@ -207,6 +207,7 @@ test("quick degraded evidence remains a separate axis from structural report qua
   run.task_status.valuation_long_short.status = "degraded";
   const insufficient = completenessStatus(run);
   assert.equal(insufficient.completeness, "incomplete");
+  assert.equal(insufficient.evidence_coverage, "incomplete");
   assert.ok(insufficient.missing_evidence.length >= 3);
 });
 

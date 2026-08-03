@@ -98,7 +98,7 @@ function visibleCouncilTiming(args) {
   };
 }
 
-function remainingCouncilBudget(run, capMs) {
+function remainingCouncilBudget(run, capMs, nowMs = Date.now()) {
   if (!run.deadline_at) return capMs;
   const configuredReserve = run.council_mode === "quick"
     ? LIMITS.QUICK_FINALIZE_RESERVE_MS
@@ -110,7 +110,7 @@ function remainingCouncilBudget(run, capMs) {
   const killGrace = councilKillGrace(run);
   // runCodex may need one SIGKILL grace after its timeout. Budget that grace before
   // launching a child so the queue-to-persistence deadline remains the outer boundary.
-  const usable = Date.parse(run.deadline_at) - Date.now() - reserve - killGrace;
+  const usable = Date.parse(run.deadline_at) - nowMs - reserve - killGrace;
   return Math.max(0, Math.min(capMs, usable));
 }
 
@@ -121,6 +121,25 @@ function councilKillGrace(run) {
   // The exact same value is passed to runCodex, so forced settlement remains inside the
   // queue-to-persistence deadline rather than becoming an unaccounted overrun.
   return Math.min(LIMITS.SIGKILL_GRACE_MS, Math.max(50, Math.floor(total * 0.02)));
+}
+
+/**
+ * Budget the one allowed no-search repair inside both the pace-specific stage and the outer run.
+ * A deeper pace buys a proportionally larger repair window, but never more than the absolute
+ * repair ceiling and never by borrowing the finalize/SIGKILL reserve from the global deadline.
+ */
+export function parseRepairBudget(run, {
+  stageBudgetMs,
+  stageStartedAtMs,
+  nowMs = Date.now(),
+} = {}) {
+  const stageBudget = Math.max(0, Math.floor(Number(stageBudgetMs) || 0));
+  const stageStarted = Number.isFinite(Number(stageStartedAtMs)) ? Number(stageStartedAtMs) : nowMs;
+  const stageElapsed = Math.max(0, nowMs - stageStarted);
+  const stageRemaining = Math.max(0, stageBudget - stageElapsed);
+  const paceAwareCap = Math.floor(stageBudget * LIMITS.PARSE_REPAIR_STAGE_FRACTION);
+  const boundedCap = Math.max(0, Math.min(LIMITS.PARSE_REPAIR_MS, paceAwareCap, stageRemaining));
+  return Math.floor(remainingCouncilBudget(run, boundedCap, nowMs));
 }
 
 function deadlineResult(run) {
@@ -1373,6 +1392,36 @@ export function isDryRun(args = {}) {
   return args.dry_run === true;
 }
 
+function boundedSchemaRepairIssues(errorOrIssues) {
+  const source = Array.isArray(errorOrIssues)
+    ? errorOrIssues
+    : Array.isArray(errorOrIssues?.data?.errors) ? errorOrIssues.data.errors : [];
+  return source.slice(0, 8).map((issue) => ({
+    path: cleanLog(String(issue?.path || "/"), 240),
+    keyword: cleanLog(String(issue?.keyword || "schema"), 80),
+    message: cleanLog(String(issue?.message || "validation failed"), 240),
+    ...(typeof issue?.missing_property === "string"
+      ? { missing_property: cleanLog(issue.missing_property, 120) }
+      : {}),
+  }));
+}
+
+function schemaRepairIssuePrompt(errorOrIssues) {
+  const issues = boundedSchemaRepairIssues(errorOrIssues);
+  if (!issues.length) return "Validator error paths were unavailable; preserve the supplied content and satisfy the stated schema contract exactly.";
+  return [
+    "Bounded validator errors to fix exactly:",
+    ...issues.map((issue) => `- ${issue.path} [${issue.keyword}]: ${issue.message}${issue.missing_property ? `; missing_property=${issue.missing_property}` : ""}`),
+  ].join("\n");
+}
+
+const EVIDENCE_REPAIR_SCHEMA_CONTRACT = [
+  "Evidence schema contract: required top-level fields are summary (non-empty string), claims (array), metrics (object), sources (array), open_questions (array), and confidence (high|medium|low).",
+  "Every claim requires non-empty claim and evidence strings, confidence (high|medium|low), and source_ids containing at least one non-empty source id.",
+  "Every source requires non-empty id, title, url, published_at, and retrieved_at. At least one of claims or open_questions must be non-empty.",
+  "Use only source ids already present in the supplied sources array. Never invent a source id or fact; remove an unsupported claim and record the lost point in open_questions instead of returning empty source_ids.",
+].join(" ");
+
 /**
  * Keep execution diagnostics separate from investment evidence.
  *
@@ -1414,6 +1463,7 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
   const status = outputContractFailed ? failureKind : (timedOut ? "timed_out" : "failed");
   const exitLabel = Number.isInteger(result?.code) ? `exit code ${result.code}` : "worker error";
   const parseMessage = cleanLog(parseError?.message || parseError || "subagent did not return valid JSON", 1_000);
+  const schemaErrors = boundedSchemaRepairIssues(parseError);
   const reason = outputContractFailed ? parseMessage : (timedOut ? `timeout after ${timeoutMs}ms` : exitLabel);
   const rawOutput = String(result?.text || "");
   const positionMatch = outputContractFailed ? /\bposition\s+(\d+)\b/i.exec(parseMessage) : null;
@@ -1454,6 +1504,12 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     } : {}),
     ...(outputContractFailed ? {
       ...(parseFailed ? { parse_error: parseMessage } : { reader_language_error: parseMessage }),
+      ...(schemaErrors.length ? {
+        schema_id: cleanLog(String(parseError?.data?.schema_id || "unknown"), 160),
+        schema_kind: cleanLog(String(parseError?.data?.kind || "unknown"), 80),
+        schema_error_count: Array.isArray(parseError?.data?.errors) ? parseError.data.errors.length : schemaErrors.length,
+        schema_errors: schemaErrors,
+      } : {}),
       parse_position: Number.isInteger(parsePosition) ? parsePosition : null,
       parse_context: Number.isInteger(parsePosition)
         ? cleanLog(rawOutput.slice(contextStart, contextEnd), 1_000)
@@ -1873,12 +1929,10 @@ export async function collectEvidence(args) {
       });
       const retryDiagnostic = join(dir, `${task}.attempt-1.failure.json`);
       writeJson(retryDiagnostic, firstFailure.diagnostic, { mode: 0o600 });
-      const elapsedMs = Date.now() - workerStartedAt;
-      const retryTimeoutMs = Math.min(
-        LIMITS.PARSE_REPAIR_MS,
-        timeoutMs - elapsedMs,
-        remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS),
-      );
+      const retryTimeoutMs = parseRepairBudget(run, {
+        stageBudgetMs: timeoutMs,
+        stageStartedAtMs: workerStartedAt,
+      });
       if (retryTimeoutMs <= 0) {
         return commitFailure({
           failedResult: result,
@@ -1906,6 +1960,8 @@ export async function collectEvidence(args) {
         firstFailureKind === "reader_language_mismatch"
           ? "Translate only the reader-facing strings in the supplied valid JSON into the requested language. Preserve the evidence packet schema, claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. Return exactly one JSON object and nothing else."
           : "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
+        EVIDENCE_REPAIR_SCHEMA_CONTRACT,
+        schemaRepairIssuePrompt(firstParseError),
         `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
         `Malformed worker output:\n${malformed}`,
       ].join("\n\n");
@@ -2189,6 +2245,7 @@ export async function runHeadlessMasters(run, args = {}) {
       }, resolvedEngine);
     };
 
+    const workerStartedAt = Date.now();
     let result = await execute(prompt, timeoutMs, 1);
     if (!result.ok) {
       return { id, error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`, raw: cleanLog(result.stderr || result.stdout || "method worker failed") };
@@ -2197,23 +2254,47 @@ export async function runHeadlessMasters(run, args = {}) {
       return { id, opinion: parse(result), engine };
     } catch (firstParseError) {
       const firstFailureKind = outputFailureKind(firstParseError);
-      const repairBudget = Math.min(LIMITS.PARSE_REPAIR_MS, remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS));
-      if (repairBudget <= 0) return { id, error: firstFailureKind, raw: cleanLog(firstParseError?.message || result.text) };
+      const firstSchemaErrors = boundedSchemaRepairIssues(firstParseError);
+      const repairBudget = parseRepairBudget(run, {
+        stageBudgetMs: timeoutMs,
+        stageStartedAtMs: workerStartedAt,
+      });
+      if (repairBudget <= 0) {
+        return { id, error: firstFailureKind, raw: cleanLog(firstParseError?.message || result.text), schema_errors: firstSchemaErrors };
+      }
+      appendEvent(run, "master_parse_repair", {
+        master: id,
+        budget_ms: repairBudget,
+        reason: firstFailureKind,
+      });
       const repairPrompt = [
         "PARSE-ONLY TRANSPORT REPAIR. Do not browse, search, add facts or change the frozen method stance.",
         `Master ID: ${id}; required acknowledged stance: ${frozenOpinion?.stance || "use the original stance"}; output language: ${run.language}.`,
         frozenOpinion
           ? "Return one JSON object with master, acknowledged_stance, voice_mode=first_person_public_method_simulation_v1, disclosure_ack=alphacouncil.first_person_public_method_simulation.v1, position_intent, every required first-person voice field, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. Do not return a flat statement."
           : "Return one JSON object matching the master_opinion schema from the original prompt.",
+        schemaRepairIssuePrompt(firstParseError),
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve the frozen stance, facts, numbers and source IDs.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
       result = await execute(repairPrompt, repairBudget, 2);
-      if (!result.ok) return { id, error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`, raw: cleanLog(result.stderr || "method repair failed") };
+      if (!result.ok) {
+        return {
+          id,
+          error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`,
+          raw: cleanLog(result.stderr || "method repair failed"),
+          schema_errors: firstSchemaErrors,
+        };
+      }
       try {
         return { id, opinion: parse(result), engine };
       } catch (secondParseError) {
-        return { id, error: outputFailureKind(secondParseError), raw: cleanLog(secondParseError?.message || result.text) };
+        return {
+          id,
+          error: outputFailureKind(secondParseError),
+          raw: cleanLog(secondParseError?.message || result.text),
+          schema_errors: boundedSchemaRepairIssues(secondParseError),
+        };
       }
     }
   }, (error, { id }) => ({
@@ -2229,6 +2310,7 @@ export async function runHeadlessMasters(run, args = {}) {
         master: outcome.id,
         failure_kind: outcome.error,
         diagnostic: outcome.raw,
+        ...(outcome.schema_errors?.length ? { schema_errors: outcome.schema_errors } : {}),
         public_summary: outcome.error === "reader_language_mismatch"
           ? localized(run.language, {
             en: "The dedicated method worker returned reader-facing content in the wrong language; no method-seat statement is available.",
@@ -2272,6 +2354,7 @@ export async function runHeadlessMasters(run, args = {}) {
 export async function runDebateRole(run, role, context, timeoutMs) {
   const prompt = debatePrompt(role, run, context);
   updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round });
+  const workerStartedAt = Date.now();
   let result = timeoutMs <= 0
     ? deadlineResult(run)
     : await runCodex(prompt, timeoutMs, ({ pid, output }) => {
@@ -2311,7 +2394,10 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   };
   let packet = enforceLanguage(debateFromCodex(result, role, run, prompt));
   if (result.ok && ["parse_failed", "reader_language_mismatch"].includes(packet.failure_kind)) {
-    const repairBudget = Math.min(LIMITS.PARSE_REPAIR_MS, remainingCouncilBudget(run, LIMITS.PARSE_REPAIR_MS));
+    const repairBudget = parseRepairBudget(run, {
+      stageBudgetMs: timeoutMs,
+      stageStartedAtMs: workerStartedAt,
+    });
     if (repairBudget > 0) {
       const repairReason = packet.failure_kind;
       appendEvent(run, "agent_parse_repair", { role, round: context.round, budget_ms: repairBudget, reason: repairReason });
@@ -2324,6 +2410,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
         role === "portfolio_manager"
           ? `portfolio_manager.report_markdown is mandatory and must contain every authored report section. Required headings: ${requiredReportSectionAliases(run).map((section) => section.suggested_heading).join("; ")}.`
           : "",
+        schemaRepairIssuePrompt(packet.schema_errors),
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve facts, numbers, source IDs and exact Q&A bindings.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");

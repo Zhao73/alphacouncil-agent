@@ -2,6 +2,23 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.3] — 2026-08-03
+
+### Fixed
+
+- Parse-only schema repairs now receive pace-aware, deadline-safe budgets instead of a fixed
+  30 seconds, and receive bounded validator paths plus the exact evidence contract without
+  being allowed to search or invent sources.
+- Full reports and chat handoffs both end with the complete selected-seat ledger. Missing
+  evidence is reported as incomplete coverage, and unpublished runs no longer advertise a
+  publication marker that does not exist.
+- SEC split conversion facts now prevent stock splits from being misclassified as economic
+  dilution. Unverified split-like jumps fail closed for manual adjustment rather than becoming
+  a pass or an elimination.
+- Evidence prompts must retain available options open-interest data and verify regulator plus
+  issuer-official news coverage before making a no-event claim. Failure reports now route
+  forward-expectations and earnings-deep-dive packets into their current sections.
+
 ## [1.1.2] — 2026-08-03
 
 ### Fixed

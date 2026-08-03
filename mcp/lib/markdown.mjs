@@ -609,18 +609,30 @@ export function writeAnalystMarkdownFiles(run, debate = {}) {
 
 export function writeReportQuality(run, markdown, handoffMarkdown) {
   const report = validateFinalReport(markdown, run);
+  const reportTail = validateUserResponse(markdown, run);
   const handoff = handoffMarkdown === undefined ? null : validateUserResponse(handoffMarkdown, run);
   const quality = handoff ? {
     ...report,
     schema_version: 3,
     final_report_status: report.status,
+    final_report_method_statement_coverage: reportTail,
     handoff_method_statement_coverage: handoff,
-    status: report.status === "passed" && handoff.status === "passed" ? "passed" : "needs_revision",
+    status: report.status === "passed" && reportTail.status === "passed" && handoff.status === "passed"
+      ? "passed"
+      : "needs_revision",
     missing: [
       ...report.missing,
+      ...reportTail.missing.map((item) => `final report: ${item}`),
       ...handoff.missing.map((item) => `handoff: ${item}`),
     ],
-  } : report;
+  } : {
+    ...report,
+    schema_version: 3,
+    final_report_status: report.status,
+    final_report_method_statement_coverage: reportTail,
+    status: report.status === "passed" && reportTail.status === "passed" ? "passed" : "needs_revision",
+    missing: [...report.missing, ...reportTail.missing.map((item) => `final report: ${item}`)],
+  };
   run.report_quality = quality;
   writeJson(join(runPath(run.run_id), "report_quality.json"), quality);
   return quality;
@@ -884,14 +896,15 @@ function withQuickScope(run, markdown) {
 export function finalReportMarkdown(run, manager) {
   const gate = verificationStatus(run);
   const completeness = completenessStatus(run);
+  const sourceBody = withoutHandoffMethodTail(manager.report_markdown || manager.summary);
   const reportBody = withRecordedMasterBench(
     run,
     withRecordedInstrumentStructure(
       run,
-      withRecordedPriceSnapshot(run, manager.report_markdown || manager.summary),
+      withRecordedPriceSnapshot(run, sourceBody),
     ),
   );
-  return withDisclaimer(
+  const report = withDisclaimer(
     withCompletenessBanner(
       withQuickScope(
         run,
@@ -902,10 +915,13 @@ export function finalReportMarkdown(run, manager) {
     ),
     run.language
   );
+  return `${report.trimEnd()}\n\n${handoffMethodTail(run, handoffCopy(run.language))}`;
 }
 
 export function writeArtifactIndex(run, debate = {}) {
   const artifacts = artifactPaths(run);
+  const publicationExpected = run.report_quality?.status === "passed"
+    && new Set(["complete", "degraded", "incomplete", "needs_verification", "needs_revision", "failed"]).has(run.status);
   const key = languageKey(run.language);
   const label = {
     zh: { title: "AlphaCouncil 工件索引", run: "运行 ID", status: "状态", quality: "报告质量", main: "主要文件", final: "最终报告", handoff: "聊天交接摘要", trace: "全部代理审计追踪", evidence: "证据 JSON", decision: "决策 JSON", sources: "来源清单", statusFile: "状态", events: "事件", qualityFile: "报告质量", publication: "发布提交标记", analysts: "分析师 Markdown 文件", masters: "方法席 Markdown 文件" },
@@ -931,7 +947,9 @@ export function writeArtifactIndex(run, debate = {}) {
     `- ${label.statusFile}: ${artifacts.status_json}`,
     `- ${label.events}: ${artifacts.events_jsonl}`,
     `- ${label.qualityFile}: ${artifacts.report_quality_json}`,
-    `- ${label.publication}: ${artifacts.publication_manifest_json}`,
+    publicationExpected
+      ? `- ${label.publication}: ${artifacts.publication_manifest_json}`
+      : "",
     "",
     `## ${label.analysts}`,
     "",
@@ -1262,6 +1280,21 @@ function handoffMethodTail(run, copy) {
     blocks.join("\n") || `- ${copy.missing}`,
     `<!-- ${HANDOFF_METHOD_TAIL_END_MARKER} -->`,
   ].join("\n");
+}
+
+function withoutHandoffMethodTail(markdown) {
+  const begin = `<!-- ${HANDOFF_METHOD_TAIL_MARKER} -->`;
+  const end = `<!-- ${HANDOFF_METHOD_TAIL_END_MARKER} -->`;
+  let text = String(markdown || "");
+  let beginAt = text.indexOf(begin);
+  while (beginAt >= 0) {
+    const endAt = text.indexOf(end, beginAt + begin.length);
+    text = endAt < 0
+      ? text.slice(0, beginAt)
+      : `${text.slice(0, beginAt)}${text.slice(endAt + end.length)}`;
+    beginAt = text.indexOf(begin);
+  }
+  return text.trimEnd();
 }
 
 export function userResponseMarkdown(run, manager) {

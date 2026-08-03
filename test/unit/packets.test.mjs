@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { __test__ } from "../../mcp/server.mjs";
-import { debateQnaGate, firstFailedDebateResult } from "../../mcp/lib/packets.mjs";
+import { debateQnaGate, firstFailedDebateResult, managerFallback } from "../../mcp/lib/packets.mjs";
 
 import { scopedPacket } from "../helpers/fixtures.mjs";
 
@@ -107,4 +107,33 @@ test("debate transport diagnostics retain an early-round failure after a later s
     { result: later },
   ]), early);
   assert.equal(firstFailedDebateResult([{ result: later }]), null);
+});
+
+test("manager fallback routes the current analyst tasks into revision and earnings-call sections", () => {
+  const packet = (task, summary) => ({
+    task,
+    summary,
+    confidence: "high",
+    claims: [],
+    open_questions: [],
+    sources: [],
+  });
+  const report = managerFallback({
+    run_id: "FALLBACK-MAPPING",
+    symbol: "TEST",
+    as_of: "2026-08-03",
+    language: "English",
+    dry_run: false,
+    master_opinions: [],
+    packets: [
+      packet("forward_expectations", "FORWARD_EXPECTATIONS_SENTINEL"),
+      packet("earnings_deep_dive", "EARNINGS_DEEP_DIVE_SENTINEL"),
+    ],
+  }).report_markdown;
+  const section = (heading) => report.split(`## ${heading}\n`)[1].split("\n## ")[0];
+
+  assert.match(section("Analyst Rating and Target-Price Revisions"), /FORWARD_EXPECTATIONS_SENTINEL/);
+  assert.doesNotMatch(section("Analyst Rating and Target-Price Revisions"), /No sell-side revision evidence/);
+  assert.match(section("Earnings Call Management Signals"), /EARNINGS_DEEP_DIVE_SENTINEL/);
+  assert.doesNotMatch(section("Earnings Call Management Signals"), /No earnings-call evidence/);
 });

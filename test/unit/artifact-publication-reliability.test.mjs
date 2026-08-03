@@ -28,6 +28,7 @@ const {
   publishFinalArtifacts,
   writeAllAgentsMarkdown,
   writeFinalArtifacts,
+  writeReportQuality,
 } = await import("../../mcp/lib/markdown.mjs");
 const { recoverInterruptedBackgroundRuns } = await import("../../mcp/lib/background-recovery.mjs");
 
@@ -183,6 +184,7 @@ test("publication marker commits last, covers the delivery set, and terminal rep
   const result = writeFinalArtifacts(run, debate);
   assert.equal(result.report_quality.status, "passed", result.report_quality.missing.join("; "));
   const markerPath = result.artifacts.publication_manifest_json;
+  assert.match(readFileSync(result.artifacts.artifact_index_md, "utf8"), /publication_manifest\.json/u);
   assert.equal(existsSync(markerPath), false, "rendering alone must not publish before terminal state is saved");
   appendEvent(run, "run_complete", { decision: debate.manager.rating, winner: debate.manager.winner });
   saveRun(run);
@@ -236,6 +238,55 @@ test("publication marker commits last, covers the delivery set, and terminal rep
     () => writeJson(result.artifacts.evidence_json, { ...readJson(result.artifacts.evidence_json), status: "failed" }),
     /refusing to modify immutable published artifact/u,
   );
+});
+
+test("a needs-revision artifact index never promises a publication marker and both delivery files retain the failure ledger tail", () => {
+  const run = fixtureRun("UNPUBLISHED-NEEDS-REVISION");
+  run.status = "incomplete";
+  run.phase = "incomplete";
+  run.masters = ["master_buffett"];
+  run.master_status = {
+    master_buffett: { master: "master_buffett", status: "skipped", error: "evidence_gate_failed" },
+  };
+  run.master_opinions = [];
+  run.task_status.market_data = { task: "market_data", status: "timed_out", error: "timeout" };
+  const fallback = { ...manager(), decision_available: false, rating: null, winner: null };
+  const debate = { manager: fallback };
+  const dir = runPath(run.run_id);
+  mkdirSync(dir, { recursive: true });
+  writeJson(join(dir, "decision.json"), fallback);
+
+  const result = writeFinalArtifacts(run, debate);
+  const end = "<!-- alphacouncil:handoff-method-seat-tail:v1:end -->";
+  const finalReport = readFileSync(result.artifacts.final_report_md, "utf8");
+  const handoff = readFileSync(result.artifacts.user_response_md, "utf8");
+  const index = readFileSync(result.artifacts.artifact_index_md, "utf8");
+  assert.equal(result.report_quality.status, "needs_revision");
+  assert.doesNotMatch(index, /publication_manifest\.json/u);
+  assert.equal(existsSync(result.artifacts.publication_manifest_json), false);
+  assert.ok(finalReport.trimEnd().endsWith(end));
+  assert.ok(handoff.trimEnd().endsWith(end));
+  assert.match(finalReport, /statement_status=not_produced; seat_status=skipped; not_a_directional_view=true/u);
+  assert.match(handoff, /statement_status=not_produced; seat_status=skipped; not_a_directional_view=true/u);
+});
+
+test("report quality rejects a final_report whose otherwise-valid method tail lost its terminal end marker", () => {
+  const run = fixtureRun("FINAL-REPORT-TAIL-GATE");
+  const debate = { manager: manager() };
+  const dir = runPath(run.run_id);
+  mkdirSync(dir, { recursive: true });
+  writeJson(join(dir, "decision.json"), debate.manager);
+  const result = writeFinalArtifacts(run, debate);
+  assert.equal(result.report_quality.status, "passed", result.report_quality.missing.join("; "));
+  const damaged = result.final_report_markdown.replace(
+    "<!-- alphacouncil:handoff-method-seat-tail:v1:end -->",
+    "",
+  );
+  const quality = writeReportQuality(run, damaged, result.user_response_markdown);
+  assert.equal(quality.final_report_status, "passed", "section quality remains a separate axis");
+  assert.equal(quality.status, "needs_revision");
+  assert.ok(quality.missing.some((item) => item.startsWith("final report: handoff method-seat tail end marker")));
+  assert.ok(quality.missing.includes("final report: handoff method-seat ledger is not the final section"));
 });
 
 test("a crash after terminal save but before marker is not rewritten as failed by startup recovery", () => {
