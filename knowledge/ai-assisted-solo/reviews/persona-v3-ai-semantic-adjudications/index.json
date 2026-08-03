@@ -13,17 +13,6 @@
       "skeptic_artifact_hash": "sha256:08f5ec4efa82bfa4054ebbeb1c51e3c9c24df82693a4bc596ca7167e90c95098"
     },
     {
-      "adjudication_artifact_hash": "sha256:b3c59f22b41c452133bf4f035797dea22f06dc39ffdb1debacd865dce46a6c3d",
-      "candidate_id": "aschenbrenner_situational_awareness_2024",
-      "content_hash": "sha256:68735f1b5a3d30fb276e42493389d016d4afb46fef922b44ed7ebf7ad55189d3",
-      "extractor_artifact_hash": "sha256:9b5fdde9858915f150ba552b90759b2bff4b73d99c4e1db77e887183af1c3761",
-      "final_overall_verdict": "partial",
-      "persona_id": "master_aschenbrenner",
-      "proposition_adjudication_count": 1,
-      "relative_path": "master_aschenbrenner/aschenbrenner_situational_awareness_2024.json",
-      "skeptic_artifact_hash": "sha256:b4f6081f121d2a399be4f9c8c7a880941b64085d293fc8afeeb57c3c10a9d259"
-    },
-    {
       "adjudication_artifact_hash": "sha256:84cd5bfc1ed32dc941d4f9f593036ab3fbab8186153692a7515ac633f043b692",
       "candidate_id": "asness_value_momentum_interaction",
       "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
@@ -354,22 +343,22 @@
       "skeptic_artifact_hash": "sha256:8a553c450254820499489a8beaec005b4686cf4f3784d0a09a7607d59b3a2c7f"
     }
   ],
-  "binding_pass_count": 32,
-  "candidate_count": 32,
+  "binding_pass_count": 31,
+  "candidate_count": 31,
   "candidate_verdict_counts": {
-    "partial": 10,
+    "partial": 9,
     "supported": 16,
     "unsupported": 0,
     "unverifiable": 6
   },
-  "canonical_master_count": 27,
+  "canonical_master_count": 26,
   "human_reviewed_count": 0,
-  "index_hash": "sha256:9d052ce5a24c0cf4d50f9f7be8c3cdfad2bb31ebd62cbe1e150403d3b2806fd4",
+  "index_hash": "sha256:8239c8a49b1e4e956b8cbcd77d4df23dbd6e07e2909088e9fbe0573dc409cc4d",
   "method_attribution_approved_count": 0,
   "production_effect": "none",
-  "proposition_adjudication_count": 29,
+  "proposition_adjudication_count": 28,
   "proposition_verdict_counts": {
-    "partial": 11,
+    "partial": 10,
     "supported": 18,
     "unsupported": 0,
     "unverifiable": 0
@@ -378,7 +367,7 @@
   "reviewer_kind": "ai",
   "role": "adjudicator",
   "schema_version": 1,
-  "seats_with_candidates": 26,
-  "skeptic_agreement_count": 29,
+  "seats_with_candidates": 25,
+  "skeptic_agreement_count": 28,
   "skeptic_disagreement_count": 0
 }

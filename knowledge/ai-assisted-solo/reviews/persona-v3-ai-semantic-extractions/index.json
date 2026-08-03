@@ -11,15 +11,6 @@
       "relative_path": "master_ackman/ackman_pershing_netflix_letter_2022.json"
     },
     {
-      "artifact_hash": "sha256:9b5fdde9858915f150ba552b90759b2bff4b73d99c4e1db77e887183af1c3761",
-      "candidate_id": "aschenbrenner_situational_awareness_2024",
-      "content_hash": "sha256:68735f1b5a3d30fb276e42493389d016d4afb46fef922b44ed7ebf7ad55189d3",
-      "persona_id": "master_aschenbrenner",
-      "proposition_count": 1,
-      "readability": "readable",
-      "relative_path": "master_aschenbrenner/aschenbrenner_situational_awareness_2024.json"
-    },
-    {
       "artifact_hash": "sha256:c70eb39df202924ee504bbc7656f09d9ca7198fdb1521eedf35511212f079567",
       "candidate_id": "asness_value_momentum_interaction",
       "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
@@ -290,21 +281,21 @@
       "relative_path": "master_thorp/thorp_kelly_stock_market.json"
     }
   ],
-  "candidate_count": 32,
-  "canonical_master_count": 27,
+  "candidate_count": 31,
+  "canonical_master_count": 26,
   "human_reviewed_count": 0,
-  "index_hash": "sha256:712b227059e659c9c0561556a4b5feb65633d255af4322c3a985b9d617217c25",
+  "index_hash": "sha256:0def99a35a92d190ba0c87192db25043564f54fa821fba8e7edc9c84e9b60329",
   "method_attribution_approved_count": 0,
   "production_effect": "none",
-  "proposition_count": 29,
+  "proposition_count": 28,
   "readability_counts": {
     "partial": 4,
-    "readable": 26,
+    "readable": 25,
     "unreadable": 2
   },
   "review_stage": "round_1_semantic_extraction",
   "reviewer_kind": "ai",
   "role": "extractor",
   "schema_version": 1,
-  "seats_with_candidates": 26
+  "seats_with_candidates": 25
 }

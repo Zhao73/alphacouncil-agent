@@ -1,0 +1,18 @@
+{
+  "name": "@alphacouncil/dev-fuzz",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "fuzz:regression": "jazzer ./targets/transport-runtime.mjs --sync --mode=regression --dryRun ./corpus/transport-runtime",
+    "fuzz:pr": "jazzer ./targets/transport-runtime.mjs --sync --timeout=2000 ./.work/corpus ./corpus/transport-runtime -- -max_total_time=30 -seed=1337 -max_len=65536 -rss_limit_mb=2048 -use_value_profile=1 -artifact_prefix=./artifacts/ -print_final_stats=1",
+    "fuzz:manual": "jazzer ./targets/transport-runtime.mjs --sync --timeout=2000 ./.work/corpus ./corpus/transport-runtime -- -max_total_time=300 -max_len=65536 -rss_limit_mb=2048 -use_value_profile=1 -artifact_prefix=./artifacts/ -print_final_stats=1",
+    "fuzz:scheduled": "jazzer ./targets/transport-runtime.mjs --sync --timeout=2000 ./.work/corpus ./corpus/transport-runtime -- -max_total_time=600 -max_len=65536 -rss_limit_mb=2048 -use_value_profile=1 -artifact_prefix=./artifacts/ -print_final_stats=1",
+    "fuzz:node": "node ./runner/node-fuzz.mjs --runs=50000 --seed=1337"
+  },
+  "devDependencies": {
+    "@jazzer.js/core": "4.0.0"
+  }
+}

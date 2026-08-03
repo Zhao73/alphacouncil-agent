@@ -62,7 +62,22 @@ before(async () => {
       task: "market_data",
       packet: {
         summary: "The market-data fixture records sufficient English evidence for the visible method-stage barrier.",
-        claims: [], metrics: {}, sources: [], open_questions: [], confidence: "medium",
+        claims: [{
+          claim: "The fixture records one bounded market-data fact for the visible method-stage barrier.",
+          evidence: "The dated fixture source directly supports this bounded market-data fact.",
+          confidence: "medium",
+          source_ids: ["S1"],
+        }],
+        metrics: {},
+        sources: [{
+          id: "S1",
+          title: "Visible master-stage fixture source",
+          url: "https://example.com/masters-market-data",
+          published_at: "2026-08-01",
+          retrieved_at: "2026-08-03",
+        }],
+        open_questions: [],
+        confidence: "medium",
       },
     }));
   }
@@ -220,6 +235,7 @@ test("stances a caller plausibly writes are mapped rather than discarded", async
         verdict: "The evidence supports only the normalized stance in this test fixture.",
         stance: given,
         summary: "This fixture supplies valid English prose while testing stance aliases only.",
+        source_ids: ["market_data:S1"],
       },
     }));
     assert.equal(result.opinion.stance, expected, `${given} should normalize to ${expected}`);

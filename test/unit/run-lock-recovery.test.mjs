@@ -14,6 +14,11 @@ function store() {
   return mkdtempSync(join(tmpdir(), "alphacouncil-run-locks-"));
 }
 
+function identity(machine, birth, boot = "b") {
+  const part = (source, value) => ({ capability: "verified", source, fingerprint: `sha256:${value.repeat(64)}` });
+  return { schema_version: 1, machine: part("test_machine", machine), boot: part("test_boot", boot), process_birth: part("test_birth", birth) };
+}
+
 test("run locks contain owner/time metadata and release only their own token", () => {
   const dir = store();
   try {
@@ -85,17 +90,50 @@ test("a dead same-host run owner recovers after grace and cannot unlink its succ
   }
 });
 
+test("a hostname rename still probes the stable machine and detects PID reuse only after grace", () => {
+  const dir = store();
+  try {
+    const first = acquireRunLock(RUN_ID, {
+      runsDir: dir, now: 1_000, ownerPid: 4242, hostname: "old-name", ownerIdentity: identity("a", "c"),
+    });
+    const live = inspectRunLock(RUN_ID, {
+      runsDir: dir, now: 2_000, hostname: "new-name", probePid: () => true, identityProbe: () => identity("a", "c"),
+    });
+    assert.equal(live.owner_state, "alive");
+    assert.equal(live.same_host, false);
+    assert.equal(live.same_machine, true);
+
+    assert.throws(() => acquireRunLock(RUN_ID, {
+      runsDir: dir, now: 5_999, deadOwnerGraceMs: 5_000, hostname: "new-name",
+      probePid: () => true, identityProbe: () => identity("a", "d"),
+    }), (error) => error?.data?.lock_owner_state === "dead");
+    const recovered = acquireRunLock(RUN_ID, {
+      runsDir: dir, now: 6_000, deadOwnerGraceMs: 5_000, hostname: "new-name",
+      probePid: () => true, identityProbe: () => identity("a", "d"),
+    });
+    assert.equal(recovered.recovered, true);
+    assert.equal(recovered.recovered_lock.token, first.metadata.token);
+    assert.equal(first.release(), false);
+    recovered.release();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("foreign, malformed, traversing and symlinked run locks fail closed", () => {
   const dir = store();
   const outside = store();
   try {
-    const foreign = acquireRunLock(RUN_ID, { runsDir: dir, now: 1_000, ownerPid: 999_999, hostname: "foreign-host" });
+    const foreign = acquireRunLock(RUN_ID, {
+      runsDir: dir, now: 1_000, ownerPid: 999_999, hostname: "same-name", ownerIdentity: identity("a", "c"),
+    });
     assert.throws(() => acquireRunLock(RUN_ID, {
       runsDir: dir,
       now: 99_999,
       deadOwnerGraceMs: 0,
-      hostname: "local-host",
+      hostname: "same-name",
       probePid: () => false,
+      identityProbe: () => identity("d", "e"),
     }), (error) => error?.data?.lock_owner_state === "foreign_unverifiable");
     foreign.release();
     const path = runLockPath(RUN_ID, { runsDir: dir });

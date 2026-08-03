@@ -1,8 +1,81 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import { createHash } from "node:crypto";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readSync,
+  readdirSync,
+  statSync,
+  unlinkSync,
+} from "node:fs";
 import { join } from "node:path";
 import { CODEX_CMD, DATA_DIR, LIMITS } from "./constants.mjs";
+import { MAX_WORKER_JSON_CHARS } from "./bounded-json.mjs";
 import { appendLimited } from "./text.mjs";
+
+const OUTPUT_DIAGNOSTIC_BYTES = 4096;
+// parseJsonTransport limits JavaScript characters, while this layer sees UTF-8 bytes. A valid
+// CJK-heavy payload may use three bytes per character (and supplementary Unicode four), so the
+// pre-read ceiling must preserve every payload the downstream character contract can accept.
+export const MAX_WORKER_OUTPUT_BYTES = MAX_WORKER_JSON_CHARS * 4;
+
+function readExactly(fd, length, position = 0) {
+  const output = Buffer.alloc(length);
+  let offset = 0;
+  while (offset < length) {
+    const bytesRead = readSync(fd, output, offset, length - offset, position + offset);
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  return offset === length ? output : output.subarray(0, offset);
+}
+
+/**
+ * Read a worker output without ever allocating a buffer proportional to an untrusted file.
+ * Oversized files are rejected before decoding; only bounded prefix/tail diagnostics and a
+ * fingerprint of those samples plus the byte count are retained. Do not hash the entire bad
+ * file: an attacker-controlled multi-gigabyte output must not turn rejection into an I/O stall.
+ */
+export function readWorkerOutputBounded(
+  path,
+  { maxBytes = MAX_WORKER_OUTPUT_BYTES, diagnosticBytes = OUTPUT_DIAGNOSTIC_BYTES } = {},
+) {
+  const fd = openSync(path, "r");
+  try {
+    const size = fstatSync(fd).size;
+    if (size <= maxBytes) {
+      return {
+        text: readExactly(fd, size).toString("utf8"),
+        output_bytes: size,
+        output_too_large: false,
+      };
+    }
+
+    const sampleSize = Math.min(Math.max(0, Math.floor(Number(diagnosticBytes) || 0)), size, 64 * 1024);
+    const prefix = readExactly(fd, sampleSize);
+    const tail = readExactly(fd, sampleSize, Math.max(0, size - sampleSize));
+    const fingerprint = createHash("sha256")
+      .update(`bytes:${size}\n`)
+      .update(prefix)
+      .update(tail)
+      .digest("hex");
+    return {
+      text: "",
+      output_bytes: size,
+      output_too_large: true,
+      output_fingerprint_sha256: fingerprint,
+      output_hash_scope: "byte_count_plus_prefix_tail",
+      output_prefix: prefix.toString("utf8"),
+      output_tail: tail.toString("utf8"),
+      max_output_bytes: maxBytes,
+    };
+  } finally {
+    closeSync(fd);
+  }
+}
 
 export function quoteCmdArg(value) {
   const text = String(value);
@@ -71,9 +144,10 @@ export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true } =
 
 export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}, runtime = {}) {
   return new Promise((resolvePromise) => {
-    mkdirSync(DATA_DIR, { recursive: true });
-    const outFile = join(DATA_DIR, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
-    const args = codexWorkerArgs(outFile, DATA_DIR, { search: runtime.search !== false });
+    const workerDataDir = runtime.dataDir || DATA_DIR;
+    mkdirSync(workerDataDir, { recursive: true });
+    const outFile = join(workerDataDir, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
+    const args = codexWorkerArgs(outFile, workerDataDir, { search: runtime.search !== false });
     const invocation = codexInvocation(args);
     const spawnWorker = runtime.spawn || spawn;
     const stopWorker = runtime.stopChild || stopChild;
@@ -81,7 +155,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       ? Math.max(0, runtime.sigkillGraceMs)
       : LIMITS.SIGKILL_GRACE_MS;
     const child = spawnWorker(invocation.command, invocation.args, {
-      cwd: DATA_DIR,
+      cwd: workerDataDir,
       stdio: ["pipe", "pipe", "pipe"],
       ...invocation.options,
     });
@@ -143,12 +217,40 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         try { unlinkSync(outFile); } catch {}
         return;
       }
-      let text = "";
-      if (existsSync(outFile)) text = readFileSync(outFile, "utf8");
+      let output = { text: "", output_bytes: 0, output_too_large: false };
+      try {
+        if (existsSync(outFile)) output = readWorkerOutputBounded(outFile);
+      } catch (error) {
+        finish({
+          ok: false,
+          code,
+          ...output,
+          output_read_error: true,
+          stderr: appendLimited(stderr, `\nworker output could not be read: ${error.message || error}`),
+          stdout,
+          outFile,
+          timedOut,
+        });
+        return;
+      }
+      if (output.output_too_large) {
+        stderr = appendLimited(
+          stderr,
+          `\nworker output exceeded ${output.max_output_bytes} bytes; bytes=${output.output_bytes}; fingerprint_sha256=${output.output_fingerprint_sha256}`,
+        );
+      }
       // A cooperative child may flush a valid-looking output and exit zero after it has
       // received our timeout signal. The deadline still won: post-timeout output must never
       // be promoted into evidence merely because shutdown happened cleanly.
-      finish({ ok: !timedOut && code === 0 && text.trim().length > 0, code, text, stderr, stdout, outFile, timedOut });
+      finish({
+        ok: !timedOut && code === 0 && !output.output_too_large && output.text.trim().length > 0,
+        code,
+        ...output,
+        stderr,
+        stdout,
+        outFile,
+        timedOut,
+      });
     });
   });
 }

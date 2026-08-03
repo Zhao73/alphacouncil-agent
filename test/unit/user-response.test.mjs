@@ -186,6 +186,48 @@ test("a whole-roster handoff ends with one readable statement for every selected
   assert.equal(validateUserResponse(markdown, fixture).status, "passed");
 });
 
+test("a full-roster handoff preserves 2,048 characters per method without clipping or reordering", () => {
+  const ids = compiledPersonaPacks().ids();
+  assert.equal(ids.length, CANONICAL_MASTER_COUNT);
+  const fixture = localizedRun("en-US", "ANALYST_PRESSURE", "unused");
+  fixture.masters = ids;
+  fixture.master_status = Object.fromEntries(ids.map((id) => [id, { master: id, status: "completed" }]));
+  const statements = ids.map((id, index) => {
+    const begin = `SEAT_${String(index + 1).padStart(2, "0")}_BEGIN|`;
+    const end = `|SEAT_${String(index + 1).padStart(2, "0")}_END`;
+    const statement = `${begin}${"X".repeat(2_048 - begin.length - end.length)}${end}`;
+    assert.equal(statement.length, 2_048, id);
+    return statement;
+  });
+  fixture.master_opinions = ids.map((id, index) => ({
+    master: id,
+    stance: "cautious",
+    confidence: "medium",
+    voice_status: "completed",
+    statement_origin: "dedicated_worker",
+    voice_statement: statements[index],
+    dedicated_worker: { status: "completed" },
+  }));
+
+  const markdown = userResponseMarkdown(fixture, manager("Pressure fixture verdict."));
+  const tail = markdown.slice(markdown.indexOf("alphacouncil:handoff-method-seat-tail:v1:begin"));
+  assert.equal(statements.reduce((sum, statement) => sum + statement.length, 0), CANONICAL_MASTER_COUNT * 2_048);
+  for (const [index, id] of ids.entries()) {
+    assert.equal(tail.split(`(\`${id}\`)`).length - 1, 1, id);
+    assert.ok(tail.includes(statements[index]), `${id} statement was clipped`);
+    if (index > 0) {
+      assert.ok(tail.indexOf(statements[index - 1]) < tail.indexOf(statements[index]), `${id} was reordered`);
+    }
+  }
+  assert.ok(markdown.trimEnd().endsWith("<!-- alphacouncil:handoff-method-seat-tail:v1:end -->"));
+  assert.equal(validateUserResponse(markdown, fixture).status, "passed");
+
+  const damaged = markdown.replace(statements[13].slice(-64), "…");
+  const damagedQuality = validateUserResponse(damaged, fixture);
+  assert.equal(damagedQuality.status, "needs_revision");
+  assert.ok(damagedQuality.missing.some((item) => item.includes(ids[13])));
+});
+
 test("a seat's own conclusion reaches the handoff instead of being clipped away", () => {
   // The statement opens with the evidence and closes with the action, so a one-line budget
   // always cut the conclusion. On a real run this made seven seats that all spoke read as

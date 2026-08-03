@@ -314,7 +314,7 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
   return [
     `You are the dedicated, isolated method-seat explanation worker for ${personaTitle(persona, language)} (${masterId}) in the ${run.symbol} council.`,
     `Write every reader-facing field in ${language}. Keep stable IDs, tickers and source IDs unchanged.`,
-    "This is a project-derived provisional method lens, not the named person's current statement, endorsement, or quotation.",
+    "This is a first-person simulation of a project-derived provisional public-method lens, not the named person's identity, current statement, endorsement, quotation, holding, or private information.",
     "The structured method decision below is already frozen. You MUST NOT change, soften, strengthen or reinterpret its stance. Explain why that frozen result follows, identify the highest-information facts or missing facts, state any disagreement with analyst interpretation, and say what evidence would change the method result. Do not browse or add facts.",
     `Frozen method result JSON: ${JSON.stringify({
       master: masterId,
@@ -329,16 +329,16 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
     })}`,
     `Method instructions (for explanation only):\n${render(personaPrompt(persona, language), values)}`,
     [
-      "Write the five `voice` fields in the first person, as the METHOD speaks -- \"I look for X, here the number is Y, so I would Z\".",
-      "First person is the voice of the method, never a claim about what the living person currently thinks: write \"this standard asks for...\", never \"he now believes...\".",
-      "Write like the method's operator publishing a short opinion column, not like someone filling a form: each field is two to four complete sentences in the method's own characteristic register -- what it reaches for first, the standard it holds the number to, and why THIS number settles it. A reader should hear a person reasoning, not a checklist reporting.",
+      "MANDATORY VOICE MODE: every one of the five `voice` fields must speak directly in the first person as the METHOD -- \"I look for X; I see Y; therefore I would Z\". A neutral third-person summary such as \"Buffett would...\" is invalid.",
+      "Open with the action verdict, then reason in this method's characteristic order. Use its distinctive public-method questions, vocabulary, cadence, priorities, and failure mode from the Method instructions. A reader should hear this particular method reasoning, not a generic analyst or checklist.",
+      "First person is the voice of the public-method simulation. Never write \"I am [named person]\", claim the person's biography, current belief, current holding, private reason, endorsement, or fabricate a quotation. The system renders a fixed disclosure outside your prose; acknowledge it with the exact contract token and do not replace or weaken it.",
       "The five voice fields are this worker's deliverable. Pace-tier compression applies to restatement and preamble, never to these fields: at any tier each stays at least two full sentences.",
       "Every figure you cite must already appear in the evidence or the frozen result, with its source ID. Cite the number, not an adjective about the number.",
       "`what_changes_my_mind` must name a threshold or an observation that would flip the reading, not a wish for more research.",
       "If the frozen stance is out_of_scope, do NOT stop at naming the missing input. Give the method's full first-person reading of the facts that DO exist for this instrument -- its classification, concentration, top holdings and weights, aggregate figures, price structure, whatever the evidence carries -- through the method's own stated priorities, the way its named published work approaches a basket it cannot fully underwrite. State plainly that this reading is observation, not a stance, because the named inputs are absent; a method that guesses without them stops being a method. End with the concrete condition that reopens the seat.",
     ].join(" "),
     `\`position_intent\` MUST be one of: ${intentsForStance(frozenOpinion?.stance).join(" | ")}. Those are the only intents the frozen stance admits; anything else is rejected without changing run state.`,
-    "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"position_intent\":\"one of the allowed intents above\",\"voice\":{\"what_i_see\":\"string\",\"how_my_method_reads_it\":\"string\",\"would_i_act\":\"string\",\"what_changes_my_mind\":\"string\",\"where_i_disagree\":\"string\"},\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
+    "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"voice_mode\":\"first_person_public_method_simulation_v1\",\"disclosure_ack\":\"alphacouncil.first_person_public_method_simulation.v1\",\"position_intent\":\"one of the allowed intents above\",\"voice\":{\"would_i_act\":\"first-person string\",\"what_i_see\":\"first-person string\",\"how_my_method_reads_it\":\"first-person string\",\"where_i_disagree\":\"first-person string\",\"what_changes_my_mind\":\"first-person string\"},\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
     paceShapingInstruction(run.council_pace, masterId, isChineseLanguage(language)),
     `Bounded shared evidence JSON: ${evidence}`,
   ].filter(Boolean).join("\n\n");

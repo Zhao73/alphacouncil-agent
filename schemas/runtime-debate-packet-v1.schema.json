@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-debate-packet-v1.schema.json",
+  "title": "AlphaCouncil headless debate worker packet",
+  "type": "object",
+  "required": [
+    "verdict",
+    "rating",
+    "winner",
+    "summary",
+    "long_thesis",
+    "short_thesis",
+    "valuation_range",
+    "catalysts",
+    "risks",
+    "position",
+    "invalidation",
+    "source_ids",
+    "confidence"
+  ],
+  "properties": {
+    "verdict": { "type": "string", "pattern": "\\S" },
+    "rating": { "enum": ["Buy", "Overweight", "Hold", "Underweight", "Sell"] },
+    "winner": { "enum": ["bull", "bear", "balanced", "unknown"] },
+    "summary": { "type": "string", "pattern": "\\S" },
+    "long_thesis": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "short_thesis": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "valuation_range": { "type": "string" },
+    "catalysts": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "risks": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "position": { "type": "string" },
+    "invalidation": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "\\S" }
+    },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "questions": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "questions_answered": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question", "answer"],
+        "properties": {
+          "question": { "type": "string", "pattern": "\\S" },
+          "answer": { "type": "string", "pattern": "\\S" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "report_markdown": { "type": "string" }
+  },
+  "additionalProperties": true
+}

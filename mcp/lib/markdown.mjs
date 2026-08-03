@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   DEBATE_ROLES,
@@ -9,7 +9,7 @@ import {
   RECORDED_INSTRUMENT_MARKER_PREFIX,
   REPORT_SECTIONS,
 } from "./constants.mjs";
-import { writeJson } from "./fsutil.mjs";
+import { readJson, readJsonl, writeJson, writeTextAtomic } from "./fsutil.mjs";
 import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
@@ -18,7 +18,16 @@ import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, validateUserResponse, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { composeVoiceStatement, intentLabel, VOICE_FIELDS, voiceDisclaimer, voiceFieldLabel } from "./voice.mjs";
-import { agentState, appendEvent, artifactPaths, runPath, taskState } from "./run-store.mjs";
+import {
+  agentState,
+  appendEvent,
+  artifactPaths,
+  readPublicationManifest,
+  runPath,
+  taskState,
+  verifyPublishedArtifact,
+  writePublicationManifest,
+} from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 
 export function renderPacketMarkdown(packet, index = 0, language = packet?.language) {
@@ -89,6 +98,8 @@ export function renderMasterMarkdown(opinion, lang) {
   }[languageKey(lang)];
   return [
     `## ${title}`,
+    "",
+    voiceDisclaimer(lang),
     "",
     `- ID: ${opinion.master}`,
     `- ${labels.stance}: ${opinion.stance || "unknown"}`,
@@ -501,6 +512,10 @@ export function renderDebateMarkdown(agent, language = agent?.language) {
 
 export function writeAllAgentsMarkdown(run, debate = {}) {
   const dir = runPath(run.run_id);
+  const path = join(dir, "all_agents.md");
+  // Several orchestration paths historically rewrote this trace after final publication.
+  // Once committed, keep the verified bytes immutable so the manifest cannot go stale.
+  if (verifyPublishedArtifact(run, "all_agents_md")) return path;
   const key = languageKey(run.language);
   const label = {
     zh: { title: "全部代理审计追踪", metadata: "运行元数据", runId: "运行 ID", symbol: "代码", asOf: "截至", language: "语言", execution: "执行模式", visibility: "要求可见", dry: "演练", status: "状态", phase: "阶段", started: "开始", updated: "更新", completed: "完成", tasks: "任务", taskStatus: "证据席状态", debateStatus: "辩论席状态", evidence: "证据分析子代理", masters: "方法席", debate: "多空辩论与组合经理", none: "无" },
@@ -570,15 +585,14 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
       renderDebateMarkdown(debate.manager, run.language),
     );
   }
-  const path = join(dir, "all_agents.md");
-  writeFileSync(path, `${sections.filter(Boolean).join("\n\n")}\n`);
+  writeTextAtomic(path, `${sections.filter(Boolean).join("\n\n")}\n`);
   return path;
 }
 
 export function writeAnalystMarkdownFiles(run, debate = {}) {
   const dir = runPath(run.run_id);
   for (const [index, packet] of (run.packets || []).entries()) {
-    writeFileSync(join(dir, `${packet.task}.md`), `${renderPacketMarkdown(packet, index, run.language)}\n`);
+    writeTextAtomic(join(dir, `${packet.task}.md`), `${renderPacketMarkdown(packet, index, run.language)}\n`);
   }
   const debateFiles = [
     ["bull_researcher", debate.bull],
@@ -586,10 +600,10 @@ export function writeAnalystMarkdownFiles(run, debate = {}) {
     ["portfolio_manager", debate.manager],
   ];
   for (const [role, packet] of debateFiles) {
-    if (packet) writeFileSync(join(dir, `${role}.md`), `${renderDebateMarkdown({ ...packet, role }, run.language)}\n`);
+    if (packet) writeTextAtomic(join(dir, `${role}.md`), `${renderDebateMarkdown({ ...packet, role }, run.language)}\n`);
   }
   for (const opinion of run.master_opinions || []) {
-    writeFileSync(join(dir, `${opinion.master}.md`), `${renderMasterMarkdown(opinion, run.language)}\n`);
+    writeTextAtomic(join(dir, `${opinion.master}.md`), `${renderMasterMarkdown(opinion, run.language)}\n`);
   }
 }
 
@@ -894,10 +908,10 @@ export function writeArtifactIndex(run, debate = {}) {
   const artifacts = artifactPaths(run);
   const key = languageKey(run.language);
   const label = {
-    zh: { title: "AlphaCouncil 工件索引", run: "运行 ID", status: "状态", quality: "报告质量", main: "主要文件", final: "最终报告", handoff: "聊天交接摘要", trace: "全部代理审计追踪", evidence: "证据 JSON", decision: "决策 JSON", sources: "来源清单", statusFile: "状态", events: "事件", qualityFile: "报告质量", analysts: "分析师 Markdown 文件", masters: "方法席 Markdown 文件" },
-    en: { title: "AlphaCouncil Artifact Index", run: "Run ID", status: "Status", quality: "Report quality", main: "Main Files", final: "Final report", handoff: "Chat handoff summary", trace: "Full agent audit trace", evidence: "Evidence JSON", decision: "Decision JSON", sources: "Source manifest", statusFile: "Status", events: "Events", qualityFile: "Report quality", analysts: "Analyst Markdown Files", masters: "Method-Seat Markdown Files" },
-    ja: { title: "AlphaCouncil 成果物索引", run: "実行 ID", status: "状態", quality: "レポート品質", main: "主要ファイル", final: "最終レポート", handoff: "チャット引継ぎ要約", trace: "全エージェント監査トレース", evidence: "証拠 JSON", decision: "判断 JSON", sources: "出典一覧", statusFile: "状態", events: "イベント", qualityFile: "レポート品質", analysts: "分析担当 Markdown ファイル", masters: "メソッド席 Markdown ファイル" },
-    ko: { title: "AlphaCouncil 산출물 색인", run: "실행 ID", status: "상태", quality: "보고서 품질", main: "주요 파일", final: "최종 보고서", handoff: "채팅 인계 요약", trace: "전체 에이전트 감사 추적", evidence: "증거 JSON", decision: "판단 JSON", sources: "출처 목록", statusFile: "상태", events: "이벤트", qualityFile: "보고서 품질", analysts: "분석가 Markdown 파일", masters: "방법론 좌석 Markdown 파일" },
+    zh: { title: "AlphaCouncil 工件索引", run: "运行 ID", status: "状态", quality: "报告质量", main: "主要文件", final: "最终报告", handoff: "聊天交接摘要", trace: "全部代理审计追踪", evidence: "证据 JSON", decision: "决策 JSON", sources: "来源清单", statusFile: "状态", events: "事件", qualityFile: "报告质量", publication: "发布提交标记", analysts: "分析师 Markdown 文件", masters: "方法席 Markdown 文件" },
+    en: { title: "AlphaCouncil Artifact Index", run: "Run ID", status: "Status", quality: "Report quality", main: "Main Files", final: "Final report", handoff: "Chat handoff summary", trace: "Full agent audit trace", evidence: "Evidence JSON", decision: "Decision JSON", sources: "Source manifest", statusFile: "Status", events: "Events", qualityFile: "Report quality", publication: "Publication commit marker", analysts: "Analyst Markdown Files", masters: "Method-Seat Markdown Files" },
+    ja: { title: "AlphaCouncil 成果物索引", run: "実行 ID", status: "状態", quality: "レポート品質", main: "主要ファイル", final: "最終レポート", handoff: "チャット引継ぎ要約", trace: "全エージェント監査トレース", evidence: "証拠 JSON", decision: "判断 JSON", sources: "出典一覧", statusFile: "状態", events: "イベント", qualityFile: "レポート品質", publication: "公開コミットマーカー", analysts: "分析担当 Markdown ファイル", masters: "メソッド席 Markdown ファイル" },
+    ko: { title: "AlphaCouncil 산출물 색인", run: "실행 ID", status: "상태", quality: "보고서 품질", main: "주요 파일", final: "최종 보고서", handoff: "채팅 인계 요약", trace: "전체 에이전트 감사 추적", evidence: "증거 JSON", decision: "판단 JSON", sources: "출처 목록", statusFile: "상태", events: "이벤트", qualityFile: "보고서 품질", publication: "게시 커밋 마커", analysts: "분석가 Markdown 파일", masters: "방법론 좌석 Markdown 파일" },
   }[key];
   const lines = [
     `# ${run.symbol} ${label.title}`,
@@ -917,6 +931,7 @@ export function writeArtifactIndex(run, debate = {}) {
     `- ${label.statusFile}: ${artifacts.status_json}`,
     `- ${label.events}: ${artifacts.events_jsonl}`,
     `- ${label.qualityFile}: ${artifacts.report_quality_json}`,
+    `- ${label.publication}: ${artifacts.publication_manifest_json}`,
     "",
     `## ${label.analysts}`,
     "",
@@ -929,7 +944,7 @@ export function writeArtifactIndex(run, debate = {}) {
         ...(run.master_opinions || []).map((o) => `- ${o.master} (${o.stance || "unknown"}): ${join(runPath(run.run_id), `${o.master}.md`)}`)]
       : []),
   ].filter(Boolean);
-  writeFileSync(artifacts.artifact_index_md, `${lines.join("\n")}\n`);
+  writeTextAtomic(artifacts.artifact_index_md, `${lines.join("\n")}\n`);
   return artifacts.artifact_index_md;
 }
 
@@ -1243,6 +1258,7 @@ function handoffMethodTail(run, copy) {
   return [
     `<!-- ${HANDOFF_METHOD_TAIL_MARKER} -->`,
     `## ${copy.masters} — ${selected.length}`,
+    voiceDisclaimer(run.language),
     blocks.join("\n") || `- ${copy.missing}`,
     `<!-- ${HANDOFF_METHOD_TAIL_END_MARKER} -->`,
   ].join("\n");
@@ -1334,11 +1350,24 @@ export function userResponseMarkdown(run, manager) {
 
 export function writeUserResponse(run, manager, renderedMarkdown) {
   const markdown = renderedMarkdown ?? userResponseMarkdown(run, manager);
-  writeFileSync(artifactPaths(run).user_response_md, `${markdown}\n`);
+  writeTextAtomic(artifactPaths(run).user_response_md, `${markdown}\n`);
   return markdown;
 }
 
 export function writeFinalArtifacts(run, debate = {}) {
+  const existingPublication = readPublicationManifest(run);
+  if (existingPublication) {
+    const artifacts = artifactPaths(run);
+    const quality = readJson(artifacts.report_quality_json);
+    run.report_quality = quality;
+    return {
+      final_report_markdown: readFileSync(artifacts.final_report_md, "utf8").replace(/\n$/u, ""),
+      user_response_markdown: readFileSync(artifacts.user_response_md, "utf8").replace(/\n$/u, ""),
+      report_quality: quality,
+      publication_manifest: existingPublication,
+      artifacts,
+    };
+  }
   const manager = debate.manager;
   if (!manager) {
     writeAnalystMarkdownFiles(run, debate);
@@ -1346,7 +1375,7 @@ export function writeFinalArtifacts(run, debate = {}) {
     return { artifacts: artifactPaths(run) };
   }
   const finalMarkdown = finalReportMarkdown(run, manager);
-  writeFileSync(artifactPaths(run).final_report_md, `${finalMarkdown}\n`);
+  writeTextAtomic(artifactPaths(run).final_report_md, `${finalMarkdown}\n`);
   const preliminaryReportQuality = validateFinalReport(finalMarkdown, run);
   let user_response_markdown = userResponseMarkdown(run, manager);
   const preliminaryHandoffQuality = validateUserResponse(user_response_markdown, run);
@@ -1369,5 +1398,34 @@ export function writeFinalArtifacts(run, debate = {}) {
   writeAnalystMarkdownFiles(run, debate);
   writeUserResponse(run, manager, user_response_markdown);
   writeArtifactIndex(run, debate);
-  return { final_report_markdown: finalMarkdown, user_response_markdown, report_quality: quality, artifacts: artifactPaths(run) };
+  writeAllAgentsMarkdown(run, debate);
+  return {
+    final_report_markdown: finalMarkdown,
+    user_response_markdown,
+    report_quality: quality,
+    publication_manifest: null,
+    artifacts: artifactPaths(run),
+  };
+}
+
+/**
+ * Publish only after the orchestrator has durably saved terminal evidence/status and then
+ * regenerated the trace from that saved state. The event log is append-only and deliberately
+ * outside the marker, so an interrupted post-marker event append is safely repairable.
+ */
+export function publishFinalArtifacts(run, debate = {}) {
+  if (run.report_quality?.status !== "passed") return null;
+  const artifacts = artifactPaths(run);
+  const publication_manifest = readPublicationManifest(run) || writePublicationManifest(run, debate);
+  const events = readJsonl(artifacts.events_jsonl).entries;
+  const alreadyRecorded = events.some((event) => event.type === "artifacts_published"
+    && event.publication_manifest === artifacts.publication_manifest_json
+    && event.published_at === publication_manifest.published_at);
+  if (!alreadyRecorded) {
+    appendEvent(run, "artifacts_published", {
+      publication_manifest: artifacts.publication_manifest_json,
+      published_at: publication_manifest.published_at,
+    });
+  }
+  return publication_manifest;
 }

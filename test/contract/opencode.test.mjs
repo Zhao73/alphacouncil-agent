@@ -88,7 +88,11 @@ test("Codex MCP wiring is isolated from OpenCode Claude-plugin compatibility imp
   );
 
   const codexPlugin = JSON.parse(readFileSync(repoFile(".codex-plugin/plugin.json"), "utf8"));
-  assert.equal(codexPlugin.mcpServers, "./codex.mcp.json");
+  assert.deepEqual(codexPlugin.mcpServers?.["alphacouncil-agent"], {
+    command: "node",
+    args: ["./mcp/server.mjs"],
+    cwd: ".",
+  });
   const codexMcp = JSON.parse(readFileSync(repoFile("codex.mcp.json"), "utf8"));
   assert.deepEqual(codexMcp.mcpServers?.["alphacouncil-agent"], {
     command: "node",

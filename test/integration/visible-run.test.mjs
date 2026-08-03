@@ -34,9 +34,20 @@ const bearQuestions = [
 
 const evidencePacket = (summary = "The visible analyst records sufficient English evidence for this integration protocol fixture.", extra = {}) => ({
   summary,
-  claims: [],
+  claims: [{
+    claim: "The fixture records one bounded material fact for downstream provenance checks.",
+    evidence: "The fixture source directly supports this bounded material fact.",
+    confidence: "medium",
+    source_ids: ["S1"],
+  }],
   metrics: {},
-  sources: [],
+  sources: [{
+    id: "S1",
+    title: "Visible integration fixture source",
+    url: "https://example.com/visible-fixture",
+    published_at: "2026-01-02",
+    retrieved_at: "2026-01-03",
+  }],
   open_questions: [],
   confidence: "medium",
   ...extra,
@@ -52,6 +63,12 @@ function debatePacket(role, round, extra = {}) {
     summary: `The ${role} completes round ${round} with sourced reasoning, explicit uncertainty, and a clear testable conclusion.`,
     long_thesis: role === "bull_researcher" ? ["Operating evidence supports the constructive scenario under the stated conditions."] : [],
     short_thesis: role === "bear_researcher" ? ["Valuation and execution evidence support the cautious scenario under the stated conditions."] : [],
+    valuation_range: "The bounded fixture supports only a conditional valuation range.",
+    catalysts: ["A dated primary-source update would test the recorded thesis."],
+    risks: ["New primary evidence could invalidate the bounded fixture conclusion."],
+    position: "Keep exposure bounded while the stated evidence conditions remain in force.",
+    invalidation: ["A contradictory primary filing invalidates the fixture conclusion."],
+    source_ids: ["market_data:S1"],
     questions: round >= 2 ? ownQuestions : [],
     questions_answered: round === 3
       ? opponentQuestions.map((question) => ({ question, answer: `The recorded evidence answers this exact question while preserving uncertainty: ${question}` }))
@@ -94,7 +111,16 @@ async function recordEvidence(runId, task = "market_data", packet = evidencePack
 async function recordMaster(runId, packet = {
   master: selectedMaster,
   acknowledged_stance: "out_of_scope",
-  statement: "The selected method seat records uncertainty without manufacturing an unsupported investment claim.",
+  voice_mode: "first_person_public_method_simulation_v1",
+  disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+  position_intent: "not_in_my_circle",
+  voice: {
+    would_i_act: "I would not issue a directional view from this incomplete evidence.",
+    what_i_see: "I see that the fixture lacks my required point-in-time method facts.",
+    how_my_method_reads_it: "I stop at my fact gate instead of manufacturing an unsupported investment claim.",
+    where_i_disagree: "I disagree with treating an abstention as a bearish vote.",
+    what_changes_my_mind: "I would reassess when dated primary sources provide my missing method-critical facts.",
+  },
   key_findings: ["The fixture does not contain the required method-specific point-in-time facts."],
   disagreements: [],
   what_would_change_my_mind: ["Provide the missing method-critical facts from dated primary sources."],
@@ -139,6 +165,14 @@ async function recordPm(runId) {
       rating: "Hold",
       winner: "balanced",
       summary: "The final decision weighs both completed sides, all exact questions, and the recorded evidence.",
+      long_thesis: ["The sourced operating fixture supports the conditional long case."],
+      short_thesis: ["The sourced risk fixture limits confidence in the long case."],
+      valuation_range: "The bounded fixture supports only a conditional valuation range.",
+      catalysts: ["A dated primary-source update would test the decision."],
+      risks: ["Contradictory primary evidence remains the principal risk."],
+      position: "Keep exposure bounded until the next primary-source update.",
+      invalidation: ["A contradictory primary filing invalidates the decision."],
+      source_ids: ["market_data:S1"],
       confidence: "medium",
       report_markdown: completeReport,
     },
@@ -164,6 +198,14 @@ async function recordThinPm(runId) {
       rating: "Hold",
       winner: "balanced",
       summary: "A submission whose analyst work log never names the planned analyst, which the structure gate must reject.",
+      long_thesis: ["The sourced operating fixture supports the conditional long case."],
+      short_thesis: ["The sourced risk fixture limits confidence in the long case."],
+      valuation_range: "The bounded fixture supports only a conditional valuation range.",
+      catalysts: ["A dated primary-source update would test the decision."],
+      risks: ["Contradictory primary evidence remains the principal risk."],
+      position: "Keep exposure bounded until the next primary-source update.",
+      invalidation: ["A contradictory primary filing invalidates the decision."],
+      source_ids: ["market_data:S1"],
       confidence: "medium",
       report_markdown: unloggedReport,
     },
@@ -259,6 +301,12 @@ before(async () => {
     run_id: citationRunId,
     task: "market_data",
     packet: evidencePacket("本席位记录了足够的中文证据，并按来源发布时的原文标题引用，不翻译标题。", {
+      claims: [{
+        claim: "本地固定测试记录了一条完整的中文重大事实。",
+        evidence: "该事实由下方保持原文标题的公开来源直接支持。",
+        confidence: "medium",
+        source_ids: ["S1"],
+      }],
       sources: [{ id: "S1", title: "Nokia beats quarterly estimates", url: "https://example.com/a", published_at: "2026-01-02", retrieved_at: "2026-01-03" }],
     }),
   });
@@ -277,7 +325,14 @@ before(async () => {
   recorded.wrongEvidence = await recordEvidence(
     languageRunId,
     "market_data",
-    evidencePacket("这是一份完全使用中文撰写的错误语言证据包，不能写入英文运行。"),
+    evidencePacket("这是一份完全使用中文撰写的错误语言证据包，不能写入英文运行。", {
+      claims: [{
+        claim: "这条中文重大事实故意违反英文运行的语言合同。",
+        evidence: "这段中文证据也故意违反英文运行的语言合同。",
+        confidence: "medium",
+        source_ids: ["S1"],
+      }],
+    }),
   );
   recorded.afterWrongEvidence = readFileSync(languageEvidencePath, "utf8");
   await recordEvidence(languageRunId);
@@ -285,7 +340,16 @@ before(async () => {
   recorded.wrongMaster = await recordMaster(languageRunId, {
     master: selectedMaster,
     acknowledged_stance: "out_of_scope",
-    statement: "这段中文内容不应进入要求英文输出的运行记录。",
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: "not_in_my_circle",
+    voice: {
+      would_i_act: "我不会在证据不足时给出方向判断。",
+      what_i_see: "我看到这段中文内容不应进入要求英文输出的运行记录。",
+      how_my_method_reads_it: "我按自己的方法先拒绝补造事实。",
+      where_i_disagree: "我不同意忽略本轮英文语言合同。",
+      what_changes_my_mind: "我只会在语言和事实合同都满足后改变判断。",
+    },
     key_findings: ["本方法席无法依据当前证据给出方向性判断。"],
     disagreements: [],
     what_would_change_my_mind: [],
@@ -299,7 +363,17 @@ before(async () => {
     languageRunId,
     "bull_researcher",
     1,
-    debatePacket("bull_researcher", 1, { verdict: "这是一段错误语言的多头发言。", summary: "这段中文内容不得写入英文运行。", long_thesis: [] }),
+    debatePacket("bull_researcher", 1, {
+      verdict: "这是一段错误语言的多头发言。",
+      summary: "这段中文内容不得写入英文运行。",
+      long_thesis: ["这条多头论据故意违反英文语言合同。"],
+      short_thesis: ["这条空头论据也故意违反英文语言合同。"],
+      valuation_range: "这段估值说明故意使用中文。",
+      catalysts: ["这条催化剂故意使用中文。"],
+      risks: ["这条风险故意使用中文。"],
+      position: "这条仓位说明故意使用中文。",
+      invalidation: ["这条反证条件故意使用中文。"],
+    }),
   );
   recorded.afterWrongDebate = readFileSync(languageEvidencePath, "utf8");
 
@@ -310,7 +384,16 @@ before(async () => {
   recorded.wrongFrozenStance = await recordMaster(barrierRunId, {
     master: selectedMaster,
     acknowledged_stance: "constructive",
-    statement: "This packet attempts to replace the frozen deterministic stance and must be rejected.",
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: "would_buy",
+    voice: {
+      would_i_act: "I would attempt to replace the frozen stance.",
+      what_i_see: "I see a fixture that must reject this changed stance.",
+      how_my_method_reads_it: "I am deliberately violating the frozen contract in this negative control.",
+      where_i_disagree: "I disagree with the frozen record only for this negative control.",
+      what_changes_my_mind: "I would preserve the original stance in a valid packet.",
+    },
     key_findings: [], disagreements: [], what_would_change_my_mind: [], source_ids: [], confidence: "low",
   });
   await recordMaster(barrierRunId);
@@ -429,7 +512,7 @@ test("single-round plus PM is rejected without writing a decision", () => {
 
 test("wrong-language visible packets are structured rejections with no completion write", () => {
   for (const response of [recorded.wrongEvidence, recorded.wrongMaster, recorded.wrongDebate]) {
-    assert.equal(response.error?.data?.reason, "READER_LANGUAGE_MISMATCH");
+    assert.equal(response.error?.data?.reason, "READER_LANGUAGE_MISMATCH", JSON.stringify(response).slice(0, 800));
     assert.equal(response.error?.code, -32602);
   }
   assert.equal(recorded.afterWrongEvidence, recorded.beforeWrongEvidence);
@@ -516,6 +599,22 @@ test("a portfolio manager packet with no report body is rejected at submission, 
   await recordMaster(runId);
   await recordFullDebate(runId);
 
+  const missingRatingPacket = debatePacket("portfolio_manager", 1, {
+    winner: "balanced",
+    report_markdown: completeReport,
+  });
+  delete missingRatingPacket.rating;
+  const missingRating = await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm-no-rating`,
+    packet: missingRatingPacket,
+  });
+  assert.equal(missingRating.error?.data?.reason, "VISIBLE_INPUT_SCHEMA_MISMATCH");
+  assert.equal(missingRating.error?.data?.schema_id, "runtime-debate-packet-v1");
+  assert.ok(missingRating.error.data.errors.some((item) => item.missing_property === "rating"));
+  assert.ok(!existsSync(join(dataDir, "runs", runId, "decision.json")));
+
   const rejected = await server.callTool("record_visible_decision", {
     run_id: runId,
     role: "portfolio_manager",
@@ -525,6 +624,14 @@ test("a portfolio manager packet with no report body is rejected at submission, 
       rating: "Hold",
       winner: "balanced",
       summary: "A submission that never carried a report body at all.",
+      long_thesis: ["The sourced operating fixture supports the conditional long case."],
+      short_thesis: ["The sourced risk fixture limits confidence in the long case."],
+      valuation_range: "The bounded fixture supports only a conditional valuation range.",
+      catalysts: ["A dated primary-source update would test the decision."],
+      risks: ["Contradictory primary evidence remains the principal risk."],
+      position: "Keep exposure bounded until the next primary-source update.",
+      invalidation: ["A contradictory primary filing invalidates the decision."],
+      source_ids: ["market_data:S1"],
       confidence: "medium",
     },
   });
@@ -549,4 +656,31 @@ test("a portfolio manager packet with no report body is rejected at submission, 
   assert.equal(accepted.report_quality, "passed");
   assert.equal(accepted.status, "complete");
   assert.notEqual(accepted.idempotent_replay, true);
+});
+
+test("visible runtime schemas reject hollow evidence and forged downstream provenance before persistence", async () => {
+  const runId = `SELFTEST-STRICT-RUNTIME-${process.pid}`;
+  await plan(runId);
+  const evidencePath = join(dataDir, "runs", runId, "evidence.json");
+  const before = readFileSync(evidencePath, "utf8");
+  const hollow = await server.callTool("record_visible_packet", {
+    run_id: runId,
+    task: "market_data",
+    packet: {},
+  });
+  assert.equal(hollow.error?.data?.reason, "VISIBLE_INPUT_SCHEMA_MISMATCH");
+  assert.equal(hollow.error?.data?.schema_id, "runtime-evidence-packet-v1");
+  assert.equal(readFileSync(evidencePath, "utf8"), before);
+
+  await recordEvidence(runId);
+  await recordMaster(runId);
+  const forged = await recordRound(
+    runId,
+    "bull_researcher",
+    1,
+    debatePacket("bull_researcher", 1, { source_ids: ["market_data:FORGED"] }),
+  );
+  assert.equal(forged.error?.data?.reason, "SOURCE_PROVENANCE_MISMATCH");
+  assert.deepEqual(forged.error?.data?.unknown_source_ids, ["market_data:FORGED"]);
+  assert.equal(existsSync(join(dataDir, "runs", runId, "bull_researcher.round-1.json")), false);
 });

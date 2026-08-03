@@ -347,7 +347,7 @@ function expectedEntries({ root, extractionRoot, productionRoot, personaDir, pdf
     const artifact = buildArtifact({ record, bytes, archivePath, extractorArtifact, extractorPath, judgment, pdftotext });
     entries.push({ record, artifact });
   }
-  if (entries.length !== 32 || catalog.size !== entries.length) throw new Error(`skeptic review requires exactly 32 candidates; got ${entries.length}/${catalog.size}`);
+  if (catalog.size !== entries.length) throw new Error(`skeptic review requires exactly ${catalog.size} candidates; got ${entries.length}/${catalog.size}`);
   entries.sort((a, b) => `${a.record.persona_id}/${a.record.candidate_id}`.localeCompare(`${b.record.persona_id}/${b.record.candidate_id}`));
   return entries;
 }

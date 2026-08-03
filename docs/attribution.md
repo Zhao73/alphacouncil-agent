@@ -87,10 +87,11 @@ proprietary research, or non-public information from any of them is used.
 
 ## On the master lenses
 
-`personas/masters/` contains 21 lenses named after real investors, traders and authors.
-Each one is a reconstruction of a publicly documented method — a simulation of how that
-person's stated approach would read the evidence in front of it, and what they would
-plausibly decide. **None of it is a quotation, a statement, a view, or an endorsement by
+`personas/masters/` contains 25 active lenses named after real investors, traders and authors,
+plus one composite forensic-short method. Each named lens is a project reconstruction of a
+publicly documented method and applies stated research priorities to the evidence in front
+of it. It does not predict what the person would decide today. **None of it is a quotation,
+a statement, a view, or an endorsement by
 the named person, and no file contains anything they actually said.** The wording,
 the ordering of concerns and the stated failure modes were written for this project.
 

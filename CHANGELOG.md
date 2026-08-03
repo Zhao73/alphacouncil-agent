@@ -2,6 +2,32 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.1] — 2026-08-03
+
+### Fixed
+
+- Terminal MCP responses now return the complete persisted handoff, including the final
+  statement for every selected method seat. `read_run` adds explicit compact/full detail
+  levels so large evidence and report bodies no longer crowd the handoff out of text-only hosts.
+- Evidence, method, debate and PM packets fail closed on hollow schemas or unknown source IDs;
+  PM output can no longer become a synthetic Hold when rating or authored report content is
+  absent.
+- Final artifacts use durable atomic writes and a hash-bound publication marker committed only
+  after terminal evidence, status, source, decision, quality and every delivered Markdown file.
+  Event logs now carry a verified append-only hash chain and recover only a trailing half-line.
+- Worker outputs have bounded UTF-8-safe reads, bounded diagnostics and no untrusted whole-file
+  allocation. Selection/receipt and lock recovery are crash-tested before this release is
+  installed.
+
+### Changed
+
+- The provisional public-method bench contains 26 seats; the retired AI-genius seat is absent.
+  Every selected seat receives the same validated evidence pack and produces a strong
+  first-person public-method simulation after its deterministic stance is frozen.
+- Omitting `read_run.detail` now selects the bounded `compact` payload. Callers that require the
+  legacy multi-megabyte structured body must request `detail=full`; terminal text remains the
+  complete persisted handoff in both modes.
+
 ## [1.1.0] — 2026-08-02
 
 ### Added

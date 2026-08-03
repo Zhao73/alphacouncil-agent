@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "contract_id": "alphacouncil-prompt-contract-v1",
+  "contract_revision": "2026-08-03.2",
+  "golden_sha256": "c6de02f952ae75ae377aaf70a5d76f1099c81ec0212b3e6ba8b576c6596ed0f3",
+  "change_policy": {
+    "breaking": [
+      "structured output schema",
+      "tool and recursive-agent prohibitions",
+      "scoped source-id contract",
+      "frozen method stance"
+    ],
+    "behavioral": [
+      "research role instructions",
+      "debate dependency rules",
+      "portfolio-manager report sections"
+    ],
+    "cosmetic": [
+      "wording that preserves every required fragment and golden meaning"
+    ]
+  },
+  "contracts": {
+    "evidence": {
+      "required": [
+        "Do not call the alphacouncil-agent plugin/MCP tools",
+        "do not spawn nested subagents",
+        "Return ONLY valid JSON. No markdown fences.",
+        "\"source_ids\":[\"S1\"]",
+        "If search or fetch is denied, times out, or is otherwise unavailable"
+      ],
+      "forbidden": ["```json"]
+    },
+    "debate": {
+      "required": [
+        "Do not call alphacouncil-agent",
+        "or spawn nested subagents",
+        "Return ONLY valid JSON. No markdown fences.",
+        "\"source_ids\":[\"market_data:S1\"]",
+        "\"questions_answered\"",
+        "Evidence JSON:"
+      ],
+      "forbidden": ["```json"]
+    },
+    "portfolio_manager": {
+      "required": [
+        "Do not call alphacouncil-agent",
+        "Return ONLY valid JSON. No markdown fences.",
+        "\"report_markdown\":\"string\"",
+        "report_markdown must be the complete report body",
+        "data gaps / unavailable data",
+        "Evidence JSON:"
+      ],
+      "forbidden": ["```json"]
+    },
+    "method_voice": {
+      "required": [
+        "source IDs unchanged",
+        "already frozen",
+        "You MUST NOT change",
+        "Do not browse or add facts.",
+        "MANDATORY VOICE MODE",
+        "every one of the five `voice` fields must speak directly in the first person",
+        "A neutral third-person summary such as \"Buffett would...\" is invalid.",
+        "Never write \"I am [named person]\"",
+        "\"voice_mode\":\"first_person_public_method_simulation_v1\"",
+        "\"disclosure_ack\":\"alphacouncil.first_person_public_method_simulation.v1\"",
+        "Return ONLY one valid JSON object, no Markdown fence.",
+        "Bounded shared evidence JSON:"
+      ],
+      "forbidden": ["```json", "Use neutral third-person method language"]
+    }
+  }
+}

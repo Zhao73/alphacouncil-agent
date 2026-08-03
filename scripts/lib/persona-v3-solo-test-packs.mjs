@@ -454,13 +454,16 @@ function toolFactIds(tools) {
 
 function voice(blueprint, seat, language) {
   const title = language === "zh" ? blueprint.canonical_title.zh : blueprint.canonical_title.en;
-  const warning = language === "zh"
-    ? "这是未经过人工审定的项目派生测试视角，不冒充本人，不代表本人的当前观点，也不是 method_model。"
-    : "This is a project-derived, non-human-reviewed test lens. It does not impersonate the person, represent a current view, or qualify as a method_model.";
+  const selectorPersona = { id: seat.persona_id, title: blueprint.canonical_title };
+  const method = language === "zh"
+    ? selectorCard(selectorPersona, "zh-CN").method
+    : seat.method_scope.planning_hypothesis;
+  const warning = language === "zh" ? "AI 公开方法模拟，非本人原话。" : "AI public-method simulation — not the named person's words.";
   const instruction = language === "zh"
-    ? "只解释已经冻结的原生决策、共同投影、缺失事实和公式轨迹；不得补造阈值、来源或结论。"
-    : "Explain only the frozen native decision, common projection, missing facts and formula trace; never invent thresholds, sources or conclusions.";
-  return `# ${title} — provisional solo-test voice\n\n> ${warning}\n\n${instruction}\n\n${seat.method_scope.planning_hypothesis}\n`;
+    ? "必须让这个方法用“我”直接说话，先给行动判断，再按本方法特有的问题顺序解释冻结结论。五段都必须明确含“我”：我会不会行动、我看到什么、我怎样推理、我与谁分歧、什么会让我改变判断。不得退回“某某会认为”的第三人称摘要；不得写“我是本人”，也不得补造阈值、来源、引语、当前持仓或私下信息。"
+    : "Make this method speak directly as ‘I’. Lead with the action verdict, then explain the frozen result in this method's characteristic question order. All five fields must explicitly use first person: would I act, what I see, how I reason, where I disagree, and what changes my mind. Never fall back to ‘the person would think’; never write ‘I am the named person’ or invent a threshold, source, quotation, current holding, or private information.";
+  const methodLine = language === "zh" ? `我的方法顺序：${method}` : `My method sequence: ${method}`;
+  return `# ${title} — provisional solo-test voice\n\n> ${warning}\n\n${instruction}\n\n${methodLine}\n`;
 }
 
 function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifestHash }) {
@@ -516,7 +519,7 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
     selection: {
       // What a seat IS, not its review history. "Not the person's own words" stays because it
       // guards against impersonation; the review-status clause is gone because the owner signed
-      // off on these attributions and a warning repeated 27 times stops being a warning.
+      // off on these attributions and a warning repeated for every seat stops being a warning.
       identity: {
         en: `${publicTitle.en}; a method model, not the person's own words`,
         zh: `${publicTitle.zh}；方法模型，非本人言论`,

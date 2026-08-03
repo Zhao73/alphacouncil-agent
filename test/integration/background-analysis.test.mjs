@@ -11,7 +11,7 @@ async function completedRun(server, runId, timeoutMs = 5_000) {
     const response = await server.callTool("read_run", { run_id: runId });
     if (response.result) {
       const run = structured(response);
-      if (["complete", "degraded", "incomplete", "needs_verification", "failed"].includes(run.status?.status)) return run;
+      if (["complete", "degraded", "incomplete", "needs_verification", "needs_revision", "failed"].includes(run.status?.status)) return run;
     }
     await new Promise((resolve) => setTimeout(resolve, 20));
   }
@@ -44,6 +44,8 @@ test("analyze_symbol returns a pollable run handle instead of holding an MCP cal
     assert.equal(accepted.poll_tool, "read_run");
     assert.equal(accepted.status_json, join(dataDir, "runs", runId, "status.json"));
     assert.equal("decision" in accepted, false, "the acceptance response must stay small");
+    assert.match(response.result.content[0].text, /^Accepted AlphaCouncil Agent analysis/);
+    assert.ok(response.result.content[0].text.length < 300, "a nonterminal acceptance must remain a small text ACK");
 
     const immediateResponse = await server.callTool("read_run", { run_id: runId });
     assert.ok(immediateResponse.result, "an accepted run must be pollable immediately");
@@ -57,10 +59,16 @@ test("analyze_symbol returns a pollable run handle instead of holding an MCP cal
     assert.equal(completed.status.status, "complete");
     assert.equal(completed.decision.verdict, "DRY_RUN");
     assert.equal(
-      completed.events.filter((event) => event.type === "background_run_queued").length,
+      completed.events_summary.type_counts.background_run_queued,
       1,
       "the durable queued lifecycle must be recorded before background work starts",
     );
+    assert.equal("evidence" in completed, false, "the default read_run detail must be compact");
+    assert.equal("events" in completed, false, "compact polling returns an event summary, not the full log");
+
+    const full = structured(await server.callTool("read_run", { run_id: runId, detail: "full" }));
+    assert.equal(full.events.filter((event) => event.type === "background_run_queued").length, 1);
+    assert.equal(full.evidence.run_id, runId, "detail=full preserves the legacy complete payload");
   } finally {
     await server.close();
     removeDataDir(dataDir);

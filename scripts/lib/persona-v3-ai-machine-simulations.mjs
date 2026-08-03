@@ -21,6 +21,7 @@ import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 import { CANONICAL_MASTER_COUNT, CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
 import { PRIORITY_13_MASTER_IDS } from "./council-evaluation-protocol.mjs";
+import { CANONICAL_SOLO_TEST_FACT_CONTRACTS } from "./persona-v3-solo-formula-pipeline.mjs";
 
 export const AI_MACHINE_SIMULATION_RUN_IDS = Object.freeze([
   "A", "B", "C", "D13", "D26", "E:D13", "E:D26", "H_ai_reference",
@@ -35,6 +36,16 @@ export const AI_MACHINE_SIMULATION_NEFF_FILE = "n-eff-disclosure.json";
 
 const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const AS_OF = "2026-07-27";
+const SYNTHETIC_POLICY_FACT_CONTRACTS = Object.freeze({
+  // This policy-only enum never enters a numeric tool, so it is intentionally outside the
+  // formula bridge's numeric contract registry. Giving it an explicit state exercises Dalio's
+  // regime rules instead of comparing a synthetic ratio with a string and silently missing.
+  "macro.growth_regime": Object.freeze({
+    value_kind: "text",
+    unit: null,
+    synthetic_value: "rising_growth_falling_inflation",
+  }),
+});
 const BOUNDARY = Object.freeze({
   evidence_class: "machine_simulation",
   reviewer_kind: "ai",
@@ -89,7 +100,8 @@ function boundFile(relativePath) {
   return canonicalValue({ path: relativePath, physical_file_hash: bytesHash(opened.bytes), byte_length: opened.bytes.length });
 }
 
-function factValue(kind) {
+function factValue(kind, contract = {}) {
+  if (Object.hasOwn(contract, "synthetic_value")) return contract.synthetic_value;
   if (kind === "boolean") return true;
   if (kind === "text") return "synthetic_machine_simulation";
   if (kind === "date") return AS_OF;
@@ -113,13 +125,22 @@ function factPackFor(pack) {
     ...(pack.manifest.capability.required_fact_types || []),
     ...(pack.manifest.capability.optional_fact_types || []),
   ]) {
-    if (!byFact.has(factId)) byFact.set(factId, { value_kind: "ratio", unit: "decimal" });
+    // A policy-only fact does not inherit a contract from a tool input. Use the same canonical
+    // fact contract as the grounding/formula bridge whenever one exists; otherwise a monetary
+    // fact can silently become a ratio in the synthetic fixture and an invalid cross-kind
+    // comparison can look executable. Unknown qualitative facts retain the legacy placeholder
+    // because most are presence gates and do not yet have a physical adapter.
+    if (!byFact.has(factId)) {
+      byFact.set(factId, CANONICAL_SOLO_TEST_FACT_CONTRACTS[factId]
+        || SYNTHETIC_POLICY_FACT_CONTRACTS[factId]
+        || { value_kind: "ratio", unit: "decimal" });
+    }
   }
   const facts = [...byFact].map(([factId, contract]) => canonicalValue({
     schema_version: 1,
     fact_id: factId,
     value_kind: contract.value_kind,
-    value: factValue(contract.value_kind),
+    value: factValue(contract.value_kind, contract),
     unit: contract.unit,
     currency: contract.value_kind === "monetary" ? "USD" : null,
     scale: contract.value_kind === "monetary" ? 1 : null,

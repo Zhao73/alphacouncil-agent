@@ -2,9 +2,9 @@ import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { RUNS_DIR } from "./constants.mjs";
-import { readJson } from "./fsutil.mjs";
+import { readJson, readJsonl } from "./fsutil.mjs";
 import { acquireRunLock } from "./run-locks.mjs";
-import { appendEvent, runPath, saveRun } from "./run-store.mjs";
+import { appendEvent, artifactPaths, readPublicationManifest, runPath, saveRun } from "./run-store.mjs";
 
 const TERMINAL_ANALYSIS_STATUSES = new Set([
   "complete",
@@ -81,6 +81,17 @@ export function recoverInterruptedBackgroundRuns({ scanLimit = DEFAULT_SCAN_LIMI
       result.invalid_skipped += 1;
       continue;
     }
+    const publicationPath = artifactPaths(run).publication_manifest_json;
+    if (existsSync(publicationPath)) {
+      try {
+        readPublicationManifest(run);
+      } catch {
+        result.invalid_skipped += 1;
+      }
+      // A valid marker is already terminal; an inconsistent marker is fail-closed above.
+      // Recovery must never turn either case into a new failed state beside that marker.
+      continue;
+    }
     if (!interruptedCandidate(run)) continue;
 
     let lock;
@@ -98,7 +109,14 @@ export function recoverInterruptedBackgroundRuns({ scanLimit = DEFAULT_SCAN_LIMI
       // Re-read after taking the lock; a writer may have reached a terminal state between
       // the directory scan and lock acquisition.
       run = readJson(evidencePath);
+      if (existsSync(artifactPaths(run).publication_manifest_json)) {
+        readPublicationManifest(run);
+        continue;
+      }
       if (!interruptedCandidate(run)) continue;
+      // Validate the audit log before mutating evidence. A recoverable trailing half-line
+      // is repaired by appendEvent; middle corruption or a broken hash chain fails closed.
+      readJsonl(join(dir, "events.jsonl"));
       const completedAt = new Date().toISOString();
       const previousStatus = run.status;
       const previousPhase = run.phase;

@@ -13,6 +13,7 @@ import {
 import { parseArgs } from "../../scripts/run-persona-v3-ai-machine-simulations.mjs";
 import { inspectAiAssistedSoloStatus } from "../../scripts/lib/persona-v3-ai-assisted-solo-status.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { CANONICAL_SOLO_TEST_FACT_CONTRACTS } from "../../scripts/lib/persona-v3-solo-formula-pipeline.mjs";
 
 function byId(plan, id) {
   return plan.runs.find((run) => run.run_id === id);
@@ -41,10 +42,8 @@ test("eight physical machine simulations run without network, human, formal expe
   assert.equal(d13.configuration.selected_master_count, 13);
   assert.equal(d13.results.executed_count, 13);
   assert.equal(d26.configuration.selected_master_count, CANONICAL_MASTER_COUNT);
-  // One seat is authored to be genuinely narrow and declines on a fixture that is not its
-  // subject. A bench where every seat executes on every input is a bench with no method in it.
   assert.equal(d26.results.executed_count, CANONICAL_MASTER_COUNT - d26.results.blocked_fail_closed_count);
-  assert.equal(d26.results.blocked_fail_closed_count, 1);
+  assert.equal(d26.results.blocked_fail_closed_count, 0);
   // Identity proxies could only reject or abstain, so agreement was structural. Authored
   // methods disagree, and the spread IS the output: a unanimous bench says nothing.
   const stances = new Set(d26.results.decisions.map((decision) => decision.stance).filter(Boolean));
@@ -60,6 +59,20 @@ test("eight physical machine simulations run without network, human, formal expe
   assert.equal(plan.n_eff_disclosure.n_eff, null);
   assert.equal(plan.n_eff_disclosure.status, "insufficient_resolved_outcomes");
   assert.equal(plan.n_eff_disclosure.formal_n_eff_effect, "none");
+
+  for (const seat of plan.input.seat_inputs) {
+    for (const fact of seat.fact_pack.facts) {
+      const contract = CANONICAL_SOLO_TEST_FACT_CONTRACTS[fact.fact_id];
+      if (!contract) continue;
+      assert.equal(fact.value_kind, contract.value_kind, `${seat.persona_id}:${fact.fact_id}`);
+      assert.equal(fact.unit, contract.unit, `${seat.persona_id}:${fact.fact_id}`);
+    }
+  }
+  const dalioRegime = plan.input.seat_inputs.find((seat) => seat.persona_id === "master_dalio")
+    .fact_pack.facts.find((fact) => fact.fact_id === "macro.growth_regime");
+  assert.equal(dalioRegime.value_kind, "text");
+  assert.equal(dalioRegime.unit, null);
+  assert.equal(dalioRegime.value, "rising_growth_falling_inflation");
 });
 
 test("physical simulation artifacts are exact and tampering is rejected", () => {
@@ -69,7 +82,7 @@ test("physical simulation artifacts are exact and tampering is rejected", () => 
   // Eight arms over overlapping rosters, so this is a total rather than a rate; what the
   // per-arm assertions above pin is that a seat either executes or fails closed, never both.
   assert.equal(report.executed_count, 105);
-  assert.equal(report.blocked_fail_closed_count, 3);
+  assert.equal(report.blocked_fail_closed_count, 0);
   assert.equal(report.network_call_count, 0);
   assert.equal(report.human_reference_count, 0);
   assert.equal(report.n_eff, null);

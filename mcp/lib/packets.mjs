@@ -1,21 +1,28 @@
-import { join } from "node:path";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
 // A worker returning a malformed packet is a client contract violation, not a server bug:
 // these three checks used to raise -32603 while the equivalent checks in the orchestrator
 // correctly raised -32602.
-import { internalError, invalidParams } from "./errors.mjs";
+import { invalidParams } from "./errors.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import {
   composeVoiceStatement,
-  defaultIntentForStance,
+  FIRST_PERSON_DISCLOSURE_ACK,
+  FIRST_PERSON_VOICE_MODE,
+  hasAnyFirstPersonMarker,
   intentsForStance,
   isIntentAllowed,
   VOICE_FIELDS,
+  voiceDisclaimer,
 } from "./voice.mjs";
 import { cleanLog, clip } from "./text.mjs";
 import { scopedSourceId } from "./gates.mjs";
 import { runPath } from "./run-store.mjs";
 import { packetSummary } from "./markdown.mjs";
+import { parseJsonTransport } from "./bounded-json.mjs";
+import { assertRuntimeWorkerPayload } from "./runtime-validation.mjs";
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -25,16 +32,41 @@ export function rawRecordText(packet) {
 }
 
 export function extractJson(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const start = text.indexOf("{");
-    const end = text.lastIndexOf("}");
-    if (start !== -1 && end > start) {
-      return JSON.parse(text.slice(start, end + 1));
-    }
-    throw internalError("subagent did not return JSON");
+  return parseJsonTransport(text).value;
+}
+
+export function extractWorkerJson(text, kind) {
+  return assertRuntimeWorkerPayload(kind, extractJson(text));
+}
+
+function sourceIdList(value) {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean))]
+    : [];
+}
+
+/** Every downstream citation must resolve to the immutable evidence/grounding manifest. */
+export function assertSourceIdsResolve(run, sourceIds, owner, { allowEmpty = false } = {}) {
+  const ids = sourceIdList(sourceIds);
+  const known = new Set([
+    ...(run?.grounding?.typed_fact_sources || []).map((source) => source?.id || source?.source_id),
+    ...(run?.packets || []).flatMap((packet) => (packet?.sources || []).map((source) => source?.id || source?.source_id)),
+  ].filter(Boolean));
+  const unknown = ids.filter((id) => !known.has(id));
+  if (unknown.length) {
+    throw invalidParams(`${owner} cited source IDs absent from source_manifest.json: ${unknown.join(", ")}`, {
+      reason: "SOURCE_PROVENANCE_MISMATCH",
+      owner,
+      unknown_source_ids: unknown,
+    });
   }
+  if (!allowEmpty && ids.length === 0) {
+    throw invalidParams(`${owner} must cite at least one source_manifest.json ID; missing evidence must be an explicit gap or out_of_scope result.`, {
+      reason: "SOURCE_PROVENANCE_REQUIRED",
+      owner,
+    });
+  }
+  return ids;
 }
 
 export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
@@ -199,6 +231,7 @@ export function compactEvidence(run) {
       const included = new Set(selectedIds);
       return {
         task: packet.task,
+        artifact_ref: packetArtifactRef(run, packet),
         summary: clip(packet.summary || "", 1_800),
         claims: claims.map((claim) => ({
           claim: clip(claim?.claim || "", 700),
@@ -221,6 +254,37 @@ export function compactEvidence(run) {
         information_richness: packet.information_richness,
       };
     }),
+  };
+}
+
+const ARTIFACT_REF_CACHE = new Map();
+
+function fileArtifactRef(path) {
+  if (!existsSync(path)) return { path, hash: null, bytes: null };
+  const stat = statSync(path);
+  const signature = `${stat.size}:${stat.mtimeMs}`;
+  const cached = ARTIFACT_REF_CACHE.get(path);
+  if (cached?.signature === signature) return cached.ref;
+  const body = readFileSync(path);
+  const ref = {
+    path,
+    hash: `sha256:${createHash("sha256").update(body).digest("hex")}`,
+    bytes: body.byteLength,
+  };
+  ARTIFACT_REF_CACHE.set(path, { signature, ref });
+  return ref;
+}
+
+function packetArtifactRef(run, packet) {
+  const task = String(packet?.task || "unknown");
+  const recordedJson = run?.task_status?.[task]?.output;
+  const jsonPath = typeof recordedJson === "string" && recordedJson
+    ? recordedJson
+    : join(runPath(run.run_id), `${task}.json`);
+  const dir = dirname(jsonPath);
+  return {
+    json: fileArtifactRef(jsonPath),
+    markdown: fileArtifactRef(join(dir, `${task}.md`)),
   };
 }
 
@@ -338,7 +402,10 @@ export function debateFromCodex(result, role, run, fallbackPrompt) {
     return debateFailurePacket(role, run, failureKind);
   }
   try {
-    return normalizeDebate(extractJson(result.text), role, run, result.text);
+    const kind = role === "portfolio_manager" ? "portfolio_manager" : "debate";
+    const parsed = extractWorkerJson(result.text, kind);
+    const source_ids = assertSourceIdsResolve(run, parsed.source_ids, role);
+    return normalizeDebate({ ...parsed, source_ids }, role, run, result.text);
   } catch (error) {
     return debateFailurePacket(role, run, "parse_failed");
   }
@@ -558,18 +625,22 @@ export function coerceStance(value, masterId = "") {
  */
 export function normalizeMasterOpinion(packet, masterId, run, raw = "") {
   const list = (value) => (Array.isArray(value) ? value.filter((x) => typeof x === "string") : []);
+  const stance = coerceStance(packet?.stance, masterId);
+  const source_ids = assertSourceIdsResolve(run, list(packet?.source_ids), masterId, {
+    allowEmpty: stance === "out_of_scope",
+  });
   return {
     master: masterId,
     symbol: run.symbol,
     as_of: run.as_of,
     verdict: typeof packet?.verdict === "string" ? packet.verdict : "",
-    stance: coerceStance(packet?.stance, masterId),
+    stance,
     summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
     key_findings: list(packet?.key_findings),
     disagreements: list(packet?.disagreements),
     disqualifiers_triggered: list(packet?.disqualifiers_triggered),
     what_would_change_my_mind: list(packet?.what_would_change_my_mind),
-    source_ids: list(packet?.source_ids),
+    source_ids,
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
     raw_text: raw,
@@ -610,38 +681,64 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
   if (packet?.acknowledged_stance !== frozenOpinion?.stance) {
     throw invalidParams(`dedicated method worker attempted to change frozen stance for ${masterId}`);
   }
-  // The five-field voice is the current contract; a flat `statement` remains accepted so a
-  // legacy worker, or one that answered before the contract moved, is not a hard failure.
+  if (packet?.voice_mode !== FIRST_PERSON_VOICE_MODE) {
+    throw invalidParams(`dedicated method worker did not use the required first-person voice mode for ${masterId}`);
+  }
+  if (packet?.disclosure_ack !== FIRST_PERSON_DISCLOSURE_ACK) {
+    throw invalidParams(`dedicated method worker did not acknowledge the fixed identity disclosure for ${masterId}`);
+  }
   const voice = Object.fromEntries(VOICE_FIELDS
     .map((field) => [field, sanitizeStatementMarkdown(packet?.voice?.[field])])
     .filter(([, text]) => text));
-  const statement = Object.keys(voice).length
-    ? composeVoiceStatement(voice, run.language)
-    : sanitizeStatementMarkdown(packet?.statement);
-  if (!statement) throw invalidParams(`dedicated method worker returned no statement for ${masterId}`);
+  const missingVoiceFields = VOICE_FIELDS.filter((field) => !voice[field]);
+  if (missingVoiceFields.length) {
+    throw invalidParams(`dedicated method worker omitted required first-person voice fields for ${masterId}: ${missingVoiceFields.join(", ")}`);
+  }
+  // Target-language validation runs immediately after normalization. This gate asks the
+  // orthogonal question: did the worker use first person at all? Keeping the checks separate
+  // means an English "I" in a Chinese run is reported as a language mismatch, not parse failure.
+  const thirdPersonFields = VOICE_FIELDS.filter((field) => !hasAnyFirstPersonMarker(voice[field]));
+  if (thirdPersonFields.length) {
+    throw invalidParams(`dedicated method worker returned non-first-person method prose for ${masterId}: ${thirdPersonFields.join(", ")}`);
+  }
+  const statement = composeVoiceStatement(voice, run.language);
 
   // Intent narrows the frozen stance; it never reopens it. Rejected the same way a changed
   // stance is, so a worker cannot turn `opposed` into `would_buy` by choosing a label.
   const requested = packet?.position_intent;
-  if (requested !== undefined && !isIntentAllowed(requested, frozenOpinion.stance)) {
+  if (requested === undefined) {
+    throw invalidParams(`dedicated method worker omitted position_intent for ${masterId}`);
+  }
+  if (!isIntentAllowed(requested, frozenOpinion.stance)) {
     throw invalidParams(
       `dedicated method worker returned an intent outside the frozen stance for ${masterId}: `
       + `${JSON.stringify(requested)} is not one of ${intentsForStance(frozenOpinion.stance).join(", ")}`,
     );
   }
 
+  const workerSourceIds = list(packet?.source_ids);
+  assertSourceIdsResolve(
+    run,
+    [...(frozenOpinion?.source_ids || []), ...workerSourceIds],
+    masterId,
+    { allowEmpty: frozenOpinion.stance === "out_of_scope" },
+  );
+
   return {
     master: masterId,
     symbol: run.symbol,
     as_of: run.as_of,
     acknowledged_stance: frozenOpinion.stance,
-    position_intent: requested ?? defaultIntentForStance(frozenOpinion.stance),
+    voice_mode: FIRST_PERSON_VOICE_MODE,
+    disclosure_ack: FIRST_PERSON_DISCLOSURE_ACK,
+    disclosure: voiceDisclaimer(run.language),
+    position_intent: requested,
     voice: Object.keys(voice).length ? voice : null,
     statement,
     key_findings: list(packet?.key_findings),
     disagreements: list(packet?.disagreements),
     what_would_change_my_mind: list(packet?.what_would_change_my_mind),
-    source_ids: list(packet?.source_ids),
+    source_ids: workerSourceIds,
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : frozenOpinion.confidence || "low",
     language: run.language,
     raw_text: raw,

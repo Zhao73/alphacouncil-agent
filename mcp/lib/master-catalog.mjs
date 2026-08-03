@@ -11,10 +11,6 @@
 import { MASTER_SELECTOR_METHOD_LOCALES } from "../../data/master-selector-method-locales.v1.mjs";
 
 const CARDS = Object.freeze({
-  master_aschenbrenner: {
-    zh: ["Leopold Aschenbrenner，关注 AI 扩张、算力和国家安全的研究者", "研究算力、电力、资本开支和技术时间线是否被市场正确定价。", "AI 基础设施、半导体、电力和长期技术扩散"],
-    en: ["Leopold Aschenbrenner, a researcher focused on AI scaling, compute and national security", "Tests compute, power, capital-spending and technology timelines against what the market already prices.", "AI infrastructure, semiconductors, power and long-duration technology adoption"],
-  },
   master_buffett: {
     zh: ["沃伦·巴菲特，伯克希尔长期掌舵人和企业所有者型投资代表", "从能力圈、护城河、所有者收益和资本配置判断一家公司是否值得长期拥有。", "商业模式清晰、现金流稳定、可长期复利的企业"],
     en: ["Warren Buffett, Berkshire's long-time leader and a leading business-owner investor", "Judges circle of competence, moat, owner earnings and capital allocation before considering price.", "Understandable, cash-generative businesses with long compounding runways"],

@@ -1,5 +1,8 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { COUNCIL_PACES } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
@@ -18,6 +21,32 @@ import { startServer, structured } from "../helpers/rpc-client.mjs";
 let dataDir;
 let server;
 let seq = 0;
+
+function legacySelectionHash(receipt) {
+  const payload = {
+    schema_version: receipt.schema_version,
+    selection_receipt: receipt.selection_receipt,
+    selection_id: receipt.selection_id,
+    symbol: receipt.symbol,
+    council_mode: receipt.council_mode,
+    catalog_hash: receipt.catalog_hash,
+    request_hash: receipt.request_hash,
+    intent_hash: receipt.intent_hash,
+    selected_master_ids: receipt.selected_master_ids,
+    selected_master_pack_hashes: receipt.selected_master_pack_hashes,
+    selection_mode: receipt.selection_mode,
+    created_at: receipt.created_at,
+    expires_at: receipt.expires_at,
+  };
+  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
+
+function selectionFiles(confirmed) {
+  return {
+    selection: join(dataDir, "selections", `${confirmed.selection_id}.json`),
+    receipt: join(dataDir, "selections", "receipts", `${confirmed.selection_receipt}.json`),
+  };
+}
 
 before(async () => {
   dataDir = makeDataDir();
@@ -83,10 +112,149 @@ test("the gate offers every tier with both its estimate and its ceiling", async 
 test("the tier chosen at the gate binds into the receipt and reaches the run", async () => {
   const { confirmed, prompt } = await gate({ choice: "slow" });
   assert.equal(structured(confirmed).council_pace, "slow");
+  assert.equal(structured(confirmed).selection_hash_version, 2);
   // Omitted at execution: the gate's decision is what runs.
   const result = structured(await run(structured(confirmed).selection_receipt, prompt));
   assert.equal(result.run.council_pace, "slow");
   assert.equal(result.run.time_budget_ms, COUNCIL_PACES.slow.total_ms);
+});
+
+test("an omitted execution pace validates a 40-minute timeout against the slow receipt", async () => {
+  const gated = await gate({ choice: "slow" });
+  const receipt = structured(gated.confirmed).selection_receipt;
+  const result = structured(await run(receipt, gated.prompt, {
+    total_timeout_ms: 40 * 60 * 1000,
+  }));
+  assert.equal(result.run.council_pace, "slow");
+  assert.equal(result.run.time_budget_ms, 40 * 60 * 1000);
+});
+
+test("an omitted execution pace rejects 20 minutes for fast without consuming the receipt", async () => {
+  const gated = await gate({ choice: "fast" });
+  const receipt = structured(gated.confirmed).selection_receipt;
+  const rejected = await run(receipt, gated.prompt, {
+    total_timeout_ms: 20 * 60 * 1000,
+  });
+  assert.equal(rejected.error?.data?.reason, "FULL_TOTAL_TIMEOUT_EXCEEDS_MAX");
+  assert.equal(rejected.error?.data?.council_pace, "fast");
+  assert.equal(rejected.error?.data?.maximum_ms, COUNCIL_PACES.fast.total_ms);
+
+  const retried = structured(await run(receipt, gated.prompt, {
+    total_timeout_ms: COUNCIL_PACES.fast.total_ms,
+  }));
+  assert.equal(retried.run.council_pace, "fast");
+  assert.equal(retried.run.time_budget_ms, COUNCIL_PACES.fast.total_ms);
+});
+
+test("a still-valid legacy v1 receipt remains consumable across the hash upgrade", async () => {
+  const gated = await gate({ choice: "fast" });
+  const confirmed = structured(gated.confirmed);
+  const files = selectionFiles(confirmed);
+  const selection = JSON.parse(readFileSync(files.selection, "utf8"));
+  const receipt = JSON.parse(readFileSync(files.receipt, "utf8"));
+
+  delete selection.selection_hash_version;
+  delete receipt.selection_hash_version;
+  receipt.selection_hash = legacySelectionHash(receipt);
+  writeFileSync(files.selection, `${JSON.stringify(selection, null, 2)}\n`);
+  writeFileSync(files.receipt, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  const result = structured(await run(confirmed.selection_receipt, gated.prompt));
+  assert.equal(result.run.council_pace, "fast");
+  assert.equal(result.run.master_selection.selection_hash_version, 1);
+});
+
+test("v2 detects a pace mutation even when both local records were changed together", async () => {
+  const gated = await gate({ choice: "fast" });
+  const confirmed = structured(gated.confirmed);
+  const files = selectionFiles(confirmed);
+  const selection = JSON.parse(readFileSync(files.selection, "utf8"));
+  const receipt = JSON.parse(readFileSync(files.receipt, "utf8"));
+  selection.council_pace = "slow";
+  receipt.council_pace = "slow";
+  writeFileSync(files.selection, `${JSON.stringify(selection, null, 2)}\n`);
+  writeFileSync(files.receipt, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  const rejected = await run(confirmed.selection_receipt, gated.prompt);
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_HASH_MISMATCH");
+});
+
+test("v2 rejects a missing quick pace field instead of treating it as null", async () => {
+  const gated = await gate({ mode: "quick" });
+  const confirmed = structured(gated.confirmed);
+  const files = selectionFiles(confirmed);
+  const selection = JSON.parse(readFileSync(files.selection, "utf8"));
+  const receipt = JSON.parse(readFileSync(files.receipt, "utf8"));
+  delete selection.council_pace;
+  delete receipt.council_pace;
+  writeFileSync(files.selection, `${JSON.stringify(selection, null, 2)}\n`);
+  writeFileSync(files.receipt, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  seq += 1;
+  const rejected = await server.callTool("analyze_symbol", {
+    symbol: "NOW", language: "zh-CN", prompt: gated.prompt, council_mode: "quick",
+    run_id: `GATE-QUICK-MISSING-PACE-${seq}-${process.pid}`, dry_run: true,
+    wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+  }, { timeoutMs: 60_000 });
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_HASH_MISMATCH");
+});
+
+test("legacy v1 still requires an explicit pace field on both records", async () => {
+  const gated = await gate({ mode: "quick" });
+  const confirmed = structured(gated.confirmed);
+  const files = selectionFiles(confirmed);
+  const selection = JSON.parse(readFileSync(files.selection, "utf8"));
+  const receipt = JSON.parse(readFileSync(files.receipt, "utf8"));
+  delete selection.selection_hash_version;
+  delete receipt.selection_hash_version;
+  delete selection.council_pace;
+  delete receipt.council_pace;
+  receipt.selection_hash = legacySelectionHash(receipt);
+  writeFileSync(files.selection, `${JSON.stringify(selection, null, 2)}\n`);
+  writeFileSync(files.receipt, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  seq += 1;
+  const rejected = await server.callTool("analyze_symbol", {
+    symbol: "NOW", language: "zh-CN", prompt: gated.prompt, council_mode: "quick",
+    run_id: `GATE-QUICK-V1-MISSING-PACE-${seq}-${process.pid}`, dry_run: true,
+    wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+  }, { timeoutMs: 60_000 });
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_RECORD_MISMATCH");
+  assert.ok(rejected.error?.data?.mismatched_fields.includes("council_pace"));
+});
+
+test("legacy v1 full receipts cannot replace the confirmed pace with null in both records", async () => {
+  const gated = await gate({ choice: "fast" });
+  const confirmed = structured(gated.confirmed);
+  const files = selectionFiles(confirmed);
+  const selection = JSON.parse(readFileSync(files.selection, "utf8"));
+  const receipt = JSON.parse(readFileSync(files.receipt, "utf8"));
+  delete selection.selection_hash_version;
+  delete receipt.selection_hash_version;
+  selection.council_pace = null;
+  receipt.council_pace = null;
+  receipt.selection_hash = legacySelectionHash(receipt);
+  writeFileSync(files.selection, `${JSON.stringify(selection, null, 2)}\n`);
+  writeFileSync(files.receipt, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  const rejected = await run(confirmed.selection_receipt, gated.prompt);
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_RECORD_MISMATCH");
+  assert.ok(rejected.error?.data?.mismatched_fields.includes("council_pace"));
+});
+
+test("an explicit null hash version is invalid rather than a legacy fallback", async () => {
+  const gated = await gate({ choice: "fast" });
+  const confirmed = structured(gated.confirmed);
+  const files = selectionFiles(confirmed);
+  const selection = JSON.parse(readFileSync(files.selection, "utf8"));
+  const receipt = JSON.parse(readFileSync(files.receipt, "utf8"));
+  selection.selection_hash_version = null;
+  receipt.selection_hash_version = null;
+  writeFileSync(files.selection, `${JSON.stringify(selection, null, 2)}\n`);
+  writeFileSync(files.receipt, `${JSON.stringify(receipt, null, 2)}\n`);
+
+  const rejected = await run(confirmed.selection_receipt, gated.prompt);
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_HASH_VERSION_UNSUPPORTED");
 });
 
 test("a named speed is a prefill the user can accept or overrule", async () => {
@@ -102,6 +270,41 @@ test("a named speed is a prefill the user can accept or overrule", async () => {
   assert.equal(structured(plain.confirmed).council_pace, "normal", "no answer means the default");
 });
 
+test("an already confirmed selection cannot be replayed with another pace", async () => {
+  seq += 1;
+  const prompt = `Confirm one pace only (${seq}).`;
+  const opened = structured(await server.callTool("begin_council_selection", {
+    symbol: "NOW", language: "zh-CN", host: "claude-code", prompt, council_mode: "full",
+  }));
+  const first = structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    selected_master_ids: ["master_marks"],
+    council_pace: "fast",
+  }));
+  const changed = await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    selected_master_ids: ["master_marks"],
+    council_pace: "slow",
+  });
+  assert.ok(changed.error);
+  assert.equal(changed.error.data.reason, "MASTER_SELECTION_ALREADY_CONFIRMED");
+  assert.equal(changed.error.data.confirmed_council_pace, "fast");
+  assert.equal(changed.error.data.submitted_council_pace, "slow");
+
+  const replay = structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    selected_master_ids: ["master_marks"],
+    council_pace: "fast",
+  }));
+  assert.equal(replay.selection_receipt, first.selection_receipt);
+});
+
 test("execution cannot switch the tier the user approved", async () => {
   const { confirmed, prompt } = await gate({ choice: "fast" });
   const receipt = structured(confirmed).selection_receipt;
@@ -112,9 +315,8 @@ test("execution cannot switch the tier the user approved", async () => {
   assert.equal(response.error.data.submitted_council_pace, "slow");
   assert.match(response.error.data.remedy, /start a new selection/);
 
-  // Repeating the approved tier is fine; only changing it is not.
-  const repeat = await gate({ choice: "fast" });
-  const ok = structured(await run(structured(repeat.confirmed).selection_receipt, repeat.prompt, { council_pace: "fast" }));
+  // The rejected call must not consume the receipt; a new run id can still use the approved pace.
+  const ok = structured(await run(receipt, prompt, { council_pace: "fast" }));
   assert.equal(ok.run.council_pace, "fast");
 });
 

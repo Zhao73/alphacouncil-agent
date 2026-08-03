@@ -4,6 +4,30 @@ import assert from "node:assert/strict";
 import * as orchestrator from "../../mcp/lib/orchestrator.mjs";
 import { debateFromCodex } from "../../mcp/lib/packets.mjs";
 
+const sourcedRun = {
+  symbol: "QQQ",
+  as_of: "2026-07-28",
+  language: "English",
+  packets: [{ task: "market_data", sources: [{ id: "market_data:S1" }] }],
+};
+
+const validDebatePacket = (over = {}) => ({
+  verdict: "The bounded fixture supports a conditional conclusion.",
+  rating: "Hold",
+  winner: "balanced",
+  summary: "The bounded fixture preserves sourced reasoning and explicit uncertainty.",
+  long_thesis: ["The cited fixture supports the conditional long case."],
+  short_thesis: ["The cited fixture also records a material downside condition."],
+  valuation_range: "Only a conditional range is supportable from this fixture.",
+  catalysts: ["A dated primary-source update would test the case."],
+  risks: ["Contradictory primary evidence is the principal risk."],
+  position: "Keep exposure bounded.",
+  invalidation: ["A contradictory primary filing invalidates the case."],
+  source_ids: ["market_data:S1"],
+  confidence: "medium",
+  ...over,
+});
+
 test("a timed-out worker keeps internal traces out of the evidence packet", () => {
   assert.equal(typeof orchestrator.workerFailureArtifacts, "function");
   const internalTrace = "codex-search-bridge/research_web internal tool transcript";
@@ -66,6 +90,43 @@ test("a code-zero JSON parse failure is diagnostic material, not investment evid
   assert.match(diagnostic.parse_context, /}\{/);
 });
 
+test("oversized worker diagnostics preserve only bounded prefix/tail metadata outside evidence", () => {
+  const prefix = "P".repeat(8 * 1024);
+  const tail = "T".repeat(8 * 1024);
+  const { packet, diagnostic } = orchestrator.workerFailureArtifacts({
+    task: "market_data",
+    symbol: "QQQ",
+    asOfDate: "2026-07-28",
+    language: "English",
+    timeoutMs: 1_000,
+    failureKind: "parse_failed",
+    parseError: new Error("worker output exceeded bounded transport"),
+    result: {
+      ok: false,
+      code: 0,
+      timedOut: false,
+      text: "",
+      stderr: "worker output exceeded bounded transport",
+      output_too_large: true,
+      output_bytes: 50 * 1024 * 1024,
+      max_output_bytes: 512 * 1024,
+      output_fingerprint_sha256: "a".repeat(64),
+      output_hash_scope: "byte_count_plus_prefix_tail",
+      output_prefix: prefix,
+      output_tail: tail,
+    },
+  });
+  assert.equal(diagnostic.output_too_large, true);
+  assert.equal(diagnostic.output_bytes, 50 * 1024 * 1024);
+  assert.equal(diagnostic.max_output_bytes, 512 * 1024);
+  assert.equal(diagnostic.output_fingerprint_sha256, "a".repeat(64));
+  assert.equal(diagnostic.output_hash_scope, "byte_count_plus_prefix_tail");
+  assert.equal(diagnostic.output_prefix.length, 4 * 1024);
+  assert.equal(diagnostic.output_tail.length, 4 * 1024);
+  assert.doesNotMatch(JSON.stringify(packet), /P{100}|T{100}|output_fingerprint/u);
+  assert.equal(packet.raw_text, "");
+});
+
 test("reader-language evidence failures keep an independent failure kind", () => {
   const mismatch = new Error("evidence worker reader language mismatch: requested=zh");
   mismatch.code = "READER_LANGUAGE_MISMATCH";
@@ -120,6 +181,24 @@ test("debate failure kind orders timeout and exit ahead of parse", () => {
   assert.equal(exit.failure_kind, "exit");
   const parse = debateFromCodex({ ok: true, timedOut: false, code: 0, text: "{}{}" }, "bear_researcher", run, "");
   assert.equal(parse.failure_kind, "parse_failed");
+});
+
+test("headless PM requires report_markdown while bull/bear do not", () => {
+  const withoutReport = validDebatePacket();
+  const bull = debateFromCodex({ ok: true, timedOut: false, code: 0, text: JSON.stringify(withoutReport) }, "bull_researcher", sourcedRun, "");
+  assert.equal(bull.failure_kind, undefined);
+
+  const manager = debateFromCodex({ ok: true, timedOut: false, code: 0, text: JSON.stringify(withoutReport) }, "portfolio_manager", sourcedRun, "");
+  assert.equal(manager.failure_kind, "parse_failed");
+  assert.equal(manager.decision_available, false);
+  assert.equal(manager.rating, null);
+});
+
+test("headless debate rejects source IDs absent from the source manifest", () => {
+  const packet = validDebatePacket({ source_ids: ["market_data:FORGED"] });
+  const result = debateFromCodex({ ok: true, timedOut: false, code: 0, text: JSON.stringify(packet) }, "bull_researcher", sourcedRun, "");
+  assert.equal(result.failure_kind, "parse_failed");
+  assert.equal(result.decision_available, false);
 });
 
 for (const [language, script, timeoutText, parseText] of [

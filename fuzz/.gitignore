@@ -1,0 +1,7 @@
+node_modules/
+.work/
+artifacts/
+coverage/
+crash-*
+timeout-*
+oom-*

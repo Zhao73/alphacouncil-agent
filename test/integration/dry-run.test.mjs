@@ -9,7 +9,11 @@ let dataDir;
 let server;
 let toolsList;
 let analysis;
+let analysisResponse;
 let replay;
+let replayResponse;
+let backgroundReplay;
+let backgroundReplayResponse;
 let replayEventsUnchanged;
 let runDir;
 
@@ -22,23 +26,33 @@ before(async () => {
   toolsList = list.result?.tools || [];
 
   const selection = await confirmMasterSelection(server, { symbol: "AAPL", selected_master_ids: ["master_buffett"] });
-  const response = await server.callTool("analyze_symbol", {
+  analysisResponse = await server.callTool("analyze_symbol", {
     symbol: "AAPL",
     dry_run: true,
     tasks: ["market_data", "valuation_long_short"],
     selection_receipt: selection.selection_receipt,
   });
-  analysis = structured(response);
+  analysis = structured(analysisResponse);
   runDir = join(dataDir, "runs", analysis.run.run_id);
 
   const eventsBeforeReplay = readFileSync(join(runDir, "events.jsonl"), "utf8");
-  replay = structured(await server.callTool("analyze_symbol", {
+  replayResponse = await server.callTool("analyze_symbol", {
     symbol: "AAPL",
     run_id: analysis.run.run_id,
     dry_run: true,
     tasks: ["market_data", "valuation_long_short"],
     selection_receipt: selection.selection_receipt,
-  }));
+  });
+  replay = structured(replayResponse);
+  backgroundReplayResponse = await server.callTool("analyze_symbol", {
+    symbol: "AAPL",
+    run_id: analysis.run.run_id,
+    dry_run: true,
+    wait_for_completion: false,
+    tasks: ["market_data", "valuation_long_short"],
+    selection_receipt: selection.selection_receipt,
+  });
+  backgroundReplay = structured(backgroundReplayResponse);
   replayEventsUnchanged = readFileSync(join(runDir, "events.jsonl"), "utf8") === eventsBeforeReplay;
 
   await server.close();
@@ -78,6 +92,10 @@ test("analyze_symbol schema keeps dry_run opt-in and exposes language and tasks"
   assert.equal(analyze?.inputSchema?.properties?.wait_for_completion?.default, false);
   assert.ok(analyze?.inputSchema?.properties?.language, "language selection must be exposed");
   assert.ok(analyze?.inputSchema?.properties?.tasks?.items?.enum?.includes("quant_factor"));
+
+  const readRun = toolsList.find((tool) => tool.name === "read_run");
+  assert.deepEqual(readRun?.inputSchema?.properties?.detail?.enum, ["compact", "full"]);
+  assert.equal(readRun?.inputSchema?.properties?.detail?.default, "compact");
 });
 
 test("a dry run returns a DRY_RUN decision with both markdown payloads", () => {
@@ -90,7 +108,17 @@ test("a dry run returns a DRY_RUN decision with both markdown payloads", () => {
 test("replaying analyze_symbol returns the existing analysis without spending the council again", () => {
   assert.equal(replay.idempotent_replay, true);
   assert.deepEqual(replay.decision, analysis.decision);
+  assert.equal(backgroundReplay.idempotent_replay, true);
+  assert.deepEqual(backgroundReplay.decision, analysis.decision);
   assert.equal(replayEventsUnchanged, true, "an idempotent replay must not append a second lifecycle");
+});
+
+test("text-only analyze_symbol terminal responses and terminal replays are the persisted handoff", () => {
+  const persisted = readFileSync(join(runDir, "user_response.md"), "utf8");
+  for (const response of [analysisResponse, replayResponse, backgroundReplayResponse]) {
+    assert.equal(response.result.content[0].text, persisted);
+    assert.ok(response.result.content[0].text.trimEnd().endsWith("<!-- alphacouncil:handoff-method-seat-tail:v1:end -->"));
+  }
 });
 
 test("a dry run writes every promised artifact", () => {

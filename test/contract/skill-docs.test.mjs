@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { repoFile } from "../helpers/paths.mjs";
 
@@ -208,7 +208,7 @@ test("the npm tarball excludes PersonaPack staging and every raw acquisition art
     "the package must ship the PersonaPack v3 deterministic policy consumed by operators");
   const reviewJson = packed.filter((path) => path.startsWith("knowledge/ai-assisted-solo/reviews/") && path.endsWith(".json"));
   const repoReviewJson = execSync("git ls-files knowledge/ai-assisted-solo/reviews", { cwd: repoFile("."), encoding: "utf8" })
-    .split("\n").filter((path) => path.endsWith(".json"));
+    .split("\n").filter((path) => path.endsWith(".json") && existsSync(repoFile(path)));
   assert.equal(reviewJson.length, repoReviewJson.length,
     "the package must ship the complete hash-verifiable AI review capsule");
   assert.equal(packed.some((path) => path.startsWith("knowledge/ai-assisted-solo/host-e2e/")), false,

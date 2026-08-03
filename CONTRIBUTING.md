@@ -8,11 +8,15 @@ Thanks for your interest in improving AlphaCouncil Agent!
 git clone https://github.com/Zhao73/alphacouncil-agent.git
 cd alphacouncil-agent
 node --version      # must be >= 18
+npm ci              # development-only schema/property-test tools
 npm run check       # runs node --check + the self-check (no Codex auth needed)
 ```
 
 There are **no runtime dependencies** — the MCP server is plain Node.js standard
-library. Please keep it that way unless there is no simple standard-library path.
+library. Ajv, fast-check and jsonrepair are development-only: the committed standalone
+validators and bounded local parser run without `node_modules`, including direct Codex
+marketplace installs. Please keep the runtime dependency-free unless there is no simple
+standard-library path.
 
 ## Before opening a pull request
 

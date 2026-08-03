@@ -400,7 +400,9 @@ export function inspectPersonaV3ProductionCandidates({
   const blueprints = canonicalMasterBlueprints({ personaDir: resolvedPersonaDir });
   const expectedByPersona = expectedToolMap();
   const inventoryErrors = [];
-  if (buildInventory.seat_count !== CANONICAL_MASTER_COUNT) inventoryErrors.push("build-spec seat count is not 26");
+  if (buildInventory.seat_count !== CANONICAL_MASTER_COUNT) {
+    inventoryErrors.push(`build-spec seat count is not ${CANONICAL_MASTER_COUNT}`);
+  }
   const expectedToolCount = [...expectedByPersona.values()].reduce((total, ids) => total + ids.length, 0);
   if (expectedToolCount !== PLANNED_TOOL_COUNT) inventoryErrors.push(`build-spec tool count is not ${PLANNED_TOOL_COUNT}: ${expectedToolCount}`);
 

@@ -16,7 +16,7 @@ const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
-const task = /Task:\\s*(market_data)/u.exec(prompt)?.[1] || null;
+const task = /(?:Task:\\s*|任务：\\s*|Target task:\\s*)(market_data)/u.exec(prompt)?.[1] || null;
 const originalMaster = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
 const repairMaster = /Master ID:\\s*(master_[a-z0-9_]+)/u.exec(prompt)?.[1] || null;
 const master = originalMaster || repairMaster;
@@ -43,7 +43,16 @@ if (task) {
   packet = wrong
     ? {
       master, acknowledged_stance: stance,
-      statement: "This valid master statement deliberately remains in the wrong reader language after repair.",
+      voice_mode: "first_person_public_method_simulation_v1",
+      disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+      position_intent: ({ constructive: "would_buy", cautious: "would_hold", opposed: "would_pass", out_of_scope: "not_in_my_circle" })[stance],
+      voice: {
+        would_i_act: "I would keep this statement in the wrong reader language after repair.",
+        what_i_see: "I see that the dedicated method worker ignored the requested Chinese language.",
+        how_my_method_reads_it: "I apply my method in English even though this fixture requires Chinese.",
+        where_i_disagree: "I disagree with the requested language contract in this negative control.",
+        what_changes_my_mind: "I would need a valid Chinese reader-facing statement."
+      },
       key_findings: ["The dedicated method worker ignored the requested Chinese language."],
       disagreements: ["The language contract is not satisfied."],
       what_would_change_my_mind: ["A valid Chinese reader-facing statement is required."],
@@ -51,7 +60,16 @@ if (task) {
     }
     : {
       master, acknowledged_stance: stance,
-      statement: "本方法席仅解释已经冻结的判断，不增加任何新事实。",
+      voice_mode: "first_person_public_method_simulation_v1",
+      disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+      position_intent: ({ constructive: "would_buy", cautious: "would_hold", opposed: "would_pass", out_of_scope: "not_in_my_circle" })[stance],
+      voice: {
+        would_i_act: "我只会遵守已经冻结的判断，不增加方向。",
+        what_i_see: "我看到本轮冻结事实仍然不足。",
+        how_my_method_reads_it: "我按自己的方法解释记录，不增加任何新事实。",
+        where_i_disagree: "我不同意把方法模拟误写成真人原话。",
+        what_changes_my_mind: "我只会在新的可核验一手证据出现时改变判断。"
+      },
       key_findings: ["冻结事实不足时必须明确拒绝补造。"], disagreements: ["不得把方法代理误写成真人原话。"],
       what_would_change_my_mind: ["新的可核验一手证据可能改变判断。"],
       source_ids: ["market_data:S1"], confidence: "low"
@@ -98,9 +116,6 @@ async function runChineseFullFailure(failureTarget) {
     dataDir,
     env: {
       ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver,
-      // The subject here is the voice worker's language gate, so the seat has to get a worker.
-      // On an ETF this seat abstains, and an abstaining seat no longer spends one by default.
-      ...(failureTarget === "master" ? { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "1" } : {}),
     },
   });
   await server.request("initialize", {});

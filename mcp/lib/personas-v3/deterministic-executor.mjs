@@ -482,15 +482,28 @@ function unique(values) {
   return [...new Set(values)];
 }
 
-function resolveOperand(operand, facts, outputs) {
+function resolveOperand(operand, facts, outputs, outputContracts = null) {
   if (hasOwn(operand, "literal")) return { computable: true, value: operand.literal, missing_input_ids: [] };
   if (hasOwn(operand, "fact_id")) {
     if (!facts.has(operand.fact_id)) return { computable: false, value: null, missing_input_ids: [`fact:${operand.fact_id}`] };
-    return { computable: true, value: facts.get(operand.fact_id).value, missing_input_ids: [] };
+    const fact = facts.get(operand.fact_id);
+    return {
+      computable: true,
+      value: fact.value,
+      value_kind: fact.value_kind,
+      unit: fact.unit,
+      missing_input_ids: [],
+    };
   }
   if (hasOwn(operand, "output_id")) {
     if (!outputs.has(operand.output_id)) return { computable: false, value: null, missing_input_ids: [`output:${operand.output_id}`] };
-    return { computable: true, value: outputs.get(operand.output_id), missing_input_ids: [] };
+    const contract = outputContracts?.get(operand.output_id);
+    return {
+      computable: true,
+      value: outputs.get(operand.output_id),
+      ...(contract ? { value_kind: contract.value_kind, unit: contract.unit } : {}),
+      missing_input_ids: [],
+    };
   }
   policyFail("INVALID_OPERAND", "invalid operand reached execution");
 }
@@ -606,13 +619,27 @@ function comparable(value) {
   return value === null || ["number", "string", "boolean"].includes(typeof value);
 }
 
+function assertTypedLiteralCompatibility(typed, literal, path) {
+  if (!typed.value_kind) return;
+  const expected = ["monetary", "ratio", "count", "scalar"].includes(typed.value_kind)
+    ? "number"
+    : ["text", "date"].includes(typed.value_kind) ? "string"
+      : typed.value_kind === "boolean" ? "boolean" : null;
+  if (expected && typeof literal.value !== expected) {
+    policyFail(
+      "OPERAND_CONTRACT_MISMATCH",
+      `${path}: ${JSON.stringify(typed.value_kind)} operand cannot be compared with ${typeof literal.value} literal`,
+    );
+  }
+}
+
 function uncomputable(op, missing, children = undefined) {
   return { op, computable: false, value: null, missing_input_ids: unique(missing), ...(children ? { children } : {}) };
 }
 
-function evaluateCondition(condition, facts, outputs, path) {
+function evaluateCondition(condition, facts, outputs, path, outputContracts = null) {
   if (LOGICAL_CONDITIONS.has(condition.op)) {
-    const children = condition.conditions.map((child, index) => evaluateCondition(child, facts, outputs, `${path}.conditions[${index}]`));
+    const children = condition.conditions.map((child, index) => evaluateCondition(child, facts, outputs, `${path}.conditions[${index}]`, outputContracts));
     const known = children.filter((child) => child.computable);
     const missing = children.flatMap((child) => child.missing_input_ids);
     if (condition.op === "all") {
@@ -625,18 +652,30 @@ function evaluateCondition(condition, facts, outputs, path) {
     return { op: "any", computable: true, value: false, missing_input_ids: [], children };
   }
   if (condition.op === "not") {
-    const child = evaluateCondition(condition.condition, facts, outputs, `${path}.condition`);
+    const child = evaluateCondition(condition.condition, facts, outputs, `${path}.condition`, outputContracts);
     if (!child.computable) return uncomputable("not", child.missing_input_ids, [child]);
     return { op: "not", computable: true, value: !child.value, missing_input_ids: [], children: [child] };
   }
   if (condition.op === "exists") {
-    const result = resolveOperand(condition.value, facts, outputs);
+    const result = resolveOperand(condition.value, facts, outputs, outputContracts);
     return { op: "exists", computable: true, value: result.computable && result.value !== null && result.value !== "", missing_input_ids: result.missing_input_ids };
   }
-  const left = resolveOperand(condition.left, facts, outputs);
-  const right = resolveOperand(condition.right, facts, outputs);
+  const left = resolveOperand(condition.left, facts, outputs, outputContracts);
+  const right = resolveOperand(condition.right, facts, outputs, outputContracts);
   const missing = [...left.missing_input_ids, ...right.missing_input_ids];
   if (!left.computable || !right.computable) return uncomputable(condition.op, missing);
+  // Numeric-looking JavaScript values are not sufficient to make two typed artifacts
+  // comparable. Crossing monetary/ratio/count/scalar kinds is always a contract error. Exact
+  // ratio-unit compatibility remains a separate admission problem because current provisional
+  // packs still contain time-normalised and price-relative ratios awaiting human adjudication.
+  if (left.value_kind && right.value_kind && left.value_kind !== right.value_kind) {
+    policyFail(
+      "OPERAND_CONTRACT_MISMATCH",
+      `${path}: left ${JSON.stringify(left.value_kind)} (${JSON.stringify(left.unit)}) cannot be compared with right ${JSON.stringify(right.value_kind)} (${JSON.stringify(right.unit)})`,
+    );
+  }
+  if (left.value_kind && !right.value_kind) assertTypedLiteralCompatibility(left, right, path);
+  if (right.value_kind && !left.value_kind) assertTypedLiteralCompatibility(right, left, path);
   let value;
   if (["date_gt", "date_gte", "date_lt", "date_lte"].includes(condition.op)) {
     const a = dateValue(left.value, `${path}.left`);
@@ -713,6 +752,10 @@ function readsOnlyFacts(node) {
 function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   const facts = new Map(preDecision.fact_pack.facts.map((fact) => [fact.fact_id, fact]));
   const outputs = new Map();
+  const outputContracts = new Map(tools.map((tool) => [tool.output_id, {
+    value_kind: tool.value_kind,
+    unit: tool.unit,
+  }]));
 
   // A veto that reads only facts is evaluated before any tool runs.
   //
@@ -724,7 +767,7 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   // veto that reads a tool output still waits for it.
   const vetoedOnFactsAlone = policy.hard_vetoes.some((record, index) => {
     if (!readsOnlyFacts(record.condition)) return false;
-    const early = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`);
+    const early = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`, outputContracts);
     return early.computable ? Boolean(early.value) : record.on_uncomputable.action === "trigger";
   });
 
@@ -771,7 +814,7 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   const eligibilityChecks = policy.eligibility.all.map((record, index) => ({
     condition_id: record.condition_id,
     source_ids: record.source_ids,
-    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.eligibility.all[${index}].condition`),
+    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.eligibility.all[${index}].condition`, outputContracts),
   }));
   const eligibilityFailure = eligibilityChecks.map((check, index) => {
     if (!check.computable) return { check, mapping: policy.eligibility.all[index].on_uncomputable, reason: "eligibility_uncomputable" };
@@ -780,7 +823,7 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   }).find(Boolean) || null;
 
   const vetoEvaluations = policy.hard_vetoes.map((record, index) => {
-    const evaluation = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`);
+    const evaluation = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`, outputContracts);
     const resolution = evaluation.computable
       ? evaluation.value ? "condition_true" : "condition_false"
       : record.on_uncomputable.action === "trigger" ? "uncomputable_triggered" : "uncomputable_abstain";
@@ -818,7 +861,7 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
     points: record.points,
     coverage_weight: record.coverage_weight,
     source_ids: record.source_ids,
-    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.scoring.rules[${index}].condition`),
+    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.scoring.rules[${index}].condition`, outputContracts),
   }));
   const computableRules = evaluatedRules.filter((rule) => rule.computable);
   const hits = computableRules.filter((rule) => rule.value);

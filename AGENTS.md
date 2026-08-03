@@ -6,12 +6,16 @@ For report-generation behavior, also follow `docs/report-contract.md`. The chat 
 
 For anti-laziness governance, also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with the plugin so installed agents inherit the same gates without separately installing `addyosmani/agent-skills`.
 
+For methodology comparisons or Skill experiments, also follow
+`skills/alphacouncil-method-lenses/SKILL.md`. Its 26 on-demand references are provisional
+explanation material and never replace a frozen deterministic PersonaPack result.
+
 Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.0.0` is the published default install. It carries 27 physical
-PersonaPack v3 packs, 27 `operator_lens` seats and 54 executable tools, with 0 validated
+Package/plugin version `1.0.0` is the published default install. The current source tree carries 26 physical
+PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
 `method_model` seats. Human review of the authored formulas and the live four-host
 end-to-end run are outstanding, so do not present a passing full/quick report or a packaged
 smoke as evidence that either has been done.
@@ -88,8 +92,8 @@ The MCP server is the load-bearing integration on every host: it reads `personas
 so a host that ignores the generated agent files still gets correct prompts.
 
 Every host also follows the same mandatory master-selection protocol for a full or quick
-council. Call `begin_council_selection` with the intended `council_mode`, display all 26
-returned entries with number, identity, method and `best_for`, collect one submission, then
+council. Call `begin_council_selection` with the intended `council_mode`, display every
+returned entry with number, identity, method and `best_for`, collect one submission, then
 call `confirm_master_selection` with `display_ack: true`. Full accepts numbers, ranges,
 stable IDs or `all`; quick accepts exactly 1-4 distinct methods and rejects `all` and
 `select_all`. Existing names in the request are only a prefill; the full catalog is still
@@ -166,7 +170,7 @@ rather than four in a menu of a hundred.
 | Invocation | What runs | Model spend |
 |---|---|---|
 | `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs full; plugin-managed headless is ≤30m | deterministic stance + one isolated voice worker per selected v3 seat |
-| `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
+| `/alpha <ticker> quick` | Shows the complete returned catalog, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |

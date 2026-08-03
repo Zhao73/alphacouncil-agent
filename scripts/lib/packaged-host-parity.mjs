@@ -27,6 +27,11 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
+import {
+  HOST_SELECTION_INSTRUCTION_PATHS,
+  inspectHostSelectionInstruction,
+} from "./host-selection-instruction-contract.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const PACKAGED_PARITY_REPO_ROOT = resolve(HERE, "../..");
 export const PACKAGED_HOST_IDS = Object.freeze(["claude_code", "codex", "opencode", "grok"]);
@@ -316,6 +321,9 @@ function validatePackagedSurfaces(pack) {
   const packageFiles = new Set(pack.tarFiles);
   const installedEntries = walkFiles(pack.installedRoot);
   const installedFiles = new Set(installedEntries.map((entry) => entry.path));
+  if (pack.tarFiles.some((path) => path === "fuzz" || path.startsWith("fuzz/"))) {
+    fail("npm package leaked the development-only fuzz lane");
+  }
   const forbiddenTar = pack.tarFiles.filter(forbiddenPackageArtifact);
   const forbiddenInstalled = installedEntries.map((entry) => entry.path).filter(forbiddenPackageArtifact);
   if (forbiddenTar.length || forbiddenInstalled.length) {
@@ -349,6 +357,24 @@ function validatePackagedSurfaces(pack) {
   const canonicalCommand = requireInstalledFile(pack.installedRoot, packageFiles, "commands/alpha.md", "canonical command");
   const hosts = [];
   const shippedPaths = new Set(REQUIRED_PACKAGE_FILES);
+  for (const rel of HOST_SELECTION_INSTRUCTION_PATHS) {
+    const instruction = requireInstalledFile(
+      pack.installedRoot,
+      packageFiles,
+      rel,
+      "packaged host selection instruction",
+    );
+    const result = inspectHostSelectionInstruction(instruction, {
+      path: rel,
+      canonicalCount: CANONICAL_MASTER_COUNT,
+    });
+    if (result.status !== "passed") {
+      fail(`packaged host selection instruction violates returned-catalog contract: ${rel}`, {
+        errors: result.errors,
+      });
+    }
+    shippedPaths.add(rel);
+  }
   for (const host of contract.hosts) {
     if (host.live_e2e?.status !== "not_run" || host.live_e2e?.artifact !== null) {
       fail(`${host.host_id} packaged contract fabricates external live E2E`);
@@ -410,6 +436,12 @@ function validatePackagedSurfaces(pack) {
     contract,
     hosts,
     shipped_surface_count: shippedPaths.size,
+    host_selection_instructions: {
+      status: "passed",
+      contract_id: "host_selector_returned_catalog_v1",
+      canonical_catalog_count: CANONICAL_MASTER_COUNT,
+      files: [...HOST_SELECTION_INSTRUCTION_PATHS],
+    },
     deterministic_policy: {
       path: "docs/persona-v3-deterministic-policy.md",
       hash: sha256(policy),
@@ -878,6 +910,7 @@ export async function runPackagedHostParity({ repoRoot = PACKAGED_PARITY_REPO_RO
       package_surfaces: {
         hosts: surfaces.hosts,
         shipped_surface_count: surfaces.shipped_surface_count,
+        host_selection_instructions: surfaces.host_selection_instructions,
         deterministic_policy: surfaces.deterministic_policy,
         exclusions: surfaces.exclusions,
         ai_assisted_review_capsule: surfaces.ai_assisted_review_capsule,

@@ -219,35 +219,13 @@ function uniqueStrings(values) {
 /**
  * Whether a frozen seat still needs a model worker to become readable.
  *
- * A seat that reached a stance has a reading worth explaining: which condition decided it, at
- * what number, and what would move it. A seat whose gate never opened has no reading. Its
- * deterministic statement already names the condition that closed the gate and says an
- * abstention is not a bearish vote, which is the whole of what an out_of_scope seat is asked
- * to say -- so an isolated worker there buys prose, not information. The declined path reached
- * this conclusion earlier for the same reason; this applies it to a seat that executed its
- * policy and abstained. On a real seven-seat run four such seats took most of the method phase
- * to report, at length, that they had no opinion.
- *
- * Set ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1 to give every seat a worker,
- * or =0 to never voice an abstention, on any instrument.
- *
- * Baskets are the exception to the default. On an operating company an abstention
- * is the rare case and its deterministic record says everything the contract asks.
- * On an ETF or index it is the MAJORITY outcome -- most methods' required facts do
- * not exist for a basket -- so a bench that skips abstention workers there reads as
- * twenty-five copies of "no data" and the run's whole value collapses to two seats.
- * There the worker is asked for the method's reading of the facts that DO exist,
- * labelled as observation rather than a stance, which no template can author.
+ * Every selected seat gets its isolated voice worker, including an abstaining seat. Strong
+ * first-person, method-specific expression is a reader contract, not an optional cost
+ * optimization. The deterministic first-person rendering remains only as an auditable
+ * failure/dry-run fallback and never substitutes a generic third-person summary.
  */
-export function needsMethodVoiceWorker(opinion, { env = process.env, run = null } = {}) {
-  if (env?.ALPHACOUNCIL_VOICE_ABSTAINING_SEATS === "1") return true;
-  if (env?.ALPHACOUNCIL_VOICE_ABSTAINING_SEATS === "0") {
-    return (opinion?.stance || "out_of_scope") !== "out_of_scope";
-  }
-  if ((opinion?.stance || "out_of_scope") !== "out_of_scope") return true;
-  const instrument = run?.grounding?.instrument;
-  return instrument?.fund_like === true || instrument?.index_like === true
-    || ["etf", "mutual_fund", "index"].includes(instrument?.asset_type);
+export function needsMethodVoiceWorker() {
+  return true;
 }
 
 /** Render a post-freeze, model-free opinion from the DSL result. */

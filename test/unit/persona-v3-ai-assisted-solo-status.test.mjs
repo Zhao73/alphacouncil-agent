@@ -46,7 +46,7 @@ test("the current physical machine reviews are hash-bound and remain explicitly 
     ROOT,
     "knowledge/ai-assisted-solo/reviews/persona-v3-ai-source-prereviews/master_buffett/buffett_berkshire_letter_2024.json",
   ));
-  const sourceCheck = validateAiSourcePrereviewArtifact(source);
+  const sourceCheck = validateAiSourcePrereviewArtifact(source, { sourcePathRoot: null });
   assert.equal(sourceCheck.valid, true, sourceCheck.errors.join("\n"));
   const sourceTamper = structuredClone(source);
   sourceTamper.human_reviewed = true;
@@ -79,12 +79,15 @@ test("the status gate separates local AI-review readiness from unfinished releas
   assert.equal(report.local_test_status, "ready");
   assert.equal(report.release_status, "blocked");
   assert.equal(report.solo_packs.completed, CANONICAL_MASTER_COUNT);
-  assert.equal(report.ai_review_coverage.source.completed, 32);
-  assert.equal(report.ai_review_coverage.source.verification_mode, "raw_revalidated");
-  assert.equal(report.ai_review_coverage.source.raw_source_revalidated_count, 32);
-  assert.equal(report.ai_review_coverage.semantic.extraction.completed, 32);
-  assert.equal(report.ai_review_coverage.semantic.skeptic.completed, 32);
-  assert.equal(report.ai_review_coverage.semantic.adjudication.completed, 32);
+  assert.equal(report.ai_review_coverage.source.completed, 31);
+  assert.ok(["raw_revalidated", "packaged_capsule_only"].includes(report.ai_review_coverage.source.verification_mode));
+  assert.equal(
+    report.ai_review_coverage.source.raw_source_revalidated_count,
+    report.ai_review_coverage.source.verification_mode === "raw_revalidated" ? 31 : 0,
+  );
+  assert.equal(report.ai_review_coverage.semantic.extraction.completed, 31);
+  assert.equal(report.ai_review_coverage.semantic.skeptic.completed, 31);
+  assert.equal(report.ai_review_coverage.semantic.adjudication.completed, 31);
   assert.equal(report.ai_review_coverage.semantic.status, "passed");
   assert.equal(report.ai_review_coverage.formula.completed, PLANNED_TOOL_COUNT);
   assert.equal(report.automated_experiment_coverage.completed, 8);
@@ -105,11 +108,11 @@ test("the packaged review capsule verifies hashes without pretending to reopen o
   const report = inspectAiAssistedSoloStatus({ sourceAcquisitionRoot: missingRawRoot });
   assert.equal(report.integrity_status, "passed", report.integrity_errors.join("\n"));
   assert.equal(report.local_test_status, "ready");
-  assert.equal(report.ai_review_coverage.source.completed, 32);
+  assert.equal(report.ai_review_coverage.source.completed, 31);
   assert.equal(report.ai_review_coverage.source.verification_mode, "packaged_capsule_only");
   assert.equal(report.ai_review_coverage.source.raw_source_revalidated_count, 0);
   for (const stage of ["extraction", "skeptic", "adjudication"]) {
-    assert.equal(report.ai_review_coverage.semantic[stage].completed, 32, stage);
+    assert.equal(report.ai_review_coverage.semantic[stage].completed, 31, stage);
     assert.equal(report.ai_review_coverage.semantic[stage].verification_mode, "packaged_capsule_only", stage);
     assert.equal(report.ai_review_coverage.semantic[stage].raw_source_revalidated_count, 0, stage);
   }

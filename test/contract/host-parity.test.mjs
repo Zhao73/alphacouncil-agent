@@ -13,6 +13,10 @@ import {
   loadHostCapabilities,
   validateHostCapabilities,
 } from "../../scripts/lib/host-capabilities.mjs";
+import {
+  HOST_SELECTION_INSTRUCTION_PATHS,
+  inspectHostSelectionInstruction,
+} from "../../scripts/lib/host-selection-instruction-contract.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const read = (rel) => readFileSync(join(HOST_REPO_ROOT, rel), "utf8");
@@ -63,6 +67,36 @@ test("all four shipped command surfaces impose the same ordered selection protoc
     for (const marker of ["`identity`", "`method`", "`best_for`", "`maturity`", "catalog_hash", "display_ack: true", "one-use `selection_receipt`", "missing, expired, stale or consumed"]) {
       assert.ok(command.includes(marker), `${host.host_id} lacks ${marker}`);
     }
+  }
+});
+
+test("consumer-facing host selector instructions derive catalog size from returned entries", () => {
+  for (const path of HOST_SELECTION_INSTRUCTION_PATHS) {
+    const result = inspectHostSelectionInstruction(read(path), {
+      path,
+      canonicalCount: CANONICAL_MASTER_COUNT,
+    });
+    assert.equal(result.status, "passed", JSON.stringify(result.errors, null, 2));
+  }
+});
+
+test("selector instruction contract rejects stale and currently-correct hardcoded counts", () => {
+  const dynamic = inspectHostSelectionInstruction(
+    "Show every returned method individually, then ask for one submission.",
+    { path: "dynamic-fixture", canonicalCount: CANONICAL_MASTER_COUNT },
+  );
+  assert.equal(dynamic.status, "passed");
+
+  for (const count of [CANONICAL_MASTER_COUNT - 1, CANONICAL_MASTER_COUNT]) {
+    const result = inspectHostSelectionInstruction(
+      `Show every returned method individually. Also display all ${count} methods.`,
+      { path: `hardcoded-${count}-fixture`, canonicalCount: CANONICAL_MASTER_COUNT },
+    );
+    assert.equal(result.status, "failed");
+    assert.deepEqual(result.errors.map((error) => error.code), [
+      "HARDCODED_SELECTOR_CATALOG_COUNT",
+    ]);
+    assert.equal(result.errors[0].count, count);
   }
 });
 

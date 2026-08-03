@@ -95,43 +95,6 @@ function buildSpec({
 
 const seats = [
   buildSpec({
-    personaId: "master_aschenbrenner",
-    promptPath: "personas/masters/masters-modern/aschenbrenner.md",
-    scope: "Test an AI-scaling thesis by linking compute, power, capital expenditure, supply constraints and adoption timelines to price-implied expectations.",
-    domains: ["ai_infrastructure", "semiconductors", "power", "technology_diffusion"],
-    excludes: ["private laboratory roadmaps", "classified national-security information", "a claim to reproduce the named researcher's current view"],
-    facts: ["ai.compute.installed_capacity", "ai.compute.capex_commitments", "ai.power.available_mw", "ai.supply_chain.lead_time", "ai.adoption.revenue", "valuation.implied_growth"],
-    decision: {
-      schemaId: "ai_scaling_timeline_v1",
-      eligibility: ["dated compute, power and capex facts", "price-implied adoption baseline"],
-      states: ["timeline_underpriced", "timeline_priced", "timeline_overpriced", "out_of_scope"],
-      outputs: ["constraint map", "dated scenario range", "implied-versus-required adoption", "invalidation milestones"],
-      failClosed: ["material private or classified dependency", "no dated supply facts", "no price-implied baseline"],
-    },
-    tools: [
-      ["master_aschenbrenner.compute_power_bridge", "Translate chips and utilization assumptions into power and datacenter requirements.", ["ai.power.required_mw", "ai.compute.effective_capacity"]],
-      ["master_aschenbrenner.timeline_reverse_valuation", "Solve for the adoption and revenue timeline embedded in market value.", ["valuation.implied_growth", "ai.adoption.implied_timeline"]],
-    ],
-    vetoes: [
-      ["master_aschenbrenner.private_dependency", "Reject conclusions whose load-bearing input is private or classified."],
-      ["master_aschenbrenner.power_gap", "Reject a scale scenario that lacks a dated, financeable power path."],
-      ["master_aschenbrenner.supply_timeline_gap", "Reject a timeline that ignores documented equipment and interconnect lead times."],
-    ],
-    sources: [
-      source("master_aschenbrenner", 1, "author_signed", "Acquire dated author-published essays and corrections with exact section anchors."),
-      source("master_aschenbrenner", 2, "institutional_primary", "Acquire issuer, grid, foundry and equipment-company disclosures for compute and power constraints."),
-      source("master_aschenbrenner", 3, "public_record", "Acquire public policy, permitting and procurement records relevant to scaling timelines."),
-    ],
-    cases: {
-      decision: "Acquire dated public scaling calls whose information set and forecast horizon can be frozen.",
-      failure: "Acquire documented timeline misses, bottleneck surprises and thesis revisions without inferring private motives.",
-      counterfactual: "Vary compute cost, utilization, power availability and adoption while holding unrelated facts fixed.",
-      golden: "Construct blinded compute-power-capex cases with independently recomputed timeline outputs.",
-    },
-    limits: ["Important laboratory capabilities and state planning inputs may be private or classified.", "The public thesis is recent, so resolved long-horizon decision cases are inherently scarce."],
-  }),
-
-  buildSpec({
     personaId: "master_buffett",
     promptPath: "personas/masters/masters-value/buffett.md",
     legacyV2: "knowledge/masters/master_buffett/manifest.json",

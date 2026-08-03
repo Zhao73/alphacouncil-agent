@@ -26,7 +26,6 @@ import { canDefineMethodRule, validateSourceAnchor } from "./source-anchor.mjs";
 import { defaultKnowledgeDir } from "./admission.mjs";
 
 export const CANONICAL_MASTER_IDS = Object.freeze([
-  "master_aschenbrenner",
   "master_buffett",
   "master_graham",
   "master_simons",

@@ -2,14 +2,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS, councilPaceProfile } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
-import { readJson, writeJson } from "./fsutil.mjs";
+import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
 import { assertReaderLanguage, isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
-import { writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
+import { assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
@@ -17,6 +18,27 @@ import { completedMasterOpinion, declinedMasterOpinion, needsMethodVoiceWorker, 
 import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
+
+function commitFinalArtifacts(run, debate = {}) {
+  const prepared = writeFinalArtifacts(run, debate);
+  if (!prepared.publication_manifest && run.status === "complete") {
+    const events = readJsonl(artifactPaths(run).events_jsonl).entries;
+    if (!events.some((event) => event.type === "run_complete")) {
+      appendEvent(run, "run_complete", {
+        decision: debate.manager?.rating ?? null,
+        winner: debate.manager?.winner ?? null,
+      });
+    }
+  }
+  if (!prepared.publication_manifest) {
+    // report_quality is assigned while rendering; save the complete terminal state only
+    // after that gate, then render the trace once more from the exact persisted timestamp.
+    saveRun(run);
+    writeAllAgentsMarkdown(run, debate);
+  }
+  const publication_manifest = publishFinalArtifacts(run, debate);
+  return { ...prepared, publication_manifest };
+}
 
 function councilMode(args = {}) {
   return COUNCIL_MODES.includes(args.council_mode) ? args.council_mode : "full";
@@ -448,10 +470,10 @@ export function visibleAgentSpecs(run, userPrompt = "") {
           }),
         ].join("\n\n"),
         output_contract: localized(run.language, {
-          en: "Return one JSON method voice: master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids, confidence. acknowledged_stance must equal frozen_stance.",
-          zh: "只返回一个 JSON 方法席陈词：master、acknowledged_stance、statement、key_findings、disagreements、what_would_change_my_mind、source_ids、confidence；acknowledged_stance 必须等于冻结立场。",
-          ja: "master、acknowledged_stance、statement、key_findings、disagreements、what_would_change_my_mind、source_ids、confidence を持つ JSON を1つだけ返し、acknowledged_stance は凍結済みスタンスと一致させてください。",
-          ko: "master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids, confidence를 가진 JSON 하나만 반환하고 acknowledged_stance는 동결된 입장과 같아야 합니다.",
+          en: "Return one JSON method voice with the exact voice_mode and disclosure_ack from the prompt, position_intent, all five first-person voice fields, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. master and acknowledged_stance must equal the frozen record.",
+          zh: "只返回一个 JSON 方法席陈词：使用提示中的精确 voice_mode 与 disclosure_ack，并包含 position_intent、全部五个强第一人称 voice 字段、key_findings、disagreements、what_would_change_my_mind、source_ids、confidence；master 与 acknowledged_stance 必须等于冻结记录。",
+          ja: "プロンプト指定の voice_mode と disclosure_ack、position_intent、5つすべての一人称 voice フィールド、key_findings、disagreements、what_would_change_my_mind、source_ids、confidence を持つ JSON を1つだけ返してください。master と acknowledged_stance は凍結済み記録と一致させます。",
+          ko: "프롬프트의 정확한 voice_mode와 disclosure_ack, position_intent, 5개 모두의 1인칭 voice 필드, key_findings, disagreements, what_would_change_my_mind, source_ids, confidence를 가진 JSON 하나만 반환하십시오. master와 acknowledged_stance는 동결 기록과 같아야 합니다.",
         }),
       };
     });
@@ -635,8 +657,12 @@ export function recordMasterOpinion(args) {
         supplied_stance: args.packet?.acknowledged_stance || null,
       });
     }
+    const validatedVoice = assertRuntimeClientPayload("method_voice", args.packet, {
+      run_id: run.run_id,
+      master: args.master,
+    });
     const voice = normalizeMasterVoice(
-      args.packet,
+      validatedVoice,
       args.master,
       run,
       frozenOpinion,
@@ -653,6 +679,11 @@ export function recordMasterOpinion(args) {
       deterministic_summary: frozenOpinion.deterministic_summary || frozenOpinion.summary,
       summary: voice.statement,
       voice_statement: voice.statement,
+      voice: voice.voice,
+      position_intent: voice.position_intent,
+      voice_mode: voice.voice_mode,
+      disclosure_ack: voice.disclosure_ack,
+      disclosure: voice.disclosure,
       voice_status: "completed",
       voice_language: run.language,
       statement_origin: "visible_method_voice_worker",
@@ -734,8 +765,12 @@ export function recordVisiblePacket(args) {
   const task = args.task;
   if (!run.tasks.includes(task)) throw invalidParams(`Unknown task for this run: ${task}`);
   const dir = runPath(run.run_id);
+  const validated = assertRuntimeClientPayload("evidence", args.packet, {
+    run_id: run.run_id,
+    task,
+  });
   const packet = normalizePacket({
-    ...(args.packet || {}),
+    ...validated,
     thread_id: args.thread_id,
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
@@ -902,9 +937,16 @@ function recordVisibleDebateRound(run, args) {
   const round = args.round;
   const dir = runPath(run.run_id);
   const state = visibleDebateState(run);
+  const validated = assertRuntimeClientPayload("debate", args.packet, {
+    run_id: run.run_id,
+    role,
+    round,
+  });
+  const source_ids = assertSourceIdsResolve(run, validated.source_ids, `${role} round ${round}`);
   const packet = {
     ...normalizeDebate({
-      ...(args.packet || {}),
+      ...validated,
+      source_ids,
       thread_id: args.thread_id,
       thread_title: args.thread_title,
       execution_mode: "visible_host_threads",
@@ -1036,8 +1078,16 @@ function recordVisiblePortfolioManager(run, args) {
   }
   const dir = runPath(run.run_id);
   const state = visibleDebateState(run);
+  // Validate the shared debate contract first so a missing/invalid rating can never be
+  // normalized into Hold. report_markdown remains a role-specific gate immediately below.
+  const validated = assertRuntimeClientPayload("debate", args.packet, {
+    run_id: run.run_id,
+    role: "portfolio_manager",
+  });
+  const source_ids = assertSourceIdsResolve(run, validated.source_ids, "portfolio_manager");
   const packet = normalizeDebate({
-    ...(args.packet || {}),
+    ...validated,
+    source_ids,
     thread_id: args.thread_id,
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
@@ -1085,17 +1135,13 @@ function recordVisiblePortfolioManager(run, args) {
     if (state.portfolio_manager.content_hash !== contentHash) state.portfolio_manager = null;
   }
   if (state.portfolio_manager) {
-    const handoffPath = join(dir, "user_response.md");
-    const reportPath = join(dir, "final_report.md");
-    const qualityPath = join(dir, "report_quality.json");
+    const debate = existingDebate(dir);
+    const artifacts = commitFinalArtifacts(run, debate);
     return {
       run,
       decision: state.portfolio_manager.packet,
       idempotent_replay: true,
-      user_response_markdown: existsSync(handoffPath) ? readFileSync(handoffPath, "utf8") : "",
-      final_report_markdown: existsSync(reportPath) ? readFileSync(reportPath, "utf8") : "",
-      report_quality: existsSync(qualityPath) ? readJson(qualityPath) : null,
-      artifacts: artifactPaths(run),
+      ...artifacts,
     };
   }
 
@@ -1150,11 +1196,7 @@ function recordVisiblePortfolioManager(run, args) {
   }
   run.completed_at = completedAt;
   saveRun(run);
-  const finalArtifacts = writeFinalArtifacts(run, existingDebate(dir));
-  saveRun(run);
-  if (run.status === "complete") appendEvent(run, "run_complete", { decision: packet.rating, winner: packet.winner });
-  writeStatus(run);
-  writeAllAgentsMarkdown(run, existingDebate(dir));
+  const finalArtifacts = commitFinalArtifacts(run, existingDebate(dir));
   return { run, decision: packet, idempotent_replay: false, ...finalArtifacts };
 }
 
@@ -1183,17 +1225,15 @@ const VISIBLE_FINALIZE_REASONS = new Set([
 function finalizedVisibleReplay(run, idempotentReplay = true) {
   const dir = runPath(run.run_id);
   const managerPath = join(dir, "manager_synthesis.json");
-  const reportPath = join(dir, "final_report.md");
-  const handoffPath = join(dir, "user_response.md");
-  const qualityPath = join(dir, "report_quality.json");
+  const manager = existsSync(managerPath) ? readJson(managerPath) : null;
+  const artifacts = manager
+    ? commitFinalArtifacts(run, { ...existingDebate(dir), manager })
+    : { artifacts: artifactPaths(run) };
   return {
     run,
-    decision: existsSync(managerPath) ? readJson(managerPath) : null,
+    decision: manager,
     idempotent_replay: idempotentReplay,
-    final_report_markdown: existsSync(reportPath) ? readFileSync(reportPath, "utf8") : "",
-    user_response_markdown: existsSync(handoffPath) ? readFileSync(handoffPath, "utf8") : "",
-    report_quality: existsSync(qualityPath) ? readJson(qualityPath) : null,
-    artifacts: artifactPaths(run),
+    ...artifacts,
   };
 }
 
@@ -1325,9 +1365,7 @@ export function finalizeVisibleRun(args) {
   });
   saveRun(run);
   const debate = { ...existingDebate(dir), manager };
-  const artifacts = writeFinalArtifacts(run, debate);
-  saveRun(run);
-  writeAllAgentsMarkdown(run, debate);
+  const artifacts = commitFinalArtifacts(run, debate);
   return { run, decision: manager, idempotent_replay: false, ...artifacts };
 }
 
@@ -1403,6 +1441,17 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     diagnostic_excerpt: cleanLog(outputContractFailed
       ? (rawOutput || result?.stderr || result?.stdout || reason)
       : (result?.stderr || result?.stdout || rawOutput || reason)),
+    ...(result?.output_too_large === true ? {
+      output_too_large: true,
+      output_bytes: Number.isSafeInteger(result.output_bytes) ? result.output_bytes : null,
+      max_output_bytes: Number.isSafeInteger(result.max_output_bytes) ? result.max_output_bytes : null,
+      output_fingerprint_sha256: typeof result.output_fingerprint_sha256 === "string"
+        ? result.output_fingerprint_sha256
+        : null,
+      output_hash_scope: typeof result.output_hash_scope === "string" ? result.output_hash_scope : null,
+      output_prefix: String(result.output_prefix || "").slice(0, 4 * 1024),
+      output_tail: String(result.output_tail || "").slice(-4 * 1024),
+    } : {}),
     ...(outputContractFailed ? {
       ...(parseFailed ? { parse_error: parseMessage } : { reader_language_error: parseMessage }),
       parse_position: Number.isInteger(parsePosition) ? parsePosition : null,
@@ -1805,7 +1854,7 @@ export async function collectEvidence(args) {
     }
     let packet;
     try {
-      packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
+      packet = normalizePacket(extractWorkerJson(result.text, "evidence"), task, symbol, asOfDate, result.text);
       assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task}`);
       commitPacket(packet);
       updateTask(run, task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
@@ -1870,7 +1919,7 @@ export async function collectEvidence(args) {
         });
       }
       try {
-        packet = normalizePacket(extractJson(result.text), task, symbol, asOfDate, result.text);
+        packet = normalizePacket(extractWorkerJson(result.text, "evidence"), task, symbol, asOfDate, result.text);
         assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} repair`);
         commitPacket(packet);
         updateTask(run, task, "completed", {
@@ -2091,7 +2140,7 @@ export async function runHeadlessMasters(run, args = {}) {
     };
     const parse = (result) => {
       if (frozenOpinion) {
-        const voice = normalizeMasterVoice(extractJson(result.text), id, run, frozenOpinion, result.text);
+        const voice = normalizeMasterVoice(extractWorkerJson(result.text, "method_voice"), id, run, frozenOpinion, result.text);
         assertReaderLanguage([
           voice.statement,
           ...(voice.key_findings || []),
@@ -2103,8 +2152,14 @@ export async function runHeadlessMasters(run, args = {}) {
           deterministic_summary: frozenOpinion.summary,
           summary: voice.statement,
           voice_statement: voice.statement,
+          voice: voice.voice,
+          position_intent: voice.position_intent,
+          voice_mode: voice.voice_mode,
+          disclosure_ack: voice.disclosure_ack,
+          disclosure: voice.disclosure,
           voice_status: "completed",
           voice_language: run.language,
+          statement_origin: "dedicated_method_voice_worker",
           key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
           disagreements: voice.disagreements,
           what_would_change_my_mind: voice.what_would_change_my_mind.length
@@ -2148,7 +2203,7 @@ export async function runHeadlessMasters(run, args = {}) {
         "PARSE-ONLY TRANSPORT REPAIR. Do not browse, search, add facts or change the frozen method stance.",
         `Master ID: ${id}; required acknowledged stance: ${frozenOpinion?.stance || "use the original stance"}; output language: ${run.language}.`,
         frozenOpinion
-          ? "Return one JSON object with master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence."
+          ? "Return one JSON object with master, acknowledged_stance, voice_mode=first_person_public_method_simulation_v1, disclosure_ack=alphacouncil.first_person_public_method_simulation.v1, position_intent, every required first-person voice field, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. Do not return a flat statement."
           : "Return one JSON object matching the master_opinion schema from the original prompt.",
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve the frozen stance, facts, numbers and source IDs.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
@@ -2240,6 +2295,15 @@ export async function runDebateRole(run, role, context, timeoutMs) {
         ...(candidate?.questions_answered || []).flatMap((item) => [item?.question, item?.answer]),
         candidate?.report_markdown,
       ].filter(Boolean).join("\n"), run.language, `${role} debate output`);
+      if (role === "portfolio_manager") {
+        const gaps = authoredReportSectionGaps(candidate?.report_markdown, run);
+        if (gaps.length) {
+          return {
+            ...debateFailurePacket(role, run, "parse_failed"),
+            contract_errors: gaps,
+          };
+        }
+      }
       return candidate;
     } catch (error) {
       return debateFailurePacket(role, run, "reader_language_mismatch");
@@ -2257,6 +2321,9 @@ export async function runDebateRole(run, role, context, timeoutMs) {
         repairReason === "reader_language_mismatch"
           ? "Translate only the reader-facing strings in the supplied valid debate-packet JSON. Preserve exact round-2 questions, exact round-3 question bindings, facts, numbers, source IDs and uncertainty. Return one JSON object only."
           : "Convert only the supplied malformed output into one valid debate-packet JSON object. Preserve exact round-2 questions and exact round-3 question bindings when present. Return JSON only.",
+        role === "portfolio_manager"
+          ? `portfolio_manager.report_markdown is mandatory and must contain every authored report section. Required headings: ${requiredReportSectionAliases(run).map((section) => section.suggested_heading).join("; ")}.`
+          : "",
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve facts, numbers, source IDs and exact Q&A bindings.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
@@ -2409,11 +2476,7 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
     run.phase = "complete";
     run.status = "complete";
   }
-  const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager });
-  writeJson(join(dir, "evidence.json"), run);
-  writeStatus(run);
-  if (run.status === "complete") appendEvent(run, "run_complete", { decision: manager.rating, winner: manager.winner });
-  writeAllAgentsMarkdown(run, { bull, bear, manager });
+  const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager });
   return { bull, bear, manager, ...finalArtifacts };
 }
 
@@ -2438,10 +2501,7 @@ function finalizeBeforeDebate(run, args, reason) {
     missing_debate: completeness.missing_debate,
     missing_masters: completeness.missing_masters,
   });
-  const finalArtifacts = writeFinalArtifacts(run, { manager });
-  writeJson(join(dir, "evidence.json"), run);
-  writeStatus(run);
-  writeAllAgentsMarkdown(run, { manager });
+  const finalArtifacts = commitFinalArtifacts(run, { manager });
   return { bull: null, bear: null, manager, ...finalArtifacts };
 }
 
@@ -2479,10 +2539,7 @@ function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRoun
     missing_debate: completeness.missing_debate,
     missing_masters: completeness.missing_masters,
   });
-  const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager });
-  writeJson(join(dir, "evidence.json"), run);
-  writeStatus(run);
-  writeAllAgentsMarkdown(run, { bull, bear, manager });
+  const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager });
   return { bull, bear, manager, ...finalArtifacts };
 }
 
@@ -2537,11 +2594,7 @@ export async function synthesizeDecision(run, args) {
       run.phase = "complete";
       run.status = "complete";
     }
-    const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager: fallback });
-    writeJson(join(dir, "evidence.json"), run);
-    writeStatus(run);
-    if (run.status === "complete") appendEvent(run, "run_complete", { decision: fallback.rating, winner: fallback.winner });
-    writeAllAgentsMarkdown(run, { bull, bear, manager: fallback });
+    const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager: fallback });
     return { bull, bear, manager: fallback, ...finalArtifacts };
   }
 
@@ -2689,11 +2742,7 @@ export async function synthesizeDecision(run, args) {
     run.phase = "complete";
     run.status = "complete";
   }
-  const finalArtifacts = writeFinalArtifacts(run, { bull, bear, manager });
-  writeJson(join(dir, "evidence.json"), run);
-  writeStatus(run);
-  if (run.status === "complete") appendEvent(run, "run_complete", { decision: manager.rating, winner: manager.winner });
-  writeAllAgentsMarkdown(run, { bull, bear, manager });
+  const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager });
   return { bull, bear, manager, ...finalArtifacts };
 }
 
@@ -2783,10 +2832,7 @@ export function finalizeUnhandledBackgroundFailure(runIdValue, prompt, error) {
     diagnostic: run.background_error,
     standard_artifacts_written: true,
   });
-  const artifacts = writeFinalArtifacts(run, { manager });
-  writeJson(join(dir, "evidence.json"), run);
-  writeStatus(run);
-  writeAllAgentsMarkdown(run, { manager });
+  const artifacts = commitFinalArtifacts(run, { manager });
   return { run, manager, ...artifacts };
 }
 

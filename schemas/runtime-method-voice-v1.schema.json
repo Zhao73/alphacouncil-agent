@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-method-voice-v1.schema.json",
+  "title": "AlphaCouncil frozen method voice worker packet",
+  "type": "object",
+  "required": [
+    "master",
+    "acknowledged_stance",
+    "voice_mode",
+    "disclosure_ack",
+    "position_intent",
+    "voice",
+    "key_findings",
+    "disagreements",
+    "what_would_change_my_mind",
+    "source_ids",
+    "confidence"
+  ],
+  "properties": {
+    "master": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "acknowledged_stance": { "enum": ["constructive", "cautious", "opposed", "out_of_scope"] },
+    "voice_mode": { "const": "first_person_public_method_simulation_v1" },
+    "disclosure_ack": { "const": "alphacouncil.first_person_public_method_simulation.v1" },
+    "position_intent": {
+      "enum": ["would_buy", "would_add", "would_hold", "would_watch", "would_pass", "would_avoid", "not_in_my_circle"]
+    },
+    "voice": {
+      "type": "object",
+      "required": ["what_i_see", "how_my_method_reads_it", "would_i_act", "what_changes_my_mind", "where_i_disagree"],
+      "properties": {
+        "what_i_see": { "type": "string", "pattern": "\\S" },
+        "how_my_method_reads_it": { "type": "string", "pattern": "\\S" },
+        "would_i_act": { "type": "string", "pattern": "\\S" },
+        "what_changes_my_mind": { "type": "string", "pattern": "\\S" },
+        "where_i_disagree": { "type": "string", "pattern": "\\S" }
+      },
+      "additionalProperties": true
+    },
+    "key_findings": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "disagreements": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "what_would_change_my_mind": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "source_ids": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "confidence": { "enum": ["high", "medium", "low"] }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "acknowledged_stance": { "enum": ["constructive", "cautious", "opposed"] }
+        },
+        "required": ["acknowledged_stance"]
+      },
+      "then": {
+        "properties": {
+          "source_ids": { "type": "array", "minItems": 1 }
+        }
+      }
+    }
+  ],
+  "additionalProperties": true
+}

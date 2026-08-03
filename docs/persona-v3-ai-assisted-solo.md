@@ -31,8 +31,8 @@ adjudicator chain, but does not claim to reopen raw source bytes. A source check
 private acquisition tree reports `raw_revalidated` instead. Both modes remain AI-only and
 have no production or formal-GA effect.
 
-The first 32 source artifacts prove archive integrity and machine triage only. A separate
-three-process semantic chain then reopens all 32 byte archives: extractor, skeptic and a
+The first 31 source artifacts prove archive integrity and machine triage only. A separate
+three-process semantic chain then reopens all 31 byte archives: extractor, skeptic and a
 no-context adjudicator each emit 32 hash-bound artifacts. The chain binds PDF pages or HTML
 text offsets plus snippet hashes, while keeping `human_reviewed=false` and
 `method_attribution_approved=false`. The 52 formula artifacts independently rederive and
@@ -51,8 +51,8 @@ npm run persona:ai-simulations:check
 ```
 
 - `status` reports every lane and fails only on malformed or tampered evidence.
-- `check` additionally requires 26 physical solo packs, 32 source pre-reviews, all three
-  32-artifact semantic-review rounds and 52 formula cross-reviews. This is the local
+- `check` additionally requires 26 physical solo packs, 31 source pre-reviews, all three
+  31-artifact semantic-review rounds and 52 formula cross-reviews. This is the local
   AI-assisted testing boundary.
 - `persona:ai-simulations:check` re-executes and byte-verifies eight no-network machine
   simulation variants: `A`, `B`, `C`, `D13`, `D26`, `E:D13`, `E:D26` and
@@ -67,10 +67,10 @@ Current verified status:
 | Lane | Coverage | Meaning |
 | --- | ---: | --- |
 | Physical solo packs | 26/26 | locally testable provisional packs |
-| AI source pre-reviews | 32/32 | hash-bound machine triage; not semantic/human approval |
-| Semantic extractor | 32/32 | 29 locator-bound source propositions |
-| Semantic skeptic | 32/32 | independent support/scope challenge |
-| Semantic adjudicator | 32/32 | 18 supported, 11 partial; 6 candidates unverifiable |
+| AI source pre-reviews | 31/31 | hash-bound machine triage; not semantic/human approval |
+| Semantic extractor | 31/31 | 28 locator-bound source propositions |
+| Semantic skeptic | 31/31 | independent support/scope challenge |
+| Semantic adjudicator | 31/31 | 18 supported, 10 partial; 6 candidates unverifiable |
 | AI formula cross-reviews | 52/52 | mechanical cross-review; semantic fidelity unknown |
 | Machine simulation variants | 8/8 | 105/105 deterministic seat executions; no network/model calls |
 | Canonical experiments | 0/8 | synthetic simulation is never counted as formal experiment evidence |

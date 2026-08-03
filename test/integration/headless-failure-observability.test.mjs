@@ -11,6 +11,7 @@ function scriptedCodexCommand(dataDir, {
   failOnSecondAttempt = false,
   lateValidOnSecondAttempt = false,
   wrongLanguageBoth = false,
+  locallyRepairableFirst = false,
 } = {}) {
   const driver = join(dataDir, "fake-codex-malformed.mjs");
   const counter = join(dataDir, "fake-codex-attempts.txt");
@@ -20,20 +21,27 @@ function scriptedCodexCommand(dataDir, {
     claims: [],
     metrics: {},
     sources: [],
-    open_questions: [],
+    open_questions: ["The malformed first attempt contained no recoverable sourced claim."],
     confidence: "low",
     information_richness: "C",
   });
+  const locallyRepairable = `${recovered.slice(0, -1)},}`;
   const wrongLanguage = JSON.stringify({
     summary: "This valid evidence packet uses the wrong reader language on every bounded attempt.",
     claims: [{
       claim: "The worker returned valid JSON but ignored the requested reader language.",
       evidence: "The fixture intentionally preserves this English sentence for the language gate.",
       confidence: "low",
-      source_ids: [],
+      source_ids: ["S1"],
     }],
     metrics: {},
-    sources: [],
+    sources: [{
+      id: "S1",
+      title: "Local language fixture",
+      url: "https://example.com/language-fixture",
+      published_at: "2026-07-28",
+      retrieved_at: "2026-07-28"
+    }],
     open_questions: ["The requested reader language still needs a valid response."],
     confidence: "low",
     information_richness: "C",
@@ -68,6 +76,8 @@ if (${JSON.stringify(lateValidOnSecondAttempt)} && attempt === 2) {
 }
 const output = ${wrongLanguageBoth
   ? JSON.stringify(wrongLanguage)
+  : locallyRepairableFirst
+    ? JSON.stringify(locallyRepairable)
   : recoverOnSecondAttempt
     ? `attempt === 2 ? ${JSON.stringify(recovered)} : ${JSON.stringify(malformed)}`
     : JSON.stringify(malformed)};
@@ -141,6 +151,43 @@ test("headless failures stay out of evidence and full council stops before expen
     for (const role of ["bull_researcher", "bear_researcher", "portfolio_manager"]) {
       assert.equal(result.run.agent_status[role].status, "skipped");
     }
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+}
+});
+
+test("a safe local syntax repair avoids a second Codex worker", async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir, { locallyRepairableFirst: true });
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "RKLB",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-LOCAL-REPAIR-${process.pid}`;
+    const run = structured(await server.callTool("collect_evidence", {
+      symbol: "RKLB",
+      run_id: runId,
+      tasks: ["forward_expectations"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 5_000,
+    }));
+    assert.equal(readFileSync(fake.counter, "utf8"), "1", "local syntax repair must not spend a model retry");
+    assert.equal(run.status, "evidence_complete");
+    assert.equal(run.task_status.forward_expectations.status, "completed");
+    assert.equal(run.task_status.forward_expectations.attempts, 1);
+    assert.equal(run.packets[0].summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
+    assert.equal(existsSync(join(dataDir, "runs", runId, "forward_expectations.attempt-1.failure.json")), false);
+    const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    assert.equal(events.some((event) => event.type === "task_retry"), false);
   } finally {
     await server.close();
     removeDataDir(dataDir);

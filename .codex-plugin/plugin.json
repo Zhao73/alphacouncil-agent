@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Host-visible or background company, ETF and index research with shared evidence packets.",
   "author": {
     "name": "Zhao73"
@@ -28,5 +28,13 @@
       "@alphacouncil-agent compare AAPL, 0700.HK, 7203.T."
     ]
   },
-  "mcpServers": "./codex.mcp.json"
+  "mcpServers": {
+    "alphacouncil-agent": {
+      "command": "node",
+      "args": [
+        "./mcp/server.mjs"
+      ],
+      "cwd": "."
+    }
+  }
 }

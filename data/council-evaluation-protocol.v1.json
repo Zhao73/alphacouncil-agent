@@ -32,7 +32,6 @@
       "master_buffett"
     ],
     "canonical_master_ids": [
-      "master_aschenbrenner",
       "master_buffett",
       "master_graham",
       "master_simons",
@@ -265,7 +264,6 @@
         "ib_event_analysis"
       ],
       "master_ids": [
-        "master_aschenbrenner",
         "master_buffett",
         "master_graham",
         "master_simons",
@@ -357,7 +355,6 @@
         "ib_event_analysis"
       ],
       "master_ids": [
-        "master_aschenbrenner",
         "master_buffett",
         "master_graham",
         "master_simons",

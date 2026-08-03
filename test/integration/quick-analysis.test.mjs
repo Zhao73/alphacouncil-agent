@@ -7,9 +7,15 @@ import { QUICK_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer, structured } from "../helpers/rpc-client.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
 
-function reportBody() {
-  const work = QUICK_TASKS.map((task) => `- ${task}: completed a sourced quick-read packet and recorded confidence plus open questions.`).join("\n");
+function reportBody(failedTask = null) {
+  const work = QUICK_TASKS.map((task) => task === failedTask
+    ? `- ${task}: failed explicitly; the quick report records this evidence gap and does not cite a fabricated source.`
+    : `- ${task}: completed a sourced quick-read packet and recorded confidence plus open questions.`).join("\n");
+  const sourceRows = QUICK_TASKS.filter((task) => task !== failedTask)
+    .map((task) => `- ${task}:S1 — ${task} source — 2026-07-27 — https://example.com/${task}`)
+    .join("\n");
   return `# RKLB Quick Council
 
 ## Conclusion
@@ -40,16 +46,13 @@ Launch delays, financing requirements, dilution and missing facts can invalidate
 Keep any position small until the next primary filing resolves the highest-impact unknowns.
 
 ## Data Gaps / Unavailable Data
-No adversarial verifier or three-round cross-examination ran in quick_v1. Those omissions are product-scope limits, not evidence.
+No adversarial verifier or three-round cross-examination ran in quick_v1. Those omissions are product-scope limits, not evidence.${failedTask ? ` The ${failedTask} evidence seat failed and no source ID was manufactured for it.` : ""}
 
 ## Confidence
 medium and conditional on the cited quick packets.
 
 ## Source Table
-- market_data:S1 — market source — 2026-07-27 — https://example.com/market
-- earnings_deep_dive:S1 — earnings source — 2026-07-27 — https://example.com/earnings
-- valuation_long_short:S1 — valuation source — 2026-07-27 — https://example.com/valuation
-- news_industry_management:S1 — recent industry source — 2026-07-27 — https://example.com/news
+${sourceRows}
 `;
 }
 
@@ -95,7 +98,16 @@ if (task) {
   packet = {
     master,
     acknowledged_stance: frozen.stance,
-    statement: "QUICK_MASTER_SENTINEL_" + master + " explains the frozen " + frozen.stance + " result.",
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: ({ constructive: "would_buy", cautious: "would_hold", opposed: "would_pass", out_of_scope: "not_in_my_circle" })[frozen.stance],
+    voice: {
+      would_i_act: "I would follow only the frozen " + frozen.stance + " result for QUICK_MASTER_SENTINEL_" + master + ".",
+      what_i_see: "I see the bounded quick evidence and its explicit limits.",
+      how_my_method_reads_it: "I apply my declared method sequence without changing the frozen result.",
+      where_i_disagree: "I disagree with adding an unsupported fact to this quick record.",
+      what_changes_my_mind: "I would change my reading only when new primary evidence satisfies my method."
+    },
     key_findings: ["bounded quick finding"], disagreements: ["bounded quick disagreement"],
     what_would_change_my_mind: ["new primary evidence"], source_ids: ["market_data:S1"], confidence: "medium"
   };
@@ -113,8 +125,8 @@ if (task) {
       summary: "One-round quick synthesis.", long_thesis: ["operating execution"], short_thesis: ["valuation and dilution"],
       valuation_range: "Conditional range; no unsupported point target.", catalysts: ["next filing"], risks: ["execution"],
       position: "small only", invalidation: ["missed milestones"],
-      source_ids: ["market_data:S1", "earnings_deep_dive:S1", "valuation_long_short:S1", "news_industry_management:S1"],
-      confidence: "medium", report_markdown: ${JSON.stringify(reportBody())}
+      source_ids: ${JSON.stringify(QUICK_TASKS.filter((task) => task !== failedTask).map((task) => `${task}:S1`))},
+      confidence: "medium", report_markdown: ${JSON.stringify(reportBody(failedTask))}
     };
 } else {
   packet = {
@@ -199,6 +211,7 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
 
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
+    assert.deepEqual(validateHeadlessTrace(events, { mode: "quick" }), []);
     assert.equal(events.filter((event) => event.type === "evidence_complete").length, 1);
     assert.equal(events.some((event) => event.type === "evidence_degraded"), false);
     assert.deepEqual(events.filter((event) => event.type === "debate_round").map((event) => event.round), [1]);
@@ -312,6 +325,7 @@ test("quick delivers an explicit degraded terminal run when one evidence seat fa
 
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
+    assert.deepEqual(validateHeadlessTrace(events, { mode: "quick" }), []);
     const evidence = events.find((event) => event.type === "evidence_degraded");
     assert.equal(evidence?.barrier_satisfied, true);
     assert.equal(evidence?.successful, 3);
@@ -353,6 +367,9 @@ test("quick PM transport failure writes standard artifacts and no synthetic Hold
     assert.equal(result.decision.rating, null);
     assert.match(result.user_response_markdown, /Rating: unavailable/);
     assert.match(result.user_response_markdown, /NEEDS_MANAGER_REVIEW/);
+    const events = readFileSync(join(dir, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    assert.deepEqual(validateHeadlessTrace(events, { mode: "quick" }), []);
     for (const name of ["decision.json", "manager_synthesis.json", "final_report.md", "user_response.md", "report_quality.json", "artifact_index.md"]) {
       assert.equal(readFileSync(join(dir, name), "utf8").length > 0, true, name);
     }

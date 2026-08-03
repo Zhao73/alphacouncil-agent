@@ -25,14 +25,14 @@
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="mcp" />
   <img src="https://img.shields.io/badge/API_keys-none_required-2ea043?style=for-the-badge" alt="no api keys" />
-  <img src="https://img.shields.io/badge/dependencies-zero-2ea043?style=for-the-badge" alt="zero dependencies" />
+  <img src="https://img.shields.io/badge/runtime_dependencies-zero-2ea043?style=for-the-badge" alt="zero runtime dependencies" />
 </p>
 
 <p>
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
   <a href="#-tools--32-all-keyless"><b>Tools</b></a> ·
-  <a href="#-the-bench--27-investor-method-lenses"><b>The bench</b></a> ·
+  <a href="#-the-bench--26-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
   <a href="#-disclaimer"><b>Disclaimer</b></a>
@@ -52,7 +52,7 @@
 
 **Ask an LLM "is this stock a buy" and you get one confident paragraph of training-data
 vibes. Ask AlphaCouncil and you get an argument** — eight evidence agents pull the primary
-sources, twenty-seven investor-method lenses read the same facts and disagree in public,
+sources, twenty-six investor-method lenses read the same facts and disagree in public,
 bull and bear cross-examine each other for three rounds, and a portfolio manager signs a
 verdict with entry bands and the conditions that would invalidate it. Every claim traces
 to a source ID; a method whose inputs are missing says so instead of guessing.
@@ -70,7 +70,7 @@ evidence, run selected method seats and produce an auditable portfolio-manager r
 | | |
 |---|---|
 | 🏛️ **A council, not one opinion** | Eight specialist analysts by default, eleven available — market data, earnings, forward expectations, quant, valuation, news and supply chain, insider/SEC, IB events, macro, narrative, crowding. |
-| 🎭 **27 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai, Bogle and more read the **same facts** through different stated research priorities. Every council run shows all 27 with actual maturity before research. Full accepts any non-empty selection or `all`; quick requires 1-4 and rejects `all`. |
+| 🎭 **26 selectable investor lenses** | Buffett, Munger, Graham, Lynch, Marks, Damodaran, Ackman, Cathie Wood, Pabrai, Bogle and more read the **same facts** through different stated research priorities. Every council run shows all 26 with actual maturity before research. Full accepts any non-empty selection or `all`; quick requires 1-4 and rejects `all`. |
 | 🧺 **A basket is not a company, and the bench knows it** | An ETF or index is priced by look-through: a fund owning 1% of a business has a claim on 1% of its owner earnings, so a company method reads a basket **without changing its method**. Ratios aggregate by weight; absolute figures become the fund's own dollar claim; a share count is refused because it has no portfolio meaning. |
 | 📰 **A basket gets its own industry news** | `SOX` has no press office. Its industry is derived from the weighted SIC groups of its holdings, so SOXX resolves to semiconductors and survives a rebalance. Where no group dominates, the basket is queried as the several industries it actually is. |
 | 🌏 **What else you are betting on** | Correlation to the broad market, to KOSPI, to KOSDAQ and to the semiconductor cycle, plus dispersion across the eleven sector SPDRs. Sessions pair by date, because Korea and the United States keep different holidays. |
@@ -80,7 +80,7 @@ evidence, run selected method seats and produce an auditable portfolio-manager r
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
-| 🔑 **32 tools, zero API keys, zero dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🔑 **32 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
 | 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
@@ -89,12 +89,12 @@ This repository is the uploadable source copy. Runtime outputs are written outsi
 
 `npm install -g alphacouncil-agent` installs the current release.
 
-Twenty-seven method seats, each running its own formulas and its own thresholds against typed
+Twenty-six method seats, each running its own formulas and its own thresholds against typed
 facts built from SEC filings, FRED series, issuer holdings disclosures, published index
 aggregates, Section 16 ownership, cross-market price history and dated industry news.
-Fifty-four executable tools.
+Fifty-two executable method tools.
 
-Measured against live grounding, with no fixtures: every one of the 27 seats reaches a stance
+Measured against live grounding, with no fixtures: every one of the 26 seats reaches a stance
 somewhere across a mixed set of symbols, with no contract failures. A basket that had **no data
 path at all** — `SOX` was in neither registry — now produces 40-plus typed facts, and the seats
 that read them are running the same methods they run on a company.
@@ -184,7 +184,7 @@ shows the system quote (or an explicit quote-data gap), all eight analyst status
 and every selected method seat's frozen stance plus readable explanation/status. Its final
 section is a system-gated ledger: completed seats retain their full, untruncated statement;
 failed seats explicitly say that no directional view was produced and why. `all` therefore
-accounts for all 27 selected IDs without manufacturing votes. These are provisional
+accounts for all 26 selected IDs without manufacturing votes. These are provisional
 method-seat outputs, never quotes from the named people. If a visible hard gate fails,
 `finalize_visible_run` closes the run as `incomplete` and returns this same handoff; the host
 must not replace it with a shorter manual recap.
@@ -196,8 +196,8 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Asks the depth tier with its expected time, shows every master, confirms `1..N`/ranges/`all`, then full; headless is bounded by the chosen tier (15/30/60m) | deterministic stance + one isolated voice worker per v3 seat that reached a stance; a frozen abstention is published without one |
-| `/alpha <ticker> quick` | Shows all 27, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
+| `/alpha <ticker>` | Asks the depth tier with its expected time, shows every master, confirms `1..N`/ranges/`all`, then full; headless is bounded by the chosen tier (15/30/60m) | deterministic stance + one isolated strong-first-person voice worker per selected v3 seat, including `out_of_scope` |
+| `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
 | `/alpha <ticker> news` | Dated filings and headlines | **none** |
@@ -244,9 +244,9 @@ but never change it: a run approved as fifteen minutes cannot become an hour, an
 records which tier produced it. Quick has no tier — it is a smaller contract, not a slower one.
 
 All eight mandatory evidence workers start in one parallel wave. After the evidence barrier,
-each selected physical v3 method freezes its deterministic stance; a method that reached a
-stance gets one isolated voice worker that can explain, but cannot change, that result, while a
-frozen abstention is published from its deterministic record without spending a worker. Bull and
+each selected physical v3 method freezes its deterministic stance and then gets one isolated
+voice worker that explains, but cannot change, that result in a strong method-specific first
+person. This includes a frozen abstention. Bull and
 Bear run in parallel within each of the three rounds, with a barrier between rounds, followed by
 the PM.
 
@@ -265,7 +265,7 @@ Japanese and Korean; each worker receives the run language.
 
 Quick is never inferred from impatience or a full-run failure. It runs only through the
 plugin-managed headless `analyze_symbol(council_mode="quick")`; `plan_visible_run` rejects
-quick. After the complete 27-seat display and a 1-4-seat confirmation, it executes:
+quick. After the complete 26-seat display and a 1-4-seat confirmation, it executes:
 
 1. `market_data`, `earnings_deep_dive`, `valuation_long_short` and
    `news_industry_management` in one parallel wave;
@@ -302,7 +302,7 @@ Default stock-analysis runs are full runs, not lite summaries:
 - News, industry context, supply chain, and management's words checked against their actions
 - SEC filings, Form 4 insider transactions, buybacks, dilution, debt and capital allocation
 - Investment-banking event analysis for M&A, ECM, debt, buybacks and strategic transactions
-- A selectable bench of 27 investor method lenses reading the same facts
+- A selectable bench of 26 investor method lenses reading the same facts
 - Bull researcher, bear researcher and portfolio-manager synthesis
 
 Full is fail-fast at its mandatory evidence barrier. If a required evidence role still
@@ -343,11 +343,17 @@ not only in the docs, because the payload is what gets quoted downstream:
   contracts — is dropped rather than averaged in, because a zero does not look like a gap,
   it looks like a calm stock.
 
-## 🏛️ The bench — 27 investor method lenses
+## 🏛️ The bench — 26 investor method lenses
 
 Reconstructions of publicly documented methods, not anything the named people said. Each
 states how it thinks, what it notices first, its characteristic challenge, and **its own
 failure mode** — a seat that cannot name how it goes wrong will not flag it when it does.
+
+Why “seat”? It is the council's stable selection and accounting slot: one method ID, one
+fact contract, one result or explicit failure, and one final-ledger entry. It does not mean
+the person is present, that every seat is a separate model/source, or that 26 seats are 26
+independent samples. Reader-facing text calls them method lenses; internal protocols retain
+`seat` because it precisely names that orchestration obligation.
 
 | Roster | Lenses |
 |---|---|
@@ -356,25 +362,35 @@ failure mode** — a seat that cannot name how it goes wrong will not flag it wh
 | Adversarial | Soros · Druckenmiller · Dalio · Burry · short seller |
 | Quant | Simons · Asness · Thorp |
 | Options | Taleb · Natenberg · Sinclair |
-| Modern | Aschenbrenner |
 | v3 expansion | Damodaran · Ackman · Cathie Wood · Pabrai · Bogle · Jhunjhunwala |
 
-The `solo_test` catalog has 27 selectable physical v3 packs, but **27 physical packs is
-not 27 approved method models**. Every seat is a provisional `operator_lens` backed by
-project-derived proxy material; the 54 tools are executable test proxies, not human-approved
+The `solo_test` catalog has 26 selectable physical v3 packs, but **26 physical packs is
+not 26 approved method models**. Every seat is a provisional `operator_lens` backed by
+project-derived proxy material; the 52 method tools are executable test proxies, not human-approved
 formula attribution. Operational and `method_model` counts are both zero, and production GA
 remains fail-closed.
+
+`skills/alphacouncil-method-lenses` adds one router plus 26 on-demand, hash-bound method
+references for methodology comparisons and frozen-result explanations. It deliberately avoids
+26 globally triggered Skills and third-party runtime dependencies. Every reference uses a strong
+first-person public-method simulation—verdict first, characteristic vocabulary, reasoning order,
+and failure mode—while the short `AI public-method simulation` label distinguishes it from a quote. The
+references remain `method_reference_provisional`; they do not replace the deterministic packs.
+The public-Skill A/B pilot and the presentation mechanics adopted from it are recorded in
+[docs/evaluation/method-skill-pilot-2026-08-03.md](docs/evaluation/method-skill-pilot-2026-08-03.md).
 
 Masters read the **same established facts** the analysts read — filings, quotes, financials,
 macro — and receive the analyst packets separately, labelled as other seats' readings rather
 than as fact. That separation is the point: the bench is worth having only because Munger
 looks at incentives where an analyst looked at margins. See [docs/attribution.md](docs/attribution.md).
 
-A seat that reached a stance gets its own isolated voice worker and speaks in first person —
-what it sees, how its standard reads the number, whether it would act, and what would change
-its mind. A seat that abstained publishes a deterministic first-person statement at zero
-model cost; set `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` to give abstaining seats a full
-voice worker too, at the cost of one worker per abstained seat.
+Every selected seat gets its own isolated voice worker, including `out_of_scope`. The council UI
+renders the project-derived result in strong first person: action verdict first, then what I see,
+how my method reads it, where I disagree, and what changes my mind. The method's distinctive
+questions, vocabulary, reasoning order and failure mode are required; a neutral “Buffett would”
+summary is rejected. Each independently readable surface carries one short `AI public-method
+simulation` label. It is not evidence of the person's words, endorsement, private reasoning,
+current view or holding.
 
 ## 🧩 Architecture
 
@@ -386,7 +402,7 @@ the verifier node shown here.
 flowchart TD
     U["@alphacouncil-agent<br/>ticker / question"] --> G[("Established facts<br/>filings · quotes · macro · options")]
     G --> AG{{"Analyst council"}}
-    G --> MS{{"Master bench<br/>27 lenses"}}
+    G --> MS{{"Master bench<br/>26 lenses"}}
     AG --> A1["📈 Market data"]
     AG --> A2["💰 Earnings"]
     AG --> A3["⚖️ Valuation"]
@@ -411,7 +427,7 @@ flowchart TD
     PM --> R[["final_report.md<br/>verdict + entry price bands"]]
 ```
 
-The masters branch off the facts, not off the packets. Feeding 27 lenses one analyst's
+The masters branch off the facts, not off the packets. Feeding 26 lenses one analyst's
 selection of what mattered would give them all the same blind spot — a large and perfectly
 correlated error — and would remove the reason for having a bench at all.
 

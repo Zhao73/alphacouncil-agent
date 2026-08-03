@@ -9,13 +9,6 @@
       "relative_path": "master_ackman/ackman_pershing_netflix_letter_2022.json"
     },
     {
-      "artifact_hash": "sha256:9e3f6021010b12bf46a3942a4553a3328d8725935fd291279c28bcc01bbeadb2",
-      "candidate_id": "aschenbrenner_situational_awareness_2024",
-      "content_hash": "sha256:68735f1b5a3d30fb276e42493389d016d4afb46fef922b44ed7ebf7ad55189d3",
-      "persona_id": "master_aschenbrenner",
-      "relative_path": "master_aschenbrenner/aschenbrenner_situational_awareness_2024.json"
-    },
-    {
       "artifact_hash": "sha256:3439be6b2ab16b31f09b30cdcc5c942675772e05ba69e3b1bd7b635e3731fb5b",
       "candidate_id": "asness_value_momentum_interaction",
       "content_hash": "sha256:07e94f7f13ba4a74a7578f42eae791dda4aef0e3a31adc1c249412b960c5ae32",
@@ -227,16 +220,12 @@
     }
   ],
   "assurance_class": "machine_pre_review_only",
-  "candidate_count": 32,
-  "canonical_master_count": 27,
+  "candidate_count": 31,
+  "canonical_master_count": 26,
   "human_claim_count": 0,
   "human_reviewed_count": 0,
-  "index_hash": "sha256:3ce3085cb3ed7c4fdc1a99a7941558ff29c9248f70a833f2a9140b8a248dba67",
+  "index_hash": "sha256:c0984e2181e2323979ffad6ed2e2afb79e8a49ecbe299fd466b1a155ad310cad",
   "personas": [
-    {
-      "candidate_count": 1,
-      "persona_id": "master_aschenbrenner"
-    },
     {
       "candidate_count": 1,
       "persona_id": "master_buffett"
@@ -344,10 +333,10 @@
   ],
   "production_effect": "none",
   "reviewer_kind": "ai",
-  "role_output_count": 96,
+  "role_output_count": 93,
   "schema_version": 1,
-  "seats_with_candidates": 26,
+  "seats_with_candidates": 25,
   "verdict_counts": {
-    "requires_human_review": 32
+    "requires_human_review": 31
   }
 }

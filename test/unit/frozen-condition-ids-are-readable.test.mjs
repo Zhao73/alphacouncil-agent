@@ -121,15 +121,14 @@ test("scoring conditions resolve by declared id, not by position in the executor
   assert.ok(hitAt < missAt, "the hit must be reported as the hit, not swapped with the miss");
 });
 
-test("a frozen abstention states the closed gate and needs no model worker", () => {
+test("every frozen seat, including an abstention, gets a method-specific voice worker", () => {
   // The seat has all it needs to score, so the gate opens and the seat votes: it must keep its
   // worker, because a stance has a reading only a worker can put into the method's own words.
   const { opinion: voted } = vetoedMarksOpinion();
   assert.equal(needsMethodVoiceWorker(voted), true);
 
-  // With the market yardstick absent the eligibility gate closes. The statement must name what
-  // closed it and say an abstention is not a bearish vote -- the whole of what the contract
-  // asks an out_of_scope seat to say -- so no worker turn is needed to restate it.
+  // With the market yardstick absent the eligibility gate closes. The deterministic record
+  // remains readable, but the strong first-person contract still requires the isolated worker.
   const registry = soloTestRegistry();
   const run = {
     symbol: "NOW",
@@ -151,18 +150,14 @@ test("a frozen abstention states the closed gate and needs no model worker", () 
     : completedMasterOpinion(run, seat);
 
   assert.equal(opinion.stance, "out_of_scope");
-  assert.equal(needsMethodVoiceWorker(opinion), false);
+  assert.equal(needsMethodVoiceWorker(opinion), true);
   assert.match(opinion.voice_statement, /这不是看空，也不是一张反对票/);
   assert.match(opinion.summary, /没有让语言模型选择立场|v3 typed-fact 闸门/);
   assert.ok(!/anon_[0-9a-f]{17}/.test(JSON.stringify(opinion)));
 
-  // The opt-in gives a worker to every seat without touching the frozen record.
+  // Legacy environment toggles cannot weaken the global reader contract.
   assert.equal(needsMethodVoiceWorker(opinion, { env: { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "1" } }), true);
-
-  // On a basket the default flips: most methods' required facts do not exist for an
-  // index, so abstention is the majority outcome and each seat's reading of what
-  // DOES exist is the bench's whole value there. The explicit opt-out still wins.
   const basket = { grounding: { instrument: { asset_type: "index", index_like: true } } };
   assert.equal(needsMethodVoiceWorker(opinion, { env: {}, run: basket }), true);
-  assert.equal(needsMethodVoiceWorker(opinion, { env: { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" }, run: basket }), false);
+  assert.equal(needsMethodVoiceWorker(opinion, { env: { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" }, run: basket }), true);
 });

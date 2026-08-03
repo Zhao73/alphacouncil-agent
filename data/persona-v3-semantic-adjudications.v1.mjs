@@ -2,7 +2,6 @@
 
 export const SEMANTIC_SOURCE_ADJUDICATION_CATALOG = Object.freeze([
   ["ackman_pershing_netflix_letter_2022:p1", "partial", "The excerpt establishes an attractive-valuation opportunity after adverse short-term guidance, but it does not state the proposed only-when rule or the durable-economics condition."],
-  ["aschenbrenner_situational_awareness_2024:p1", "partial", "The source describes escalating compute-cluster and power plans; treating those observations as leading indicators is an additional analytical rule."],
   ["asness_value_momentum_interaction:p1", "supported", "The exact passage states both the negative value-momentum correlation and each factor's positive relation with average returns."],
   ["buffett_berkshire_letter_2024:p1", "partial", "The excerpt establishes a very-long-term intention for five named holdings, not a general conditional holding rule for all acceptable businesses."],
   ["cathie_wood_ark_disruptive_innovation_2017:p1", "supported", "The bound passage and its heading directly contrast cost-curve beneficiaries with incumbents at risk of becoming value traps."],

@@ -1,0 +1,1 @@
+1{"summary":"bounded evidence","claims":[{"claim":"fixture claim","evidence":"fixture evidence","confidence":"medium","source_ids":["S1"]}],"metrics":{"value":1},"sources":[{"id":"S1","title":"Fixture","url":"https://example.com/source","published_at":"2026-08-01","retrieved_at":"2026-08-02"}],"open_questions":[],"confidence":"medium"}

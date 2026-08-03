@@ -15,6 +15,9 @@
 
 import { localized } from "./lang.mjs";
 
+export const FIRST_PERSON_VOICE_MODE = "first_person_public_method_simulation_v1";
+export const FIRST_PERSON_DISCLOSURE_ACK = "alphacouncil.first_person_public_method_simulation.v1";
+
 export const POSITION_INTENTS = Object.freeze([
   "would_buy",
   "would_add",
@@ -50,11 +53,11 @@ export function isIntentAllowed(intent, stance) {
 
 /** The five reader-facing fields, in the order a reader wants them. */
 export const VOICE_FIELDS = Object.freeze([
+  "would_i_act",
   "what_i_see",
   "how_my_method_reads_it",
-  "would_i_act",
-  "what_changes_my_mind",
   "where_i_disagree",
+  "what_changes_my_mind",
 ]);
 
 const FIELD_LABELS = Object.freeze({
@@ -99,13 +102,37 @@ export function intentLabel(intent, language) {
  * mistaken for a quotation. The wording is deliberate: it describes what the METHOD concludes,
  * and never asserts what the living person currently thinks.
  */
+export const VOICE_DISCLOSURES = Object.freeze({
+  en: "AI public-method simulation — not the named person's words.",
+  zh: "AI 公开方法模拟，非本人原话。",
+  ja: "AIによる公開メソッドのシミュレーションであり、本人の発言ではありません。",
+  ko: "AI 공개 방법론 시뮬레이션이며 본인의 실제 발언이 아닙니다.",
+});
+
 export function voiceDisclaimer(language) {
-  return localized(language, {
-    en: "First-person reasoning by a project-derived method model. Not a quotation, endorsement, or current view of the named person.",
-    zh: "以下为项目派生方法模型的第一人称推演，非本人言论、授权或当前观点。",
-    ja: "以下はプロジェクト由来のメソッドモデルによる一人称の推論です。本人の発言・承認・現在の見解ではありません。",
-    ko: "아래는 프로젝트 파생 방법론 모델의 1인칭 추론입니다. 본인의 발언·승인·현재 견해가 아닙니다.",
-  });
+  return localized(language, VOICE_DISCLOSURES);
+}
+
+/**
+ * A method voice is first-person in every reader-facing field, not merely under a
+ * first-person heading. This is intentionally a small lexical gate: style fidelity is
+ * evaluated elsewhere, while this function prevents a worker from silently falling back
+ * to "Buffett would..." or another neutral third-person summary.
+ */
+export function hasFirstPersonMarker(value, language) {
+  const text = String(value || "");
+  const key = String(language || "").toLowerCase();
+  if (/中文|chinese|zh/u.test(key)) return /我/u.test(text);
+  if (/日本語|japanese|ja/u.test(key)) return /私/u.test(text);
+  if (/한국어|korean|ko/u.test(key)) return /(?:나|내|저|제)/u.test(text);
+  return /\b(?:I|I'm|I've|I'd|I'll|me|my|mine|myself)\b/iu.test(text);
+}
+
+export function hasAnyFirstPersonMarker(value) {
+  return hasFirstPersonMarker(value, "English")
+    || hasFirstPersonMarker(value, "中文")
+    || hasFirstPersonMarker(value, "日本語")
+    || hasFirstPersonMarker(value, "한국어");
 }
 
 /**

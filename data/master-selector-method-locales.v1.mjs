@@ -8,10 +8,6 @@ export const MASTER_SELECTOR_METHOD_LOCALES = Object.freeze({
     ja: "現状の単独価値と改善による付加価値を分けたうえで、法的に実行可能で、資金調達ができ、期限が明確な主体が、その変更計画を遂行できるか検証する。",
     ko: "현상 유지 기준의 독립 가치와 개선으로 생기는 추가 가치를 분리한 뒤, 법적으로 실행 가능하고 자금 조달이 가능하며 기한이 명확한 주체가 변화 계획을 수행할 수 있는지 검증한다.",
   }),
-  master_aschenbrenner: Object.freeze({
-    ja: "AIのスケーリング仮説について、計算資源、電力、設備投資、供給制約、普及時期を、市場価格に織り込まれた期待と結び付けて検証する。",
-    ko: "AI 확장 가설을 컴퓨팅 자원, 전력, 자본 지출, 공급 제약, 도입 시점과 시장 가격에 반영된 기대를 연결해 검증한다.",
-  }),
   master_asness: Object.freeze({
     ja: "リターンをバリュー、モメンタム、クオリティ、ベータ、セクター、混雑度へのエクスポージャーに分解し、残差リターンをアルファとみなす前に検証する。",
     ko: "수익률을 가치, 모멘텀, 퀄리티, 베타, 섹터, 쏠림 노출로 분해한 뒤 잔여 성과를 알파로 간주할 수 있는지 검증한다.",
@@ -124,12 +120,6 @@ export const MASTER_SELECTOR_BEST_FOR_LOCALES = Object.freeze({
     zh: "股东行动主义、公司治理、资本配置与企业变革。",
     ja: "株主アクティビズム、コーポレートガバナンス、資本配分、企業変革。",
     ko: "주주 행동주의, 기업 지배구조, 자본 배분, 기업 변화.",
-  }),
-  master_aschenbrenner: Object.freeze({
-    en: "AI infrastructure, semiconductors, power constraints, and technology diffusion.",
-    zh: "人工智能基础设施、半导体、电力约束与技术扩散。",
-    ja: "AIインフラ、半導体、電力制約、技術普及。",
-    ko: "AI 인프라, 반도체, 전력 제약, 기술 확산.",
   }),
   master_asness: Object.freeze({
     en: "Factor investing, portfolio attribution, style cycles, and crowded positioning.",

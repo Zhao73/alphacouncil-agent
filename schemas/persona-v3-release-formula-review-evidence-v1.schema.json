@@ -14,15 +14,15 @@
     "schema_version": { "const": 1 },
     "artifact_kind": { "const": "persona_v3_release_formula_review_evidence" },
     "verified_at": { "type": "string", "format": "date-time" },
-    "canonical_master_count": { "const": 27 },
-    "planned_tool_count": { "const": 54 },
+    "canonical_master_count": { "const": 26 },
+    "planned_tool_count": { "const": 52 },
     "trusted_formula_reviewer_keys": {
       "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/trustedKey" }
     },
     "trusted_key_registry_hash": { "$ref": "#/$defs/hash" },
     "formula_binding_inventory_hash": { "$ref": "#/$defs/hash" },
     "verified_bindings": {
-      "type": "array", "minItems": 54, "maxItems": 54,
+      "type": "array", "minItems": 52, "maxItems": 52,
       "items": { "$ref": "#/$defs/binding" }
     }
   },

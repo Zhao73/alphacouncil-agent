@@ -15,7 +15,7 @@ The plugin turns `@alphacouncil-agent <ticker/request>` into one of two explicit
   bounded parse-only repair, persist the failure package, skip method/debate/PM model calls,
   and terminate `incomplete` before downstream synthesis.
 - `quick_v1` runs only when explicitly requested and only through plugin-managed headless
-  `analyze_symbol`: display all 27 methods, confirm 1-4, run four fixed evidence roles and the
+  `analyze_symbol`: display every method returned by the selector, confirm 1-4, run four fixed evidence roles and the
   selected methods in parallel waves, one parallel Bull/Bear statement round, then a short
   PM inside a hard ten-minute ceiling.
 
@@ -25,8 +25,9 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.0.12`, published to npm as the default install.
-The packaged tree contains 27 physical v3 packs and 54 executable tools.
+The declared package/plugin version is `1.1.1`; verify npm/GitHub/installed-host state separately
+before claiming which build is the current published default.
+The packaged tree contains 26 physical v3 packs and 52 executable method tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
 human source approvals = 0, human formula approvals = 0, human approval signatures = 0.
 Human review of the authored formulas and the live four-host end-to-end run are the
@@ -37,6 +38,10 @@ See `docs/releases/v1.0.0.md`, `CHANGELOG.md` for everything since, and
 ## Agent-Skills Governance
 
 Also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with this plugin and applies the `addyosmani/agent-skills` style of explicit gates, anti-rationalizations, and exit criteria to AlphaCouncil runs. Do not treat it as an optional local setup step.
+
+For methodology comparisons and public-Skill tests, also follow
+`skills/alphacouncil-method-lenses/SKILL.md`. It exposes 26 isolated provisional method
+references; it may explain a frozen deterministic result but may not replace or rewrite it.
 
 ## Invocation
 
@@ -106,12 +111,10 @@ No research, run directory or worker may start before that receipt exists. Data-
 - The plugin cannot enforce this deadline on `plan_visible_run` host subagents. Visible full
   runs retain the same evidence/report gates but must not be described as 30-minute bounded.
   Run every returned post-evidence v3 explanation worker and record its `acknowledged_stance`
-  before debate. A seat frozen `out_of_scope` is returned as already settled and gets no
-  worker: its deterministic statement names the condition that closed the gate and states that
-  an abstention is not a bearish vote, which is the whole of what an out_of_scope seat is asked
-  to say, so a worker there buys prose rather than information. Set
-  `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` to give every seat a worker again. Every selected
-  seat still needs a readable statement in the report either way.
+  before debate. Every selected physical v3 seat gets a worker, including `out_of_scope`.
+  Require `voice_mode=first_person_public_method_simulation_v1`, the exact disclosure ack,
+  `position_intent`, and all five strong first-person fields. A legacy environment toggle may
+  not skip an abstaining seat or weaken this contract.
 - If any visible evidence, selected method or debate worker cannot pass its bounded repair,
   call `finalize_visible_run` with the failed IDs. It closes the run as `incomplete`, writes
   the standard artifacts and returns `user_response_markdown`; do not substitute a manual
@@ -186,8 +189,8 @@ Optional analysts, on the `full` roster rather than the default:
 Quick evidence roles are the fixed four-seat subset listed above and always launch in one
 parallel wave.
 
-Master Bench: the complete generated catalog has 27 selectable lenses. Both modes display
-all 27. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
+Master Bench: the selector's complete returned catalog is authoritative. Both modes display
+every returned lens. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
 methods run between evidence and debate. In plugin-managed headless mode, each selected v3
 seat is a frozen deterministic stance plus its own isolated voice worker; this is a
 process-isolated worker, not a persistent sidebar agent and not the real person. Quick runs
@@ -195,8 +198,8 @@ its 1-4 seats in one parallel wave. Full/deep
 verifiers are `source_fidelity`, `rederivation`, and `refuter`; quick does not run this
 adversarial fan-out. See `skills/alphacouncil-agent/SKILL.md` and `docs/personas.md`.
 
-Do not call the 27 solo-test packs approved method models. The explicit solo-test loader
-exposes 27 provisional `operator_lens` packs and 54 executable derived-proxy tools; none is
+Do not call the 26 solo-test packs approved method models. The explicit solo-test loader
+exposes 26 provisional `operator_lens` packs and 52 executable derived-proxy tools; none is
 operational or `method_model`, and none has human source/formula approval or signature.
 
 Debate roles:

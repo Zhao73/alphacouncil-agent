@@ -172,8 +172,8 @@ export async function runPackageSmoke() {
     });
     assert.equal(replay.error?.data?.reason, "MASTER_SELECTION_REPLAYED");
 
-    process.stdout.write(`package-smoke: passed tools=${tools.length} catalog=26 locales=4 selected=1 replay_rejected=true\n`);
-    return { tools: tools.length, catalog: 26, locales: 4, selected: 1, replay_rejected: true };
+    process.stdout.write(`package-smoke: passed tools=${tools.length} catalog=${CANONICAL_MASTER_COUNT} locales=4 selected=1 replay_rejected=true\n`);
+    return { tools: tools.length, catalog: CANONICAL_MASTER_COUNT, locales: 4, selected: 1, replay_rejected: true };
   } finally {
     if (!server.child.killed) await server.close().catch(() => server.child.kill());
     rmSync(dataDir, { recursive: true, force: true });

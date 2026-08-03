@@ -77,13 +77,22 @@ Its `user_response.md` must also visibly carry:
 - a machine-marked final section with the exact selected-seat count. Every speaking seat keeps
   its complete recorded statement; every failed/unavailable seat instead carries
   `statement_status=not_produced` plus status/reason and never counts as a directional view.
-  Full `all` therefore accounts for all 27 selected IDs; quick reports its actual 1–4.
+  Full `all` therefore accounts for all 26 selected IDs; quick reports its actual 1–4.
 
 Visible PM completion returns `handoff_contract=inline_user_response_v1` plus the persisted
 `user_response_markdown`. When a visible barrier cannot complete, the host must call
 `finalize_visible_run`; it closes the run as `incomplete` and returns the same handoff contract.
 The host uses that body for the final reply instead of reducing it to a compact ACK or manual
 recap, and appends nothing after the method-seat tail. Idempotent replays return the same handoff.
+
+Text-only MCP hosts receive that same persisted `user_response.md` body in `content[0].text`
+when synchronous `analyze_symbol`, a terminal idempotent replay, or `read_run` observes a
+terminal run. A nonterminal background acceptance remains a small polling acknowledgement.
+`read_run` defaults to `detail=compact`: its structured payload contains only status, a bounded
+decision, report quality, artifact paths, an event summary and the user response. Use
+`detail=full` only when the caller explicitly needs the legacy evidence, event log,
+`all_agents.md` or `final_report.md` bodies. The terminal text handoff is complete in either
+detail mode and still ends at the method-seat tail marker.
 
 All mandatory full evidence roles must be completed. If one still fails after the one bounded
 parse-only repair, full fails closed at the evidence barrier: no master, bull/bear or PM model

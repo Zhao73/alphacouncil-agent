@@ -11,6 +11,15 @@ Use this plugin when the user invokes `@alphacouncil-agent` or asks for a multi-
 
 Also apply `../agent-skills-governance/SKILL.md` before planning, running, synthesizing, or reporting. That bundled skill provides the agent-skills-style anti-laziness gates for every installer of this plugin; it is not a separate local dependency.
 
+## Method-lens references
+
+When the user asks to compare methodologies, inspect how one or all methods reason, or test a
+public investor Skill, also apply `../alphacouncil-method-lenses/SKILL.md`. It routes to 26
+on-demand, hash-bound `method_reference_provisional` files and excludes persona voice from the
+method contract. During a council run it is an explanation layer only: the physical
+PersonaPack deterministic executor remains the decision authority, and the Skill may not
+alter a frozen stance, native state, decisive rule, or input hash.
+
 ## Mandatory Council Contract (MUST READ FIRST)
 
 Every council run has an explicit `council_mode`. `full` is the default. Never infer quick
@@ -151,11 +160,11 @@ Use this contract when full runs through headless `analyze_symbol`:
   voice worker for that stable ID. It may explain the recorded policy result in the user's
   language, but cannot change the stance, invent a typed fact or speak as the real named person.
   A missing voice result remains visible and prevents a false complete bench.
-- A seat frozen `out_of_scope` is settled without a worker. Its deterministic statement names
-  the condition that closed its gate and states that an abstention is not a bearish vote, which
-  is all an out_of_scope seat is asked to say; `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1` restores
-  a worker for every seat. Such a seat is still published with a readable statement, and its
-  `voice_status` is `deterministic_scope` rather than a claim that a worker ran.
+- Every selected physical v3 seat gets an isolated explanation worker, including
+  `out_of_scope`. Require `voice_mode=first_person_public_method_simulation_v1`, the exact
+  disclosure ack, a stance-compatible `position_intent`, and all five strong first-person
+  fields. The worker must use the selected method's characteristic public questions,
+  vocabulary, reasoning order and failure mode; neutral third-person summary is invalid.
 - Every condition id a seat cites is resolved back to the id its pack declares. The ids are
   hashed before the policy runs so the decision layer cannot recognise the seat, but past the
   freeze the seat is named in the report and in its own worker prompt, so a surviving

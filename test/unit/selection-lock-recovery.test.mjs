@@ -31,6 +31,11 @@ function store() {
   return mkdtempSync(join(tmpdir(), "alphacouncil-selection-locks-"));
 }
 
+function identity(machine, birth, boot = "b") {
+  const part = (source, value) => ({ capability: "verified", source, fingerprint: `sha256:${value.repeat(64)}` });
+  return { schema_version: 1, machine: part("test_machine", machine), boot: part("test_boot", boot), process_birth: part("test_birth", birth) };
+}
+
 function lockSpec(id = SELECTION_A) {
   return { kind: "selection", id, operation: "test", contentionReason: "TEST_LOCKED" };
 }
@@ -135,6 +140,31 @@ test("a same-host dead owner is reclaimed only after the explicit grace", () => 
   }
 });
 
+test("stable machine identity survives hostname rename and rejects a reused PID after grace", () => {
+  const dir = store();
+  try {
+    const first = acquireSelectionLock(lockSpec(), {
+      selectionsDir: dir, now: 1_000, ownerPid: 4242, hostname: "old-name", ownerIdentity: identity("a", "c"),
+    });
+    const live = inspectSelectionLock("selection", SELECTION_A, {
+      selectionsDir: dir, now: 2_000, hostname: "new-name", probePid: () => true, identityProbe: () => identity("a", "c"),
+    });
+    assert.equal(live.owner_state, "alive");
+    assert.equal(live.same_host, false);
+    assert.equal(live.same_machine, true);
+    const recovered = acquireSelectionLock(lockSpec(), {
+      selectionsDir: dir, now: 6_000, deadOwnerGraceMs: 5_000, hostname: "new-name",
+      probePid: () => true, identityProbe: () => identity("a", "d"),
+    });
+    assert.equal(recovered.recovered, true);
+    assert.equal(recovered.recovered_lock.token, first.metadata.token);
+    assert.equal(first.release(), false);
+    recovered.release();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("foreign-host and malformed locks fail closed instead of being guessed dead", () => {
   const dir = store();
   try {
@@ -142,14 +172,16 @@ test("foreign-host and malformed locks fail closed instead of being guessed dead
       selectionsDir: dir,
       now: 1_000,
       ownerPid: 999_999,
-      hostname: "another-host",
+      hostname: "same-name",
+      ownerIdentity: identity("a", "c"),
     });
     assert.throws(() => acquireSelectionLock(lockSpec(), {
       selectionsDir: dir,
       now: 999_999,
       deadOwnerGraceMs: 0,
-      hostname: "this-host",
+      hostname: "same-name",
       probePid: () => false,
+      identityProbe: () => identity("d", "e"),
     }), (error) => error?.data?.lock_owner_state === "foreign_unverifiable");
     foreign.release();
 
@@ -161,6 +193,36 @@ test("foreign-host and malformed locks fail closed instead of being guessed dead
       deadOwnerGraceMs: 0,
       hostname: "this-host",
       probePid: () => false,
+    }), (error) => error?.data?.lock_owner_state === "unknown");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("legacy hostname-and-pid metadata remains readable but cannot prove an owner dead", () => {
+  const dir = store();
+  try {
+    const seeded = acquireSelectionLock(lockSpec(), {
+      selectionsDir: dir, now: 1_000, ownerPid: 4242, hostname: "legacy-host",
+    });
+    const legacy = { ...seeded.metadata };
+    delete legacy.owner_identity;
+    seeded.release();
+    writeFileSync(seeded.path, `${JSON.stringify(legacy, null, 2)}\n`);
+
+    const live = inspectSelectionLock("selection", SELECTION_A, {
+      selectionsDir: dir, now: 9_000, hostname: "legacy-host", probePid: () => true, deadOwnerGraceMs: 0,
+    });
+    assert.equal(live.owner_state, "alive");
+    assert.equal(live.identity_format, "legacy_hostname_pid_v1");
+
+    const unverifiable = inspectSelectionLock("selection", SELECTION_A, {
+      selectionsDir: dir, now: 9_000, hostname: "legacy-host", probePid: () => false, deadOwnerGraceMs: 0,
+    });
+    assert.equal(unverifiable.owner_state, "unknown");
+    assert.equal(unverifiable.reclaimable, false);
+    assert.throws(() => acquireSelectionLock(lockSpec(), {
+      selectionsDir: dir, now: 9_000, hostname: "legacy-host", probePid: () => false, deadOwnerGraceMs: 0,
     }), (error) => error?.data?.lock_owner_state === "unknown");
   } finally {
     rmSync(dir, { recursive: true, force: true });

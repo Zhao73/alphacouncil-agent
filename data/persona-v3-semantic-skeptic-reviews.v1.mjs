@@ -84,13 +84,6 @@ export const SEMANTIC_SOURCE_SKEPTIC_REVIEW_CATALOG = Object.freeze([
       ["The statement turns a described purchase into a general entry rule.", "The excerpt does not itself say that durable economics remained intact."],
     ),
   ]),
-  candidate("master_aschenbrenner", "aschenbrenner_situational_awareness_2024", [
-    partial(
-      "aschenbrenner_situational_awareness_2024:p1",
-      "The page describes rapidly escalating cluster plans and power-contract procurement, but calling those observations leading indicators is an analyst inference rather than an explicit method instruction.",
-      ["A scenario observation is being converted into an investment-monitoring rule."],
-    ),
-  ]),
   candidate("master_asness", "asness_value_momentum_interaction", [
     supported("asness_value_momentum_interaction:p1", "The abstract expressly states both the negative cross-sectional correlation and each factor's positive relationship with average returns."),
   ]),

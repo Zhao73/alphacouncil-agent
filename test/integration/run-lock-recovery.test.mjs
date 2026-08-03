@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { join } from "node:path";
 
+import { captureLockOwnerIdentity } from "../../mcp/lib/lock-owner-identity.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
@@ -35,6 +36,7 @@ function runLock(runId, ownerPid, token) {
     token,
     owner_pid: ownerPid,
     owner_hostname: os.hostname(),
+    owner_identity: captureLockOwnerIdentity(ownerPid),
     created_at: new Date(created).toISOString(),
     lease_expires_at: new Date(created + 1).toISOString(),
   }, null, 2)}\n`);

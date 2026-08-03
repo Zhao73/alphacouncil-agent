@@ -13,6 +13,8 @@ import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.m
 const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
 const QUICK_MASTER_MAX = 4;
+const LEGACY_SELECTION_HASH_VERSION = 1;
+const CURRENT_SELECTION_HASH_VERSION = 2;
 const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(["中文", "English", "日本語", "한국어"]);
 
 function digest(value) {
@@ -23,8 +25,23 @@ function sameJson(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function selectionHashVersion(record) {
+  const version = Object.hasOwn(record, "selection_hash_version")
+    ? record.selection_hash_version
+    : LEGACY_SELECTION_HASH_VERSION;
+  if (version !== LEGACY_SELECTION_HASH_VERSION && version !== CURRENT_SELECTION_HASH_VERSION) {
+    throw invalidParams(`Unsupported selection hash version: ${version}`, {
+      reason: "MASTER_SELECTION_HASH_VERSION_UNSUPPORTED",
+      selection_hash_version: version,
+      supported_selection_hash_versions: [LEGACY_SELECTION_HASH_VERSION, CURRENT_SELECTION_HASH_VERSION],
+    });
+  }
+  return version;
+}
+
 function receiptSelectionHash(receipt) {
-  return digest({
+  const version = selectionHashVersion(receipt);
+  const legacyPayload = {
     schema_version: receipt.schema_version,
     selection_receipt: receipt.selection_receipt,
     selection_id: receipt.selection_id,
@@ -38,7 +55,134 @@ function receiptSelectionHash(receipt) {
     selection_mode: receipt.selection_mode,
     created_at: receipt.created_at,
     expires_at: receipt.expires_at,
+  };
+  if (version === LEGACY_SELECTION_HASH_VERSION) return digest(legacyPayload);
+  return digest({
+    ...legacyPayload,
+    selection_hash_version: version,
+    council_pace: receipt.council_pace,
   });
+}
+
+function selectedMasterPackHashes(record, ids = record.selected_master_ids) {
+  return Object.fromEntries(
+    record.catalog.masters
+      .filter((master) => ids.includes(master.id))
+      .map((master) => [master.id, master.pack_hash]),
+  );
+}
+
+/**
+ * The selection id already carries 128 bits of randomness. Deriving the receipt id from the
+ * immutable confirmation inputs means a crash before the first durable confirmation write cannot
+ * make an identical retry mint a second one-use capability.
+ */
+function stableReceiptId(record, resolved, councilPace) {
+  const raw = digest({
+    schema_version: 1,
+    selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
+    selection_id: record.selection_id,
+    catalog_hash: record.catalog_hash,
+    intent_hash: record.intent_hash,
+    selection_mode: resolved.mode,
+    selected_master_ids: resolved.ids,
+    council_pace: councilPace,
+  }).slice(0, 32);
+  // Preserve the UUID grammar required by the lock layer: deterministic v5 nibble and RFC 4122
+  // variant, while the remaining 122 bits still come from the confirmation digest.
+  const hex = `${raw.slice(0, 12)}5${raw.slice(13, 16)}${((Number.parseInt(raw[16], 16) & 0x3) | 0x8).toString(16)}${raw.slice(17)}`;
+  return `RCP-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function confirmedReceiptRecord(record) {
+  const receiptRecord = {
+    schema_version: record.schema_version,
+    selection_hash_version: selectionHashVersion(record),
+    selection_receipt: assertReceiptId(record.selection_receipt),
+    selection_id: record.selection_id,
+    status: "confirmed",
+    symbol: record.symbol,
+    council_mode: record.council_mode || "full",
+    council_pace: record.council_pace,
+    catalog_hash: record.catalog_hash,
+    request_hash: record.request_hash,
+    intent_hash: record.intent_hash,
+    selected_master_ids: record.selected_master_ids,
+    selected_master_pack_hashes: selectedMasterPackHashes(record),
+    selection_mode: record.selection_mode,
+    created_at: record.confirmed_at,
+    expires_at: record.expires_at,
+    consumed_at: null,
+    consumed_by_run_id: null,
+  };
+  receiptRecord.selection_hash = receiptSelectionHash(receiptRecord);
+  return receiptRecord;
+}
+
+function receiptRecoveryRecord(receipt) {
+  return {
+    schema_version: 1,
+    authority: "selection_record",
+    selection_receipt: receipt.selection_receipt,
+    selection_hash: receipt.selection_hash,
+    prepared_at: receipt.created_at,
+  };
+}
+
+function receiptRecoveryMismatches(selection, receipt) {
+  if (!Object.hasOwn(selection, "receipt_recovery")) return [];
+  // The recovery authority was introduced with v2. Legacy v1 receipts have no such binding;
+  // retaining or ignoring an unknown additive selection field must not change their old hash and
+  // pace-validation contract.
+  if (selectionHashVersion(selection) === LEGACY_SELECTION_HASH_VERSION
+    || selectionHashVersion(receipt) === LEGACY_SELECTION_HASH_VERSION) return [];
+  const recovery = selection.receipt_recovery;
+  const expected = receiptRecoveryRecord(receipt);
+  return Object.keys(expected)
+    .filter((field) => !sameJson(recovery?.[field], expected[field]))
+    .map((field) => `receipt_recovery.${field}`);
+}
+
+function transactionWriter(options = {}) {
+  const injected = options.io?.writeJson;
+  if (injected === undefined) return writeJson;
+  if (typeof injected !== "function") throw new TypeError("selection transaction io.writeJson must be a function");
+  return injected;
+}
+
+function receiptRecordMismatches(actual, expected) {
+  return Object.keys(expected)
+    .filter((field) => !sameJson(actual?.[field], expected[field]));
+}
+
+/**
+ * A confirmed selection is the single durable authority for its receipt. It contains the stable
+ * receipt id, every binding input and the expected receipt hash, so a restart can finish only the
+ * missing second write. An existing but different receipt is never overwritten as "recovery".
+ */
+function ensureConfirmedReceipt(record, options = {}) {
+  const expected = confirmedReceiptRecord(record);
+  const recoveryMismatches = receiptRecoveryMismatches(record, expected);
+  if (recoveryMismatches.length) {
+    throw invalidParams("The confirmed selection recovery record is inconsistent.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: recoveryMismatches,
+    });
+  }
+  const path = receiptPath(expected.selection_receipt);
+  if (!existsSync(path)) {
+    transactionWriter(options)(path, expected);
+    return expected;
+  }
+  const actual = readJson(path);
+  const mismatched = receiptRecordMismatches(actual, expected);
+  if (mismatched.length) {
+    throw invalidParams("The existing selection receipt does not match its confirmed selection.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: mismatched,
+    });
+  }
+  return actual;
 }
 
 function councilMode(value) {
@@ -49,6 +193,32 @@ function councilMode(value) {
     });
   }
   return mode;
+}
+
+function assertSelectionTimeout(args, selection, mode) {
+  if (args.total_timeout_ms === undefined) return;
+  if (mode === "quick") {
+    if (args.total_timeout_ms > LIMITS.QUICK_HARD_MAX_MS) {
+      throw invalidParams(`Quick council total_timeout_ms cannot exceed ${LIMITS.QUICK_HARD_MAX_MS}.`, {
+        reason: "QUICK_TOTAL_TIMEOUT_EXCEEDS_MAX",
+        maximum_ms: LIMITS.QUICK_HARD_MAX_MS,
+      });
+    }
+    return;
+  }
+
+  const profile = councilPaceProfile(selection.council_pace);
+  if (args.total_timeout_ms > profile.total_ms) {
+    throw invalidParams(
+      `Full council total_timeout_ms cannot exceed ${profile.total_ms} at the ${profile.pace} pace. Raise council_pace to buy more time.`,
+      {
+        reason: "FULL_TOTAL_TIMEOUT_EXCEEDS_MAX",
+        council_pace: profile.pace,
+        maximum_ms: profile.total_ms,
+        paces: Object.fromEntries(COUNCIL_PACE_NAMES.map((name) => [name, councilPaceProfile(name).total_ms])),
+      },
+    );
+  }
 }
 
 function selectionLanguage(args = {}) {
@@ -176,6 +346,7 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const expiresAt = new Date(now + LIMITS.SELECTION_TTL_MS).toISOString();
   const record = {
     schema_version: 1,
+    selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
     selection_id: selectionId,
     status: "awaiting_user_selection",
     symbol,
@@ -355,7 +526,8 @@ function resolveConfirmation(args, record) {
   return parseMasterSelection(args.selection, masters);
 }
 
-function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
+function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
+  const now = options.now ?? Date.now();
   ensureStore();
   const record = readSelection(args.selection_id);
   if (expired(record, now)) {
@@ -411,11 +583,15 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
   }
   if (record.status === "confirmed") {
     if (record.selection_mode === resolved.mode
-      && JSON.stringify(record.selected_master_ids) === JSON.stringify(resolved.ids)) {
+      && JSON.stringify(record.selected_master_ids) === JSON.stringify(resolved.ids)
+      && (record.council_pace || null) === chosenPace) {
+      ensureConfirmedReceipt(record, options);
       return confirmationResult(record);
     }
-    throw invalidParams("This selection was already confirmed with a different master set.", {
+    throw invalidParams("This selection was already confirmed with different method choices or pace.", {
       reason: "MASTER_SELECTION_ALREADY_CONFIRMED",
+      confirmed_council_pace: record.council_pace || null,
+      submitted_council_pace: chosenPace,
     });
   }
   if (record.status !== "awaiting_user_selection") {
@@ -424,15 +600,11 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     });
   }
 
-  const receipt = `RCP-${randomUUID()}`;
+  const receipt = stableReceiptId(record, resolved, chosenPace);
   const confirmedAt = new Date(now).toISOString();
-  const selectedPackHashes = Object.fromEntries(
-    record.catalog.masters
-      .filter((master) => resolved.ids.includes(master.id))
-      .map((master) => [master.id, master.pack_hash]),
-  );
   Object.assign(record, {
     status: "confirmed",
+    selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
     selection_mode: resolved.mode,
     selected_master_ids: resolved.ids,
     selection_receipt: receipt,
@@ -440,31 +612,14 @@ function confirmCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     updated_at: confirmedAt,
     council_pace: chosenPace,
   });
-  const receiptRecord = {
-    schema_version: 1,
-    selection_receipt: receipt,
-    selection_id: record.selection_id,
-    status: "confirmed",
-    symbol: record.symbol,
-    council_mode: record.council_mode || "full",
-    // The pace is part of what the user approved for this run, so it travels inside the receipt
-    // and is checked at consumption like every other bound field. A caller cannot approve a
-    // 15-minute run and then execute an hour of it.
-    council_pace: chosenPace,
-    catalog_hash: record.catalog_hash,
-    request_hash: record.request_hash,
-    intent_hash: record.intent_hash,
-    selected_master_ids: record.selected_master_ids,
-    selected_master_pack_hashes: selectedPackHashes,
-    selection_mode: record.selection_mode,
-    created_at: confirmedAt,
-    expires_at: record.expires_at,
-    consumed_at: null,
-    consumed_by_run_id: null,
-  };
-  receiptRecord.selection_hash = receiptSelectionHash(receiptRecord);
-  writeJson(selectionPath(record.selection_id), record);
-  writeJson(receiptPath(receipt), receiptRecord);
+  const receiptRecord = confirmedReceiptRecord(record);
+  // This recovery metadata and the complete selection binding reach disk in the first write.
+  // Receipt existence plus its verified hash is the commit point; no catch-time rollback is
+  // required, so a process death between the two writes is restart-recoverable.
+  record.receipt_recovery = receiptRecoveryRecord(receiptRecord);
+  const writeTransactionJson = transactionWriter(options);
+  writeTransactionJson(selectionPath(record.selection_id), record);
+  writeTransactionJson(receiptPath(receipt), receiptRecord);
   return confirmationResult(record);
 }
 
@@ -490,22 +645,106 @@ function confirmationResult(record) {
     symbol: record.symbol,
     language: record.language,
     council_mode: record.council_mode || "full",
+    selection_hash_version: selectionHashVersion(record),
     catalog_hash: record.catalog_hash,
     intent_hash: record.intent_hash,
     selection_mode: record.selection_mode,
     selected_master_ids: record.selected_master_ids,
-    selected_master_pack_hashes: Object.fromEntries(
-      record.catalog.masters
-        .filter((master) => record.selected_master_ids.includes(master.id))
-        .map((master) => [master.id, master.pack_hash]),
-    ),
+    selected_master_pack_hashes: selectedMasterPackHashes(record),
     selected_count: record.selected_master_ids.length,
     council_pace: record.council_pace || null,
     expires_at: record.expires_at,
   };
 }
 
-function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
+function consumptionState(record, recordName) {
+  if (record.status !== "consumed") return null;
+  const mismatched = [];
+  if (typeof record.consumed_by_run_id !== "string" || !record.consumed_by_run_id) {
+    mismatched.push(`${recordName}.consumed_by_run_id`);
+  }
+  const consumedAt = Date.parse(record.consumed_at);
+  const expiresAt = Date.parse(record.expires_at);
+  if (!Number.isFinite(consumedAt)) mismatched.push(`${recordName}.consumed_at`);
+  if (!Number.isFinite(expiresAt) || (Number.isFinite(consumedAt) && consumedAt > expiresAt)) {
+    mismatched.push(`${recordName}.consumed_at_after_expires_at`);
+  }
+  if (mismatched.length) {
+    throw invalidParams("The consumed selection audit metadata is invalid.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: mismatched,
+    });
+  }
+  return { run_id: record.consumed_by_run_id, consumed_at: record.consumed_at };
+}
+
+function replayedSelection(receiptState, selectionState) {
+  throw invalidParams("This master selection receipt has already been used by another run.", {
+    reason: "MASTER_SELECTION_REPLAYED",
+    consumed_by_run_id: receiptState?.run_id || selectionState?.run_id || null,
+  });
+}
+
+/**
+ * Receipt is written first during consumption. If the process dies before the selection write,
+ * the consumed receipt is the durable authority and only the same run id may finish that write.
+ * The reverse split is also repaired for forward compatibility; conflicting owners fail closed.
+ */
+function reconcileConsumption(receipt, selection, runId, options = {}) {
+  const receiptState = consumptionState(receipt, "receipt");
+  const selectionState = consumptionState(selection, "selection");
+  if (!receiptState && !selectionState) return null;
+
+  const owners = [receiptState?.run_id, selectionState?.run_id].filter(Boolean);
+  if (owners.some((owner) => owner !== runId) || new Set(owners).size > 1) {
+    replayedSelection(receiptState, selectionState);
+  }
+  if (receiptState && selectionState) {
+    if (receiptState.consumed_at !== selectionState.consumed_at) {
+      throw invalidParams("The consumed selection records disagree on their audit timestamp.", {
+        reason: "MASTER_SELECTION_RECORD_MISMATCH",
+        mismatched_fields: ["consumed_at"],
+      });
+    }
+    return consumedResult(selection, receipt);
+  }
+
+  const writeTransactionJson = transactionWriter(options);
+  if (receiptState) {
+    // Older code could incorrectly mark the confirmed half expired while leaving a valid,
+    // pre-expiry consumed receipt. That state is recoverable by the same owner as well.
+    if (selection.status !== "confirmed" && selection.status !== "expired") {
+      throw invalidParams("The selection receipt and selection record have incompatible states.", {
+        reason: "MASTER_SELECTION_RECORD_MISMATCH",
+        mismatched_fields: ["status"],
+      });
+    }
+    Object.assign(selection, {
+      status: "consumed",
+      consumed_at: receiptState.consumed_at,
+      consumed_by_run_id: receiptState.run_id,
+      updated_at: receiptState.consumed_at,
+    });
+    writeTransactionJson(selectionPath(selection.selection_id), selection);
+  } else {
+    if (receipt.status !== "confirmed") {
+      throw invalidParams("The selection receipt and selection record have incompatible states.", {
+        reason: "MASTER_SELECTION_RECORD_MISMATCH",
+        mismatched_fields: ["status"],
+      });
+    }
+    Object.assign(receipt, {
+      status: "consumed",
+      consumed_at: selectionState.consumed_at,
+      consumed_by_run_id: selectionState.run_id,
+    });
+    writeTransactionJson(receiptPath(receipt.selection_receipt), receipt);
+  }
+  return consumedResult(selection, receipt);
+}
+
+function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
+  const now = options.now ?? Date.now();
   ensureStore();
   const receipt = readReceipt(args.selection_receipt);
   if (receipt.selection_receipt !== args.selection_receipt) {
@@ -514,19 +753,37 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
       mismatched_fields: ["selection_receipt"],
     });
   }
+  const receiptHashVersion = selectionHashVersion(receipt);
+  const expectedSelectionHash = receiptSelectionHash(receipt);
+  if (receipt.selection_hash !== expectedSelectionHash) {
+    throw invalidParams("The selection receipt hash is invalid.", {
+      reason: "MASTER_SELECTION_HASH_MISMATCH",
+      expected_selection_hash: expectedSelectionHash,
+    });
+  }
   const selection = readSelection(receipt.selection_id);
-  const expectedPackHashes = Object.fromEntries(
-    selection.catalog.masters
-      .filter((master) => selection.selected_master_ids.includes(master.id))
-      .map((master) => [master.id, master.pack_hash]),
-  );
+  const recoveryMismatches = receiptRecoveryMismatches(selection, receipt);
+  if (recoveryMismatches.length) {
+    throw invalidParams("The selection receipt does not match its recovery authority.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: recoveryMismatches,
+    });
+  }
+  const selectionRecordHashVersion = selectionHashVersion(selection);
+  const expectedPackHashes = selectedMasterPackHashes(selection);
   const recordBindings = [
     ["schema_version", receipt.schema_version, selection.schema_version],
+    ["selection_hash_version", receiptHashVersion, selectionRecordHashVersion],
     ["selection_id", receipt.selection_id, selection.selection_id],
     ["selection_receipt", receipt.selection_receipt, selection.selection_receipt],
     ["symbol", receipt.symbol, selection.symbol],
     ["council_mode", receipt.council_mode || "full", selection.council_mode || "full"],
-    ["council_pace", receipt.council_pace || null, selection.council_pace || null],
+    [
+      "council_pace",
+      receipt.council_pace,
+      selection.council_pace,
+      Object.hasOwn(receipt, "council_pace") && Object.hasOwn(selection, "council_pace"),
+    ],
     ["catalog_hash", receipt.catalog_hash, selection.catalog_hash],
     ["request_hash", receipt.request_hash, selection.request_hash],
     ["intent_hash", receipt.intent_hash, selection.intent_hash],
@@ -536,12 +793,24 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     ["expires_at", receipt.expires_at, selection.expires_at],
   ];
   const mismatchedBindings = recordBindings
-    .filter(([, receiptValue, selectionValue]) => !sameJson(receiptValue, selectionValue))
+    .filter(([, receiptValue, selectionValue, present = true]) => !present || !sameJson(receiptValue, selectionValue))
     .map(([field]) => field);
   if (mismatchedBindings.length) {
     throw invalidParams("The selection receipt does not match its confirmed selection record.", {
       reason: "MASTER_SELECTION_RECORD_MISMATCH",
       mismatched_fields: mismatchedBindings,
+    });
+  }
+  const boundMode = receipt.council_mode || "full";
+  const paceMatchesMode = boundMode === "quick"
+    ? receipt.council_pace === null
+    : COUNCIL_PACE_NAMES.includes(receipt.council_pace);
+  if (!paceMatchesMode) {
+    throw invalidParams("The selection receipt has no valid pace for its confirmed council mode.", {
+      reason: "MASTER_SELECTION_RECORD_MISMATCH",
+      mismatched_fields: ["council_pace"],
+      council_mode: boundMode,
+      council_pace: receipt.council_pace,
     });
   }
   if (!sameJson(receipt.selected_master_pack_hashes, expectedPackHashes)) {
@@ -580,13 +849,6 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
       mismatched_master_ids: mismatchedPackHashes,
     });
   }
-  const expectedSelectionHash = receiptSelectionHash(receipt);
-  if (receipt.selection_hash !== expectedSelectionHash) {
-    throw invalidParams("The selection receipt hash is invalid.", {
-      reason: "MASTER_SELECTION_HASH_MISMATCH",
-      expected_selection_hash: expectedSelectionHash,
-    });
-  }
   const prompt = typeof args.prompt === "string" ? args.prompt : "";
   const language = selectionLanguage({ language: args.language, prompt });
   const mode = councilMode(args.council_mode);
@@ -611,21 +873,30 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
       remedy: "Re-send the exact symbol, prompt, language and council_mode used in begin_council_selection, or start a new selection.",
     });
   }
+  const runId = String(args.run_id || "");
+  if (!runId) throw invalidParams("run_id is required when consuming a selection receipt.");
+  if (args.council_pace !== undefined
+    && String(args.council_pace) !== String(selection.council_pace)) {
+    throw invalidParams(
+      `council_pace ${args.council_pace} does not match the pace confirmed at the selection gate (${selection.council_pace}).`,
+      {
+        reason: "COUNCIL_PACE_RECEIPT_MISMATCH",
+        confirmed_council_pace: selection.council_pace,
+        submitted_council_pace: String(args.council_pace),
+        remedy: "Send the confirmed pace or start a new selection to change it.",
+      },
+    );
+  }
+  assertSelectionTimeout(args, selection, mode);
+  // A valid consumed audit record proves consumption began before expiry. Reconcile or replay it
+  // before applying the TTL for a brand-new use; otherwise a restart can strand the one-use
+  // receipt after its first write. Every content/binding check above still runs first.
+  const reconciled = reconcileConsumption(receipt, selection, runId, options);
+  if (reconciled) return reconciled;
   if (expired(receipt, now) || expired(selection, now)) {
     if (selection.status !== "expired") markExpired(selection);
     throw invalidParams("The master selection receipt expired. Start a new selection.", {
       reason: "MASTER_SELECTION_EXPIRED",
-    });
-  }
-  const runId = String(args.run_id || "");
-  if (!runId) throw invalidParams("run_id is required when consuming a selection receipt.");
-  if (receipt.status === "consumed" || selection.status === "consumed") {
-    if (receipt.consumed_by_run_id === runId && selection.consumed_by_run_id === runId) {
-      return consumedResult(selection, receipt);
-    }
-    throw invalidParams("This master selection receipt has already been used by another run.", {
-      reason: "MASTER_SELECTION_REPLAYED",
-      consumed_by_run_id: receipt.consumed_by_run_id || selection.consumed_by_run_id,
     });
   }
   if (receipt.status !== "confirmed" || selection.status !== "confirmed") {
@@ -640,8 +911,9 @@ function consumeCouncilSelectionUnlocked(args = {}, { now = Date.now() } = {}) {
     consumed_by_run_id: runId,
     updated_at: consumedAt,
   });
-  writeJson(receiptPath(receipt.selection_receipt), receipt);
-  writeJson(selectionPath(selection.selection_id), selection);
+  const writeTransactionJson = transactionWriter(options);
+  writeTransactionJson(receiptPath(receipt.selection_receipt), receipt);
+  writeTransactionJson(selectionPath(selection.selection_id), selection);
   return consumedResult(selection, receipt);
 }
 
@@ -664,6 +936,7 @@ function consumedResult(selection, receipt) {
     selection_id: selection.selection_id,
     selection_receipt: receipt.selection_receipt,
     selection_hash: receipt.selection_hash,
+    selection_hash_version: selectionHashVersion(receipt),
     catalog_hash: selection.catalog_hash,
     intent_hash: selection.intent_hash,
     selection_mode: selection.selection_mode,

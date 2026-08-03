@@ -1,0 +1,4 @@
+interface:
+  display_name: "AlphaCouncil Method Lenses"
+  short_description: "Run 26 source-bound methods in strong first person"
+  default_prompt: "Use $alphacouncil-method-lenses to analyze this evidence through the selected public-method lenses and return each result in its required strong first-person method voice."

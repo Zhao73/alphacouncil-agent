@@ -240,7 +240,7 @@ test("a tampered per-seat pack hash is rejected before the receipt is consumed",
     grounding: { facts_unavailable: true },
     selection_receipt: selection.selection_receipt,
   });
-  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_PACK_HASH_MISMATCH");
+  assert.equal(rejected.error?.data?.reason, "MASTER_SELECTION_HASH_MISMATCH");
   assert.equal(existsSync(join(dataDir, "runs", rejectedRunId)), false);
 
   // Restore the exact confirmed receipt. The failed integrity check must not burn it.
@@ -338,19 +338,63 @@ test("the same consumed receipt is idempotent only for the same run id", async (
   };
   const first = await server.callTool("plan_visible_run", args);
   const firstPlan = structured(first);
-  await server.callTool("record_visible_packet", {
+  const recordedEvidence = structured(await server.callTool("record_visible_packet", {
     run_id: runId,
     task: "market_data",
     packet: {
       summary: "state that must survive an idempotent replay",
-      claims: [], metrics: {}, sources: [], open_questions: [], confidence: "medium",
+      claims: [{
+        claim: "The idempotency fixture records one bounded market-data fact.",
+        evidence: "The dated fixture source directly supports the bounded fact.",
+        confidence: "medium",
+        source_ids: ["S1"],
+      }],
+      metrics: {},
+      sources: [{
+        id: "S1",
+        title: "Idempotent selection fixture source",
+        url: "https://example.com/selection-idempotency",
+        published_at: "2026-08-01",
+        retrieved_at: "2026-08-03",
+      }],
+      open_questions: [],
+      confidence: "medium",
     },
-  });
-  await server.callTool("record_master_opinion", {
+  }));
+  assert.deepEqual(recordedEvidence.recorded_tasks, ["market_data"]);
+
+  const selectedMaster = selection.selected_master_ids[0];
+  const frozen = firstPlan.run.master_opinions.find((opinion) => opinion.master === selectedMaster);
+  assert.ok(frozen, "the selected v3 method must have a frozen deterministic record");
+  const recordedMaster = structured(await server.callTool("record_master_opinion", {
     run_id: runId,
-    master: selection.selected_master_ids[0],
-    packet: { verdict: "fixture", stance: "out_of_scope", summary: "preserved", confidence: "low" },
-  });
+    master: selectedMaster,
+    packet: {
+      master: selectedMaster,
+      acknowledged_stance: frozen.stance,
+      voice_mode: "first_person_public_method_simulation_v1",
+      disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+      position_intent: ({
+        constructive: "would_buy",
+        cautious: "would_hold",
+        opposed: "would_pass",
+        out_of_scope: "not_in_my_circle",
+      })[frozen.stance],
+      voice: {
+        would_i_act: "I would preserve only the frozen method stance in this replay fixture.",
+        what_i_see: "I see one bounded fact linked to market_data:S1.",
+        how_my_method_reads_it: "I apply my declared method without changing the frozen record.",
+        where_i_disagree: "I disagree with replacing the frozen record during an idempotent replay.",
+        what_changes_my_mind: "I would change my mind only if the cited primary evidence changes.",
+      },
+      key_findings: ["The replay fixture is bound to one recorded source."],
+      disagreements: [],
+      what_would_change_my_mind: ["A changed primary source could reopen the method decision."],
+      source_ids: ["market_data:S1"],
+      confidence: "low",
+    },
+  }));
+  assert.equal(recordedMaster.opinion.master, selectedMaster);
   const second = await server.callTool("plan_visible_run", args);
   const replay = structured(second);
   assert.ok(firstPlan.run);

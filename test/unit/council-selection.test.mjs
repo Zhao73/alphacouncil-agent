@@ -7,7 +7,6 @@ import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 const TARGET_MASTER_IDS = [
   "master_ackman",
-  "master_aschenbrenner",
   "master_asness",
   "master_bogle",
   "master_buffett",

@@ -61,6 +61,7 @@ export function buildCheckPlan(root = repoRoot) {
     staging,
     tests,
     steps: Object.freeze([
+      ...(tests ? [Object.freeze(["scripts/generate-runtime-validators.mjs", "--check"])] : []),
       ...PORTABLE_STEPS,
       ...(staging === "present" ? PRIVATE_STAGING_STEPS : []),
       Object.freeze(["scripts/run-tests.mjs"]),

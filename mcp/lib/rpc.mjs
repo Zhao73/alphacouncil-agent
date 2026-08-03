@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { COUNCIL_MODES, COUNCIL_PACE_NAMES, DEFAULT_COUNCIL_PACE, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION, councilPaceProfile } from "./constants.mjs";
+import { COUNCIL_MODES, COUNCIL_PACE_NAMES, DEFAULT_COUNCIL_PACE, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { localized, resolveLanguage } from "./lang.mjs";
@@ -147,6 +147,86 @@ export function jsonContent(text, structuredContent = {}) {
   };
 }
 
+const TERMINAL_ANALYSIS_STATUSES = new Set([
+  "complete",
+  "degraded",
+  "incomplete",
+  "needs_verification",
+  "needs_revision",
+  "failed",
+]);
+const READ_RUN_DETAILS = new Set(["compact", "full"]);
+const COMPACT_DECISION_SCALARS = [
+  "run_id", "role", "symbol", "as_of", "decision_available", "verdict", "rating",
+  "winner", "summary", "valuation_range", "position", "confidence", "failure_kind",
+];
+const COMPACT_DECISION_LISTS = ["catalysts", "risks", "invalidation", "source_ids"];
+
+function isTerminalAnalysis(value) {
+  const status = typeof value === "string" ? value : value?.status;
+  return TERMINAL_ANALYSIS_STATUSES.has(status);
+}
+
+function persistedUserResponse(runId) {
+  const path = join(runPath(runId), "user_response.md");
+  return existsSync(path) ? readFileSync(path, "utf8") : "";
+}
+
+function terminalHandoffText(run, fallback) {
+  if (!isTerminalAnalysis(run) || !run?.run_id) return fallback;
+  return persistedUserResponse(run.run_id) || fallback;
+}
+
+function boundedCompactText(value, limit = 2_000) {
+  if (typeof value !== "string") return value;
+  return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`;
+}
+
+/** Keep the decision useful for polling without returning its report/raw transcript bodies. */
+export function compactDecision(decision) {
+  if (!decision || typeof decision !== "object" || Array.isArray(decision)) return decision ?? null;
+  const compact = {};
+  for (const field of COMPACT_DECISION_SCALARS) {
+    if (decision[field] !== undefined) compact[field] = boundedCompactText(decision[field]);
+  }
+  for (const field of COMPACT_DECISION_LISTS) {
+    if (!Array.isArray(decision[field])) continue;
+    compact[field] = decision[field].slice(0, 12).map((item) => boundedCompactText(item, 800));
+  }
+  return compact;
+}
+
+/** Summarize an append-only event log without echoing every event payload into the host. */
+export function compactEventSummary(eventLog) {
+  const entries = Array.isArray(eventLog?.entries) ? eventLog.entries : [];
+  const typeCounts = new Map();
+  for (const event of entries) {
+    const type = typeof event?.type === "string" ? event.type : "unknown";
+    typeCounts.set(type, (typeCounts.get(type) || 0) + 1);
+  }
+  const first = entries[0] || null;
+  const last = entries[entries.length - 1] || null;
+  return {
+    count: entries.length,
+    parse_error_count: Number(eventLog?.parse_errors || 0),
+    first_at: first?.at || null,
+    last_at: last?.at || null,
+    last_type: last?.type || null,
+    type_counts: Object.fromEntries([...typeCounts.entries()].slice(0, 64)),
+  };
+}
+
+function readRunDetail(value) {
+  const detail = value === undefined ? "compact" : String(value);
+  if (!READ_RUN_DETAILS.has(detail)) {
+    throw invalidParams("read_run detail must be compact or full.", {
+      reason: "INVALID_READ_RUN_DETAIL",
+      allowed: [...READ_RUN_DETAILS],
+    });
+  }
+  return detail;
+}
+
 // Series history and per-fact lineage are the two unbounded parts of a grounding object: on one
 // real run they were 2.33 MB of a 2.54 MB plan payload, which exceeded the host's tool-result
 // limit and pushed the entire plan to a scratch file. They are already saved in evidence.json and
@@ -221,12 +301,6 @@ function startValidation(args, entryTool) {
       reason: "INVALID_TOTAL_TIMEOUT",
     });
   }
-  if (mode === "quick" && args.total_timeout_ms > LIMITS.QUICK_HARD_MAX_MS) {
-    throw invalidParams(`Quick council total_timeout_ms cannot exceed ${LIMITS.QUICK_HARD_MAX_MS}.`, {
-      reason: "QUICK_TOTAL_TIMEOUT_EXCEEDS_MAX",
-      maximum_ms: LIMITS.QUICK_HARD_MAX_MS,
-    });
-  }
   if (args.council_pace !== undefined && !COUNCIL_PACE_NAMES.includes(String(args.council_pace))) {
     throw invalidParams(`council_pace must be one of ${COUNCIL_PACE_NAMES.join(", ")}.`, {
       reason: "INVALID_COUNCIL_PACE",
@@ -238,23 +312,9 @@ function startValidation(args, entryTool) {
       reason: "QUICK_PACE_FORBIDDEN",
     });
   }
-  // A call is held to its own pace's budget, not to the outer bound of the schema: asking for
-  // an hour at the fast pace would buy idle time, because what bounds each worker is its
-  // per-stage cap and those are set by the pace.
-  if (mode === "full" && args.total_timeout_ms !== undefined) {
-    const profile = councilPaceProfile(args.council_pace);
-    if (args.total_timeout_ms > profile.total_ms) {
-      throw invalidParams(
-        `Full council total_timeout_ms cannot exceed ${profile.total_ms} at the ${profile.pace} pace. Raise council_pace to buy more time.`,
-        {
-          reason: "FULL_TOTAL_TIMEOUT_EXCEEDS_MAX",
-          council_pace: profile.pace,
-          maximum_ms: profile.total_ms,
-          paces: Object.fromEntries(COUNCIL_PACE_NAMES.map((name) => [name, councilPaceProfile(name).total_ms])),
-        },
-      );
-    }
-  }
+  // The upper bound cannot be checked here: when execution omits council_pace, the confirmed
+  // receipt still owns it. consumeCouncilSelection validates the requested timeout against that
+  // bound pace while both the run lock and receipt lock are held, before writing consumed state.
   if (mode === "quick" && args.synthesis === false) {
     throw invalidParams("Quick council requires its one-round bull/bear and portfolio-manager synthesis.", {
       reason: "QUICK_SYNTHESIS_REQUIRED",
@@ -314,23 +374,9 @@ function selectedRunArgs(args = {}, entryTool) {
       language: args.language,
       prompt: typeof args.prompt === "string" ? args.prompt : "",
       council_mode: args.council_mode || "full",
+      council_pace: args.council_pace,
+      total_timeout_ms: args.total_timeout_ms,
     });
-    // The pace was approved at the gate, so the receipt is authoritative: an execution call may
-    // repeat it but not change it. Otherwise a user could approve fifteen minutes and get an
-    // hour, or the reverse, with nothing in the record showing the switch.
-    if (args.council_pace !== undefined
-      && selection.council_pace
-      && String(args.council_pace) !== String(selection.council_pace)) {
-      throw invalidParams(
-        `council_pace ${args.council_pace} does not match the pace confirmed at the selection gate (${selection.council_pace}).`,
-        {
-          reason: "COUNCIL_PACE_RECEIPT_MISMATCH",
-          confirmed_council_pace: selection.council_pace,
-          submitted_council_pace: String(args.council_pace),
-          remedy: "Send the confirmed pace or start a new selection to change it.",
-        },
-      );
-    }
     return {
       ...args,
       run_id: id,
@@ -403,6 +449,18 @@ function persistBackgroundFailure(runArgs, error) {
 
 function startBackgroundSelectedRun(args, entryTool, operation) {
   const runArgs = selectedRunArgs(args, entryTool);
+  // A replay of an already terminal run is not new background work. Return its persisted
+  // result synchronously so text-only hosts receive the final handoff instead of another
+  // misleading "accepted; keep polling" acknowledgement.
+  if (runArgs.existing_run && isTerminalAnalysis(runArgs.existing_run)) {
+    try {
+      return { terminal_result: loadExistingAnalysis(runArgs.existing_run) };
+    } catch (error) {
+      throw attachRunContext(error, runArgs);
+    } finally {
+      runArgs.release_run_lock();
+    }
+  }
   try {
     if (!runArgs.existing_run) runArgs.queued_run = queueHeadlessRun(runArgs);
   } catch (error) {
@@ -613,9 +671,17 @@ export function tools() {
       },
       required: ["symbol", "selection_receipt"],
     }),
-    tool("read_run", "Read a saved AlphaCouncil Agent run from the shared evidence store.", {
+    tool("read_run", "Read a saved AlphaCouncil Agent run. Terminal text is the persisted user handoff. detail=compact (default) returns bounded polling state and artifact paths; detail=full returns the legacy complete evidence/report payload.", {
       type: "object",
-      properties: { run_id: { type: "string" } },
+      properties: {
+        run_id: { type: "string" },
+        detail: {
+          type: "string",
+          enum: ["compact", "full"],
+          default: "compact",
+          description: "compact returns status, a bounded decision, report quality, artifact paths, an event summary and user_response only. full preserves the legacy evidence/events/report bodies.",
+        },
+      },
       required: ["run_id"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
     tool("council_diagnostics", "Measure descriptive seat agreement, unique cited-source contribution and repeated-input behavioural differentiation across saved runs. This tool never treats seat count or agreement as independent evidence: error N_eff remains null unless the separate preregistered signed resolved-outcome protocol is satisfied.", {
@@ -643,18 +709,30 @@ export function tools() {
       type: "object",
       properties: { language: common.language },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: false }),
-    tool("record_master_opinion", "Record one returned visible method-seat worker after evidence and before debate. For physical v3 seats, submit the method-voice schema from plan_visible_run: master, acknowledged_stance, statement, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. acknowledged_stance must equal the frozen stance; the worker cannot vote again. Legacy packets may use stance/verdict/summary. Reader-facing fields in the wrong run language are rejected without changing state. Every returned selected seat must be recorded before PM.", {
+    tool("record_master_opinion", "Record one returned visible method-seat worker after evidence and before debate. For physical v3 seats, submit the first-person public-method simulation schema from plan_visible_run: exact voice_mode and disclosure_ack, master, acknowledged_stance, position_intent, all five voice fields, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. acknowledged_stance must equal the frozen stance; the worker cannot vote again. Legacy packets may use stance/verdict/summary. Reader-facing fields in the wrong run language are rejected without changing state. Every returned selected seat must be recorded before PM.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
         master: { type: "string", enum: masterIds },
         packet: {
           type: "object",
-          description: `Current physical v3 seats use acknowledged_stance + statement; acknowledged_stance MUST be one of ${MASTER_STANCES.join(" | ")} and match the frozen stance returned by plan_visible_run. The legacy stance/verdict/summary shape remains accepted only for a legacy seat.`,
+          description: `Current physical v3 seats require the five-field first-person public-method voice contract; acknowledged_stance MUST be one of ${MASTER_STANCES.join(" | ")} and match the frozen stance returned by plan_visible_run. The legacy stance/verdict/summary shape remains accepted only for a legacy seat.`,
           properties: {
             master: { type: "string", enum: masterIds },
             acknowledged_stance: { type: "string", enum: MASTER_STANCES },
-            statement: { type: "string", minLength: 1 },
+            voice_mode: { type: "string", const: "first_person_public_method_simulation_v1" },
+            disclosure_ack: { type: "string", const: "alphacouncil.first_person_public_method_simulation.v1" },
+            position_intent: { type: "string", enum: ["would_buy", "would_add", "would_hold", "would_watch", "would_pass", "would_avoid", "not_in_my_circle"] },
+            voice: {
+              type: "object",
+              properties: {
+                would_i_act: { type: "string", minLength: 1 },
+                what_i_see: { type: "string", minLength: 1 },
+                how_my_method_reads_it: { type: "string", minLength: 1 },
+                where_i_disagree: { type: "string", minLength: 1 },
+                what_changes_my_mind: { type: "string", minLength: 1 },
+              },
+            },
             key_findings: { type: "array", items: { type: "string" } },
             disagreements: { type: "array", items: { type: "string" } },
             what_would_change_my_mind: { type: "array", items: { type: "string" } },
@@ -1248,10 +1326,17 @@ export async function handleToolCall(id, params) {
     const runInBackground = args.wait_for_completion === false
       || (args.wait_for_completion === undefined && args.dry_run !== true);
     if (runInBackground) {
-      const accepted = startBackgroundSelectedRun(args, "analyze_symbol", async (runArgs) => {
+      const started = startBackgroundSelectedRun(args, "analyze_symbol", async (runArgs) => {
         if (runArgs.existing_run) return loadExistingAnalysis(runArgs.existing_run);
         return analyzeSymbol(runArgs);
       });
+      if (started.terminal_result) {
+        const replay = started.terminal_result;
+        const fallback = `Loaded AlphaCouncil Agent analysis for ${replay.run.symbol}: ${replay.run.run_id}`;
+        sendResult(id, jsonContent(terminalHandoffText(replay.run, fallback), replay));
+        return;
+      }
+      const accepted = started;
       sendResult(id, jsonContent(
         `Accepted AlphaCouncil Agent analysis for ${accepted.symbol}: ${accepted.run_id}. Poll read_run until status is terminal.`,
         accepted,
@@ -1259,19 +1344,20 @@ export async function handleToolCall(id, params) {
       return;
     }
     const result = await withSelectedRun(args, "analyze_symbol", async (runArgs) => {
-      const result = runArgs.existing_run ? loadExistingAnalysis(runArgs.existing_run) : await analyzeSymbol(runArgs);
-      return jsonContent(
-        `${runArgs.existing_run ? "Loaded" : "Saved"} AlphaCouncil Agent analysis for ${result.run.symbol}: ${result.run.run_id}`,
-        result,
-      );
+      return runArgs.existing_run ? loadExistingAnalysis(runArgs.existing_run) : await analyzeSymbol(runArgs);
     });
-    sendResult(id, result);
+    const fallback = `${result.idempotent_replay ? "Loaded" : "Saved"} AlphaCouncil Agent analysis for ${result.run.symbol}: ${result.run.run_id}`;
+    sendResult(id, jsonContent(terminalHandoffText(result.run, fallback), result));
     return;
   }
   if (name === "read_run") {
+    const detail = readRunDetail(args.detail);
     const idArg = args.run_id;
     const dir = runPath(idArg);
-    const evidence = readJson(join(dir, "evidence.json"));
+    const evidencePath = join(dir, "evidence.json");
+    // Keep the historical existence requirement without parsing a multi-megabyte evidence
+    // body for the default compact poll. Old runs without status.json still fall back to it.
+    if (!existsSync(evidencePath)) readJson(evidencePath);
     const decisionPath = join(dir, "decision.json");
     const decision = existsSync(decisionPath) ? readJson(decisionPath) : null;
     const allAgentsPath = join(dir, "all_agents.md");
@@ -1281,27 +1367,52 @@ export async function handleToolCall(id, params) {
     const eventsPath = join(dir, "events.jsonl");
     const sourceManifestPath = join(dir, "source_manifest.json");
     const reportQualityPath = join(dir, "report_quality.json");
+    const status = existsSync(statusPath) ? readJson(statusPath) : null;
+    const reportQuality = existsSync(reportQualityPath) ? readJson(reportQualityPath) : null;
     const eventLog = readJsonl(eventsPath);
-    sendResult(id, jsonContent(`Loaded AlphaCouncil Agent run ${idArg}`, {
+    let evidence = null;
+    if (detail === "full" || !status) evidence = readJson(evidencePath);
+    const taskIds = (status?.tasks || [])
+      .map((task) => typeof task === "string" ? task : task?.task)
+      .filter((task) => typeof task === "string");
+    const artifactRun = evidence || { run_id: idArg, tasks: taskIds };
+    const artifacts = {
+      ...artifactPaths(artifactRun),
+      all_agents_md: allAgentsPath,
+      final_report_md: finalReportPath,
+      user_response_md: userResponsePath,
+      source_manifest_json: sourceManifestPath,
+      status_json: statusPath,
+      events_jsonl: eventsPath,
+    };
+    const userResponse = existsSync(userResponsePath) ? readFileSync(userResponsePath, "utf8") : "";
+    const runStatus = status?.status || evidence?.status;
+    const text = isTerminalAnalysis(runStatus) && userResponse
+      ? userResponse
+      : `Loaded AlphaCouncil Agent run ${idArg}`;
+    if (detail === "compact") {
+      sendResult(id, jsonContent(text, {
+        status,
+        decision: compactDecision(decision),
+        report_quality: reportQuality,
+        artifacts,
+        events_summary: compactEventSummary(eventLog),
+        user_response_markdown: userResponse,
+      }));
+      return;
+    }
+    sendResult(id, jsonContent(text, {
       evidence,
       decision,
       source_manifest: existsSync(sourceManifestPath) ? readJson(sourceManifestPath) : sourceManifest(evidence),
-      report_quality: existsSync(reportQualityPath) ? readJson(reportQualityPath) : null,
-      status: existsSync(statusPath) ? readJson(statusPath) : null,
+      report_quality: reportQuality,
+      status,
       events: eventLog.entries,
       events_parse_errors: eventLog.parse_errors,
-      artifacts: {
-        ...artifactPaths(evidence),
-        all_agents_md: allAgentsPath,
-        final_report_md: finalReportPath,
-        user_response_md: userResponsePath,
-        source_manifest_json: sourceManifestPath,
-        status_json: statusPath,
-        events_jsonl: eventsPath,
-      },
+      artifacts,
       all_agents_markdown: existsSync(allAgentsPath) ? readFileSync(allAgentsPath, "utf8") : "",
       final_report_markdown: existsSync(finalReportPath) ? readFileSync(finalReportPath, "utf8") : "",
-      user_response_markdown: existsSync(userResponsePath) ? readFileSync(userResponsePath, "utf8") : "",
+      user_response_markdown: userResponse,
     }));
     return;
   }

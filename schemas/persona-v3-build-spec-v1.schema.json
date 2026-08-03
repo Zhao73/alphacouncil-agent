@@ -19,7 +19,7 @@
     "inventory_id": { "const": "personapack-v3-build-specs" },
     "inventory_status": { "const": "non_production_planning_only" },
     "canonical_catalog_source": { "const": "mcp/lib/personas/registry.mjs" },
-    "seat_count": { "const": 27 },
+    "seat_count": { "const": 26 },
     "adjudication_policy": {
       "type": "object",
       "required": ["method_attribution", "source_grading", "case_labels", "veto_thresholds", "reviewer_approvals", "experiments", "promotion_effect"],
@@ -36,8 +36,8 @@
     },
     "seats": {
       "type": "array",
-      "minItems": 27,
-      "maxItems": 27,
+      "minItems": 26,
+      "maxItems": 26,
       "items": { "$ref": "#/$defs/seat" }
     }
   },

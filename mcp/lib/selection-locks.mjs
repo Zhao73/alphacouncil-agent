@@ -17,6 +17,14 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { LIMITS, SELECTIONS_DIR } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
+import {
+  captureLockOwnerIdentity,
+  classifyLockOwner,
+  defaultPidProbe,
+  normalizeLockOwnerIdentity,
+} from "./lock-owner-identity.mjs";
+
+export { defaultPidProbe } from "./lock-owner-identity.mjs";
 
 const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
 export const SELECTION_LOCK_IDS = Object.freeze({
@@ -114,20 +122,9 @@ function validMetadata(metadata) {
   if (typeof metadata.token !== "string" || !/^[0-9a-f-]{36}$/i.test(metadata.token)) return false;
   if (!Number.isInteger(metadata.owner_pid) || metadata.owner_pid <= 0) return false;
   if (typeof metadata.owner_hostname !== "string" || !metadata.owner_hostname) return false;
+  if (metadata.owner_identity !== undefined && !normalizeLockOwnerIdentity(metadata.owner_identity)) return false;
   if (!Number.isFinite(Date.parse(metadata.created_at)) || !Number.isFinite(Date.parse(metadata.lease_expires_at))) return false;
   return true;
-}
-
-export function defaultPidProbe(pid) {
-  if (pid === process.pid) return true;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    if (error?.code === "ESRCH") return false;
-    // EPERM proves a process exists but is not signalable. Unknown errors fail closed too.
-    return error?.code === "EPERM" ? true : null;
-  }
 }
 
 export function inspectSelectionLock(kind, id, options = {}) {
@@ -139,16 +136,13 @@ export function inspectSelectionLock(kind, id, options = {}) {
     return { ...parsed, status: "invalid_metadata", reclaimable: false, owner_state: "unknown" };
   }
   const now = Number(options.now ?? Date.now());
-  const hostname = String(options.hostname || os.hostname());
   const created = Date.parse(metadata.created_at);
   const leaseExpires = Date.parse(metadata.lease_expires_at);
   if (created > now + SELECTION_LOCK_RULES.max_clock_skew_ms || leaseExpires < created) {
     return { ...parsed, status: "invalid_time", reclaimable: false, owner_state: "unknown" };
   }
-  const sameHost = metadata.owner_hostname === hostname;
-  const probe = options.probePid || defaultPidProbe;
-  const probeResult = sameHost ? probe(metadata.owner_pid) : null;
-  const ownerState = !sameHost ? "foreign_unverifiable" : probeResult === true ? "alive" : probeResult === false ? "dead" : "unknown";
+  const owner = classifyLockOwner(metadata, options);
+  const ownerState = owner.owner_state;
   const ageMs = Math.max(0, now - created);
   const deadOwnerGraceMs = boundedDuration(
     options.deadOwnerGraceMs,
@@ -158,8 +152,7 @@ export function inspectSelectionLock(kind, id, options = {}) {
   return {
     ...parsed,
     status: ownerState === "alive" ? "active" : ownerState === "dead" ? "dead_owner" : "unverifiable",
-    owner_state: ownerState,
-    same_host: sameHost,
+    ...owner,
     age_ms: ageMs,
     lease_expired: leaseExpires <= now,
     reclaimable: ownerState === "dead" && ageMs >= deadOwnerGraceMs,
@@ -183,6 +176,7 @@ function lockMetadata(kind, id, operation, options, token) {
     token,
     owner_pid: ownerPid,
     owner_hostname: ownerHostname,
+    owner_identity: captureLockOwnerIdentity(ownerPid, options),
     created_at: new Date(now).toISOString(),
     lease_expires_at: new Date(now + leaseMs).toISOString(),
   });

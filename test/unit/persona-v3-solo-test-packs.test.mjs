@@ -162,6 +162,21 @@ test("every canonical seat physical selector manifests carry distinct Chinese pl
   }
 });
 
+test("every solo-test voice artifact requires strong first person and a method-specific sequence", () => {
+  const ids = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).ids();
+  for (const id of ids) {
+    const dir = join(DEFAULT_SOLO_TEST_PACK_ROOT, id);
+    const en = readFileSync(join(dir, "voice.en.md"), "utf8");
+    const zh = readFileSync(join(dir, "voice.zh.md"), "utf8");
+    assert.match(en, /speak directly as ‘I’/u, id);
+    assert.match(en, /My method sequence:/u, id);
+    assert.match(zh, /用“我”直接说话/u, id);
+    assert.match(zh, /我的方法顺序：/u, id);
+    assert.match(zh, /\p{Script=Han}/u, id);
+    assert.doesNotMatch(zh, /This is a project-derived/u, id);
+  }
+});
+
 test("runtime build profile exposes every canonical seat as visibly provisional while formal compilation stays production", () => {
   assert.equal(resolveRuntimePersonaBuildProfile(), "solo_test");
   const formal = loadCompiledPersonaPacks();

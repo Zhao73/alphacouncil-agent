@@ -16,7 +16,7 @@
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:9eb750e5aec2e4b6ef7a7033aba119927d5a6540220d608cbe6fd90eaf255b05",
+  "formula_compilation_manifest_hash": "sha256:d7ae835fe0fc5c648fab6f234a8d493696353c777742e6d0343ec4930c866d17",
   "method_model_eligible": false,
   "native_states": [
     "provisional_insufficient_scuttlebutt",

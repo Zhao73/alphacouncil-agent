@@ -1,0 +1,779 @@
+{
+  "schema_version": 1,
+  "catalog_id": "alphacouncil_method_references_v1",
+  "active_method_count": 26,
+  "active_method_ids": [
+    "master_buffett",
+    "master_graham",
+    "master_simons",
+    "master_soros",
+    "master_cathie_wood",
+    "master_druckenmiller",
+    "master_fisher",
+    "master_munger",
+    "master_thorp",
+    "master_asness",
+    "master_dalio",
+    "master_duan_yongping",
+    "master_jhunjhunwala",
+    "master_lynch",
+    "master_forensic_short",
+    "master_li_lu",
+    "master_marks",
+    "master_burry",
+    "master_klarman",
+    "master_pabrai",
+    "master_ackman",
+    "master_damodaran",
+    "master_taleb",
+    "master_natenberg",
+    "master_sinclair",
+    "master_bogle"
+  ],
+  "retired_method_ids": [
+    "master_aschenbrenner"
+  ],
+  "execution_rule": "one isolated context per selected method; aggregate only after outputs are frozen",
+  "decision_authority": "provisional references are advisory unless explaining a hash-bound deterministic executor result",
+  "methods": [
+    {
+      "method_id": "master_buffett",
+      "title": {
+        "zh": "巴菲特视角",
+        "en": "Buffett Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:5a89c1a2bdffdeb78dd6bc73c0040e06162889840165100d0f4a0da079f985e8",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:82fa38354fc68af3c051801c6c9eee02dad41eb8ae28fbd5eb37da829512454f",
+      "reference_path": "methods/master_buffett.md",
+      "reference_hash": "sha256:96b1b68d7c08d46ecb5425e81580722e5b80eea53cc78c6735ada21449e6058a"
+    },
+    {
+      "method_id": "master_graham",
+      "title": {
+        "zh": "格雷厄姆视角",
+        "en": "Graham Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:8955ea70fdf3bd8abf23eb6509425ade60cf9781c3190aa36bfda6b3f5f274b9",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:3ae70d26b39746c2468b39bcb926e8c631397c64a7a7dd7c41f9752eb86b32ef",
+      "reference_path": "methods/master_graham.md",
+      "reference_hash": "sha256:0d88710975ddd24d584833cf54b7da6c4b44d919747a029f6a4accf2b0f6a595"
+    },
+    {
+      "method_id": "master_simons",
+      "title": {
+        "zh": "西蒙斯视角",
+        "en": "Simons Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:54f9cdfe825309fe8a7216db84dd4de4a99b7f9283b2e60fc02d89955d63335b",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 1,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:216b08f4710dbecc8981eed862e227c458382ebf6c496b833501a1c4d1e18869",
+      "reference_path": "methods/master_simons.md",
+      "reference_hash": "sha256:1caf1d6112b39af04877d62b094a0ab0e5f9dd6dde51c96fa2f14091e6a9b3a6"
+    },
+    {
+      "method_id": "master_soros",
+      "title": {
+        "zh": "索罗斯视角",
+        "en": "Soros Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:ca1528a64ce4269bbc2d02194d574b85aede9509cbfb7dbb092f37aea4622c17",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:9049bd90bf16c3d612994f9441bcd101b4d46803a57dc13c1d4d535c476f54bc",
+      "reference_path": "methods/master_soros.md",
+      "reference_hash": "sha256:f46e390abeacbf06fee48fd90c52218e99939842311d663bda89f263989206e1"
+    },
+    {
+      "method_id": "master_cathie_wood",
+      "title": {
+        "zh": "Cathie Wood 创新扩散视角",
+        "en": "Cathie Wood Innovation Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:a561c8d5583b99ed8dc54474b941077a829e8899078a84f97a992bebcc385eca",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:8ebc9a7922a52a1cc5b0fe6f9dfe62dda46653fe5c89d3c168ec7716112a9ba8",
+      "reference_path": "methods/master_cathie_wood.md",
+      "reference_hash": "sha256:37a5ba89eb266c7bc88f5efebfe5df338e26287fa4defe604b20d3d66ed091a8"
+    },
+    {
+      "method_id": "master_druckenmiller",
+      "title": {
+        "zh": "德鲁肯米勒视角",
+        "en": "Druckenmiller Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:b2ad4060d121d11f25fed8fccbdf05c0bf414fa09fb0fabbcb4fb3589f1922c8",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:b7ec758bb5e5d1370df946de74439e6afe6b79df3a3d3d9dc9726b3036c4597b",
+      "reference_path": "methods/master_druckenmiller.md",
+      "reference_hash": "sha256:d529fc2ba0f313c7bda453d619a37cd379ed97514b3fdf54e00ef53e5ae86d4c"
+    },
+    {
+      "method_id": "master_fisher",
+      "title": {
+        "zh": "费雪视角",
+        "en": "Fisher Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:b4e02bfce594e5dafa5a597a9dd8a30d1d101cd260cf7fef8902151c9c234c53",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:ee8cbbe0ce3dc08feba857f4831325fc20c1fea79ea34551e82aa255e236aba8",
+      "reference_path": "methods/master_fisher.md",
+      "reference_hash": "sha256:12742e1099526dec490f58c34faf6dc552859b1e1894f3f4e183bf57f54b9265"
+    },
+    {
+      "method_id": "master_munger",
+      "title": {
+        "zh": "芒格视角",
+        "en": "Munger Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:1db8aefba921b73712cfdf9936710967b7acce32bf39745cb4850a21a36af4ad",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 1,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:39681ccb91ebe5b21802304f57a91d8b467d6320a74cb010816e401a624a6124",
+      "reference_path": "methods/master_munger.md",
+      "reference_hash": "sha256:6b2d49fc31c38bfb24742ab7622df8d4513b0154bd4cdba2350b7b398b47b8b4"
+    },
+    {
+      "method_id": "master_thorp",
+      "title": {
+        "zh": "索普视角",
+        "en": "Thorp Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:8090a4cf04b43da5d25846d1a5780ff7c2679b801786a35a665dbf5c0f3fd273",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 1,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 1,
+      "contract_findings": [
+        {
+          "finding_id": "master_thorp.policy_operand_contract.1",
+          "status": "requires_human_formula_adjudication",
+          "condition_path": "decision_policy.hard_vetoes[0].condition",
+          "operation": "lte",
+          "left": {
+            "operand": {
+              "output_id": "trade.net_edge.master_thorp"
+            },
+            "value_kind": "ratio",
+            "unit": "decimal"
+          },
+          "right": {
+            "operand": {
+              "fact_id": "execution.bid_ask"
+            },
+            "value_kind": "ratio",
+            "unit": "decimal_of_mid"
+          }
+        }
+      ],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:5a73192dc30968f50d56e16742eb6d8a55274dd2212b8f17e245883624a8f205",
+      "reference_path": "methods/master_thorp.md",
+      "reference_hash": "sha256:bdb7a8fa76432fd1f21ab410c42385edea1a31bd403da6d2b00bf05a973b11ad"
+    },
+    {
+      "method_id": "master_asness",
+      "title": {
+        "zh": "Asness 因子视角",
+        "en": "Asness Factor Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:886fda4564d0e5994bd5014b0662d80e0923d7ab707acbb5c66d16554d08e479",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:4afcea72880955465416ebb54a5dc4f20626a68b2109a4c61e7c7f8ecadc71a9",
+      "reference_path": "methods/master_asness.md",
+      "reference_hash": "sha256:c22a5bf7ae72b99c6911f583743e6d0557d6284b5b682ff673ea86bf136d3b56"
+    },
+    {
+      "method_id": "master_dalio",
+      "title": {
+        "zh": "达利欧视角",
+        "en": "Dalio Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:224eb3057d12004bb2ba17ac0c52626cfa4141009006e510b1de3533d7355cc0",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:2ffe44038cfa26fad6dc5a2cdeeb12bbe64592e18f2ca5bfad960a569b976951",
+      "reference_path": "methods/master_dalio.md",
+      "reference_hash": "sha256:a6a367b7991e7630305007e154e1f429fbc1164c9b7be0ac0703d0748751da66"
+    },
+    {
+      "method_id": "master_duan_yongping",
+      "title": {
+        "zh": "段永平视角",
+        "en": "Duan Yongping Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:3aaa0e6af49058ddda0659e122bb1f33825d89959a79a44a72b9331554baf5dd",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 1,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:d3af498610fb99ae1e7ef3d9edcc0d5e01b54043d4f9d9fae929c7556e85f3ef",
+      "reference_path": "methods/master_duan_yongping.md",
+      "reference_hash": "sha256:24611ecec57b607b9b91e948444812a11bce69e7d15865db7e34f56ee5275639"
+    },
+    {
+      "method_id": "master_jhunjhunwala",
+      "title": {
+        "zh": "Jhunjhunwala 印度结构成长视角",
+        "en": "Jhunjhunwala India Growth Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:0b3caad9745fcd1cac8f37b5c1903ba0733f405a09a72a997d18585c0fb6daf2",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:bdbd8cc2ffa25c23894c3e2a423e09e5b465c4901bad293d65f0192861fd88d8",
+      "reference_path": "methods/master_jhunjhunwala.md",
+      "reference_hash": "sha256:4bc0c61285b1eea124757b564020d8ed6facb244f241c87f119d9427e2b5e3a2"
+    },
+    {
+      "method_id": "master_lynch",
+      "title": {
+        "zh": "彼得·林奇视角",
+        "en": "Peter Lynch Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:259f16adc709c83f658fba751df90c1edaa60dcd4c051492e614d9f9fae107dc",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:5f332116682020e0cf07bbf0b57d0e9f3688c301934d09fea46079dccdd0cb3c",
+      "reference_path": "methods/master_lynch.md",
+      "reference_hash": "sha256:29099304888e36f1e635a7c4b0ca3f1a8f9c843ba4aa7bf12e837c872af1a868"
+    },
+    {
+      "method_id": "master_forensic_short",
+      "title": {
+        "zh": "法务会计做空视角",
+        "en": "Forensic Short Seller Lens"
+      },
+      "kind": "composite_professional_method",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:aba686c2a48f6038f4a3c42a7c4a51a817dc0c0b6e13f63b7d1e30c4ba9b7a6e",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:9f88266bde35c00e758d25b78ef94d5d33631b90da090cca2caf94e1d135576e",
+      "reference_path": "methods/master_forensic_short.md",
+      "reference_hash": "sha256:9b10f9355b26e277603fe291369d42ff1e081998fd49cb57b912cc0bb4e6fe8f"
+    },
+    {
+      "method_id": "master_li_lu",
+      "title": {
+        "zh": "李录视角",
+        "en": "Li Lu Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:3e08a57b66380b09e981660b81c333ff141b55aecd7d683745cc24e17363c734",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:48737be5804175890c1027dc24cb54a45ef62c3d06588a234bf5926b0fcd829f",
+      "reference_path": "methods/master_li_lu.md",
+      "reference_hash": "sha256:a07d8700d8cda544954d895414049897e75e35b7208772af9019e9d8c364e837"
+    },
+    {
+      "method_id": "master_marks",
+      "title": {
+        "zh": "霍华德·马克斯视角",
+        "en": "Howard Marks Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:cc68c99290f8f869e4917af21a7933bccbf09812df722587fee8d885758cad9e",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:fe55e7fe0368d8c590b960b3971a3ca0b0bef0319ca0e5018727d28574d6c752",
+      "reference_path": "methods/master_marks.md",
+      "reference_hash": "sha256:3650b0863edf7eb4549cf13905dc40ed58a9eb5adb10997909fbb99cb086edc9"
+    },
+    {
+      "method_id": "master_burry",
+      "title": {
+        "zh": "迈克尔·伯里视角",
+        "en": "Michael Burry Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:90b9cba19e97e9591f40f57d96d430b3aa669b5cfc0d8fa71c25a63363da605e",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 1,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:92252f96fe3c38b8b0ea6687eb495cda27f875dcaa5939066856db2d6ecea709",
+      "reference_path": "methods/master_burry.md",
+      "reference_hash": "sha256:062a833b7c7a3c8da6271f7367b2d5c4ce5b1872e52ab77529668f26f389f5d1"
+    },
+    {
+      "method_id": "master_klarman",
+      "title": {
+        "zh": "克拉曼视角",
+        "en": "Klarman Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:261a03e6dbc03bcf202e928ed43fb2005d2bbbbac06c79cff9a58cc8df632d1c",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 1,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:b85f5d4ac85840e8818dd6d2877648387ce38213e63f5de3e3378a812076833b",
+      "reference_path": "methods/master_klarman.md",
+      "reference_hash": "sha256:15c1adcd6d922e17bb82fcdc4d59cfc68c68d9d3f5991b1d6b5407c5b1aa6803"
+    },
+    {
+      "method_id": "master_pabrai",
+      "title": {
+        "zh": "Pabrai Dhandho 视角",
+        "en": "Pabrai Dhandho Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:e7bb89ed9ee2f5c0f7ffeaf9beca2ad6ec234a43d84812f1f98b9a12f06af15a",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:59f6ab982c3c86c4c8b594fb7c4d329e58ff383bf5dd8cb6d79c76f4e7638cb1",
+      "reference_path": "methods/master_pabrai.md",
+      "reference_hash": "sha256:7327742f79583618e2c6226c4bd97c4ca639263e623f048255ba77db9b8db08f"
+    },
+    {
+      "method_id": "master_ackman",
+      "title": {
+        "zh": "阿克曼激进投资视角",
+        "en": "Ackman Activist Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:41ce83ef497c5cc400564c3f78f709753da1768f78fc97ca874ac01a28725094",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:f6d54e1045cbdbd88a247e779b76fef0b85ac3869e3a95d4725e9d3404e10031",
+      "reference_path": "methods/master_ackman.md",
+      "reference_hash": "sha256:752d2ed8631355c41637fd3e96fce1b91e478b5b78a63a65ff626a50627b58a8"
+    },
+    {
+      "method_id": "master_damodaran",
+      "title": {
+        "zh": "达莫达兰估值视角",
+        "en": "Damodaran Valuation Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:f6d0990a4f03f88b685bf3db069bb0b752f719b865ffeea7550fc88c519bdf31",
+      "source_candidate_count": 4,
+      "source_machine_verdict_counts": {
+        "supported": 4,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:c090acca2c9ac73f7d2bd646c2d9b3f64610c81569e29dbc5bbfd38db1a5f947",
+      "reference_path": "methods/master_damodaran.md",
+      "reference_hash": "sha256:44a10ac5d7294ef728161c31c21e9f1237f7f42237d48b2563c4545a385c0c18"
+    },
+    {
+      "method_id": "master_taleb",
+      "title": {
+        "zh": "塔勒布视角（凸性与尾部）",
+        "en": "Taleb Lens (Convexity and Tails)"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:fd8a762803f43931cdf8482b8da8e1ec533a63fc10857809b7e3cfa94b1cc584",
+      "source_candidate_count": 4,
+      "source_machine_verdict_counts": {
+        "supported": 2,
+        "partial": 2,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:e10ee5340e414d231f137cc77e680e24c87b9af0eafe62db3ad7abdeba7c3a2d",
+      "reference_path": "methods/master_taleb.md",
+      "reference_hash": "sha256:8cdec935bae0e35a5f149c8b145c193b05857e1193fee8517ccbdb30b4e35b64"
+    },
+    {
+      "method_id": "master_natenberg",
+      "title": {
+        "zh": "纳坦伯格视角（波动率定价）",
+        "en": "Natenberg Lens (Volatility Pricing)"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:aa8227b042c452b3aba87f46b2739acc6f028a56f25eb38f99c2885d9ad58e6e",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 1,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 1,
+      "contract_findings": [
+        {
+          "finding_id": "master_natenberg.policy_operand_contract.2",
+          "status": "requires_human_formula_adjudication",
+          "condition_path": "decision_policy.scoring.rules[0].condition",
+          "operation": "gt",
+          "left": {
+            "operand": {
+              "fact_id": "options.implied_volatility"
+            },
+            "value_kind": "ratio",
+            "unit": "decimal_annualized_volatility"
+          },
+          "right": {
+            "operand": {
+              "output_id": "execution.round_trip_cost.master_natenberg"
+            },
+            "value_kind": "ratio",
+            "unit": "decimal_of_mid"
+          }
+        }
+      ],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:441faf3c35b77a69f77a53a047e9018867912029ed97cd74040cbc9f88cf846a",
+      "reference_path": "methods/master_natenberg.md",
+      "reference_hash": "sha256:61b58b5569226d0dde2e09e3f25bae3ef5dfd0c8b88929be8ac26a0f4ee09cf2"
+    },
+    {
+      "method_id": "master_sinclair",
+      "title": {
+        "zh": "辛克莱视角（波动率交易与执行）",
+        "en": "Sinclair Lens (Volatility Trading and Execution)"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:ffd3866ece7625a46cca3cc83ab569780583fa6408cd7dca9d6553777abd3efe",
+      "source_candidate_count": 1,
+      "source_machine_verdict_counts": {
+        "supported": 1,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 1,
+      "contract_findings": [
+        {
+          "finding_id": "master_sinclair.policy_operand_contract.1",
+          "status": "requires_human_formula_adjudication",
+          "condition_path": "decision_policy.hard_vetoes[0].condition",
+          "operation": "gte",
+          "left": {
+            "operand": {
+              "output_id": "execution.round_trip_cost.master_sinclair"
+            },
+            "value_kind": "ratio",
+            "unit": "decimal_of_mid"
+          },
+          "right": {
+            "operand": {
+              "fact_id": "options.implied_volatility"
+            },
+            "value_kind": "ratio",
+            "unit": "decimal_annualized_volatility"
+          }
+        }
+      ],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:6ee0ca2b375934205d36b47dfb2fc41a50d48112937a408ea5f89581c2ea1cc8",
+      "reference_path": "methods/master_sinclair.md",
+      "reference_hash": "sha256:40c55f17377fff81de22c481e44e30edf8915a2b60715a02171bc29f5db80f49"
+    },
+    {
+      "method_id": "master_bogle",
+      "title": {
+        "zh": "约翰·博格视角",
+        "en": "Bogle Lens"
+      },
+      "kind": "named_public_method_reference",
+      "reference_status": "method_reference_provisional",
+      "runtime_maturity": "operator_lens",
+      "pack_snapshot_hash": "sha256:d850b526d06a10ceb0aa21c03b0a7082db2d35bf500a6c8f6163089279fc2ba1",
+      "source_candidate_count": 0,
+      "source_machine_verdict_counts": {
+        "supported": 0,
+        "partial": 0,
+        "unverifiable": 0,
+        "unsupported": 0
+      },
+      "human_method_attribution_approved": false,
+      "contract_finding_count": 0,
+      "contract_findings": [],
+      "voice_mode": "first_person_public_method_simulation_v1",
+      "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
+      "voice_profile_hash": "sha256:ac38219863a6e0d89ce2847c42c511a2ed970580447953467f473ed7bb3e83fc",
+      "reference_path": "methods/master_bogle.md",
+      "reference_hash": "sha256:39f2aeea173e8365fa5e8b5f8addc815645aaa1023c2ea82c98e0d2909fa135c"
+    }
+  ]
+}

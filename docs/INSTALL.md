@@ -43,7 +43,8 @@ Or run it without installing: `npx alphacouncil-agent`.
 
 There is nothing to configure. Every core data source is keyless — SEC EDGAR for US
 filings, TWSE for Taiwan, Yahoo and Stooq for quotes and macro — and the package has no
-dependencies, so the install is the download and nothing else.
+runtime dependencies, so the install is the download and nothing else. Development-only
+schema generation and property-test packages are not loaded by the installed plugin.
 
 Two optional free keys widen coverage. Without them the tools still answer; they report
 which market is missing a feed and which variable would unlock it, and analysts are told
@@ -115,7 +116,7 @@ runs full. It is managed by the plugin's headless `analyze_symbol` path so the M
 enforce a wall-clock deadline. `plan_visible_run` rejects `council_mode=quick` rather than
 pretending an external host Task can be force-stopped by the plugin.
 
-- Stage 0 still displays the complete 27-seat catalog, but quick accepts exactly 1-4 selected
+- Stage 0 still displays the complete 26-seat catalog, but quick accepts exactly 1-4 selected
   methods and forbids `all` / `select_all`.
 - The receipt is bound to symbol, prompt, language and `council_mode`; it cannot be reused
   across quick and full.

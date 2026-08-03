@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { execSync, spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import test from "node:test";
 
 import {
@@ -7,6 +9,7 @@ import {
   npmInvocation,
 } from "../../scripts/lib/packaged-host-parity.mjs";
 import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
+import { HOST_SELECTION_INSTRUCTION_PATHS } from "../../scripts/lib/host-selection-instruction-contract.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 /**
@@ -15,7 +18,7 @@ import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
  * to be edited on the day a seat is added.
  */
 const REPO_REVIEW_JSON_COUNT = execSync("git ls-files knowledge/ai-assisted-solo/reviews", { cwd: PACKAGED_PARITY_REPO_ROOT, encoding: "utf8" })
-  .split("\n").filter((path) => path.endsWith(".json")).length;
+  .split("\n").filter((path) => path.endsWith(".json") && existsSync(resolve(PACKAGED_PARITY_REPO_ROOT, path))).length;
 
 /** Seats whose legacy v2 operator material survives in the production fallback profile. */
 const LEGACY_OPERATOR_SEATS = 4;
@@ -90,6 +93,12 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
     assert.deepEqual(host.run_masters, report.packaged_adapter_e2e.selected_master_ids, host.host_id);
     assert.deepEqual(host.run_selection_pack_hashes, report.packaged_adapter_e2e.selected_master_pack_hashes, host.host_id);
   }
+  assert.deepEqual(report.package_surfaces.host_selection_instructions, {
+    status: "passed",
+    contract_id: "host_selector_returned_catalog_v1",
+    canonical_catalog_count: CANONICAL_MASTER_COUNT,
+    files: [...HOST_SELECTION_INSTRUCTION_PATHS],
+  });
   assert.equal(report.package_surfaces.deterministic_policy.status, "present_in_installed_tarball");
   assert.deepEqual(report.package_surfaces.exclusions, {
     knowledge_staging: "absent",

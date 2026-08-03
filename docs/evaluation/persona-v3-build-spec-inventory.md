@@ -40,7 +40,6 @@ counterfactuals and 312 golden cases. These are workload commitments, **not corp
 
 | Seat | Native decision contract | Planned dedicated computations | Load-bearing limit |
 |---|---|---|---|
-| Aschenbrenner | `ai_scaling_timeline_v1` | compute-power bridge; timeline reverse valuation | private or classified scaling inputs |
 | Buffett | `ownership_candidate_v1` | owner-earnings rebuild; incremental returns | private Berkshire deliberations and joint attribution |
 | Graham | `margin_of_safety_v1` | asset floor; normalized earnings | historical accounting and edition-level attribution |
 | Simons | `out_of_sample_signal_v1` | leakage audit; out-of-sample cost test | Renaissance production system is proprietary |

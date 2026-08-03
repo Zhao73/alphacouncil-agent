@@ -26,7 +26,7 @@ import { withTestFormulaApprovalBinding } from "../helpers/persona-v3-determinis
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 /** Seats that currently carry at least one raw source acquisition. */
-const SEATS_WITH_RAW_ACQUISITIONS = 26;
+const SEATS_WITH_RAW_ACQUISITIONS = 25;
 
 /** Seats carrying legacy v2 operator material rather than prompt-only material. */
 const LEGACY_OPERATOR_SEATS = 4;

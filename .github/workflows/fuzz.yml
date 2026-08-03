@@ -1,0 +1,58 @@
+name: Development fuzzing
+
+on:
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  transport-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: fuzz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: fuzz/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: mkdir -p .work/corpus artifacts
+      - name: Replay regression corpus
+        run: npm run fuzz:regression
+      - name: Deterministic PR fuzz
+        if: github.event_name == 'pull_request'
+        run: npm run fuzz:pr
+      - name: Manual fuzz
+        if: github.event_name == 'workflow_dispatch'
+        run: npm run fuzz:manual
+      - name: Scheduled fuzz
+        if: github.event_name == 'schedule'
+        run: npm run fuzz:scheduled
+      - name: Upload findings
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transport-runtime-findings-${{ github.run_id }}
+          path: fuzz/artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload evolved corpus
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: transport-runtime-corpus-${{ github.run_id }}
+          path: fuzz/.work/corpus/
+          if-no-files-found: ignore
+          retention-days: 7

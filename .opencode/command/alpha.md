@@ -78,7 +78,7 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
    number**. Each row must include `identity`, `method`, `best_for` and `maturity`; a school
    name or a count is not a substitute for the individual catalog.
 4. Ask for one submission covering both the tier and the seats. In full mode accept one number from `1..N`, combinations,
-   ranges, stable IDs/names, or `all`. In quick mode the same complete 26-seat catalog is
+   ranges, stable IDs/names, or `all`. In quick mode the same complete returned catalog is
    displayed, but the submission must contain **1..4 seats** and `all` / `select_all` is
    forbidden. A host-native multi-select is a convenience only. If it is unavailable or
    cannot show the full catalog, use the numbered text table and plain reply on every host.
@@ -149,7 +149,7 @@ Quick is an explicit, bounded council contract, not an automatic downgrade of fu
 visible-host orchestration. `plan_visible_run` rejects `council_mode=quick`; run it through
 plugin-managed headless `analyze_symbol` so the server can enforce the deadline.
 
-1. Complete Stage 0 with `council_mode: "quick"`; display all 26 methods and confirm 1-4.
+1. Complete Stage 0 with `council_mode: "quick"`; display every method returned by the selector and confirm 1-4.
 2. Call `analyze_symbol` once with the exact same prompt/language/mode and one-use receipt,
    `dry_run:false`, `wait_for_completion:false`, and optionally `total_timeout_ms` no greater
    than `600000`. Do not pass `tasks`: quick fixes and starts these four roles in parallel:

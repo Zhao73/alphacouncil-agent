@@ -54,7 +54,7 @@ export function main(argv = process.argv.slice(2)) {
       "Usage: node scripts/check-persona-v3-ai-assisted-solo.mjs [--status|--check|--gate] [--json]",
       "",
       "  --status                 report integrity and all coverage (default)",
-      "  --check                  require 26 packs + 32 source + 52 formula AI reviews",
+      "  --check                  require 26 packs + 31 source + 52 formula AI reviews",
       "  --gate                   require 8 machine simulations, 4 live hosts and an honest N_eff disclosure",
       "  --profile PATH           override the immutable AI-assisted profile contract",
       "  --source-review-root PATH",

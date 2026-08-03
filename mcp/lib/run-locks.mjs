@@ -16,7 +16,11 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import { LIMITS, RUNS_DIR } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
-import { defaultPidProbe } from "./selection-locks.mjs";
+import {
+  captureLockOwnerIdentity,
+  classifyLockOwner,
+  normalizeLockOwnerIdentity,
+} from "./lock-owner-identity.mjs";
 
 const RUN_ID = /^[A-Z0-9.^=+\-_]{1,80}$/;
 const MAX_ATTEMPTS = 4;
@@ -82,6 +86,7 @@ function valid(metadata, id) {
     && typeof metadata.token === "string" && /^[0-9a-f-]{36}$/i.test(metadata.token)
     && Number.isInteger(metadata.owner_pid) && metadata.owner_pid > 0
     && typeof metadata.owner_hostname === "string" && metadata.owner_hostname.length > 0
+    && (metadata.owner_identity === undefined || Boolean(normalizeLockOwnerIdentity(metadata.owner_identity)))
     && Number.isFinite(Date.parse(metadata.created_at))
     && Number.isFinite(Date.parse(metadata.lease_expires_at));
 }
@@ -97,17 +102,14 @@ export function inspectRunLock(id, options = {}) {
   if (!Number.isFinite(now) || created > now + CLOCK_SKEW_MS || leaseExpires < created) {
     return { ...parsed, status: "invalid_time", owner_state: "unknown", reclaimable: false };
   }
-  const hostname = String(options.hostname || os.hostname());
-  const sameHost = parsed.metadata.owner_hostname === hostname;
-  const probe = options.probePid || defaultPidProbe;
-  const probed = sameHost ? probe(parsed.metadata.owner_pid) : null;
-  const ownerState = !sameHost ? "foreign_unverifiable" : probed === true ? "alive" : probed === false ? "dead" : "unknown";
+  const owner = classifyLockOwner(parsed.metadata, options);
+  const ownerState = owner.owner_state;
   const ageMs = Math.max(0, now - created);
   const graceMs = boundedDuration(options.deadOwnerGraceMs, LIMITS.SELECTION_LOCK_DEAD_GRACE_MS, "deadOwnerGraceMs");
   return {
     ...parsed,
     status: ownerState === "alive" ? "active" : ownerState === "dead" ? "dead_owner" : "unverifiable",
-    owner_state: ownerState,
+    ...owner,
     age_ms: ageMs,
     lease_expired: leaseExpires <= now,
     reclaimable: ownerState === "dead" && ageMs >= graceMs,
@@ -131,6 +133,7 @@ function metadata(id, options, token) {
     token,
     owner_pid: ownerPid,
     owner_hostname: hostname,
+    owner_identity: captureLockOwnerIdentity(ownerPid, options),
     created_at: new Date(now).toISOString(),
     lease_expires_at: new Date(now + leaseMs).toISOString(),
   });

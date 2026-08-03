@@ -180,7 +180,12 @@ export function validateHostCapabilities(contract = loadHostCapabilities(), { ro
   const claudeServer = claudePlugin?.mcpServers?.["alphacouncil-agent"];
   if (claudePlugin?.commands !== "./commands/" || claudeServer?.command !== "node" || JSON.stringify(claudeServer?.args) !== JSON.stringify(["${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"])) errors.push("Claude Code plugin command or MCP adapter shape changed");
   const codexPlugin = parseJsonFile(root, ".codex-plugin/plugin.json", errors);
-  if (codexPlugin?.mcpServers !== "./codex.mcp.json") errors.push("Codex plugin no longer resolves its isolated MCP manifest");
+  const inlineCodexServer = codexPlugin?.mcpServers?.["alphacouncil-agent"];
+  if (inlineCodexServer?.command !== "node"
+    || JSON.stringify(inlineCodexServer?.args) !== JSON.stringify(["./mcp/server.mjs"])
+    || inlineCodexServer?.cwd !== ".") {
+    errors.push("Codex plugin no longer carries the canonical inline MCP server entry");
+  }
   const codexMcp = parseJsonFile(root, "codex.mcp.json", errors);
   const codexServer = codexMcp?.mcpServers?.["alphacouncil-agent"];
   if (codexServer?.command !== "node" || JSON.stringify(codexServer?.args) !== JSON.stringify(["./mcp/server.mjs"]) || codexServer?.cwd !== ".") errors.push("codex.mcp.json does not resolve the canonical Node server entry");

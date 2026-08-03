@@ -6,6 +6,8 @@ import { join } from "node:path";
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
+import { compactEvidence } from "../../mcp/lib/packets.mjs";
 
 const SELECTED_MASTERS = [
   "master_buffett",
@@ -143,7 +145,16 @@ if (task) {
   packet = {
     master,
     acknowledged_stance: frozen.stance,
-    statement: "MASTER_SENTINEL_" + master + " explains only the frozen " + frozen.stance + " result.",
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: ({ constructive: "would_buy", cautious: "would_hold", opposed: "would_pass", out_of_scope: "not_in_my_circle" })[frozen.stance],
+    voice: {
+      would_i_act: "I would follow only the frozen " + frozen.stance + " result for MASTER_SENTINEL_" + master + ".",
+      what_i_see: "I see only the bounded fixture evidence supplied to this method.",
+      how_my_method_reads_it: "I apply my declared method sequence without changing the frozen stance.",
+      where_i_disagree: "I disagree with any reading that adds facts outside this frozen record.",
+      what_changes_my_mind: "I would change my reading only when the declared method-critical evidence changes."
+    },
     key_findings: ["MASTER_FINDING_" + master],
     disagreements: ["MASTER_DISAGREEMENT_" + master],
     what_would_change_my_mind: ["MASTER_CHANGE_" + master],
@@ -202,7 +213,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
   // real dedicated worker; the default skip has its own test.
   const server = startServer({
     dataDir,
-    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver, ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "1" },
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver },
   });
   try {
     await server.request("initialize", {});
@@ -265,7 +276,45 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
       assert.equal(result.run.master_status[id].status, "completed");
       assert.equal(result.run.master_status[id].worker_kind, "dedicated_method_worker");
       assert.equal(result.run.master_opinions.find((item) => item.master === id)?.dedicated_worker?.status, "completed");
+      assert.equal(result.run.master_opinions.find((item) => item.master === id)?.statement_origin, "dedicated_method_voice_worker");
     }
+
+    const firstPacket = result.run.packets[0];
+    const expandedPacket = {
+      ...firstPacket,
+      claims: [
+        ...firstPacket.claims,
+        ...Array.from({ length: 9 }, (_, index) => ({
+          claim: `omitted claim ${index}`,
+          evidence: "available only through the original packet artifact",
+          confidence: "low",
+          source_ids: [firstPacket.sources[0].id],
+        })),
+      ],
+      sources: [
+        ...firstPacket.sources,
+        ...Array.from({ length: 14 }, (_, index) => ({
+          id: `${firstPacket.task}:EXTRA-${index}`,
+          title: `extra source ${index}`,
+          url: `https://example.com/extra-${index}`,
+          published_at: "2026-07-28",
+          retrieved_at: "2026-07-28",
+        })),
+      ],
+    };
+    const boundedPacket = compactEvidence({
+      ...result.run,
+      packets: [expandedPacket, ...result.run.packets.slice(1)],
+    }).packets[0];
+    assert.equal(boundedPacket.omitted_claim_count, 2);
+    assert.equal(boundedPacket.omitted_source_count, 3);
+    for (const [kind, extension] of [["json", "json"], ["markdown", "md"]]) {
+      const ref = boundedPacket.artifact_ref[kind];
+      assert.equal(ref.path, join(dir, `${firstPacket.task}.${extension}`));
+      assert.equal(ref.bytes, readFileSync(ref.path).byteLength);
+      assert.match(ref.hash, /^sha256:[0-9a-f]{64}$/u);
+    }
+    assert.doesNotMatch(JSON.stringify(boundedPacket), /omitted claim 8/u, "omitted bodies must stay out of the prompt context");
 
     const launches = readJsonl(fake.log);
     const evidence = launches.filter((item) => DEFAULT_TASKS.includes(item.role) && !item.parseRepair);
@@ -311,6 +360,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.deepEqual(bull.debate_rounds[2].questions_answered.map((item) => item.question), bear.debate_rounds[1].questions);
     assert.deepEqual(bear.debate_rounds[2].questions_answered.map((item) => item.question), bull.debate_rounds[1].questions);
     const events = readJsonl(join(dir, "events.jsonl"));
+    assert.deepEqual(validateHeadlessTrace(events, { mode: "full" }), []);
     assert.equal(events.find((event) => event.type === "debate_qna_gate")?.status, "passed");
     assert.deepEqual(events.filter((event) => event.type === "debate_round").map((event) => event.round), [1, 2, 3]);
 
@@ -368,16 +418,13 @@ test("a caller-lowered full-council budget fails closed and persists a terminal 
   }
 });
 
-test("an abstaining seat is published from its frozen record without spending a voice worker", async () => {
-  // Four seats on this ETF fixture all freeze out_of_scope. Each used to get an isolated worker
-  // to write, at length, that it had no opinion -- on a real seven-seat run that consumed most
-  // of the method phase. The frozen record already says everything the contract asks of an
-  // out_of_scope seat, so it is published directly.
+test("every abstaining seat receives and publishes its strong first-person method voice", async () => {
+  // Four seats on this ETF fixture freeze out_of_scope. The global voice contract still runs
+  // each isolated method worker so an abstention sounds like that method rather than a generic
+  // neutral template.
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir);
-  // Pinned to the explicit opt-out: on a basket the DEFAULT now voices abstaining
-  // seats (the bench's value there is each method's reading, not 25 "no data" rows),
-  // and this test proves the frozen-record path still publishes completely.
+  // A legacy opt-out cannot weaken the global first-person contract.
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver, ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" } });
   try {
     await server.request("initialize", {});
@@ -399,26 +446,27 @@ test("an abstaining seat is published from its frozen record without spending a 
     const launches = readJsonl(fake.log);
 
     for (const id of SELECTED_MASTERS) {
-      // No worker was launched for the seat, and none was faked into the record.
-      assert.equal(launches.filter((item) => item.role === id).length, 0, `${id} must not launch a worker`);
-      assert.doesNotMatch(finalReport, new RegExp(`MASTER_SENTINEL_${id}`), id);
+      assert.equal(launches.filter((item) => item.role === id).length, 1, `${id} must launch one voice worker`);
+      assert.match(finalReport, new RegExp(`MASTER_SENTINEL_${id}`), id);
 
       // The seat is still fully published: every artifact carries it, with a readable statement.
       const opinion = result.run.master_opinions.find((item) => item.master === id);
       assert.ok(opinion, `${id} must still be recorded`);
       assert.equal(opinion.stance, "out_of_scope");
       assert.equal(result.run.master_status[id].status, "completed");
-      assert.equal(result.run.master_status[id].voice_status, "deterministic_scope");
-      // Honest provenance: never a claim that a worker ran.
-      assert.equal(opinion.dedicated_worker.status, "not_required_frozen_abstention");
+      assert.equal(result.run.master_status[id].voice_status, "completed");
+      assert.equal(opinion.dedicated_worker.status, "completed");
+      assert.equal(opinion.voice_mode, "first_person_public_method_simulation_v1");
+      assert.equal(opinion.disclosure_ack, "alphacouncil.first_person_public_method_simulation.v1");
+      assert.ok(Object.values(opinion.voice).every((text) => /\bI\b/u.test(text)), id);
       assert.ok(opinion.voice_statement.replace(/\s/g, "").length >= 20, `${id} statement too thin`);
-      assert.match(opinion.voice_statement, /neither bearish nor a vote against/);
+      assert.match(opinion.voice_statement, /I would/u);
       assert.equal(existsSync(join(dir, `${id}.md`)), true, id);
       assert.match(finalReport, new RegExp(id));
       assert.match(userResponse, new RegExp(id));
     }
 
-    // Skipping the workers must not weaken the bench gate or the report contract.
+    // Voicing all abstentions must not weaken the bench gate or the report contract.
     assert.equal(result.run.missing_master_count ?? 0, 0);
     assert.equal(readJson(join(dir, "report_quality.json")).method_statement_coverage.status, "passed");
   } finally {

@@ -87,7 +87,14 @@ test("publishing is public and lands on the channel a plain install follows", ()
   assert.deepEqual(pkg.publishConfig, { access: "public", tag: "latest" });
 });
 
-test("no dependencies, so an install is the download and nothing else", () => {
+test("runtime stays dependency-free while schema and property tools remain development-only", () => {
   assert.ok(!pkg.dependencies || Object.keys(pkg.dependencies).length === 0);
+  assert.deepEqual(pkg.devDependencies, {
+    ajv: "8.20.0",
+    "fast-check": "4.9.0",
+    jsonrepair: "3.15.0",
+  });
+  const validators = readFileSync(repoFile("mcp/generated/runtime-validators.mjs"), "utf8");
+  assert.doesNotMatch(validators, /(?:from\s+["']ajv\/|require\(["']ajv\/|jsonrepair|fast-check)/u);
   assert.ok(!existsSync(join(repoRoot, "node_modules")) || true);
 });

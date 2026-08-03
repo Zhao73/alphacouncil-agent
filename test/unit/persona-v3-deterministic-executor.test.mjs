@@ -526,6 +526,38 @@ test("typed facts must match the hash-bound input unit and period contract", () 
   );
 });
 
+test("policy comparisons fail closed when two typed operands have different value kinds", () => {
+  const value = artifacts();
+  value.policy.scoring.rules[0].condition = {
+    op: "gte",
+    left: { fact_id: "finance.debt_ratio" },
+    right: { output_id: "cash.owner_earnings_value" },
+  };
+  const changed = structuredClone(facts());
+  const debt = changed.facts.find((fact) => fact.fact_id === "finance.debt_ratio");
+  debt.value_kind = "ratio";
+  debt.unit = "decimal";
+  debt.ratio_denominator = "synthetic_denominator";
+  const factPack = buildFactPack(changed.facts, { asOf: AS_OF });
+  assert.throws(
+    () => executeDeterministicPersonaPolicy(preDecision({ packValue: pack(value), factPack })),
+    (error) => error.code === "OPERAND_CONTRACT_MISMATCH" && /ratio.*scalar/u.test(error.message),
+  );
+});
+
+test("policy comparisons fail closed when a typed fact and literal have incompatible types", () => {
+  const value = artifacts();
+  value.policy.scoring.rules[0].condition = {
+    op: "eq",
+    left: { fact_id: "finance.debt_ratio" },
+    right: { literal: "high" },
+  };
+  assert.throws(
+    () => executeDeterministicPersonaPolicy(preDecision({ packValue: pack(value) })),
+    (error) => error.code === "OPERAND_CONTRACT_MISMATCH" && /scalar.*string literal/u.test(error.message),
+  );
+});
+
 test("downstream output references must declare the producer's exact output contract", () => {
   const value = artifacts();
   value.tools[1].input_contracts[0].unit = "different_units";

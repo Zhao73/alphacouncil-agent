@@ -22,7 +22,7 @@ npm run persona:source:ai-prereview:check -- --json
 
 It creates one deterministic artifact per archived candidate under
 `knowledge/ai-assisted-solo/reviews/persona-v3-ai-source-prereviews/<persona_id>/<candidate_id>.json`.
-The current inventory contains 32 artifacts across all 26 seats and 96 role outputs:
+The current inventory contains 31 artifacts across 25 sourced seats and 93 role outputs:
 
 1. `ai_source_extractor_v1` independently verifies the archived byte length, raw SHA-256
    and deterministic file-format probe. It explicitly performs no semantic extraction.
@@ -59,7 +59,7 @@ npm run persona:source:semantic:write
 npm run persona:source:semantic:check -- --json
 ```
 
-`knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-extractions/` contains 32 source-bound artifacts:
+`knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-extractions/` contains 31 source-bound artifacts:
 26 readable, four partial and two unreadable. The readable set records 29 concise method
 propositions, each with a short exact excerpt, snippet hash, and PDF page or HTML text
 offset. Poppler extraction output, page counts and extracted-text hashes are recomputed by
@@ -83,7 +83,7 @@ npm run persona:source:semantic:skeptic:write
 npm run persona:source:semantic:skeptic:check -- --json
 ```
 
-`knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-skeptic-reviews/` contains 32 machine-labelled
+`knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-skeptic-reviews/` contains 31 machine-labelled
 skeptic artifacts plus one index. All 32 raw/extracted-text bindings pass. Of the 29 proposed
 propositions, 18 are supported by their exact source context and 11 are partial because the
 extractor generalized a case, combined nearby principles, or bound too narrow a snippet.
@@ -106,8 +106,8 @@ npm run persona:source:semantic:adjudicator:write
 npm run persona:source:semantic:adjudicator:check -- --json
 ```
 
-`knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-adjudications/` contains 32 adjudications plus an
-index. The 29 final proposition verdicts are 18 supported, 11 partial, zero unsupported and
+`knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-adjudications/` contains 31 adjudications plus an
+index. The 28 final proposition verdicts are 18 supported, 10 partial, zero unsupported and
 zero unverifiable; the 32 candidate verdicts are 16 supported, 10 partial, zero unsupported
 and six unverifiable. Each proposition records exact content/hash bindings, extractor and
 skeptic agreements or disagreements, final rationale, and unresolved authorship, scope and

@@ -47,12 +47,12 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 | | |
 |---|---|
-| 🏛️ **是委员会,不是一家之言** | 完整模式默认 8 个证据席、最多 11 个；quick 固定 4 个并行证据席。两者都在研究前完整展示 27 个方法席。 |
+| 🏛️ **是委员会,不是一家之言** | 完整模式默认 8 个证据席、最多 11 个；quick 固定 4 个并行证据席。两者都在研究前完整展示 26 个方法席。 |
 | 🐂🐻 **天生对抗式** | 完整模式跑三轮多空交叉质询；quick 只跑一轮并行 Bull/Bear 陈述和短 PM，且明确不声称完成对抗 verifier。 |
 | ⏱️ **完整 headless 有硬时限，且有三档深度** | 开场问答里选 fast / normal / slow（预计 ~12 / ~20 / ~44 分钟，上限 15 / 30 / 60），三档都是同一个完整契约，只改每席能想多久。8 个分析师同波启动、每轮 Bull/Bear 同时启动、在所选档位内保存终态；外部服务故障会明确 `incomplete`，不会静默漏席。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
-| 🔑 **32 个工具,零 API 密钥,零依赖** | 数据全部来自免密钥公开源(SEC EDGAR、CBOE、Yahoo/Stooq、21 组宏观序列),不需要付费行情或券商账号;分析师另通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
+| 🔑 **32 个工具,零 API 密钥,零运行时依赖** | 数据全部来自免密钥公开源(SEC EDGAR、CBOE、Yahoo/Stooq、21 组宏观序列),不需要付费行情或券商账号;分析师另通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
 | 📚 **内置研究方法论** | 股票研究与投行事件分析的方法论以**本地 skill** 形式打包(`skills/public-equity-investing`、`skills/investment-banking`)——不依赖 Codex 专属远程工作流,Claude Code 也能获得同等研究深度。 |
 | 📈 **真实行情兜底,免 key** | 内置 `get_quote` 通过 Yahoo + Stooq 拉延迟(~15分钟)的指数 / 股指期货(含夜盘)/ 汇率 / 利率 / 波动率 / 商品 / 个股点位——不用 API key,分析师引用真实数字而非猜测。 |
 | 🧭 **公司、ETF 与指数正确分流** | 先识别资产再研究：公司走发行人财务，ETF 走带时点持仓穿透，指数走聚合方法；QQQ/SPY 不会再被当成有自身营收和 EPS 的公司。 |
@@ -63,11 +63,11 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 `npm install -g alphacouncil-agent` 装到的就是最新正式版。
 
-27 个方法席，每一席跑自己的公式和自己的阈值，读的是从 SEC 申报、FRED 序列、发行商持仓披露、
+26 个方法席，每一席跑自己的公式和自己的阈值，读的是从 SEC 申报、FRED 序列、发行商持仓披露、
 公开指数聚合值、Section 16 持股、跨市场价格历史和带日期的行业新闻构建的类型化事实。
-54 个可执行工具。
+52 个可执行方法工具。
 
-活体行情实测、不用任何 fixture：27 席全部能在混合标的集合中的某个标的上给出立场，零契约失败。
+活体行情实测、不用任何 fixture：26 席全部能在混合标的集合中的某个标的上给出立场，零契约失败。
 一个此前**根本没有数据路径**的篮子（`SOX` 两个注册表里都没有）现在能产出 40 多个类型化事实，
 而读它们的席位跑的是和分析个股时**同一套方法**。
 
@@ -142,7 +142,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 会显示系统价格（或明确的行情缺口）、8 个分析师的状态/摘要，以及每个所选方法席冻结的立场
 和可读解释/状态。摘要最后一节是系统强制校验的逐席台账：已完成席位输出完整、不截断的陈词；
 失败席位明确显示“未产生方向性观点”和终止原因，不会被伪造成投票。选择 `all` 时结尾完整
-交代 27 席。它们是项目派生的临时方法席输出，不是本人引语。可见运行中任一硬门禁失败时，
+交代 26 席。它们是项目派生的临时方法席输出，不是本人引语。可见运行中任一硬门禁失败时，
 `finalize_visible_run` 会先把运行正式收口为 `incomplete` 并生成同一份交付摘要，宿主不得另写短总结替代。
 
 ### 斜杠命令
@@ -152,7 +152,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 | 输入 | 跑什么 | 额度消耗 |
 |---|---|---|
 | `/alpha <ticker>` | 先问跑多深（三档，带预计时间），再逐人展示全部大师，确认后运行 full | 每个达成立场的 v3 席为确定性立场 + 一个独立 voice worker；弃权席直接发布 |
-| `/alpha <ticker> quick` | 展示全部 27 席，确认 1-4 席（禁用 `all`），再跑插件托管 `quick_v1`（≤10 分钟） | 随选择数量变化 |
+| `/alpha <ticker> quick` | 展示全部 26 席，确认 1-4 席（禁用 `all`），再跑插件托管 `quick_v1`（≤10 分钟） | 随选择数量变化 |
 | `/alpha <ticker> screen` | 只跑机械筛选 | **零** |
 | `/alpha <ticker> options` | 隐含波动率期限结构、偏斜、持仓分布 | **零** |
 | `/alpha <ticker> news` | 带日期的申报与新闻 | **零** |
@@ -205,7 +205,7 @@ full 的交付摘要必须列出全部所选 stable master ID、全部 8 个分�
 ### Quick v1 —— 有界，但不等于完整议会
 
 不会因为用户着急或完整运行失败就自动切换 quick。Quick 只能通过插件托管的 headless
-`analyze_symbol(council_mode="quick")` 运行；`plan_visible_run` 会拒绝 quick。完整展示 27 席并
+`analyze_symbol(council_mode="quick")` 运行；`plan_visible_run` 会拒绝 quick。完整展示 26 席并
 确认 1-4 席后，执行图固定为：
 
 1. `market_data`、`earnings_deep_dive`、`valuation_long_short`、
@@ -242,7 +242,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 - 新闻、行业背景、产业链，以及管理层言行核对
 - SEC 申报、Form 4 内部人交易、回购、稀释、债务与资本配置
 - 并购、股权与债务融资、回购等事件分析
-- 可逐席选择的 27 个投资方法视角读取同一批事实
+- 可逐席选择的 26 个投资方法视角读取同一批事实
 - 多头、空头与 PM 裁决
 
 完整模式在 mandatory evidence barrier 上 fail-fast。任何必需证据席在一次有界 parse-only
@@ -274,9 +274,14 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 - **无可解析时间戳的新闻条目被剔除**，不会被展示为「最新」。
 - **报 `iv = 0` 的合约被丢弃** —— CBOE 对已过期和深度实值合约返回 0，而 0 混进均值不像缺失值，像一只很平静的股票。
 
-## 🏛️ 大师议席 —— 27 位
+## 🏛️ 方法议席 —— 26 席
 
 这是对公开方法论的重构，**不是本人的任何表述**。每一位都写明自己怎么思考、最先注意什么、典型追问是什么，以及**自己的失败模式** —— 说不出自己怎么错的席位，出错时不会举手。
+
+为什么叫“席”？它是委员会里的稳定选择与核算槽位：一个方法 ID、一份事实契约、一个结果或
+明确失败、以及总结结尾的一条完整台账。它不表示真人在场，也不表示每席都是独立模型、独立
+数据源或独立统计样本。用户界面称“方法视角”；内部协议保留 `seat`，因为它准确表达“选中后
+必须交代”的编排责任。
 
 | 名册 | 席位 |
 |---|---|
@@ -285,17 +290,26 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | 对抗 | 索罗斯 · 德鲁肯米勒 · 达利欧 · 伯里 · 做空视角 |
 | 量化 | 西蒙斯 · Asness · 索普 |
 | 期权 | 塔勒布 · 纳坦伯格 · 辛克莱 |
-| 现代 | Aschenbrenner |
 | v3 扩展 | 达莫达兰 · 阿克曼 · 凯茜·伍德 · Pabrai · 博格 · 琼琼瓦拉 |
 
-1.0.0 `solo_test` 目录已有 27 个可选的物理 v3 包，但 **27 个物理包不等于 27 个已获批的
-方法模型**。所有 27 席都只是 provisional `operator_lens`；54 个工具是可执行的
+当前 `solo_test` 目录有 26 个可选的物理 v3 包，但 **26 个物理包不等于 26 个已获批的
+方法模型**。所有 26 席都只是 provisional `operator_lens`；52 个方法工具是可执行的
 `provisional_derived_proxy` 测试代理，不是经过人工审批的公式归因。`operational` 与
 `method_model` 数量均为 0，正式生产 GA 继续 fail-closed。
 
+`skills/alphacouncil-method-lenses` 提供 1 个路由 Skill 和 26 份按需、哈希绑定的方法参考，
+用于方法对比和冻结结论解释。它刻意不发布 26 个全局自动触发 Skill，也不引入第三方运行
+依赖。全部参考统一使用强第一人称公开方法模拟：判断先行、方法特有词汇、推理顺序和失败
+模式，并以极短的“AI 公开方法模拟”标签和本人原话区分。这些参考仍是
+`method_reference_provisional`，不会替代确定性物理包。公开 Skill 的 A/B 与采用机制见
+[docs/evaluation/method-skill-pilot-2026-08-03.md](docs/evaluation/method-skill-pilot-2026-08-03.md)。
+
 大师读到的是**和分析师同一份已确立事实**（申报、行情、财务、宏观），分析师的证据包单独给出并标注为「其他席位的解读」而非事实。这个分离是关键：芒格看激励结构的地方分析师看的是毛利率，只有让他们各自取舍，这个议席才有存在意义。详见 [docs/attribution.md](docs/attribution.md)。
 
-形成立场的席位各自有一个隔离的发声 worker，用第一人称把话说完整——我看到什么、用我的标准怎么读这个数、我会不会动手、什么会让我改主意。弃权席位则以零模型成本发布一段确定性的第一人称陈述；想让弃权席也由 worker 完整开口，设 `ALPHACOUNCIL_VOICE_ABSTAINING_SEATS=1`（代价是每个弃权席多花一个 worker）。
+每个选中席位都有一个隔离发声 worker，包括 `out_of_scope`。陈词必须用强第一人称：先说我会
+不会行动，再说我看到什么、我如何按本方法推理、我与谁分歧、什么会让我改变判断；还必须
+体现对应方法的特有问题、词汇、推理顺序和失败模式。“巴菲特会认为……”这类中性第三人称
+摘要会被拒绝。每个可独立阅读的界面只显示一次极短的“AI 公开方法模拟”标签。
 
 ## 🧩 架构
 
@@ -306,7 +320,7 @@ Bull/Bear 陈述和短 PM；它不运行图中的 verifier 节点。
 flowchart TD
     U["@alphacouncil-agent"] --> G[("Established facts<br/>filings · quotes · macro · options")]
     G --> AG{{"Analyst council"}}
-    G --> MS{{"Master bench<br/>27 lenses"}}
+    G --> MS{{"Master bench<br/>26 lenses"}}
     AG --> A1["Market data"]
     AG --> A2["Earnings"]
     AG --> A3["Valuation"]
@@ -331,7 +345,7 @@ flowchart TD
     PM --> R[["final_report.md"]]
 ```
 
-大师从事实分叉，而非从分析师的证据包分叉。让 27 位大师共用一位分析师对「什么重要」的取舍，会给他们同一个盲区 —— 一个又大又完全相关的误差 —— 也就取消了设立议席的理由。
+方法视角从事实分叉，而非从分析师的证据包分叉。让 26 个方法视角共用一位分析师对「什么重要」的取舍，会给它们同一个盲区 —— 一个又大又完全相关的误差 —— 也就取消了设立议席的理由。
 
 关键文件:
 

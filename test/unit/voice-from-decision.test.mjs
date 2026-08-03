@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { factsInCondition, readableValue, voiceFromDecision, voiceFromDecline } from "../../mcp/lib/voice-from-decision.mjs";
+import { hasFirstPersonMarker } from "../../mcp/lib/voice.mjs";
 
 const fact = (fact_id, value, unit = "decimal") => ({ fact_id, value, unit });
 
@@ -60,7 +61,7 @@ test("a fired veto is reported as the thing that decided it", () => {
     factPack: { facts: [] },
     language: "English",
   });
-  assert.match(voice.how_my_method_reads_it, /hard veto decided this before scoring: graham_no_asset_floor/u);
+  assert.match(voice.how_my_method_reads_it, /hard veto decided the case: graham_no_asset_floor/u);
   assert.match(voice.what_changes_my_mind, /graham_no_asset_floor/u);
 });
 
@@ -92,6 +93,33 @@ test("every locale composes real sentences rather than falling back to English",
   for (const [language, marker] of [["中文", /条评分条件中有/u], ["日本語", /件の採点条件のうち/u], ["한국어", /채점 조건/u]]) {
     const voice = voiceFromDecision({ ...args, language });
     assert.match(voice.how_my_method_reads_it, marker, language);
+  }
+});
+
+test("every deterministic decision and abstention field is explicitly first person in all locales", () => {
+  const decisionArgs = {
+    result: {
+      common_projection: { stance: "cautious", score_ratio: 0.5 },
+      computations: { trace: [] },
+      score: { hits: [{ rule_id: "a" }], misses: [{ rule_id: "b" }], uncomputable: [] },
+      vetoes_triggered: [],
+    },
+    policy: { scoring: { rules: [{ rule_id: "rule_one" }, { rule_id: "rule_two" }] }, hard_vetoes: [], eligibility: { all: [] } },
+    factPack: { facts: [] },
+  };
+  const eligibility = {
+    present_required_fact_types: ["market.price"],
+    missing_required_fact_types: ["financial.owner_earnings"],
+  };
+  for (const language of ["English", "中文", "日本語", "한국어"]) {
+    for (const voice of [
+      voiceFromDecision({ ...decisionArgs, language }),
+      voiceFromDecline({ eligibility, language }),
+    ]) {
+      for (const [field, text] of Object.entries(voice)) {
+        assert.equal(hasFirstPersonMarker(text, language), true, `${language}:${field}: ${text}`);
+      }
+    }
   }
 });
 

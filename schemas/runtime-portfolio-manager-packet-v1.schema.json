@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-portfolio-manager-packet-v1.schema.json",
+  "title": "AlphaCouncil headless portfolio-manager packet",
+  "allOf": [
+    {
+      "$ref": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-debate-packet-v1.schema.json"
+    },
+    {
+      "type": "object",
+      "required": ["report_markdown"],
+      "properties": {
+        "report_markdown": { "type": "string", "pattern": "\\S" }
+      }
+    }
+  ]
+}

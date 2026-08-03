@@ -1,11 +1,25 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, writeFileSync, utimesSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readdirSync,
+  truncateSync,
+  writeFileSync,
+  writeSync,
+  utimesSync,
+} from "node:fs";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer } from "../helpers/rpc-client.mjs";
-import { mapLimit, runCodex } from "../../mcp/lib/codex.mjs";
+import {
+  MAX_WORKER_OUTPUT_BYTES,
+  mapLimit,
+  readWorkerOutputBounded,
+  runCodex,
+} from "../../mcp/lib/codex.mjs";
 
 // runCodex used to write codex-<ts>-<rand>.txt into DATA_DIR and never delete it, so
 // every analyst of every run leaked one file permanently. These tests cover the sweep
@@ -74,6 +88,106 @@ test("runCodex force-settles after kill grace even if a broken child never close
   assert.equal(result.forced_settle, true);
   assert.deepEqual(stops, ["TERM", "KILL"]);
   assert.ok(Date.now() - started < 250, "forced settlement must not wait for a close event");
+});
+
+test("runCodex rejects and removes an output beyond the UTF-8-safe character envelope", async () => {
+  const dir = makeDataDir();
+  class ClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 434343;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  try {
+    const result = await runCodex("fixture", 1000, () => {}, () => {}, {
+      dataDir: dir,
+      spawn: (_command, args) => {
+        const child = new ClosingChild();
+        const outFile = args[args.length - 2];
+        queueMicrotask(() => {
+          writeFileSync(outFile, Buffer.alloc(MAX_WORKER_OUTPUT_BYTES + 1, 0x78));
+          child.emit("close", 0);
+        });
+        return child;
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.output_too_large, true);
+    assert.equal(result.output_bytes, MAX_WORKER_OUTPUT_BYTES + 1);
+    assert.equal(result.text, "");
+    assert.match(result.output_fingerprint_sha256, /^[0-9a-f]{64}$/u);
+    assert.equal(result.output_hash_scope, "byte_count_plus_prefix_tail");
+    assert.match(result.stderr, new RegExp(`worker output exceeded ${MAX_WORKER_OUTPUT_BYTES} bytes`, "u"));
+    assert.ok(!existsSync(result.outFile), "rejected worker output must still be removed");
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("runCodex does not reject valid CJK text merely because UTF-8 uses more bytes", async () => {
+  const dir = makeDataDir();
+  class ClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 444444;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  const payload = JSON.stringify({ summary: "中".repeat(200_000) });
+  assert.ok(payload.length < 512_000);
+  assert.ok(Buffer.byteLength(payload) > 512_000);
+  try {
+    const result = await runCodex("fixture", 1000, () => {}, () => {}, {
+      dataDir: dir,
+      spawn: (_command, args) => {
+        const child = new ClosingChild();
+        const outFile = args[args.length - 2];
+        queueMicrotask(() => {
+          writeFileSync(outFile, payload);
+          child.emit("close", 0);
+        });
+        return child;
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.output_too_large, false);
+    assert.equal(result.text, payload);
+    assert.ok(!existsSync(result.outFile));
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("bounded output reader diagnoses a sparse 50 MiB file with bounded samples", () => {
+  const dir = makeDataDir();
+  const path = join(dir, "huge-worker.txt");
+  const bytes = 50 * 1024 * 1024;
+  try {
+    writeFileSync(path, "");
+    truncateSync(path, bytes);
+    const fd = openSync(path, "r+");
+    try {
+      writeSync(fd, Buffer.from("PREFIX"), 0, 6, 0);
+      writeSync(fd, Buffer.from("TAIL"), 0, 4, bytes - 4);
+    } finally {
+      closeSync(fd);
+    }
+    const result = readWorkerOutputBounded(path, { maxBytes: 512_000, diagnosticBytes: 32 });
+    assert.equal(result.output_too_large, true);
+    assert.equal(result.output_bytes, bytes);
+    assert.equal(result.text, "");
+    assert.equal(Buffer.byteLength(result.output_prefix), 32);
+    assert.equal(Buffer.byteLength(result.output_tail), 32);
+    assert.ok(result.output_prefix.startsWith("PREFIX"));
+    assert.ok(result.output_tail.endsWith("TAIL"));
+  } finally {
+    removeDataDir(dir);
+  }
 });
 
 test("mapLimit can isolate an unexpected seat rejection without cancelling siblings", async () => {

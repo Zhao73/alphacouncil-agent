@@ -752,10 +752,10 @@ export function loadAiAssistedSoloProfile(file = DEFAULT_AI_ASSISTED_SOLO_PROFIL
   }
   const expectedRequirements = {
     physical_solo_packs: CANONICAL_MASTER_COUNT,
-    ai_source_prereviews: 32,
-    ai_semantic_extractions: 32,
-    ai_semantic_skeptic_reviews: 32,
-    ai_semantic_adjudications: 32,
+    ai_source_prereviews: 31,
+    ai_semantic_extractions: 31,
+    ai_semantic_skeptic_reviews: 31,
+    ai_semantic_adjudications: 31,
     ai_formula_cross_reviews: PLANNED_TOOL_COUNT,
     independent_roles_per_review: 3,
     automated_experiment_runs: 8,

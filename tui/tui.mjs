@@ -14,6 +14,7 @@
 import { readdirSync, readFileSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { voiceDisclaimer } from "../mcp/lib/voice.mjs";
 
 const DATA_DIR = process.env.ALPHACOUNCIL_AGENT_DATA_DIR || join(homedir(), ".alphacouncil-agent");
 const RUNS_DIR = join(DATA_DIR, "runs");
@@ -62,7 +63,7 @@ const L10N = {
     waiting: "(waiting for a speaker…)", full: "full text", collapsed: "…",
     keys: "q quit · space pause · → finish typing · n next speaker",
     stances: { constructive: "BULLISH", cautious: "CAUTIOUS", opposed: "BEARISH", out_of_scope: "ABSTAIN", bull: "BULL", bear: "BEAR", pm: "VERDICT" },
-    voice: { what_i_see: "What I see", how_my_method_reads_it: "My standard", would_i_act: "Would I act", what_changes_my_mind: "What changes my mind", where_i_disagree: "Where I disagree" },
+    voice: { would_i_act: "Would I act", what_i_see: "What I see", how_my_method_reads_it: "My standard", where_i_disagree: "Where I disagree", what_changes_my_mind: "What changes my mind" },
     bullName: "Bull", bearName: "Bear", pmName: "Portfolio Manager",
     pm: { rating: "Final rating", conf: "confidence", position: "Position", invalidation: "Invalidation" },
     pick: "Language / 语言 / 言語 / 언어:",
@@ -73,7 +74,7 @@ const L10N = {
     waiting: "（等待发言…）", full: "全文", collapsed: "…",
     keys: "q 退出 · 空格 暂停 · → 跳过打字 · n 下一位",
     stances: { constructive: "看多", cautious: "谨慎", opposed: "看空", out_of_scope: "弃权", bull: "多方", bear: "空方", pm: "决策" },
-    voice: { what_i_see: "我看到的", how_my_method_reads_it: "用我的标准", would_i_act: "我会不会动手", what_changes_my_mind: "什么会让我改主意", where_i_disagree: "我的分歧" },
+    voice: { would_i_act: "我会不会动手", what_i_see: "我看到的", how_my_method_reads_it: "用我的标准", where_i_disagree: "我的分歧", what_changes_my_mind: "什么会让我改主意" },
     bullName: "多方", bearName: "空方", pmName: "组合经理",
     pm: { rating: "最终评级", conf: "置信度", position: "仓位", invalidation: "失效条件" },
   },
@@ -83,7 +84,7 @@ const L10N = {
     waiting: "（発言待ち…）", full: "全文", collapsed: "…",
     keys: "q 終了 · スペース 一時停止 · → 表示を完了 · n 次へ",
     stances: { constructive: "強気", cautious: "慎重", opposed: "弱気", out_of_scope: "棄権", bull: "強気側", bear: "弱気側", pm: "裁定" },
-    voice: { what_i_see: "私が見ているもの", how_my_method_reads_it: "私の基準では", would_i_act: "私なら動くか", what_changes_my_mind: "考えを変える条件", where_i_disagree: "意見の相違" },
+    voice: { would_i_act: "私なら動くか", what_i_see: "私が見ているもの", how_my_method_reads_it: "私の基準では", where_i_disagree: "意見の相違", what_changes_my_mind: "考えを変える条件" },
     bullName: "強気側", bearName: "弱気側", pmName: "ポートフォリオ・マネージャー",
     pm: { rating: "最終評価", conf: "信頼度", position: "ポジション", invalidation: "無効化条件" },
   },
@@ -93,7 +94,7 @@ const L10N = {
     waiting: "(발언 대기 중…)", full: "전문", collapsed: "…",
     keys: "q 종료 · 스페이스 일시정지 · → 타이핑 건너뛰기 · n 다음",
     stances: { constructive: "강세", cautious: "신중", opposed: "약세", out_of_scope: "기권", bull: "강세측", bear: "약세측", pm: "판정" },
-    voice: { what_i_see: "내가 보는 것", how_my_method_reads_it: "내 기준으로는", would_i_act: "나라면 움직이는가", what_changes_my_mind: "생각을 바꾸는 조건", where_i_disagree: "의견 차이" },
+    voice: { would_i_act: "나라면 움직이는가", what_i_see: "내가 보는 것", how_my_method_reads_it: "내 기준으로는", where_i_disagree: "의견 차이", what_changes_my_mind: "생각을 바꾸는 조건" },
     bullName: "강세측", bearName: "약세측", pmName: "포트폴리오 매니저",
     pm: { rating: "최종 평가", conf: "신뢰도", position: "포지션", invalidation: "무효화 조건" },
   },
@@ -107,7 +108,7 @@ const ZH_NAMES = {
   master_druckenmiller: "德鲁肯米勒", master_dalio: "达利欧", master_burry: "迈克尔·伯里",
   master_forensic_short: "做空研究员", master_simons: "西蒙斯", master_asness: "阿斯内斯",
   master_thorp: "索普", master_taleb: "塔勒布", master_natenberg: "纳滕伯格", master_sinclair: "辛克莱",
-  master_aschenbrenner: "阿申布伦纳", master_damodaran: "达莫达兰", master_ackman: "阿克曼",
+  master_damodaran: "达莫达兰", master_ackman: "阿克曼",
   master_cathie_wood: "凯茜·伍德", master_pabrai: "帕伯莱", master_jhunjhunwala: "琼琼瓦拉",
   master_bogle: "博格", master_duan_yongping: "段永平", master_li_lu: "李录",
 };
@@ -117,7 +118,7 @@ const JA_NAMES = {
   master_druckenmiller: "ドラッケンミラー", master_dalio: "ダリオ", master_burry: "マイケル・バーリ",
   master_forensic_short: "空売りリサーチャー", master_simons: "シモンズ", master_asness: "アスネス",
   master_thorp: "ソープ", master_taleb: "タレブ", master_natenberg: "ナテンバーグ", master_sinclair: "シンクレア",
-  master_aschenbrenner: "アッシェンブレナー", master_damodaran: "ダモダラン", master_ackman: "アックマン",
+  master_damodaran: "ダモダラン", master_ackman: "アックマン",
   master_cathie_wood: "キャシー・ウッド", master_pabrai: "パブライ", master_jhunjhunwala: "ジュンジュンワラ",
   master_bogle: "ボーグル", master_duan_yongping: "段永平", master_li_lu: "李録",
 };
@@ -322,6 +323,7 @@ function frame(state) {
 
   const header = [];
   header.push(`${ACCENT}${BOLD}α${RESET} ${ACCENT}${BOLD}ALPHACOUNCIL${RESET} ${BOLD}${status.symbol || RUN_ID}${RESET}  ${DIM}${status.council_mode || "?"}${status.council_pace ? " · " + status.council_pace : ""} · ${status.status || "?"}${state.mode === "replay" ? " · " + T.replay : ""}${RESET}`);
+  header.push(`${DIM}${voiceDisclaimer(lang)}${RESET}`);
   // Wall-clock bar against the tier's hard ceiling, when the run declares one.
   const budgetMs = status.time_budget_ms || (status.deadline_at && status.started_at
     ? Date.parse(status.deadline_at) - Date.parse(status.started_at) : 0);

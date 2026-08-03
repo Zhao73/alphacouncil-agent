@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:b88b95a72ac829720356072a44881c6c856a66666415fe49eab52d02dcd25367",
-    "derivation_spec_hash": "sha256:5177b07c8b2aa0e5303c3e0e2b0a98ebaf75cf4c1ba5257e327cdd4e10ef486e",
+    "derivation_evidence_hash": "sha256:7b27828f8aac4aa5081adef0b4f0ea0fcac16baf7893732c874ef8e98901b66b",
+    "derivation_spec_hash": "sha256:28ea7addea3420d5e3df4b535183ce140a56b311d00e8d6f968d7808cf1b1793",
     "derivation_spec_id": "master_ackman.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_ackman.market_capitalisation",
@@ -28,7 +28,7 @@
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:8acf4b2a1fc157ec4219b0d0ef76bac827cbca552d4bc1fb4413b6866502a7b2",
+    "input_schema_hash": "sha256:d7b69f4e3f34901c3ba8e7abdbb4f2c4300ecb2178e5295ff7f2ac573135c9cd",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:a5d6a20233a5f2062c302a0d17fdddda010d65d1d4e14f3838381cbf50a8c51a",
+    "output_schema_hash": "sha256:745ae184a17021a50c7aa27519043af504a3598001f6b68a668657e9b863bee1",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:80968abbbfa03af12f2711821160902e684df17d31aac8166fdf4b1c264cb6b9",
-    "derivation_spec_hash": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
+    "derivation_evidence_hash": "sha256:aa7d2eb0262cd3fc040e99cf3ffcbf175fcd15aba194a81d573bcc9285315e75",
+    "derivation_spec_hash": "sha256:80326a4b55df7ec7476c8f3a11574c7857a79e7e9c19de15fe66d1be5b2a45bf",
     "derivation_spec_id": "master_ackman.owner_earnings_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_ackman.owner_earnings_yield",
@@ -87,7 +87,7 @@
         "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:9f99ae402409f36da36df30b911141dd23e5be38b2b8f76f3597d1a1e125e518",
+    "input_schema_hash": "sha256:27bc0a089114933c67328de738187f92614ac24397eb4cacea5c03c3e965be7d",
     "inputs": [
       {
         "fact_id": "financial.owner_earnings"
@@ -106,7 +106,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:20259b82092a96c0cdf3979904198a8a7bd9a147ccd83ea3df214d1ed6e40809",
+    "output_schema_hash": "sha256:3bdba177d6d204862b7e235bb09e7b4c5e99b3b234a0a85636f3ce46c49680ec",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

@@ -382,7 +382,9 @@ function expectedEntries({ root, extractionRoot, skepticRoot, productionRoot, pe
     const artifact = buildArtifact({ record, bytes, archivePath, extractorArtifact, extractorPath: relativePath, skepticArtifact, skepticPath: relativePath, judgments, pdftotext });
     entries.push({ record, artifact });
   }
-  if (entries.length !== 32) throw new Error(`semantic adjudication requires exactly 32 candidates; got ${entries.length}`);
+  const expectedCandidateCount = new Set(SEMANTIC_SOURCE_ADJUDICATION_CATALOG
+    .map((item) => item.proposition_id.split(":p", 1)[0])).size;
+  if (entries.length !== expectedCandidateCount) throw new Error(`semantic adjudication requires exactly ${expectedCandidateCount} candidates; got ${entries.length}`);
   const propositionIds = new Set(entries.flatMap((entry) => entry.artifact.proposition_adjudications.map((item) => item.proposition_id)));
   if (propositionIds.size !== judgments.size || [...judgments.keys()].some((id) => !propositionIds.has(id))) throw new Error(`independent adjudicator catalog must cover every proposition exactly; got ${judgments.size}/${propositionIds.size}`);
   entries.sort((a, b) => `${a.record.persona_id}/${a.record.candidate_id}`.localeCompare(`${b.record.persona_id}/${b.record.candidate_id}`));

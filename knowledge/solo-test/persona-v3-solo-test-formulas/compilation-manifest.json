@@ -4,32 +4,6 @@
   "bindings": [
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:f8b6d943e2936b2b7c281c83098f72ced75d897425e0ea0f45aff1e2948c0140",
-      "derivation_spec_hash": "sha256:8d76c65b8d0aee17eeaaa15d8ac53ccfd8ad8d079eeea237e3b8d23eedfd3d5e",
-      "derivation_spec_id": "master_aschenbrenner.market_capitalisation.prototype_v1.derived_proxy_v1",
-      "persona_id": "master_aschenbrenner",
-      "production_eligible": false,
-      "review_status": "not_human_reviewed",
-      "source_ids": [
-        "derived_proxy:master_aschenbrenner.market_capitalisation.prototype_v1"
-      ],
-      "tool_id": "master_aschenbrenner.market_capitalisation"
-    },
-    {
-      "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:9126653980212d2bfd254deddecfe2eecf60ab23e422f68f05dc66f92f2e1a98",
-      "derivation_spec_hash": "sha256:cf3d02f5e7ab3138f3d25c34fcf4a8253187de58264d2f240d5570697e589f96",
-      "derivation_spec_id": "master_aschenbrenner.price_implied_cash_yield.prototype_v1.derived_proxy_v1",
-      "persona_id": "master_aschenbrenner",
-      "production_eligible": false,
-      "review_status": "not_human_reviewed",
-      "source_ids": [
-        "derived_proxy:master_aschenbrenner.price_implied_cash_yield.prototype_v1"
-      ],
-      "tool_id": "master_aschenbrenner.price_implied_cash_yield"
-    },
-    {
-      "assurance_class": "provisional_derived_proxy",
       "derivation_evidence_hash": "sha256:7f122bd9c632386b8d9a42ae236378a5282a6c90aa7a1764a540b105eccf7ede",
       "derivation_spec_hash": "sha256:cba0709bd7f31f34381a508d326a19f20a09a5dd3e03cfa3a64e2129d3e33ffb",
       "derivation_spec_id": "master_buffett.market_capitalisation.prototype_v1.derived_proxy_v1",
@@ -550,8 +524,8 @@
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:b88b95a72ac829720356072a44881c6c856a66666415fe49eab52d02dcd25367",
-      "derivation_spec_hash": "sha256:5177b07c8b2aa0e5303c3e0e2b0a98ebaf75cf4c1ba5257e327cdd4e10ef486e",
+      "derivation_evidence_hash": "sha256:7b27828f8aac4aa5081adef0b4f0ea0fcac16baf7893732c874ef8e98901b66b",
+      "derivation_spec_hash": "sha256:28ea7addea3420d5e3df4b535183ce140a56b311d00e8d6f968d7808cf1b1793",
       "derivation_spec_id": "master_ackman.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_ackman",
       "production_eligible": false,
@@ -563,8 +537,8 @@
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:80968abbbfa03af12f2711821160902e684df17d31aac8166fdf4b1c264cb6b9",
-      "derivation_spec_hash": "sha256:233af4f87f220dd426da53b6946ff1b4470579d98fb2440289a8c42d7007277f",
+      "derivation_evidence_hash": "sha256:aa7d2eb0262cd3fc040e99cf3ffcbf175fcd15aba194a81d573bcc9285315e75",
+      "derivation_spec_hash": "sha256:80326a4b55df7ec7476c8f3a11574c7857a79e7e9c19de15fe66d1be5b2a45bf",
       "derivation_spec_id": "master_ackman.owner_earnings_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_ackman",
       "production_eligible": false,
@@ -705,16 +679,16 @@
       "tool_id": "master_bogle.expected_return_over_long_bond"
     }
   ],
-  "canonical_seat_count": 27,
-  "compilation_hash": "sha256:18729c8e10a9fb20a4e658a0eb522440e94b9d3518c82a11aa879ebe3e6e0e58",
-  "compiled_tool_count": 54,
+  "canonical_seat_count": 26,
+  "compilation_hash": "sha256:3668c3a7c529984784a637dbaf08316c1b22cfb22d0cacf1be323796c94544b4",
+  "compiled_tool_count": 52,
   "formula_approval_binding_count": 0,
   "human_reviewer_count": 0,
   "intended_use": "local_test_only",
   "method_model_eligible": false,
   "production_effect": "none",
   "production_eligible": false,
-  "provisional_derivation_count": 54,
+  "provisional_derivation_count": 52,
   "review_status": "not_human_reviewed",
   "schema_version": 1,
   "signature_count": 0

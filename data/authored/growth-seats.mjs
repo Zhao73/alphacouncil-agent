@@ -20,39 +20,33 @@
  *    through `executableNativeState()`, which adds the `provisional_` prefix. Do not pre-prefix
  *    them here or they double-prefix and stop matching the declared state set.
  *
- *    `master_aschenbrenner` is the one seat whose declared state set contains the literal string
- *    `out_of_scope`. That is a common stance, and the policy validator rejects a common stance
- *    used as a native state -- but only before prefixing. `provisional_out_of_scope` is not a
- *    stance, so the seat validates once mapped. It must not be hand-renamed here, because the
- *    build spec is the authority on the state names.
- *
- * 2. `eligibility.all[]` entries carry the executor's own record shape
+ * 1. `eligibility.all[]` entries carry the executor's own record shape
  *    (`condition_id` / `condition` / `on_false` / `on_uncomputable`) but omit `source_ids`,
  *    because the source id is minted at build time. The pipeline must inject `source_ids` the
  *    way it already does for hard vetoes and scoring rules, and must map the two mapping states
  *    through `executableNativeState()`.
  *
- * 3. `purpose` on tools and `rationale` on vetoes and rules are authoring metadata. The executor
+ * 2. `purpose` on tools and `rationale` on vetoes and rules are authoring metadata. The executor
  *    rejects unknown fields, so neither may be copied into the physical policy or tool records.
  *
- * 4. Chained tools: a tool that consumes another tool's `output_id` must take the PRODUCER's
+ * 3. Chained tools: a tool that consumes another tool's `output_id` must take the PRODUCER's
  *    `value_kind` and `unit` as its input contract, not its own. Three seats here divide a
  *    monetary numerator by a monetary market capitalisation to produce a ratio, exactly as
  *    Buffett and Graham do, so a consumer-derived input contract fails
  *    `does not match producer ... output contract`.
  *
- * 5. Shared `output_id`s are deliberate and denote the same number built the same way, both
+ * 4. Shared `output_id`s are deliberate and denote the same number built the same way, both
  *    inside this file and across it and the nine-seat file:
- *      valuation.market_capitalisation    cathie_wood, ackman, aschenbrenner   price x share count
+ *      valuation.market_capitalisation    cathie_wood, ackman                  price x share count
  *                                         (= buffett, graham)
  *      valuation.owner_earnings_yield     ackman (= buffett)                   owner earnings / cap
- *      valuation.free_cash_flow_yield     cathie_wood, aschenbrenner           5y avg FCF / cap
+ *      valuation.free_cash_flow_yield     cathie_wood                          5y avg FCF / cap
  *      accounting.cash_conversion_gap     forensic_short, jhunjhunwala         OCF/NI less one
  *
- * 6. Scoring points are one per rule throughout, so `max_score` is the rule count and the
+ * 5. Scoring points are one per rule throughout, so `max_score` is the rule count and the
  *    builder's `max_score === sum(points)` check holds without this file restating it.
  *
- * 7. `master_forensic_short` inverts the usual band ordering on purpose. Its affirmative output
+ * 6. `master_forensic_short` inverts the usual band ordering on purpose. Its affirmative output
  *    is a short, and a seat that has completed a short case is `opposed` to owning the security,
  *    not constructive on it. The stance rises with the strength of the case AGAINST the name.
  */
@@ -234,7 +228,7 @@ export const growthSeats = Object.freeze({
         value_kind: "monetary",
         unit: "currency_units",
         purpose:
-          "The price of the whole company, which is what a value gap is measured against. Same construction and same output id as the Buffett, Graham, Cathie Wood and Aschenbrenner seats.",
+          "The price of the whole company, which is what a value gap is measured against. Same construction and same output id as the Buffett, Graham and Cathie Wood seats.",
       },
       {
         tool_id: "master_ackman.owner_earnings_yield",
@@ -402,98 +396,6 @@ export const growthSeats = Object.freeze({
       { min_ratio: 0, common_stance: "cautious", native_state: "red_flags_no_trade" },
       { min_ratio: 0.5, common_stance: "cautious", native_state: "watch" },
       { min_ratio: 1, common_stance: "opposed", native_state: "forensic_short_candidate" },
-    ],
-  },
-
-  master_aschenbrenner: {
-    provenance:
-      "Leopold Aschenbrenner, Situational Awareness: The Decade Ahead (June 2024): the compute-scaling series of roughly half an order of magnitude of effective compute per year split between raw compute and algorithmic efficiency, the trillion-dollar-cluster and industrial-mobilisation chapters on power, fabs and interconnect lead times, and the argument that the buildout is not yet in prices. NONE of that is a fact in this pack. There is no installed compute figure, no capex-commitment series, no available-megawatt figure, no supply-chain lead time and no adoption-revenue series, and the build spec's two planned tools -- the compute-to-power bridge and the timeline reverse-valuation -- have no inputs at all here. Rather than dress a generic growth screen in his vocabulary, this seat is deliberately narrowed to the one shape of his argument these facts can carry: a scaling-driven growth expectation set against what the price already implies, tested only on names whose price is not explained by the cash they currently produce. On anything else it declines and says which input it wanted. The narrow eligibility is the point of the seat, not a limitation of it. The revenue-growth-versus-long-bond test is this project's reading; the published half-order-of-magnitude-per-year figure is about compute, not revenue, and is deliberately not repurposed as a revenue threshold.",
-    tools: [
-      {
-        tool_id: "master_aschenbrenner.market_capitalisation",
-        operation: "multiply",
-        inputs: [{ fact_id: "market.price" }, { fact_id: "capital_allocation.share_count" }],
-        output_id: "valuation.market_capitalisation",
-        value_kind: "monetary",
-        unit: "currency_units",
-        purpose:
-          "The price of the whole company, which is the only thing a price-implied timeline can be solved against. Same construction and same output id as the other seats that build it.",
-      },
-      {
-        tool_id: "master_aschenbrenner.price_implied_cash_yield",
-        operation: "divide",
-        inputs: [{ fact_id: "financial.free_cash_flow_5y" }, { output_id: "valuation.market_capitalisation" }],
-        output_id: "valuation.free_cash_flow_yield",
-        value_kind: "ratio",
-        unit: "decimal",
-        purpose:
-          "The part of the price that the cash the business already produces pays for. The remainder is what the market has bought on a future it cannot yet see delivered, and that remainder is the closest thing to a price-implied timeline these facts will yield.",
-      },
-    ],
-    eligibility: {
-      all: [
-        // Narrow on purpose. If today's cash already earns more on the price than a long
-        // government bond pays, the price is explained without any scaling story and there is no
-        // embedded timeline for this method to test. That is most of the listed universe, and
-        // this seat should decline on all of it rather than reissue a generic growth screen.
-        {
-          condition_id: "master_aschenbrenner.price_embeds_a_scaling_timeline",
-          condition: { op: "lt", left: { output_id: "valuation.free_cash_flow_yield" }, right: { fact_id: "macro.long_bond_yield" } },
-          on_false: { native_state: "out_of_scope", common_stance: "out_of_scope" },
-          on_uncomputable: { native_state: "out_of_scope", common_stance: "out_of_scope" },
-        },
-        // And there has to be an observed scaling rate to set against that timeline. Compute,
-        // power and lead times are the inputs the method actually wants; revenue growth is the
-        // only rate in this pack, and without it the seat has nothing at all.
-        {
-          condition_id: "master_aschenbrenner.observed_scaling_rate_available",
-          condition: { op: "exists", value: { fact_id: "valuation.revenue_growth" } },
-          on_false: { native_state: "out_of_scope", common_stance: "out_of_scope" },
-          on_uncomputable: { native_state: "out_of_scope", common_stance: "out_of_scope" },
-        },
-        // The capital-expenditure half of the argument. With no capex-commitment series, the
-        // incremental return on capital is the only reading of whether the buildout pays for
-        // itself; without it the seat has a growth rate and no economics behind it, which is the
-        // point at which it stops being his method and starts being a momentum screen.
-        {
-          condition_id: "master_aschenbrenner.buildout_economics_observable",
-          condition: { op: "exists", value: { fact_id: "financial.incremental_return_on_capital" } },
-          on_false: { native_state: "out_of_scope", common_stance: "out_of_scope" },
-          on_uncomputable: { native_state: "out_of_scope", common_stance: "out_of_scope" },
-        },
-      ],
-    },
-    hard_vetoes: [
-      {
-        veto_id: "master_aschenbrenner.scaling_has_stopped",
-        rationale:
-          "A scaling thesis about a business whose revenue is not growing has no timeline to be early or late on, at any price. This is the measurable residue of the build spec's supply-timeline-gap family: not the documented equipment lead times, which are absent, but the outcome those lead times are supposed to produce.",
-        condition: { op: "lte", left: { fact_id: "valuation.revenue_growth" }, right: { literal: 0 } },
-        on_trigger: { common_stance: "opposed", native_state: "timeline_overpriced" },
-      },
-    ],
-    scoring: [
-      {
-        rule_id: "aschenbrenner_scaling_rate_beats_the_riskless_alternative",
-        points: 1,
-        coverage_weight: 1,
-        rationale:
-          "The price has already been established as not payable out of current cash, so the timeline it embeds has to be met by growth. Growth slower than what a long government bond pays outright cannot close a gap that starts below the bond. It is the weakest honest form of the reverse-valuation the build spec plans, and it is this project's reading rather than a threshold Aschenbrenner published.",
-        condition: { op: "gt", left: { fact_id: "valuation.revenue_growth" }, right: { fact_id: "macro.long_bond_yield" } },
-      },
-      {
-        rule_id: "aschenbrenner_buildout_earns_on_the_capital_it_consumes",
-        points: 1,
-        coverage_weight: 1,
-        rationale:
-          "The capital-expenditure half of the essay, reduced to the one thing that survives without the capex-commitment series: the money going into the buildout has to earn a positive return on the way in. Scale that does not is the failure mode the whole trillion-dollar-cluster argument is exposed to, and zero is the boundary rather than a chosen level.",
-        condition: { op: "gt", left: { fact_id: "financial.incremental_return_on_capital" }, right: { literal: 0 } },
-      },
-    ],
-    bands: [
-      { min_ratio: 0, common_stance: "opposed", native_state: "timeline_overpriced" },
-      { min_ratio: 0.5, common_stance: "cautious", native_state: "timeline_priced" },
-      { min_ratio: 1, common_stance: "constructive", native_state: "timeline_underpriced" },
     ],
   },
 

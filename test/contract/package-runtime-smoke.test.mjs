@@ -6,10 +6,17 @@ import { tmpdir } from "node:os";
 
 import { buildCheckPlan } from "../../scripts/selfcheck.mjs";
 import { runPackageSmoke } from "../../scripts/package-smoke.mjs";
+import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 test("the release package smoke executes selection and rejects receipt replay", async () => {
   const result = await runPackageSmoke();
-  assert.deepEqual(result, { tools: 32, catalog: 26, locales: 4, selected: 1, replay_rejected: true });
+  assert.deepEqual(result, {
+    tools: 32,
+    catalog: CANONICAL_MASTER_COUNT,
+    locales: 4,
+    selected: 1,
+    replay_rejected: true,
+  });
 });
 
 test("selfcheck never treats partial private staging as a valid source tree", (t) => {

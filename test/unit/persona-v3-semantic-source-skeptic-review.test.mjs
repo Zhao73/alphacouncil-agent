@@ -11,7 +11,7 @@ import { parseArgs, usage } from "../../scripts/review-persona-source-semantics.
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 /** Seats that currently carry at least one raw source acquisition. */
-const SEATS_WITH_RAW_ACQUISITIONS = 26;
+const SEATS_WITH_RAW_ACQUISITIONS = 25;
 
 const root = fileURLToPath(new URL("../../knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-skeptic-reviews/", import.meta.url));
 
@@ -19,26 +19,26 @@ function artifact(path) {
   return JSON.parse(readFileSync(`${root}/${path}`, "utf8"));
 }
 
-test("independent skeptic reopens all 32 sources and reports exact proposition verdicts", () => {
+test("independent skeptic reopens all 31 sources and reports exact proposition verdicts", () => {
   const report = inspectSemanticSourceSkepticReviews();
   assert.equal(report.valid, true, report.errors.join("\n"));
-  assert.equal(report.candidate_count, 32);
-  assert.equal(report.valid_artifact_count, 32);
+  assert.equal(report.candidate_count, 31);
+  assert.equal(report.valid_artifact_count, 31);
   assert.equal(report.seats_with_candidates, SEATS_WITH_RAW_ACQUISITIONS);
-  assert.equal(report.proposition_review_count, 29);
+  assert.equal(report.proposition_review_count, 28);
   assert.deepEqual(report.proposition_verdict_counts, {
-    partial: 11,
+    partial: 10,
     supported: 18,
     unsupported: 0,
     unverifiable: 0,
   });
   assert.deepEqual(report.candidate_verdict_counts, {
-    partial: 10,
+    partial: 9,
     supported: 16,
     unsupported: 0,
     unverifiable: 6,
   });
-  assert.equal(report.binding_pass_count, 32);
+  assert.equal(report.binding_pass_count, 31);
   assert.equal(report.human_reviewed_count, 0);
   assert.equal(report.method_attribution_approved_count, 0);
   assert.equal(report.production_effect, "none");

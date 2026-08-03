@@ -12,16 +12,16 @@ import { parseArgs, usage } from "../../scripts/adjudicate-persona-source-semant
 const root = fileURLToPath(new URL("../../knowledge/ai-assisted-solo/reviews/persona-v3-ai-semantic-adjudications/", import.meta.url));
 const artifact = (path) => JSON.parse(readFileSync(`${root}/${path}`, "utf8"));
 
-test("third-process adjudicator independently rebinds all 32 candidates and 29 propositions", () => {
+test("third-process adjudicator independently rebinds all 31 candidates and 28 propositions", () => {
   const report = inspectSemanticSourceAdjudications();
   assert.equal(report.valid, true, report.errors.join("\n"));
-  assert.equal(report.candidate_count, 32);
-  assert.equal(report.valid_artifact_count, 32);
-  assert.equal(report.proposition_adjudication_count, 29);
-  assert.deepEqual(report.proposition_verdict_counts, { partial: 11, supported: 18, unsupported: 0, unverifiable: 0 });
-  assert.deepEqual(report.candidate_verdict_counts, { partial: 10, supported: 16, unsupported: 0, unverifiable: 6 });
-  assert.equal(report.binding_pass_count, 32);
-  assert.equal(report.skeptic_agreement_count, 29);
+  assert.equal(report.candidate_count, 31);
+  assert.equal(report.valid_artifact_count, 31);
+  assert.equal(report.proposition_adjudication_count, 28);
+  assert.deepEqual(report.proposition_verdict_counts, { partial: 10, supported: 18, unsupported: 0, unverifiable: 0 });
+  assert.deepEqual(report.candidate_verdict_counts, { partial: 9, supported: 16, unsupported: 0, unverifiable: 6 });
+  assert.equal(report.binding_pass_count, 31);
+  assert.equal(report.skeptic_agreement_count, 28);
   assert.equal(report.skeptic_disagreement_count, 0);
   assert.equal(report.human_reviewed_count, 0);
   assert.equal(report.method_attribution_approved_count, 0);

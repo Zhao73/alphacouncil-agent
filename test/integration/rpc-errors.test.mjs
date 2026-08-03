@@ -61,6 +61,13 @@ test("an invalid run_id shape is rejected before touching the filesystem", async
   assert.match(response.error.message, /run_id is invalid/);
 });
 
+test("read_run rejects an unknown detail instead of silently returning an arbitrary shape", async () => {
+  const response = await server.callTool("read_run", { run_id: "NOPE-DOES-NOT-EXIST", detail: "everything" });
+  assert.equal(response.error?.code, RpcCode.INVALID_PARAMS);
+  assert.equal(response.error?.data?.reason, "INVALID_READ_RUN_DETAIL");
+  assert.deepEqual(response.error?.data?.allowed, ["compact", "full"]);
+});
+
 test("a malformed JSON frame gets a PARSE_ERROR reply instead of silence", async () => {
   const parseErrors = [];
   const onLine = new Promise((resolve) => {
