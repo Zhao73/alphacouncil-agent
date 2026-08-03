@@ -21,7 +21,7 @@ import {
   reconcileOpinion as reconcileLegacyOpinion,
 } from "../personas-v2/bridge.mjs";
 
-function v3FactPack(run) {
+export function ensureV3FactPack(run) {
   if (run?.grounding?.typed_fact_pack) return run.grounding.typed_fact_pack;
   const asOf = run?.as_of;
   if (run?.grounding && typeof run.grounding === "object") {
@@ -56,6 +56,7 @@ function v3DecisionRecord(id, pack, preDecision, frozenDecision = null) {
     tool_graph_hash: pack.tool_graph_hash,
     fact_pack_hash: preDecision.fact_pack.fact_pack_hash,
     evidence_snapshot_hash: preDecision.evidence_snapshot_hash,
+    company_dossier_hash: preDecision.private_evidence?.company_dossier_hash || null,
     deterministic_core_hash: preDecision.deterministic_core_hash,
     eligibility: preDecision.eligibility,
     stance: result?.stance || "out_of_scope",
@@ -76,8 +77,18 @@ function planV3Seat(run, id, pack) {
   try {
     preDecision = buildAnonymousPreDecision({
       compiledPack: pack,
-      factPack: v3FactPack(run),
-      privateEvidence: [],
+      factPack: ensureV3FactPack(run),
+      // The deterministic policy still consumes only typed facts. Bind every selected seat to
+      // the same completed dossier hash so provenance can prove which full evidence snapshot
+      // its post-freeze explanation received; no method-specific private packet is allowed.
+      privateEvidence: run?.company_dossier?.content_hash
+        ? {
+          contract_id: run.company_dossier.contract_id,
+          company_dossier_hash: run.company_dossier.content_hash,
+          coverage_status: run.company_dossier.status,
+          retrieval_status: run.company_dossier.retrieval_status,
+        }
+        : [],
     });
   } catch (error) {
     return {

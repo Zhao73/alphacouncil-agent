@@ -320,6 +320,17 @@ function startValidation(args, entryTool) {
       reason: "QUICK_SYNTHESIS_REQUIRED",
     });
   }
+  if (entryTool === "analyze_symbol" && mode === "full" && args.synthesis === false) {
+    throw invalidParams("analyze_symbol is a decision-producing council and requires Bull/Bear plus portfolio-manager synthesis. Use collect_evidence for a task-selective evidence run.", {
+      reason: "FULL_SYNTHESIS_REQUIRED",
+      alternative_tool: "collect_evidence",
+    });
+  }
+  if (entryTool === "plan_visible_run" && args.synthesis !== undefined) {
+    throw invalidParams("plan_visible_run always plans the complete visible full council; synthesis cannot be disabled or overridden.", {
+      reason: "VISIBLE_SYNTHESIS_OVERRIDE_FORBIDDEN",
+    });
+  }
   if (entryTool === "plan_visible_run" && mode === "quick") {
     throw invalidParams("Quick council requires plugin-managed analyze_symbol so its global deadline can be enforced.", {
       reason: "QUICK_REQUIRES_HEADLESS_ORCHESTRATOR",

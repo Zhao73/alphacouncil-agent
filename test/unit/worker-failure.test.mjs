@@ -90,6 +90,42 @@ test("a code-zero JSON parse failure is diagnostic material, not investment evid
   assert.match(diagnostic.parse_context, /}\{/);
 });
 
+test("company coverage failures expose bounded repair paths instead of a generic parse message", () => {
+  const coverageError = new Error("market_data did not satisfy operating_company_dossier_v1");
+  coverageError.data = {
+    reason: "COMPANY_DOSSIER_COVERAGE_MISMATCH",
+    contract_id: "operating_company_dossier_v1",
+    coverage: {
+      missing: ["market.quote_snapshot"],
+      duplicates: [],
+      unexpected: [],
+      invalid: [{
+        id: "market.price_history_range",
+        reason: "covered_source_without_publication_or_observation_time",
+        source_id: "market_data:S2",
+      }],
+    },
+  };
+  const { diagnostic } = orchestrator.workerFailureArtifacts({
+    task: "market_data",
+    symbol: "ACME",
+    asOfDate: "2026-08-03",
+    language: "English",
+    timeoutMs: 1_000,
+    failureKind: "parse_failed",
+    parseError: coverageError,
+    result: { ok: true, timedOut: false, code: 0, text: "{}", stdout: "", stderr: "" },
+  });
+  assert.ok(diagnostic.schema_errors.some((issue) => (
+    issue.path === "/coverage_items/market.quote_snapshot" && issue.keyword === "required"
+  )));
+  assert.ok(diagnostic.schema_errors.some((issue) => (
+    issue.path === "/coverage_items/market.price_history_range"
+      && issue.keyword === "covered_source_without_publication_or_observation_time"
+      && issue.message.includes("market_data:S2")
+  )));
+});
+
 test("oversized worker diagnostics preserve only bounded prefix/tail metadata outside evidence", () => {
   const prefix = "P".repeat(8 * 1024);
   const tail = "T".repeat(8 * 1024);

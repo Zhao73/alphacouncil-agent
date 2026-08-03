@@ -2,6 +2,8 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
+import { expectedCoverageItems } from "../../mcp/lib/company-dossier.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer, structured } from "../helpers/rpc-client.mjs";
 
@@ -40,7 +42,13 @@ const promptOf = (agent) => (typeof agent.prompt_template === "string" || agent.
   ? agent.prompt_template
   : agent.prompt);
 
-async function plan(server, { symbol, runId, masters, tasks }) {
+async function plan(server, {
+  symbol,
+  runId,
+  masters,
+  tasks,
+  researchModel = "operating_company",
+}) {
   const prompt = `Analyse ${symbol} and show every analyst and method seat.`;
   const opened = structured(await server.callTool("begin_council_selection", {
     symbol, language: "en", host: "codex", prompt,
@@ -57,7 +65,17 @@ async function plan(server, { symbol, runId, masters, tasks }) {
     prompt,
     run_id: runId,
     tasks,
-    grounding: { facts_unavailable: true },
+    grounding: {
+      facts_unavailable: true,
+      instrument: {
+        symbol,
+        name: `${symbol} prompt-delivery fixture`,
+        instrument_type: researchModel === "operating_company" ? "equity" : "etf",
+        research_model: researchModel,
+        exchange: "NASDAQ",
+        currency: "USD",
+      },
+    },
     selection_receipt: confirmed.selection_receipt,
   }));
 }
@@ -68,7 +86,7 @@ const allAgents = (planned) => [
   ...planned.debate_agents,
 ];
 
-test("every planned prompt is written to the run directory and reported by path", async () => {
+test("an operating-company full plan keeps all prompts file-backed until the dossier barrier", async () => {
   const planned = await plan(smallServer, {
     symbol: "AAPL",
     runId: `PROMPT-FILES-${process.pid}`,
@@ -77,9 +95,17 @@ test("every planned prompt is written to the run directory and reported by path"
   });
 
   const agents = allAgents(planned);
-  assert.ok(agents.length >= 4, "the plan must still return its agents");
+  assert.deepEqual(planned.run.tasks, DEFAULT_TASKS, "a selected full run cannot shrink the eight-seat evidence roster");
+  assert.equal(planned.evidence_agents.length, 8);
+  assert.equal(
+    DEFAULT_TASKS.reduce((sum, task) => sum + expectedCoverageItems(task).length, 0),
+    52,
+    "the operating-company evidence roster must retain all 52 coverage items",
+  );
+  assert.ok(agents.length >= 12, "the plan must still return evidence, method, debate, and PM agents");
   assert.equal(typeof planned.prompt_dir, "string");
-  assert.equal(planned.prompts_inline, true, "a small plan must keep returning prompts inline");
+  assert.equal(planned.prompts_inline, false,
+    "pre-dossier downstream prompt copies would become stale after the evidence barrier");
   assert.ok(planned.prompt_chars_total > 0);
 
   for (const agent of agents) {
@@ -91,17 +117,43 @@ test("every planned prompt is written to the run directory and reported by path"
     // A path outside the run's prompt directory would be a traversal, not a plan.
     assert.ok(agent.prompt_file.startsWith(planned.prompt_dir));
     // Both agent shapes must be externalized: evidence carries `prompt`, the rest
-    // `prompt_template`. Reading only one of them wrote empty files for the other.
+    // `prompt_template`. Operating-company plans deliberately return neither body inline.
+    assert.equal(promptOf(agent), null, `${agent.role} must be read from its prompt_file`);
+  }
+
+  for (const agent of planned.evidence_agents) {
+    const written = readFileSync(agent.prompt_file, "utf8");
+    const coverageIds = expectedCoverageItems(agent.role);
+    assert.ok(coverageIds.length > 0, `${agent.role} must own company-dossier coverage`);
+    for (const id of coverageIds) {
+      assert.match(written, new RegExp(id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${agent.role}:${id}`);
+    }
+  }
+});
+
+test("a small non-company plan still returns prompt copies inline as well as on disk", async () => {
+  const planned = await plan(smallServer, {
+    symbol: "SPY",
+    runId: `PROMPT-INLINE-${process.pid}`,
+    masters: ["master_buffett"],
+    tasks: ["market_data"],
+    researchModel: "fund_lookthrough",
+  });
+
+  assert.equal(planned.prompts_inline, true);
+  for (const agent of allAgents(planned)) {
+    const written = readFileSync(agent.prompt_file, "utf8").replace(/\n$/, "");
     assert.equal(promptOf(agent), written, `${agent.role} inline copy must match the file`);
   }
 });
 
 test("a plan over the budget drops the inline copies and stays readable on disk", async () => {
   const planned = await plan(tinyBudgetServer, {
-    symbol: "MSFT",
+    symbol: "SPY",
     runId: `PROMPT-BUDGET-${process.pid}`,
     masters: ["master_buffett", "master_marks"],
     tasks: ["market_data", "earnings_deep_dive"],
+    researchModel: "fund_lookthrough",
   });
 
   assert.ok(planned.prompt_chars_total > 1000, `saw ${planned.prompt_chars_total}`);

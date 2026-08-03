@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 
 function languageFailureCodex(dataDir, failureTarget) {
   const driver = join(dataDir, `fake-language-${failureTarget}.mjs`);
@@ -16,7 +17,15 @@ const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
-const task = /(?:Task:\\s*|任务：\\s*|Target task:\\s*)(market_data)/u.exec(prompt)?.[1] || null;
+const tasks = ${JSON.stringify(DEFAULT_TASKS)};
+const regularTask = tasks.find((id) => [
+  "Task:" + id,
+  "Task: " + id,
+  "任务：" + id,
+  "任务： " + id,
+].some((marker) => prompt.includes(marker))) || null;
+const repairTask = /Target task:\\s*([a-z_]+)/u.exec(prompt)?.[1] || null;
+const task = regularTask || (tasks.includes(repairTask) ? repairTask : null);
 const originalMaster = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
 const repairMaster = /Master ID:\\s*(master_[a-z0-9_]+)/u.exec(prompt)?.[1] || null;
 const master = originalMaster || repairMaster;
@@ -28,12 +37,46 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, parseRepair, searc
 
 let packet;
 if (task) {
+  const source = {
+    id: "S1",
+    title: task + " 本地测试来源",
+    url: "https://example.com/runtime-language/" + task,
+    published_at: "2026-07-28",
+    retrieved_at: "2026-07-28"
+  };
+  const coverageItem = {
+    title: source.title,
+    published_at: source.published_at,
+    url: source.url,
+    source_id: "S1"
+  };
   packet = {
-    summary: "本证据席位返回经过约束的中文摘要，并明确保留所有未知事项。",
-    claims: [{ claim: "这是一条用于运行时语言回归的中文事实。", evidence: "证据来自本地固定测试夹具。", confidence: "low", source_ids: ["S1"] }],
+    summary: "本证据席位返回经过约束的中文摘要，并明确保留所有未知事项：" + task + "。",
+    claims: [{ claim: "这是一条用于运行时语言回归的中文事实：" + task + "。", claim_type: "event_or_observation", evidence: "证据来自本地固定测试夹具。", confidence: "low", source_ids: ["S1"] }],
     metrics: {},
-    sources: [{ id: "S1", title: "本地测试来源", url: "https://example.com/runtime-language", published_at: "2026-07-28", retrieved_at: "2026-07-28" }],
-    open_questions: ["生产运行仍需核验真实数据来源。"], confidence: "low", information_richness: "C"
+    sources: [source],
+    open_questions: ["生产运行仍需核验真实数据来源。"], confidence: "low", information_richness: "C",
+    ...(task === "news_industry_management" ? {
+      official_source_coverage: {
+        status: "complete",
+        regulator: {
+          status: "complete",
+          entry_url: "https://example.com/runtime-language/regulator",
+          checked_through: "2026-07-28",
+          latest_dated_item: { ...coverageItem, record_id: "fixture-regulator-record" },
+          dated_items_checked: [{ ...coverageItem, record_id: "fixture-regulator-record" }],
+          gap: null
+        },
+        issuer: {
+          status: "complete",
+          entry_url: "https://example.com/runtime-language/issuer",
+          checked_through: "2026-07-28",
+          latest_dated_item: coverageItem,
+          dated_items_checked: [coverageItem],
+          gap: null
+        }
+      }
+    } : {})
   };
 } else if (master) {
   const frozenLine = prompt.split("\\n").find((line) => line.startsWith("Frozen method result JSON: "));
@@ -126,9 +169,17 @@ async function runChineseFullFailure(failureTarget) {
   const runId = `RUNTIME-LANGUAGE-${failureTarget.toUpperCase()}-${process.pid}`;
   const result = structured(await server.callTool("analyze_symbol", {
     symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "中文", prompt,
-    council_mode: "full", tasks: ["market_data"], total_timeout_ms: 30_000,
+    council_mode: "full", tasks: DEFAULT_TASKS, total_timeout_ms: 30_000,
     timeout_ms: 5_000, synthesis_timeout_ms: 5_000, wait_for_completion: true,
-    grounding: { facts_unavailable: true, unavailable: ["本地测试夹具"] },
+    grounding: {
+      instrument: {
+        asset_type: "etf",
+        research_model: "fund_lookthrough",
+        classification_source: "test_fixture",
+      },
+      facts_unavailable: true,
+      unavailable: ["本地测试夹具"],
+    },
     selection_receipt: selection.selection_receipt,
   }, { timeoutMs: 45_000 }));
   return { dataDir, fake, server, runId, result };
@@ -139,7 +190,11 @@ test("master valid JSON remains reader_language_mismatch after one bounded repai
   try {
     const { dataDir, fake, runId, result } = fixture;
     assert.equal(result.run.status, "incomplete");
-    assert.equal(result.run.master_status.master_buffett.status, "failed");
+    assert.equal(
+      result.run.master_status.master_buffett.status,
+      "failed",
+      JSON.stringify(result.run.task_status, null, 2),
+    );
     assert.equal(result.run.master_status.master_buffett.error, "reader_language_mismatch");
     const diagnostic = JSON.parse(readFileSync(join(dataDir, "runs", runId, "master_buffett.failure.json"), "utf8"));
     assert.equal(diagnostic.failure_kind, "reader_language_mismatch");

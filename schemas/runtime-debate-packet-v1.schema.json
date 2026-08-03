@@ -53,7 +53,8 @@
         "additionalProperties": true
       }
     },
-    "report_markdown": { "type": "string" }
+    "report_markdown": { "type": "string" },
+    "company_dossier_hash_ack": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
   },
   "additionalProperties": true
 }

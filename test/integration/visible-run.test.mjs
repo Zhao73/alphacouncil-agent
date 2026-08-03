@@ -2,12 +2,18 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
+import {
+  COMPANY_DOSSIER_CONTRACT_ID,
+  expectedCoverageItems,
+} from "../../mcp/lib/company-dossier.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 import { completeReport } from "../helpers/fixtures.mjs";
 
 let dataDir;
 let server;
+const AS_OF = "2026-07-28";
 const selectedMaster = "master_simons";
 const completeRunId = `SELFTEST-VISIBLE-${process.pid}`;
 const noPmRunId = `SELFTEST-NOPM-${process.pid}`;
@@ -32,27 +38,97 @@ const bearQuestions = [
   "Which measurable condition would invalidate the short thesis completely?",
 ];
 
-const evidencePacket = (summary = "The visible analyst records sufficient English evidence for this integration protocol fixture.", extra = {}) => ({
-  summary,
-  claims: [{
-    claim: "The fixture records one bounded material fact for downstream provenance checks.",
-    claim_type: "event_or_observation",
-    evidence: "The fixture source directly supports this bounded material fact.",
+const analystLog = DEFAULT_TASKS.map((task) => [
+  `### ${task}`,
+  `The ${task} analyst produced a visible packet. This section names the planned analyst explicitly and records the evidence handoff.`,
+].join("\n")).join("\n\n");
+
+const fullCouncilReport = completeReport.replace(
+  /### market_data\nThe market_data analyst produced a visible packet\. This section names the planned analyst explicitly and records the evidence handoff\./,
+  analystLog,
+);
+
+function source(id, title, url) {
+  return {
+    id,
+    title,
+    url,
+    published_at: AS_OF,
+    retrieved_at: AS_OF,
+  };
+}
+
+function officialItem(sourceId, title, url) {
+  return {
+    title,
+    published_at: AS_OF,
+    url,
+    source_id: sourceId,
+  };
+}
+
+function evidencePacket(task = "market_data", {
+  summary = `The ${task} visible analyst records sufficient English evidence for this integration protocol fixture.`,
+  extra = {},
+  includeOfficialCoverage = true,
+  coverageNote = "The dated fixture source covers this contract item for barrier testing.",
+} = {}) {
+  const packet = {
+    summary,
+    claims: [{
+      claim: `The ${task} fixture records one bounded material fact for downstream provenance checks.`,
+      claim_type: "event_or_observation",
+      evidence: "The fixture source directly supports this bounded material fact.",
+      confidence: "medium",
+      source_ids: ["S1"],
+    }],
+    metrics: {},
+    sources: [source("S1", `${task} visible integration fixture source`, `https://example.com/${task}`)],
+    open_questions: [],
+    coverage_items: expectedCoverageItems(task).map((id) => ({
+      id,
+      status: "covered",
+      source_ids: ["S1"],
+      note: coverageNote,
+    })),
     confidence: "medium",
-    source_ids: ["S1"],
-  }],
-  metrics: {},
-  sources: [{
-    id: "S1",
-    title: "Visible integration fixture source",
-    url: "https://example.com/visible-fixture",
-    published_at: "2026-01-02",
-    retrieved_at: "2026-01-03",
-  }],
-  open_questions: [],
-  confidence: "medium",
-  ...extra,
-});
+    information_richness: "B",
+    ...extra,
+  };
+
+  if (task === "news_industry_management" && includeOfficialCoverage
+    && !Object.hasOwn(packet, "official_source_coverage")) {
+    const regulatorUrl = "https://regulator.example/filing";
+    const issuerUrl = "https://issuer.example/news";
+    const regulatorItem = officialItem("S1", "Regulator fixture filing", regulatorUrl);
+    const issuerItem = officialItem("S2", "Issuer fixture release", issuerUrl);
+    packet.sources = [
+      source("S1", regulatorItem.title, regulatorUrl),
+      source("S2", issuerItem.title, issuerUrl),
+    ];
+    packet.official_source_coverage = {
+      status: "complete",
+      regulator: {
+        status: "complete",
+        entry_url: "https://regulator.example/filings",
+        checked_through: AS_OF,
+        latest_dated_item: regulatorItem,
+        dated_items_checked: [regulatorItem],
+        gap: null,
+      },
+      issuer: {
+        status: "complete",
+        entry_url: "https://issuer.example/newsroom",
+        checked_through: AS_OF,
+        latest_dated_item: issuerItem,
+        dated_items_checked: [issuerItem],
+        gap: null,
+      },
+    };
+  }
+
+  return packet;
+}
 
 function debatePacket(role, round, extra = {}) {
   const ownQuestions = role === "bull_researcher" ? bullQuestions : bearQuestions;
@@ -88,18 +164,30 @@ async function selectionReceipt(symbol) {
   return selection.selection_receipt;
 }
 
-async function plan(runId, tasks = ["market_data"]) {
+async function plan(runId, tasks = DEFAULT_TASKS) {
   return server.callTool("plan_visible_run", {
     symbol: "NOK",
+    as_of: AS_OF,
     language: "English",
     run_id: runId,
     tasks,
-    grounding: { facts_unavailable: true },
+    grounding: {
+      gathered_at: `${AS_OF}T12:00:00Z`,
+      facts_unavailable: true,
+      instrument: {
+        symbol: "NOK",
+        name: "Nokia visible integration fixture",
+        instrument_type: "equity",
+        research_model: "operating_company",
+        exchange: "NYSE",
+        currency: "USD",
+      },
+    },
     selection_receipt: await selectionReceipt("NOK"),
   });
 }
 
-async function recordEvidence(runId, task = "market_data", packet = evidencePacket()) {
+async function recordEvidence(runId, task = "market_data", packet = evidencePacket(task)) {
   return server.callTool("record_visible_packet", {
     run_id: runId,
     task,
@@ -109,25 +197,67 @@ async function recordEvidence(runId, task = "market_data", packet = evidencePack
   });
 }
 
-async function recordMaster(runId, packet = {
-  master: selectedMaster,
-  acknowledged_stance: "out_of_scope",
-  voice_mode: "first_person_public_method_simulation_v1",
-  disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
-  position_intent: "not_in_my_circle",
-  voice: {
-    would_i_act: "I would not issue a directional view from this incomplete evidence.",
-    what_i_see: "I see that the fixture lacks my required point-in-time method facts.",
-    how_my_method_reads_it: "I stop at my fact gate instead of manufacturing an unsupported investment claim.",
-    where_i_disagree: "I disagree with treating an abstention as a bearish vote.",
-    what_changes_my_mind: "I would reassess when dated primary sources provide my missing method-critical facts.",
-  },
-  key_findings: ["The fixture does not contain the required method-specific point-in-time facts."],
-  disagreements: [],
-  what_would_change_my_mind: ["Provide the missing method-critical facts from dated primary sources."],
-  source_ids: [],
-  confidence: "low",
-}) {
+async function recordAllEvidence(runId, { skip = [] } = {}) {
+  for (const task of DEFAULT_TASKS) {
+    if (!skip.includes(task)) structured(await recordEvidence(runId, task));
+  }
+  return JSON.parse(readFileSync(join(dataDir, "runs", runId, "company_dossier.json"), "utf8"));
+}
+
+function persistedRun(runId) {
+  return JSON.parse(readFileSync(join(dataDir, "runs", runId, "evidence.json"), "utf8"));
+}
+
+function dossier(runId) {
+  return JSON.parse(readFileSync(join(dataDir, "runs", runId, "company_dossier.json"), "utf8"));
+}
+
+function companyDossierHash(runId) {
+  const path = join(dataDir, "runs", runId, "company_dossier.json");
+  return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")).content_hash : `sha256:${"0".repeat(64)}`;
+}
+
+function frozenStance(runId) {
+  const opinion = persistedRun(runId).master_opinions.find((item) => item.master === selectedMaster);
+  assert.ok(opinion, `${selectedMaster} must have a frozen deterministic opinion`);
+  return opinion.stance;
+}
+
+function methodVoicePacket(runId, extra = {}) {
+  const stance = frozenStance(runId);
+  const positionIntent = {
+    constructive: "would_buy",
+    cautious: "would_hold",
+    opposed: "would_pass",
+    out_of_scope: "not_in_my_circle",
+  }[stance];
+  assert.ok(positionIntent, `unexpected frozen stance: ${stance}`);
+  return {
+    master: selectedMaster,
+    acknowledged_stance: stance,
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: positionIntent,
+    voice: {
+      would_i_act: "I would not issue a directional view from this incomplete evidence.",
+      what_i_see: "I see that the fixture lacks my required point-in-time method facts.",
+      how_my_method_reads_it: "I stop at my fact gate instead of manufacturing an unsupported investment claim.",
+      where_i_disagree: "I disagree with treating an abstention as a bearish vote.",
+      what_changes_my_mind: "I would reassess when dated primary sources provide my missing method-critical facts.",
+    },
+    key_findings: ["The fixture does not contain the required method-specific point-in-time facts."],
+    disagreements: [],
+    what_would_change_my_mind: ["Provide the missing method-critical facts from dated primary sources."],
+    // Even an out-of-scope operating-company voice must show that it read the shared dossier;
+    // the empty-source exception applies only when no company dossier is required.
+    source_ids: ["market_data:S1"],
+    confidence: "low",
+    company_dossier_hash_ack: companyDossierHash(runId),
+    ...extra,
+  };
+}
+
+async function recordMaster(runId, packet = methodVoicePacket(runId)) {
   return server.callTool("record_master_opinion", {
     run_id: runId,
     master: selectedMaster,
@@ -143,7 +273,10 @@ async function recordRound(runId, role, round, packet = debatePacket(role, round
     round,
     thread_id: `thread-${runId}-${role}-${round}`,
     thread_title: `AlphaCouncil Agent NOK ${role} round ${round}`,
-    packet,
+    packet: {
+      ...packet,
+      company_dossier_hash_ack: packet.company_dossier_hash_ack || companyDossierHash(runId),
+    },
   });
 }
 
@@ -175,7 +308,8 @@ async function recordPm(runId) {
       invalidation: ["A contradictory primary filing invalidates the decision."],
       source_ids: ["market_data:S1"],
       confidence: "medium",
-      report_markdown: completeReport,
+      report_markdown: fullCouncilReport,
+      company_dossier_hash_ack: dossier(runId).content_hash,
     },
   });
 }
@@ -184,7 +318,7 @@ async function recordPm(runId) {
 // work log never names the planned analyst -- a defect only the assembled report can see, since
 // the check is scoped to that section's body against the run's task list. That keeps the
 // revision path exercised now that a missing report body is rejected at submission time.
-const unloggedReport = completeReport.replace(
+const unloggedReport = fullCouncilReport.replace(
   /### market_data\nThe market_data analyst/,
   "### Evidence seats\nThe evidence seat",
 );
@@ -209,6 +343,7 @@ async function recordThinPm(runId) {
       source_ids: ["market_data:S1"],
       confidence: "medium",
       report_markdown: unloggedReport,
+      company_dossier_hash_ack: dossier(runId).content_hash,
     },
   });
 }
@@ -219,8 +354,17 @@ before(async () => {
   await server.request("initialize", {});
 
   recorded.plan = structured(await plan(completeRunId));
-  await recordEvidence(completeRunId);
-  await recordMaster(completeRunId);
+  const downstreamAgents = [...recorded.plan.master_agents, ...recorded.plan.debate_agents];
+  recorded.preBarrierPrompts = Object.fromEntries(downstreamAgents.map((agent) => [
+    agent.role,
+    readFileSync(agent.prompt_file, "utf8"),
+  ]));
+  recorded.completeDossier = await recordAllEvidence(completeRunId);
+  recorded.postBarrierPrompts = Object.fromEntries(downstreamAgents.map((agent) => [
+    agent.role,
+    readFileSync(agent.prompt_file, "utf8"),
+  ]));
+  recorded.master = structured(await recordMaster(completeRunId));
   // Round 2 cannot start until both Round-1 sides exist.
   recorded.outOfOrder = await recordRound(completeRunId, "bull_researcher", 2);
   await recordRound(completeRunId, "bull_researcher", 1);
@@ -244,12 +388,13 @@ before(async () => {
   recorded.pmReplay = structured(await recordPm(completeRunId));
 
   await plan(noPmRunId);
-  await recordEvidence(noPmRunId);
-  await recordMaster(noPmRunId);
+  await recordAllEvidence(noPmRunId);
+  structured(await recordMaster(noPmRunId));
   await recordFullDebate(noPmRunId);
 
   await plan(finalizedRunId);
-  await recordEvidence(finalizedRunId);
+  await recordAllEvidence(finalizedRunId);
+  structured(await recordMaster(finalizedRunId));
   recorded.finalized = structured(await server.callTool("finalize_visible_run", {
     run_id: finalizedRunId,
     reason: "debate_worker_failed",
@@ -263,6 +408,8 @@ before(async () => {
   recorded.lateFinalizedDecision = await recordRound(finalizedRunId, "bear_researcher", 1);
 
   await plan(reorderedFinalizationRunId);
+  await recordAllEvidence(reorderedFinalizationRunId);
+  structured(await recordMaster(reorderedFinalizationRunId));
   recorded.reorderedFinalization = structured(await server.callTool("finalize_visible_run", {
     run_id: reorderedFinalizationRunId,
     reason: "debate_worker_failed",
@@ -275,7 +422,7 @@ before(async () => {
   }));
 
   await plan(invalidFinalizationTargetRunId);
-  await recordEvidence(invalidFinalizationTargetRunId);
+  await recordAllEvidence(invalidFinalizationTargetRunId);
   recorded.invalidFinalizationTarget = await server.callTool("finalize_visible_run", {
     run_id: invalidFinalizationTargetRunId,
     reason: "evidence_worker_failed",
@@ -283,8 +430,8 @@ before(async () => {
   });
 
   await plan(shortcutRunId);
-  await recordEvidence(shortcutRunId);
-  await recordMaster(shortcutRunId);
+  await recordAllEvidence(shortcutRunId);
+  structured(await recordMaster(shortcutRunId));
   await recordRound(shortcutRunId, "bull_researcher", 1);
   await recordRound(shortcutRunId, "bear_researcher", 1);
   recorded.shortcut = await recordPm(shortcutRunId);
@@ -292,30 +439,47 @@ before(async () => {
   // A Chinese run whose only non-Chinese text is the English source titles it cites.
   await server.callTool("plan_visible_run", {
     symbol: "NOK",
+    as_of: AS_OF,
     language: "zh-CN",
     run_id: citationRunId,
     tasks: ["market_data"],
-    grounding: { facts_unavailable: true },
+    grounding: {
+      gathered_at: `${AS_OF}T12:00:00Z`,
+      facts_unavailable: true,
+      instrument: {
+        symbol: "NOK",
+        name: "诺基亚可见集成固定样本",
+        instrument_type: "equity",
+        research_model: "operating_company",
+        exchange: "NYSE",
+        currency: "USD",
+      },
+    },
     selection_receipt: (await confirmMasterSelection(server, { symbol: "NOK", language: "zh-CN", selected_master_ids: [selectedMaster] })).selection_receipt,
   });
   recorded.citation = await server.callTool("record_visible_packet", {
     run_id: citationRunId,
     task: "market_data",
-    packet: evidencePacket("本席位记录了足够的中文证据，并按来源发布时的原文标题引用，不翻译标题。", {
-      claims: [{
-        claim: "本地固定测试记录了一条完整的中文重大事实。",
-        evidence: "该事实由下方保持原文标题的公开来源直接支持。",
-        confidence: "medium",
-        source_ids: ["S1"],
-      }],
-      sources: [{ id: "S1", title: "Nokia beats quarterly estimates", url: "https://example.com/a", published_at: "2026-01-02", retrieved_at: "2026-01-03" }],
+    packet: evidencePacket("market_data", {
+      summary: "本席位记录了足够的中文证据，并按来源发布时的原文标题引用，不翻译标题。",
+      coverageNote: "本固定样本的日期来源覆盖了这项资料包契约检查。",
+      extra: {
+        claims: [{
+          claim: "本地固定测试记录了一条完整的中文重大事实。",
+          claim_type: "event_or_observation",
+          evidence: "该事实由下方保持原文标题的公开来源直接支持。",
+          confidence: "medium",
+          source_ids: ["S1"],
+        }],
+        sources: [source("S1", "Nokia beats quarterly estimates", "https://example.com/a")],
+      },
     }),
   });
 
   // A PM whose first submission fails the structure gate must stay revisable.
   await plan(reviseRunId);
-  await recordEvidence(reviseRunId);
-  await recordMaster(reviseRunId);
+  await recordAllEvidence(reviseRunId);
+  structured(await recordMaster(reviseRunId));
   await recordFullDebate(reviseRunId);
   recorded.thinPm = structured(await recordThinPm(reviseRunId));
   recorded.revisedPm = await recordPm(reviseRunId);
@@ -326,24 +490,25 @@ before(async () => {
   recorded.wrongEvidence = await recordEvidence(
     languageRunId,
     "market_data",
-    evidencePacket("这是一份完全使用中文撰写的错误语言证据包，不能写入英文运行。", {
-      claims: [{
-        claim: "这条中文重大事实故意违反英文运行的语言合同。",
-        evidence: "这段中文证据也故意违反英文运行的语言合同。",
-        confidence: "medium",
-        source_ids: ["S1"],
-      }],
+    evidencePacket("market_data", {
+      summary: "这是一份完全使用中文撰写的错误语言证据包，不能写入英文运行。",
+      coverageNote: "这条中文覆盖说明也故意违反英文运行的语言合同。",
+      extra: {
+        claims: [{
+          claim: "这条中文重大事实故意违反英文运行的语言合同。",
+          claim_type: "event_or_observation",
+          evidence: "这段中文证据也故意违反英文运行的语言合同。",
+          confidence: "medium",
+          source_ids: ["S1"],
+        }],
+      },
     }),
   );
   recorded.afterWrongEvidence = readFileSync(languageEvidencePath, "utf8");
-  await recordEvidence(languageRunId);
+  structured(await recordEvidence(languageRunId));
+  await recordAllEvidence(languageRunId, { skip: ["market_data"] });
   recorded.beforeWrongMaster = readFileSync(languageEvidencePath, "utf8");
-  recorded.wrongMaster = await recordMaster(languageRunId, {
-    master: selectedMaster,
-    acknowledged_stance: "out_of_scope",
-    voice_mode: "first_person_public_method_simulation_v1",
-    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
-    position_intent: "not_in_my_circle",
+  recorded.wrongMaster = await recordMaster(languageRunId, methodVoicePacket(languageRunId, {
     voice: {
       would_i_act: "我不会在证据不足时给出方向判断。",
       what_i_see: "我看到这段中文内容不应进入要求英文输出的运行记录。",
@@ -354,11 +519,11 @@ before(async () => {
     key_findings: ["本方法席无法依据当前证据给出方向性判断。"],
     disagreements: [],
     what_would_change_my_mind: [],
-    source_ids: [],
+    source_ids: ["market_data:S1"],
     confidence: "low",
-  });
+  }));
   recorded.afterWrongMaster = readFileSync(languageEvidencePath, "utf8");
-  await recordMaster(languageRunId);
+  structured(await recordMaster(languageRunId));
   recorded.beforeWrongDebate = readFileSync(languageEvidencePath, "utf8");
   recorded.wrongDebate = await recordRound(
     languageRunId,
@@ -380,13 +545,11 @@ before(async () => {
 
   await plan(barrierRunId);
   recorded.earlyMaster = await recordMaster(barrierRunId);
-  await recordEvidence(barrierRunId);
+  structured(await recordEvidence(barrierRunId));
   recorded.earlyDebate = await recordRound(barrierRunId, "bull_researcher", 1);
-  recorded.wrongFrozenStance = await recordMaster(barrierRunId, {
-    master: selectedMaster,
+  await recordAllEvidence(barrierRunId, { skip: ["market_data"] });
+  recorded.wrongFrozenStance = await recordMaster(barrierRunId, methodVoicePacket(barrierRunId, {
     acknowledged_stance: "constructive",
-    voice_mode: "first_person_public_method_simulation_v1",
-    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
     position_intent: "would_buy",
     voice: {
       would_i_act: "I would attempt to replace the frozen stance.",
@@ -395,9 +558,9 @@ before(async () => {
       where_i_disagree: "I disagree with the frozen record only for this negative control.",
       what_changes_my_mind: "I would preserve the original stance in a valid packet.",
     },
-    key_findings: [], disagreements: [], what_would_change_my_mind: [], source_ids: [], confidence: "low",
-  });
-  await recordMaster(barrierRunId);
+    key_findings: [], disagreements: [], what_would_change_my_mind: [], source_ids: ["market_data:S1"], confidence: "low",
+  }));
+  structured(await recordMaster(barrierRunId));
 });
 
 after(async () => {
@@ -410,6 +573,14 @@ test("full visible completion requires the persisted three-round exact-Q&A chain
   const dir = join(dataDir, "runs", completeRunId);
   const status = JSON.parse(readFileSync(join(dir, "status.json"), "utf8"));
   assert.equal(status.completeness, "complete");
+  assert.equal(status.company_dossier_contract, COMPANY_DOSSIER_CONTRACT_ID);
+  assert.equal(status.company_dossier_coverage, "complete");
+  assert.equal(status.company_dossier_decision_barrier_ready, true);
+  assert.equal(status.company_dossier_expected_count, 52);
+  assert.equal(status.company_dossier_covered_count, 52);
+  assert.deepEqual(recorded.completeDossier.packets.map((packet) => packet.task), DEFAULT_TASKS);
+  assert.equal(recorded.completeDossier.coverage.expected_count, 52);
+  assert.equal(recorded.completeDossier.coverage.covered_count, 52);
   assert.equal(status.visible_debate_contract, "role_round_audit_v1");
   assert.equal(status.visible_debate_rounds_expected, 3);
   assert.deepEqual(status.visible_debate_rounds_recorded, {
@@ -418,16 +589,46 @@ test("full visible completion requires the persisted three-round exact-Q&A chain
   });
   assert.equal(status.visible_debate_qna_gate, "passed");
   for (const role of ["bull_researcher", "bear_researcher"]) {
-    for (const round of [1, 2, 3]) assert.ok(existsSync(join(dir, `${role}.round-${round}.json`)));
+    for (const round of [1, 2, 3]) {
+      const packet = JSON.parse(readFileSync(join(dir, `${role}.round-${round}.json`), "utf8"));
+      assert.equal(packet.company_dossier_hash_ack, recorded.completeDossier.content_hash, `${role}:${round}`);
+    }
   }
+  const manager = JSON.parse(readFileSync(join(dir, "manager_synthesis.json"), "utf8"));
+  assert.equal(manager.company_dossier_hash_ack, recorded.completeDossier.content_hash);
 });
 
-test("a declined seat is planned as a settled record, not as an explanation worker", () => {
-  assert.deepEqual(recorded.plan.master_agents, []);
+test("a declined out-of-scope v3 seat still returns an independent first-person hash-bound voice", () => {
+  assert.equal(recorded.plan.prompts_inline, false);
+  assert.equal(recorded.plan.master_agents.length, 1);
+  const worker = recorded.plan.master_agents[0];
+  assert.equal(worker.role, selectedMaster);
+  assert.equal(worker.worker_kind, "visible_method_voice");
+  assert.equal(worker.frozen_stance, "out_of_scope");
+  assert.equal(worker.prompt_template, null);
+  assert.ok(worker.prompt_file);
   const declined = recorded.plan.masters_declined.find((seat) => seat.master === selectedMaster);
   assert.ok(declined, "the seat must still appear in the plan as an explicit decline");
   assert.equal(declined.stance, "out_of_scope");
   assert.equal(declined.engine, "v3_method_runtime");
+
+  const opinion = recorded.master.opinion;
+  assert.equal(opinion.stance, "out_of_scope");
+  assert.equal(opinion.voice_status, "completed");
+  assert.equal(opinion.statement_origin, "visible_method_voice_worker");
+  assert.equal(opinion.dedicated_worker.execution_mode, "visible_host_thread");
+  assert.equal(opinion.company_dossier_hash_ack, recorded.completeDossier.content_hash);
+  assert.equal(opinion.company_dossier_hash, recorded.completeDossier.content_hash);
+  for (const [field, value] of Object.entries(opinion.voice)) {
+    assert.match(value, /\bI\b/, `${field} must retain independent first-person method voice`);
+  }
+
+  assert.doesNotMatch(recorded.preBarrierPrompts[selectedMaster], new RegExp(recorded.completeDossier.content_hash));
+  for (const role of [selectedMaster, "bull_researcher", "bear_researcher", "portfolio_manager"]) {
+    assert.notEqual(recorded.postBarrierPrompts[role], recorded.preBarrierPrompts[role], `${role} prompt must refresh at the barrier`);
+    assert.match(recorded.postBarrierPrompts[role], new RegExp(recorded.completeDossier.content_hash), `${role} prompt hash`);
+    assert.match(recorded.postBarrierPrompts[role], /company_dossier_hash_ack/, `${role} prompt ack field`);
+  }
 });
 
 test("round ordering, exact questions, and conflicting replay fail closed", () => {
@@ -437,11 +638,12 @@ test("round ordering, exact questions, and conflicting replay fail closed", () =
   assert.equal(recorded.conflict.error?.data?.reason, "VISIBLE_DEBATE_ROUND_CONFLICT");
 });
 
-// The method barrier itself is covered by gates.test.mjs against a `waiting` seat. It cannot
-// be exercised from this fixture any more: its only seat declines deterministically, so it is
-// settled before the debate opens and there is nothing left for the barrier to hold back.
 test("visible evidence and frozen-stance barriers are enforced server-side", () => {
   assert.equal(recorded.earlyMaster.error?.data?.reason, "VISIBLE_MASTER_EVIDENCE_INCOMPLETE");
+  assert.deepEqual(recorded.earlyMaster.error?.data?.missing_evidence, DEFAULT_TASKS);
+  assert.equal(recorded.earlyDebate.error?.data?.reason, "VISIBLE_DEBATE_PREREQUISITES_INCOMPLETE");
+  assert.deepEqual(recorded.earlyDebate.error?.data?.missing_evidence, DEFAULT_TASKS.slice(1));
+  assert.deepEqual(recorded.earlyDebate.error?.data?.missing_masters, [selectedMaster]);
   assert.equal(recorded.wrongFrozenStance.error?.data?.reason, "VISIBLE_MASTER_FROZEN_STANCE_MISMATCH");
 });
 
@@ -537,7 +739,8 @@ test("the completed run retains visible provenance and all promised artifacts", 
   assert.match(trace, new RegExp(`thread-${completeRunId}-market_data`));
   assert.match(trace, new RegExp(`thread-${completeRunId}-pm`));
   for (const file of [
-    "user_response.md", "artifact_index.md", "report_quality.json", "market_data.md",
+    "user_response.md", "artifact_index.md", "report_quality.json", "company_dossier.json",
+    ...DEFAULT_TASKS.map((task) => `${task}.md`),
     "portfolio_manager.md", "bull_researcher.md", "bear_researcher.md",
   ]) assert.ok(existsSync(join(dir, file)), `visible run did not write ${file}`);
 });
@@ -596,13 +799,14 @@ test("a portfolio manager packet with no report body is rejected at submission, 
   // owed, without taking the idempotency lock.
   const runId = `SELFTEST-PM-ENTRY-${process.pid}`;
   await plan(runId);
-  await recordEvidence(runId);
-  await recordMaster(runId);
+  await recordAllEvidence(runId);
+  structured(await recordMaster(runId));
   await recordFullDebate(runId);
 
   const missingRatingPacket = debatePacket("portfolio_manager", 1, {
     winner: "balanced",
-    report_markdown: completeReport,
+    report_markdown: fullCouncilReport,
+    company_dossier_hash_ack: dossier(runId).content_hash,
   });
   delete missingRatingPacket.rating;
   const missingRating = await server.callTool("record_visible_decision", {
@@ -634,6 +838,7 @@ test("a portfolio manager packet with no report body is rejected at submission, 
       invalidation: ["A contradictory primary filing invalidates the decision."],
       source_ids: ["market_data:S1"],
       confidence: "medium",
+      company_dossier_hash_ack: dossier(runId).content_hash,
     },
   });
   assert.ok(rejected.error, `expected a structured rejection, saw ${JSON.stringify(rejected).slice(0, 300)}`);
@@ -673,8 +878,8 @@ test("visible runtime schemas reject hollow evidence and forged downstream prove
   assert.equal(hollow.error?.data?.schema_id, "runtime-evidence-packet-v1");
   assert.equal(readFileSync(evidencePath, "utf8"), before);
 
-  await recordEvidence(runId);
-  await recordMaster(runId);
+  await recordAllEvidence(runId);
+  structured(await recordMaster(runId));
   const forged = await recordRound(
     runId,
     "bull_researcher",
@@ -692,7 +897,11 @@ test("visible news evidence fails closed before persistence when official covera
   const evidencePath = join(dataDir, "runs", runId, "evidence.json");
   const before = readFileSync(evidencePath, "utf8");
   const rejected = await recordEvidence(runId, "news_industry_management", evidencePacket(
-    "This prose says the official surfaces were checked, but supplies no structured coverage record.",
+    "news_industry_management",
+    {
+      summary: "This prose says the official surfaces were checked, but supplies no structured coverage record.",
+      includeOfficialCoverage: false,
+    },
   ));
   assert.equal(rejected.error?.data?.reason, "OFFICIAL_SOURCE_COVERAGE_INVALID");
   assert.equal(rejected.error?.data?.schema_id, "news-official-source-coverage-v1");

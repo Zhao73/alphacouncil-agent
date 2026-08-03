@@ -95,13 +95,20 @@ test("method references expose every currently known cross-unit policy compariso
   assert.equal(CATALOG.methods.reduce((sum, method) => sum + method.contract_finding_count, 0), 3);
 });
 
-test("the reference generator is deterministic and the Skill passes the official validator", () => {
+test("the reference generator is deterministic and the Skill passes the bundled portable validator", () => {
   execFileSync(process.execPath, [join(SKILL, "scripts", "generate-method-references.mjs"), "--check"], { cwd: ROOT });
-  const result = spawnSync("python3", [
-    "/Users/zhaojiapeng/.codex/skills/.system/skill-creator/scripts/quick_validate.py",
-    SKILL,
-  ], { cwd: ROOT, encoding: "utf8" });
+  const validator = join(ROOT, "scripts", "quick-validate-skill.mjs");
+  const result = spawnSync(process.execPath, [validator, SKILL], { cwd: ROOT, encoding: "utf8" });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+});
+
+test("the bundled Skill validator rejects invalid portable frontmatter", () => {
+  const validator = join(ROOT, "scripts", "quick-validate-skill.mjs");
+  const directory = mkdtempSync(join(tmpdir(), "alphacouncil-invalid-skill-"));
+  writeFileSync(join(directory, "SKILL.md"), "---\nname: Invalid Name\ndescription: invalid\n---\n");
+  const result = spawnSync(process.execPath, [validator, directory], { cwd: ROOT, encoding: "utf8" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout, /hyphen-case/u);
 });
 
 test("full-evidence validator accepts bound facts and rejects the retired method", () => {
@@ -197,5 +204,6 @@ test("the npm package contains the router, contracts, catalog and all method ref
   assert.ok(packed.includes("skills/alphacouncil-method-lenses/references/catalog.v1.json"));
   assert.ok(packed.includes("skills/alphacouncil-method-lenses/references/first-person-voice-contract-v1.md"));
   assert.ok(packed.includes("skills/alphacouncil-method-lenses/scripts/validate-method-output.mjs"));
+  assert.ok(packed.includes("scripts/quick-validate-skill.mjs"));
   assert.equal(packed.filter((path) => path.startsWith("skills/alphacouncil-method-lenses/references/methods/") && path.endsWith(".md")).length, 26);
 });

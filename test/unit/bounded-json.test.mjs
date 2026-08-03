@@ -181,6 +181,29 @@ test("parse-repair arbitration accepts only one distinct schema-valid complete r
   );
 });
 
+test("evidence transport normalizes only nullable optional coverage fields", () => {
+  const packet = evidence();
+  packet.coverage_items = [{
+    id: "market.quote_snapshot",
+    status: "covered",
+    source_ids: ["S1"],
+    note: null,
+    attempted: null,
+    attempted_urls: null,
+    gap: null,
+  }];
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.deepEqual(parsed.coverage_items[0], {
+    id: "market.quote_snapshot",
+    status: "covered",
+    source_ids: ["S1"],
+    note: "",
+    attempted: "",
+    attempted_urls: [],
+    gap: "",
+  });
+});
+
 test("candidate enumeration preserves complete roots but never chooses one", () => {
   assert.deepEqual(
     parseJsonTransportCandidates('{"a":1}\ntransport note\n{"b":2,}'),

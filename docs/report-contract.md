@@ -17,6 +17,8 @@ writes the mode-appropriate versions of:
 - `bull_researcher.md`, `bear_researcher.md`, `portfolio_manager.md` when those stages ran.
 - `report_quality.json` - machine-readable report-structure result and contract metadata.
 - `status.json`, `events.jsonl`, `evidence.json`, and `source_manifest.json`.
+- `company_dossier.json` for an applicable full operating-company run, containing the frozen
+  `operating_company_dossier_v1` evidence snapshot, its coverage ledger and content hash.
 - `<task>.failure.json` for a worker failure, kept separate from investment evidence.
 
 `artifact_index.md` lists `publication_manifest.json` only when report quality has passed and
@@ -42,6 +44,156 @@ it so the host may retry. `report_quality.json` records requested/observed local
 Han-only fragments explicitly inconclusive, and cannot pass a Japanese or Korean run whose
 report body is English. Unsupported explicit selector locales are rejected instead of being
 silently mislabeled as localized English.
+
+## operating_company_dossier_v1 Contract
+
+`operating_company_dossier_v1` is the shared, point-in-time public-evidence snapshot for a
+full operating-company council. It is required for both US and non-US operating companies in
+non-dry `full_v2`; it is not a quick-council artifact. It does not apply to ETFs, mutual funds
+or cash indices. Those instruments continue to use `fund_lookthrough` or `index_aggregate`
+and their own dated holdings, constituents, methodology and aggregate-coverage rules. A fund
+or index must never receive an `operating_company_dossier_v1` label merely because it has a
+ticker, SEC registrant or generated evidence file.
+
+The dossier is not a claim that AlphaCouncil read the whole public internet. Public web search
+has no finite, provable endpoint. The contract instead defines a finite decision-relevant
+coverage roster. Every roster item must be accounted for exactly once with source lineage or
+an explicit gap. Search results are locators, not evidence by themselves; a material claim
+still needs a source ID that resolves inside `source_manifest.json`. Every source and fact
+retains its publication/public/retrieval time, period, unit, currency and point-in-time
+boundary where applicable. Post-`as_of` information, model memory and an uncited remembered
+number are excluded.
+
+Non-US names use the same coverage contract with the issuer's local regulator, exchange and
+IR documents. A configured structured regulator adapter may improve extraction, but a
+customer API key or extra package is not part of this contract. If the structured route is
+not configured, the worker must attempt the public primary-document route and record the
+remaining limitation; it may not substitute a US peer or model memory.
+
+### Fixed 52-item coverage roster
+
+The roster is owned by the eight mandatory full evidence roles. Optional analysts may add
+evidence, but they do not replace or waive any item below.
+
+- `market_data` (6): `market.identity_listing_currency`, `market.quote_snapshot`,
+  `market.price_history_range`, `market.liquidity_volume`, `market.technical_levels`,
+  `market.relative_performance`.
+- `earnings_deep_dive` (10): `financials.business_model`,
+  `financials.latest_reported_period`, `financials.historical_statements`,
+  `financials.balance_sheet_liquidity`, `financials.cash_flow_capex`,
+  `financials.segments_geography`, `financials.margins_returns_quality`,
+  `financials.customer_supplier_concentration`, `financials.guidance`,
+  `financials.earnings_call_qna`.
+- `forward_expectations` (5): `expectations.consensus_revenue_eps`,
+  `expectations.estimate_dispersion_revisions`,
+  `expectations.implied_beat_miss_thresholds`, `expectations.ratings_target_changes`,
+  `expectations.next_reporting_date`.
+- `quant_factor` (6): `quant.momentum_trend_volatility`,
+  `quant.relative_strength_factors`, `quant.liquidity_volume_regime`,
+  `quant.short_interest_borrow`, `quant.options_iv_skew_expected_move`,
+  `quant.peer_cross_section`.
+- `valuation_long_short` (6): `valuation.trading_multiples`,
+  `valuation.peer_comparables`, `valuation.dcf_reverse_dcf`,
+  `valuation.bear_base_bull`, `valuation.catalysts_invalidation`,
+  `valuation.long_short_asymmetry`.
+- `news_industry_management` (8): `news.regulator_timeline`,
+  `news.issuer_ir_newsroom`, `news.recent_company_developments`,
+  `news.industry_competition`, `news.customers_suppliers_partners`,
+  `news.management_board_changes`, `news.regulation_litigation`,
+  `news.disconfirming_search`.
+- `insider_sec` (6): `ownership.insider_transactions`, `ownership.ownership_control`,
+  `ownership.buybacks_dilution`, `ownership.debt_liquidity_capital_allocation`,
+  `ownership.governance_related_parties`, `ownership.accounting_controls_restatements`.
+- `ib_event_analysis` (5): `events.mna_strategic_transactions`,
+  `events.capital_markets_financing`, `events.restructuring_spinoff`,
+  `events.material_contracts_commitments`, `events.event_calendar`.
+
+The authoritative roster is fixed independently of a caller-supplied task subset. A full
+operating-company run cannot become coverage-complete by planning fewer than all eight
+mandatory roles.
+
+### Coverage-item semantics
+
+Each role returns one `coverage_items` row for every ID it owns. An ID is missing if it is
+absent, duplicated, renamed or replaced by an unexpected ID.
+
+- `covered`: at least one `source_ids` entry is present and every ID resolves to that packet's
+  evidence-domain source. The resolved source must belong to the same task namespace, must not
+  be a PersonaPack/proxy source and must use an HTTP(S) URL. A static document needs a parseable
+  `published_at` no later than the run's `as_of`. A directly fetched dynamic quote, history table
+  or live aggregate/index page that genuinely has no publication date keeps
+  `published_at: unknown`, declares `source_kind: dynamic_snapshot`, and records its actual ISO
+  retrieval observation in `observed_at`, also no later than `as_of`. `retrieved_at` alone does
+  not silently waive this check, and an ordinary undated article cannot use the dynamic label.
+  Every `news.*` item and every `events.*` item except `events.event_calendar` still needs at
+  least one genuinely dated source. `covered` means the named domain has usable public evidence;
+  it does not mean every possible fact in that domain was published or found.
+- `unavailable`: the worker actually attempted a named public route and still could not obtain
+  usable evidence. It must record the concrete `attempted` route, at least one valid HTTP(S)
+  locator actually tried in `attempted_urls`, and a non-empty `gap`; the exact same gap must
+  appear in `open_questions`. Not researched, omitted for time, a missing optional adapter key,
+  or a search snippet without the underlying document is not silently `covered`.
+- `not_applicable`: the instrument or fact genuinely has no such field and the row carries a
+  concrete reason consistent with the classified operating-company route. It cannot be used
+  to avoid an applicable check. A field that should exist but could not be fetched is
+  `unavailable`, not `not_applicable`.
+
+Coverage accounting and evidence sufficiency are separate axes. Coverage is `complete` when
+all 52 IDs appear exactly once and every row satisfies the structural/source/gap rules. A
+coverage-complete dossier may still contain many `unavailable` rows, contradictory evidence,
+stale observations or method-critical fact gaps. Those conditions lower the separately
+reported evidence sufficiency and may make individual methods `out_of_scope` or the whole run
+`incomplete`. Conversely, one rich packet never excuses a missing coverage row. Status,
+evidence coverage, dossier coverage, evidence sufficiency, verification and report quality
+must remain independently visible; `report_quality=passed` cannot upgrade any other axis.
+An `unavailable` or `not_applicable` row on the fixed critical subset is a decision barrier,
+even when all 52 rows are structurally accounted for.
+
+### Frozen snapshot, distribution and acknowledgements
+
+The system freezes the applicable dossier as `company_dossier.json` and computes one canonical
+SHA-256 `content_hash`. The eight mandatory evidence analysts collectively populate the
+artifact; all eight normalized packets and all 52 coverage rows are frozen inside it. Every
+mandatory downstream consumer for that dossier revision receives the exact same hash-bound
+artifact, not independently summarized copies:
+
+- for a confirmed `all` selection, all 26 active method seats; for another valid selection,
+  every selected method seat;
+- Bull and Bear in every required debate round; and
+- the portfolio manager.
+
+Compact evidence embedded in a prompt is only an index. Information omitted from that index
+remains available through the full hash-bound dossier artifact. Before accepting a mandatory
+consumer's output, the runtime revalidates the persisted dossier against the expected hash and
+requires that output (or the deterministic method execution record) to carry the exact
+`company_dossier_hash_ack`. A missing hash, a mismatched hash, a changed dossier artifact, an
+unresolved source ID, an invalid coverage row or a mandatory consumer that never acknowledged
+the frozen revision fails closed. The run names the affected role, persists diagnostics and
+does not proceed past the relevant evidence, method, debate or PM barrier. A changed accepted
+source creates a new dossier revision and invalidates acknowledgements to the old hash; it is
+never silently appended behind a previously frozen decision.
+
+The acknowledgement proves which snapshot was delivered and bound to the output. It does not,
+by itself, prove that a model reasoned over every byte. Material figures and conclusions still
+need scoped source IDs, and the report must preserve the dossier's explicit gaps and conflicts.
+
+### Deterministic-method input boundary
+
+The dossier and a deterministic method's executable fact pack are related but are not the same
+thing. Physical PersonaPack v3 policies consume only point-in-time, source-bound facts that can
+be represented under the compatible typed-fact contracts, with valid units, periods and
+lineage. They do not parse arbitrary dossier prose, raw documents or an analyst's qualitative
+claim. Binding the dossier hash into a method execution record proves snapshot identity; it
+does not prove that every dossier field affected the frozen stance.
+
+The isolated method explanation worker may read the full dossier after the deterministic
+stance is frozen, but it may only explain or challenge the evidence and may not change that
+stance or invent a typed fact. A dossier fact that has no valid typed-fact adapter remains
+visible to the explanation, Bull/Bear and PM, while the deterministic method records it as an
+unavailable input or returns `out_of_scope` when its own critical contract requires it. A real
+`full-evidence-input-v1` claim requires the separate case wrapper, typed fact pack, source,
+claim and coverage ledgers, artifact references and complete hash bindings; the company
+dossier alone must not be relabeled as that stronger contract.
 
 ## full_v2 Contract
 

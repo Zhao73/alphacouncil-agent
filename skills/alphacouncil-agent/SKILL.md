@@ -198,6 +198,39 @@ Use this contract when full runs through headless `analyze_symbol`:
   explanation/status; all eight analyst task IDs, statuses and summaries; and a system-owned
   price snapshot with currency/time/source or an explicit unavailable-data gap.
 
+#### Operating-company dossier barrier
+
+For a non-dry operating-company `full_v2` decision run, the eight evidence packets jointly
+populate `operating_company_dossier_v1`. This is a finite, auditable decision-relevant
+coverage contract, not a claim to have read the whole internet.
+
+- Every one of the fixed 52 coverage IDs in `docs/report-contract.md` must appear exactly once.
+  `covered` needs a same-task packet-local evidence source with an HTTP(S) URL. Static sources
+  need a parseable publication time no later than `as_of`; a directly fetched dynamic page with
+  no publication date must keep `published_at: unknown`, declare
+  `source_kind: dynamic_snapshot`, and add its actual `observed_at`, also no later than `as_of`.
+  An ordinary undated article cannot use this label, and news/event coverage (except the event
+  calendar) still needs dated evidence. PersonaPack/proxy and cross-task source IDs cannot satisfy it.
+  `unavailable` needs a named attempt, at least one actually attempted HTTP(S) locator in
+  `attempted_urls`, and the identical gap in `open_questions`; `not_applicable` needs a concrete
+  reason. Missing, duplicate, renamed, unexpected or unresolved rows stop the evidence barrier.
+- Coverage completeness and evidence sufficiency are different. A structurally complete
+  dossier with a non-critical unavailable field is `limited` and keeps the gap visible. An
+  unavailable or not-applicable decision-critical field makes sufficiency `insufficient`,
+  prevents methods, debate and PM from starting, and cannot be repaired into a rating by prose.
+- At the evidence barrier, freeze `company_dossier.json` and its canonical SHA-256 hash. Every
+  selected method voice (including `out_of_scope`), every Bull/Bear round and the PM must read
+  that same full artifact by path and return the exact `company_dossier_hash_ack`. Before
+  acceptance, the runtime re-hashes the on-disk artifact. Missing/mismatched acknowledgement,
+  artifact mutation or a conflicting evidence replay fails closed.
+- The compact evidence embedded in a prompt is only an index. Never reason from it as if it
+  were the full packet. The dossier hash is bound into every physical v3 evidence snapshot,
+  while its deterministic stance still consumes only compatible point-in-time typed facts;
+  do not claim arbitrary dossier prose changed the frozen policy result.
+- `collect_evidence` remains the task-selective evidence-only diagnostic and reports
+  `evidence_only_v1`. Public `analyze_symbol` is always decision-producing and rejects
+  `synthesis=false`; an evidence-only result must never be described as a completed full council.
+
 `plan_visible_run` is not governed by this clock: the external host schedules and owns those
 subagents, so the plugin cannot force-stop them. Do not promise the 30-minute headless bound
 for visible-host execution.
@@ -442,9 +475,16 @@ Evidence agents return:
   "metrics": {},
   "sources": [{"id": "S1", "title": "string", "url": "string", "published_at": "YYYY-MM-DD or unknown", "retrieved_at": "YYYY-MM-DD"}],
   "open_questions": ["string"],
+  "coverage_items": [{"id": "role-owned.coverage_id", "status": "covered|unavailable|not_applicable", "source_ids": ["S1"], "note": "string", "attempted": "string", "attempted_urls": ["https://actual-route.example"], "gap": "string"}],
   "confidence": "high|medium|low"
 }
 ```
+
+`coverage_items` is mandatory only when the prompt includes the
+`operating_company_dossier_v1` coverage block. Return exactly the IDs listed there; do not copy
+the example ID. For `covered`, `attempted*` and `gap` may be omitted. For `unavailable`,
+`source_ids` may be empty but `attempted`, `attempted_urls`, `gap` and the identical
+`open_questions` entry are mandatory.
 
 Debate agents return:
 

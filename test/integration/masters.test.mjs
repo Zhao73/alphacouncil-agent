@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
+import { expectedCoverageItems } from "../../mcp/lib/company-dossier.mjs";
 import { RpcCode } from "../../mcp/lib/errors.mjs";
 
 let dataDir;
@@ -18,8 +20,117 @@ let productionRunDir;
 let productionPlan;
 let productionSelectionReceipt;
 const productionRunId = `MASTERS-PRODUCTION-${process.pid}`;
+let companyDossierHash;
 
 const selectedMasters = ["master_buffett", "master_munger", "master_duan_yongping", "master_li_lu"];
+const companyGrounding = {
+  facts_unavailable: true,
+  instrument: {
+    symbol: "ACME",
+    name: "Acme master-lifecycle fixture corporation",
+    asset_type: "equity",
+    research_model: "operating_company",
+    exchange: "NASDAQ",
+    currency: "USD",
+    classification_source: "masters_fixture",
+  },
+};
+
+function evidencePacket(task) {
+  const packet = {
+    summary: `The ${task} fixture records sufficient English fund evidence for the visible method-stage barrier.`,
+    claims: [{
+      claim: `The ${task} fixture records one bounded fund observation for the visible method-stage barrier.`,
+      claim_type: "event_or_observation",
+      evidence: "The dated fixture source directly supports this bounded fund observation.",
+      confidence: "medium",
+      source_ids: ["S1"],
+    }],
+    metrics: {},
+    sources: [{
+      id: "S1",
+      title: `${task} visible fund fixture source`,
+      url: `https://example.com/masters-${task}`,
+      published_at: "2026-08-01",
+      retrieved_at: "2026-08-03",
+    }],
+    open_questions: [],
+    coverage_items: expectedCoverageItems(task).map((id) => ({
+      id,
+      status: "covered",
+      source_ids: ["S1"],
+      note: "The dated fixture source covers this operating-company dossier item for lifecycle testing.",
+    })),
+    confidence: "medium",
+    information_richness: "B",
+  };
+  if (task === "news_industry_management") {
+    const regulatorItem = {
+      title: "Fund regulator fixture filing",
+      published_at: "2026-08-01",
+      url: "https://regulator.example/fund-filing",
+      source_id: "S1",
+    };
+    const issuerItem = {
+      title: "Fund sponsor fixture release",
+      published_at: "2026-08-01",
+      url: "https://issuer.example/fund-news",
+      source_id: "S2",
+    };
+    packet.sources = [
+      { ...regulatorItem, id: "S1", retrieved_at: "2026-08-03" },
+      { ...issuerItem, id: "S2", retrieved_at: "2026-08-03" },
+    ];
+    packet.official_source_coverage = {
+      status: "complete",
+      regulator: {
+        status: "complete",
+        entry_url: "https://regulator.example/fund-filings",
+        checked_through: "2026-08-03",
+        latest_dated_item: regulatorItem,
+        dated_items_checked: [regulatorItem],
+        gap: null,
+      },
+      issuer: {
+        status: "complete",
+        entry_url: "https://issuer.example/fund-newsroom",
+        checked_through: "2026-08-03",
+        latest_dated_item: issuerItem,
+        dated_items_checked: [issuerItem],
+        gap: null,
+      },
+    };
+  }
+  return packet;
+}
+
+function methodVoicePacket(master, stance) {
+  return {
+    master,
+    acknowledged_stance: stance,
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: ({
+      constructive: "would_buy",
+      cautious: "would_hold",
+      opposed: "would_pass",
+      out_of_scope: "not_in_my_circle",
+    })[stance],
+    voice: {
+      would_i_act: "I would not take a directional position because this company dossier does not open my typed method gate.",
+      what_i_see: "I see the complete hash-bound operating-company dossier and its explicit 52-item coverage ledger.",
+      how_my_method_reads_it: "I apply my declared method only to the frozen record and keep the out-of-scope stance unchanged.",
+      where_i_disagree: "I disagree with turning dossier coverage into a typed fact that the deterministic policy never received.",
+      what_changes_my_mind: "I would reassess after dated company evidence supplies the method-critical typed inputs.",
+    },
+    key_findings: ["All eight evidence seats contributed to the frozen operating-company dossier."],
+    disagreements: ["A deterministic decline is not a directional vote."],
+    what_would_change_my_mind: ["A source-bound typed company fact could reopen the method gate."],
+    source_ids: ["market_data:S1"],
+    confidence: "low",
+    company_dossier_hash_ack: companyDossierHash,
+  };
+}
 
 before(async () => {
   dataDir = makeDataDir();
@@ -27,14 +138,15 @@ before(async () => {
   server = startServer({ dataDir });
   await server.request("initialize", {});
   const selection = await confirmMasterSelection(server, {
-    symbol: "0700.HK",
+    symbol: "ACME",
     selected_master_ids: selectedMasters,
   });
   selectionReceipt = selection.selection_receipt;
   plan = structured(await server.callTool("plan_visible_run", {
-    symbol: "0700.HK",
+    symbol: "ACME",
     run_id: runId,
-    tasks: ["market_data"],
+    tasks: DEFAULT_TASKS,
+    grounding: companyGrounding,
     selection_receipt: selectionReceipt,
   }));
 
@@ -46,41 +158,27 @@ before(async () => {
   });
   await productionServer.request("initialize", {});
   const productionSelection = await confirmMasterSelection(productionServer, {
-    symbol: "0700.HK",
+    symbol: "ACME",
     selected_master_ids: selectedMasters,
   });
   productionSelectionReceipt = productionSelection.selection_receipt;
   productionPlan = structured(await productionServer.callTool("plan_visible_run", {
-    symbol: "0700.HK",
+    symbol: "ACME",
     run_id: productionRunId,
-    tasks: ["market_data"],
+    tasks: DEFAULT_TASKS,
+    grounding: companyGrounding,
     selection_receipt: productionSelectionReceipt,
   }));
   for (const [targetServer, targetRunId] of [[server, runId], [productionServer, productionRunId]]) {
-    structured(await targetServer.callTool("record_visible_packet", {
-      run_id: targetRunId,
-      task: "market_data",
-      packet: {
-        summary: "The market-data fixture records sufficient English evidence for the visible method-stage barrier.",
-        claims: [{
-          claim: "The fixture records one bounded market-data fact for the visible method-stage barrier.",
-          evidence: "The dated fixture source directly supports this bounded market-data fact.",
-          confidence: "medium",
-          source_ids: ["S1"],
-        }],
-        metrics: {},
-        sources: [{
-          id: "S1",
-          title: "Visible master-stage fixture source",
-          url: "https://example.com/masters-market-data",
-          published_at: "2026-08-01",
-          retrieved_at: "2026-08-03",
-        }],
-        open_questions: [],
-        confidence: "medium",
-      },
-    }));
+    for (const task of DEFAULT_TASKS) {
+      structured(await targetServer.callTool("record_visible_packet", {
+        run_id: targetRunId,
+        task,
+        packet: evidencePacket(task),
+      }));
+    }
   }
+  companyDossierHash = JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8")).content_hash;
 });
 
 after(async () => {
@@ -90,58 +188,66 @@ after(async () => {
   removeDataDir(productionDataDir);
 });
 
-// 0700.HK is a Hong Kong listing, so the SEC screen computes nothing. Methods that need a
-// long-run financial series genuinely cannot evaluate it, and spawning an agent to write an
-// essay about numbers that do not exist is the waste this release removes. Every selected
-// seat is still accounted for by its deterministic decline record; only a seat that actually
-// reached a decision is worth a sequential model turn to explain.
-test("a decline is recorded, accounts for itself, and costs no explanation worker", () => {
-  const spawned = plan.master_agents.map((a) => a.role);
+// This fixture exercises the company method-seat lifecycle, so it satisfies the real full
+// evidence barrier: all eight roles and all 52 dossier coverage items are recorded first.
+test("every declined v3 seat launches an independent first-person voice worker and waits", () => {
+  const dossier = JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8"));
+  assert.equal(dossier.coverage.expected_count, 52);
+  assert.equal(dossier.coverage.covered_count, 52);
+  assert.equal(dossier.content_hash, companyDossierHash);
+  const spawned = plan.master_agents.map((agent) => agent.role);
   const declined = plan.masters_declined.map((d) => d.master);
-  // Not every selected seat declines any more, and that is the point: a seat holding SOME of
-  // its required facts runs its own policy, where its authored vetoes decide. What must hold is
-  // that a seat which declined has nothing to run, says what it lacked, and is never handed to
-  // a model to write an essay about numbers that do not exist.
-  assert.ok(declined.length > 0, "a HK filer with no computable screen must decline somewhere");
-  assert.ok(declined.every((master) => selectedMasters.includes(master)), "a decline names a selected seat");
+  assert.deepEqual(declined, selectedMasters, "the evidence-light fund fixture must decline every selected company lens");
+  assert.deepEqual(spawned, selectedMasters, "every selected v3 seat must receive exactly one worker");
+  assert.equal(new Set(spawned).size, selectedMasters.length);
   for (const d of plan.masters_declined) {
     assert.equal(d.stance, "out_of_scope");
     assert.ok(d.unmet.length > 0, `${d.master} must say which requirement was unmet`);
-    assert.equal(
-      spawned.includes(d.master),
-      false,
-      `${d.master} abstained and has no stance to explain, so it must spawn nothing`,
-    );
+    const agent = plan.master_agents.find((candidate) => candidate.role === d.master);
+    assert.equal(agent.engine, "v3_method_runtime");
+    assert.equal(agent.worker_kind, "visible_method_voice");
+    assert.equal(agent.frozen_stance, "out_of_scope");
+    assert.match(agent.output_contract, /five first-person voice fields/);
+    assert.equal(plan.run.master_status[d.master].status, "waiting");
+    assert.equal(plan.run.master_status[d.master].voice_required, true);
   }
 });
 
-test("a declined v3 seat completes on its deterministic record", () => {
-  const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
-  for (const { master } of plan.masters_declined) {
-    assert.equal(
-      plan.master_agents.find((candidate) => candidate.role === master),
-      undefined,
-      `${master} declined, so no worker may be scheduled for it`,
-    );
-    const opinion = (run.master_opinions || []).find((o) => o.master === master);
-    assert.ok(opinion, `${master} must still be recorded or the completeness gate can never pass`);
-    assert.equal(opinion.stance, "out_of_scope");
-    assert.equal(opinion.engine, "v3_method_runtime");
-    // The reader-facing guarantee is unchanged: every seat still carries a readable statement.
-    assert.ok(opinion.voice_statement.length > 20);
-    assert.equal(run.master_status[master].status, "completed");
-    assert.equal(run.master_status[master].voice_required, false);
+test("each declined v3 seat completes only after its own first-person voice returns", async () => {
+  for (const [index, master] of selectedMasters.entries()) {
+    const beforeRecord = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+    const frozen = beforeRecord.master_opinions.find((opinion) => opinion.master === master);
+    assert.ok(frozen, `${master} must have a frozen deterministic record before voice generation`);
+    const threadId = `thread-${master}`;
+    const recorded = structured(await server.callTool("record_master_opinion", {
+      run_id: runId,
+      master,
+      thread_id: threadId,
+      packet: methodVoicePacket(master, frozen.stance),
+    }));
+    assert.equal(recorded.opinion.stance, "out_of_scope");
+    assert.equal(recorded.opinion.voice_status, "completed");
+    assert.equal(recorded.opinion.statement_origin, "visible_method_voice_worker");
+    assert.equal(recorded.opinion.company_dossier_hash_ack, companyDossierHash);
+    assert.equal(recorded.opinion.dedicated_worker.thread_id, threadId);
+    const persisted = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+    assert.equal(persisted.master_status[master].status, "completed");
+    assert.equal(persisted.master_status[master].voice_required, true);
+    for (const pending of selectedMasters.slice(index + 1)) {
+      assert.equal(persisted.master_status[pending].status, "waiting", `${pending} must wait for its own worker`);
+    }
   }
+
+  const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+  assert.ok(selectedMasters.every((master) => run.master_status[master].status === "completed"));
+  assert.equal(new Set(run.master_opinions.map((opinion) => opinion.dedicated_worker?.thread_id)).size, selectedMasters.length);
 });
 
 test("solo-test v3 seats never fall back to legacy judgment agents", () => {
   assert.ok(plan.master_agents.every((agent) => agent.engine === "v3_method_runtime"));
   assert.ok(plan.master_agents.every((agent) => agent.worker_kind === "visible_method_voice"));
-  // Every seat is accounted for -- as a decline or as a worker -- and none of them by a legacy
-  // engine. The split between the two moves with the data and is not what this test pins.
-  // Four buckets, and a seat lands in exactly one: it declined, it completed, it is being
-  // explained, or its policy could not execute. The split moves with the data; what this pins
-  // is that nothing falls out of all four.
+  // Every seat is accounted for in both the frozen decision ledger and the independent voice
+  // roster, and none of them falls back to a legacy judgment engine.
   const accounted = new Set([
     ...plan.masters_declined.map((seat) => seat.master),
     ...(plan.masters_completed || []).map((seat) => seat.master),
@@ -162,11 +268,12 @@ test("the explicit production profile retains the legacy v1 prompt and v2 determ
 
 test("a production-profile legacy master prompt carries evidence, walk-away conditions and out_of_scope", () => {
   const munger = productionPlan.master_agents.find((a) => a.role === "master_munger");
-  assert.match(munger.prompt_template, /Evidence JSON:/);
-  assert.match(munger.prompt_template, /Walk-away conditions you must check/);
-  assert.match(munger.prompt_template, /out_of_scope/);
+  const prompt = munger.prompt_template || readFileSync(munger.prompt_file, "utf8");
+  assert.match(prompt, /Evidence JSON:/);
+  assert.match(prompt, /Walk-away conditions you must check/);
+  assert.match(prompt, /out_of_scope/);
   // A master judges; it must not be told to go and search.
-  assert.doesNotMatch(munger.prompt_template, /WebSearch|live web search/);
+  assert.doesNotMatch(prompt, /WebSearch|live web search/);
 });
 
 test("masters never appear among the evidence or debate agents", () => {
@@ -259,23 +366,22 @@ test("legacy narrative writes cannot replace a frozen v3 opinion", async () => {
   assert.equal(legacyWrite.error?.code, RpcCode.INVALID_PARAMS);
   assert.equal(legacyWrite.error?.data?.reason, "VISIBLE_MASTER_FROZEN_STANCE_MISMATCH");
   const replan = structured(await server.callTool("plan_visible_run", {
-    symbol: "0700.HK",
+    symbol: "ACME",
     run_id: runId,
-    tasks: ["market_data"],
+    tasks: DEFAULT_TASKS,
+    grounding: companyGrounding,
     selection_receipt: selectionReceipt,
   }));
   // An idempotent re-plan returns the existing envelope; it must not erase opinions.
   const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
   assert.ok(Array.isArray(run.master_opinions));
-  assert.deepEqual(replan.master_agents, [], "every seat on this fixture declined, so none is worth a turn");
+  assert.deepEqual(replan.master_agents, [], "an idempotent replay must not launch a second voice worker");
   assert.equal(replan.masters_declined.length, 4);
   assert.ok(run.master_opinions.some((opinion) => opinion.master === "master_li_lu"));
 });
 
-// The completeness gate is satisfied by the deterministic record itself. An all-declined
-// roster therefore reaches the debate with zero method-seat model turns spent, instead of one
-// per seat spent explaining that there was nothing to decide.
-test("a roster where nothing was computable is still complete and accounted for", async () => {
+// A deterministic decline remains pending until its selected seat's independent voice returns.
+test("an all-declined roster is complete only after every selected voice returns", async () => {
   const status = JSON.parse(readFileSync(join(runDir, "status.json"), "utf8"));
   assert.equal(status.missing_evidence_count, 0);
   assert.equal(status.missing_debate_count, 3);

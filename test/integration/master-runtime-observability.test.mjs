@@ -4,6 +4,7 @@ import { once } from "node:events";
 import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
@@ -16,7 +17,7 @@ const args = process.argv.slice(2);
 const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
-const task = /Task:\\s*(market_data)/u.exec(prompt)?.[1] || null;
+const task = (${JSON.stringify(DEFAULT_TASKS)}).find((id) => prompt.includes("Task:" + id) || prompt.includes("Task: " + id)) || null;
 const originalMaster = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
 const repairMaster = /Master ID:\\s*(master_[a-z0-9_]+)/u.exec(prompt)?.[1] || null;
 const master = originalMaster || repairMaster;
@@ -27,10 +28,25 @@ let packet;
 if (task) {
   packet = {
     summary: "The bounded market fixture supplies one dated source for runtime observability.",
-    claims: [{ claim: "The runtime fixture has one bounded fact.", evidence: "The local dated fixture is the complete test evidence.", confidence: "low", source_ids: ["S1"] }],
+    claims: [{ claim: "The runtime fixture has one bounded fact.", claim_type: "event_or_observation", evidence: "The local dated fixture is the complete test evidence.", confidence: "low", source_ids: ["S1"] }],
     metrics: {},
     sources: [{ id: "S1", title: "Runtime observability fixture", url: "https://example.com/runtime-observability", published_at: "2026-08-01", retrieved_at: "2026-08-03" }],
-    open_questions: [], confidence: "low", information_richness: "C"
+    open_questions: [], confidence: "low", information_richness: "C",
+    ...(task === "news_industry_management" ? {
+      official_source_coverage: {
+        status: "complete",
+        regulator: {
+          status: "complete", entry_url: "https://example.com/regulator", checked_through: "2026-08-03",
+          latest_dated_item: { title: "Runtime observability fixture", published_at: "2026-08-01", url: "https://example.com/runtime-observability", source_id: "S1" },
+          dated_items_checked: [{ title: "Runtime observability fixture", published_at: "2026-08-01", url: "https://example.com/runtime-observability", source_id: "S1" }], gap: null
+        },
+        issuer: {
+          status: "complete", entry_url: "https://example.com/issuer", checked_through: "2026-08-03",
+          latest_dated_item: { title: "Runtime observability fixture", published_at: "2026-08-01", url: "https://example.com/runtime-observability", source_id: "S1" },
+          dated_items_checked: [{ title: "Runtime observability fixture", published_at: "2026-08-01", url: "https://example.com/runtime-observability", source_id: "S1" }], gap: null
+        }
+      }
+    } : {})
   };
 } else if (master) {
   await sleep((${JSON.stringify(delays)})[master] || 20);
@@ -88,8 +104,11 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
     const runId = `MASTER-PROVENANCE-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "QQQ", run_id: runId, as_of: "2026-08-03",
-      tasks: ["market_data"], synthesis: false, wait_for_completion: true,
-      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      tasks: ["market_data"], wait_for_completion: true,
+      grounding: {
+        instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
+        facts_unavailable: true, unavailable: ["fixture"],
+      },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 5_000, total_timeout_ms: 15_000,
     }, { timeoutMs: 20_000 }));
@@ -146,8 +165,11 @@ test("each terminal master is canonical before the barrier and survives interrup
     const runId = `MASTER-SETTLEMENT-${process.pid}`;
     const accepted = structured(await server.callTool("analyze_symbol", {
       symbol: "QQQ", run_id: runId, as_of: "2026-08-03",
-      tasks: ["market_data"], synthesis: false, wait_for_completion: false,
-      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      tasks: ["market_data"], wait_for_completion: false,
+      grounding: {
+        instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
+        facts_unavailable: true, unavailable: ["fixture"],
+      },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 20_000, total_timeout_ms: 30_000,
     }));

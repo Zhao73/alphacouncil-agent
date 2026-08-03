@@ -24,6 +24,7 @@ import { packetSummary } from "./markdown.mjs";
 import { parseJsonTransport, parseJsonTransportCandidates } from "./bounded-json.mjs";
 import { assertRuntimeWorkerPayload } from "./runtime-validation.mjs";
 import { canonicalJson } from "./personas-v3/canonical.mjs";
+import { assertCompanyDossierAck, normalizeCompanyCoverageItems, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -36,8 +37,31 @@ export function extractJson(text) {
   return parseJsonTransport(text).value;
 }
 
+function normalizeNullableCoverageTransport(kind, payload) {
+  if (!["evidence", "news_evidence"].includes(kind)
+    || !payload || typeof payload !== "object" || Array.isArray(payload)
+    || !Array.isArray(payload.coverage_items)) return payload;
+  return {
+    ...payload,
+    coverage_items: payload.coverage_items.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      const normalized = { ...item };
+      // These fields are optional for `covered`, and models commonly serialize an unused
+      // value as null. Turning only null/undefined into the schema's empty value is a lossless
+      // transport normalization; it never fills a required unavailable-data gap or source.
+      for (const field of ["note", "attempted", "gap"]) {
+        if (normalized[field] == null) normalized[field] = "";
+      }
+      for (const field of ["source_ids", "attempted_urls"]) {
+        if (normalized[field] == null) normalized[field] = [];
+      }
+      return normalized;
+    }),
+  };
+}
+
 export function extractWorkerJson(text, kind) {
-  return assertRuntimeWorkerPayload(kind, extractJson(text));
+  return assertRuntimeWorkerPayload(kind, normalizeNullableCoverageTransport(kind, extractJson(text)));
 }
 
 /**
@@ -591,10 +615,10 @@ function boundedPacketSourceIds(packet, claimLimit, sourceLimit) {
 /** Evidence IDs actually exposed to a dedicated method voice, plus frozen fact lineage. */
 export function methodVoiceAllowedSourceIds(run, frozenOpinion) {
   const quick = run?.council_mode === "quick";
-  const packetIds = (run?.packets || []).flatMap((packet) => boundedPacketSourceIds(
-    packet,
-    quick ? 4 : 8,
-    quick ? 6 : 12,
+  const packetIds = (run?.packets || []).flatMap((packet) => (
+    quick
+      ? boundedPacketSourceIds(packet, 4, 6)
+      : (packet?.sources || []).map((source) => source?.id).filter(Boolean)
   ));
   const frozenEvidenceIds = frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [];
   const allowed = sourceIdList([...packetIds, ...frozenEvidenceIds]);
@@ -607,9 +631,25 @@ export function methodVoiceAllowedSourceIds(run, frozenOpinion) {
 
 export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
   const sourceIdMap = new Map();
+  const suppliedSourceIds = new Set();
   const sources = Array.isArray(packet?.sources) ? packet.sources.map((source, index) => {
-    const original = String(source?.id || `S${index + 1}`);
+    const original = String(source?.id || `S${index + 1}`).trim() || `S${index + 1}`;
+    if (original.includes(":") && !original.startsWith(`${task}:`)) {
+      throw invalidParams(`${task} supplied a packet source ID owned by another provenance scope: ${original}`, {
+        reason: "PACKET_SOURCE_SCOPE_MISMATCH",
+        task,
+        source_id: original,
+      });
+    }
     const id = scopedSourceId(task, original, index);
+    if (suppliedSourceIds.has(id)) {
+      throw invalidParams(`${task} supplied duplicate packet source ID ${id}`, {
+        reason: "PACKET_SOURCE_ID_DUPLICATE",
+        task,
+        source_id: id,
+      });
+    }
+    suppliedSourceIds.add(id);
     sourceIdMap.set(original, id);
     return { ...(source && typeof source === "object" ? source : {}), id };
   }) : [];
@@ -627,6 +667,7 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
   const officialSourceCoverage = task === NEWS_TASK && Object.hasOwn(packet || {}, "official_source_coverage")
     ? normalizeOfficialSourceCoverage(packet.official_source_coverage, task, sourceIdMap)
     : undefined;
+  const coverageItems = normalizeCompanyCoverageItems(packet?.coverage_items, task, sourceIdMap);
   const openQuestions = Array.isArray(packet?.open_questions) ? [...packet.open_questions] : [];
   for (const gap of coverageGapQuestions(officialSourceCoverage)) {
     if (!openQuestions.includes(gap)) openQuestions.push(gap);
@@ -640,6 +681,7 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     metrics: packet?.metrics && typeof packet.metrics === "object" ? packet.metrics : {},
     sources,
     open_questions: openQuestions,
+    ...(coverageItems.length ? { coverage_items: coverageItems } : {}),
     ...(officialSourceCoverage !== undefined ? { official_source_coverage: officialSourceCoverage } : {}),
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
     // How much material this task actually had. Deliberately separate from confidence:
@@ -687,6 +729,9 @@ export function normalizeDebate(packet, role, run, raw = "") {
       ? packet.horizon_views
       : {},
     data_gaps: Array.isArray(packet?.data_gaps) ? packet.data_gaps : [],
+    company_dossier_hash_ack: typeof packet?.company_dossier_hash_ack === "string"
+      ? packet.company_dossier_hash_ack
+      : undefined,
     report_markdown: typeof packet?.report_markdown === "string" ? packet.report_markdown : "",
     failure_kind: typeof packet?.failure_kind === "string" ? packet.failure_kind : undefined,
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
@@ -779,7 +824,12 @@ export function compactEvidence(run) {
     run_id: run.run_id,
     symbol: run.symbol,
     as_of: run.as_of,
-    context_contract: "bounded_full_v1",
+    context_contract: run?.company_dossier?.content_hash
+      ? "company_dossier_index_v1"
+      : "bounded_full_v1",
+    ...(run?.company_dossier?.content_hash
+      ? { company_dossier: run.company_dossier }
+      : {}),
     packets: (run.packets || []).map((packet) => {
       const claims = (packet.claims || []).slice(0, 8);
       const sourceById = new Map((packet.sources || []).map((source) => [source?.id, source]));
@@ -806,6 +856,9 @@ export function compactEvidence(run) {
         metrics: compactValue(packet.metrics || {}),
         ...(packet.official_source_coverage
           ? { official_source_coverage: compactValue(packet.official_source_coverage) }
+          : {}),
+        ...(packet.coverage_items
+          ? { coverage_items: compactValue(packet.coverage_items) }
           : {}),
         sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
           id: source?.id,
@@ -944,6 +997,7 @@ export function compactDebateContext(packet) {
     invalidation: (packet.invalidation || []).slice(0, 6).map((item) => clip(item, 500)),
     source_ids: (packet.source_ids || []).slice(0, 20),
     confidence: packet.confidence,
+    company_dossier_hash_ack: packet.company_dossier_hash_ack,
     questions: (packet.questions || []).slice(0, 3).map((item) => clip(item, 600)),
     questions_answered: (packet.questions_answered || []).slice(0, 3).map((item) => ({
       question: clip(item?.question || "", 600),
@@ -987,6 +1041,7 @@ export function debateFromCodex(result, role, run, fallbackPrompt, {
     const parsed = repairedTransport
       ? extractRepairedWorkerJson(result.text, kind)
       : extractWorkerJson(result.text, kind);
+    assertCompanyDossierAck(parsed, run, role);
     const source_ids = assertSourceIdsResolve(run, parsed.source_ids, role);
     return normalizeDebate({ ...parsed, source_ids }, role, run, result.text);
   } catch (error) {
@@ -1092,6 +1147,7 @@ export function mergeDebateRounds(rounds) {
     summary: packet.summary || "",
     long_thesis: packet.long_thesis || [],
     short_thesis: packet.short_thesis || [],
+    company_dossier_hash_ack: packet.company_dossier_hash_ack || null,
     questions: packet.questions || [],
     questions_answered: packet.questions_answered || [],
     raw_text: packet.raw_text || "",
@@ -1378,7 +1434,10 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
     run,
     workerSourceIds,
     `${masterId} worker evidence`,
-    { allowEmpty: frozenOpinion.stance === "out_of_scope", domain: "evidence" },
+    {
+      allowEmpty: frozenOpinion.stance === "out_of_scope" && !requiresOperatingCompanyDossier(run),
+      domain: "evidence",
+    },
   );
   const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion);
   const allowed = new Set(allowedSourceIds);
@@ -1408,6 +1467,9 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
     what_would_change_my_mind: list(packet?.what_would_change_my_mind),
     source_ids: workerSourceIds,
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : frozenOpinion.confidence || "low",
+    company_dossier_hash_ack: typeof packet?.company_dossier_hash_ack === "string"
+      ? packet.company_dossier_hash_ack
+      : undefined,
     language: run.language,
     raw_text: raw,
   };
