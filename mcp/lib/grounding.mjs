@@ -263,19 +263,16 @@ export async function gatherGrounding({
         )));
       });
       jobs.push(fundamentalsJob);
-      // Section 16 ownership is chained after the fundamentals rather than run beside them: it
-      // is a RATIO over shares outstanding, and taking that count from a second source would
-      // make the numerator and the denominator describe different registers.
+      // Insider ownership must use an instant register count from CompanyFacts, never the
+      // annual weighted-average diluted EPS denominator exposed by fundamentals. The ownership
+      // adapter fetches and records that point-in-time denominator itself, so both jobs can run
+      // independently and an unavailable denominator skips the ratio rather than miscomputing it.
       jobs.push((async () => {
-        await fundamentalsJob;
-        const shares = out.fundamentals?.metrics?.["capital_allocation.share_count"]?.value;
-        if (!Number.isFinite(shares)) return;
-        const owned = await safely("insider ownership", () => fetchInsiderOwnership(cik, {
-          sharesOutstanding: shares, asOf, signal,
-        }));
+        const owned = await safely("insider ownership", () => fetchInsiderOwnership(cik, { asOf, signal }));
         if (!owned.ok) { out.unavailable.push(owned.error); return; }
-        out.insider_ownership = owned.value;
         out.unavailable.push(...(owned.value.unavailable || []));
+        if (!Number.isFinite(owned.value.value)) return;
+        out.insider_ownership = owned.value;
       })());
     }
     if (out.instrument.sec_companyfacts_applicable) jobs.push(safely("screen", () => screenTicker({ cik, ticker: symbol, asOf, signal })).then((r) => {
@@ -294,6 +291,9 @@ export async function gatherGrounding({
         passed: x.passed,
         period_start: x.period_start || null,
         period_end: x.period_end || null,
+        span_days: Number.isFinite(x.span_days) ? x.span_days : null,
+        span_years: Number.isFinite(x.span_years) ? x.span_years : null,
+        observation_count: Number.isInteger(x.observation_count) ? x.observation_count : null,
         fiscal_year: x.fiscal_year || null,
         public_at: x.public_at || null,
         source_ids: metricSourceIds(x),

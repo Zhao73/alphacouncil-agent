@@ -195,7 +195,12 @@ function screenFacts(grounding, context) {
       periodEnd: metric.period_end || null,
       fiscalYear: Number.isInteger(metric.fiscal_year) ? metric.fiscal_year : null,
       derivationToolId: `${ADAPTER_ID}:screen:${metric.rule}`,
-      derivationInput: { metric_rule: metric.rule },
+      derivationInput: {
+        metric_rule: metric.rule,
+        ...(Number.isFinite(metric.span_days) ? { span_days: metric.span_days } : {}),
+        ...(Number.isFinite(metric.span_years) ? { span_years: metric.span_years } : {}),
+        ...(Number.isInteger(metric.observation_count) ? { observation_count: metric.observation_count } : {}),
+      },
     };
     if (mapping.kind === "usd") {
       addUnique(context.facts, context.diagnostics, baseFact({
@@ -782,33 +787,84 @@ function insiderOwnershipFacts(grounding, context) {
   const owned = grounding?.insider_ownership;
   if (!owned || !finite(owned.value)) return;
   const publicAt = timestampAtOrBefore(owned.public_at, context.cutoff);
-  if (!publicAt || !owned.source_url || !owned.source_ids?.length) {
+  const numeratorSourceIds = Array.isArray(owned.numerator_source_ids) ? owned.numerator_source_ids : [];
+  const numeratorSources = Array.isArray(owned.numerator_sources) ? owned.numerator_sources : [];
+  const denominator = owned.denominator;
+  if (!publicAt || !numeratorSourceIds.length || numeratorSources.length !== numeratorSourceIds.length
+      || !denominator?.source_id || !denominator?.source_url || !denominator?.public_at
+      || denominator.measurement !== "point_in_time_common_shares_outstanding") {
     context.diagnostics.push({ code: "missing_source_lineage", source: "insider_ownership", action: "not_converted" });
     return;
   }
-  const sourceIdValue = sourceId("sec", "section16_ownership", owned.as_of || publicAt);
+  for (const source of numeratorSources) {
+    if (!numeratorSourceIds.includes(source?.source_id)
+        || !source?.accession || !source?.url || !source?.filing_date) {
+      context.diagnostics.push({ code: "missing_source_lineage", source: "insider_ownership.numerator", action: "not_converted" });
+      return;
+    }
+    const sourcePublicAt = timestampAtOrBefore(source.filing_date, context.cutoff);
+    if (!sourcePublicAt || !registerSource(context, {
+      source_id: source.source_id,
+      source_kind: "regulatory_filing_data",
+      title: `SEC Form ${source.form || "3/4/5"} ownership filing ${source.accession}`,
+      url: source.url,
+      public_at: sourcePublicAt,
+      retrieved_at: grounding.gathered_at || publicAt,
+      locator: {
+        accession: source.accession,
+        form: source.form || null,
+        owner_cik: source.owner_cik || null,
+        report_date: source.report_date || null,
+      },
+    })) return;
+  }
+  const denominatorPublicAt = timestampAtOrBefore(denominator.public_at, context.cutoff);
+  if (!denominatorPublicAt) {
+    context.diagnostics.push({ code: "future_source", source: "insider_ownership.denominator", action: "not_converted" });
+    return;
+  }
+  const denominatorIdentity = secCompanyFactsIdentity(denominator.source_id);
   if (!registerSource(context, {
-    source_id: sourceIdValue,
+    source_id: denominator.source_id,
     source_kind: "regulatory_filing_data",
-    title: "Section 16 ownership filings (Forms 3, 4 and 5)",
-    url: owned.source_url,
-    public_at: publicAt,
+    title: denominatorIdentity.title,
+    url: denominator.source_url,
+    public_at: denominatorPublicAt,
     retrieved_at: grounding.gathered_at || publicAt,
-    locator: { filing_count: owned.source_ids.length, reporting_owners: owned.owner_count },
+    locator: {
+      ...denominatorIdentity.locator,
+      taxonomy: denominator.taxonomy,
+      form: denominator.form,
+      measurement: denominator.measurement,
+    },
   })) return;
   addUnique(context.facts, context.diagnostics, baseFact({
     factId: "governance.insider_ownership",
     valueKind: "ratio",
     value: owned.value,
     unit: "decimal",
-    ratioDenominator: "shares_outstanding",
+    ratioDenominator: "point_in_time_common_shares_outstanding",
     asOf: context.asOf,
     publicAt,
-    sources: [sourceIdValue],
+    sources: [...numeratorSourceIds, denominator.source_id],
     confidence: 0.7,
     derivation: "estimated",
     derivationToolId: `${ADAPTER_ID}:section16:insider_ownership`,
-    derivationInput: { method: owned.method, reporting_owners: owned.owner_count },
+    derivationInput: {
+      method: owned.method,
+      reporting_owners: owned.owner_count,
+      owner_report_date_min: owned.owner_report_date_min || null,
+      owner_report_date_max: owned.owner_report_date_max || null,
+      coverage: owned.coverage || null,
+      denominator: {
+        measurement: denominator.measurement,
+        taxonomy: denominator.taxonomy,
+        tag: denominator.tag,
+        form: denominator.form,
+        period_end: denominator.period_end,
+        value: denominator.value,
+      },
+    },
   }));
 }
 

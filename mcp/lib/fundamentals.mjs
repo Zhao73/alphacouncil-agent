@@ -431,7 +431,7 @@ function revenueGrowth(companyFacts, series, cik, gaps, asOf) {
   const compound = revenueCagr(annual, factId, gaps);
   if (!compound) return null;
   const { cagr, first, last, spanDays, years, publicAt } = compound;
-  const yoy = trailingYearOverYear(companyFacts, asOf);
+  const yoy = trailingYearOverYear(companyFacts, series.revenue, asOf);
   if (yoy.value === null && yoy.gap) gaps.push(gap({ factId, component: "yoy_ttm", ...yoy.gap }));
 
   const alignment = {
@@ -459,6 +459,14 @@ function revenueGrowth(companyFacts, series, cik, gaps, asOf) {
       revenue_end_period_end: last.end,
       span_days: spanDays,
       years: decimal(years),
+      // The TTM component is thesis-bearing too. Keep its exact reconstruction inputs inside
+      // the calculation hash instead of letting two different trailing periods hash alike just
+      // because the headline CAGR did not move.
+      yoy_ttm: yoy.value === null ? null : decimal(yoy.value),
+      yoy_ttm_method: yoy.method ?? null,
+      yoy_ttm_period_end: yoy.period_end ?? null,
+      yoy_ttm_prior_period_end: yoy.prior_period_end ?? null,
+      yoy_ttm_inputs: yoy.inputs ?? null,
     },
     components: {
       cagr: decimal(cagr),
@@ -466,70 +474,264 @@ function revenueGrowth(companyFacts, series, cik, gaps, asOf) {
       yoy_ttm: yoy.value === null ? null : decimal(yoy.value),
       yoy_ttm_latest: yoy.latest ?? null,
       yoy_ttm_prior: yoy.prior ?? null,
+      yoy_ttm_method: yoy.method ?? null,
+      yoy_ttm_period_start: yoy.period_start ?? null,
+      yoy_ttm_period_end: yoy.period_end ?? null,
+      yoy_ttm_prior_period_start: yoy.prior_period_start ?? null,
+      yoy_ttm_prior_period_end: yoy.prior_period_end ?? null,
+      yoy_ttm_public_at: yoy.public_at ?? null,
+      yoy_ttm_freshness: yoy.freshness ?? null,
     },
     assumptions: [
       `value is the compound annual growth rate over ${decimal(years)} years (${first.end} -> ${last.end}), expressed as a decimal`,
       "the exponent uses the measured day span, not the count of filings, because fiscal calendars are 52 or 53 weeks",
       yoy.value === null
         ? "trailing-four-quarter year-over-year is unavailable and reported as a gap rather than substituted for the CAGR"
-        : "components.yoy_ttm is the sum of the latest four quarters against the four before them, as a decimal",
+        : yoy.method === "annual_ytd_bridge"
+          ? "components.yoy_ttm uses the latest full fiscal year plus current YTD less prior-year same YTD, compared with the identically bridged prior TTM"
+          : "components.yoy_ttm uses the latest eight directly reported, contiguous standalone quarters ending at the newest regular revenue period",
     ],
   });
 }
 
-/** Trailing-four-quarter revenue against the four quarters before it. */
-function trailingYearOverYear(companyFacts, asOf) {
-  const quarters = quarterlySeries(companyFacts, FUNDAMENTAL_CONCEPTS.revenue.tags, { asOf, unit: "USD" });
-  const empty = { value: null, public_at: null, entries: [] };
-  if (!quarters || quarters.length < 8) {
+const quarterOrdinal = (entry) => {
+  const match = /^Q([1-3])$/u.exec(String(entry?.fp || "").toUpperCase());
+  return match ? Number(match[1]) : null;
+};
+
+const normalizeQuarter = (entry) => ({
+  concept: "revenue",
+  tag: entry.tag,
+  unit: "USD",
+  start: entry.start,
+  end: entry.end,
+  filed: entry.filed,
+  accession: entry.accn || null,
+  value: entry.val,
+  fiscal_year: fiscalYearOf(entry.end),
+});
+
+const periodSeamIsClean = (leftEnd, rightStart) => {
+  const seam = daysBetween(leftEnd, rightStart);
+  return seam >= -5 && seam <= 15;
+};
+
+const annualPeriodsAreConsecutive = (prior, latest) => (
+  prior?.start && latest?.start
+  && periodSeamIsClean(prior.end, latest.start)
+  && daysBetween(prior.end, latest.end) >= 330
+  && daysBetween(prior.end, latest.end) <= 400
+);
+
+function quarterSequenceIsClean(window, anchorStart = null) {
+  if (!window.length) return true;
+  if (anchorStart && !periodSeamIsClean(anchorStart, window[0].start)) return false;
+  for (let index = 1; index < window.length; index += 1) {
+    if (!periodSeamIsClean(window[index - 1].end, window[index].start)) return false;
+  }
+  return true;
+}
+
+function fiscalPrefix(quarters, annual, count) {
+  if (count === 0) return [];
+  if (!annual?.start || !annual?.end) return null;
+  const inside = quarters.filter((entry) => (
+    Date.parse(entry.end) > Date.parse(annual.start)
+    && Date.parse(entry.end) <= Date.parse(annual.end)
+  ));
+  const prefix = [];
+  for (let ordinal = 1; ordinal <= count; ordinal += 1) {
+    const candidates = inside.filter((entry) => quarterOrdinal(entry) === ordinal);
+    if (candidates.length !== 1) return null;
+    prefix.push(candidates[0]);
+  }
+  return quarterSequenceIsClean(prefix, annual.start) ? prefix : null;
+}
+
+function correspondingFiscalPeriods(...windows) {
+  const length = windows[0]?.length ?? 0;
+  if (!windows.every((window) => window?.length === length)) return false;
+  for (let index = 0; index < length; index += 1) {
+    const ordinal = index + 1;
+    if (!windows.every((window) => quarterOrdinal(window[index]) === ordinal)) return false;
+    for (let windowIndex = 1; windowIndex < windows.length; windowIndex += 1) {
+      const yearSpan = daysBetween(windows[windowIndex - 1][index].end, windows[windowIndex][index].end);
+      if (yearSpan < 330 || yearSpan > 400) return false;
+    }
+  }
+  return true;
+}
+
+const dayAfter = (date) => new Date(Date.parse(`${date}T00:00:00.000Z`) + DAY_MS).toISOString().slice(0, 10);
+
+function freshnessMetadata(asOf, periodEnd, publicAt) {
+  const asOfDay = asOf ? new Date(asOf).toISOString().slice(0, 10) : null;
+  return Object.freeze({
+    as_of: asOfDay,
+    latest_regular_period_end: periodEnd || null,
+    period_age_days: asOfDay && periodEnd ? daysBetween(periodEnd, asOfDay) : null,
+    public_age_days: asOfDay && publicAt ? daysBetween(publicAt.slice(0, 10), asOfDay) : null,
+  });
+}
+
+function finishTrailingComparison({
+  latest,
+  prior,
+  method,
+  latestWindow,
+  priorWindow,
+  used,
+  inputs,
+  asOf,
+}) {
+  if (!(prior > 0)) {
     return {
-      ...empty,
-      gap: {
-        code: "insufficient_history",
-        detail: `a trailing-four-quarter comparison needs 8 tagged quarters; found ${quarters?.length || 0}`,
-        missingTags: FUNDAMENTAL_CONCEPTS.revenue.tags,
-      },
+      value: null,
+      public_at: null,
+      entries: [],
+      method: null,
+      gap: { code: "non_positive_base", detail: `prior-year trailing revenue is ${prior}` },
     };
   }
-  // Search backwards for the most recent pair of clean four-quarter blocks rather than
-  // insisting the last eight filings are them. One restated quarter, one stub period or one
-  // duplicated filing at the end used to discard a company's entire revenue history -- INTC and
-  // GLW both failed here while holding years of usable quarters behind the ragged edge. Each
-  // window is still checked exactly as strictly; only the search moved.
-  let latest = null;
-  let prior = null;
-  let offset = 0;
-  for (; offset <= quarters.length - 8; offset += 1) {
-    const end = quarters.length - 1 - offset;
-    latest = fourQuarters(quarters, end);
-    prior = fourQuarters(quarters, end - 4);
-    if (latest && prior) break;
-    latest = null;
-    prior = null;
+  const entries = used.map((entry) => ("concept" in entry ? entry : normalizeQuarter(entry)));
+  const publicAt = publicInstant(entries);
+  if (!publicAt) {
+    return {
+      value: null,
+      public_at: null,
+      entries: [],
+      method: null,
+      gap: { code: "missing_filing_date", detail: "a TTM bridge input carries no filing date" },
+    };
   }
-  if (!latest || !prior) {
-    return { ...empty, gap: { code: "period_misaligned", detail: `no contiguous pair of four-quarter blocks in the ${quarters.length} tagged quarters` } };
-  }
-  if (!(prior.total > 0)) {
-    return { ...empty, gap: { code: "non_positive_base", detail: `prior-year four-quarter revenue is ${prior.total}` } };
-  }
-  const entries = [...prior.window, ...latest.window].map((entry) => ({
-    concept: "revenue",
-    tag: entry.tag,
-    unit: "USD",
-    start: entry.start,
-    end: entry.end,
-    filed: entry.filed,
-    accession: entry.accn || null,
-    value: entry.val,
-    fiscal_year: fiscalYearOf(entry.end),
-  }));
+  const periodEnd = latestWindow.at(-1).end;
+  const priorPeriodEnd = priorWindow.at(-1).end;
   return {
-    value: latest.total / prior.total - 1,
-    latest: latest.total,
-    prior: prior.total,
-    public_at: publicInstant(entries),
+    value: latest / prior - 1,
+    latest,
+    prior,
+    method,
+    period_start: latestWindow[0].start,
+    period_end: periodEnd,
+    prior_period_start: priorWindow[0].start,
+    prior_period_end: priorPeriodEnd,
+    public_at: publicAt,
+    freshness: freshnessMetadata(asOf, periodEnd, publicAt),
     entries,
+    inputs,
+  };
+}
+
+/**
+ * Trailing revenue growth ending at the newest regular revenue period visible at `asOf`.
+ *
+ * Company Facts usually does not publish a standalone fiscal Q4. The primary path therefore
+ * bridges from the newest full fiscal year: FY + current YTD - prior-year same YTD. The prior
+ * TTM is built on the identical fiscal ordinal. Only when that bridge cannot be supported may
+ * the latest eight directly reported quarters be used, and they must END at the same newest
+ * period. There is deliberately no backwards search for an older clean block.
+ */
+function trailingYearOverYear(companyFacts, annualRevenue, asOf) {
+  const quarters = quarterlySeries(companyFacts, FUNDAMENTAL_CONCEPTS.revenue.tags, { asOf, unit: "USD" }) || [];
+  const annual = annualRevenue || [];
+  const newestAnnualEnd = annual.at(-1)?.end || null;
+  const newestQuarterEnd = quarters.at(-1)?.end || null;
+  const newestPeriodEnd = [newestAnnualEnd, newestQuarterEnd].filter(Boolean).sort().at(-1) || null;
+  const empty = {
+    value: null,
+    public_at: null,
+    entries: [],
+    method: null,
+    period_end: newestPeriodEnd,
+    freshness: freshnessMetadata(asOf, newestPeriodEnd, null),
+  };
+
+  let bridgeFailure = "two consecutive full fiscal years are unavailable";
+  if (annual.length >= 2) {
+    const latestAnnual = annual.at(-1);
+    const priorAnnual = annual.at(-2);
+    const postAnnual = quarters.filter((entry) => Date.parse(entry.end) > Date.parse(latestAnnual.end));
+    const bridgeCount = postAnnual.length;
+    const currentOrdinals = postAnnual.every((entry, index) => quarterOrdinal(entry) === index + 1);
+    const currentSequence = bridgeCount <= 3
+      && currentOrdinals
+      && quarterSequenceIsClean(postAnnual, dayAfter(latestAnnual.end));
+    const priorYearYtd = currentSequence ? fiscalPrefix(quarters, latestAnnual, bridgeCount) : null;
+    const twoYearsPriorYtd = currentSequence ? fiscalPrefix(quarters, priorAnnual, bridgeCount) : null;
+    const periodsMatch = currentSequence
+      && annualPeriodsAreConsecutive(priorAnnual, latestAnnual)
+      && correspondingFiscalPeriods(twoYearsPriorYtd, priorYearYtd, postAnnual);
+    const bridgeEndsAtNewest = (postAnnual.at(-1)?.end || latestAnnual.end) === newestPeriodEnd;
+
+    if (periodsMatch && bridgeEndsAtNewest) {
+      const currentYtd = sum(postAnnual.map((entry) => entry.val));
+      const priorYearSameYtd = sum(priorYearYtd.map((entry) => entry.val));
+      const twoYearsPriorSameYtd = sum(twoYearsPriorYtd.map((entry) => entry.val));
+      const latest = latestAnnual.value + currentYtd - priorYearSameYtd;
+      const prior = priorAnnual.value + priorYearSameYtd - twoYearsPriorSameYtd;
+      const latestWindow = bridgeCount
+        ? [{ start: dayAfter(priorYearYtd.at(-1).end) }, postAnnual.at(-1)]
+        : [{ start: latestAnnual.start }, latestAnnual];
+      const priorWindow = bridgeCount
+        ? [{ start: dayAfter(twoYearsPriorYtd.at(-1).end) }, priorYearYtd.at(-1)]
+        : [{ start: priorAnnual.start }, priorAnnual];
+      return finishTrailingComparison({
+        latest,
+        prior,
+        method: "annual_ytd_bridge",
+        latestWindow,
+        priorWindow,
+        used: [latestAnnual, priorAnnual, ...postAnnual, ...priorYearYtd, ...twoYearsPriorYtd],
+        inputs: {
+          latest_full_fy: { value: latestAnnual.value, start: latestAnnual.start, end: latestAnnual.end },
+          prior_full_fy: { value: priorAnnual.value, start: priorAnnual.start, end: priorAnnual.end },
+          fiscal_quarters_bridged: bridgeCount,
+          current_ytd: postAnnual.map((entry) => ({ ordinal: quarterOrdinal(entry), value: entry.val, start: entry.start, end: entry.end })),
+          prior_year_same_ytd: priorYearYtd.map((entry) => ({ ordinal: quarterOrdinal(entry), value: entry.val, start: entry.start, end: entry.end })),
+          two_years_prior_same_ytd: twoYearsPriorYtd.map((entry) => ({ ordinal: quarterOrdinal(entry), value: entry.val, start: entry.start, end: entry.end })),
+        },
+        asOf,
+      });
+    }
+    bridgeFailure = bridgeCount > 3
+      ? `latest full year is followed by ${bridgeCount} standalone quarters (expected at most 3)`
+      : "full-year bridge lacks matching contiguous fiscal ordinals for current and prior-year YTD";
+  }
+
+  // Fallback is intentionally the LAST eight rows only. If they do not end at the newest
+  // formal period or do not form two contiguous years, returning an older pair would label
+  // stale history as the current TTM.
+  if (quarters.length >= 8 && quarters.at(-1).end === newestPeriodEnd) {
+    const tail = quarters.slice(-8);
+    const prior = fourQuarters(tail, 3);
+    const latest = fourQuarters(tail, 7);
+    const yearSeam = prior && latest && periodSeamIsClean(prior.window.at(-1).end, latest.window[0].start);
+    const matchingEnds = prior && latest && daysBetween(prior.window.at(-1).end, latest.window.at(-1).end) >= 330
+      && daysBetween(prior.window.at(-1).end, latest.window.at(-1).end) <= 400;
+    if (prior && latest && yearSeam && matchingEnds) {
+      return finishTrailingComparison({
+        latest: latest.total,
+        prior: prior.total,
+        method: "direct_eight_quarters",
+        latestWindow: latest.window,
+        priorWindow: prior.window,
+        used: tail,
+        inputs: {
+          latest_quarters: latest.window.map((entry) => ({ value: entry.val, start: entry.start, end: entry.end })),
+          prior_quarters: prior.window.map((entry) => ({ value: entry.val, start: entry.start, end: entry.end })),
+        },
+        asOf,
+      });
+    }
+  }
+
+  return {
+    ...empty,
+    gap: {
+      code: annual.length < 2 && quarters.length < 8 ? "insufficient_history" : "period_misaligned",
+      detail: `${bridgeFailure}; the latest eight standalone quarters do not form a contiguous comparison ending ${newestPeriodEnd || "at a reported period"}`,
+      missingTags: FUNDAMENTAL_CONCEPTS.revenue.tags,
+    },
   };
 }
 

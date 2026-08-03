@@ -38,6 +38,17 @@ test("a missing observation is dropped, never carried forward", () => {
   ]);
 });
 
+test("blank CSV values are missing while a reported zero remains numeric", () => {
+  const rows = parseFredCsv([
+    "observation_date,DGS10",
+    "2026-07-20,",
+    "2026-07-21,   ",
+    "2026-07-22,.",
+    "2026-07-23,0",
+  ].join("\n"), "DGS10");
+  assert.deepEqual(rows, [{ date: "2026-07-23", value: 0 }]);
+});
+
 test("an empty or non-numeric series fails closed", () => {
   assert.throws(() => parseFredCsv("", "DGS10"), /empty FRED series/);
   assert.throws(() => parseFredCsv("observation_date,DGS10\n2026-07-24,.\n", "DGS10"), /no numeric observations/);

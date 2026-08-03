@@ -137,6 +137,94 @@ function coverageSourceIds(coverage) {
   }));
 }
 
+/**
+ * Bind the US regulator surface to the SEC feed already fetched deterministically during
+ * grounding. A model should not have to rediscover or copy this URL inventory perfectly, and a
+ * parse-only repair cannot invent a missing primary-document source. The issuer surface remains
+ * wholly worker-supplied and fail-closed; this adapter only materializes facts the server already
+ * fetched before the worker started.
+ */
+export function applyGroundedRegulatorCoverage(packet, {
+  task = packet?.task,
+  asOfDate = packet?.as_of,
+  grounding = null,
+} = {}) {
+  if (task !== NEWS_TASK || !objectRecord(packet?.official_source_coverage)) return packet;
+  const coverage = packet.official_source_coverage;
+  if (!objectRecord(coverage.regulator) || !objectRecord(coverage.issuer)) return packet;
+  const filer = grounding?.filer;
+  const expected = filer?.latest_filing;
+  const entryUrl = normalizedHttpUrl(filer?.submissions_url);
+  const itemUrl = normalizedHttpUrl(expected?.primary_document_url);
+  const publishedAt = typeof expected?.filing_date === "string" ? expected.filing_date : null;
+  if (!entryUrl || !itemUrl || !exactIsoDay(publishedAt) || !exactIsoDay(asOfDate)) return packet;
+  // Real grounding always records gathered_at. Synthetic/dry-run fixtures predating that
+  // field are bounded by their declared as_of; they cannot bypass the separate councilAsOf
+  // future-date rejection at the execution boundary.
+  const retrievedThrough = grounding?.gathered_at ? isoDay(grounding.gathered_at) : asOfDate;
+
+  packet.sources = Array.isArray(packet.sources) ? packet.sources : [];
+  let source = packet.sources.find((candidate) => (
+    normalizedHttpUrl(candidate?.url) === itemUrl && isoDay(candidate?.published_at) === publishedAt
+  ));
+  if (!source) {
+    const baseId = scopedSourceId(task, "GROUNDED_REGULATOR_LATEST");
+    let sourceId = baseId;
+    let suffix = 2;
+    const used = new Set(packet.sources.map((candidate) => candidate?.id));
+    while (used.has(sourceId)) {
+      sourceId = `${baseId}_${suffix}`;
+      suffix += 1;
+    }
+    source = {
+      id: sourceId,
+      title: `SEC ${expected.form || "filing"} ${expected.accession || publishedAt}`,
+      url: expected.primary_document_url,
+      published_at: publishedAt,
+      retrieved_at: grounding?.gathered_at || asOfDate,
+    };
+    packet.sources.push(source);
+  }
+  const item = {
+    title: source.title,
+    published_at: publishedAt,
+    url: expected.primary_document_url,
+    source_id: source.id,
+    ...(expected.accession ? { record_id: expected.accession } : {}),
+  };
+  const priorGap = typeof coverage.regulator.gap === "string" ? coverage.regulator.gap.trim() : "";
+  if (!retrievedThrough || asOfDate > retrievedThrough) {
+    const gap = retrievedThrough
+      ? `SEC official surface was retrieved through ${retrievedThrough} and cannot certify the future cutoff ${asOfDate}`
+      : `SEC official surface has no valid retrieval timestamp and cannot certify cutoff ${asOfDate}`;
+    coverage.regulator = {
+      status: "incomplete",
+      entry_url: filer.submissions_url,
+      checked_through: retrievedThrough,
+      latest_dated_item: item,
+      dated_items_checked: [item],
+      gap,
+    };
+    coverage.status = "incomplete";
+    packet.open_questions = Array.isArray(packet.open_questions) ? packet.open_questions : [];
+    if (!packet.open_questions.includes(gap)) packet.open_questions.push(gap);
+    return packet;
+  }
+  coverage.regulator = {
+    status: "complete",
+    entry_url: filer.submissions_url,
+    checked_through: asOfDate,
+    latest_dated_item: item,
+    dated_items_checked: [item],
+    gap: null,
+  };
+  coverage.status = coverage.issuer.status === "complete" ? "complete" : "incomplete";
+  if (priorGap && Array.isArray(packet.open_questions)) {
+    packet.open_questions = packet.open_questions.filter((question) => question !== priorGap);
+  }
+  return packet;
+}
+
 function parsedInstant(value) {
   if (typeof value !== "string" || !value.trim() || value.trim().toLowerCase() === "unknown") return null;
   const instant = Date.parse(value);
@@ -251,6 +339,16 @@ function validateCoverageSurface(name, surface, context, errors) {
       coverageIssue(errors, `${path}/checked_through`, "point_in_time", "must not be after as_of");
     }
   }
+  if (surface.status === "complete" && (!context.retrievedThroughDay || surface.checked_through > context.retrievedThroughDay)) {
+    coverageIssue(
+      errors,
+      `${path}/checked_through`,
+      "retrieval_cutoff",
+      context.retrievedThroughDay
+        ? `complete coverage cannot extend beyond actual retrieval day ${context.retrievedThroughDay}`
+        : "complete coverage requires a valid grounding retrieval timestamp",
+    );
+  }
   if (surface.status === "incomplete" && (typeof surface.gap !== "string" || !surface.gap.trim())) {
     coverageIssue(errors, `${path}/gap`, "required", "incomplete coverage requires a non-empty gap", "gap");
   }
@@ -331,6 +429,7 @@ export function assertOfficialSourceCoverage(packet, {
   const context = {
     asOfDate,
     asOfEnd,
+    retrievedThroughDay: grounding?.gathered_at ? isoDay(grounding.gathered_at) : asOfDate,
     sourceById: new Map((packet?.sources || []).map((source) => [source?.id, source])),
   };
   if (objectRecord(coverage)) {

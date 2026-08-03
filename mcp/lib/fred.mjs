@@ -57,7 +57,9 @@ export function parseFredCsv(csv, id) {
   for (const line of lines.slice(1)) {
     const [date, raw] = line.split(",");
     if (!/^\d{4}-\d{2}-\d{2}$/u.test(String(date || "").trim())) continue;
-    const value = Number(raw);
+    const normalized = String(raw ?? "").trim();
+    if (!normalized || normalized === ".") continue;
+    const value = Number(normalized);
     if (!Number.isFinite(value)) continue;
     observations.push({ date: date.trim(), value });
   }

@@ -104,7 +104,7 @@ test("a heavy non-cash charge exempts a thin net margin", () => {
 });
 
 test("dilution beyond the threshold eliminates", () => {
-  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 120, 150] }));
+  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 105, 110, 120, 130, 150] }));
   const dilution = rule(result, "dilution");
   assert.equal(dilution.skipped, undefined, "ordinary 50% issuance is economic dilution, not split-like");
   assert.equal(dilution.passed, false);
@@ -118,18 +118,21 @@ test("a verified 10-for-1 split is removed from five-year economic dilution", ()
 
   assert.equal(dilution.skipped, undefined);
   assert.equal(dilution.passed, true);
-  assert.equal(dilution.raw_value, 869.83, "the unadjusted filing-shape jump is retained for audit");
-  assert.equal(dilution.value, -3.02, "a roughly 3% buyback must not be reported as 869% dilution");
+  assert.equal(dilution.raw_value, 880.4, "the unadjusted filing-shape jump is retained for audit");
+  assert.equal(dilution.value, -1.96, "a roughly 2% buyback must not be reported as 880% dilution");
   assert.equal(dilution.adjustment_status, "verified_xbrl");
   assert.equal(dilution.split_adjustment.factor, 10);
-  assert.equal(dilution.period_start, "2022-01-30", "coverage starts at the oldest share observation, not the split event");
+  assert.equal(dilution.period_start, "2021-01-31", "coverage starts at the five-year endpoint, not the split event");
   assert.equal(dilution.period_end, "2026-01-25");
+  assert.equal(dilution.span_days, 1820);
+  assert.equal(dilution.span_years, 4.9829);
+  assert.equal(dilution.observation_count, 6);
   assert.ok(dilution.source_records.some((source) => source.tag === "CommonStockSharesOutstanding"));
   assert.ok(dilution.source_records.some((source) => source.tag === "StockholdersEquityNoteStockSplitConversionRatio1"));
 });
 
 test("a split-like jump without a reliable official factor is skipped for manual adjustment", () => {
-  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 1000, 970] }));
+  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 100, 100, 100, 1000, 970] }));
   const dilution = rule(result, "dilution");
 
   assert.equal(dilution.skipped, true);
@@ -253,14 +256,60 @@ test("the dilution rule actually computes, rather than skipping forever", async 
   const { evaluateRules } = await import("../../mcp/lib/screen.mjs");
   const year = (y, val, unit) => ({ form: "10-K", start: `${y}-01-01`, end: `${y}-12-31`, val, filed: `${y + 1}-02-01` });
   const facts = { facts: { "us-gaap": {
-    CommonStockSharesOutstanding: { units: { shares: [2020, 2021, 2022, 2023, 2024].map((y, i) => year(y, 1000 + i * 100)) } },
+    CommonStockSharesOutstanding: { units: { shares: [2020, 2021, 2022, 2023, 2024, 2025].map((y, i) => year(y, 1000 + i * 100)) } },
   } } };
   const result = evaluateRules(facts, {});
   const dilution = result.rules.find((r) => r.id === "dilution");
   assert.equal(dilution.skipped, undefined, "the rule must compute when share history exists");
-  // 1000 to 1400 is 40% dilution, past the 20% threshold.
-  assert.equal(dilution.value, 40);
+  // 1000 to 1500 is 50% dilution, past the 20% threshold.
+  assert.equal(dilution.value, 50);
   assert.equal(dilution.passed, false);
+});
+
+test("five annual observations spanning only four years are not mislabeled as five-year dilution", () => {
+  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 105, 110, 115, 120] }));
+  const dilution = rule(result, "dilution");
+  assert.equal(dilution.skipped, true);
+  assert.equal(dilution.passed, undefined);
+  assert.match(dilution.reason, /insufficient five-year share-count history/i);
+});
+
+test("a missing middle year still computes when the endpoints cover five years", () => {
+  const share = (year, val) => ({ form: "10-K", end: `${year}-12-31`, val, filed: `${year + 1}-02-01` });
+  const companyFacts = { facts: { "us-gaap": {
+    CommonStockSharesOutstanding: { units: { shares: [
+      share(2020, 100), share(2022, 105), share(2023, 110), share(2024, 115), share(2025, 120),
+    ] } },
+  } } };
+  const dilution = rule(evaluateRules(companyFacts), "dilution");
+  assert.equal(dilution.skipped, undefined);
+  assert.equal(dilution.value, 20);
+  assert.equal(dilution.span_days, 1826);
+  assert.equal(dilution.observation_count, 5);
+});
+
+test("a share-count endpoint outside the deterministic P5Y window is skipped", () => {
+  const rows = [
+    { form: "10-K", end: "2020-01-01", val: 100, filed: "2020-02-01" },
+    { form: "10-K", end: "2021-03-01", val: 105, filed: "2021-04-01" },
+    { form: "10-K", end: "2022-03-01", val: 110, filed: "2022-04-01" },
+    { form: "10-K", end: "2023-03-01", val: 115, filed: "2023-04-01" },
+    { form: "10-K", end: "2024-03-01", val: 120, filed: "2024-04-01" },
+    { form: "10-K", end: "2025-03-01", val: 125, filed: "2025-04-01" },
+  ];
+  const companyFacts = { facts: { "us-gaap": { CommonStockSharesOutstanding: { units: { shares: rows } } } } };
+  const dilution = rule(evaluateRules(companyFacts), "dilution");
+  assert.equal(dilution.skipped, true);
+  assert.match(dilution.reason, /insufficient five-year/i);
+});
+
+test("as_of truncation cannot turn four years into a five-year dilution fact", () => {
+  const result = evaluateRules(facts({ CommonStockSharesOutstanding: [100, 105, 110, 115, 120, 125] }), {
+    asOf: "2021-12-31",
+  });
+  const dilution = rule(result, "dilution");
+  assert.equal(dilution.skipped, true);
+  assert.match(dilution.reason, /insufficient five-year/i);
 });
 
 // Two-series rules paired by array position, not by fiscal period. A gap in one series --

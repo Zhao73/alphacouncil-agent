@@ -9,6 +9,14 @@ import {
   LIMITS,
   councilPaceProfile,
 } from "../../mcp/lib/constants.mjs";
+import {
+  councilAsOf,
+  debateStageTimeout,
+  evidenceStageTimeout,
+  masterStageTimeout,
+  portfolioManagerStageTimeout,
+} from "../../mcp/lib/orchestrator.mjs";
+import { tools as rpcTools } from "../../mcp/lib/rpc.mjs";
 
 /**
  * A total budget alone does not change how deep an analysis goes. What bounds each worker is its
@@ -81,4 +89,41 @@ test("an operator override only ever lowers a pace, and is absent by default", (
     const effective = Math.min(profile.total_ms, LIMITS.FULL_TOTAL_OVERRIDE_MS ?? profile.total_ms);
     assert.equal(effective, profile.total_ms, `${name} must default to its own total`);
   }
+});
+
+test("omitting legacy worker timeouts preserves every slow stage cap", () => {
+  const run = { council_mode: "full", council_pace: "slow" };
+  assert.equal(evidenceStageTimeout({}, run), COUNCIL_PACES.slow.evidence_ms);
+  assert.equal(masterStageTimeout({}, run), COUNCIL_PACES.slow.master_ms);
+  assert.equal(debateStageTimeout({}, run), COUNCIL_PACES.slow.debate_ms);
+  assert.equal(portfolioManagerStageTimeout({}, run), COUNCIL_PACES.slow.pm_ms);
+
+  // The legacy fields remain a caller-controlled LOWER ceiling; they can never enlarge a pace.
+  assert.equal(evidenceStageTimeout({ timeout_ms: 600_000 }, run), 600_000);
+  assert.equal(evidenceStageTimeout({ timeout_ms: 900_000 }, run), COUNCIL_PACES.slow.evidence_ms);
+  assert.equal(masterStageTimeout({ timeout_ms: 30_000 }, run), 30_000);
+  assert.equal(debateStageTimeout({ synthesis_timeout_ms: 45_000 }, run), 45_000);
+  assert.equal(portfolioManagerStageTimeout({ synthesis_timeout_ms: 45_000 }, run), 45_000);
+});
+
+test("the MCP schema no longer injects a ten-minute legacy default into a pace", () => {
+  for (const name of ["collect_evidence", "analyze_symbol"]) {
+    const tool = rpcTools().find((entry) => entry.name === name);
+    assert.ok(tool, `${name} must be shipped`);
+    assert.equal(Object.hasOwn(tool.inputSchema.properties.timeout_ms, "default"), false, name);
+    assert.equal(Object.hasOwn(tool.inputSchema.properties.synthesis_timeout_ms, "default"), false, name);
+    assert.equal(Object.hasOwn(tool.inputSchema.properties.council_pace, "default"), false, name,
+      "execution omission must inherit the pace bound into the one-run receipt");
+  }
+});
+
+test("a council rejects a future information cutoff before launching workers", () => {
+  const now = new Date("2026-08-03T12:00:00.000Z");
+  assert.equal(councilAsOf("2026-08-03", { now }), "2026-08-03");
+  assert.equal(councilAsOf("2026-08-02", { now }), "2026-08-02");
+  assert.throws(
+    () => councilAsOf("2026-08-04", { now }),
+    (error) => error.code === -32602 && error.data.reason === "FUTURE_AS_OF",
+  );
+  assert.throws(() => councilAsOf("2026-02-30", { now }), /valid YYYY-MM-DD/u);
 });

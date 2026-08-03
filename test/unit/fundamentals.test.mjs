@@ -200,7 +200,7 @@ test("a CAGR across a non-positive base is refused rather than produced", () => 
   assert.equal(gapsFor(result, "valuation.revenue_growth")[0].code, "non_positive_base");
 });
 
-test("trailing-four-quarter growth is computed when eight quarters exist, and gapped when they do not", () => {
+test("the direct eight-quarter fallback must end at the newest regular revenue period", () => {
   const quarterEnds = [
     "2023-03-31", "2023-06-30", "2023-09-30", "2023-12-31",
     "2024-03-31", "2024-06-30", "2024-09-30", "2024-12-31",
@@ -219,23 +219,110 @@ test("trailing-four-quarter growth is computed when eight quarters exist, and ga
     };
   });
   const withQuarters = baseFacts({
-    Revenues: usd([...flowRows(zip(YEARS, [1000, 1100, 1210, 1331, 1464.1, 1610.51])), ...quarterRows]),
+    // Leave the latest full year behind the quarterly history so the annual/YTD bridge is not
+    // available. The fallback may use only these LAST eight rows, ending at 2024-12-31.
+    Revenues: usd([...flowRows(zip(YEARS.slice(0, 3), [1000, 1100, 1210])), ...quarterRows]),
   });
-  const growth = deriveFundamentals({ companyFacts: withQuarters }).metrics["valuation.revenue_growth"];
+  const growth = deriveFundamentals({ companyFacts: withQuarters, asOf: "2025-03-01" }).metrics["valuation.revenue_growth"];
   // 440 against 400 is 10%, expressed as 0.1 rather than 10.
   assert.equal(growth.components.yoy_ttm, 0.1);
   assert.equal(growth.components.yoy_ttm_latest, 440);
   assert.equal(growth.components.yoy_ttm_prior, 400);
+  assert.equal(growth.components.yoy_ttm_method, "direct_eight_quarters");
+  assert.equal(growth.components.yoy_ttm_period_end, "2024-12-31");
+  assert.deepEqual(growth.components.yoy_ttm_freshness, {
+    as_of: "2025-03-01",
+    latest_regular_period_end: "2024-12-31",
+    period_age_days: 60,
+    public_age_days: 25,
+  });
   // The annual rows must not be mistaken for quarters, and vice versa.
   assert.equal(quarterlySeries(withQuarters, ["Revenues"], {}).length, 8);
 
-  // Without quarterly tags the CAGR still stands and the YoY is a named component gap.
+  // At a fiscal-year end the same bridge has zero YTD quarters and compares the two complete
+  // annual periods. It is still a current TTM, not a quarterly-data gap.
   const annualOnly = deriveFundamentals({ companyFacts: baseFacts() });
   assert.ok(annualOnly.metrics["valuation.revenue_growth"].value > 0);
-  assert.equal(annualOnly.metrics["valuation.revenue_growth"].components.yoy_ttm, null);
-  const [gap] = gapsFor(annualOnly, "valuation.revenue_growth");
+  assert.equal(annualOnly.metrics["valuation.revenue_growth"].components.yoy_ttm_method, "annual_ytd_bridge");
+  assert.equal(annualOnly.metrics["valuation.revenue_growth"].components.yoy_ttm_latest, 1610.51);
+  assert.equal(annualOnly.metrics["valuation.revenue_growth"].components.yoy_ttm_prior, 1464.1);
+});
+
+test("latest-FY plus Q1 bridge produces the current and prior TTM as of the cutoff", () => {
+  const annual = [
+    { start: "2023-01-30", end: "2024-01-28", val: 60_922_000_000, accn: "0001045810-26-000021", fy: 2026, fp: "FY", form: "10-K", filed: "2026-02-25" },
+    { start: "2024-01-29", end: "2025-01-26", val: 130_497_000_000, accn: "0001045810-26-000021", fy: 2026, fp: "FY", form: "10-K", filed: "2026-02-25" },
+    { start: "2025-01-27", end: "2026-01-25", val: 215_938_000_000, accn: "0001045810-26-000021", fy: 2026, fp: "FY", form: "10-K", filed: "2026-02-25" },
+  ];
+  const q1 = [
+    { start: "2024-01-29", end: "2024-04-28", val: 26_044_000_000, accn: "0001045810-25-000116", fy: 2026, fp: "Q1", form: "10-Q", filed: "2025-05-28" },
+    { start: "2025-01-27", end: "2025-04-27", val: 44_062_000_000, accn: "0001045810-26-000052", fy: 2027, fp: "Q1", form: "10-Q", filed: "2026-05-20" },
+    { start: "2026-01-26", end: "2026-04-26", val: 81_615_000_000, accn: "0001045810-26-000052", fy: 2027, fp: "Q1", form: "10-Q", filed: "2026-05-20" },
+  ];
+  const companyFacts = baseFacts({ Revenues: usd([...annual, ...q1]) });
+  companyFacts.cik = 1_045_810;
+  const growth = deriveFundamentals({ companyFacts, asOf: "2026-08-03" }).metrics["valuation.revenue_growth"];
+
+  assert.equal(growth.components.yoy_ttm_latest, 253_491_000_000);
+  assert.equal(growth.components.yoy_ttm_prior, 148_515_000_000);
+  assert.equal(growth.components.yoy_ttm, 0.706838);
+  assert.equal(growth.components.yoy_ttm_method, "annual_ytd_bridge");
+  assert.equal(growth.components.yoy_ttm_period_start, "2025-04-28");
+  assert.equal(growth.components.yoy_ttm_period_end, "2026-04-26");
+  assert.equal(growth.components.yoy_ttm_prior_period_end, "2025-04-27");
+  assert.equal(growth.inputs.yoy_ttm_inputs.fiscal_quarters_bridged, 1);
+  assert.equal(growth.inputs.yoy_ttm_inputs.current_ytd[0].ordinal, 1);
+  assert.deepEqual(growth.components.yoy_ttm_freshness, {
+    as_of: "2026-08-03",
+    latest_regular_period_end: "2026-04-26",
+    period_age_days: 99,
+    public_age_days: 75,
+  });
+});
+
+test("a ragged newest quarter fails closed instead of scanning back to an older clean eight-quarter block", () => {
+  const cleanEnds = [
+    "2022-03-31", "2022-06-30", "2022-09-30", "2022-12-31",
+    "2023-03-31", "2023-06-30", "2023-09-30", "2023-12-31",
+  ];
+  const clean = cleanEnds.map((end, index) => ({
+    start: index === 0 ? "2022-01-01" : shift(cleanEnds[index - 1], 1),
+    end,
+    val: index < 4 ? 100 : 110,
+    accn: accession(end),
+    fy: Number(end.slice(0, 4)),
+    fp: `Q${(index % 4) + 1}`,
+    form: index % 4 === 3 ? "10-K" : "10-Q",
+    filed: shift(end, 35),
+  }));
+  const raggedLatest = {
+    start: "2024-04-01",
+    end: "2024-06-30",
+    val: 120,
+    accn: accession("2024-06-30"),
+    fy: 2024,
+    fp: "Q2",
+    form: "10-Q",
+    filed: "2024-08-01",
+  };
+  const result = deriveFundamentals({
+    companyFacts: baseFacts({
+      Revenues: usd([
+        ...flowRows(zip(YEARS.slice(0, 3), [1000, 1100, 1210])),
+        ...clean,
+        raggedLatest,
+      ]),
+    }),
+    asOf: "2024-08-03",
+  });
+  const growth = result.metrics["valuation.revenue_growth"];
+  assert.equal(growth.components.yoy_ttm, null);
+  assert.equal(growth.components.yoy_ttm_method, null);
+  assert.equal(growth.components.yoy_ttm_period_end, "2024-06-30");
+  const [gap] = gapsFor(result, "valuation.revenue_growth");
   assert.equal(gap.component, "yoy_ttm");
-  assert.equal(gap.code, "insufficient_history");
+  assert.equal(gap.code, "period_misaligned");
+  assert.match(gap.detail, /latest eight standalone quarters/u);
 });
 
 test("incremental return on capital returns null when the denominator barely moves", () => {

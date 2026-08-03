@@ -175,8 +175,6 @@ export const LIMITS = Object.freeze({
   HEARTBEAT_MS: 30000,
   /** Grace period between SIGTERM and SIGKILL for a timed-out child. */
   SIGKILL_GRACE_MS: 5000,
-  /** Default per-subagent Codex timeout. */
-  CODEX_TIMEOUT_MS: Number(process.env.ALPHACOUNCIL_AGENT_TIMEOUT_MS) || 600000,
   /**
    * Non-overridable public ceiling for a plugin-managed full council: the slowest pace's
    * budget. The ceiling a given call is actually held to is its pace's `total_ms`, which is

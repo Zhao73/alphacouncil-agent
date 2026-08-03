@@ -331,7 +331,9 @@ export const CONCEPTS = {
     "InterestIncomeExpenseNonoperatingNet",
     "InterestExpenseBorrowings",
   ],
-  sharesOutstanding: ["CommonStockSharesOutstanding", "WeightedAverageNumberOfDilutedSharesOutstanding"],
+  // An instant share-count endpoint must never be backfilled with a duration-weighted average.
+  // The dilution screen fails closed when the filer does not publish this point-in-time tag.
+  sharesOutstanding: ["CommonStockSharesOutstanding"],
 };
 
 export const secUserAgent = () => UA;

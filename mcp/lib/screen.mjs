@@ -1,5 +1,6 @@
 import { fetchUniverse, fetchCompanyFacts, annualSeries, CONCEPTS } from "./sec.mjs";
 import { invalidParams } from "./errors.mjs";
+import { periodWindowMatches } from "./periods.mjs";
 
 /**
  * Mechanical elimination screen. No language model is involved.
@@ -16,6 +17,7 @@ import { invalidParams } from "./errors.mjs";
 const pct = (x) => (x === null ? null : Number((x * 100).toFixed(2)));
 const last = (series, n) => series.slice(-n);
 const sum = (xs) => xs.reduce((a, b) => a + b, 0);
+const DAY_MS = 86_400_000;
 
 /**
  * Pair two annual series by fiscal period end, newest last, capped at n pairs.
@@ -100,6 +102,47 @@ function dilutionProvenance(shares, splitRows) {
     ...ruleProvenance([shares, splitRows]),
     period_start: shares[0]?.end || null,
     period_end: shares.at(-1)?.end || null,
+  };
+}
+
+/**
+ * A five-year endpoint change normally needs a sixth annual endpoint, not the last five rows.
+ * Date coverage, not row count, is authoritative when a middle year is absent.
+ * Pick the observation nearest the latest endpoint's five-calendar-year anniversary and
+ * refuse shorter proxies.  The full slice is retained because split detection needs every
+ * transition between the selected endpoints.
+ */
+function fiveYearShareWindow(shares) {
+  if (!Array.isArray(shares) || shares.length < 2) return null;
+  const latest = shares.at(-1);
+  const latestTime = Date.parse(latest?.end);
+  if (!Number.isFinite(latestTime)) return null;
+  const latestDate = new Date(latestTime);
+  const target = Date.UTC(
+    latestDate.getUTCFullYear() - 5,
+    latestDate.getUTCMonth(),
+    latestDate.getUTCDate(),
+  );
+  let selectedIndex = -1;
+  let selectedDrift = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < shares.length - 1; index += 1) {
+    const time = Date.parse(shares[index]?.end);
+    if (!Number.isFinite(time)) continue;
+    if (!periodWindowMatches({ period_start: shares[index].end, period_end: latest.end }, "P5Y")) continue;
+    const drift = Math.abs(time - target) / DAY_MS;
+    if (drift < selectedDrift) {
+      selectedIndex = index;
+      selectedDrift = drift;
+    }
+  }
+  if (selectedIndex < 0) return null;
+  const window = shares.slice(selectedIndex);
+  const spanDays = Math.round((latestTime - Date.parse(window[0].end)) / DAY_MS);
+  return {
+    window,
+    spanDays,
+    spanYears: Number((spanDays / 365.25).toFixed(4)),
+    observationCount: window.length,
   };
 }
 
@@ -386,8 +429,14 @@ export function evaluateRules(facts, { asOf = null } = {}) {
   });
 
   add("dilution", { en: "5-year share dilution", zh: "5年股本稀释" }, () => {
-    const s = last(shares, 5);
-    if (s.length < 3) return null;
+    const measured = fiveYearShareWindow(shares);
+    if (!measured) {
+      return {
+        skipped: true,
+        reason: "insufficient five-year share-count history",
+      };
+    }
+    const s = measured.window;
     const first = s[0].val;
     const latest = s[s.length - 1].val;
     if (!(first > 0) || !(latest > 0)) return null;
@@ -402,14 +451,25 @@ export function evaluateRules(facts, { asOf = null } = {}) {
         unit: "%",
         threshold: 20,
         direction: "max",
-        years: s.length,
+        years: 5,
+        span_days: measured.spanDays,
+        span_years: measured.spanYears,
+        observation_count: measured.observationCount,
         split_like_transitions: splitReview.transitions,
         ...dilutionProvenance(s, splitReview.sourceRows),
       };
     }
     const change = latest / (first * splitReview.factor) - 1;
     return {
-      passed: change <= 0.20, value: pct(change), unit: "%", threshold: 20, direction: "max", years: s.length,
+      passed: change <= 0.20,
+      value: pct(change),
+      unit: "%",
+      threshold: 20,
+      direction: "max",
+      years: 5,
+      span_days: measured.spanDays,
+      span_years: measured.spanYears,
+      observation_count: measured.observationCount,
       ...(splitReview.status === "verified_xbrl" ? {
         raw_value: pct(rawChange),
         adjustment_status: "verified_xbrl",

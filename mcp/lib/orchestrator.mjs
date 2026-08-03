@@ -9,7 +9,7 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { assertOfficialSourceCoverage, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
@@ -19,6 +19,28 @@ import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { managerDecisionNestedSourceIds, renderStructuredManagerReport } from "./manager-report.mjs";
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/u;
+
+/** A council cannot certify an information set whose cutoff has not happened yet. */
+export function councilAsOf(value, { now = new Date() } = {}) {
+  const asOfDate = value || (now instanceof Date ? now : new Date(now)).toISOString().slice(0, 10);
+  const parsed = ISO_DAY.test(String(asOfDate)) ? Date.parse(`${asOfDate}T00:00:00.000Z`) : NaN;
+  if (!Number.isFinite(parsed) || new Date(parsed).toISOString().slice(0, 10) !== asOfDate) {
+    throw invalidParams(`as_of must be a valid YYYY-MM-DD date, got ${JSON.stringify(value)}`);
+  }
+  const nowTime = now instanceof Date ? now.getTime() : Date.parse(now);
+  if (!Number.isFinite(nowTime)) throw new Error("council now must be a valid timestamp");
+  const currentDay = new Date(nowTime).toISOString().slice(0, 10);
+  if (asOfDate > currentDay) {
+    throw invalidParams(`as_of ${asOfDate} is in the future; the latest certifiable cutoff is ${currentDay}`, {
+      reason: "FUTURE_AS_OF",
+      as_of: asOfDate,
+      latest_certifiable_cutoff: currentDay,
+    });
+  }
+  return asOfDate;
+}
 
 function commitFinalArtifacts(run, debate = {}) {
   const prepared = writeFinalArtifacts(run, debate);
@@ -61,6 +83,45 @@ function plannedTasks(args = {}) {
 export function runPace(run) {
   if (run?.council_mode === "quick") return null;
   return councilPaceProfile(run?.council_pace);
+}
+
+/**
+ * Resolve optional legacy worker caps without letting an MCP schema default silently shorten
+ * a confirmed pace. A caller may explicitly lower a stage, but omitting the legacy field means
+ * "use the pace profile" -- especially slow evidence at twelve minutes.
+ */
+export function evidenceStageTimeout(args = {}, timing = {}) {
+  const cap = timing.council_mode === "quick"
+    ? LIMITS.QUICK_EVIDENCE_MS
+    : councilPaceProfile(timing.council_pace).evidence_ms;
+  const requested = Number.isFinite(args.timeout_ms) ? Number(args.timeout_ms) : cap;
+  return Math.min(requested, cap);
+}
+
+export function masterStageTimeout(args = {}, run = {}) {
+  const cap = run.council_mode === "quick"
+    ? LIMITS.QUICK_MASTER_MS
+    : runPace(run).master_ms;
+  const requested = Number.isFinite(args.timeout_ms) ? Number(args.timeout_ms) : cap;
+  return Math.min(requested, cap);
+}
+
+function explicitSynthesisCeiling(args = {}) {
+  if (Number.isFinite(args.synthesis_timeout_ms)) return Number(args.synthesis_timeout_ms);
+  if (Number.isFinite(args.timeout_ms)) return Number(args.timeout_ms);
+  return null;
+}
+
+export function debateStageTimeout(args = {}, run = {}) {
+  const cap = run.council_mode === "quick" ? LIMITS.QUICK_SYNTHESIS_MS : runPace(run).debate_ms;
+  const requested = explicitSynthesisCeiling(args);
+  return Math.min(requested ?? cap, cap);
+}
+
+export function portfolioManagerStageTimeout(args = {}, run = {}) {
+  const cap = run.council_mode === "quick" ? LIMITS.QUICK_SYNTHESIS_MS : runPace(run).pm_ms;
+  const requested = explicitSynthesisCeiling(args);
+  return Math.min(requested ?? cap, cap);
 }
 
 function councilTiming(args, startedAt) {
@@ -254,7 +315,7 @@ function frozenMasterSelection(args = {}) {
 
 export function visibleRun(args) {
   const symbol = safeSymbol(args.symbol);
-  const asOfDate = args.as_of || today();
+  const asOfDate = councilAsOf(args.as_of);
   const id = args.run_id || runId(symbol);
   const tasks = plannedTasks(args);
   const language = resolveLanguage(args);
@@ -803,6 +864,7 @@ export function recordVisiblePacket(args) {
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
   }, task, run.symbol, run.as_of, rawRecordText(args.packet));
+  applyGroundedRegulatorCoverage(packet, { task, asOfDate: run.as_of, grounding: run.grounding });
   assertOfficialSourceCoverage(packet, { task, asOfDate: run.as_of, grounding: run.grounding });
   assertVisibleReaderLanguage(visibleEvidenceReaderText(packet), run, `visible evidence ${task}`);
   const byTask = new Map(run.packets.map((item) => [item.task, item]));
@@ -1840,7 +1902,7 @@ export function queueHeadlessRun(args) {
     throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-level multi_agent or codex_app threads first, then record_visible_packet/record_visible_decision.");
   }
   const symbol = safeSymbol(args.symbol);
-  const asOfDate = args.as_of || today();
+  const asOfDate = councilAsOf(args.as_of);
   const id = args.run_id || runId(symbol);
   const tasks = plannedTasks(args);
   const dryRun = isDryRun(args);
@@ -1896,7 +1958,7 @@ export async function collectEvidence(args) {
     throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-level multi_agent or codex_app threads first, then record_visible_packet/record_visible_decision.");
   }
   const symbol = safeSymbol(args.symbol);
-  const asOfDate = args.as_of || today();
+  const asOfDate = councilAsOf(args.as_of);
   const id = args.run_id || runId(symbol);
   const tasks = plannedTasks(args);
   const dryRun = isDryRun(args);
@@ -1904,10 +1966,7 @@ export async function collectEvidence(args) {
   const frozen = frozenMasterSelection(args);
   const startedAt = args.queued_run?.started_at || new Date().toISOString();
   const timing = councilTiming(args, startedAt);
-  const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
-  const timeoutMs = timing.council_mode === "quick"
-    ? Math.min(requestedTimeoutMs, LIMITS.QUICK_EVIDENCE_MS)
-    : Math.min(requestedTimeoutMs, councilPaceProfile(timing.council_pace).evidence_ms);
+  const timeoutMs = evidenceStageTimeout(args, timing);
   const defaultConcurrency = timing.council_mode === "quick"
     ? QUICK_TASKS.length
     : Math.min(tasks.length, LIMITS.FULL_EVIDENCE_CONCURRENCY);
@@ -2087,6 +2146,7 @@ export async function collectEvidence(args) {
     let packet;
     try {
       packet = normalizePacket(extractWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"), task, symbol, asOfDate, result.text);
+      applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
       assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
       assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task}`);
       commitPacket(packet);
@@ -2153,6 +2213,7 @@ export async function collectEvidence(args) {
       }
       try {
         packet = normalizePacket(extractWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"), task, symbol, asOfDate, result.text);
+        applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} repair`);
         commitPacket(packet);
@@ -2299,10 +2360,7 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
 export async function runHeadlessMasters(run, args = {}) {
   const selected = selectedMasters(run);
   const dir = runPath(run.run_id);
-  const requestedTimeoutMs = Number.isFinite(args.timeout_ms) ? args.timeout_ms : LIMITS.CODEX_TIMEOUT_MS;
-  const timeoutMs = run.council_mode === "quick"
-    ? Math.min(requestedTimeoutMs, LIMITS.QUICK_MASTER_MS)
-    : Math.min(requestedTimeoutMs, runPace(run).master_ms);
+  const timeoutMs = masterStageTimeout(args, run);
   const defaultConcurrency = run.council_mode === "quick"
     ? 4
     : Math.min(selected.length, LIMITS.FULL_MASTER_CONCURRENCY);
@@ -2979,12 +3037,7 @@ function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRoun
 
 export async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
-  const requestedSynthesisMs = Number.isFinite(args.synthesis_timeout_ms)
-    ? args.synthesis_timeout_ms
-    : Number(args.timeout_ms || LIMITS.CODEX_TIMEOUT_MS);
-  const timeoutMs = run.council_mode === "quick"
-    ? Math.min(requestedSynthesisMs, LIMITS.QUICK_SYNTHESIS_MS)
-    : Math.min(requestedSynthesisMs, runPace(run).debate_ms);
+  const timeoutMs = debateStageTimeout(args, run);
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
   run.phase = "debate";
   run.status = "running";
@@ -3146,7 +3199,7 @@ export async function synthesizeDecision(run, args) {
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 
-  const pmBudget = remainingCouncilBudget(run, Math.min(requestedSynthesisMs, runPace(run).pm_ms));
+  const pmBudget = remainingCouncilBudget(run, portfolioManagerStageTimeout(args, run));
   const managerStep = await runDebateRole(run, "portfolio_manager", {
     bull,
     bear,

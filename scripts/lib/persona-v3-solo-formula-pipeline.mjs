@@ -79,7 +79,7 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "financial.gross_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
   "financial.net_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
   "accounting.cash_conversion": Object.freeze({ value_kind: "ratio", unit: "multiple", period: duration("P5Y") }),
-  "capital_allocation.share_count_change_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "capital_allocation.share_count_change_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
   "options.implied_volatility": Object.freeze({ value_kind: "ratio", unit: "decimal_annualized_volatility", period: INSTANT_AS_OF }),
   "options.skew_25d": Object.freeze({ value_kind: "ratio", unit: "decimal_volatility_difference", period: INSTANT_AS_OF }),
   "execution.bid_ask": Object.freeze({ value_kind: "ratio", unit: "decimal_of_mid", period: INSTANT_AS_OF }),

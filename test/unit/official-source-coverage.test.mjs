@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  applyGroundedRegulatorCoverage,
   assertOfficialSourceCoverage,
   compactEvidence,
   compactQuickEvidence,
@@ -24,6 +25,7 @@ const regulatorItem = {
 };
 
 const grounding = {
+  gathered_at: "2026-08-03T10:19:06Z",
   filer: {
     submissions_url: "https://data.sec.gov/submissions/CIK0001000045.json",
     latest_filing: {
@@ -228,4 +230,62 @@ test("regulator coverage must match the deterministic latest filing in grounding
     (error) => error?.data?.reason === "OFFICIAL_SOURCE_COVERAGE_INVALID"
       && error.data.errors.some((issue) => issue.keyword === "grounding_alignment"),
   );
+});
+
+test("deterministic SEC grounding materializes the canonical regulator source before the gate", () => {
+  const input = inputPacket();
+  input.sources[0] = {
+    ...input.sources[0],
+    title: "SEC submissions feed",
+    url: grounding.filer.submissions_url,
+  };
+  input.official_source_coverage.regulator.latest_dated_item = {
+    ...input.official_source_coverage.regulator.latest_dated_item,
+    title: "SEC submissions feed",
+    url: grounding.filer.submissions_url,
+  };
+  input.official_source_coverage.regulator.dated_items_checked = [
+    structuredClone(input.official_source_coverage.regulator.latest_dated_item),
+  ];
+  const packet = normalized(input);
+  applyGroundedRegulatorCoverage(packet, { task: TASK, asOfDate: AS_OF, grounding: {
+    ...grounding,
+    gathered_at: "2026-08-03T10:19:06Z",
+  } });
+
+  const latest = packet.official_source_coverage.regulator.latest_dated_item;
+  assert.equal(latest.url, regulatorItem.url);
+  assert.equal(latest.record_id, regulatorItem.record_id);
+  const source = packet.sources.find((candidate) => candidate.id === latest.source_id);
+  assert.equal(source.url, regulatorItem.url);
+  assert.equal(source.published_at, "2026-07-20");
+  assert.doesNotThrow(() => assertOfficialSourceCoverage(packet, { task: TASK, asOfDate: AS_OF, grounding }));
+});
+
+test("official coverage can never certify a cutoff after its actual retrieval day", () => {
+  const future = "2099-01-01";
+  const input = inputPacket();
+  for (const surface of [input.official_source_coverage.regulator, input.official_source_coverage.issuer]) {
+    surface.checked_through = future;
+  }
+  const packet = normalizePacket(input, TASK, "ACME", future, "");
+  assert.throws(
+    () => assertOfficialSourceCoverage(packet, { task: TASK, asOfDate: future, grounding }),
+    (error) => error.code === -32602
+      && error.data.errors.some((issue) => issue.keyword === "retrieval_cutoff"),
+  );
+});
+
+test("the deterministic regulator adapter marks a future cutoff incomplete", () => {
+  const future = "2099-01-01";
+  const input = inputPacket();
+  for (const surface of [input.official_source_coverage.regulator, input.official_source_coverage.issuer]) {
+    surface.checked_through = future;
+  }
+  const packet = normalizePacket(input, TASK, "ACME", future, "");
+  applyGroundedRegulatorCoverage(packet, { task: TASK, asOfDate: future, grounding });
+  assert.equal(packet.official_source_coverage.regulator.status, "incomplete");
+  assert.equal(packet.official_source_coverage.regulator.checked_through, AS_OF);
+  assert.match(packet.official_source_coverage.regulator.gap, /cannot certify the future cutoff/u);
+  assert.equal(packet.official_source_coverage.status, "incomplete");
 });

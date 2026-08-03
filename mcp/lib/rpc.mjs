@@ -525,13 +525,12 @@ export function tools() {
     tasks: { type: "array", items: { type: "string", enum: analystIds } },
     dry_run: { type: "boolean", default: false, description: "Default false. Set true only for planning/self-tests without launching Codex subagents." },
     max_concurrency: { type: "number", default: LIMITS.CONCURRENCY_DEFAULT },
-    timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
+    timeout_ms: { type: "number", description: "Optional legacy per-worker ceiling. Omit it to use the selected council pace's stage caps; callers may only use it to lower those caps." },
     synthesis: { type: "boolean", default: true, description: "Run bull, bear, and portfolio-manager synthesis after evidence collection." },
-    synthesis_timeout_ms: { type: "number", default: LIMITS.CODEX_TIMEOUT_MS },
+    synthesis_timeout_ms: { type: "number", description: "Optional legacy synthesis ceiling. Omit it to use the selected council pace's debate and portfolio-manager caps." },
     council_pace: {
       type: "string",
       enum: COUNCIL_PACE_NAMES,
-      default: DEFAULT_COUNCIL_PACE,
       description: "Full-council depth/time tier. fast = 15 minutes, normal = 30, slow = 60. The tier sets the total budget AND every per-stage cap together: slow gives each evidence seat 12 minutes instead of 6 and each debate round 6 minutes per side instead of 150 seconds, which is where the extra depth comes from. Raising total_timeout_ms alone buys idle time, not depth. Quick rejects this field.",
     },
     total_timeout_ms: {

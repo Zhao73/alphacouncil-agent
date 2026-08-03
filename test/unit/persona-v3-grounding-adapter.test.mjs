@@ -304,3 +304,51 @@ test("the final source-visibility gate drops a fact dated before a cited source"
     action: "not_converted",
   }]);
 });
+
+test("insider ownership keeps every exact Form 4 document in typed-fact lineage", () => {
+  const numeratorId = "sec:ownership:0000320193:0000320193-26-000099";
+  const denominatorId = "sec:companyfacts:0000320193:EntityCommonStockSharesOutstanding:0000320193-26-000088:2026-05-15";
+  const grounding = {
+    as_of: "2026-08-03",
+    gathered_at: "2026-08-03T12:00:00.000Z",
+    insider_ownership: {
+      value: 0.0955,
+      owner_count: 1,
+      as_of: "2026-06-16",
+      public_at: "2026-06-16T00:00:00.000Z",
+      method: "bounded Section 16 register proxy",
+      owner_report_date_min: "2026-06-15",
+      owner_report_date_max: "2026-06-15",
+      coverage: { attempted_document_count: 1, unresolved_document_count: 0 },
+      numerator_source_ids: [numeratorId],
+      numerator_sources: [{
+        source_id: numeratorId,
+        accession: "0000320193-26-000099",
+        form: "4",
+        filing_date: "2026-06-16",
+        report_date: "2026-06-15",
+        owner_cik: "0001780525",
+        url: "https://www.sec.gov/Archives/edgar/data/320193/000032019326000099/form4.xml",
+      }],
+      denominator: {
+        value: 1_000_000,
+        measurement: "point_in_time_common_shares_outstanding",
+        taxonomy: "dei",
+        tag: "EntityCommonStockSharesOutstanding",
+        form: "10-Q",
+        period_end: "2026-05-15",
+        public_at: "2026-05-20T00:00:00.000Z",
+        source_id: denominatorId,
+        source_url: "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json",
+      },
+    },
+  };
+  const adapted = adaptGroundingToTypedFacts(grounding, { asOf: "2026-08-03" });
+  const fact = adapted.fact_pack.facts.find((candidate) => candidate.fact_id === "governance.insider_ownership");
+  assert.deepEqual(fact.source_ids, [numeratorId, denominatorId]);
+  const numerator = adapted.sources.find((source) => source.source_id === numeratorId);
+  assert.equal(numerator.url, grounding.insider_ownership.numerator_sources[0].url);
+  assert.equal(numerator.locator.accession, "0000320193-26-000099");
+  assert.equal(numerator.locator.owner_cik, "0001780525");
+  assert.equal(adapted.diagnostics.length, 0);
+});

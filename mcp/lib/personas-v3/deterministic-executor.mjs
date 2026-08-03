@@ -8,6 +8,7 @@
 
 import { canonicalValue, sha256 } from "./canonical.mjs";
 import { freezeAnonymousDecision } from "./runtime.mjs";
+import { ANY_REPORTING_INTERVAL, periodWindowMatches } from "../periods.mjs";
 import {
   PROVISIONAL_DERIVED_PROXY_ASSURANCE,
   deterministicToolEvidenceBinding,
@@ -15,6 +16,7 @@ import {
 } from "./tool-schema-hashes.mjs";
 
 export {
+  ANY_REPORTING_INTERVAL,
   PROVISIONAL_DERIVED_PROXY_ASSURANCE,
   deterministicToolEvidenceBinding,
   deterministicToolSchemaHashes,
@@ -543,31 +545,6 @@ function runOperation(operation, values, path) {
 
 function periodTuple(fact) {
   return [fact.period_start, fact.period_end, fact.fiscal_year];
-}
-
-/** Window token for a duration whose length is set by data availability, not by the method. */
-export const ANY_REPORTING_INTERVAL = "ANY";
-
-function periodWindowMatches(fact, window) {
-  if (!fact.period_start || !fact.period_end) return false;
-  const start = Date.parse(fact.period_start);
-  const end = Date.parse(fact.period_end);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return false;
-  // Some aggregates cover as many periods as the filings supplied rather than a fixed span --
-  // interest coverage is three years for one issuer and one for the next. Pinning a count there
-  // would reject the fact for being honest about its own coverage; what still has to hold is
-  // that it carries a real interval rather than a stray observation date.
-  if (window === ANY_REPORTING_INTERVAL) return true;
-  const match = /^P([1-9]\d*)([DMY])$/u.exec(window || "");
-  if (!match) return false;
-  const count = Number(match[1]);
-  const elapsedDays = (end - start) / 86_400_000;
-  if (match[2] === "D") return elapsedDays === count;
-  if (match[2] === "M") return elapsedDays >= count * 27 && elapsedDays <= count * 32;
-  // A fiscal year is 52 or 53 weeks, not 365 days, and it is measured between two fiscal
-  // year-end dates -- so a real one-year filing span is routinely 363 or 364 days. Demanding
-  // 365 rejected every issuer whose year ends on a weekday.
-  return elapsedDays >= count * 364 - 2 && elapsedDays <= count * 366 + 1;
 }
 
 function assertFactInputContract(fact, contract, factPackAsOf, path) {

@@ -2,6 +2,33 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.6] — 2026-08-03
+
+### Fixed
+
+- Full-council worker limits now inherit the pace selected at the one-run gate. Omitting the
+  legacy timeout fields no longer cuts a slow evidence seat from twelve minutes to ten; explicit
+  legacy values may still lower, but never enlarge, each evidence, method, debate or PM cap.
+- Section 16 ownership now sums every distinct non-derivative holding bucket in an insider's
+  newest document, including separately disclosed trusts and LLCs, while still excluding
+  derivative awards. The ratio now uses the latest eligible point-in-time common-share count
+  from SEC CompanyFacts instead of an annual weighted-average diluted EPS denominator. Any
+  unresolved candidate Form now withholds the ratio, and every exact XML accession remains in
+  typed-fact lineage.
+- Revenue TTM growth must end at the newest visible regular period. It uses a same-period
+  full-year/YTD bridge or the latest contiguous eight direct quarters and never searches back
+  to an old clean window; the exact bridge inputs are included in fact lineage and hashes.
+- Five-year share-count change now requires a physical P5Y endpoint interval, shares the same
+  period matcher as deterministic method contracts, and never mixes instant common shares with
+  weighted diluted averages. Shorter histories fail closed instead of being labelled five-year.
+- Blank FRED CSV observations are discarded before numeric conversion, preserving true zeroes
+  without contaminating macro history, percentiles or liquidity alignment with synthetic zeroes.
+- The official SEC news surface is materialized deterministically from the already-grounded
+  filing feed before source-coverage validation, so parse-only repair cannot fail on a copied
+  canonical filing URL while issuer-official coverage remains worker-supplied and fail-closed.
+  Future analysis cutoffs are rejected, and official coverage cannot extend past its actual
+  grounding retrieval date.
+
 ## [1.1.5] — 2026-08-03
 
 ### Fixed
