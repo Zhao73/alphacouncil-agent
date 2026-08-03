@@ -2,6 +2,18 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.7] — 2026-08-03
+
+### Fixed
+
+- Dedicated headless method voices now preserve over-structured prose entries as deterministic
+  canonical JSON strings inside the three narrative arrays. This prevents one otherwise valid
+  seat from blocking the 26-seat barrier when a worker returns a sourced object instead of a
+  plain string, without loosening visible-input, source-ID, stance, confidence or PM contracts.
+- Method-voice prompts now state explicitly that findings, disagreements and change-of-mind
+  lists contain plain strings only. Structured-prose regression coverage proves the seat crosses
+  the full council barrier without launching a parse-repair worker or losing authored content.
+
 ## [1.1.6] — 2026-08-03
 
 ### Fixed

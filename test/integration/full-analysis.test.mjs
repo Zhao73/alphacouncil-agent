@@ -203,6 +203,11 @@ if (task) {
   const malformedMode = ${JSON.stringify(malformedMasterModes)}[master];
   if (!parseRepair && malformedMode === "missing_voice") delete packet.voice;
   if (!parseRepair && malformedMode === "invalid_confidence") packet.confidence = "very_high";
+  if (!parseRepair && malformedMode === "structured_prose") {
+    packet.key_findings = [{ text: "MASTER_STRUCTURED_FINDING_" + master, source_ids: ["market_data:S1"] }];
+    packet.disagreements = [{ rank: 1, text: "MASTER_STRUCTURED_DISAGREEMENT_" + master }];
+    packet.what_would_change_my_mind = [{ signal: "MASTER_STRUCTURED_CHANGE_" + master, threshold: 1 }];
+  }
 } else if (role === "portfolio_manager") {
   await sleep(45);
   if (${JSON.stringify(pmFailureMode)} === "both" || (${JSON.stringify(pmFailureMode)} === "first" && !parseRepair)) {
@@ -266,6 +271,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     malformedMasterModes: {
       master_buffett: "missing_voice",
       master_druckenmiller: "invalid_confidence",
+      master_taleb: "structured_prose",
     },
   });
   // Every seat this fixture selects abstains on an ETF, and an abstaining seat no longer spends
@@ -403,6 +409,11 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.ok(masterRepairs.every((item) => item.search === false), "method schema repair cannot browse");
     assert.ok(masterRepairs.every((item) => item.exactMethodVoiceContract),
       "repair repeats the exact five-field voice, confidence enum, and allowed-source contract");
+    assert.deepEqual(
+      result.run.master_opinions.find((item) => item.master === "master_taleb")?.key_findings,
+      ['{"source_ids":["market_data:S1"],"text":"MASTER_STRUCTURED_FINDING_master_taleb"}'],
+      "structured prose survives as deterministic canonical JSON without launching a repair worker",
+    );
 
     const roundLaunches = (round) => launches.filter((item) =>
       ["bull_researcher", "bear_researcher"].includes(item.role) && item.round === round && !item.parseRepair);

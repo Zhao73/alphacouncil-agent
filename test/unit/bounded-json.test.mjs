@@ -8,7 +8,11 @@ import {
   stripJsonComments,
   stripTrailingCommas,
 } from "../../mcp/lib/bounded-json.mjs";
-import { assertRuntimeWorkerPayload } from "../../mcp/lib/runtime-validation.mjs";
+import {
+  assertRuntimeClientPayload,
+  assertRuntimeWorkerPayload,
+  normalizeMethodVoiceWorkerTransport,
+} from "../../mcp/lib/runtime-validation.mjs";
 
 const evidence = () => ({
   summary: "Sourced evidence packet with an explicit boundary.",
@@ -27,6 +31,26 @@ const evidence = () => ({
     retrieved_at: "2026-08-02",
   }],
   open_questions: [],
+  confidence: "medium",
+});
+
+const methodVoice = () => ({
+  master: "master_druckenmiller",
+  acknowledged_stance: "cautious",
+  voice_mode: "first_person_public_method_simulation_v1",
+  disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+  position_intent: "would_hold",
+  voice: {
+    would_i_act: "I would hold while the evidence remains bounded.",
+    what_i_see: "I see a valid point-in-time record.",
+    how_my_method_reads_it: "I read liquidity and price together.",
+    where_i_disagree: "I disagree with ignoring the cycle.",
+    what_changes_my_mind: "I would change my mind if price and liquidity reversed.",
+  },
+  key_findings: ["Price confirms the bounded stance."],
+  disagreements: ["The cycle still matters."],
+  what_would_change_my_mind: ["A dated reversal would change my reading."],
+  source_ids: ["market_data:S1"],
   confidence: "medium",
 });
 
@@ -162,4 +186,88 @@ test("runtime source IDs accept long SEC lineage but reject whitespace, controls
       (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
     );
   }
+});
+
+test("headless method voice preserves strings and canonically serializes structured prose only", () => {
+  const valid = methodVoice();
+  assert.equal(assertRuntimeWorkerPayload("method_voice", valid), valid);
+
+  const structured = methodVoice();
+  structured.key_findings = [
+    "Original string remains unchanged.",
+    { text: "Price confirms.", nested: { z: 2, a: 1 }, source_ids: ["market_data:S1"] },
+  ];
+  structured.disagreements = [{ text: "Cycle risk remains.", rank: 1 }];
+  structured.what_would_change_my_mind = [{ threshold: 0.5, signal: "liquidity_reversal" }];
+  const normalized = assertRuntimeWorkerPayload("method_voice", structured);
+  assert.notEqual(normalized, structured);
+  assert.deepEqual(normalized.key_findings, [
+    "Original string remains unchanged.",
+    '{"nested":{"a":1,"z":2},"source_ids":["market_data:S1"],"text":"Price confirms."}',
+  ]);
+  assert.deepEqual(normalized.disagreements, ['{"rank":1,"text":"Cycle risk remains."}']);
+  assert.deepEqual(normalized.what_would_change_my_mind, [
+    '{"signal":"liquidity_reversal","threshold":0.5}',
+  ]);
+  assert.deepEqual(structured.key_findings, [
+    "Original string remains unchanged.",
+    { text: "Price confirms.", nested: { z: 2, a: 1 }, source_ids: ["market_data:S1"] },
+  ]);
+
+  const reordered = methodVoice();
+  reordered.key_findings = [{ source_ids: ["market_data:S1"], nested: { a: 1, z: 2 }, text: "Price confirms." }];
+  assert.equal(
+    assertRuntimeWorkerPayload("method_voice", reordered).key_findings[0],
+    normalized.key_findings[1],
+  );
+
+  assert.throws(
+    () => assertRuntimeClientPayload("method_voice", structured),
+    (error) => error?.data?.reason === "VISIBLE_INPUT_SCHEMA_MISMATCH",
+  );
+});
+
+test("method voice transport does not coerce provenance or invalid prose primitives", () => {
+  const badSource = methodVoice();
+  badSource.source_ids = [{ id: "market_data:S1" }];
+  assert.throws(
+    () => assertRuntimeWorkerPayload("method_voice", badSource),
+    (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
+  );
+
+  for (const invalidItem of [null, undefined, 42, true, ["nested array"]]) {
+    const invalid = methodVoice();
+    invalid.key_findings = [invalidItem];
+    assert.throws(
+      () => assertRuntimeWorkerPayload("method_voice", invalid),
+      (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
+    );
+  }
+});
+
+test("method voice transport fails closed on non-canonical structured prose", () => {
+  const cyclic = {};
+  cyclic.self = cyclic;
+  const invalid = methodVoice();
+  invalid.disagreements = [cyclic];
+  assert.throws(
+    () => normalizeMethodVoiceWorkerTransport(invalid),
+    (error) => error?.data?.reason === "WORKER_OUTPUT_TRANSPORT_MISMATCH"
+      && error.data.path === "/disagreements/0",
+  );
+
+  const undefinedValue = methodVoice();
+  undefinedValue.key_findings = [{ text: undefined }];
+  assert.throws(
+    () => normalizeMethodVoiceWorkerTransport(undefinedValue),
+    (error) => error?.data?.reason === "WORKER_OUTPUT_TRANSPORT_MISMATCH",
+  );
+
+  const prototypeKey = methodVoice();
+  prototypeKey.key_findings = [JSON.parse('{"__proto__":{"polluted":true},"text":"kept"}')];
+  assert.equal(
+    normalizeMethodVoiceWorkerTransport(prototypeKey).key_findings[0],
+    '{"__proto__":{"polluted":true},"text":"kept"}',
+  );
+  assert.equal({}.polluted, undefined);
 });

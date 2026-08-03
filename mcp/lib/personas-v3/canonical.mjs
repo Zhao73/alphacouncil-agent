@@ -28,7 +28,14 @@ function normalize(value, path = "$") {
   const out = {};
   for (const key of Object.keys(value).sort()) {
     if (value[key] === undefined) throw new Error(`${path}.${key}: undefined is not canonical JSON`);
-    out[key] = normalize(value[key], `${path}.${key}`);
+    // Define the own data property explicitly so a JSON key named "__proto__" remains data
+    // rather than invoking Object.prototype's legacy setter and disappearing from the hash.
+    Object.defineProperty(out, key, {
+      value: normalize(value[key], `${path}.${key}`),
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
   return out;
 }

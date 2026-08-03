@@ -351,6 +351,7 @@ export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
   return [
     `Allowed investment-evidence source_ids JSON: ${JSON.stringify(allowedSourceIds)}`,
     "`source_ids` MUST contain only a subset of that exact allowed list. A directional stance requires at least one ID. Never put `proxy:*` or any method-definition provenance in `source_ids`; the system preserves those separately as `method_source_ids`.",
+    "`key_findings`, `disagreements`, and `what_would_change_my_mind` MUST each be an array of plain strings. Never place objects or nested arrays inside them.",
     "`confidence` MUST be exactly one of: high | medium | low.",
     `Return ONLY one valid JSON object, no Markdown fence. Exact required shape (replace the angle-bracket voice text, preserve every key): ${JSON.stringify(example)}`,
   ].join("\n");

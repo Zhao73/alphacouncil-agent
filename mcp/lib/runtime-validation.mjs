@@ -6,7 +6,14 @@ import {
   validateNewsEvidencePacket,
   validatePortfolioManagerPacket,
 } from "../generated/runtime-validators.mjs";
+import { canonicalJson } from "./personas-v3/canonical.mjs";
 import { internalError, invalidParams } from "./errors.mjs";
+
+const METHOD_VOICE_PROSE_ARRAYS = Object.freeze([
+  "key_findings",
+  "disagreements",
+  "what_would_change_my_mind",
+]);
 
 const VALIDATORS = Object.freeze({
   evidence: Object.freeze({
@@ -59,8 +66,46 @@ function assertRuntimePayload(kind, value, { client = false, context = {} } = {}
   });
 }
 
+/**
+ * Dedicated method workers occasionally over-structure prose-array entries as JSON objects.
+ * Preserve that worker-authored content byte-for-byte at the semantic level by serializing the
+ * object canonically before the strict runtime schema sees it. This is deliberately limited to
+ * the three prose arrays on headless worker output: visible client packets and provenance fields
+ * such as source_ids retain their exact strict schema.
+ */
+export function normalizeMethodVoiceWorkerTransport(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  let normalized = value;
+  for (const field of METHOD_VOICE_PROSE_ARRAYS) {
+    const items = value[field];
+    if (!Array.isArray(items)) continue;
+    let changed = false;
+    const next = items.map((item, index) => {
+      if (typeof item === "string") return item;
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      try {
+        changed = true;
+        return canonicalJson(item);
+      } catch (error) {
+        throw internalError(`subagent method voice contained non-canonical JSON prose at /${field}/${index}`, {
+          reason: "WORKER_OUTPUT_TRANSPORT_MISMATCH",
+          schema_id: "runtime-method-voice-v1",
+          kind: "method_voice",
+          path: `/${field}/${index}`,
+          diagnostic: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
+    if (changed) normalized = { ...normalized, [field]: next };
+  }
+  return normalized;
+}
+
 export function assertRuntimeWorkerPayload(kind, value) {
-  return assertRuntimePayload(kind, value);
+  return assertRuntimePayload(
+    kind,
+    kind === "method_voice" ? normalizeMethodVoiceWorkerTransport(value) : value,
+  );
 }
 
 /** Visible-host packets are client input and therefore surface as JSON-RPC invalid params. */
