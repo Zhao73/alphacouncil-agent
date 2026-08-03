@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   adaptGroundingToTypedFacts,
+  enforceTypedFactSourceVisibility,
   typedFactPackFromGrounding,
 } from "../../mcp/lib/personas-v3/grounding-adapter.mjs";
 
@@ -27,6 +28,7 @@ function liveGrounding() {
       delayed: true,
       source: "CBOE delayed quotes",
       quote_time: "2026-07-27T11:30:00.000Z",
+      chain_timestamp: "2026-07-27T11:30:00.000Z",
       reference_expiry: { expiry: "2026-08-15", atm_iv: 0.45 },
       skew_25delta: { put_minus_call: 0.0033 },
       atm_spread_pct_of_mid: 8,
@@ -65,6 +67,7 @@ test("untimestamped observations are skipped instead of inheriting the run cutof
   delete grounding.gathered_at;
   delete grounding.quote.quote_time;
   delete grounding.options.quote_time;
+  delete grounding.options.chain_timestamp;
   const adapted = adaptGroundingToTypedFacts(grounding, { asOf: AS_OF });
   assert.equal(adapted.fact_pack.facts.length, 0);
   assert.deepEqual(adapted.diagnostics.map((entry) => entry.source), ["quote", "options"]);
@@ -77,6 +80,71 @@ test("an observation after an exact cutoff is not converted", () => {
   });
   assert.equal(adapted.fact_pack.facts.length, 0);
   assert.ok(adapted.diagnostics.every((entry) => entry.code === "missing_public_at"));
+});
+
+test("options metrics use the chain observation instead of an older underlying trade", () => {
+  const grounding = liveGrounding();
+  grounding.as_of = "2026-08-03";
+  grounding.gathered_at = "2026-08-03T10:19:08.015Z";
+  grounding.options.quote_time = "2026-07-31T19:59:59.000Z";
+  grounding.options.last_trade_time = "2026-07-31T19:59:59.000Z";
+  grounding.options.chain_timestamp = "2026-08-03T10:17:46.000Z";
+  grounding.options.retrieved_at = "2026-08-03T10:19:08.015Z";
+
+  const adapted = adaptGroundingToTypedFacts(grounding, { asOf: "2026-08-03" });
+  const optionSource = adapted.sources.find((source) => /option chain/iu.test(source.title));
+  const optionFacts = adapted.fact_pack.facts.filter((fact) => fact.source_ids.includes(optionSource.source_id));
+  const optionFactIds = new Set(optionFacts.map((fact) => fact.fact_id));
+  for (const factId of [
+    "execution.bid_ask",
+    "options.implied_volatility",
+    "options.skew_25d",
+    "options.term_structure",
+  ]) assert.equal(optionFactIds.has(factId), true, `${factId} was not published from the chain snapshot`);
+  assert.ok(optionFacts.every((fact) => fact.public_at === "2026-08-03T10:17:46.000Z"));
+
+  assert.equal(optionSource.public_at, "2026-08-03T10:17:46.000Z");
+  assert.equal(optionSource.locator.observation_time, "2026-08-03T10:17:46.000Z");
+  assert.equal(optionSource.locator.underlying_price_observation_time, "2026-07-31T19:59:59.000Z");
+  assert.equal(adapted.diagnostics.some((entry) => entry.code === "fact_public_at_precedes_source"), false);
+});
+
+test("source visibility rejects options metrics backdated to the underlying trade", () => {
+  const diagnostics = [];
+  const sourceId = "options:CBOE:NOK:2026-08-03T10:17:46.000Z";
+  const facts = enforceTypedFactSourceVisibility([
+    {
+      fact_id: "options.implied_volatility",
+      public_at: "2026-07-31T19:59:59.000Z",
+      source_ids: [sourceId],
+    },
+    {
+      fact_id: "execution.bid_ask",
+      public_at: "2026-07-31T19:59:59.000Z",
+      source_ids: [sourceId],
+    },
+  ], new Map([[sourceId, {
+    source_id: sourceId,
+    public_at: "2026-08-03T10:17:46.000Z",
+  }]]), diagnostics);
+
+  assert.deepEqual(facts, []);
+  assert.deepEqual(diagnostics.map((entry) => ({
+    code: entry.code,
+    fact_id: entry.fact_id,
+    source_public_at: entry.sources[0].source_public_at,
+  })), [
+    {
+      code: "fact_public_at_precedes_source",
+      fact_id: "options.implied_volatility",
+      source_public_at: "2026-08-03T10:17:46.000Z",
+    },
+    {
+      code: "fact_public_at_precedes_source",
+      fact_id: "execution.bid_ask",
+      source_public_at: "2026-08-03T10:17:46.000Z",
+    },
+  ]);
 });
 
 test("unversioned screen and macro summaries remain explicit lineage gaps", () => {
@@ -172,4 +240,67 @@ test("one SEC record can ground multiple derived metrics without a source identi
     adapted.fact_pack.facts.find((fact) => fact.fact_id === "financial.net_margin_5y").lineage.tool_id,
     "grounding_to_typed_facts:screen:net_margin",
   );
+});
+
+test("liquidity impulse becomes public no earlier than its latest cited FRED input", () => {
+  const fred = (id, observationDate, publicAt) => ({
+    id,
+    fact: null,
+    latest: 1,
+    label: id,
+    observation_date: observationDate,
+    public_at: publicAt,
+    source_url: `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}`,
+  });
+  const grounding = {
+    as_of: "2026-08-03",
+    gathered_at: "2026-08-03T12:00:00.000Z",
+    macro_series: {
+      series: {
+        WALCL: fred("WALCL", "2026-07-29", "2026-07-29T00:00:00.000Z"),
+        RRPONTSYD: fred("RRPONTSYD", "2026-07-31", "2026-07-31T00:00:00.000Z"),
+        WTREGEN: fred("WTREGEN", "2026-07-29", "2026-07-29T00:00:00.000Z"),
+      },
+      net_liquidity: {
+        public_at: "2026-07-29T00:00:00.000Z",
+        derived_from: ["WALCL", "RRPONTSYD", "WTREGEN"],
+      },
+      liquidity_impulse: {
+        value: 0.01,
+        window_days: 91,
+        from_date: "2026-04-29",
+        to_date: "2026-07-29",
+        from_value: 1,
+        to_value: 1.01,
+      },
+    },
+  };
+
+  const adapted = adaptGroundingToTypedFacts(grounding, { asOf: "2026-08-03" });
+  const impulse = adapted.fact_pack.facts.find((fact) => fact.fact_id === "macro.liquidity_impulse");
+  assert.equal(impulse.public_at, "2026-07-31T00:00:00.000Z");
+  assert.ok(impulse.source_ids.some((id) => id.includes("RRPONTSYD:2026-07-31")));
+  assert.equal(adapted.diagnostics.some((entry) => entry.code === "fact_public_at_precedes_source"), false);
+});
+
+test("the final source-visibility gate drops a fact dated before a cited source", () => {
+  const diagnostics = [];
+  const sourceId = "fred:RRPONTSYD:2026-07-31";
+  const facts = enforceTypedFactSourceVisibility([{
+    fact_id: "macro.liquidity_impulse",
+    public_at: "2026-07-29T00:00:00.000Z",
+    source_ids: [sourceId],
+  }], new Map([[sourceId, {
+    source_id: sourceId,
+    public_at: "2026-07-31T00:00:00.000Z",
+  }]]), diagnostics);
+
+  assert.deepEqual(facts, []);
+  assert.deepEqual(diagnostics, [{
+    code: "fact_public_at_precedes_source",
+    fact_id: "macro.liquidity_impulse",
+    fact_public_at: "2026-07-29T00:00:00.000Z",
+    sources: [{ source_id: sourceId, source_public_at: "2026-07-31T00:00:00.000Z" }],
+    action: "not_converted",
+  }]);
 });

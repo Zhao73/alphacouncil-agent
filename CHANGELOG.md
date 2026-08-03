@@ -2,6 +2,25 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.5] — 2026-08-03
+
+### Fixed
+
+- Full headless portfolio-manager workers now return a compact, source-validated decision;
+  the complete multilingual `full_v2` report is rendered deterministically in-process instead
+  of embedding more than twenty Markdown sections inside JSON. Failed attempts retain bounded,
+  owner-only length/hash/schema diagnostics without rejected model prose, and never fabricate a
+  rating or high confidence.
+- CBOE snapshot timestamps and underlying last-trade timestamps use their correct independent
+  timezone semantics. Derived typed facts cannot predate any cited input, and the final fact gate
+  drops missing-lineage or look-ahead records rather than silently accepting them.
+- The news/industry seat must return structured regulator and issuer-official coverage with a
+  dated latest item and checked-through boundary. Missing issuer coverage becomes an explicit
+  gap, while prose-only claims that an official newsroom was checked fail closed.
+- Slow handoffs report the actual 60-minute ceiling. Incomplete manager fallbacks state that the
+  manager ran but failed its output contract, keep `rating=null` and `confidence=low`, and preserve
+  every completed method statement at the end of the report.
+
 ## [1.1.4] — 2026-08-03
 
 ### Fixed

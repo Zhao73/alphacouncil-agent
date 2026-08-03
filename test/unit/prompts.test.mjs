@@ -42,6 +42,11 @@ test("news prompt gates no-event claims on current regulator and issuer-official
   assert.match(prompt, /issuer's \*\*IR\/newsroom\*\* through `as_of`/i);
   assert.match(prompt, /latest official filing\/news date and the coverage cutoff/i);
   assert.match(prompt, /If either official surface is missing or unreachable.*do not make a no-event assertion/is);
+  assert.match(prompt, /top-level `official_source_coverage`/i);
+  assert.match(prompt, /`latest_dated_item` must be the most recent item in `dated_items_checked`/i);
+  assert.match(prompt, /Top-level status may be `complete` only when both surfaces were actually checked through `as_of`/i);
+  assert.match(prompt, /accession\/record_id.*original-document URL must match/i);
+  assert.match(prompt, /entire news packet is rejected and cannot enter a rating/i);
 });
 
 // Masters used to see only the analysts' packets. That made 21 seats inherit one selection
@@ -115,4 +120,21 @@ test("an ETF portfolio-manager prompt requires the fund structure section and ag
   assert.match(prompt, /## Fund and Index Structure/);
   assert.match(prompt, /dated holdings\/constituent weights/);
   assert.match(prompt, /never add a few constituents into portfolio financials/i);
+});
+
+test("full headless portfolio-manager prompt ends with the compact decision contract", async () => {
+  const { debatePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const prompt = debatePrompt("portfolio_manager", {
+    run_id: "RKLB-HEADLESS-PM",
+    symbol: "RKLB",
+    as_of: "2026-07-28",
+    language: "English",
+    council_mode: "full",
+    tasks: [], packets: [], masters: [], master_opinions: [],
+  }, { structuredDecisionOnly: true });
+  assert.match(prompt, /HEADLESS_STRUCTURED_PM_DECISION_V1/);
+  assert.match(prompt, /Do not return `report_markdown`/);
+  assert.match(prompt, /price_levels.*horizon_views.*data_gaps/s);
+  assert.ok(prompt.lastIndexOf("HEADLESS_STRUCTURED_PM_DECISION_V1") > prompt.lastIndexOf("Evidence JSON:"),
+    "the compact transport contract must be the final output-form instruction");
 });

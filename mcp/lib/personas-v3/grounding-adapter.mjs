@@ -20,6 +20,12 @@ function timestampAtOrBefore(value, cutoff) {
   return Date.parse(value) <= cutoff ? value : null;
 }
 
+function latestTimestampAtOrBefore(values, cutoff) {
+  const visible = values.map((value) => timestampAtOrBefore(value, cutoff));
+  if (!visible.length || visible.some((value) => value === null)) return null;
+  return visible.reduce((latest, value) => (Date.parse(value) > Date.parse(latest) ? value : latest));
+}
+
 function sourceId(...parts) {
   return parts.map((part) => String(part ?? "unknown").trim().replace(/\s+/gu, "_"))
     .join(":").slice(0, 300);
@@ -220,6 +226,53 @@ function addUnique(facts, diagnostics, fact) {
   facts.push(fact);
 }
 
+/**
+ * A derived fact cannot exist before every source it cites was public.  Keep this as a final
+ * adapter-wide invariant rather than trusting each converter to remember the rule.  A bad
+ * fact is omitted and diagnosed; it never enters the immutable pack.
+ */
+export function enforceTypedFactSourceVisibility(facts, sourceRecords, diagnostics = []) {
+  const records = sourceRecords instanceof Map
+    ? sourceRecords
+    : new Map((sourceRecords || []).map((record) => [record.source_id, record]));
+  return facts.filter((fact) => {
+    const factTime = Date.parse(fact?.public_at);
+    const missing = (fact?.source_ids || []).filter((id) => !records.has(id));
+    if (missing.length) {
+      diagnostics.push({
+        code: "missing_typed_fact_source",
+        fact_id: fact?.fact_id || null,
+        source_ids: missing,
+        action: "not_converted",
+      });
+      return false;
+    }
+    const invalid = [];
+    const later = [];
+    for (const id of fact?.source_ids || []) {
+      const source = records.get(id);
+      const sourceTime = Date.parse(source?.public_at);
+      if (!Number.isFinite(sourceTime)) invalid.push(id);
+      else if (!Number.isFinite(factTime) || sourceTime > factTime) later.push(id);
+    }
+    if (invalid.length || later.length) {
+      const cited = [...invalid, ...later].map((id) => ({
+        source_id: id,
+        source_public_at: records.get(id)?.public_at || null,
+      }));
+      diagnostics.push({
+        code: invalid.length ? "invalid_typed_fact_source_public_at" : "fact_public_at_precedes_source",
+        fact_id: fact?.fact_id || null,
+        fact_public_at: fact?.public_at || null,
+        sources: cited,
+        action: "not_converted",
+      });
+      return false;
+    }
+    return true;
+  });
+}
+
 function quoteFacts(grounding, context) {
   const quote = grounding?.quote;
   if (!quote || !finite(quote.price)) return;
@@ -274,11 +327,16 @@ function quoteFacts(grounding, context) {
 function optionsFacts(grounding, context) {
   const options = grounding?.options;
   if (!options || options.available === false) return;
-  const publicAt = timestampAtOrBefore(options.quote_time, context.cutoff)
-    || timestampAtOrBefore(options.last_trade_time, context.cutoff)
+  // CBOE's `quote_time` is normalized from data.last_trade_time: it timestamps the
+  // underlying price, not the option rows used to derive IV, skew, spreads and the surface.
+  // Chain facts become public with the chain observation itself.  Keep the underlying-price
+  // timestamp only as separate locator metadata so it can never backdate chain metrics.
+  const publicAt = timestampAtOrBefore(options.observation_time, context.cutoff)
     || timestampAtOrBefore(options.chain_timestamp, context.cutoff)
     || timestampAtOrBefore(options.retrieved_at, context.cutoff)
     || timestampAtOrBefore(grounding.gathered_at, context.cutoff);
+  const underlyingPriceObservationTime = timestampAtOrBefore(options.quote_time, context.cutoff)
+    || timestampAtOrBefore(options.last_trade_time, context.cutoff);
   if (!publicAt) {
     context.diagnostics.push({
       code: "missing_public_at",
@@ -310,7 +368,8 @@ function optionsFacts(grounding, context) {
     locator: {
       symbol: optionSymbol,
       reference_expiry: reference.expiry || null,
-      observation_time: options.quote_time || options.last_trade_time || options.chain_timestamp || publicAt,
+      observation_time: publicAt,
+      underlying_price_observation_time: underlyingPriceObservationTime,
     },
   })) return;
   if (finite(implied)) {
@@ -413,9 +472,13 @@ function macroSeriesFacts(grounding, context) {
   const impulse = macro.liquidity_impulse;
   const liquidity = macro.net_liquidity;
   if (impulse && finite(impulse.value) && liquidity) {
-    const publicAt = timestampAtOrBefore(liquidity.public_at, context.cutoff);
-    const inputIds = (liquidity.derived_from || []).map((id) => sourceId("fred", id, macro.series?.[id]?.observation_date));
-    const registered = publicAt && (liquidity.derived_from || []).every((id) => {
+    const derivedFrom = liquidity.derived_from || [];
+    const inputSeries = derivedFrom.map((id) => macro.series?.[id]).filter(Boolean);
+    const publicAt = inputSeries.length === derivedFrom.length
+      ? latestTimestampAtOrBefore(inputSeries.map((series) => series.public_at), context.cutoff)
+      : null;
+    const inputIds = derivedFrom.map((id) => sourceId("fred", id, macro.series?.[id]?.observation_date));
+    const registered = publicAt && derivedFrom.every((id) => {
       const series = macro.series?.[id];
       return series && registerSource(context, {
         source_id: sourceId("fred", id, series.observation_date),
@@ -459,7 +522,7 @@ function macroSeriesFacts(grounding, context) {
     const slope = macro.series?.T10Y3M;
     const breakeven = macro.series?.T5YIE;
     const publicAt = slope && breakeven
-      ? timestampAtOrBefore([slope.public_at, breakeven.public_at].sort()[0], context.cutoff)
+      ? latestTimestampAtOrBefore([slope.public_at, breakeven.public_at], context.cutoff)
       : null;
     const sources = [slope, breakeven].filter(Boolean).map((series) => sourceId("fred", series.id, series.observation_date));
     if (publicAt && sources.length === 2) {
@@ -827,6 +890,11 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
       if (family === "macro" && grounding.macro_series?.series) continue;
       context.diagnostics.push({ code: "missing_source_lineage", source: family, action: "not_converted" });
     }
+  }
+  context.facts = enforceTypedFactSourceVisibility(context.facts, context.sourceRecords, context.diagnostics);
+  const usedSourceIds = new Set(context.facts.flatMap((fact) => fact.source_ids || []));
+  for (const id of context.sourceRecords.keys()) {
+    if (!usedSourceIds.has(id)) context.sourceRecords.delete(id);
   }
   return Object.freeze({
     fact_pack: buildFactPack(context.facts, { asOf: resolvedAsOf, knowledgeAsOf }),

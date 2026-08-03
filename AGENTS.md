@@ -14,7 +14,7 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.1.4` is the GitHub/Codex marketplace release line; npm's public
+Package/plugin version `1.1.5` is the GitHub/Codex marketplace release line; npm's public
 `latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
 PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
 `method_model` seats. Human review of the authored formulas and the live four-host
@@ -29,8 +29,8 @@ mandatory evidence role still fails after its one bounded parse-only repair, per
 failure/diagnostic artifacts, skip method/debate/PM model calls and terminate `incomplete`
 before downstream synthesis. Never auto-downgrade that run to quick.
 
-Plugin-managed headless full runs launched with `analyze_symbol` have a hard
-queue-to-terminal-persistence ceiling of 1800000 ms. The eight mandatory evidence workers
+Plugin-managed headless full runs launched with `analyze_symbol` use the selected pace's hard
+queue-to-terminal-persistence ceiling: 15 minutes for fast, 30 for normal, and 60 for slow. The eight mandatory evidence workers
 start in one parallel wave. Each selected v3 method first produces a deterministic, frozen
 stance and then gets one isolated voice worker that may explain, but never change, that
 stance. Bull and Bear run in parallel within each of the three rounds, with a hard barrier

@@ -126,6 +126,15 @@ test("Chinese handoff keeps the price, every analyst seat, recent-news boundary 
   for (const task of DEFAULT_TASKS) assert.match(markdown, new RegExp(`中文分析_${task}`));
 });
 
+test("a slow full-council handoff reports its actual sixty-minute hard ceiling", () => {
+  const fixture = localizedRun("zh-CN", "中文分析", "中文专属方法席发言");
+  fixture.council_pace = "slow";
+  fixture.time_budget_ms = 60 * 60 * 1000;
+  const markdown = userResponseMarkdown(fixture, manager("中文最终判断"));
+  assert.match(markdown, /本次插件托管运行硬上限 60 分钟/u);
+  assert.doesNotMatch(markdown, /硬上限 30 分钟/u);
+});
+
 test("Japanese handoff keeps the price, every analyst seat and the dedicated master statement in Japanese framing", () => {
   const markdown = userResponseMarkdown(localizedRun("日本語", "日本語分析", "日本語の専用メソッド席発言"), manager("日本語の最終判断"));
   assert.match(markdown, /AlphaCouncil 実行サマリー/);

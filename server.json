@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Zhao73/alphacouncil-agent",
-  "description": "Simulated investment committee: 26 public-method lenses read the same sourced evidence, debate, and a PM decides.",
+  "description": "Investment committee: 26 method lenses analyze sourced evidence, debate, and a PM decides.",
   "repository": {
     "url": "https://github.com/Zhao73/alphacouncil-agent",
     "source": "github"
   },
-  "version": "1.1.4",
+  "version": "1.1.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "alphacouncil-agent",
-      "version": "1.1.4",
+      "version": "1.1.5",
       "transport": {
         "type": "stdio"
       }

@@ -45,6 +45,371 @@ function sourceIdList(value) {
     : [];
 }
 
+const NEWS_TASK = "news_industry_management";
+const OFFICIAL_SOURCE_COVERAGE_SCHEMA_ID = "news-official-source-coverage-v1";
+const COVERAGE_STATUSES = new Set(["complete", "incomplete"]);
+const NEWS_CLAIM_TYPES = new Set(["event_or_observation", "absence_no_event"]);
+const NO_EVENT_CONCLUSION_PATTERNS = [
+  /\b(?:there\s+(?:is|are|was|were)|we\s+(?:found|identified))\s+no\b.{0,48}\b(?:news|event|filing|announcement|executive|management|change|update)s?\b/iu,
+  /\bno\s+(?:recent|new|material|official)?\s*(?:news|event|filing|announcement|executive|management|change|update)s?\b/iu,
+  /(?:没有|未发现|并无|不存在|无)(?:任何|近期|新的|重大|官方)?(?:新闻|事件|公告|申报|高管变动|管理层变化|更新)/u,
+  /(?:最近|新たな|重大な)?(?:ニュース|発表|提出|経営陣の変更|更新).{0,16}(?:ない|なし|見当たらない)/u,
+  /(?:최근|새로운|중대한|공식)?(?:뉴스|발표|공시|경영진 변경|업데이트).{0,16}(?:없|않)/u,
+];
+
+function looksLikeNoEventConclusion(value) {
+  const text = typeof value === "string" ? value.trim() : "";
+  return Boolean(text) && NO_EVENT_CONCLUSION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function normalizedNewsClaimType(claim) {
+  // Obvious absence language wins over a worker-supplied label. The model cannot bypass an
+  // incomplete official-source gate by calling "no recent official news" an observation.
+  if (looksLikeNoEventConclusion(claim?.claim)) return "absence_no_event";
+  return NEWS_CLAIM_TYPES.has(claim?.claim_type) ? claim.claim_type : claim?.claim_type;
+}
+
+function objectRecord(value) {
+  return value && typeof value === "object" && !Array.isArray(value);
+}
+
+function mappedCoverageSourceId(value, task, sourceIdMap) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  return raw ? (sourceIdMap.get(raw) || scopedSourceId(task, raw)) : "";
+}
+
+function normalizeCoverageItem(value, task, sourceIdMap) {
+  if (!objectRecord(value)) return value;
+  return {
+    title: typeof value.title === "string" ? value.title.trim() : value.title,
+    published_at: typeof value.published_at === "string" ? value.published_at.trim() : value.published_at,
+    url: typeof value.url === "string" ? value.url.trim() : value.url,
+    source_id: mappedCoverageSourceId(value.source_id, task, sourceIdMap),
+    ...(value.record_id !== undefined
+      ? { record_id: typeof value.record_id === "string" ? value.record_id.trim() : value.record_id }
+      : {}),
+  };
+}
+
+function normalizeCoverageSurface(value, task, sourceIdMap) {
+  if (!objectRecord(value)) return value;
+  return {
+    status: typeof value.status === "string" ? value.status.trim() : value.status,
+    entry_url: typeof value.entry_url === "string" ? value.entry_url.trim() : value.entry_url ?? null,
+    checked_through: typeof value.checked_through === "string" ? value.checked_through.trim() : value.checked_through ?? null,
+    latest_dated_item: value.latest_dated_item == null
+      ? null
+      : normalizeCoverageItem(value.latest_dated_item, task, sourceIdMap),
+    dated_items_checked: Array.isArray(value.dated_items_checked)
+      ? value.dated_items_checked.map((item) => normalizeCoverageItem(item, task, sourceIdMap))
+      : value.dated_items_checked,
+    gap: typeof value.gap === "string" ? value.gap.trim() : value.gap ?? null,
+  };
+}
+
+function normalizeOfficialSourceCoverage(value, task, sourceIdMap) {
+  if (!objectRecord(value)) return value;
+  return {
+    status: typeof value.status === "string" ? value.status.trim() : value.status,
+    regulator: normalizeCoverageSurface(value.regulator, task, sourceIdMap),
+    issuer: normalizeCoverageSurface(value.issuer, task, sourceIdMap),
+  };
+}
+
+function coverageGapQuestions(coverage) {
+  if (!objectRecord(coverage)) return [];
+  return [coverage.regulator, coverage.issuer]
+    .filter((surface) => objectRecord(surface) && surface.status === "incomplete")
+    .map((surface) => typeof surface.gap === "string" ? surface.gap.trim() : "")
+    .filter(Boolean);
+}
+
+function coverageSourceIds(coverage) {
+  if (!objectRecord(coverage)) return [];
+  return sourceIdList([coverage.regulator, coverage.issuer].flatMap((surface) => {
+    if (!objectRecord(surface)) return [];
+    return [
+      surface.latest_dated_item?.source_id,
+      ...(Array.isArray(surface.dated_items_checked)
+        ? surface.dated_items_checked.map((item) => item?.source_id)
+        : []),
+    ];
+  }));
+}
+
+function parsedInstant(value) {
+  if (typeof value !== "string" || !value.trim() || value.trim().toLowerCase() === "unknown") return null;
+  const instant = Date.parse(value);
+  return Number.isFinite(instant) ? instant : null;
+}
+
+function isoDay(value) {
+  const instant = parsedInstant(value);
+  return instant === null ? null : new Date(instant).toISOString().slice(0, 10);
+}
+
+function exactIsoDay(value) {
+  return typeof value === "string"
+    && /^\d{4}-\d{2}-\d{2}$/u.test(value)
+    && isoDay(value) === value;
+}
+
+function normalizedHttpUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const parsed = new URL(value);
+    if (!new Set(["http:", "https:"]).has(parsed.protocol)) return null;
+    parsed.hash = "";
+    return parsed.href.replace(/\/$/u, "");
+  } catch {
+    return null;
+  }
+}
+
+function hostname(value) {
+  const normalized = normalizedHttpUrl(value);
+  return normalized ? new URL(normalized).hostname.toLowerCase() : null;
+}
+
+function commonSiteHost(first, second) {
+  const left = hostname(first);
+  const right = hostname(second);
+  if (!left || !right) return false;
+  if (left === right || left.endsWith(`.${right}`) || right.endsWith(`.${left}`)) return true;
+  const siteKey = (host) => {
+    const parts = host.split(".");
+    const commonSecondLevel = new Set(["ac", "co", "com", "edu", "gov", "net", "org"]);
+    const length = parts.at(-1)?.length === 2 && commonSecondLevel.has(parts.at(-2)) ? 3 : 2;
+    return parts.length >= length ? parts.slice(-length).join(".") : host;
+  };
+  return siteKey(left) === siteKey(right);
+}
+
+function coverageIssue(errors, path, keyword, message, missingProperty) {
+  errors.push({
+    path,
+    keyword,
+    message,
+    ...(missingProperty ? { missing_property: missingProperty } : {}),
+  });
+}
+
+function validateCoverageItem(item, path, context, errors) {
+  if (!objectRecord(item)) {
+    coverageIssue(errors, path, "type", "must be an object");
+    return null;
+  }
+  for (const field of ["title", "published_at", "url", "source_id"]) {
+    if (typeof item[field] !== "string" || !item[field].trim()) {
+      coverageIssue(errors, path, "required", `${field} must be a non-empty string`, field);
+    }
+  }
+  const published = parsedInstant(item.published_at);
+  if (published === null) coverageIssue(errors, `${path}/published_at`, "format", "must be a dated value, never unknown");
+  else if (published > context.asOfEnd) coverageIssue(errors, `${path}/published_at`, "point_in_time", "must not be after as_of");
+  const itemUrl = normalizedHttpUrl(item.url);
+  if (!itemUrl) coverageIssue(errors, `${path}/url`, "format", "must be an absolute http(s) URL");
+  else if (context.entryUrl && !commonSiteHost(context.entryUrl, item.url)) {
+    coverageIssue(errors, `${path}/url`, "official_host", "must be on the same official site as entry_url");
+  }
+  const source = context.sourceById.get(item.source_id);
+  if (!source) {
+    coverageIssue(errors, `${path}/source_id`, "source_resolution", "must resolve to packet.sources");
+  } else {
+    const sourceUrl = normalizedHttpUrl(source.url);
+    if (itemUrl && sourceUrl !== itemUrl) {
+      coverageIssue(errors, `${path}/url`, "source_alignment", "must equal the resolved source URL");
+    }
+    if (isoDay(source.published_at) !== isoDay(item.published_at)) {
+      coverageIssue(errors, `${path}/published_at`, "source_alignment", "must match the resolved source publication date");
+    }
+  }
+  return published;
+}
+
+function validateCoverageSurface(name, surface, context, errors) {
+  const path = `/official_source_coverage/${name}`;
+  if (!objectRecord(surface)) {
+    coverageIssue(errors, path, "required", "must be an object", name);
+    return;
+  }
+  if (!COVERAGE_STATUSES.has(surface.status)) {
+    coverageIssue(errors, `${path}/status`, "enum", "must be complete or incomplete");
+  }
+  const entryUrl = normalizedHttpUrl(surface.entry_url);
+  if (surface.status === "complete" && !entryUrl) {
+    coverageIssue(errors, `${path}/entry_url`, "format", "complete coverage requires an absolute http(s) entry URL");
+  } else if (surface.entry_url != null && !entryUrl) {
+    coverageIssue(errors, `${path}/entry_url`, "format", "must be null or an absolute http(s) URL");
+  }
+  if (surface.status === "complete" && surface.checked_through !== context.asOfDate) {
+    coverageIssue(errors, `${path}/checked_through`, "coverage_cutoff", "complete coverage must be checked through as_of exactly");
+  } else if (surface.checked_through != null) {
+    if (!exactIsoDay(surface.checked_through)) {
+      coverageIssue(errors, `${path}/checked_through`, "format", "must be a valid YYYY-MM-DD date or null");
+    } else if (surface.checked_through > context.asOfDate) {
+      coverageIssue(errors, `${path}/checked_through`, "point_in_time", "must not be after as_of");
+    }
+  }
+  if (surface.status === "incomplete" && (typeof surface.gap !== "string" || !surface.gap.trim())) {
+    coverageIssue(errors, `${path}/gap`, "required", "incomplete coverage requires a non-empty gap", "gap");
+  }
+  if (surface.status === "complete" && typeof surface.gap === "string" && surface.gap.trim()) {
+    coverageIssue(errors, `${path}/gap`, "consistency", "complete coverage cannot also declare a gap");
+  }
+  if (!Array.isArray(surface.dated_items_checked)) {
+    coverageIssue(errors, `${path}/dated_items_checked`, "type", "must be an array");
+    return;
+  }
+  if (surface.status === "complete" && surface.dated_items_checked.length === 0) {
+    coverageIssue(errors, `${path}/dated_items_checked`, "minItems", "complete coverage requires at least one dated official item");
+  }
+  const itemContext = { ...context, entryUrl };
+  const dated = surface.dated_items_checked.map((item, index) => ({
+    item,
+    instant: validateCoverageItem(item, `${path}/dated_items_checked/${index}`, itemContext, errors),
+  }));
+  if (surface.latest_dated_item == null) {
+    if (surface.status === "complete") {
+      coverageIssue(errors, `${path}/latest_dated_item`, "required", "complete coverage requires the latest dated item", "latest_dated_item");
+    }
+    return;
+  }
+  const latestInstant = validateCoverageItem(surface.latest_dated_item, `${path}/latest_dated_item`, itemContext, errors);
+  const latestDay = isoDay(surface.latest_dated_item.published_at);
+  const observedDays = dated.map(({ item }) => isoDay(item?.published_at)).filter(Boolean).sort();
+  const maxObservedDay = observedDays.at(-1) || null;
+  if (latestDay && maxObservedDay && latestDay !== maxObservedDay) {
+    coverageIssue(errors, `${path}/latest_dated_item/published_at`, "latest_item", "must equal the latest publication date in dated_items_checked");
+  }
+  const officialSourceDays = [...context.sourceById.values()]
+    .filter((source) => entryUrl && commonSiteHost(entryUrl, source?.url))
+    .map((source) => isoDay(source?.published_at))
+    .filter((day) => day && day <= context.asOfDate)
+    .sort();
+  const maxOfficialSourceDay = officialSourceDays.at(-1) || null;
+  if (latestDay && maxOfficialSourceDay && latestDay !== maxOfficialSourceDay) {
+    coverageIssue(errors, `${path}/latest_dated_item/published_at`, "source_inventory_latest", "must equal the latest dated packet source on the official site");
+  }
+  const latestAppearsInChecked = dated.some(({ item }) => objectRecord(item)
+    && item.source_id === surface.latest_dated_item.source_id
+    && normalizedHttpUrl(item.url) === normalizedHttpUrl(surface.latest_dated_item.url)
+    && isoDay(item.published_at) === latestDay);
+  if (!latestAppearsInChecked) {
+    coverageIssue(errors, `${path}/latest_dated_item`, "containment", "must also appear in dated_items_checked");
+  }
+  if (latestInstant !== null && latestInstant > context.asOfEnd) {
+    coverageIssue(errors, `${path}/latest_dated_item/published_at`, "point_in_time", "must not be after as_of");
+  }
+}
+
+/**
+ * Fail closed when the news seat has not materialized both official surfaces.
+ *
+ * The model may describe an official-source search in prose, but only this source-linked,
+ * cutoff-checked record is allowed to establish that the regulator and issuer newsroom were
+ * actually covered. An inaccessible surface is still recorded as an explicit gap, but the
+ * packet is rejected before it can influence a rating. This deliberately fails closed: no
+ * finite prose classifier can prove that a worker did not disguise an absence conclusion as
+ * a positive observation.
+ */
+export function assertOfficialSourceCoverage(packet, {
+  task = packet?.task,
+  asOfDate = packet?.as_of,
+  grounding = null,
+} = {}) {
+  if (task !== NEWS_TASK) return packet;
+  const errors = [];
+  const coverage = packet?.official_source_coverage;
+  if (!objectRecord(coverage)) {
+    coverageIssue(errors, "/official_source_coverage", "required", "news evidence requires structured official-source coverage", "official_source_coverage");
+  }
+  if (!exactIsoDay(asOfDate)) {
+    coverageIssue(errors, "/as_of", "format", "must be a valid YYYY-MM-DD date");
+  }
+  const asOfEnd = exactIsoDay(asOfDate) ? Date.parse(`${asOfDate}T23:59:59.999Z`) : Number.NEGATIVE_INFINITY;
+  const context = {
+    asOfDate,
+    asOfEnd,
+    sourceById: new Map((packet?.sources || []).map((source) => [source?.id, source])),
+  };
+  if (objectRecord(coverage)) {
+    if (!COVERAGE_STATUSES.has(coverage.status)) {
+      coverageIssue(errors, "/official_source_coverage/status", "enum", "must be complete or incomplete");
+    }
+    validateCoverageSurface("regulator", coverage.regulator, context, errors);
+    validateCoverageSurface("issuer", coverage.issuer, context, errors);
+    const derivedStatus = coverage.regulator?.status === "complete" && coverage.issuer?.status === "complete"
+      ? "complete"
+      : "incomplete";
+    if (coverage.status !== derivedStatus) {
+      coverageIssue(errors, "/official_source_coverage/status", "consistency", `must be ${derivedStatus} for the two surface statuses`);
+    }
+    for (const surface of [coverage.regulator, coverage.issuer]) {
+      if (surface?.status === "incomplete" && !packet.open_questions?.includes(surface.gap)) {
+        coverageIssue(errors, "/open_questions", "explicit_gap", "must include every incomplete official-source coverage gap");
+      }
+    }
+    if (derivedStatus === "incomplete") {
+      coverageIssue(
+        errors,
+        "/official_source_coverage/status",
+        "official_coverage_incomplete",
+        "both regulator and issuer-official surfaces must be complete before news evidence can enter the council",
+      );
+    }
+    for (const [index, claim] of (packet?.claims || []).entries()) {
+      if (!NEWS_CLAIM_TYPES.has(claim?.claim_type)) {
+        coverageIssue(errors, `/claims/${index}/claim_type`, "enum", "must be event_or_observation or absence_no_event");
+      }
+      const absenceConclusion = claim?.claim_type === "absence_no_event"
+        || looksLikeNoEventConclusion(claim?.claim);
+      if (derivedStatus === "incomplete" && absenceConclusion) {
+        coverageIssue(
+          errors,
+          `/claims/${index}/claim`,
+          "absence_claim_requires_complete_coverage",
+          "an absence/no-event conclusion requires complete regulator and issuer-official coverage through as_of",
+        );
+      }
+    }
+    if (derivedStatus === "incomplete" && looksLikeNoEventConclusion(packet?.summary)) {
+      coverageIssue(
+        errors,
+        "/summary",
+        "absence_claim_requires_complete_coverage",
+        "a summary absence/no-event conclusion requires complete regulator and issuer-official coverage through as_of",
+      );
+    }
+    const expected = grounding?.filer?.latest_filing;
+    if (coverage.regulator?.status === "complete" && objectRecord(expected)) {
+      const actual = coverage.regulator.latest_dated_item;
+      if (expected.filing_date && isoDay(actual?.published_at) !== isoDay(expected.filing_date)) {
+        coverageIssue(errors, "/official_source_coverage/regulator/latest_dated_item/published_at", "grounding_alignment", "must match grounding.filer.latest_filing.filing_date");
+      }
+      if (expected.accession && actual?.record_id !== expected.accession) {
+        coverageIssue(errors, "/official_source_coverage/regulator/latest_dated_item/record_id", "grounding_alignment", "must match grounding.filer.latest_filing.accession");
+      }
+      if (expected.primary_document_url
+        && normalizedHttpUrl(actual?.url) !== normalizedHttpUrl(expected.primary_document_url)) {
+        coverageIssue(errors, "/official_source_coverage/regulator/latest_dated_item/url", "grounding_alignment", "must match grounding.filer.latest_filing.primary_document_url");
+      }
+      if (grounding?.filer?.submissions_url
+        && normalizedHttpUrl(coverage.regulator.entry_url) !== normalizedHttpUrl(grounding.filer.submissions_url)) {
+        coverageIssue(errors, "/official_source_coverage/regulator/entry_url", "grounding_alignment", "must match grounding.filer.submissions_url");
+      }
+    }
+  }
+  if (errors.length) {
+    throw invalidParams("news evidence failed the official-source coverage gate", {
+      reason: "OFFICIAL_SOURCE_COVERAGE_INVALID",
+      schema_id: OFFICIAL_SOURCE_COVERAGE_SCHEMA_ID,
+      errors: errors.slice(0, 12),
+    });
+  }
+  return packet;
+}
+
 /** Every downstream citation must resolve inside its explicit manifest source domain. */
 export function assertSourceIdsResolve(run, sourceIds, owner, {
   allowEmpty = false,
@@ -114,12 +479,24 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     sourceIdMap.set(original, id);
     return { ...(source && typeof source === "object" ? source : {}), id };
   }) : [];
-  const claims = Array.isArray(packet?.claims) ? packet.claims.map((claim) => ({
-    ...(claim && typeof claim === "object" ? claim : {}),
-    source_ids: Array.isArray(claim?.source_ids)
-      ? claim.source_ids.map((id) => sourceIdMap.get(String(id)) || scopedSourceId(task, id)).filter(Boolean)
-      : [],
-  })) : [];
+  const claims = Array.isArray(packet?.claims) ? packet.claims.map((claim) => {
+    const normalized = {
+      ...(claim && typeof claim === "object" ? claim : {}),
+      source_ids: Array.isArray(claim?.source_ids)
+        ? claim.source_ids.map((id) => sourceIdMap.get(String(id)) || scopedSourceId(task, id)).filter(Boolean)
+        : [],
+    };
+    return task === NEWS_TASK
+      ? { ...normalized, claim_type: normalizedNewsClaimType(claim) }
+      : normalized;
+  }) : [];
+  const officialSourceCoverage = task === NEWS_TASK && Object.hasOwn(packet || {}, "official_source_coverage")
+    ? normalizeOfficialSourceCoverage(packet.official_source_coverage, task, sourceIdMap)
+    : undefined;
+  const openQuestions = Array.isArray(packet?.open_questions) ? [...packet.open_questions] : [];
+  for (const gap of coverageGapQuestions(officialSourceCoverage)) {
+    if (!openQuestions.includes(gap)) openQuestions.push(gap);
+  }
   return {
     task,
     symbol,
@@ -128,7 +505,8 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     claims,
     metrics: packet?.metrics && typeof packet.metrics === "object" ? packet.metrics : {},
     sources,
-    open_questions: Array.isArray(packet?.open_questions) ? packet.open_questions : [],
+    open_questions: openQuestions,
+    ...(officialSourceCoverage !== undefined ? { official_source_coverage: officialSourceCoverage } : {}),
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
     // How much material this task actually had. Deliberately separate from confidence:
     // a rich-but-contradictory task can be A/low, a sparse-but-decisive one C/high.
@@ -159,10 +537,22 @@ export function normalizeDebate(packet, role, run, raw = "") {
     position: typeof packet?.position === "string" ? packet.position : "",
     invalidation: Array.isArray(packet?.invalidation) ? packet.invalidation : [],
     source_ids: Array.isArray(packet?.source_ids) ? packet.source_ids : [],
-    confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
+    // An unavailable decision has no decision confidence. Persist `low` as the conservative
+    // machine-readable value; renderers may display it as unavailable, but must never expose
+    // high confidence beside NEEDS_MANAGER_REVIEW.
+    confidence: decisionAvailable && ["high", "medium", "low"].includes(packet?.confidence)
+      ? packet.confidence
+      : "low",
     questions: Array.isArray(packet?.questions) ? packet.questions : [],
     questions_answered: Array.isArray(packet?.questions_answered) ? packet.questions_answered : [],
     debate_rounds: Array.isArray(packet?.debate_rounds) ? packet.debate_rounds : [],
+    // Optional compact full-PM fields. Headless full renders these deterministically after the
+    // small decision packet validates; quick and visible contracts may simply leave them empty.
+    price_levels: Array.isArray(packet?.price_levels) ? packet.price_levels : [],
+    horizon_views: packet?.horizon_views && typeof packet.horizon_views === "object" && !Array.isArray(packet.horizon_views)
+      ? packet.horizon_views
+      : {},
+    data_gaps: Array.isArray(packet?.data_gaps) ? packet.data_gaps : [],
     report_markdown: typeof packet?.report_markdown === "string" ? packet.report_markdown : "",
     failure_kind: typeof packet?.failure_kind === "string" ? packet.failure_kind : undefined,
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
@@ -259,7 +649,10 @@ export function compactEvidence(run) {
     packets: (run.packets || []).map((packet) => {
       const claims = (packet.claims || []).slice(0, 8);
       const sourceById = new Map((packet.sources || []).map((source) => [source?.id, source]));
-      const referenced = [...new Set(claims.flatMap((claim) => claim?.source_ids || []))];
+      const referenced = [...new Set([
+        ...claims.flatMap((claim) => claim?.source_ids || []),
+        ...coverageSourceIds(packet.official_source_coverage),
+      ])];
       const selectedIds = referenced.filter((id) => sourceById.has(id)).slice(0, 12);
       for (const source of packet.sources || []) {
         if (selectedIds.length >= 12) break;
@@ -277,6 +670,9 @@ export function compactEvidence(run) {
           source_ids: (claim?.source_ids || []).filter((id) => included.has(id)),
         })),
         metrics: compactValue(packet.metrics || {}),
+        ...(packet.official_source_coverage
+          ? { official_source_coverage: compactValue(packet.official_source_coverage) }
+          : {}),
         sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
           id: source?.id,
           title: clip(source?.title || "", 260),
@@ -354,7 +750,10 @@ export function compactQuickEvidence(run) {
       const allClaims = packet.claims || [];
       const selectedClaims = allClaims.slice(0, 4);
       const sourceById = new Map((packet.sources || []).map((source) => [source?.id, source]));
-      const referencedIds = [...new Set(selectedClaims.flatMap((claim) => claim?.source_ids || []))];
+      const referencedIds = [...new Set([
+        ...selectedClaims.flatMap((claim) => claim?.source_ids || []),
+        ...coverageSourceIds(packet.official_source_coverage),
+      ])];
       const selectedIds = referencedIds.filter((id) => sourceById.has(id)).slice(0, 6);
       for (const source of packet.sources || []) {
         if (selectedIds.length >= 6) break;
@@ -372,6 +771,9 @@ export function compactQuickEvidence(run) {
           source_ids: (claim?.source_ids || []).filter((id) => includedIds.has(id)),
         })),
         metrics: compactValue(packet.metrics || {}),
+        ...(packet.official_source_coverage
+          ? { official_source_coverage: compactValue(packet.official_source_coverage) }
+          : {}),
         sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
           id: source?.id,
           title: clip(source?.title || "", 240),
@@ -427,7 +829,7 @@ export function compactDebateContext(packet) {
   };
 }
 
-export function debateFromCodex(result, role, run, fallbackPrompt) {
+export function debateFromCodex(result, role, run, fallbackPrompt, { managerDecisionOnly = false } = {}) {
   if (!result.ok) {
     const failureKind = result.deadline_exhausted
       ? "global_deadline"
@@ -439,28 +841,90 @@ export function debateFromCodex(result, role, run, fallbackPrompt) {
     return debateFailurePacket(role, run, failureKind);
   }
   try {
-    const kind = role === "portfolio_manager" ? "portfolio_manager" : "debate";
+    // Visible PM submissions and quick PM workers still carry authored report_markdown. Full
+    // headless PM workers have a dedicated compact contract; the trusted orchestrator attaches
+    // a deterministic complete report only after every structured field and source ID validates.
+    const kind = role === "portfolio_manager"
+      ? (managerDecisionOnly ? "headless_portfolio_manager_decision" : "portfolio_manager")
+      : "debate";
     const parsed = extractWorkerJson(result.text, kind);
     const source_ids = assertSourceIdsResolve(run, parsed.source_ids, role);
     return normalizeDebate({ ...parsed, source_ids }, role, run, result.text);
   } catch (error) {
     const failure = debateFailurePacket(role, run, "parse_failed");
     const schemaErrors = Array.isArray(error?.data?.errors) ? error.data.errors.slice(0, 12) : [];
-    return schemaErrors.length ? { ...failure, schema_errors: schemaErrors } : failure;
+    const reason = String(error?.data?.reason || "WORKER_OUTPUT_REJECTED");
+    const safeReason = /^[A-Z0-9_]{1,96}$/u.test(reason) ? reason : "WORKER_OUTPUT_REJECTED";
+    const outputContractDiagnostic = {
+      reason: safeReason,
+      ...(typeof error?.data?.schema_id === "string"
+        ? { schema_id: cleanLog(error.data.schema_id, 160) }
+        : {}),
+      ...(typeof error?.data?.kind === "string"
+        ? { schema_kind: cleanLog(error.data.kind, 80) }
+        : {}),
+      ...(schemaErrors.length ? {
+        schema_error_count: error.data.errors.length,
+        schema_errors: schemaErrors,
+      } : {}),
+    };
+    return {
+      ...failure,
+      ...(schemaErrors.length ? { schema_errors: schemaErrors } : {}),
+      output_contract_diagnostic: outputContractDiagnostic,
+    };
   }
 }
 
-function asianManagerFallback(run, summary) {
+function managerFallbackStatus(run, failurePacket = null) {
+  const agentStatus = Array.isArray(run?.agent_status)
+    ? run.agent_status.find((item) => item?.role === "portfolio_manager")
+    : run?.agent_status?.portfolio_manager;
+  const failureKind = failurePacket?.failure_kind || agentStatus?.failure_kind || agentStatus?.error || "";
+  const attempts = Math.max(1, Number(failurePacket?.attempts || agentStatus?.attempts) || 1);
+  if (failureKind === "parse_failed") {
+    if (attempts >= 2) {
+      return localized(run.language, {
+        zh: "portfolio_manager 已执行 2 次，但两次输出均违反 JSON/报告契约；未产出可用决策。",
+        en: "portfolio_manager ran twice, but both outputs violated the JSON/report contract; no usable decision was produced.",
+        ja: "portfolio_manager は2回実行されましたが、2回とも JSON／レポート契約に違反し、利用可能な判断を生成できませんでした。正式な投資判断はありません。",
+        ko: "portfolio_manager를 두 번 실행했지만 두 출력 모두 JSON/보고서 계약을 위반해 사용 가능한 결정을 생성하지 못했습니다. 공식 투자 판단을 제공할 수 없습니다.",
+      });
+    }
+    return localized(run.language, {
+      zh: "portfolio_manager 输出违反 JSON/报告契约；未产出可用决策。",
+      en: "portfolio_manager output violated the JSON/report contract; no usable decision was produced.",
+      ja: "portfolio_manager の出力が JSON／レポート契約に違反し、利用可能な判断を生成できませんでした。正式な投資判断はありません。",
+      ko: "portfolio_manager 출력이 JSON/보고서 계약을 위반해 사용 가능한 결정을 생성하지 못했습니다. 공식 투자 판단을 제공할 수 없습니다.",
+    });
+  }
+  if (failureKind) {
+    return localized(run.language, {
+      zh: "portfolio_manager 执行失败，未产出可用决策。",
+      en: "portfolio_manager failed and produced no usable decision.",
+      ja: "portfolio_manager が失敗し、利用可能な判断を生成できませんでした。正式な投資判断はありません。",
+      ko: "portfolio_manager 실행이 실패해 사용 가능한 결정을 생성하지 못했습니다. 공식 투자 판단을 제공할 수 없습니다.",
+    });
+  }
+  return localized(run.language, {
+    zh: "portfolio_manager 未完成，未产出可用决策。",
+    en: "portfolio_manager did not complete; no usable decision was produced.",
+    ja: "portfolio_manager が完了しておらず、利用可能な判断は生成されていません。正式な投資判断はありません。",
+    ko: "portfolio_manager가 완료되지 않아 사용 가능한 결정이 생성되지 않았습니다. 공식 투자 판단을 제공할 수 없습니다.",
+  });
+}
+
+function asianManagerFallback(run, summary, managerStatus) {
   const key = languageKey(run.language);
   if (!new Set(["ja", "ko"]).has(key)) return null;
   const c = localized(run.language, {
     ja: {
       title: "投資委員会ドラフト", conclusion: "結論", analyst: "アナリスト作業記録", debate: "強気・弱気討論記録", masters: "メソッド席", long: "強気論点", short: "弱気論点", market: "市場期待と織り込み条件", rating: "アナリスト評価と目標株価の変更", call: "決算説明会の経営シグナル", quant: "定量・ファクター視点", news: "ニュースと企業・業界シグナル", borrow: "空売り・貸株・オプション情報", transaction: "戦略取引・銀行イベント", valuation: "企業価値評価レンジ", price: "価格条件", catalysts: "主要カタリスト", risks: "主要リスク", position: "ポジション提案", shortTerm: "短期1–4週間の見通し", mediumTerm: "中期3–6か月の見通し", longTerm: "長期12か月の見通し", gaps: "データ欠落・利用不可データ", invalidation: "無効化条件", confidence: "信頼度", sources: "出典表",
-      unavailable: "今回の実行では同じ言語で確認できる情報を取得できませんでした。", managerMissing: "portfolio_manager の統合が完了していないため、正式な投資判断はありません。", draftOnly: "この文書はドラフトであり、正式なポジションを示しません。", noPackets: "証拠パケットは生成されませんでした。", noMaster: "完了したメソッド席はありません。", keyFindings: "主要所見", dataGaps: "データ欠落", packetSummary: "要約", packetConfidence: "信頼度", sourceCount: "出典数",
+      unavailable: "今回の実行では同じ言語で確認できる情報を取得できませんでした。", managerMissing: managerStatus, draftOnly: "この文書はドラフトであり、正式なポジションを示しません。", noPackets: "証拠パケットは生成されませんでした。", noMaster: "完了したメソッド席はありません。", keyFindings: "主要所見", dataGaps: "データ欠落", packetSummary: "要約", packetConfidence: "信頼度", sourceCount: "出典数",
     },
     ko: {
       title: "투자위원회 초안", conclusion: "결론", analyst: "분석가 작업 기록", debate: "강세·약세 토론 기록", masters: "방법론 좌석", long: "강세 논거", short: "약세 논거", market: "시장 기대와 내재 조건", rating: "애널리스트 등급 및 목표가 변경", call: "실적 발표 콜 경영진 신호", quant: "정량·팩터 관점", news: "뉴스 및 기업·산업 신호", borrow: "공매도·대차·옵션 정보", transaction: "전략적 거래·금융 이벤트", valuation: "가치평가 범위", price: "가격 조건", catalysts: "핵심 촉매", risks: "주요 위험", position: "포지션 제안", shortTerm: "단기 1–4주 전망", mediumTerm: "중기 3–6개월 전망", longTerm: "장기 12개월 전망", gaps: "데이터 공백·사용 불가 데이터", invalidation: "무효화 조건", confidence: "신뢰도", sources: "출처 표",
-      unavailable: "이번 실행에서는 같은 언어로 확인 가능한 정보를 확보하지 못했습니다.", managerMissing: "portfolio_manager 종합이 완료되지 않아 공식 투자 판단을 제공할 수 없습니다.", draftOnly: "이 문서는 초안이며 공식 포지션을 제시하지 않습니다.", noPackets: "증거 패킷이 생성되지 않았습니다.", noMaster: "완료된 방법론 좌석이 없습니다.", keyFindings: "핵심 발견", dataGaps: "데이터 공백", packetSummary: "요약", packetConfidence: "신뢰도", sourceCount: "출처 수",
+      unavailable: "이번 실행에서는 같은 언어로 확인 가능한 정보를 확보하지 못했습니다.", managerMissing: managerStatus, draftOnly: "이 문서는 초안이며 공식 포지션을 제시하지 않습니다.", noPackets: "증거 패킷이 생성되지 않았습니다.", noMaster: "완료된 방법론 좌석이 없습니다.", keyFindings: "핵심 발견", dataGaps: "데이터 공백", packetSummary: "요약", packetConfidence: "신뢰도", sourceCount: "출처 수",
     },
   });
   const analystLog = run.packets.length
@@ -571,9 +1035,12 @@ export function summarizeRun(run, userPrompt = "") {
   };
 }
 
-export function managerFallback(run, userPrompt = "") {
-  const summary = summarizeRun(run, userPrompt);
-  const asian = asianManagerFallback(run, summary);
+export function managerFallback(run, userPrompt = "", failurePacket = null) {
+  // Evidence confidence is not decision confidence. A fallback has no usable PM decision,
+  // so its own confidence is always low even when every underlying packet is high-confidence.
+  const summary = { ...summarizeRun(run, userPrompt), confidence: "low" };
+  const managerStatus = managerFallbackStatus(run, failurePacket);
+  const asian = asianManagerFallback(run, summary, managerStatus);
   if (asian) {
     return normalizeDebate({
       verdict: summary.final_decision,
@@ -596,8 +1063,8 @@ export function managerFallback(run, userPrompt = "") {
       }).join("\n\n")
     : (chinese ? "未生成 evidence packets。" : "No evidence packets were generated.");
   const debateRecord = chinese
-    ? "经理综合子代理未完成，因此没有完整多空交叉辩论记录；以上证据只能作为投资委员会初稿。"
-    : "The manager synthesis subagent did not complete, so a full bull/bear cross-debate record is unavailable; the evidence above is only an investment-committee draft.";
+    ? `${managerStatus} 已完成的多空材料仅作为降级初稿保留。`
+    : `${managerStatus} Completed bull/bear material is retained only as a degraded draft.`;
   const masterLog = (run.master_opinions || []).length
     ? run.master_opinions.map((opinion) => `- ${opinion.master}: ${opinion.stance} - ${opinion.summary || opinion.verdict || "no summary"}`).join("\n")
     : (chinese ? "- 本轮没有已完成的大师意见。" : "- No completed master opinion is available in this run.");
@@ -606,7 +1073,7 @@ export function managerFallback(run, userPrompt = "") {
     decision_available: false,
     rating: null,
     winner: "unknown",
-    summary: chinese ? "证据已收集，但未运行经理综合子代理。" : "Evidence was collected, but the manager synthesis subagent did not run.",
+    summary: managerStatus,
     long_thesis: summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => claim.claim),
     short_thesis: summary.open_questions.slice(0, 6),
     confidence: summary.confidence,

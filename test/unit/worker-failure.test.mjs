@@ -194,6 +194,45 @@ test("headless PM requires report_markdown while bull/bear do not", () => {
   assert.equal(manager.rating, null);
 });
 
+test("full headless structured PM accepts a compact decision while the visible/default PM contract still requires a report", () => {
+  const withoutReport = validDebatePacket({
+    price_levels: [
+      { label: "high", range: "above range", meaning: "poor odds", action: "avoid", basis: "valuation", source_ids: ["market_data:S1"] },
+      { label: "start", range: "inside range", meaning: "bounded odds", action: "small", basis: "valuation", source_ids: ["market_data:S1"] },
+      { label: "low", range: "below range", meaning: "margin", action: "conditional add", basis: "valuation", source_ids: ["market_data:S1"] },
+    ],
+    horizon_views: { short_term: "wait", medium_term: "verify", long_term: "compound" },
+    data_gaps: ["No critical data gaps were found in the completed fixture packets."],
+  });
+  const result = debateFromCodex({
+    ok: true, timedOut: false, code: 0, text: JSON.stringify(withoutReport),
+  }, "portfolio_manager", sourcedRun, "", { managerDecisionOnly: true });
+  assert.equal(result.failure_kind, undefined);
+  assert.equal(result.rating, "Hold");
+  assert.equal(result.report_markdown, "");
+  assert.equal(result.price_levels.length, 3);
+});
+
+test("PM attempt diagnostics are bounded hashes and never retain rejected model prose", () => {
+  const raw = 'PM_PRIVATE_RAW_SENTINEL_{"rating":"Buy","report_markdown":"truncated';
+  const diagnostic = orchestrator.portfolioManagerAttemptDiagnostic({
+    attempt: 2,
+    failureKind: "parse_failed",
+    packet: {
+      failure_kind: "parse_failed",
+      output_contract_diagnostic: { reason: "WORKER_JSON_UNRECOVERABLE" },
+    },
+    result: { ok: true, timedOut: false, code: 0, text: raw },
+  });
+  const persisted = JSON.stringify(diagnostic);
+  assert.equal(diagnostic.attempt, 2);
+  assert.equal(diagnostic.reason, "WORKER_JSON_UNRECOVERABLE");
+  assert.equal(diagnostic.output_chars, raw.length);
+  assert.match(diagnostic.output_sha256, /^sha256:[0-9a-f]{64}$/u);
+  assert.ok(persisted.length < 2_048);
+  assert.doesNotMatch(persisted, /PM_PRIVATE_RAW_SENTINEL|report_markdown|rating.*Buy/u);
+});
+
 test("headless debate rejects source IDs absent from the source manifest", () => {
   const packet = validDebatePacket({ source_ids: ["market_data:FORGED"] });
   const result = debateFromCodex({ ok: true, timedOut: false, code: 0, text: JSON.stringify(packet) }, "bull_researcher", sourcedRun, "");

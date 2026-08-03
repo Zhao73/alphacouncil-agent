@@ -19,7 +19,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const outputFile = join(root, "mcp", "generated", "runtime-validators.mjs");
 const specs = Object.freeze([
   Object.freeze({ exportName: "validateEvidencePacket", file: "runtime-evidence-packet-v1.schema.json" }),
+  Object.freeze({ exportName: "validateNewsEvidencePacket", file: "runtime-news-evidence-packet-v1.schema.json" }),
   Object.freeze({ exportName: "validateDebatePacket", file: "runtime-debate-packet-v1.schema.json" }),
+  Object.freeze({ exportName: "validateHeadlessPortfolioManagerDecision", file: "runtime-headless-portfolio-manager-decision-v1.schema.json" }),
   Object.freeze({ exportName: "validatePortfolioManagerPacket", file: "runtime-portfolio-manager-packet-v1.schema.json" }),
   Object.freeze({ exportName: "validateMethodVoice", file: "runtime-method-voice-v1.schema.json" }),
 ]);

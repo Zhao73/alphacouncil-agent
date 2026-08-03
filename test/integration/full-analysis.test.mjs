@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
@@ -98,6 +98,8 @@ function fakeFullCodex(dataDir, {
   evidenceDelayMs = 45,
   malformedTask = "forward_expectations",
   malformedMasterModes = {},
+  pmFailureMode = null,
+  pmContractFailureMode = null,
 } = {}) {
   const driver = join(dataDir, "fake-full-codex.mjs");
   const log = join(dataDir, "full-worker-log.jsonl");
@@ -108,13 +110,14 @@ const args = process.argv.slice(2);
 const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
+const asOf = /as[-_ ]of(?: date)?\\s*:\\s*(\\d{4}-\\d{2}-\\d{2})/iu.exec(prompt)?.[1] || "2026-07-28";
 const regularTask = (${JSON.stringify(DEFAULT_TASKS)}).find((id) => prompt.includes("Task:" + id) || prompt.includes("Task: " + id));
 const repairTask = /Target task:\\s*([a-z_]+)/u.exec(prompt)?.[1] || null;
 const task = regularTask || repairTask;
 const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1]
   || /Master ID:\\s*(master_[a-z0-9_]+)/u.exec(prompt)?.[1]
   || null;
-const role = /You are the portfolio_manager/i.test(prompt) ? "portfolio_manager"
+const role = /You are the portfolio_manager|Role:[ ]*portfolio_manager/i.test(prompt) ? "portfolio_manager"
   : /You are the bull_researcher/i.test(prompt) ? "bull_researcher"
   : /You are the bear_researcher/i.test(prompt) ? "bear_researcher"
   : master || task || "unknown";
@@ -128,6 +131,9 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
     && prompt.includes("would_i_act") && prompt.includes("what_changes_my_mind")
     && prompt.includes("where_i_disagree")
     && prompt.includes("MUST be exactly one of: high | medium | low"),
+  structuredPmDecision: prompt.includes("HEADLESS_STRUCTURED_PM_DECISION_V1"),
+  omitsPmReport: prompt.includes("Omit report_markdown completely")
+    || (prompt.includes("Do not return") && prompt.includes("report_markdown")),
 }) + "\\n");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -147,10 +153,27 @@ if (task) {
   await sleep(${Number(evidenceDelayMs)});
   packet = {
     summary: "ANALYST_SENTINEL_" + task + " with dated evidence and explicit limits.",
-    claims: [{ claim: task + " material fixture claim", evidence: "bounded fixture evidence", confidence: "medium", source_ids: ["S1"] }],
+    claims: [{ claim: task + " material fixture claim", claim_type: "event_or_observation", evidence: "bounded fixture evidence", confidence: "medium", source_ids: ["S1"] }],
     metrics: task === "market_data" ? { price: 512.34, currency: "USD" } : { fixture: 1 },
     sources: [{ id: "S1", title: task + " fixture source", url: "https://example.com/" + task, published_at: "2026-07-28", retrieved_at: "2026-07-28" }],
-    open_questions: [], confidence: "medium", information_richness: "B"
+    open_questions: [], confidence: "medium", information_richness: "B",
+    ...(task === "news_industry_management" ? {
+      official_source_coverage: {
+        status: "complete",
+        regulator: {
+          status: "complete", entry_url: "https://example.com/regulator-feed", checked_through: asOf,
+          latest_dated_item: { title: task + " fixture source", published_at: "2026-07-28", url: "https://example.com/" + task, source_id: "S1", record_id: "fixture-filing" },
+          dated_items_checked: [{ title: task + " fixture source", published_at: "2026-07-28", url: "https://example.com/" + task, source_id: "S1", record_id: "fixture-filing" }],
+          gap: null
+        },
+        issuer: {
+          status: "complete", entry_url: "https://example.com/issuer-news", checked_through: asOf,
+          latest_dated_item: { title: task + " fixture source", published_at: "2026-07-28", url: "https://example.com/" + task, source_id: "S1" },
+          dated_items_checked: [{ title: task + " fixture source", published_at: "2026-07-28", url: "https://example.com/" + task, source_id: "S1" }],
+          gap: null
+        }
+      }
+    } : {})
   };
 } else if (master) {
   await sleep(45);
@@ -182,14 +205,27 @@ if (task) {
   if (!parseRepair && malformedMode === "invalid_confidence") packet.confidence = "very_high";
 } else if (role === "portfolio_manager") {
   await sleep(45);
+  if (${JSON.stringify(pmFailureMode)} === "both" || (${JSON.stringify(pmFailureMode)} === "first" && !parseRepair)) {
+    writeFileSync(output, 'PM_PRIVATE_RAW_SENTINEL_{"rating":"Buy","report_markdown":"truncated');
+    process.exit(0);
+  }
   packet = {
     verdict: "QQQ fixture Hold after the complete bounded council.", rating: "Hold", winner: "balanced",
     summary: "All required fixture stages completed.", long_thesis: ["operating evidence"], short_thesis: ["valuation risk"],
     valuation_range: "Conditional valuation range tied to evidence and dilution.", catalysts: ["next filing"], risks: ["execution"],
     position: "bounded position only", invalidation: ["verified milestones fail"],
     source_ids: ["market_data:S1", "earnings_deep_dive:S1"], confidence: "medium",
-    report_markdown: ${JSON.stringify(fullReportBody())}
+    price_levels: [
+      { label: "Do not touch", range: "above the supported range", meaning: "poor risk reward", action: "do not initiate", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+      { label: "Worth starting", range: "inside the supported range", meaning: "bounded upside and downside", action: "start small", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+      { label: "Materially undervalued", range: "below the supported range", meaning: "margin of safety", action: "add only if thesis holds", basis: "conditional valuation", source_ids: ["earnings_deep_dive:S1"] }
+    ],
+    horizon_views: { short_term: "Wait for the next filing.", medium_term: "Require operating progress.", long_term: "Require durable economics." },
+    data_gaps: ["No critical data gaps were found in the completed fixture packets."]
   };
+  if (${JSON.stringify(pmContractFailureMode)} === "missing_price_levels") delete packet.price_levels;
+  if (${JSON.stringify(pmContractFailureMode)} === "invalid_horizon_views") packet.horizon_views.short_term = "  ";
+  if (${JSON.stringify(pmContractFailureMode)} === "empty_data_gaps") packet.data_gaps = [];
 } else {
   await sleep(55);
   const ownQuestions = [role + "_Q1", role + "_Q2", role + "_Q3"];
@@ -383,6 +419,23 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     const pm = launches.find((item) => item.role === "portfolio_manager" && !item.parseRepair);
     assert.ok(pm.at > Math.max(...roundLaunches(3).map((item) => item.at)), "PM must wait for both round-3 sides");
     assert.equal(pm.search, false);
+    assert.equal(pm.structuredPmDecision, true, "full headless PM must use the compact decision contract");
+    assert.equal(pm.omitsPmReport, true, "full headless PM must not JSON-escape the long report");
+
+    const manager = readJson(join(dir, "manager_synthesis.json"));
+    assert.equal(manager.rating, "Hold");
+    assert.equal(manager.decision_available, true);
+    assert.match(manager.report_markdown, /## Analyst Work Log/);
+    assert.match(manager.report_markdown, /#### Round 3/);
+    assert.match(manager.report_markdown, /## Resolved Seat-Weight Audit/);
+    assert.match(manager.report_markdown, /\| Seat \| Stance \| Declared \| Verification \| Effective \| Share \| Why adjusted \|/);
+    assert.match(manager.report_markdown, /\| master_buffett \|/);
+    const upperPriceRow = manager.report_markdown.split("\n").find((line) => line.includes("| Do not touch |"));
+    assert.ok(upperPriceRow?.includes("conditional valuation"));
+    assert.ok(upperPriceRow?.includes("(sources: `market_data:S1`)"),
+      "a supplied price-row basis must not hide its validated source IDs");
+    assert.doesNotMatch(manager.raw_text, /report_markdown/u,
+      "the worker decision stays small while the trusted renderer owns report_markdown");
 
     const bull = readJson(join(dir, "bull_researcher.json"));
     const bear = readJson(join(dir, "bear_researcher.json"));
@@ -404,6 +457,154 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.equal(status.time_budget_ms, 30_000);
     assert.equal(status.deadline_met, true);
     assert.ok(status.elapsed_ms < 30_000, `fixture elapsed ${status.elapsed_ms}ms`);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+for (const [label, pmContractFailureMode, expectedPath] of [
+  ["missing price_levels", "missing_price_levels", "/"],
+  ["invalid horizon_views", "invalid_horizon_views", "/horizon_views/short_term"],
+  ["empty data_gaps", "empty_data_gaps", "/data_gaps"],
+]) {
+  test(`full headless PM fails closed on ${label} and never publishes a rating`, async () => {
+    const dataDir = makeDataDir();
+    const fake = fakeFullCodex(dataDir, { malformedTask: null, pmContractFailureMode });
+    const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+    try {
+      await server.request("initialize", {});
+      const prompt = `Reject a structured PM decision with ${label}.`;
+      const confirmed = await confirmMasterSelection(server, {
+        symbol: "QQQ", language: "English", prompt, selected_master_ids: ["master_buffett"],
+      });
+      const runId = `FULL-PM-CONTRACT-${pmContractFailureMode.toUpperCase()}-${process.pid}`;
+      const result = structured(await server.callTool("analyze_symbol", {
+        symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+        council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
+        wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+        grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      }, { timeoutMs: 45_000 }));
+
+      const dir = join(dataDir, "runs", runId);
+      const decision = readJson(join(dir, "decision.json"));
+      const status = readJson(join(dir, "status.json"));
+      assert.equal(result.run.status, "incomplete");
+      assert.equal(status.status, "incomplete");
+      assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "failed");
+      assert.equal(decision.decision_available, false);
+      assert.equal(decision.rating, null);
+      assert.equal(result.decision.rating, null);
+      assert.equal(result.run.agent_status.portfolio_manager.attempts, 2);
+
+      const diagnostics = [1, 2].map((attempt) => readJson(join(dir, `portfolio_manager.attempt-${attempt}.failure.json`)));
+      for (const diagnostic of diagnostics) {
+        assert.equal(diagnostic.schema_id, "runtime-headless-portfolio-manager-decision-v1");
+        assert.equal(diagnostic.schema_kind, "headless_portfolio_manager_decision");
+        assert.ok(diagnostic.schema_errors.some((error) => error.path === expectedPath),
+          `${label} must remain attributable to ${expectedPath}`);
+      }
+    } finally {
+      await server.close();
+      removeDataDir(dataDir);
+    }
+  });
+}
+
+test("full headless PM repairs one malformed decision without regenerating the long report in JSON", async () => {
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir, { malformedTask: null, pmFailureMode: "first" });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Repair one malformed compact PM decision and render the complete report deterministically.";
+    const confirmed = await confirmMasterSelection(server, {
+      symbol: "QQQ", language: "English", prompt, selected_master_ids: ["master_buffett"],
+    });
+    const runId = `FULL-PM-REPAIR-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
+      wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+    }, { timeoutMs: 45_000 }));
+
+    const dir = join(dataDir, "runs", runId);
+    assert.equal(result.run.status, "complete", JSON.stringify(result.run.agent_status.portfolio_manager, null, 2));
+    assert.equal(result.decision.rating, "Hold");
+    assert.equal(result.decision.decision_available, true);
+    assert.equal(result.report_quality.status, "passed", result.report_quality.missing.join("; "));
+    assert.equal(result.run.agent_status.portfolio_manager.attempts, 2);
+    assert.equal(result.run.agent_status.portfolio_manager.attempt_diagnostics.length, 1);
+
+    const diagnosticPath = join(dir, "portfolio_manager.attempt-1.failure.json");
+    assert.equal(existsSync(diagnosticPath), true);
+    const diagnostic = readJson(diagnosticPath);
+    assert.equal(diagnostic.attempt, 1);
+    assert.equal(diagnostic.failure_kind, "parse_failed");
+    assert.match(diagnostic.output_sha256, /^sha256:[0-9a-f]{64}$/u);
+    assert.doesNotMatch(readFileSync(diagnosticPath, "utf8"), /PM_PRIVATE_RAW_SENTINEL|report_markdown|rating.*Buy/u);
+    if (process.platform !== "win32") assert.equal(statSync(diagnosticPath).mode & 0o777, 0o600);
+
+    const manager = readJson(join(dir, "manager_synthesis.json"));
+    assert.doesNotMatch(manager.raw_text, /report_markdown/u);
+    assert.match(manager.report_markdown, /## Analyst Work Log/);
+    assert.match(manager.report_markdown, /## Source Table/);
+    const launches = readJsonl(fake.log).filter((item) => item.role === "portfolio_manager");
+    assert.equal(launches.length, 2);
+    assert.ok(launches.every((item) => item.structuredPmDecision && item.omitsPmReport));
+    assert.equal(launches[1].parseRepair, true);
+    assert.equal(launches[1].search, false);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("two malformed full PM attempts persist sanitized diagnostics and never manufacture a rating", async () => {
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir, { malformedTask: null, pmFailureMode: "both" });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Fail closed after two malformed compact PM decisions without a synthetic investment rating.";
+    const confirmed = await confirmMasterSelection(server, {
+      symbol: "QQQ", language: "English", prompt, selected_master_ids: ["master_buffett"],
+    });
+    const runId = `FULL-PM-DOUBLE-FAIL-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
+      wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+    }, { timeoutMs: 45_000 }));
+
+    const dir = join(dataDir, "runs", runId);
+    const decision = readJson(join(dir, "decision.json"));
+    const status = readJson(join(dir, "status.json"));
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(status.status, "incomplete");
+    assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "failed");
+    assert.equal(decision.decision_available, false);
+    assert.equal(decision.rating, null);
+    assert.equal(decision.confidence, "low");
+    assert.match(decision.summary, /ran twice.*no usable decision/i);
+
+    const diagnosticPaths = [1, 2].map((attempt) => join(dir, `portfolio_manager.attempt-${attempt}.failure.json`));
+    for (const [index, diagnosticPath] of diagnosticPaths.entries()) {
+      assert.equal(existsSync(diagnosticPath), true);
+      const text = readFileSync(diagnosticPath, "utf8");
+      const diagnostic = JSON.parse(text);
+      assert.equal(diagnostic.attempt, index + 1);
+      assert.equal(diagnostic.failure_kind, "parse_failed");
+      assert.match(diagnostic.output_sha256, /^sha256:[0-9a-f]{64}$/u);
+      assert.ok(text.length < 4_096, `diagnostic ${index + 1} must stay bounded`);
+      assert.doesNotMatch(text, /PM_PRIVATE_RAW_SENTINEL|report_markdown|rating.*Buy/u);
+      if (process.platform !== "win32") assert.equal(statSync(diagnosticPath).mode & 0o777, 0o600);
+    }
+    assert.equal(result.run.agent_status.portfolio_manager.attempt_diagnostics.length, 2);
+    assert.match(readFileSync(join(dir, "final_report.md"), "utf8"), /## Analyst Work Log/);
+    assert.doesNotMatch(readFileSync(join(dir, "user_response.md"), "utf8"), /Rating:\s*(Buy|Hold)/u);
   } finally {
     await server.close();
     removeDataDir(dataDir);

@@ -36,6 +36,7 @@ const evidencePacket = (summary = "The visible analyst records sufficient Englis
   summary,
   claims: [{
     claim: "The fixture records one bounded material fact for downstream provenance checks.",
+    claim_type: "event_or_observation",
     evidence: "The fixture source directly supports this bounded material fact.",
     confidence: "medium",
     source_ids: ["S1"],
@@ -683,4 +684,19 @@ test("visible runtime schemas reject hollow evidence and forged downstream prove
   assert.equal(forged.error?.data?.reason, "SOURCE_PROVENANCE_MISMATCH");
   assert.deepEqual(forged.error?.data?.unknown_source_ids, ["market_data:FORGED"]);
   assert.equal(existsSync(join(dataDir, "runs", runId, "bull_researcher.round-1.json")), false);
+});
+
+test("visible news evidence fails closed before persistence when official coverage is only prose", async () => {
+  const runId = `SELFTEST-NEWS-OFFICIAL-COVERAGE-${process.pid}`;
+  await plan(runId, ["news_industry_management"]);
+  const evidencePath = join(dataDir, "runs", runId, "evidence.json");
+  const before = readFileSync(evidencePath, "utf8");
+  const rejected = await recordEvidence(runId, "news_industry_management", evidencePacket(
+    "This prose says the official surfaces were checked, but supplies no structured coverage record.",
+  ));
+  assert.equal(rejected.error?.data?.reason, "OFFICIAL_SOURCE_COVERAGE_INVALID");
+  assert.equal(rejected.error?.data?.schema_id, "news-official-source-coverage-v1");
+  assert.ok(rejected.error?.data?.errors.some((issue) => issue.missing_property === "official_source_coverage"));
+  assert.equal(readFileSync(evidencePath, "utf8"), before);
+  assert.equal(existsSync(join(dataDir, "runs", runId, "news_industry_management.json")), false);
 });

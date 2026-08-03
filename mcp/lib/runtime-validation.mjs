@@ -1,7 +1,9 @@
 import {
   validateDebatePacket,
   validateEvidencePacket,
+  validateHeadlessPortfolioManagerDecision,
   validateMethodVoice,
+  validateNewsEvidencePacket,
   validatePortfolioManagerPacket,
 } from "../generated/runtime-validators.mjs";
 import { internalError, invalidParams } from "./errors.mjs";
@@ -11,9 +13,17 @@ const VALIDATORS = Object.freeze({
     id: "runtime-evidence-packet-v1",
     validate: validateEvidencePacket,
   }),
+  news_evidence: Object.freeze({
+    id: "runtime-news-evidence-packet-v1",
+    validate: validateNewsEvidencePacket,
+  }),
   debate: Object.freeze({
     id: "runtime-debate-packet-v1",
     validate: validateDebatePacket,
+  }),
+  headless_portfolio_manager_decision: Object.freeze({
+    id: "runtime-headless-portfolio-manager-decision-v1",
+    validate: validateHeadlessPortfolioManagerDecision,
   }),
   portfolio_manager: Object.freeze({
     id: "runtime-portfolio-manager-packet-v1",

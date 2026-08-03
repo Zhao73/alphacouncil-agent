@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeCboeTimestamp, parseContract, summarizeChain } from "../../mcp/lib/options.mjs";
+import {
+  normalizeCboeSnapshotTimestamp,
+  normalizeCboeTimestamp,
+  parseContract,
+  summarizeChain,
+} from "../../mcp/lib/options.mjs";
 
 const row = (option, over = {}) => ({
   option, iv: 0.3, delta: 0.5, gamma: 0, theta: 0, vega: 0,
@@ -38,19 +43,21 @@ test("parseContract decodes root, expiry, right and strike", () => {
   assert.equal(parseContract("not-a-contract"), null);
 });
 
-test("CBOE quote and chain timestamps are retained as UTC source times", () => {
+test("CBOE snapshot UTC and last-trade New York timestamps use distinct timezone semantics", () => {
   const payload = structuredClone(CHAIN);
-  payload.timestamp = "2026-08-03 09:08:07";
+  payload.timestamp = "2026-08-03 10:17:46";
   payload.data.last_trade_time = "2026-07-31T15:59:59";
   const summary = summarizeChain(payload, {
     asOf: "2026-08-03",
-    retrievedAt: "2026-08-03T13:08:10.000Z",
+    retrievedAt: "2026-08-03T10:19:08.015Z",
   });
 
   assert.equal(normalizeCboeTimestamp("2026-07-31T15:59:59"), "2026-07-31T19:59:59.000Z");
+  assert.equal(normalizeCboeSnapshotTimestamp("2026-08-03 10:17:46"), "2026-08-03T10:17:46.000Z");
   assert.equal(summary.quote_time, "2026-07-31T19:59:59.000Z");
-  assert.equal(summary.chain_timestamp, "2026-08-03T13:08:07.000Z");
-  assert.equal(summary.retrieved_at, "2026-08-03T13:08:10.000Z");
+  assert.equal(summary.chain_timestamp, "2026-08-03T10:17:46.000Z");
+  assert.equal(summary.retrieved_at, "2026-08-03T10:19:08.015Z");
+  assert.ok(Date.parse(summary.chain_timestamp) <= Date.parse(summary.retrieved_at));
 });
 
 test("a zero implied vol is dropped, not read as low volatility", () => {

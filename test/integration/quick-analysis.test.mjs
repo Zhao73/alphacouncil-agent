@@ -65,6 +65,7 @@ const args = process.argv.slice(2);
 const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
+const asOf = /as[-_ ]of(?: date)?\\s*:\\s*(\\d{4}-\\d{2}-\\d{2})/iu.exec(prompt)?.[1] || "2026-07-28";
 const task = (${JSON.stringify(QUICK_TASKS)}).find((id) => prompt.includes("Task: " + id));
 const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
 const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
@@ -78,9 +79,17 @@ if (role === ${JSON.stringify(failedRole)}) process.exit(19);
 await new Promise((resolve) => setTimeout(resolve, role === "portfolio_manager" ? 40 : 120));
 let packet;
 if (task) {
+  const officialDatedItems = [
+    { title: "STALE_SENTINEL", published_at: "2025-01-01", url: "https://example.com/stale", source_id: "S3" },
+    { title: task + " dated source", published_at: "2026-07-27", url: "https://example.com/" + task, source_id: "S1" },
+    ...(asOf >= "2026-08-01"
+      ? [{ title: "FUTURE_SENTINEL", published_at: "2026-08-01", url: "https://example.com/future", source_id: "S4" }]
+      : []),
+  ];
+  const officialLatest = officialDatedItems.at(-1);
   packet = {
     summary: task + " quick analyst summary with explicit facts and limits.",
-    claims: [{ claim: task + " material claim", evidence: "bounded fixture evidence", confidence: "medium", source_ids: ["S1"] }],
+    claims: [{ claim: task + " material claim", claim_type: "event_or_observation", evidence: "bounded fixture evidence", confidence: "medium", source_ids: ["S1"] }],
     metrics: { fixture: 1 },
     sources: [
       { id: "S1", title: task + " dated source", url: "https://example.com/" + task, published_at: "2026-07-27", retrieved_at: "2026-07-28" },
@@ -90,7 +99,24 @@ if (task) {
         { id: "S4", title: "FUTURE_SENTINEL", url: "https://example.com/future", published_at: "2026-08-01", retrieved_at: "2026-07-28" },
       ] : []),
     ],
-    open_questions: [], confidence: "medium", information_richness: "B"
+    open_questions: [], confidence: "medium", information_richness: "B",
+    ...(task === "news_industry_management" ? {
+      official_source_coverage: {
+        status: "complete",
+        regulator: {
+          status: "complete", entry_url: "https://example.com/regulator-feed", checked_through: asOf,
+          latest_dated_item: { ...officialLatest, record_id: "fixture-filing" },
+          dated_items_checked: officialDatedItems.map((item) => ({ ...item, record_id: "fixture-filing" })),
+          gap: null
+        },
+        issuer: {
+          status: "complete", entry_url: "https://example.com/issuer-news", checked_through: asOf,
+          latest_dated_item: officialLatest,
+          dated_items_checked: officialDatedItems,
+          gap: null
+        }
+      }
+    } : {})
   };
 } else if (master) {
   const frozenLine = prompt.split("\\n").find((item) => item.startsWith("Frozen method result JSON: "));

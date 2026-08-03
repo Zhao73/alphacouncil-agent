@@ -53,7 +53,7 @@ const median = (xs) => {
 const round = (n, places = 4) =>
   Number.isFinite(n) ? Number(n.toFixed(places)) : null;
 
-/** Convert CBOE's zone-less US-market timestamps into an auditable UTC instant. */
+/** Convert CBOE's zone-less last-trade timestamps from New York wall time to UTC. */
 export function normalizeCboeTimestamp(value) {
   const raw = String(value || "").trim();
   if (!raw) return null;
@@ -84,6 +84,21 @@ export function normalizeCboeTimestamp(value) {
   return new Date(instant).toISOString();
 }
 
+/**
+ * CBOE's top-level payload timestamp is already a UTC wall clock even though it has no `Z`.
+ * It is not in the same timezone as `data.last_trade_time`. Treating both as New York time
+ * pushed the snapshot four hours past the instant at which the response was retrieved.
+ */
+export function normalizeCboeSnapshotTimestamp(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const candidate = /(?:Z|[+-]\d{2}:?\d{2})$/iu.test(raw)
+    ? raw
+    : `${raw.replace(" ", "T")}Z`;
+  const parsed = Date.parse(candidate);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+}
+
 /** The contract closest to a target delta on one side of one expiry. */
 function nearestDelta(rows, expiry, right, targetAbsDelta) {
   const side = rows.filter((r) => r.expiry === expiry && r.right === right && Number.isFinite(r.delta));
@@ -103,7 +118,7 @@ export function summarizeChain(payload, { asOf, maxExpiries = 8, retrievedAt = n
   const spot = Number(data.close) || Number(data.last_trade_price) || null;
   const today = asOf || new Date().toISOString().slice(0, 10);
   const quoteTime = normalizeCboeTimestamp(data.last_trade_time);
-  const chainTimestamp = normalizeCboeTimestamp(payload.timestamp);
+  const chainTimestamp = normalizeCboeSnapshotTimestamp(payload.timestamp);
 
   const all = data.options.map((o) => {
     const c = parseContract(o.option);

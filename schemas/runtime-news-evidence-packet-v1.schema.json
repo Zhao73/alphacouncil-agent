@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-news-evidence-packet-v1.schema.json",
+  "title": "AlphaCouncil headless and visible news evidence packet",
+  "allOf": [
+    {
+      "$ref": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-evidence-packet-v1.schema.json"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["claim_type"],
+            "properties": {
+              "claim_type": {
+                "enum": ["event_or_observation", "absence_no_event"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

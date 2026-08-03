@@ -142,6 +142,17 @@ test("normalizeDebate defaults optional contract arrays to empty", () => {
   assert.deepEqual(debate.questions_answered, []);
 });
 
+test("an unavailable decision can never retain high decision confidence", () => {
+  const debate = normalizeDebate({
+    decision_available: false,
+    rating: "Buy",
+    confidence: "high",
+  }, "portfolio_manager", { symbol: "AAPL", as_of: "2026-06-22" }, "");
+  assert.equal(debate.decision_available, false);
+  assert.equal(debate.rating, null);
+  assert.equal(debate.confidence, "low");
+});
+
 test("mergeDebateRounds takes top-level fields from the last round and keeps all rounds", () => {
   const round = (rating, summary) =>
     normalizeDebate({ rating, summary }, "bull_researcher", { symbol: "AAPL", as_of: "2026-06-22" }, summary);
@@ -224,4 +235,34 @@ test("manager fallback routes the current analyst tasks into revision and earnin
   assert.doesNotMatch(section("Analyst Rating and Target-Price Revisions"), /No sell-side revision evidence/);
   assert.match(section("Earnings Call Management Signals"), /EARNINGS_DEEP_DIVE_SENTINEL/);
   assert.doesNotMatch(section("Earnings Call Management Signals"), /No earnings-call evidence/);
+});
+
+test("manager fallback records two PM parse failures without promoting evidence confidence", () => {
+  const packet = {
+    task: "market_data",
+    summary: "High-confidence evidence remains distinct from decision confidence.",
+    confidence: "high",
+    claims: [],
+    open_questions: [],
+    sources: [],
+  };
+  const fallback = managerFallback({
+    run_id: "PM-PARSE-FALLBACK",
+    symbol: "RKLB",
+    as_of: "2026-08-03",
+    language: "zh-CN",
+    dry_run: false,
+    master_opinions: [],
+    packets: [packet],
+    agent_status: {
+      portfolio_manager: { role: "portfolio_manager", status: "waiting", attempts: 2 },
+    },
+  }, "fixture failure", { failure_kind: "parse_failed" });
+
+  assert.equal(fallback.decision_available, false);
+  assert.equal(fallback.confidence, "low");
+  assert.match(fallback.summary, /已执行 2 次.*两次输出均违反 JSON\/报告契约.*未产出可用决策/u);
+  assert.match(fallback.report_markdown, /已执行 2 次.*未产出可用决策/u);
+  assert.match(fallback.report_markdown, /## 置信度\nlow/u);
+  assert.doesNotMatch(fallback.report_markdown, /未运行经理综合子代理/u);
 });
