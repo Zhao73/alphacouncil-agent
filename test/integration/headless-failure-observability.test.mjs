@@ -13,6 +13,7 @@ function scriptedCodexCommand(dataDir, {
   wrongLanguageBoth = false,
   locallyRepairableFirst = false,
   schemaInvalidFirst = false,
+  multiPayloadRepair = false,
 } = {}) {
   const driver = join(dataDir, "fake-codex-malformed.mjs");
   const counter = join(dataDir, "fake-codex-attempts.txt");
@@ -100,6 +101,8 @@ const output = ${wrongLanguageBoth
     ? JSON.stringify(locallyRepairable)
   : schemaInvalidFirst
     ? `attempt === 1 ? ${JSON.stringify(schemaInvalid)} : ${JSON.stringify(recovered)}`
+  : multiPayloadRepair
+    ? `attempt === 2 ? ${JSON.stringify(`${recovered}\n${JSON.stringify({ repair_note: "transport only" })}`)} : ${JSON.stringify(malformed)}`
   : recoverOnSecondAttempt
     ? `attempt === 2 ? ${JSON.stringify(recovered)} : ${JSON.stringify(malformed)}`
     : JSON.stringify(malformed)};
@@ -505,6 +508,42 @@ test("one bounded parse-only retry can recover a valid evidence packet", async (
         .map(({ task, attempt, max_attempts, reason }) => ({ task, attempt, max_attempts, reason })),
       [{ task: "forward_expectations", attempt: 2, max_attempts: 2, reason: "parse_failed" }],
     );
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("parse-only retry accepts one schema-valid packet beside non-contract JSON noise", async () => {
+  const dataDir = makeDataDir();
+  const fake = scriptedCodexCommand(dataDir, { multiPayloadRepair: true });
+  const server = startServer({
+    dataDir,
+    env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
+  });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "RKLB",
+      selected_master_ids: ["master_buffett"],
+    });
+    const runId = `HEADLESS-MULTI-ROOT-REPAIR-${process.pid}`;
+    const run = structured(await server.callTool("collect_evidence", {
+      symbol: "RKLB",
+      run_id: runId,
+      tasks: ["forward_expectations"],
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 5_000,
+    }));
+    const dir = join(dataDir, "runs", runId);
+    assert.equal(readFileSync(fake.counter, "utf8"), "2");
+    assert.equal(run.status, "evidence_complete");
+    assert.equal(run.task_status.forward_expectations.status, "completed");
+    assert.equal(run.task_status.forward_expectations.attempts, 2);
+    assert.equal(run.packets[0].summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
+    assert.equal(existsSync(join(dir, "forward_expectations.failure.json")), false);
+    assert.equal(existsSync(join(dir, "forward_expectations.attempt-1.failure.json")), true);
   } finally {
     await server.close();
     removeDataDir(dataDir);

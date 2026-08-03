@@ -2,6 +2,17 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.8] — 2026-08-03
+
+### Fixed
+
+- Parse-only repair outputs with multiple complete JSON roots now receive a schema-aware,
+  deterministic arbitration step. The runtime accepts only one distinct contract-valid packet;
+  two different valid packets, a truncated extra root, or no valid packet still fail closed.
+- Initial worker output remains strictly single-root. The bounded arbitration is available only
+  after the existing no-search repair attempt and applies consistently to evidence, method,
+  debate and portfolio-manager packets without choosing between competing semantic answers.
+
 ## [1.1.7] — 2026-08-03
 
 ### Fixed

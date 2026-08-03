@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "1.1.7",
+  "version": "1.1.8",
   "description": "Multi-agent company, ETF and market-index research workflow for Codex & Claude Code: sourced evidence, method seats, bull/bear debate and portfolio-manager synthesis.",
   "type": "module",
   "license": "MIT",

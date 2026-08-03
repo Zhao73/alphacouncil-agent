@@ -21,8 +21,9 @@ import { cleanLog, clip } from "./text.mjs";
 import { scopedSourceId, sourceManifest } from "./gates.mjs";
 import { runPath } from "./run-store.mjs";
 import { packetSummary } from "./markdown.mjs";
-import { parseJsonTransport } from "./bounded-json.mjs";
+import { parseJsonTransport, parseJsonTransportCandidates } from "./bounded-json.mjs";
 import { assertRuntimeWorkerPayload } from "./runtime-validation.mjs";
+import { canonicalJson } from "./personas-v3/canonical.mjs";
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -37,6 +38,40 @@ export function extractJson(text) {
 
 export function extractWorkerJson(text, kind) {
   return assertRuntimeWorkerPayload(kind, extractJson(text));
+}
+
+/**
+ * A parse-only repair worker may accidentally append a diagnostic JSON object to the repaired
+ * packet. Accept a result only when runtime-schema validation leaves exactly one distinct
+ * contract-valid value; two different valid packets and any truncated extra root stay
+ * ambiguous and fail closed. Initial workers never use this arbiter.
+ */
+export function extractRepairedWorkerJson(text, kind) {
+  try {
+    return extractWorkerJson(text, kind);
+  } catch (error) {
+    if (error?.data?.reason !== "WORKER_JSON_MULTIPLE_VALUES") throw error;
+    let candidates;
+    try {
+      candidates = parseJsonTransportCandidates(text);
+    } catch {
+      throw error;
+    }
+    const valid = [];
+    for (const candidate of candidates) {
+      try {
+        valid.push(assertRuntimeWorkerPayload(kind, candidate));
+      } catch (candidateError) {
+        if (candidateError?.data?.reason !== "WORKER_OUTPUT_SCHEMA_MISMATCH") {
+          throw candidateError;
+        }
+        // A non-contract JSON diagnostic is transport noise, not a competing packet.
+      }
+    }
+    const distinct = new Map(valid.map((candidate) => [canonicalJson(candidate), candidate]));
+    if (distinct.size === 1) return distinct.values().next().value;
+    throw error;
+  }
 }
 
 function sourceIdList(value) {
@@ -928,7 +963,10 @@ export function compactDebateContext(packet) {
   };
 }
 
-export function debateFromCodex(result, role, run, fallbackPrompt, { managerDecisionOnly = false } = {}) {
+export function debateFromCodex(result, role, run, fallbackPrompt, {
+  managerDecisionOnly = false,
+  repairedTransport = false,
+} = {}) {
   if (!result.ok) {
     const failureKind = result.deadline_exhausted
       ? "global_deadline"
@@ -946,7 +984,9 @@ export function debateFromCodex(result, role, run, fallbackPrompt, { managerDeci
     const kind = role === "portfolio_manager"
       ? (managerDecisionOnly ? "headless_portfolio_manager_decision" : "portfolio_manager")
       : "debate";
-    const parsed = extractWorkerJson(result.text, kind);
+    const parsed = repairedTransport
+      ? extractRepairedWorkerJson(result.text, kind)
+      : extractWorkerJson(result.text, kind);
     const source_ids = assertSourceIdsResolve(run, parsed.source_ids, role);
     return normalizeDebate({ ...parsed, source_ids }, role, run, result.text);
   } catch (error) {

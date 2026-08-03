@@ -5,9 +5,11 @@ import {
   MAX_WORKER_JSON_CHARS,
   balancedJsonCandidate,
   parseJsonTransport,
+  parseJsonTransportCandidates,
   stripJsonComments,
   stripTrailingCommas,
 } from "../../mcp/lib/bounded-json.mjs";
+import { extractRepairedWorkerJson, extractWorkerJson } from "../../mcp/lib/packets.mjs";
 import {
   assertRuntimeClientPayload,
   assertRuntimeWorkerPayload,
@@ -144,6 +146,58 @@ test("bounded transport distinguishes a second JSON root from ordinary trailing 
   ]) {
     assert.throws(() => parseJsonTransport(secondRoot), /multiple JSON payloads/u);
   }
+});
+
+test("parse-repair arbitration accepts only one distinct schema-valid complete root", () => {
+  const packet = evidence();
+  const valid = JSON.stringify(packet);
+  const diagnostic = JSON.stringify({ repair_note: "transport only" });
+  assert.throws(() => extractWorkerJson(`${valid}\n${diagnostic}`, "evidence"), /multiple JSON payloads/u);
+  assert.deepEqual(
+    extractRepairedWorkerJson(`${valid}\n${diagnostic}`, "evidence"),
+    packet,
+  );
+  assert.deepEqual(
+    extractRepairedWorkerJson(`${valid}\n${valid}`, "evidence"),
+    packet,
+  );
+
+  const competing = JSON.stringify({ ...packet, summary: "A different valid evidence packet." });
+  assert.throws(
+    () => extractRepairedWorkerJson(`${valid}\n${competing}`, "evidence"),
+    /multiple JSON payloads/u,
+  );
+  assert.throws(
+    () => extractRepairedWorkerJson(`${valid}\n{"summary":`, "evidence"),
+    /multiple JSON payloads/u,
+  );
+  assert.throws(
+    () => extractRepairedWorkerJson(`${valid}\n{"repair_note":}`, "evidence"),
+    /multiple JSON payloads/u,
+  );
+  assert.throws(
+    () => extractRepairedWorkerJson('{"note":1}\n{"other":2}', "evidence"),
+    /multiple JSON payloads/u,
+  );
+});
+
+test("candidate enumeration preserves complete roots but never chooses one", () => {
+  assert.deepEqual(
+    parseJsonTransportCandidates('{"a":1}\ntransport note\n{"b":2,}'),
+    [{ a: 1 }, { b: 2 }],
+  );
+  assert.throws(
+    () => parseJsonTransportCandidates('{"a":1}\n{"b":'),
+    (error) => error?.data?.reason === "WORKER_JSON_INCOMPLETE_ADDITIONAL_VALUE",
+  );
+  assert.throws(
+    () => parseJsonTransportCandidates('{"a":1}\n{"b":}'),
+    (error) => error?.data?.reason === "WORKER_JSON_MALFORMED_ADDITIONAL_VALUE",
+  );
+  assert.throws(
+    () => parseJsonTransportCandidates(Array.from({ length: 33 }, () => "{}").join("\n")),
+    (error) => error?.data?.reason === "WORKER_JSON_CANDIDATE_LIMIT",
+  );
 });
 
 test("standalone runtime schemas accept complete packets and expose missing content", () => {

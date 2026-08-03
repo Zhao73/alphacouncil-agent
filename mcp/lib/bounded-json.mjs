@@ -4,6 +4,7 @@ import { internalError } from "./errors.mjs";
 // malformed output from turning deterministic repair into an unbounded scan while still leaving
 // ample room for a complete PM report embedded in report_markdown.
 export const MAX_WORKER_JSON_CHARS = 512_000;
+const MAX_TRANSPORT_CANDIDATES = 32;
 
 function parse(value) {
   try {
@@ -188,6 +189,74 @@ function hasAdditionalJsonRoot(value) {
     }
   }
   return false;
+}
+
+/**
+ * Enumerate complete, independently parseable JSON roots without choosing between them.
+ * This is used only by schema-aware parse-repair handling: the ordinary transport parser
+ * remains fail-closed whenever it sees more than one credible root.
+ */
+export function parseJsonTransportCandidates(text, { maxChars = MAX_WORKER_JSON_CHARS } = {}) {
+  if (typeof text !== "string") {
+    throw internalError("subagent did not return JSON text", { reason: "WORKER_JSON_NOT_TEXT" });
+  }
+  const source = text.replace(/^\uFEFF/u, "");
+  if (source.length > maxChars) {
+    throw internalError("subagent JSON exceeded the bounded transport-repair limit", {
+      reason: "WORKER_JSON_TOO_LARGE",
+      output_chars: source.length,
+      max_chars: maxChars,
+    });
+  }
+
+  const normalized = stripJsonComments(source);
+  const candidates = [];
+  let cursor = 0;
+  let spans = 0;
+  let malformedCredibleRoot = false;
+  while (cursor < normalized.length) {
+    const span = balancedJsonSpan(normalized.slice(cursor));
+    if (!span) break;
+    spans += 1;
+    if (spans > MAX_TRANSPORT_CANDIDATES) {
+      throw internalError("subagent returned too many JSON transport candidates", {
+        reason: "WORKER_JSON_CANDIDATE_LIMIT",
+        max_candidates: MAX_TRANSPORT_CANDIDATES,
+      });
+    }
+    const exact = parse(span.candidate);
+    if (exact.ok) {
+      candidates.push(exact.value);
+    } else {
+      const withoutTrailingCommas = stripTrailingCommas(span.candidate);
+      if (withoutTrailingCommas !== span.candidate) {
+        const repaired = parse(withoutTrailingCommas);
+        if (repaired.ok) candidates.push(repaired.value);
+        else malformedCredibleRoot = malformedCredibleRoot || (span.candidate.startsWith("{")
+          ? credibleJsonObjectRoot(span.candidate)
+          : credibleJsonArrayRoot(span.candidate));
+      } else {
+        malformedCredibleRoot = malformedCredibleRoot || (span.candidate.startsWith("{")
+          ? credibleJsonObjectRoot(span.candidate)
+          : credibleJsonArrayRoot(span.candidate));
+      }
+    }
+    cursor += span.end + 1;
+  }
+
+  // A complete first packet followed by a truncated second packet is still ambiguous. Never
+  // let schema-aware arbitration turn that case into an accepted first packet.
+  if (hasAdditionalJsonRoot(normalized.slice(cursor))) {
+    throw internalError("subagent returned an incomplete additional JSON payload", {
+      reason: "WORKER_JSON_INCOMPLETE_ADDITIONAL_VALUE",
+    });
+  }
+  if (malformedCredibleRoot) {
+    throw internalError("subagent returned a malformed additional JSON payload", {
+      reason: "WORKER_JSON_MALFORMED_ADDITIONAL_VALUE",
+    });
+  }
+  return candidates;
 }
 
 /**

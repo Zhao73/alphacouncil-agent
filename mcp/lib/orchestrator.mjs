@@ -9,7 +9,7 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
@@ -2212,7 +2212,7 @@ export async function collectEvidence(args) {
         });
       }
       try {
-        packet = normalizePacket(extractWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"), task, symbol, asOfDate, result.text);
+        packet = normalizePacket(extractRepairedWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"), task, symbol, asOfDate, result.text);
         applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} repair`);
@@ -2535,9 +2535,12 @@ export async function runHeadlessMasters(run, args = {}) {
       }, { search: false, sigkillGraceMs: councilKillGrace(run) });
       return { ...result, budget_ms: allowedMs };
     };
-    const parse = (result) => {
+    const parse = (result, { repairedTransport = false } = {}) => {
       if (frozenOpinion) {
-        const voice = normalizeMasterVoice(extractWorkerJson(result.text, "method_voice"), id, run, frozenOpinion, result.text);
+        const voicePacket = repairedTransport
+          ? extractRepairedWorkerJson(result.text, "method_voice")
+          : extractWorkerJson(result.text, "method_voice");
+        const voice = normalizeMasterVoice(voicePacket, id, run, frozenOpinion, result.text);
         assertReaderLanguage([
           voice.statement,
           ...(voice.key_findings || []),
@@ -2659,7 +2662,7 @@ export async function runHeadlessMasters(run, args = {}) {
         };
       }
       try {
-        return { id, opinion: parse(result), engine };
+        return { id, opinion: parse(result, { repairedTransport: true }), engine };
       } catch (secondParseError) {
         return {
           id,
@@ -2706,9 +2709,10 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       updateAgent(run, role, "running", { pid, output, round: context.round });
       appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
     }, { search: false, sigkillGraceMs: councilKillGrace(run) });
-  const parseWorkerPacket = (workerResult, workerPrompt) => {
+  const parseWorkerPacket = (workerResult, workerPrompt, { repairedTransport = false } = {}) => {
     const candidate = debateFromCodex(workerResult, role, run, workerPrompt, {
       managerDecisionOnly: structuredManagerDecision,
+      repairedTransport,
     });
     if (!structuredManagerDecision || candidate?.failure_kind) return candidate;
     try {
@@ -2817,7 +2821,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
         updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
-      packet = enforceLanguage(parseWorkerPacket(result, repairPrompt));
+      packet = enforceLanguage(parseWorkerPacket(result, repairPrompt, { repairedTransport: true }));
       if (packet?.failure_kind) persistManagerAttemptDiagnostic(2, packet, result);
     }
   }
