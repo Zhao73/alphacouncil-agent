@@ -18,6 +18,20 @@ function hash(text) {
   return `sha256:${createHash("sha256").update(text).digest("hex")}`;
 }
 
+function npmInvocation(args) {
+  const npmExecPath = process.env.npm_execpath;
+  if (typeof npmExecPath === "string" && npmExecPath.trim() && existsSync(npmExecPath)) {
+    return { command: process.execPath, args: [npmExecPath, ...args] };
+  }
+  if (process.platform === "win32") {
+    return {
+      command: process.env.ComSpec || "cmd.exe",
+      args: ["/d", "/s", "/c", "npm.cmd", ...args],
+    };
+  }
+  return { command: "npm", args };
+}
+
 test("method-lens Skill closes exactly over the 26 active methods and retires the AI seat", () => {
   assert.equal(CATALOG.active_method_count, 26);
   assert.deepEqual(CATALOG.active_method_ids, [...CANONICAL_MASTER_IDS]);
@@ -198,7 +212,8 @@ test("method output validator requires the fixed label and first person in every
 });
 
 test("the npm package contains the router, contracts, catalog and all method references", () => {
-  const packed = JSON.parse(execFileSync("npm", ["pack", "--dry-run", "--json"], { cwd: ROOT, encoding: "utf8" }))[0].files.map((item) => item.path);
+  const npm = npmInvocation(["pack", "--dry-run", "--json"]);
+  const packed = JSON.parse(execFileSync(npm.command, npm.args, { cwd: ROOT, encoding: "utf8" }))[0].files.map((item) => item.path);
   assert.ok(packed.includes("skills/alphacouncil-method-lenses/SKILL.md"));
   assert.ok(packed.includes("skills/alphacouncil-method-lenses/agents/openai.yaml"));
   assert.ok(packed.includes("skills/alphacouncil-method-lenses/references/catalog.v1.json"));

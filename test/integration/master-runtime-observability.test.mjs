@@ -76,8 +76,13 @@ if (task) {
 }
 writeFileSync(output, JSON.stringify(packet));
 `);
-  if (process.platform !== "win32") chmodSync(driver, 0o755);
-  return { driver, log };
+  if (process.platform !== "win32") {
+    chmodSync(driver, 0o755);
+    return { driver, log };
+  }
+  const wrapper = join(dataDir, "fake-master-observability.cmd");
+  writeFileSync(wrapper, `@"${process.execPath}" "${driver}" %*\r\n`);
+  return { driver: wrapper, log };
 }
 
 async function waitForStatus(path, predicate, timeoutMs = 8_000) {
