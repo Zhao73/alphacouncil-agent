@@ -94,7 +94,11 @@ medium and conditional on the cited full-council evidence.
 `;
 }
 
-function fakeFullCodex(dataDir, { evidenceDelayMs = 45, malformedTask = "forward_expectations" } = {}) {
+function fakeFullCodex(dataDir, {
+  evidenceDelayMs = 45,
+  malformedTask = "forward_expectations",
+  malformedMasterModes = {},
+} = {}) {
   const driver = join(dataDir, "fake-full-codex.mjs");
   const log = join(dataDir, "full-worker-log.jsonl");
   const malformedState = join(dataDir, "malformed-once.state");
@@ -107,14 +111,24 @@ for await (const chunk of process.stdin) prompt += chunk;
 const regularTask = (${JSON.stringify(DEFAULT_TASKS)}).find((id) => prompt.includes("Task:" + id) || prompt.includes("Task: " + id));
 const repairTask = /Target task:\\s*([a-z_]+)/u.exec(prompt)?.[1] || null;
 const task = regularTask || repairTask;
-const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1] || null;
+const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((master_[a-z0-9_]+)\\)/iu.exec(prompt)?.[1]
+  || /Master ID:\\s*(master_[a-z0-9_]+)/u.exec(prompt)?.[1]
+  || null;
 const role = /You are the portfolio_manager/i.test(prompt) ? "portfolio_manager"
   : /You are the bull_researcher/i.test(prompt) ? "bull_researcher"
   : /You are the bear_researcher/i.test(prompt) ? "bear_researcher"
   : master || task || "unknown";
 const round = Number(/Debate round:\\s*(\\d+)/u.exec(prompt)?.[1] || 0);
 const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
-appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, task, master, round, parseRepair, search: args.includes("--search"), at: Date.now(), pid: process.pid, prompt_chars: prompt.length }) + "\\n");
+appendFileSync(${JSON.stringify(log)}, JSON.stringify({
+  role, task, master, round, parseRepair, search: args.includes("--search"), at: Date.now(), pid: process.pid,
+  prompt_chars: prompt.length,
+  exactMethodVoiceContract: prompt.includes("Allowed investment-evidence source_ids JSON:")
+    && prompt.includes("what_i_see") && prompt.includes("how_my_method_reads_it")
+    && prompt.includes("would_i_act") && prompt.includes("what_changes_my_mind")
+    && prompt.includes("where_i_disagree")
+    && prompt.includes("MUST be exactly one of: high | medium | low"),
+}) + "\\n");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const lineJson = (prefix) => {
@@ -141,7 +155,9 @@ if (task) {
 } else if (master) {
   await sleep(45);
   const frozenLine = prompt.split("\\n").find((item) => item.startsWith("Frozen method result JSON: "));
-  const frozen = JSON.parse(frozenLine.slice("Frozen method result JSON: ".length));
+  const frozen = frozenLine
+    ? JSON.parse(frozenLine.slice("Frozen method result JSON: ".length))
+    : { stance: /required acknowledged stance:\\s*(constructive|cautious|opposed|out_of_scope)/u.exec(prompt)?.[1] || "out_of_scope" };
   packet = {
     master,
     acknowledged_stance: frozen.stance,
@@ -161,6 +177,9 @@ if (task) {
     source_ids: ["market_data:S1"],
     confidence: "medium"
   };
+  const malformedMode = ${JSON.stringify(malformedMasterModes)}[master];
+  if (!parseRepair && malformedMode === "missing_voice") delete packet.voice;
+  if (!parseRepair && malformedMode === "invalid_confidence") packet.confidence = "very_high";
 } else if (role === "portfolio_manager") {
   await sleep(45);
   packet = {
@@ -207,7 +226,12 @@ function readJsonl(path) {
 
 test("full council proves dedicated master workers, parallel barriers, exact Q&A, display coverage and no-search parse repair", async () => {
   const dataDir = makeDataDir();
-  const fake = fakeFullCodex(dataDir);
+  const fake = fakeFullCodex(dataDir, {
+    malformedMasterModes: {
+      master_buffett: "missing_voice",
+      master_druckenmiller: "invalid_confidence",
+    },
+  });
   // Every seat this fixture selects abstains on an ETF, and an abstaining seat no longer spends
   // a voice worker. Opt that back in here so the worker-path assertions below keep exercising a
   // real dedicated worker; the default skip has its own test.
@@ -326,7 +350,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.equal(repairs.length, 1, "malformed evidence gets one bounded parse-only retry");
     assert.equal(repairs[0].search, false, "parse-only repair must not browse or search");
 
-    const masterLaunches = launches.filter((item) => SELECTED_MASTERS.includes(item.master));
+    const masterLaunches = launches.filter((item) => SELECTED_MASTERS.includes(item.master) && !item.parseRepair);
     assert.equal(masterLaunches.length, SELECTED_MASTERS.length, "one voice worker per selected v3 master");
     assert.equal(new Set(masterLaunches.map((item) => item.master)).size, SELECTED_MASTERS.length);
     assert.equal(new Set(masterLaunches.map((item) => item.pid)).size, SELECTED_MASTERS.length,
@@ -334,6 +358,15 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.ok(Math.max(...masterLaunches.map((item) => item.at)) - Math.min(...masterLaunches.map((item) => item.at)) < 1_000,
       "max_concurrency=1 must not serialize the contract-required method wave");
     assert.ok(masterLaunches.every((item) => item.search === false), "method explanation workers cannot add web facts");
+    const masterRepairs = launches.filter((item) => SELECTED_MASTERS.includes(item.master) && item.parseRepair);
+    assert.deepEqual(
+      masterRepairs.map((item) => item.master).sort(),
+      ["master_buffett", "master_druckenmiller"],
+      "missing voice and invalid confidence each receive one bounded schema repair",
+    );
+    assert.ok(masterRepairs.every((item) => item.search === false), "method schema repair cannot browse");
+    assert.ok(masterRepairs.every((item) => item.exactMethodVoiceContract),
+      "repair repeats the exact five-field voice, confidence enum, and allowed-source contract");
 
     const roundLaunches = (round) => launches.filter((item) =>
       ["bull_researcher", "bear_researcher"].includes(item.role) && item.round === round && !item.parseRepair);

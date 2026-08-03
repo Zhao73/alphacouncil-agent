@@ -28,6 +28,53 @@ export function resolveMarketSymbol(input) {
   return Object.prototype.hasOwnProperty.call(MARKET_ALIASES, key) ? MARKET_ALIASES[key] : raw;
 }
 
+const CLOSED_MARKET_STATES = new Set(["CLOSED", "PRE", "PREPRE", "POST", "POSTPOST"]);
+const CLOSE_BEARING_INSTRUMENTS = new Set(["EQUITY", "ETF", "INDEX", "MUTUALFUND"]);
+
+/**
+ * Attach an observation-time contract to a quote.
+ *
+ * A provider's generic delay label is not evidence that a particular observation is only
+ * fifteen minutes old.  On a weekend Yahoo's `regularMarketPrice` can be Friday's close,
+ * while the same payload is gathered on Monday.  Consumers therefore get the measured age
+ * and the price basis separately and can render the actual 60.84h (or other) age rather than
+ * repeating a fixed provider slogan.
+ */
+export function withQuoteFreshness(quote, gatheredAt = new Date().toISOString()) {
+  const gatheredTime = Date.parse(gatheredAt);
+  const rawQuoteTime = String(quote?.quote_time || "");
+  // A zone-less provider timestamp must not be interpreted in the machine's local zone.
+  // Stooq's CSV fallback is explicitly EOD and carries no zone, so its age stays unknown.
+  const quoteTime = /(?:Z|[+-]\d{2}:?\d{2})$/iu.test(rawQuoteTime) ? Date.parse(rawQuoteTime) : NaN;
+  const ageSeconds = Number.isFinite(gatheredTime) && Number.isFinite(quoteTime)
+    ? Math.max(0, Math.round((gatheredTime - quoteTime) / 1000))
+    : null;
+  const source = String(quote?.source || "").toLowerCase();
+  const marketState = String(quote?.market_state || "").toUpperCase();
+  const instrumentType = String(quote?.instrument_type || "").toUpperCase();
+  const quoteBasis = source === "stooq" ? "end_of_day_close" : "regular_market_price";
+  const isRealtime = quote?.is_realtime === true;
+  let quoteStatus = "last_regular_trade";
+
+  if (isRealtime) quoteStatus = "real_time";
+  else if (quoteBasis === "end_of_day_close") quoteStatus = "end_of_day_close";
+  else if (marketState === "REGULAR") quoteStatus = "regular_session_delayed";
+  else if (CLOSED_MARKET_STATES.has(marketState)
+    || (CLOSE_BEARING_INSTRUMENTS.has(instrumentType) && ageSeconds >= 6 * 3600)) {
+    quoteStatus = "regular_close";
+  }
+
+  return {
+    ...quote,
+    gathered_at: Number.isFinite(gatheredTime) ? new Date(gatheredTime).toISOString() : null,
+    stale_age_seconds: ageSeconds,
+    stale_age_hours: ageSeconds === null ? null : Number((ageSeconds / 3600).toFixed(2)),
+    quote_basis: quoteBasis,
+    quote_status: quoteStatus,
+    is_realtime: isRealtime,
+  };
+}
+
 export function parseYahooChart(json, requested) {
   const meta = json?.chart?.result?.[0]?.meta;
   if (!meta || typeof meta.regularMarketPrice !== "number") throw new Error("no price in chart payload");
@@ -52,7 +99,7 @@ export function parseYahooChart(json, requested) {
     market_state: meta.marketState || null,
     quote_time: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : null,
     source: "yahoo",
-    note: "delayed (~15m), not a real-time feed",
+    note: "not certified real-time; compare quote_time with gathered_at for the measured age",
   };
 }
 
@@ -89,12 +136,12 @@ export async function fetchQuote(input, { signal } = {}) {
   try {
     const sourceUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=1d&interval=1d`;
     const txt = await fetchText(sourceUrl, LIMITS.QUOTE_FETCH_MS, signal);
-    return { ...parseYahooChart(JSON.parse(txt), sym), source_url: sourceUrl };
+    return withQuoteFreshness({ ...parseYahooChart(JSON.parse(txt), sym), source_url: sourceUrl });
   } catch (e1) {
     try {
       const sourceUrl = `https://stooq.com/q/l/?s=${encodeURIComponent(sym.toLowerCase())}&f=sd2t2ohlcv&h&e=csv`;
       const txt = await fetchText(sourceUrl, LIMITS.QUOTE_FETCH_MS, signal);
-      return { ...parseStooqCsv(txt, sym), source_url: sourceUrl };
+      return withQuoteFreshness({ ...parseStooqCsv(txt, sym), source_url: sourceUrl });
     } catch (e2) {
       return { query: input, symbol: sym, error: `live data unavailable (${e1.message}; ${e2.message})`, note: "fall back to WebSearch and mark open_questions" };
     }
@@ -104,12 +151,15 @@ export async function fetchQuote(input, { signal } = {}) {
 export async function getQuotes(args) {
   const list = Array.isArray(args?.symbols) ? args.symbols : (args?.symbol ? [args.symbol] : []);
   if (list.length === 0) throw invalidParams("get_quote requires symbols[] or symbol.");
+  const gatheredAt = new Date().toISOString();
   const quotes = await Promise.all(
-    list.slice(0, LIMITS.QUOTE_MAX_SYMBOLS).map((s) => fetchQuote(s).catch((e) => ({ query: s, error: String((e && e.message) || e) }))),
+    list.slice(0, LIMITS.QUOTE_MAX_SYMBOLS).map((s) => fetchQuote(s).then((quote) => (
+      quote?.error ? quote : withQuoteFreshness(quote, gatheredAt)
+    )).catch((e) => ({ query: s, error: String((e && e.message) || e) }))),
   );
   return {
-    as_of: new Date().toISOString(),
+    as_of: gatheredAt,
     quotes,
-    disclaimer: "Keyless delayed market data (Yahoo/Stooq, ~15m or EOD). Not real-time, not investment advice. Missing/errored symbols are data gaps -> open_questions.",
+    disclaimer: "Keyless Yahoo/Stooq observations are not certified real-time. Read each quote's stale_age_hours and quote_status; Stooq is an EOD fallback. Missing/errored symbols are data gaps -> open_questions.",
   };
 }

@@ -2,6 +2,27 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.1.4] — 2026-08-03
+
+### Fixed
+
+- Method-definition provenance and investment evidence now use separate source domains.
+  PersonaPack `proxy:*` references remain auditable but can never satisfy a company-evidence
+  gate, while every directional method voice is limited to real sources present in its
+  bounded evidence context.
+- Method workers persist each terminal seat into the canonical run record before the parallel
+  barrier, survive interrupted-run recovery, classify provenance failures separately from
+  transport parsing, and retain bounded hashed diagnostics without copying rejected prose.
+- Method-voice prompts expose the exact allowed source IDs and one strict repair contract,
+  removing the invalid `task:S1` example that caused all-seat schema repair failures.
+- Quote output reports measured observation age and price basis instead of a fixed delay claim.
+  SEC submissions retain the authoritative latest filing, options grounding includes open
+  interest and observation time, and split-adjusted dilution keeps the true share-history
+  period.
+- Source IDs are bounded and reject whitespace/control characters across evidence, debate,
+  method-voice and typed-fact contracts. The `/alpha` command metadata is valid YAML on every
+  generated host surface.
+
 ## [1.1.3] — 2026-08-03
 
 ### Fixed

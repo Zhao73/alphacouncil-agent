@@ -21,6 +21,14 @@ const run = {
   packets: [],
   grounding: null,
 };
+const methodRun = {
+  ...run,
+  packets: [{
+    task: "market_data",
+    claims: [{ source_ids: ["market_data:S1"] }],
+    sources: [{ id: "market_data:S1", title: "fixture", url: "https://example.com/market" }],
+  }],
+};
 
 test("prompt golden changes require an explicit contract revision", () => {
   assert.equal(contract.schema_version, 1);
@@ -54,11 +62,12 @@ test(`all ${CANONICAL_MASTER_IDS.length} method voice prompts retain the frozen-
     stance: "cautious",
     verdict: "contract fixture",
     summary: "contract fixture",
-    source_ids: [],
+    source_ids: ["market_data:S1"],
+    evidence_source_ids: ["market_data:S1"],
     what_would_change_my_mind: [],
   };
   for (const id of CANONICAL_MASTER_IDS) {
-    assertPromptContract(masterVoicePrompt(id, run, frozen), contract.contracts.method_voice, id);
+    assertPromptContract(masterVoicePrompt(id, methodRun, frozen), contract.contracts.method_voice, id);
   }
 });
 
@@ -67,8 +76,8 @@ test("negative controls prove that each required contract fragment is load-beari
     evidence: taskPrompt("market_data", "TEST", "2026-08-03", "Assess TEST", "en-US"),
     debate: debatePrompt("bull_researcher", run, { round: 1 }),
     portfolio_manager: debatePrompt("portfolio_manager", run, { bull: {}, bear: {} }),
-    method_voice: masterVoicePrompt("master_buffett", run, {
-      stance: "cautious", verdict: "fixture", summary: "fixture", source_ids: [],
+    method_voice: masterVoicePrompt("master_buffett", methodRun, {
+      stance: "cautious", verdict: "fixture", summary: "fixture", source_ids: ["market_data:S1"],
     }),
   };
   for (const [name, prompt] of Object.entries(samples)) {
@@ -81,4 +90,21 @@ test("negative controls prove that each required contract fragment is load-beari
       );
     }
   }
+});
+
+test("method voice schema exposes real allowed IDs and never offers the old task:S1 placeholder", () => {
+  const prompt = masterVoicePrompt("master_marks", methodRun, {
+    master: "master_marks",
+    stance: "cautious",
+    verdict: "fixture",
+    summary: "fixture",
+    source_ids: ["market_data:S1"],
+    evidence_source_ids: ["market_data:S1"],
+    method_source_ids: ["proxy:marks-fixture"],
+  });
+  assert.match(prompt, /Allowed investment-evidence source_ids JSON: \["market_data:S1"\]/u);
+  assert.match(prompt, /only a subset of that exact allowed list/u);
+  assert.match(prompt, /`confidence` MUST be exactly one of: high \| medium \| low/u);
+  assert.doesNotMatch(prompt, /"task:S1"/u);
+  assert.doesNotMatch(prompt, /Allowed investment-evidence source_ids JSON:[^\n]*proxy:/u);
 });

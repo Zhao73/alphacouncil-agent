@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { __test__ } from "../../mcp/server.mjs";
+import { withQuoteFreshness } from "../../mcp/lib/quotes.mjs";
 
 const { resolveMarketSymbol, parseYahooChart, parseStooqCsv } = __test__;
 
@@ -53,4 +54,35 @@ test("parseStooqCsv parses the close from the CSV row", () => {
   );
   assert.equal(quote.price, 5030);
   assert.equal(quote.source, "stooq");
+  const stamped = withQuoteFreshness(quote, "2026-06-23T12:00:00.000Z");
+  assert.equal(stamped.quote_status, "end_of_day_close");
+  assert.equal(stamped.stale_age_seconds, null, "a zone-less fallback time must not inherit the machine timezone");
+});
+
+test("quote freshness measures a weekend regular close instead of claiming a fixed delay", () => {
+  const quote = withQuoteFreshness({
+    source: "yahoo",
+    instrument_type: "EQUITY",
+    market_state: null,
+    quote_time: "2026-07-31T20:00:01.000Z",
+  }, "2026-08-03T08:50:27.762Z");
+
+  assert.equal(quote.stale_age_seconds, 219027);
+  assert.equal(quote.stale_age_hours, 60.84);
+  assert.equal(quote.quote_status, "regular_close");
+  assert.equal(quote.quote_basis, "regular_market_price");
+  assert.equal(quote.is_realtime, false);
+});
+
+test("freshness distinguishes a delayed regular-session observation from real-time", () => {
+  const quote = withQuoteFreshness({
+    source: "yahoo",
+    instrument_type: "EQUITY",
+    market_state: "REGULAR",
+    quote_time: "2026-08-03T14:45:00.000Z",
+  }, "2026-08-03T15:00:00.000Z");
+
+  assert.equal(quote.stale_age_seconds, 900);
+  assert.equal(quote.quote_status, "regular_session_delayed");
+  assert.equal(quote.is_realtime, false);
 });

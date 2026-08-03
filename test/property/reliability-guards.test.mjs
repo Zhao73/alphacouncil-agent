@@ -120,7 +120,9 @@ test("property: every selected method statement remains in the final handoff tai
           language: "English",
           packets: [{ task: "property_fixture", sources: [{ id: "property_fixture:S1" }] }],
         }, {
-          stance: "cautious", confidence: "low",
+          stance: "cautious",
+          confidence: "low",
+          evidence_source_ids: ["property_fixture:S1"],
         });
         return {
           master: id,

@@ -141,3 +141,25 @@ test("standalone runtime schemas accept complete packets and expose missing cont
     (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
   );
 });
+
+test("runtime source IDs accept long SEC lineage but reject whitespace, controls, and overlong IDs", () => {
+  const longestObservedSecFixture = "sec:companyfacts:0001234567:AssetsCurrent:0001234567-24-000001:2024-12-31";
+  const valid = evidence();
+  valid.claims[0].source_ids = [longestObservedSecFixture];
+  valid.sources[0].id = longestObservedSecFixture;
+  assert.equal(assertRuntimeWorkerPayload("evidence", valid), valid);
+
+  for (const invalidSourceId of [
+    "market_data:HAS SPACE",
+    "market_data:HAS\nCONTROL",
+    `sec:${"a".repeat(509)}`,
+  ]) {
+    const invalid = evidence();
+    invalid.claims[0].source_ids = [invalidSourceId];
+    invalid.sources[0].id = invalidSourceId;
+    assert.throws(
+      () => assertRuntimeWorkerPayload("evidence", invalid),
+      (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
+    );
+  }
+});

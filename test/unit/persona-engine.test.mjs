@@ -226,6 +226,9 @@ test("a ready v3 seat executes the deterministic DSL without entering the legacy
   const opinion = completedMasterOpinion({ symbol: "NOK", as_of: AS_OF, language: "en" }, plan.completed[0]);
   assert.equal(opinion.stance, "constructive");
   assert.equal(opinion.engine, "v3_method_runtime");
+  assert.deepEqual(opinion.source_ids, ["options:S1"]);
+  assert.deepEqual(opinion.evidence_source_ids, ["options:S1"]);
+  assert.deepEqual(opinion.method_source_ids, ["source:tail"]);
   assert.match(opinion.policy_execution_hash, /^sha256:[a-f0-9]{64}$/);
   assert.match(opinion.frozen_decision_hash, /^sha256:[a-f0-9]{64}$/);
   assert.match(opinion.summary, /no language model selected/i);

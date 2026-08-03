@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
-import { compactDebateContext, compactEvidence, compactMasterOpinions, compactQuickEvidence } from "./packets.mjs";
+import { compactDebateContext, compactEvidence, compactMasterOpinions, compactQuickEvidence, methodVoiceAllowedSourceIds } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
 import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { groundingBlock } from "./grounding.mjs";
@@ -304,6 +304,40 @@ export function masterPrompt(masterId, run) {
  * One isolated worker per selected physical v3 method, after its structured decision is
  * frozen. The worker may explain and challenge the evidence, but it cannot vote again.
  */
+export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
+  const language = run.language || "English";
+  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion);
+  const stance = frozenOpinion?.stance || "out_of_scope";
+  const confidence = ["high", "medium", "low"].includes(frozenOpinion?.confidence)
+    ? frozenOpinion.confidence
+    : "low";
+  const example = {
+    master: masterId,
+    acknowledged_stance: stance,
+    voice_mode: "first_person_public_method_simulation_v1",
+    disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+    position_intent: intentsForStance(stance)[0],
+    voice: {
+      would_i_act: `<first-person ${language} text; at least two complete sentences>`,
+      what_i_see: `<first-person ${language} text; at least two complete sentences>`,
+      how_my_method_reads_it: `<first-person ${language} text; at least two complete sentences>`,
+      where_i_disagree: `<first-person ${language} text; at least two complete sentences>`,
+      what_changes_my_mind: `<first-person ${language} text; at least two complete sentences>`,
+    },
+    key_findings: [],
+    disagreements: [],
+    what_would_change_my_mind: [],
+    source_ids: allowedSourceIds.slice(0, 1),
+    confidence,
+  };
+  return [
+    `Allowed investment-evidence source_ids JSON: ${JSON.stringify(allowedSourceIds)}`,
+    "`source_ids` MUST contain only a subset of that exact allowed list. A directional stance requires at least one ID. Never put `proxy:*` or any method-definition provenance in `source_ids`; the system preserves those separately as `method_source_ids`.",
+    "`confidence` MUST be exactly one of: high | medium | low.",
+    `Return ONLY one valid JSON object, no Markdown fence. Exact required shape (replace the angle-bracket voice text, preserve every key): ${JSON.stringify(example)}`,
+  ].join("\n");
+}
+
 export function masterVoicePrompt(masterId, run, frozenOpinion) {
   const reg = registry();
   const persona = reg.get(masterId);
@@ -323,7 +357,8 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
       summary: frozenOpinion?.summary,
       disqualifiers_triggered: frozenOpinion?.disqualifiers_triggered || [],
       what_would_change_my_mind: frozenOpinion?.what_would_change_my_mind || [],
-      source_ids: frozenOpinion?.source_ids || [],
+      evidence_source_ids: frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [],
+      method_source_ids: frozenOpinion?.method_source_ids || [],
       deterministic_core_hash: frozenOpinion?.deterministic_core_hash || null,
       frozen_decision_hash: frozenOpinion?.frozen_decision_hash || null,
     })}`,
@@ -338,7 +373,7 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
       "If the frozen stance is out_of_scope, do NOT stop at naming the missing input. Give the method's full first-person reading of the facts that DO exist for this instrument -- its classification, concentration, top holdings and weights, aggregate figures, price structure, whatever the evidence carries -- through the method's own stated priorities, the way its named published work approaches a basket it cannot fully underwrite. State plainly that this reading is observation, not a stance, because the named inputs are absent; a method that guesses without them stops being a method. End with the concrete condition that reopens the seat.",
     ].join(" "),
     `\`position_intent\` MUST be one of: ${intentsForStance(frozenOpinion?.stance).join(" | ")}. Those are the only intents the frozen stance admits; anything else is rejected without changing run state.`,
-    "Return ONLY one valid JSON object, no Markdown fence. Schema: {\"master\":\"stable id\",\"acknowledged_stance\":\"constructive|cautious|opposed|out_of_scope\",\"voice_mode\":\"first_person_public_method_simulation_v1\",\"disclosure_ack\":\"alphacouncil.first_person_public_method_simulation.v1\",\"position_intent\":\"one of the allowed intents above\",\"voice\":{\"would_i_act\":\"first-person string\",\"what_i_see\":\"first-person string\",\"how_my_method_reads_it\":\"first-person string\",\"where_i_disagree\":\"first-person string\",\"what_changes_my_mind\":\"first-person string\"},\"key_findings\":[\"string\"],\"disagreements\":[\"string\"],\"what_would_change_my_mind\":[\"string\"],\"source_ids\":[\"task:S1\"],\"confidence\":\"high|medium|low\"}.",
+    methodVoiceOutputContract(masterId, run, frozenOpinion),
     paceShapingInstruction(run.council_pace, masterId, isChineseLanguage(language)),
     `Bounded shared evidence JSON: ${evidence}`,
   ].filter(Boolean).join("\n\n");

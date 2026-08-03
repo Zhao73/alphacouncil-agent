@@ -122,6 +122,8 @@ test("a verified 10-for-1 split is removed from five-year economic dilution", ()
   assert.equal(dilution.value, -3.02, "a roughly 3% buyback must not be reported as 869% dilution");
   assert.equal(dilution.adjustment_status, "verified_xbrl");
   assert.equal(dilution.split_adjustment.factor, 10);
+  assert.equal(dilution.period_start, "2022-01-30", "coverage starts at the oldest share observation, not the split event");
+  assert.equal(dilution.period_end, "2026-01-25");
   assert.ok(dilution.source_records.some((source) => source.tag === "CommonStockSharesOutstanding"));
   assert.ok(dilution.source_records.some((source) => source.tag === "StockholdersEquityNoteStockSplitConversionRatio1"));
 });

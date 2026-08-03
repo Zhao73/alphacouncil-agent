@@ -1,6 +1,6 @@
 ---
 description: Equity research council — full run, quick read, mechanical screen, or market narrative
-argument-hint: [ticker] [fast|slow|quick|screen|market|options|news] · or just a question
+argument-hint: "[ticker] [fast|slow|quick|screen|market|options|news] · or just a question"
 ---
 
 # /alpha

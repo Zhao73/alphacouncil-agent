@@ -12,7 +12,7 @@ import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFile
 import { assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
-import { debatePrompt, masterPrompt, masterVoicePrompt, selectedMasters, taskPrompt } from "./prompts.mjs";
+import { debatePrompt, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
 import { gatherGrounding } from "./grounding.mjs";
@@ -163,6 +163,10 @@ function masterRuntimeProvenance(run, plan) {
   return Object.fromEntries(selectedMasters(run).map((id) => {
     const decision = decisions.get(id) || {};
     const item = planned.get(id) || {};
+    const methodSources = (item.pack?.components?.sources || []).map((source) => ({
+      ...source,
+      method_id: id,
+    }));
     return [id, {
       engine: decision.engine || item.engine || "unknown",
       pack_hash: decision.pack_hash || run.master_selection?.selected_master_pack_hashes?.[id] || null,
@@ -171,6 +175,8 @@ function masterRuntimeProvenance(run, plan) {
       tool_graph_hash: decision.tool_graph_hash || null,
       fact_pack_hash: decision.fact_pack_hash || item.preDecision?.fact_pack?.fact_pack_hash || null,
       evidence_snapshot_hash: decision.evidence_snapshot_hash || item.preDecision?.evidence_snapshot_hash || null,
+      method_source_ids: methodSources.map((source) => source.id || source.source_id).filter(Boolean),
+      method_sources: methodSources,
     }];
   }));
 }
@@ -712,6 +718,7 @@ export function recordMasterOpinion(args) {
         ? voice.what_would_change_my_mind
         : frozenOpinion.what_would_change_my_mind,
       source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
+      evidence_source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
       confidence: voice.confidence,
       thread_id: args.thread_id,
       dedicated_worker: {
@@ -1593,10 +1600,105 @@ function assertVisibleRunOpen(run, operation) {
   });
 }
 
-function outputFailureKind(error) {
-  return error?.code === "READER_LANGUAGE_MISMATCH"
-    ? "reader_language_mismatch"
-    : "parse_failed";
+export function outputFailureKind(error) {
+  const reason = error?.data?.reason;
+  if (error?.code === "READER_LANGUAGE_MISMATCH" || reason === "READER_LANGUAGE_MISMATCH") {
+    return "reader_language_mismatch";
+  }
+  if (reason === "SOURCE_PROVENANCE_MISMATCH") return "source_provenance_mismatch";
+  if (reason === "SOURCE_PROVENANCE_REQUIRED") return "source_provenance_required";
+  return "parse_failed";
+}
+
+function repairableOutputFailure(failureKind) {
+  return ["parse_failed", "reader_language_mismatch"].includes(failureKind);
+}
+
+/**
+ * Persist enough about a rejected method-worker output to debug the contract without
+ * copying the worker transcript into a durable run artifact. Schema paths and provenance
+ * IDs are bounded and hashed; the output body is represented only by its length and digest.
+ */
+const MASTER_DIAGNOSTIC_SOURCE_ID_LIMIT = 8;
+const MASTER_DIAGNOSTIC_SOURCE_ID_CHARS = 512;
+const MASTER_DIAGNOSTIC_SOURCE_ID_COUNT_MAX = 1_000_000;
+
+function boundedDiagnosticCode(value, fallback, maxLength = 96) {
+  const candidate = String(value || "").trim();
+  if (!candidate || !/^[a-z0-9_.:-]+$/iu.test(candidate)) return fallback;
+  return candidate.slice(0, maxLength);
+}
+
+function boundedDiagnosticMaster(master) {
+  const candidate = String(master || "").trim();
+  return /^master_[a-z0-9_]{1,80}$/u.test(candidate) ? candidate : "master_unknown";
+}
+
+function sourceIdDiagnosticHash(value) {
+  const sourceId = String(value || "");
+  const boundedPrefix = sourceId.slice(0, MASTER_DIAGNOSTIC_SOURCE_ID_CHARS);
+  return sha256(`${Buffer.byteLength(sourceId, "utf8")}:${boundedPrefix}`);
+}
+
+export function masterAttemptFailureDiagnostic({
+  master,
+  attempt,
+  failureKind,
+  error,
+  result,
+  stage = "worker_output",
+}) {
+  const schemaErrors = boundedSchemaRepairIssues(error);
+  const provenanceReason = ["SOURCE_PROVENANCE_MISMATCH", "SOURCE_PROVENANCE_REQUIRED"]
+    .includes(error?.data?.reason)
+    ? error.data.reason
+    : null;
+  const unknownSourceIds = Array.isArray(error?.data?.unknown_source_ids)
+    ? error.data.unknown_source_ids
+      .filter((id) => typeof id === "string" && id)
+      .slice(0, MASTER_DIAGNOSTIC_SOURCE_ID_LIMIT)
+    : [];
+  const unknownSourceIdCount = Array.isArray(error?.data?.unknown_source_ids)
+    ? error.data.unknown_source_ids.length
+    : 0;
+  const rawOutput = typeof result?.text === "string" ? result.text : null;
+  const safeMaster = boundedDiagnosticMaster(master);
+  const safeFailureKind = boundedDiagnosticCode(failureKind, "unexpected_error");
+  const safeStage = boundedDiagnosticCode(stage, "worker_output");
+  return {
+    schema_version: 1,
+    master: safeMaster,
+    attempt: Number.isInteger(attempt) ? Math.max(0, Math.min(attempt, 100)) : 0,
+    stage: safeStage,
+    failure_kind: safeFailureKind,
+    // Error messages may contain the forged ID or rejected worker body. Persist only codes
+    // produced by this process; the raw worker output is represented by the digest below.
+    diagnostic: `${safeFailureKind} during ${safeStage}`,
+    ...(schemaErrors.length ? {
+      schema_id: boundedDiagnosticCode(error?.data?.schema_id, "unknown", 160),
+      schema_kind: boundedDiagnosticCode(error?.data?.kind, "unknown", 80),
+      schema_error_count: Array.isArray(error?.data?.errors) ? error.data.errors.length : schemaErrors.length,
+      schema_errors: schemaErrors,
+    } : {}),
+    ...(provenanceReason ? {
+      provenance: {
+        reason: provenanceReason,
+        // The diagnostic owner is the selected seat, never a model-controlled error field.
+        owner: safeMaster,
+        unknown_source_id_count: Math.min(unknownSourceIdCount, MASTER_DIAGNOSTIC_SOURCE_ID_COUNT_MAX),
+        unknown_source_id_count_truncated: unknownSourceIdCount > MASTER_DIAGNOSTIC_SOURCE_ID_COUNT_MAX,
+        unknown_source_ids: unknownSourceIds.map(sourceIdDiagnosticHash),
+        unknown_source_ids_hashed: true,
+        unknown_source_id_hash_scope: "utf8_length_plus_first_512_chars",
+      },
+    } : {}),
+    ...(rawOutput !== null ? {
+      output_chars: rawOutput.length,
+      output_bytes: Buffer.byteLength(rawOutput, "utf8"),
+      output_sha256: sha256(rawOutput),
+    } : {}),
+    recorded_at: new Date().toISOString(),
+  };
 }
 
 /**
@@ -2043,8 +2145,78 @@ function updateMasterStatus(run, master, status, patch = {}) {
     status,
     updated_at: new Date().toISOString(),
   };
-  writeStatus(run);
+  // A terminal status is not observable until the same state is durable in the canonical
+  // evidence record. Recovery reads evidence.json, so status-only settlement would lose a
+  // completed opinion (or resurrect a failed seat) when the process dies at the barrier.
+  if (["completed", "failed"].includes(status)) saveRun(run);
+  else writeStatus(run);
   appendEvent(run, `master_${status}`, { master, ...patch });
+}
+
+function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
+  const completedAt = new Date().toISOString();
+  if (!outcome.opinion) {
+    const diagnosticPath = join(dir, `${outcome.id}.failure.json`);
+    const provenanceFailure = ["source_provenance_mismatch", "source_provenance_required"]
+      .includes(outcome.error);
+    const publicSummary = outcome.error === "reader_language_mismatch"
+      ? localized(run.language, {
+        en: "The dedicated method worker returned reader-facing content in the wrong language; no method-seat statement is available.",
+        zh: "专属方法席 worker 返回了错误语言的读者内容；没有可用的方法席发言。",
+        ja: "専用メソッド席ワーカーは指定と異なる言語の読者向け内容を返したため、利用可能なメソッド席の発言はありません。",
+        ko: "전용 방법론 좌석 워커가 지정과 다른 언어의 독자용 내용을 반환해 사용할 수 있는 방법론 좌석 발언이 없습니다.",
+      })
+      : provenanceFailure
+        ? localized(run.language, {
+          en: "The method seat failed the frozen source-provenance gate; no worker repair or method-seat statement is available.",
+          zh: "该方法席未通过冻结来源追溯闸门；系统未执行 worker repair，也没有可用的方法席发言。",
+          ja: "このメソッド席は凍結済み出典来歴ゲートを通過できず、ワーカー修復も利用可能な発言もありません。",
+          ko: "이 방법론 좌석은 동결된 출처 추적 게이트를 통과하지 못해 워커 복구나 사용할 수 있는 발언이 없습니다.",
+        })
+        : localized(run.language, {
+          en: "The dedicated method worker did not complete; no method-seat statement is available.",
+          zh: "专属方法席 worker 未完成；没有可用的方法席发言。",
+          ja: "専用メソッド席ワーカーが完了せず、利用可能なメソッド席の発言はありません。",
+          ko: "전용 방법론 좌석 워커가 완료되지 않아 사용할 수 있는 방법론 좌석 발언이 없습니다.",
+        });
+    const diagnostic = outcome.diagnostic || masterAttemptFailureDiagnostic({
+      master: outcome.id,
+      attempt: outcome.attempts ?? 0,
+      failureKind: outcome.error || "unexpected_error",
+      error: new Error(cleanLog(outcome.raw || outcome.error || "method worker failed", 1_000)),
+      stage: outcome.failure_stage || "worker_execution",
+    });
+    writeJson(diagnosticPath, { ...diagnostic, public_summary: publicSummary }, { mode: 0o600 });
+    updateMasterStatus(run, outcome.id, "failed", {
+      ...(outcome.engine ? { engine: outcome.engine } : {}),
+      error: outcome.error || "unexpected_error",
+      ...(outcome.error_code ? { error_code: outcome.error_code } : {}),
+      diagnostic: diagnosticPath,
+      completed_at: completedAt,
+      ...(Number.isInteger(outcome.attempts) ? { attempts: outcome.attempts } : {}),
+      ...(outcome.retry_diagnostic ? { retry_diagnostic: outcome.retry_diagnostic } : {}),
+      ...(outcome.failure_stage ? { failure_stage: outcome.failure_stage } : {}),
+    });
+    return outcome;
+  }
+
+  byId.set(outcome.id, outcome.opinion);
+  run.master_opinions = selected.map((id) => byId.get(id)).filter(Boolean);
+  const outputPath = join(dir, `${outcome.id}.json`);
+  writeJson(outputPath, outcome.opinion);
+  updateMasterStatus(run, outcome.id, "completed", {
+    engine: outcome.opinion.engine || outcome.engine,
+    worker_kind: outcome.opinion.dedicated_worker?.execution_mode === "dry_run"
+      ? "dedicated_method_voice_dry_run"
+      : "dedicated_method_worker",
+    worker_pid: outcome.opinion.dedicated_worker?.pid || null,
+    voice_status: outcome.opinion.voice_status || "completed",
+    completed_at: completedAt,
+    output: outputPath,
+    ...(Number.isInteger(outcome.attempts) ? { attempts: outcome.attempts } : {}),
+    ...(outcome.retry_diagnostic ? { retry_diagnostic: outcome.retry_diagnostic } : {}),
+  });
+  return outcome;
 }
 
 /** Execute every selected master between evidence collection and the bull/bear debate. */
@@ -2134,7 +2306,42 @@ export async function runHeadlessMasters(run, args = {}) {
     },
   }));
 
-  const outcomes = await mapLimit(votingWorkerItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
+  for (const outcome of abstainedOutcomes) {
+    commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected });
+  }
+
+  const runnableVotingItems = [];
+  for (const item of votingWorkerItems) {
+    if (!item.frozenOpinion) {
+      runnableVotingItems.push(item);
+      continue;
+    }
+    try {
+      assertSourceIdsResolve(run, item.frozenOpinion.source_ids, item.id, {
+        allowEmpty: item.frozenOpinion.stance === "out_of_scope",
+      });
+      runnableVotingItems.push(item);
+    } catch (error) {
+      const failureKind = outputFailureKind(error);
+      commitHeadlessMasterOutcome(run, {
+        id: item.id,
+        engine: item.engine,
+        error: failureKind,
+        attempts: 0,
+        failure_stage: "frozen_source_preflight",
+        diagnostic: masterAttemptFailureDiagnostic({
+          master: item.id,
+          attempt: 0,
+          failureKind,
+          error,
+          stage: "frozen_source_preflight",
+        }),
+      }, { dir, byId, selected });
+    }
+  }
+
+  await mapLimit(runnableVotingItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
+    const outcome = await (async () => {
     const prompt = frozenOpinion
       ? masterVoicePrompt(id, run, frozenOpinion)
       : [
@@ -2222,6 +2429,7 @@ export async function runHeadlessMasters(run, args = {}) {
             ? voice.what_would_change_my_mind
             : frozenOpinion.what_would_change_my_mind,
           source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
+          evidence_source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
           confidence: voice.confidence,
           dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
         }, engine);
@@ -2255,23 +2463,53 @@ export async function runHeadlessMasters(run, args = {}) {
     } catch (firstParseError) {
       const firstFailureKind = outputFailureKind(firstParseError);
       const firstSchemaErrors = boundedSchemaRepairIssues(firstParseError);
+      const retryDiagnostic = join(dir, `${id}.attempt-1.failure.json`);
+      const firstDiagnostic = masterAttemptFailureDiagnostic({
+        master: id,
+        attempt: 1,
+        failureKind: firstFailureKind,
+        error: firstParseError,
+        result,
+      });
+      writeJson(retryDiagnostic, firstDiagnostic, { mode: 0o600 });
+      if (!repairableOutputFailure(firstFailureKind)) {
+        return {
+          id,
+          engine,
+          error: firstFailureKind,
+          attempts: 1,
+          retry_diagnostic: retryDiagnostic,
+          failure_stage: "worker_output_provenance",
+          diagnostic: firstDiagnostic,
+        };
+      }
       const repairBudget = parseRepairBudget(run, {
         stageBudgetMs: timeoutMs,
         stageStartedAtMs: workerStartedAt,
       });
       if (repairBudget <= 0) {
-        return { id, error: firstFailureKind, raw: cleanLog(firstParseError?.message || result.text), schema_errors: firstSchemaErrors };
+        return {
+          id,
+          engine,
+          error: firstFailureKind,
+          attempts: 1,
+          retry_diagnostic: retryDiagnostic,
+          schema_errors: firstSchemaErrors,
+          diagnostic: firstDiagnostic,
+        };
       }
       appendEvent(run, "master_parse_repair", {
         master: id,
         budget_ms: repairBudget,
         reason: firstFailureKind,
+        retry_diagnostic: retryDiagnostic,
       });
+      updateMasterStatus(run, id, "running", { attempts: 2, retry_diagnostic: retryDiagnostic });
       const repairPrompt = [
         "PARSE-ONLY TRANSPORT REPAIR. Do not browse, search, add facts or change the frozen method stance.",
         `Master ID: ${id}; required acknowledged stance: ${frozenOpinion?.stance || "use the original stance"}; output language: ${run.language}.`,
         frozenOpinion
-          ? "Return one JSON object with master, acknowledged_stance, voice_mode=first_person_public_method_simulation_v1, disclosure_ack=alphacouncil.first_person_public_method_simulation.v1, position_intent, every required first-person voice field, key_findings, disagreements, what_would_change_my_mind, source_ids and confidence. Do not return a flat statement."
+          ? methodVoiceOutputContract(id, run, frozenOpinion)
           : "Return one JSON object matching the master_opinion schema from the original prompt.",
         schemaRepairIssuePrompt(firstParseError),
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve the frozen stance, facts, numbers and source IDs.`,
@@ -2297,50 +2535,15 @@ export async function runHeadlessMasters(run, args = {}) {
         };
       }
     }
-  }, (error, { id }) => ({
+    })();
+    return commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected });
+  }, (error, { id, engine }) => commitHeadlessMasterOutcome(run, {
     id,
+    engine,
     error: "unexpected_error",
     raw: cleanLog(error?.message || error),
-  }));
-
-  for (const outcome of [...abstainedOutcomes, ...outcomes]) {
-    if (!outcome.opinion) {
-      const diagnosticPath = join(dir, `${outcome.id}.failure.json`);
-      writeJson(diagnosticPath, {
-        master: outcome.id,
-        failure_kind: outcome.error,
-        diagnostic: outcome.raw,
-        ...(outcome.schema_errors?.length ? { schema_errors: outcome.schema_errors } : {}),
-        public_summary: outcome.error === "reader_language_mismatch"
-          ? localized(run.language, {
-            en: "The dedicated method worker returned reader-facing content in the wrong language; no method-seat statement is available.",
-            zh: "专属方法席 worker 返回了错误语言的读者内容；没有可用的方法席发言。",
-            ja: "専用メソッド席ワーカーは指定と異なる言語の読者向け内容を返したため、利用可能なメソッド席の発言はありません。",
-            ko: "전용 방법론 좌석 워커가 지정과 다른 언어의 독자용 내용을 반환해 사용할 수 있는 방법론 좌석 발언이 없습니다.",
-          })
-          : localized(run.language, {
-            en: "The dedicated method worker did not complete; no method-seat statement is available.",
-            zh: "专属方法席 worker 未完成；没有可用的方法席发言。",
-            ja: "専用メソッド席ワーカーが完了せず、利用可能なメソッド席の発言はありません。",
-            ko: "전용 방법론 좌석 워커가 완료되지 않아 사용할 수 있는 방법론 좌석 발언이 없습니다.",
-          }),
-      }, { mode: 0o600 });
-      updateMasterStatus(run, outcome.id, "failed", { error: outcome.error, diagnostic: diagnosticPath });
-      continue;
-    }
-    byId.set(outcome.id, outcome.opinion);
-    writeJson(join(dir, `${outcome.id}.json`), outcome.opinion);
-    updateMasterStatus(run, outcome.id, "completed", {
-      engine: outcome.opinion.engine || outcome.engine,
-      worker_kind: outcome.opinion.dedicated_worker?.execution_mode === "dry_run"
-        ? "dedicated_method_voice_dry_run"
-        : "dedicated_method_worker",
-      worker_pid: outcome.opinion.dedicated_worker?.pid || null,
-      voice_status: outcome.opinion.voice_status || "completed",
-      completed_at: new Date().toISOString(),
-      output: join(dir, `${outcome.id}.json`),
-    });
-  }
+    failure_stage: "worker_execution",
+  }, { dir, byId, selected }));
 
   run.master_opinions = selected.map((id) => byId.get(id)).filter(Boolean);
   const missing = selected.filter((id) => !byId.has(id));

@@ -81,20 +81,79 @@ async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2, upstreamSigna
   return outcome.value;
 }
 
+const submissionsUrl = (paddedCik) => `https://data.sec.gov/submissions/CIK${paddedCik}.json`;
+
+function filingDocumentUrl(paddedCik, accession, primaryDocument) {
+  if (!accession || !primaryDocument) return null;
+  const registrant = String(paddedCik).replace(/^0+/u, "") || "0";
+  const folder = String(accession).replace(/-/gu, "");
+  const documentPath = String(primaryDocument).split("/").map(encodeURIComponent).join("/");
+  return `https://www.sec.gov/Archives/edgar/data/${registrant}/${folder}/${documentPath}`;
+}
+
+/**
+ * Preserve the SEC submissions recent feed as dated, directly fetchable records.
+ *
+ * The old profile adapter discarded `filings.recent` entirely.  A worker therefore knew the
+ * issuer's SIC but still had to infer the latest filing from search results, which lagged the
+ * live submissions feed in the production audit.  Keep a bounded newest-first slice plus the exact
+ * feed URL so a negative "no later filing" claim can be checked against the authoritative
+ * index rather than a search-engine cache.
+ */
+export function parseSubmissionProfile(data, cik, { retrievedAt = new Date().toISOString(), limit = 40 } = {}) {
+  const padded = String(cik).replace(/\D/gu, "").padStart(10, "0");
+  if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
+  const recent = data?.filings?.recent || {};
+  const rows = (recent.form || []).map((form, index) => {
+    const accession = recent.accessionNumber?.[index] || null;
+    const primaryDocument = recent.primaryDocument?.[index] || null;
+    return {
+      form,
+      accession,
+      primary_document: primaryDocument,
+      filing_date: recent.filingDate?.[index] || null,
+      report_date: recent.reportDate?.[index] || null,
+      accepted_at: recent.acceptanceDateTime?.[index] || null,
+      primary_document_url: filingDocumentUrl(padded, accession, primaryDocument),
+    };
+  }).filter((row) => row.accession && row.primary_document)
+    .sort((a, b) => Date.parse(b.accepted_at || b.filing_date || 0) - Date.parse(a.accepted_at || a.filing_date || 0));
+  const recentFilings = rows.slice(0, Math.max(0, limit));
+  const sourceUrl = submissionsUrl(padded);
+  return {
+    cik: padded,
+    name: data?.name || null,
+    tickers: data?.tickers || [],
+    exchanges: data?.exchanges || [],
+    sic: data?.sic || null,
+    sic_description: data?.sicDescription || null,
+    state_of_incorporation: data?.stateOfIncorporation || null,
+    fiscal_year_end: data?.fiscalYearEnd || null,
+    website: data?.website || null,
+    investor_website: data?.investorWebsite || null,
+    submissions_url: sourceUrl,
+    submissions_retrieved_at: retrievedAt,
+    recent_filings_count: Array.isArray(recent.form) ? recent.form.length : 0,
+    latest_filing: recentFilings[0] || null,
+    recent_filings: recentFilings,
+  };
+}
+
 /** Raw filing index for one registrant. Callers that need form types read this, not `fetchSubmissions`. */
 export async function fetchFilingIndex(cik, { signal } = {}) {
   const padded = String(cik).replace(/\D/gu, "").padStart(10, "0");
   if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
-  const data = await secJson(`https://data.sec.gov/submissions/CIK${padded}.json`, LIMITS.QUOTE_FETCH_MS * 2, signal);
-  const recent = data?.filings?.recent || {};
-  const rows = (recent.form || []).map((form, index) => ({
-    form,
-    accession: recent.accessionNumber?.[index] || null,
-    primary_document: recent.primaryDocument?.[index] || null,
-    filing_date: recent.filingDate?.[index] || null,
-    report_date: recent.reportDate?.[index] || null,
-  })).filter((row) => row.accession && row.primary_document);
-  return { cik: padded, name: data?.name || null, filings: rows };
+  const sourceUrl = submissionsUrl(padded);
+  const data = await secJson(sourceUrl, LIMITS.QUOTE_FETCH_MS * 2, signal);
+  const profile = parseSubmissionProfile(data, padded, { limit: Number.MAX_SAFE_INTEGER });
+  return {
+    cik: padded,
+    name: profile.name,
+    submissions_url: sourceUrl,
+    submissions_retrieved_at: profile.submissions_retrieved_at,
+    latest_filing: profile.latest_filing,
+    filings: profile.recent_filings,
+  };
 }
 
 /**
@@ -281,15 +340,6 @@ export const secUserAgent = () => UA;
 export async function fetchSubmissions(cik, { signal } = {}) {
   const padded = String(cik).replace(/\D/g, "").padStart(10, "0");
   if (padded.length !== 10) throw invalidParams(`invalid CIK: ${cik}`);
-  const data = await secJson(`https://data.sec.gov/submissions/CIK${padded}.json`, LIMITS.QUOTE_FETCH_MS * 2, signal);
-  return {
-    cik: padded,
-    name: data.name,
-    tickers: data.tickers || [],
-    exchanges: data.exchanges || [],
-    sic: data.sic || null,
-    sic_description: data.sicDescription || null,
-    state_of_incorporation: data.stateOfIncorporation || null,
-    fiscal_year_end: data.fiscalYearEnd || null,
-  };
+  const data = await secJson(submissionsUrl(padded), LIMITS.QUOTE_FETCH_MS * 2, signal);
+  return parseSubmissionProfile(data, padded);
 }

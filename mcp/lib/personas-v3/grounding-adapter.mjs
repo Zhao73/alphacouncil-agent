@@ -274,7 +274,10 @@ function quoteFacts(grounding, context) {
 function optionsFacts(grounding, context) {
   const options = grounding?.options;
   if (!options || options.available === false) return;
-  const publicAt = timestampAtOrBefore(options.retrieved_at, context.cutoff)
+  const publicAt = timestampAtOrBefore(options.quote_time, context.cutoff)
+    || timestampAtOrBefore(options.last_trade_time, context.cutoff)
+    || timestampAtOrBefore(options.chain_timestamp, context.cutoff)
+    || timestampAtOrBefore(options.retrieved_at, context.cutoff)
     || timestampAtOrBefore(grounding.gathered_at, context.cutoff);
   if (!publicAt) {
     context.diagnostics.push({
@@ -303,8 +306,12 @@ function optionsFacts(grounding, context) {
     title: `${options.source || "CBOE"} option chain for ${optionSymbol}`,
     url: optionUrl,
     public_at: publicAt,
-    retrieved_at: grounding.gathered_at || publicAt,
-    locator: { symbol: optionSymbol, reference_expiry: reference.expiry || null },
+    retrieved_at: options.retrieved_at || grounding.gathered_at || publicAt,
+    locator: {
+      symbol: optionSymbol,
+      reference_expiry: reference.expiry || null,
+      observation_time: options.quote_time || options.last_trade_time || options.chain_timestamp || publicAt,
+    },
   })) return;
   if (finite(implied)) {
     addUnique(context.facts, context.diagnostics, baseFact({

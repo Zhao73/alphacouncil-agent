@@ -40,7 +40,11 @@
     "public_at": { "type": "string", "minLength": 10 },
     "source_ids": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
+      },
       "minItems": 1,
       "uniqueItems": true
     },

@@ -9,12 +9,12 @@
 
 import { compiledPersonaPacks } from "../personas-v3/registry.mjs";
 import { buildFactPack } from "../personas-v3/typed-facts.mjs";
-import { typedFactPackFromGrounding } from "../personas-v3/grounding-adapter.mjs";
+import { adaptGroundingToTypedFacts } from "../personas-v3/grounding-adapter.mjs";
 import { buildAnonymousPreDecision, freezeAnonymousDecision, technicalIdReadableMap } from "../personas-v3/runtime.mjs";
 import { executeDeterministicPersonaPolicy } from "../personas-v3/deterministic-executor.mjs";
 import { languageKey, localized } from "../lang.mjs";
 import { displayMasterLabel } from "../markdown.mjs";
-import { voiceFromDecision, voiceFromDecline } from "../voice-from-decision.mjs";
+import { factsInCondition, voiceFromDecision, voiceFromDecline } from "../voice-from-decision.mjs";
 import {
   declinedOpinion as v2DeclinedOpinion,
   planMasters as planLegacyMasters,
@@ -25,10 +25,20 @@ function v3FactPack(run) {
   if (run?.grounding?.typed_fact_pack) return run.grounding.typed_fact_pack;
   const asOf = run?.as_of;
   if (run?.grounding && typeof run.grounding === "object") {
-    return typedFactPackFromGrounding(run.grounding, {
+    const adapted = adaptGroundingToTypedFacts(run.grounding, {
       asOf,
       knowledgeAsOf: run?.knowledge_as_of || asOf,
     });
+    // Caller-supplied grounding can arrive before the standard gatherer has attached its typed
+    // view. Persist the exact adapter result on the run so the deterministic seat and
+    // source_manifest.json cannot observe different fact lineages.
+    run.grounding = {
+      ...run.grounding,
+      typed_fact_pack: adapted.fact_pack,
+      typed_fact_sources: adapted.sources,
+      typed_fact_diagnostics: adapted.diagnostics,
+    };
+    return adapted.fact_pack;
   }
   return buildFactPack([], { asOf, knowledgeAsOf: run?.knowledge_as_of || asOf });
 }
@@ -217,6 +227,33 @@ function uniqueStrings(values) {
 }
 
 /**
+ * Investment evidence and method-definition provenance are different source domains.
+ *
+ * PersonaPack rules cite the documents that define the provisional method. Those IDs prove
+ * where the formula came from; they do not prove the company facts fed into the formula. The
+ * reader-facing opinion therefore cites the point-in-time fact sources separately, while the
+ * pack sources stay available as auditable method provenance.
+ */
+function methodSourceIds(item) {
+  return uniqueStrings((item?.pack?.components?.sources || [])
+    .map((source) => source?.id || source?.source_id));
+}
+
+function evidenceSourceIds(item) {
+  const policy = item?.pack?.components?.decision_policy;
+  const tools = item?.pack?.components?.tools || [];
+  const factIds = uniqueStrings([
+    ...(policy?.eligibility?.all || []).flatMap((record) => factsInCondition(record?.condition)),
+    ...(policy?.hard_vetoes || []).flatMap((record) => factsInCondition(record?.condition)),
+    ...(policy?.scoring?.rules || []).flatMap((record) => factsInCondition(record?.condition)),
+    ...tools.flatMap((tool) => factsInCondition(tool?.inputs)),
+  ]);
+  const facts = new Map((item?.preDecision?.fact_pack?.facts || [])
+    .map((fact) => [fact?.fact_id, fact]));
+  return uniqueStrings(factIds.flatMap((id) => facts.get(id)?.source_ids || []));
+}
+
+/**
  * Whether a frozen seat still needs a model worker to become readable.
  *
  * Every selected seat gets its isolated voice worker, including an abstaining seat. Strong
@@ -257,12 +294,14 @@ export function completedMasterOpinion(run, item) {
   const unmet = (result.eligibility?.unmet_condition_ids || []).map(readable);
   const hitIds = (result.score?.hits || []).map((rule) => readable(rule.rule_id));
   const missIds = (result.score?.misses || []).map((rule) => readable(rule.rule_id));
-  const sourceIds = uniqueStrings([
+  const methodSources = uniqueStrings([
+    ...methodSourceIds(item),
     ...(result.eligibility?.checks || []).flatMap((check) => check.source_ids || []),
     ...(result.vetoes_triggered || []).flatMap((veto) => veto.source_ids || []),
     ...(result.score?.hits || []).flatMap((rule) => rule.source_ids || []),
     ...(result.score?.misses || []).flatMap((rule) => rule.source_ids || []),
   ]);
+  const evidenceSources = evidenceSourceIds(item);
   const scoreText = result.score?.status === "insufficient_coverage"
     ? copy.withheld(Math.round(result.score.coverage * 100))
     : result.score
@@ -317,7 +356,11 @@ export function completedMasterOpinion(run, item) {
       ...vetoIds.map(copy.veto),
       ...missIds.map(copy.score),
     ]),
-    source_ids: sourceIds,
+    // `source_ids` remains the investment-evidence field consumed by the downstream source
+    // gate. A project-authored proxy may explain the method, but can never satisfy that gate.
+    source_ids: evidenceSources,
+    evidence_source_ids: evidenceSources,
+    method_source_ids: methodSources,
     confidence: result.common_projection?.confidence || "low",
     engine: "v3_method_runtime",
     dsl_version: item.pack.dsl_version || item.pack.manifest.computation.dsl_version,
@@ -364,6 +407,8 @@ export function declinedMasterOpinion(run, item) {
   });
   const missing = eligibility.missing_required_fact_types.join(", ") || copy.none;
   const deterministicStatement = copy.statement(missing, copy.fundContext);
+  const evidenceSources = evidenceSourceIds(item);
+  const methodSources = methodSourceIds(item);
   return {
     master: item.id,
     symbol: run.symbol,
@@ -386,7 +431,9 @@ export function declinedMasterOpinion(run, item) {
     disagreements: [],
     disqualifiers_triggered: eligibility.missing_required_fact_types,
     what_would_change_my_mind: eligibility.missing_required_fact_types.map(copy.available),
-    source_ids: [],
+    source_ids: evidenceSources,
+    evidence_source_ids: evidenceSources,
+    method_source_ids: methodSources,
     // The refusal itself is deterministic, but the seat has insufficient evidence for an
     // investment judgment. Keep the reader-facing evidence confidence low so a mechanically
     // certain abstention cannot be mistaken for a high-confidence market view.

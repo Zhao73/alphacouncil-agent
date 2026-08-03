@@ -2,11 +2,18 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import Ajv2020 from "ajv/dist/2020.js";
 import standaloneCode from "ajv/dist/standalone/index.js";
+
+const require = createRequire(import.meta.url);
+const ucs2length = require("ajv/dist/runtime/ucs2length").default;
+// Ajv normally emits a package import for JSON Schema maxLength. Marketplace installs use
+// these validators without node_modules, so inline the equivalent code-point counter instead.
+ucs2length.code = "(function ucs2length(value){return Array.from(value).length})";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const outputFile = join(root, "mcp", "generated", "runtime-validators.mjs");

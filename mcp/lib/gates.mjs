@@ -46,36 +46,89 @@ export function scopedSourceId(task, id, index = 0) {
   return raw.includes(":") ? raw : `${task}:${raw}`;
 }
 
+const METHOD_ONLY_SOURCE_KINDS = new Set([
+  "derived_proxy",
+  "editorial_choice",
+  "method_definition",
+  "method_provenance",
+  "method_rule",
+  "method_source",
+  "methodology_definition",
+  "persona_method",
+  "persona_method_definition",
+]);
+
+function hasMethodOnlySourceMarker(source) {
+  const id = String(source?.id || source?.source_id || "").trim();
+  if (/^proxy:/iu.test(id)) return true;
+  const sourceKind = String(source?.source_kind || "").trim().toLowerCase();
+  return METHOD_ONLY_SOURCE_KINDS.has(sourceKind)
+    || /^(?:method|methodology|persona_method)(?:_|$)/u.test(sourceKind);
+}
+
 export function sourceManifest(run) {
   const sources = [];
   const known = new Set();
-  const appendSource = (task, source) => {
+  const evidenceEntries = [
+    ...(run.grounding?.typed_fact_sources || []).map((source) => ({ task: "grounding", source })),
+    ...(run.packets || []).flatMap((packet) => (
+      (packet.sources || []).map((source) => ({ task: packet.task, source }))
+    )),
+  ];
+  const methodEntries = Object.entries(run.master_runtime_provenance || {}).flatMap(([master, provenance]) => (
+    (provenance?.method_sources || []).map((source) => ({ master, source }))
+  ));
+  // Reserve the whole ID, not only one occurrence. Otherwise a packet could place a
+  // benign-looking duplicate before the same ID's method-labelled record and win by order.
+  const methodOnlyIds = new Set(methodEntries
+    .map(({ source }) => String(source?.id || source?.source_id || "").trim())
+    .filter(Boolean));
+  for (const { source } of evidenceEntries) {
+    if (!hasMethodOnlySourceMarker(source)) continue;
+    const id = String(source?.id || source?.source_id || "").trim();
+    if (id) methodOnlyIds.add(id);
+  }
+  const appendSource = (task, source, provenanceDomain = "evidence") => {
     const id = source?.id || source?.source_id;
     if (!id || known.has(id)) return;
+    // Ingress does not define provenance. A packet or typed-fact envelope must not turn a
+    // reserved method proxy into investment evidence merely by placing it in an evidence list.
+    // The same source remains auditable when it arrives through the explicit method domain.
+    if (provenanceDomain === "evidence" && methodOnlyIds.has(String(id).trim())) return;
     known.add(id);
-    sources.push({ task, id, ...source });
+    sources.push({ task, id, ...source, provenance_domain: provenanceDomain });
   };
-  for (const source of run.grounding?.typed_fact_sources || []) {
-    appendSource("grounding", source);
+  for (const { task, source } of evidenceEntries) {
+    appendSource(task, source);
   }
-  for (const packet of run.packets || []) {
-    for (const source of packet.sources || []) {
-      appendSource(packet.task, source);
-    }
+  // PersonaPack sources explain where a provisional method rule or derived proxy came from.
+  // They belong in the audit manifest, but in a separate domain: a method-definition source
+  // is not evidence about the company and may never satisfy an investment-claim source gate.
+  for (const { master, source } of methodEntries) {
+    appendSource(`method_provenance:${master}`, {
+      ...source,
+      method_id: master,
+    }, "method_provenance");
   }
+  const knownEvidence = new Set(sources
+    .filter((source) => source.provenance_domain === "evidence")
+    .map((source) => source.id));
   const missing_claim_source_ids = [];
   for (const packet of run.packets || []) {
     for (const claim of packet.claims || []) {
       for (const id of claim.source_ids || []) {
-        if (!known.has(id)) missing_claim_source_ids.push({ task: packet.task, source_id: id });
+        if (!knownEvidence.has(id)) missing_claim_source_ids.push({ task: packet.task, source_id: id });
       }
     }
   }
+  const evidenceSourceCount = sources.filter((source) => source.provenance_domain === "evidence").length;
   return {
     run_id: run.run_id,
     symbol: run.symbol,
     as_of: run.as_of,
     source_count: sources.length,
+    evidence_source_count: evidenceSourceCount,
+    method_provenance_source_count: sources.length - evidenceSourceCount,
     sources,
     missing_claim_source_ids,
   };

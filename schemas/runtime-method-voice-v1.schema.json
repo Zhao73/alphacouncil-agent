@@ -39,7 +39,14 @@
     "key_findings": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
     "disagreements": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
     "what_would_change_my_mind": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
-    "source_ids": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
+    "source_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
+      }
+    },
     "confidence": { "enum": ["high", "medium", "low"] }
   },
   "allOf": [

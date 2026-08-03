@@ -10,12 +10,35 @@ import {
 } from "../../mcp/lib/voice.mjs";
 
 const master = "master_buffett";
-const frozen = { stance: "cautious", confidence: "medium" };
+const frozen = {
+  master,
+  stance: "cautious",
+  confidence: "medium",
+  source_ids: ["market_data:S1"],
+  evidence_source_ids: ["market_data:S1"],
+  method_source_ids: ["proxy:buffett-fixture"],
+};
 const runtimeRun = (language = "English") => ({
   symbol: "TEST",
   as_of: "2026-08-03",
   language,
   packets: [{ task: "market_data", sources: [{ id: "market_data:S1" }] }],
+  grounding: {
+    typed_fact_sources: [{
+      source_id: "grounding:outside-bounded-voice",
+      title: "Grounding source outside the bounded method voice fixture",
+    }],
+  },
+  master_runtime_provenance: {
+    [master]: {
+      method_sources: [{
+        source_id: "proxy:buffett-fixture",
+        source_kind: "derived_proxy",
+        title: "Fixture method definition",
+        url: "https://example.com/method-definition",
+      }],
+    },
+  },
 });
 
 const localeVoice = {
@@ -104,5 +127,58 @@ test("dedicated method voice source IDs must resolve to the run source manifest"
     () => normalizeMasterVoice(packet("English", { source_ids: ["market_data:FORGED"] }), master, runtimeRun(), frozen),
     (error) => error?.data?.reason === "SOURCE_PROVENANCE_MISMATCH"
       && error.data.unknown_source_ids.includes("market_data:FORGED"),
+  );
+});
+
+test("method provenance is auditable but cannot satisfy the investment-evidence gate", () => {
+  assert.throws(
+    () => normalizeMasterVoice(
+      packet("English", { source_ids: ["proxy:buffett-fixture"] }),
+      master,
+      runtimeRun(),
+      frozen,
+    ),
+    (error) => error?.data?.reason === "SOURCE_PROVENANCE_MISMATCH"
+      && error.data.source_domain === "evidence"
+      && error.data.unknown_source_ids.includes("proxy:buffett-fixture"),
+  );
+});
+
+test("packet and typed-fact method-source spoofs cannot satisfy a method voice evidence citation", () => {
+  const run = runtimeRun();
+  run.packets[0].sources.push({
+    id: "proxy:packet-spoof",
+    source_kind: "market_snapshot",
+  });
+  run.grounding.typed_fact_sources.push({
+    source_id: "grounding:method-definition-spoof",
+    source_kind: "method_definition",
+  });
+
+  for (const spoofedId of ["proxy:packet-spoof", "grounding:method-definition-spoof"]) {
+    assert.throws(
+      () => normalizeMasterVoice(
+        packet("English", { source_ids: [spoofedId] }),
+        master,
+        run,
+        { ...frozen, source_ids: [spoofedId], evidence_source_ids: [spoofedId] },
+      ),
+      (error) => error?.data?.reason === "SOURCE_PROVENANCE_MISMATCH"
+        && error.data.source_domain === "evidence"
+        && error.data.unknown_source_ids.includes(spoofedId),
+    );
+  }
+});
+
+test("a manifest-known evidence ID still fails when it was outside the bounded voice context", () => {
+  assert.throws(
+    () => normalizeMasterVoice(
+      packet("English", { source_ids: ["grounding:outside-bounded-voice"] }),
+      master,
+      runtimeRun(),
+      frozen,
+    ),
+    (error) => error?.data?.reason === "METHOD_VOICE_SOURCE_SCOPE_MISMATCH"
+      && error.data.unknown_source_ids.includes("grounding:outside-bounded-voice"),
   );
 });

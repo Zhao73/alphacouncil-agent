@@ -89,6 +89,20 @@ function ruleProvenance(series) {
   };
 }
 
+/**
+ * Dilution is measured between two instant share-count observations.  A split ratio's
+ * duration describes the corporate-action event, not the start of the share-count coverage
+ * used by the calculation.  Keep split records in source lineage while pinning the metric
+ * period to the oldest and newest share observations themselves.
+ */
+function dilutionProvenance(shares, splitRows) {
+  return {
+    ...ruleProvenance([shares, splitRows]),
+    period_start: shares[0]?.end || null,
+    period_end: shares.at(-1)?.end || null,
+  };
+}
+
 const relativeError = (actual, expected) => Math.abs(actual / expected - 1);
 
 /**
@@ -390,7 +404,7 @@ export function evaluateRules(facts, { asOf = null } = {}) {
         direction: "max",
         years: s.length,
         split_like_transitions: splitReview.transitions,
-        ...ruleProvenance([s, splitReview.sourceRows]),
+        ...dilutionProvenance(s, splitReview.sourceRows),
       };
     }
     const change = latest / (first * splitReview.factor) - 1;
@@ -406,7 +420,7 @@ export function evaluateRules(facts, { asOf = null } = {}) {
           events: splitReview.events,
         },
       } : {}),
-      ...ruleProvenance([s, splitReview.sourceRows]),
+      ...dilutionProvenance(s, splitReview.sourceRows),
     };
   });
 

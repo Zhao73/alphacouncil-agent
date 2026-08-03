@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "Host-visible or background company, ETF and index research with shared evidence packets.",
   "author": {
     "name": "Zhao73"

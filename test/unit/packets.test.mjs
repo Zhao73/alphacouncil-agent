@@ -45,6 +45,94 @@ test("source manifest includes exact typed-grounding sources", () => {
   assert.equal(manifest.sources[0].task, "grounding");
   assert.equal(manifest.sources[0].id, source.source_id);
   assert.equal(manifest.sources[0].url, source.url);
+  assert.equal(manifest.sources[0].provenance_domain, "evidence");
+});
+
+test("source manifest preserves method provenance in a non-evidence domain", () => {
+  const manifest = sourceManifest({
+    run_id: "TEST",
+    symbol: "AAPL",
+    as_of: "2026-06-22",
+    grounding: { typed_fact_sources: [] },
+    packets: [scopedPacket()],
+    master_runtime_provenance: {
+      master_marks: {
+        method_sources: [{
+          source_id: "proxy:marks-fixture",
+          source_kind: "derived_proxy",
+          grade: "E",
+          adjudication: { status: "pending", reviewer_ids: [] },
+          content_hash: "sha256:fixture",
+          title: "Project-derived Marks method fixture",
+          url: "https://example.com/method-build-spec",
+        }],
+      },
+    },
+  });
+  assert.equal(manifest.evidence_source_count, 1);
+  assert.equal(manifest.method_provenance_source_count, 1);
+  const proxy = manifest.sources.find((source) => source.id === "proxy:marks-fixture");
+  assert.equal(proxy.task, "method_provenance:master_marks");
+  assert.equal(proxy.provenance_domain, "method_provenance");
+  assert.equal(proxy.method_id, "master_marks");
+  assert.equal(proxy.url, "https://example.com/method-build-spec");
+});
+
+test("packet and typed-fact ingress cannot promote reserved method sources into evidence", () => {
+  const spoofedIds = [
+    "proxy:packet-spoof",
+    "market_data:METHOD-DEFINITION-SPOOF",
+    "grounding:DERIVED-PROXY-SPOOF",
+    "grounding:EDITORIAL-SPOOF",
+    "market_data:METHOD-ID-ALIAS-SPOOF",
+  ];
+  const manifest = sourceManifest({
+    run_id: "TEST",
+    symbol: "AAPL",
+    as_of: "2026-06-22",
+    grounding: {
+      typed_fact_sources: [{
+        source_id: "grounding:DERIVED-PROXY-SPOOF",
+        source_kind: "derived_proxy",
+      }, {
+        source_id: "grounding:EDITORIAL-SPOOF",
+        source_kind: "editorial_choice",
+      }],
+    },
+    packets: [{
+      task: "market_data",
+      sources: [{
+        id: "proxy:packet-spoof",
+        source_kind: "market_snapshot",
+      }, {
+        id: "market_data:METHOD-DEFINITION-SPOOF",
+        source_kind: "method_definition",
+      }, {
+        id: "market_data:METHOD-ID-ALIAS-SPOOF",
+        source_kind: "market_snapshot",
+      }],
+      claims: spoofedIds.map((sourceId) => ({ source_ids: [sourceId] })),
+    }],
+    master_runtime_provenance: {
+      master_marks: {
+        method_sources: [{
+          source_id: "proxy:packet-spoof",
+          source_kind: "derived_proxy",
+        }, {
+          source_id: "market_data:METHOD-ID-ALIAS-SPOOF",
+          source_kind: "primary_text",
+        }],
+      },
+    },
+  });
+
+  assert.equal(manifest.evidence_source_count, 0);
+  assert.equal(manifest.method_provenance_source_count, 2);
+  assert.equal(manifest.sources[0].provenance_domain, "method_provenance");
+  assert.deepEqual(
+    manifest.missing_claim_source_ids.map((item) => item.source_id),
+    spoofedIds,
+  );
 });
 
 test("normalizeDebate defaults optional contract arrays to empty", () => {

@@ -14,6 +14,7 @@ import { fetchText } from "./quotes.mjs";
  */
 
 const CBOE = (symbol) => `https://cdn.cboe.com/api/global/delayed_quotes/options/${encodeURIComponent(symbol)}.json`;
+const CBOE_TIME_ZONE = "America/New_York";
 
 /** OSI-style contract symbol: root, YYMMDD, C|P, strike in thousandths. */
 const CONTRACT = /^([A-Z]+)(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/;
@@ -52,6 +53,37 @@ const median = (xs) => {
 const round = (n, places = 4) =>
   Number.isFinite(n) ? Number(n.toFixed(places)) : null;
 
+/** Convert CBOE's zone-less US-market timestamps into an auditable UTC instant. */
+export function normalizeCboeTimestamp(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (/(?:Z|[+-]\d{2}:?\d{2})$/iu.test(raw)) {
+    const parsed = Date.parse(raw);
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
+  }
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?$/u.exec(raw);
+  if (!match) return null;
+  const [, year, month, day, hour, minute, second, fraction = ""] = match;
+  const millisecond = Number(fraction.slice(0, 3).padEnd(3, "0"));
+  const wallClockUtc = Date.UTC(+year, +month - 1, +day, +hour, +minute, +second, millisecond);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: CBOE_TIME_ZONE,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+  });
+  const offsetAt = (instant) => {
+    const parts = Object.fromEntries(formatter.formatToParts(new Date(instant))
+      .filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)]));
+    return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second)
+      - Math.floor(instant / 1000) * 1000;
+  };
+  let instant = wallClockUtc - offsetAt(wallClockUtc);
+  // Re-evaluate at the derived instant so dates close to a DST transition use the final
+  // side of the offset rather than the UTC guess's side.
+  instant = wallClockUtc - offsetAt(instant);
+  return new Date(instant).toISOString();
+}
+
 /** The contract closest to a target delta on one side of one expiry. */
 function nearestDelta(rows, expiry, right, targetAbsDelta) {
   const side = rows.filter((r) => r.expiry === expiry && r.right === right && Number.isFinite(r.delta));
@@ -65,11 +97,13 @@ const byMoneyness = (rows, expiry, right, spot) =>
   rows.filter((r) => r.expiry === expiry && r.right === right)
     .sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot));
 
-export function summarizeChain(payload, { asOf, maxExpiries = 8 } = {}) {
+export function summarizeChain(payload, { asOf, maxExpiries = 8, retrievedAt = null } = {}) {
   const data = payload?.data;
   if (!data || !Array.isArray(data.options)) return null;
   const spot = Number(data.close) || Number(data.last_trade_price) || null;
   const today = asOf || new Date().toISOString().slice(0, 10);
+  const quoteTime = normalizeCboeTimestamp(data.last_trade_time);
+  const chainTimestamp = normalizeCboeTimestamp(payload.timestamp);
 
   const all = data.options.map((o) => {
     const c = parseContract(o.option);
@@ -141,6 +175,9 @@ export function summarizeChain(payload, { asOf, maxExpiries = 8 } = {}) {
   return {
     source: "CBOE delayed quotes (cdn.cboe.com), keyless",
     as_of: today,
+    quote_time: quoteTime,
+    chain_timestamp: chainTimestamp,
+    retrieved_at: retrievedAt,
     delayed: true,
     spot,
     contracts_total: all.length,
@@ -210,7 +247,7 @@ export async function fetchOptionsChain(symbol, { asOf, signal } = {}) {
     // A 404 from the CDN is HTML, which is the normal answer for a name with no listed options.
     return { symbol: sym, available: false, reason: `no listed options found for ${sym} on CBOE (non-US listings are generally absent)` };
   }
-  const summary = summarizeChain(payload, { asOf });
+  const summary = summarizeChain(payload, { asOf, retrievedAt: new Date().toISOString() });
   if (!summary) return { symbol: sym, available: false, reason: `CBOE returned no option rows for ${sym}` };
   return { symbol: sym, available: true, source_url: CBOE(sym), ...summary };
 }

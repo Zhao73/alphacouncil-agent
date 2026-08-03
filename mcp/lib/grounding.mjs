@@ -539,9 +539,21 @@ const localized = (label, chinese) => {
   return (chinese ? label.zh : label.en) ?? label.en ?? label.zh ?? "";
 };
 
+const quoteStatusLabel = (status, chinese) => ({
+  real_time: chinese ? "实时（提供方标记）" : "real-time (provider flagged)",
+  regular_session_delayed: chinese ? "常规交易时段延迟行情" : "regular-session delayed observation",
+  regular_close: chinese ? "常规交易时段收盘价" : "regular-session close",
+  end_of_day_close: chinese ? "日终收盘价" : "end-of-day close",
+  last_regular_trade: chinese ? "最近常规交易价" : "last regular trade",
+}[status] || (chinese ? "新鲜度未核实" : "freshness unverified"));
+
+const countText = (value) => (Number.isFinite(value)
+  ? value.toLocaleString("en-US")
+  : value ?? "n/a");
+
 export function groundingBlock(grounding, language = "English") {
   const chinese = /中文|chinese|zh/i.test(String(language));
-  if (!grounding || (!grounding.instrument && !grounding.quote && !grounding.screen && !grounding.options && !grounding.macro && !grounding.industry)) return "";
+  if (!grounding || (!grounding.instrument && !grounding.filer && !grounding.quote && !grounding.screen && !grounding.options && !grounding.macro && !grounding.industry)) return "";
 
   const lines = [];
   const head = chinese
@@ -557,15 +569,35 @@ export function groundingBlock(grounding, language = "English") {
   }
 
   if (grounding.filer) {
+    const filer = grounding.filer;
+    const exchanges = Array.isArray(filer.exchanges) ? filer.exchanges : [];
     lines.push(chinese
-      ? `- 主体：${grounding.filer.name}｜SIC ${grounding.filer.sic ?? "未知"}（${grounding.filer.sic_description ?? "-"}）｜交易所 ${grounding.filer.exchanges.join(", ") || "未知"}`
-      : `- Filer: ${grounding.filer.name} | SIC ${grounding.filer.sic ?? "unknown"} (${grounding.filer.sic_description ?? "-"}) | exchange ${grounding.filer.exchanges.join(", ") || "unknown"}`);
+      ? `- 主体：${filer.name}｜SIC ${filer.sic ?? "未知"}（${filer.sic_description ?? "-"}）｜交易所 ${exchanges.join(", ") || "未知"}`
+      : `- Filer: ${filer.name} | SIC ${filer.sic ?? "unknown"} (${filer.sic_description ?? "-"}) | exchange ${exchanges.join(", ") || "unknown"}`);
+    if (filer.submissions_url) {
+      const exposed = Array.isArray(filer.recent_filings) ? filer.recent_filings.length : 0;
+      lines.push(chinese
+        ? `  - SEC submissions 官方 feed：共 ${filer.recent_filings_count ?? "未知"} 条 recent 记录，本次结构化提供 ${exposed} 条｜检索 ${filer.submissions_retrieved_at || "未知"}｜${filer.submissions_url}`
+        : `  - Authoritative SEC submissions feed: ${filer.recent_filings_count ?? "unknown"} recent rows; ${exposed} exposed in this structured window | retrieved ${filer.submissions_retrieved_at || "unknown"} | ${filer.submissions_url}`);
+    }
+    if (filer.latest_filing) {
+      const latest = filer.latest_filing;
+      lines.push(chinese
+        ? `  - SEC feed 最新申报（按受理/提交时间排序，不是搜索结果）：${latest.filing_date || "未知"} ${latest.form || "未知表格"}｜受理 ${latest.accepted_at || "未知"}｜accession ${latest.accession || "未知"}｜${latest.primary_document_url || "原文链接不可用"}`
+        : `  - Latest SEC filing by accepted/filed order (not search recency): ${latest.filing_date || "unknown"} ${latest.form || "unknown form"} | accepted ${latest.accepted_at || "unknown"} | accession ${latest.accession || "unknown"} | ${latest.primary_document_url || "primary document unavailable"}`);
+    }
   }
   if (grounding.quote) {
     const q = grounding.quote;
+    const observedAt = q.quote_time || "unknown";
+    const gatheredAt = q.gathered_at || grounding.gathered_at || "unknown";
+    const age = Number.isFinite(q.stale_age_hours)
+      ? (chinese ? `${q.stale_age_hours} 小时` : `${q.stale_age_hours}h`)
+      : (chinese ? "未知" : "unknown");
+    const status = quoteStatusLabel(q.quote_status, chinese);
     lines.push(chinese
-      ? `- 行情（延迟约15分钟，${q.source}）：${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `，${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""}`
-      : `- Quote (~15m delayed, ${q.source}): ${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `, ${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""}`);
+      ? `- 行情（${status}，${q.source || "来源未知"}）：${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `，${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""}｜报价 ${observedAt} → 采集 ${gatheredAt}｜实际陈旧 ${age}`
+      : `- Quote (${status}, ${q.source || "unknown source"}): ${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `, ${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""} | observed ${observedAt} -> gathered ${gatheredAt} | measured age ${age}`);
   }
   if (grounding.screen) {
     const s = grounding.screen;
@@ -590,6 +622,20 @@ export function groundingBlock(grounding, language = "English") {
     lines.push(chinese
       ? `- 期权链（延迟，${o.source || "CBOE"}）：参考到期 ${reference?.expiry || "n/a"}｜ATM IV ${atm}｜25-delta put-call skew ${skewPoints} 波动率点`
       : `- Options chain (delayed, ${o.source || "CBOE"}): reference expiry ${reference?.expiry || "n/a"} | ATM IV ${atm} | 25-delta put-minus-call skew ${skewPoints} vol points`);
+    if (o.open_interest) {
+      const oi = o.open_interest;
+      lines.push(chinese
+        ? `  - 未平仓量：calls ${countText(oi.calls)}｜puts ${countText(oi.puts)}｜put/call OI ratio ${oi.put_call_ratio ?? "n/a"}`
+        : `  - Open interest: calls ${countText(oi.calls)} | puts ${countText(oi.puts)} | put/call OI ratio ${oi.put_call_ratio ?? "n/a"}`);
+    }
+    if (Array.isArray(o.largest_open_interest_strikes) && o.largest_open_interest_strikes.length) {
+      const strikes = o.largest_open_interest_strikes.slice(0, 6).map((row) => (
+        `${row.strike ?? "n/a"} (OI ${countText(row.open_interest)}, ${row.vs_spot_pct == null ? "n/a" : `${row.vs_spot_pct}% vs spot`})`
+      ));
+      lines.push(chinese
+        ? `  - 最大 OI 执行价及集中量：${strikes.join("；")}`
+        : `  - Largest-OI strikes and concentrations: ${strikes.join("; ")}`);
+    }
     if (o.unavailable?.length) {
       lines.push(chinese
         ? `  - 此快照无法提供：${o.unavailable.join("；")}`

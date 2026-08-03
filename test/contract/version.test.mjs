@@ -10,12 +10,18 @@ const readJson = (rel) => JSON.parse(readFileSync(repoFile(rel), "utf8"));
 test("every manifest and the served VERSION agree with package.json", () => {
   const expected = readJson("package.json").version;
   const marketplace = readJson(".claude-plugin/marketplace.json");
+  const packageLock = readJson("package-lock.json");
+  const server = readJson("server.json");
   const declared = {
     "mcp/server.mjs VERSION": __test__.VERSION,
     ".claude-plugin/plugin.json": readJson(".claude-plugin/plugin.json").version,
     ".codex-plugin/plugin.json": readJson(".codex-plugin/plugin.json").version,
     ".claude-plugin/marketplace.json metadata": marketplace.metadata.version,
     ".claude-plugin/marketplace.json plugins[0]": marketplace.plugins[0].version,
+    "package-lock.json root": packageLock.version,
+    "package-lock.json packages root": packageLock.packages[""].version,
+    "server.json root": server.version,
+    "server.json packages[0]": server.packages[0].version,
     "data/build-profile.v1.json package_version": readJson("data/build-profile.v1.json").package_version,
   };
   for (const [where, version] of Object.entries(declared)) {
@@ -23,12 +29,12 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the 1.1.3 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
+test("the 1.1.4 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "1.1.3");
+  assert.equal(expected, "1.1.4");
   assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "latest");
   assert.equal(profile.channel, "solo_test");

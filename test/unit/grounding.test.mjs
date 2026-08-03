@@ -184,12 +184,71 @@ test("the canonical option-chain digest is rendered with its explicit data gaps"
       source: "CBOE delayed quotes",
       reference_expiry: { expiry: "2026-08-15", atm_iv: 0.45 },
       skew_25delta: { put_minus_call: 0.0033 },
+      open_interest: { calls: 4500, puts: 5300, put_call_ratio: 1.1778 },
+      largest_open_interest_strikes: [
+        { strike: 90, open_interest: 5000, vs_spot_pct: -10 },
+        { strike: 110, open_interest: 4000, vs_spot_pct: 10 },
+      ],
       unavailable: ["realised volatility: not in this feed"],
     },
   }, "English");
   assert.match(block, /ATM IV 45\.0%/);
   assert.match(block, /skew 0\.33 vol points/);
+  assert.match(block, /Open interest: calls 4,500 \| puts 5,300 \| put\/call OI ratio 1\.1778/);
+  assert.match(block, /Largest-OI strikes and concentrations: 90 \(OI 5,000, -10% vs spot\)/);
   assert.match(block, /realised volatility: not in this feed/);
+});
+
+test("grounding renders the measured age of a weekend close instead of a fixed 15-minute claim", () => {
+  const grounding = {
+    quote: {
+      symbol: "EXM",
+      price: 177.87,
+      currency: "USD",
+      source: "yahoo",
+      quote_time: "2026-07-31T20:00:01.000Z",
+      gathered_at: "2026-08-03T08:50:27.762Z",
+      stale_age_seconds: 219027,
+      stale_age_hours: 60.84,
+      quote_basis: "regular_market_price",
+      quote_status: "regular_close",
+      is_realtime: false,
+    },
+  };
+  const en = groundingBlock(grounding, "English");
+  assert.match(en, /Quote \(regular-session close, yahoo\)/);
+  assert.match(en, /observed 2026-07-31T20:00:01\.000Z -> gathered 2026-08-03T08:50:27\.762Z/);
+  assert.match(en, /measured age 60\.84h/);
+  assert.doesNotMatch(en, /15m|15-minute/iu);
+  const zh = groundingBlock(grounding, "中文");
+  assert.match(zh, /常规交易时段收盘价/);
+  assert.match(zh, /实际陈旧 60\.84 小时/);
+});
+
+test("grounding exposes the authoritative latest SEC submission and feed coverage", () => {
+  const block = groundingBlock({
+    filer: {
+      name: "EXAMPLE CORP",
+      sic: 3674,
+      sic_description: "Semiconductors",
+      exchanges: ["Nasdaq"],
+      submissions_url: "https://data.sec.gov/submissions/CIK0001045810.json",
+      submissions_retrieved_at: "2026-08-03T08:50:27.762Z",
+      recent_filings_count: 247,
+      recent_filings: [{ form: "SCHEDULE 13G" }],
+      latest_filing: {
+        form: "SCHEDULE 13G",
+        filing_date: "2026-07-20",
+        accepted_at: "2026-07-20T12:34:56.000Z",
+        accession: "0001045810-26-000062",
+        primary_document_url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/primary.htm",
+      },
+    },
+  }, "English");
+  assert.match(block, /Authoritative SEC submissions feed: 247 recent rows; 1 exposed/);
+  assert.match(block, /Latest SEC filing by accepted\/filed order \(not search recency\): 2026-07-20 SCHEDULE 13G/);
+  assert.match(block, /0001045810-26-000062/);
+  assert.match(block, /https:\/\/www\.sec\.gov\/Archives\//);
 });
 
 test("grounding reaches the analyst prompt and stays after the role brief", () => {

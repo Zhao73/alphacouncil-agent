@@ -18,7 +18,7 @@ import {
   voiceDisclaimer,
 } from "./voice.mjs";
 import { cleanLog, clip } from "./text.mjs";
-import { scopedSourceId } from "./gates.mjs";
+import { scopedSourceId, sourceManifest } from "./gates.mjs";
 import { runPath } from "./run-store.mjs";
 import { packetSummary } from "./markdown.mjs";
 import { parseJsonTransport } from "./bounded-json.mjs";
@@ -45,28 +45,65 @@ function sourceIdList(value) {
     : [];
 }
 
-/** Every downstream citation must resolve to the immutable evidence/grounding manifest. */
-export function assertSourceIdsResolve(run, sourceIds, owner, { allowEmpty = false } = {}) {
+/** Every downstream citation must resolve inside its explicit manifest source domain. */
+export function assertSourceIdsResolve(run, sourceIds, owner, {
+  allowEmpty = false,
+  domain = "evidence",
+} = {}) {
   const ids = sourceIdList(sourceIds);
-  const known = new Set([
-    ...(run?.grounding?.typed_fact_sources || []).map((source) => source?.id || source?.source_id),
-    ...(run?.packets || []).flatMap((packet) => (packet?.sources || []).map((source) => source?.id || source?.source_id)),
-  ].filter(Boolean));
+  // Use the same materialized view that is written to source_manifest.json. Reconstructing a
+  // second partial manifest here caused valid PersonaPack provenance to fail at runtime even
+  // while the saved artifact told a different story.
+  const known = new Set(sourceManifest(run).sources
+    .filter((source) => source.provenance_domain === domain)
+    .map((source) => source.id));
   const unknown = ids.filter((id) => !known.has(id));
   if (unknown.length) {
-    throw invalidParams(`${owner} cited source IDs absent from source_manifest.json: ${unknown.join(", ")}`, {
+    throw invalidParams(`${owner} cited source IDs absent from the ${domain} domain of source_manifest.json: ${unknown.join(", ")}`, {
       reason: "SOURCE_PROVENANCE_MISMATCH",
       owner,
+      source_domain: domain,
       unknown_source_ids: unknown,
     });
   }
   if (!allowEmpty && ids.length === 0) {
-    throw invalidParams(`${owner} must cite at least one source_manifest.json ID; missing evidence must be an explicit gap or out_of_scope result.`, {
+    throw invalidParams(`${owner} must cite at least one ${domain} source_manifest.json ID; missing evidence must be an explicit gap or out_of_scope result.`, {
       reason: "SOURCE_PROVENANCE_REQUIRED",
       owner,
+      source_domain: domain,
     });
   }
   return ids;
+}
+
+function boundedPacketSourceIds(packet, claimLimit, sourceLimit) {
+  const claims = (packet?.claims || []).slice(0, claimLimit);
+  const sourceById = new Map((packet?.sources || []).map((source) => [source?.id, source]));
+  const selected = [...new Set(claims.flatMap((claim) => claim?.source_ids || []))]
+    .filter((id) => sourceById.has(id))
+    .slice(0, sourceLimit);
+  for (const source of packet?.sources || []) {
+    if (selected.length >= sourceLimit) break;
+    if (source?.id && !selected.includes(source.id)) selected.push(source.id);
+  }
+  return selected;
+}
+
+/** Evidence IDs actually exposed to a dedicated method voice, plus frozen fact lineage. */
+export function methodVoiceAllowedSourceIds(run, frozenOpinion) {
+  const quick = run?.council_mode === "quick";
+  const packetIds = (run?.packets || []).flatMap((packet) => boundedPacketSourceIds(
+    packet,
+    quick ? 4 : 8,
+    quick ? 6 : 12,
+  ));
+  const frozenEvidenceIds = frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [];
+  const allowed = sourceIdList([...packetIds, ...frozenEvidenceIds]);
+  assertSourceIdsResolve(run, allowed, `${frozenOpinion?.master || "method voice"} allowed evidence`, {
+    allowEmpty: frozenOpinion?.stance === "out_of_scope",
+    domain: "evidence",
+  });
+  return allowed;
 }
 
 export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
@@ -719,12 +756,35 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
   }
 
   const workerSourceIds = list(packet?.source_ids);
+  const frozenEvidenceSourceIds = sourceIdList(
+    frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [],
+  );
+  const methodSourceIds = sourceIdList(frozenOpinion?.method_source_ids || []);
+  assertSourceIdsResolve(run, methodSourceIds, `${masterId} method provenance`, {
+    allowEmpty: true,
+    domain: "method_provenance",
+  });
+  assertSourceIdsResolve(run, frozenEvidenceSourceIds, `${masterId} frozen evidence`, {
+    allowEmpty: frozenOpinion.stance === "out_of_scope",
+    domain: "evidence",
+  });
   assertSourceIdsResolve(
     run,
-    [...(frozenOpinion?.source_ids || []), ...workerSourceIds],
-    masterId,
-    { allowEmpty: frozenOpinion.stance === "out_of_scope" },
+    workerSourceIds,
+    `${masterId} worker evidence`,
+    { allowEmpty: frozenOpinion.stance === "out_of_scope", domain: "evidence" },
   );
+  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion);
+  const allowed = new Set(allowedSourceIds);
+  const outsideAllowed = workerSourceIds.filter((id) => !allowed.has(id));
+  if (outsideAllowed.length) {
+    throw invalidParams(`${masterId} cited evidence IDs outside its bounded method-voice context: ${outsideAllowed.join(", ")}`, {
+      reason: "METHOD_VOICE_SOURCE_SCOPE_MISMATCH",
+      owner: masterId,
+      unknown_source_ids: outsideAllowed,
+      allowed_source_ids: allowedSourceIds,
+    });
+  }
 
   return {
     master: masterId,

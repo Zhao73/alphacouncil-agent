@@ -26,6 +26,7 @@ function liveGrounding() {
       available: true,
       delayed: true,
       source: "CBOE delayed quotes",
+      quote_time: "2026-07-27T11:30:00.000Z",
       reference_expiry: { expiry: "2026-08-15", atm_iv: 0.45 },
       skew_25delta: { put_minus_call: 0.0033 },
       atm_spread_pct_of_mid: 8,
@@ -49,6 +50,10 @@ test("timestamped grounding becomes one immutable typed fact pack", () => {
   assert.equal(first.fact_pack.facts.find((fact) => fact.fact_id === "market.price").currency, "USD");
   assert.equal(first.fact_pack.facts.find((fact) => fact.fact_id === "options.skew_25d").value, 0.0033);
   assert.equal(first.sources.length, 2);
+  const optionSource = first.sources.find((source) => /option chain/i.test(source.title));
+  assert.equal(optionSource.public_at, "2026-07-27T11:30:00.000Z");
+  assert.equal(optionSource.retrieved_at, "2026-07-27T12:00:00.000Z");
+  assert.equal(optionSource.locator.observation_time, "2026-07-27T11:30:00.000Z");
   assert.ok(first.sources.every((source) => /^https?:\/\//.test(source.url)));
   const sourceIds = new Set(first.sources.map((source) => source.source_id));
   assert.ok(first.fact_pack.facts.every((fact) => fact.source_ids.every((id) => sourceIds.has(id))));
@@ -59,6 +64,7 @@ test("untimestamped observations are skipped instead of inheriting the run cutof
   const grounding = liveGrounding();
   delete grounding.gathered_at;
   delete grounding.quote.quote_time;
+  delete grounding.options.quote_time;
   const adapted = adaptGroundingToTypedFacts(grounding, { asOf: AS_OF });
   assert.equal(adapted.fact_pack.facts.length, 0);
   assert.deepEqual(adapted.diagnostics.map((entry) => entry.source), ["quote", "options"]);
