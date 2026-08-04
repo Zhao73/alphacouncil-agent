@@ -499,10 +499,15 @@ for (const [label, pmContractFailureMode, expectedPath] of [
       const runId = `FULL-PM-CONTRACT-${pmContractFailureMode.toUpperCase()}-${process.pid}`;
       const result = structured(await server.callTool("analyze_symbol", {
         symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
-        council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
+        // This fixture is checking the PM schema barrier, not the deadline barrier. On a busy
+        // Windows runner, process startup for the earlier evidence/debate fixtures can consume
+        // the old 30s council budget before PM starts, leaving PM correctly `skipped` but never
+        // exercising the contract this test names. Keep the separate deadline tests at 30s and
+        // give this contract fixture enough platform-independent headroom to reach both PM tries.
+        council_mode: "full", total_timeout_ms: 60_000, timeout_ms: 12_000, synthesis_timeout_ms: 12_000,
         wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
         grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
-      }, { timeoutMs: 45_000 }));
+      }, { timeoutMs: 75_000 }));
 
       const dir = join(dataDir, "runs", runId);
       const decision = readJson(join(dir, "decision.json"));

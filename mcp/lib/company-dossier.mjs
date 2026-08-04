@@ -438,6 +438,9 @@ function packetManifest(packet) {
     claim_count: Array.isArray(packet?.claims) ? packet.claims.length : 0,
     source_count: Array.isArray(packet?.sources) ? packet.sources.length : 0,
     coverage_item_count: Array.isArray(packet?.coverage_items) ? packet.coverage_items.length : 0,
+    acquisition_item_count: Array.isArray(packet?.acquisition_ledger?.items)
+      ? packet.acquisition_ledger.items.length
+      : 0,
   };
 }
 
@@ -520,6 +523,7 @@ export function buildCompanyDossier(run, sourceManifest = null) {
       acknowledgement_field: "company_dossier_hash_ack",
       method_packet_acknowledgement_field: "evidence_packet_acks",
       method_packet_acknowledgement_statuses: EVIDENCE_PACKET_ACK_STATUSES,
+      source_acquisition_policy_id: run?.grounding?.source_acquisition_plan?.policy_id || null,
       core_packet_acknowledgement_count: Object.keys(OPERATING_COMPANY_COVERAGE).length,
       selected_packet_acknowledgement_count: packets.length,
     },

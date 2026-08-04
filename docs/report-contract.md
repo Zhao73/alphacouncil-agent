@@ -152,6 +152,45 @@ must remain independently visible; `report_quality=passed` cannot upgrade any ot
 An `unavailable` or `not_applicable` row on the fixed critical subset is a decision barrier,
 even when all 52 rows are structurally accounted for.
 
+### company_source_acquisition_v1
+
+Every fresh full operating-company run freezes a company-specific acquisition plan before an
+evidence worker starts. The plan is generated from the resolved issuer identity and regulator
+profile, never from a single-ticker exception list. For SEC filers the keyless prefetch retrieves the
+submissions timeline, probes the issuer's disclosed IR and corporate sites, follows a bounded
+set of same-site earnings/news/filing/product links, stores content hashes and excerpts, and
+queries dated company, financial, customer/supplier/capacity, product/delivery/quality,
+regulatory/litigation and management/capital-allocation feeds. These starter records and their
+failed feed attempts are included in the one dossier shared with every analyst and method seat.
+
+Each of the 52 coverage IDs has a frozen ordered source ladder. Depending on the field, the
+stages include regulator filings, issuer IR/product documents, exchange or market-official
+data, local like-for-like observations, public estimate samples, customer, supplier and
+competitor disclosures, peer filings, counterparties, other regulators, courts, an explicit
+disconfirming search and a reproducible derivation. An empty Yahoo, Google or SEC Atom feed is
+therefore only one recorded attempt; it is never completion.
+
+The evidence packet returns one `acquisition_ledger.items` row per owned coverage ID. Its
+`outcome` is exactly one of:
+
+- `reported_actual`: an authorised source actually disclosed the value; the packet records
+  value, unit, period and scope.
+- `recomputed_proxy`: cited public inputs support a reproducible value; the packet records
+  value, unit, period, formula and inputs. It is never relabelled as an actual.
+- `modeled_estimate`: cited public inputs support a bounded scenario; the packet records
+  numeric low/base/high, unit, period, formula and assumptions. It is never relabelled as an
+  actual or full-market consensus.
+- `unavailable`: every stage frozen for that coverage ID records the actual URL, search query
+  or local-ledger locator tried and its terminal result. A bare "not found", an omitted search
+  or a missing optional API fails the runtime gate.
+- `not_applicable`: the fact genuinely does not apply, with a concrete reason.
+
+Successful actual, proxy and model observations are stored by ticker, coverage ID, period,
+unit and outcome. Later runs compare only like-for-like records; a 90-day change is emitted
+only when an observation at least 90 days old exists for the same period, unit and outcome.
+This makes the acquisition system improve with use without silently mixing forecast vintages
+or turning a changed fiscal period into a revision.
+
 ### Public-data availability boundary
 
 “All analysts received the complete dossier” means every public fact actually acquired for
@@ -175,9 +214,11 @@ proprietary vendor history became public. The runtime handles the recurring gaps
 - **Disclosure-dependent or proprietary fields:** product acceptance, yield, actual shipment
   and revenue contribution, order/prepayment coverage, hyperscaler capex allocation, GPU/rack
   ASP, monthly supply-chain capacity, current stock-loan fee and comparable private transaction
-  detail are `unavailable` unless a dated issuer, customer, supplier, regulator, exchange or
-  other attributable public source actually discloses them. They are never inferred from a
-  promise, headline, model prior or adjacent metric.
+  detail are actuals only when a dated issuer, customer, supplier, regulator, exchange or other
+  attributable public source discloses them. Otherwise the acquisition ladder must attempt a
+  cited reproducible proxy or bounded scenario first. If neither has defensible public inputs,
+  the exact fact remains `unavailable` after the exhaustive attempt ledger; it is never invented
+  from a promise, headline, model prior or adjacent metric.
 - **Forward free cash flow:** a future-year sustainable FCF figure is a scenario/rederivation,
   not an observed fact. Its assumptions, units, source IDs and calculation must be explicit;
   failed independent rederivation remains `needs_verification` on the mandatory triple path.

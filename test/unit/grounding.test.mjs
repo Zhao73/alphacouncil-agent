@@ -174,7 +174,55 @@ test("a skipped rule is presented as a gap, never as a pass", () => {
 test("retrieval failures are surfaced and marked un-fillable from memory", () => {
   const block = groundingBlock({ ...sample, unavailable: ["quote: HTTP 500"] }, "English");
   assert.match(block, /quote: HTTP 500/);
-  assert.match(block, /must NOT be filled from memory/);
+  assert.match(block, /continue through the source ladder/);
+  assert.match(block, /never fill them from memory/);
+});
+
+test("every item in the frozen adaptive starter pack reaches each analyst prompt", () => {
+  const grounding = {
+    instrument: {
+      asset_type: "equity",
+      research_model: "operating_company",
+      classification_source: "SEC",
+    },
+    company_starter_evidence: {
+      window_days: 45,
+      source_status: "succeeded",
+      filings: [{
+        form: "8-K",
+        filing_date: "2026-08-01",
+        accession: "0001652044-26-000001",
+        primary_document_url: "https://www.sec.gov/Archives/example.htm",
+      }],
+      issuer_documents: [{
+        title: "Alphabet Investor Relations",
+        url: "https://abc.xyz/investor/",
+        content_hash: "sha256:fixture",
+        excerpt: "Official issuer excerpt unique to the frozen starter pack.",
+      }],
+      news: [
+        {
+          topic: "customers_suppliers_capacity",
+          title: "First unique dated lead",
+          link: "https://example.com/first",
+          published_at: "2026-08-04T12:00:00.000Z",
+        },
+        {
+          topic: "regulation_litigation",
+          title: "Last unique dated lead",
+          link: "https://example.com/last",
+          published_at: "2026-08-03T12:00:00.000Z",
+        },
+      ],
+      feed_attempts: [{ ok: true }, { ok: false }],
+    },
+  };
+  const prompt = taskPrompt("news_industry_management", "GOOGL", "2026-08-05", "", "English", grounding);
+  assert.match(prompt, /0001652044-26-000001/u);
+  assert.match(prompt, /Official issuer excerpt unique/u);
+  assert.match(prompt, /First unique dated lead/u);
+  assert.match(prompt, /Last unique dated lead/u);
+  assert.match(prompt, /feeds 1\/2 succeeded/u);
 });
 
 test("the canonical option-chain digest is rendered with its explicit data gaps", () => {

@@ -36,6 +36,12 @@ import { inclusiveCutoffTime } from "./personas-v3/source-anchor.mjs";
 import { adaptGroundingToTypedFacts } from "./personas-v3/grounding-adapter.mjs";
 import { classifyInstrument, instrumentResearchChecklist, isFundOrIndex } from "./instruments.mjs";
 import { fetchEquityMarketHistory } from "./equity-history.mjs";
+import {
+  acquireCompanyStarterEvidence,
+  buildCompanySourceAcquisitionPlan,
+  discoverIssuerOfficialSources,
+} from "./company-source-acquisition.mjs";
+import { companyObservationHistory } from "./company-observations.mjs";
 // Aliased: this module already has a private `localized(label, chinese)` for metric labels.
 import { localized as localizedText } from "./lang.mjs";
 
@@ -248,6 +254,32 @@ export async function gatherGrounding({
       if (filer.ok) {
         out.filer = filer.value;
         out.instrument = classifyInstrument({ symbol, quote: out.quote, filer: out.filer });
+        if (out.instrument.research_model === "operating_company") {
+          jobs.push(safely("adaptive company source acquisition", async () => {
+            const issuerIndex = await discoverIssuerOfficialSources(out.filer, {
+              asOf: asOf || gatheredAt.slice(0, 10),
+              signal,
+            });
+            const starterEvidence = await acquireCompanyStarterEvidence({
+              symbol,
+              asOf: asOf || gatheredAt.slice(0, 10),
+              profile: out.filer,
+              issuerIndex,
+            }, { signal });
+            return { issuerIndex, starterEvidence };
+          })
+            .then((result) => {
+              if (!result.ok) { out.unavailable.push(result.error); return; }
+              out.issuer_source_index = result.value.issuerIndex;
+              out.company_starter_evidence = result.value.starterEvidence;
+              if (result.value.issuerIndex.status !== "succeeded") {
+                out.unavailable.push(`issuer official source index: ${result.value.issuerIndex.reason || result.value.issuerIndex.status}`);
+              }
+              if (result.value.starterEvidence.source_status !== "succeeded") {
+                out.unavailable.push("adaptive company starter evidence: every keyless feed and issuer document probe was unreachable");
+              }
+            }));
+        }
       } else out.unavailable.push(filer.error);
     } else {
       out.unavailable.push("filer profile: SEC submissions metadata is current, not point-in-time versioned; it was excluded from the historical information set");
@@ -326,6 +358,32 @@ export async function gatherGrounding({
       zh: `经营公司 SEC Company Facts 筛选：不适用于 ${out.instrument.asset_type}。`,
       ja: `事業会社向け SEC Company Facts スクリーン：${out.instrument.asset_type} には適用されません。`,
       ko: `사업회사용 SEC Company Facts 스크린: ${out.instrument.asset_type}에는 적용되지 않습니다.`,
+    }));
+  }
+
+  // A listed operating company without a SEC CIK still gets real company-specific source
+  // acquisition. This covers non-US listings and US names missing from the current SEC ticker
+  // map without requiring a customer key or an extra package. The issuer name comes from the
+  // quote metadata; regulator and market-official routes are selected later from the suffix.
+  if (!cik && symbol && out.instrument?.research_model === "operating_company" && snapshotPolicy.allowed) {
+    const fallbackProfile = {
+      name: out.quote?.long_name || out.quote?.short_name || symbol,
+      tickers: [symbol],
+      exchanges: out.quote?.exchange ? [out.quote.exchange] : [],
+      market_id: symbolMarket?.id || null,
+      regulator: symbolMarket?.regulator || null,
+      recent_filings: [],
+    };
+    jobs.push(safely("adaptive company starter evidence", () => acquireCompanyStarterEvidence({
+      symbol,
+      asOf: asOf || gatheredAt.slice(0, 10),
+      profile: fallbackProfile,
+    }, { signal })).then((result) => {
+      if (!result.ok) { out.unavailable.push(result.error); return; }
+      out.company_starter_evidence = result.value;
+      if (result.value.source_status !== "succeeded") {
+        out.unavailable.push("adaptive company starter evidence: every keyless company feed was unreachable");
+      }
     }));
   }
 
@@ -524,6 +582,33 @@ export async function gatherGrounding({
       }),
     };
   }
+  if (out.instrument?.research_model === "operating_company") {
+    try {
+      out.company_observation_history = companyObservationHistory(symbol, {
+        asOf: asOf || gatheredAt.slice(0, 10),
+      });
+    } catch (error) {
+      out.unavailable.push(`company observation history: ${String(error?.message || error)}`);
+    }
+    const sourceProfile = out.filer || {
+      ...(out.sec_ticker_match || {}),
+      name: out.market?.financials?.company_name
+        || out.quote?.long_name
+        || out.quote?.short_name
+        || out.sec_ticker_match?.title
+        || symbol,
+      tickers: [symbol],
+      exchanges: out.quote?.exchange ? [out.quote.exchange] : [],
+      market_id: symbolMarket?.id || null,
+      regulator: symbolMarket?.regulator || null,
+    };
+    out.source_acquisition_plan = buildCompanySourceAcquisitionPlan({
+      symbol,
+      asOf: asOf || gatheredAt.slice(0, 10),
+      profile: sourceProfile,
+      issuerIndex: out.issuer_source_index,
+    });
+  }
   const typed = adaptGroundingToTypedFacts(out, {
     asOf: asOf || gatheredAt,
     knowledgeAsOf: asOf || gatheredAt,
@@ -610,6 +695,51 @@ export function groundingBlock(grounding, language = "English") {
         ? `  - SEC feed 最新申报（按受理/提交时间排序，不是搜索结果）：${latest.filing_date || "未知"} ${latest.form || "未知表格"}｜受理 ${latest.accepted_at || "未知"}｜accession ${latest.accession || "未知"}｜${latest.primary_document_url || "原文链接不可用"}`
         : `  - Latest SEC filing by accepted/filed order (not search recency): ${latest.filing_date || "unknown"} ${latest.form || "unknown form"} | accepted ${latest.accepted_at || "unknown"} | accession ${latest.accession || "unknown"} | ${latest.primary_document_url || "primary document unavailable"}`);
     }
+    if (filer.investor_website || filer.website) {
+      lines.push(chinese
+        ? `  - SEC 主体资料给出的官方入口：IR ${filer.investor_website || "未披露"}｜官网 ${filer.website || "未披露"}`
+        : `  - Official issuer entries from the SEC profile: IR ${filer.investor_website || "not disclosed"} | website ${filer.website || "not disclosed"}`);
+    }
+  }
+  if (grounding.issuer_source_index) {
+    const index = grounding.issuer_source_index;
+    lines.push(chinese
+      ? `- 发行人官方来源索引：${index.status}｜入口 ${(index.roots || []).length}｜发现候选页面 ${(index.pages || []).length}｜采集 ${index.observed_at || "未知"}`
+      : `- Issuer official-source index: ${index.status} | roots ${(index.roots || []).length} | candidate pages ${(index.pages || []).length} | observed ${index.observed_at || "unknown"}`);
+  }
+  if (grounding.company_starter_evidence) {
+    const starter = grounding.company_starter_evidence;
+    lines.push(chinese
+      ? `- 跨源主动预取：SEC 申报 ${(starter.filings || []).length} 条｜发行人正文摘要 ${(starter.issuer_documents || []).length} 页｜${starter.window_days} 日内主题新闻 ${(starter.news || []).length} 条｜feed 成功 ${(starter.feed_attempts || []).filter((row) => row.ok).length}/${(starter.feed_attempts || []).length}`
+      : `- Adaptive starter evidence: ${(starter.filings || []).length} SEC filings | ${(starter.issuer_documents || []).length} issuer-document excerpts | ${(starter.news || []).length} thematic news items within ${starter.window_days}d | feeds ${(starter.feed_attempts || []).filter((row) => row.ok).length}/${(starter.feed_attempts || []).length} succeeded`);
+    const filingRows = starter.filings || [];
+    if (filingRows.length) {
+      lines.push(chinese ? "  - 本次冻结 starter pack 的全部 SEC 申报索引：" : "  - Complete SEC filing index in this frozen starter pack:");
+      for (const filing of filingRows) {
+        lines.push(`    - ${filing.filing_date || "unknown"} | ${filing.form || "unknown"} | ${filing.accession || "unknown accession"} | ${filing.primary_document_url || "no document URL"}`);
+      }
+    }
+    const newsRows = starter.news || [];
+    if (newsRows.length) {
+      lines.push(chinese ? "  - 本次冻结 starter pack 的全部带日期线索（仍须打开原文核实）：" : "  - Complete dated-lead set in this frozen starter pack (open originals before relying on them):");
+      for (const item of newsRows) {
+        lines.push(`    - ${item.published_at || "unknown"} | ${item.topic || "company"} | ${item.title} | ${item.link || item.feed_url}`);
+      }
+    }
+    const issuerDocuments = (starter.issuer_documents || []).filter((doc) => doc.excerpt);
+    if (issuerDocuments.length) {
+      lines.push(chinese ? "  - 本次冻结 starter pack 的全部发行人官网正文摘要：" : "  - Complete issuer-site excerpt set in this frozen starter pack:");
+      for (const doc of issuerDocuments) {
+        lines.push(`    - ${doc.title || "official issuer page"} | ${doc.url} | ${doc.content_hash || "hash unavailable"} | ${doc.excerpt}`);
+      }
+    }
+  }
+  if (grounding.company_observation_history?.status === "available") {
+    const history = grounding.company_observation_history;
+    const revisionSeries = (history.series || []).filter((row) => row.change_90d_status === "available").length;
+    lines.push(chinese
+      ? `- 本地同口径公司数据历史：${history.observation_count} 条观测｜${revisionSeries} 组已可计算 90 日变化；其余继续积累，不把不同期间/单位混成修正序列。`
+      : `- Local like-for-like company history: ${history.observation_count} observations | ${revisionSeries} series have a valid 90-day change; others keep building and never mix periods or units.`);
   }
   if (grounding.quote) {
     const q = grounding.quote;
@@ -696,8 +826,8 @@ export function groundingBlock(grounding, language = "English") {
       : `- Value-chain participants (includes non-US; list is hand-maintained): ${names.join(", ")}`);
   }
   if (grounding.unavailable?.length) {
-    lines.push(chinese ? `- 取不到的数据（属于数据缺口，禁止用记忆补）：${grounding.unavailable.join("；")}`
-      : `- Could not be retrieved -- these are data gaps and must NOT be filled from memory: ${grounding.unavailable.join("; ")}`);
+    lines.push(chinese ? `- 确定性预取尚未取得（必须继续执行下方来源梯，禁止用记忆补）：${grounding.unavailable.join("；")}`
+      : `- Deterministic prefetch did not obtain these; continue through the source ladder below and never fill them from memory: ${grounding.unavailable.join("; ")}`);
   }
   if (grounding.not_applicable?.length) {
     lines.push(chinese ? `- 明确不适用（不是数据抓取错误）：${grounding.not_applicable.join("；")}`
@@ -717,7 +847,7 @@ export function groundingBlock(grounding, language = "English") {
       "",
       "铁律：",
       "- **搜到的数字不得覆盖申报数字。** 两者冲突时，两个都写出来、都给来源、明确指出这是冲突，并说明可能的口径差异（期间、GAAP/non-GAAP、币种、是否含一次性项）。让读者看到分歧，不要替读者选。",
-      "- 上面标为「无法计算」或「取不到」的，是真实的数据缺口。写进 open_questions，不要用你的背景知识填。",
+      "- 上面标为「无法计算」或「取不到」的是确定性预取结果，不是允许立即交付的缺口。先执行本席位冻结来源梯；实际披露仍无结果时，按契约给出可复算代理值或模型区间。只有来源梯穷尽后才能进入 open_questions。",
       "- 引用上面的事实时注明来自申报/交易所，与你搜到的来源分开标注。",
     ].join("\n")
     : [
@@ -728,7 +858,7 @@ export function groundingBlock(grounding, language = "English") {
       "",
       "Hard rules:",
       "- **A searched number never overwrites a filed number.** Where they conflict, report BOTH with their sources, say plainly that they conflict, and identify the likely reason (different period, GAAP vs non-GAAP, currency, inclusion of one-off items). Show the reader the disagreement rather than resolving it for them.",
-      "- Anything marked not computable or not retrieved above is a genuine data gap. Put it in open_questions; do not fill it from background knowledge.",
+      "- Not-computable or not-retrieved above describes deterministic prefetch, not permission to stop. Execute the frozen source ladder, then produce a reproducible proxy or modeled range when an actual remains undisclosed. Only an exhausted ladder may enter open_questions.",
       "- When you cite a fact from above, mark it as filing or exchange data, distinct from sources you found by searching.",
     ].join("\n"));
 

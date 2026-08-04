@@ -108,9 +108,9 @@ export async function runPackageSmoke() {
 
     const listed = await server.request("tools/list", {});
     const tools = listed.result?.tools || [];
-    assert.equal(tools.length, 33, "installed server must expose exactly 33 MCP tools");
+    assert.equal(tools.length, 34, "installed server must expose exactly 34 MCP tools");
     const names = new Set(tools.map((tool) => tool.name));
-    for (const required of ["begin_council_selection", "confirm_master_selection", "plan_visible_run", "analyze_symbol"]) {
+    for (const required of ["begin_council_selection", "confirm_master_selection", "plan_visible_run", "analyze_symbol", "get_company_sources"]) {
       assert.ok(names.has(required), `installed server is missing ${required}`);
     }
 

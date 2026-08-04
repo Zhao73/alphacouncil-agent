@@ -2,6 +2,42 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.2.1] — 2026-08-05
+
+### Added
+
+- Fresh full operating-company runs now freeze `company_source_acquisition_v1`: an exact,
+  issuer-driven source ladder for all 52 company-dossier coverage IDs. Fixed news feeds are
+  only discovery attempts; every item escalates through the applicable regulator, issuer,
+  market, local-history, customer, supplier, peer, counterparty, court, disconfirming-search
+  and derivation stages before `unavailable` is allowed.
+- The new keyless `get_company_sources` tool returns both the frozen acquisition map and a real
+  starter evidence pack. It resolves the SEC filer, preserves the recent filing timeline,
+  discovers issuer-owned domains from periodic filing text when the SEC profile omits website
+  fields, probes same-site IR/news/filing/product pages, stores bounded excerpts with content
+  hashes, and fetches dated company-specific topic feeds.
+- Evidence packets now carry an audited `acquisition_ledger` with one row per owned coverage ID.
+  Outcomes distinguish authorised `reported_actual`, cited `recomputed_proxy`, bounded
+  `modeled_estimate`, exhaustively attempted `unavailable`, and genuine `not_applicable`.
+  Runtime gates reject a bare gap, missing stages, unresolved sources, uncited actuals, and
+  proxies/models without their formula, period, unit and inputs or assumptions.
+- Successful actual, proxy and model observations are saved in a bounded per-company local
+  ledger. A 90-day change appears only for like-for-like coverage ID, period, unit and outcome;
+  the system never mixes fiscal vintages or backfills an unavailable history from model memory.
+
+### Fixed
+
+- Company news prefetch now applies an issuer-identity relevance gate. Broad market headlines
+  emitted by a ticker feed no longer enter the shared dossier merely because the feed endpoint
+  was ticker-scoped; exclusions and samples remain auditable.
+- Issuer discovery retains distinct official subdomains. If an IR vendor blocks automated HTML,
+  reachable official newsroom, corporate and product sites from the same filing remain usable,
+  while the blocked attempt stays visible.
+- All acquired filing rows, dated starter leads and issuer-document excerpts reach every
+  evidence analyst prompt and the hash-bound company dossier. The status snapshot exposes
+  expected/recorded acquisition rows, actual/proxy/model/unavailable counts, official-site
+  discovery, and starter evidence totals.
+
 ## [1.2.0] — 2026-08-04
 
 ### Added

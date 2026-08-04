@@ -29,6 +29,8 @@ import {
   companyDossierPromptBlock,
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
+import { assertCompanySourceAcquisition, buildCompanySourceAcquisitionPlan, sourceAcquisitionPromptBlock } from "./company-source-acquisition.mjs";
+import { recordCompanyAcquisitionObservations } from "./company-observations.mjs";
 import {
   REQUIRED_VERIFIER_IDS,
   buildVerifierBatchInput,
@@ -1105,6 +1107,7 @@ export function recordVisiblePacket(args) {
   applyGroundedRegulatorCoverage(packet, { task, asOfDate: run.as_of, grounding: run.grounding });
   assertOfficialSourceCoverage(packet, { task, asOfDate: run.as_of, grounding: run.grounding });
   assertCompanyCoveragePacket(packet, run, { client: true });
+  assertCompanySourceAcquisition(packet, run, { client: true });
   assertVisibleReaderLanguage(visibleEvidenceReaderText(packet), run, `visible evidence ${task}`);
   const existingPacket = (run.packets || []).find((item) => item.task === task);
   if (taskState(run, task).status === "completed" && existingPacket) {
@@ -1126,6 +1129,11 @@ export function recordVisiblePacket(args) {
   const byTask = new Map(run.packets.map((item) => [item.task, item]));
   byTask.set(task, packet);
   run.packets = run.tasks.map((item) => byTask.get(item)).filter(Boolean);
+  const observationResult = recordCompanyAcquisitionObservations({
+    symbol: run.symbol,
+    task,
+    ledger: packet.acquisition_ledger,
+  });
   Object.assign(run, visibleStatusAfterPacket(run));
   writeJson(join(dir, `${task}.json`), packet);
   saveRun(run);
@@ -1134,6 +1142,7 @@ export function recordVisiblePacket(args) {
     thread_id: args.thread_id,
     thread_title: args.thread_title,
     output: join(dir, `${task}.json`),
+    acquisition_observations_recorded: observationResult.recorded || 0,
   });
   const allEvidenceRecorded = (run.tasks || []).every((item) => taskState(run, item).status === "completed");
   if (allEvidenceRecorded) {
@@ -1861,6 +1870,7 @@ const EVIDENCE_REPAIR_SCHEMA_CONTRACT = [
   "Every claim requires non-empty claim and evidence strings, confidence (high|medium|low), and source_ids containing at least one non-empty source id.",
   "Every source requires non-empty id, title, url, published_at, and retrieved_at. At least one of claims or open_questions must be non-empty.",
   "Every coverage_items row uses strings for note, attempted and gap (empty string when unused), and arrays for source_ids and attempted_urls (empty array when unused). For a directly observed dynamic quote/table/index with no publication date, preserve published_at as unknown and add source_kind=dynamic_snapshot plus observed_at from the actual retrieval observation. Never apply this label to an ordinary undated article; news and event claims still need dated evidence.",
+  "When the prompt carries company_source_acquisition_v1, preserve top-level acquisition_ledger with exactly one item per owned coverage id. Do not delete acquisition attempts, formulas, inputs, assumptions, or actual/proxy/model labels during transport repair.",
   "Use only source ids already present in the supplied sources array. Never invent a source id or fact; remove an unsupported claim and record the lost point in open_questions instead of returning empty source_ids.",
 ].join(" ");
 
@@ -1979,10 +1989,15 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
 }
 
 function evidenceReaderText(packet) {
+  const acquisitionMachine = new Set([
+    "policy_id", "task", "coverage_id", "outcome", "source_ids", "stage", "locator_type",
+    "locator", "result", "unit", "period", "value",
+  ]);
   return [
     packet?.summary,
     ...(packet?.claims || []).flatMap((claim) => [claim?.claim, claim?.evidence]),
     ...(packet?.open_questions || []),
+    ...readerStrings(packet?.acquisition_ledger, acquisitionMachine),
   ].filter(Boolean).join("\n");
 }
 
@@ -2004,6 +2019,8 @@ function visibleEvidenceReaderText(packet) {
     "task", "symbol", "as_of", "source_ids", "id", "url", "title", "published_at", "retrieved_at",
     "source_id", "entry_url", "checked_through", "record_id", "status",
     "confidence", "information_richness", "thread_id", "execution_mode", "raw_text",
+    "policy_id", "coverage_id", "outcome", "stage", "locator_type", "locator", "result",
+    "unit", "period", "value",
   ]);
   return [
     ...readerStrings(packet, machine),
@@ -2264,6 +2281,7 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
       as_of: asOf,
       facts_unavailable: true,
       unavailable: [`grounding failed: ${cleanLog(error?.message || error)}`],
+      source_acquisition_plan: buildCompanySourceAcquisitionPlan({ symbol, asOf, profile: {} }),
     };
   } finally {
     if (timer) clearTimeout(timer);
@@ -2427,6 +2445,25 @@ export async function collectEvidence(args) {
   const commitPacket = (packet) => {
     packetsByTask.set(packet.task, packet);
     run.packets = tasks.map((task) => packetsByTask.get(task)).filter(Boolean);
+    if (packet.acquisition_ledger) {
+      try {
+        const observation = recordCompanyAcquisitionObservations({
+          symbol: run.symbol,
+          task: packet.task,
+          ledger: packet.acquisition_ledger,
+        });
+        appendEvent(run, "company_observations_recorded", {
+          task: packet.task,
+          recorded: observation.recorded || 0,
+          observation_count: observation.observation_count || 0,
+        });
+      } catch (error) {
+        appendEvent(run, "company_observation_record_failed", {
+          task: packet.task,
+          reason: cleanLog(String(error?.message || error), 500),
+        });
+      }
+    }
     writeJson(join(dir, `${packet.task}.json`), packet);
     writeJson(join(dir, "evidence.json"), run);
     writeSourceManifest(run);
@@ -2547,6 +2584,7 @@ export async function collectEvidence(args) {
       applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
       assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
       assertCompanyCoveragePacket(packet, run);
+      assertCompanySourceAcquisition(packet, run);
       assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task}`);
       commitPacket(packet);
       persistTerminalTask(task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
@@ -2598,6 +2636,7 @@ export async function collectEvidence(args) {
           : "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
         evidenceRepairSchemaContract(task),
         companyCoverageInstruction(task, run),
+        sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
         schemaRepairIssuePrompt(firstParseError),
         `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
         `Malformed worker output:\n${malformed}`,
@@ -2616,6 +2655,7 @@ export async function collectEvidence(args) {
         applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertCompanyCoveragePacket(packet, run);
+        assertCompanySourceAcquisition(packet, run);
         assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} repair`);
         commitPacket(packet);
         appendEvent(run, "task_repair_succeeded", {

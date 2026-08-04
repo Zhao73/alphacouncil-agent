@@ -9,6 +9,7 @@ import { isFundOrIndex } from "./instruments.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 import { intentsForStance } from "./voice.mjs";
 import { companyDossierPacketAckTemplate, companyDossierPromptBlock, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
+import { sourceAcquisitionPromptBlock } from "./company-source-acquisition.mjs";
 
 /**
  * Prompt text lives in personas/, not here.
@@ -173,10 +174,12 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
   // which facts are already settled, or it reads them as the whole assignment.
   const instrumentOverride = fundOrIndexTaskInstruction(task, grounding?.instrument, resolvedLanguage);
   const grounded = groundingBlock(grounding, resolvedLanguage);
+  const sourceAcquisition = sourceAcquisitionPromptBlock(grounding?.source_acquisition_plan, task, resolvedLanguage);
   return [
     `${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`,
     instrumentOverride,
     grounded,
+    sourceAcquisition,
     // Last, so it is the final word on form after the role brief and the settled facts.
     paceShapingInstruction(pace, task, chinese),
   ].filter(Boolean).join("\n\n");

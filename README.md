@@ -31,7 +31,7 @@
 <p>
   <a href="docs/INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
-  <a href="#-tools--32-all-keyless"><b>Tools</b></a> ·
+  <a href="#-tools--34-all-keyless"><b>Tools</b></a> ·
   <a href="#-the-bench--26-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="CHANGELOG.md"><b>Changelog</b></a> ·
@@ -82,7 +82,7 @@ evidence, run selected method seats and produce an auditable portfolio-manager r
 | 📚 **One complete company dossier for every downstream seat** | A full operating-company run accounts for the fixed 52-item core roster, freezes `company_dossier.json`, and gives the same hash-bound artifact to every selected method, every Bull/Bear round and the PM. Each method returns a task/hash/status receipt for all selected packets: 8 in `core`, 11 in `all`. Critical missing data stops the decision instead of disappearing inside a summary. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
-| 🔑 **33 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🔑 **34 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, issuer IR discovery, adaptive company feeds, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
 | 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
@@ -324,7 +324,7 @@ The final report is readable directly in chat. It carries analyst work logs, dat
 summaries, the bull/bear debate, the PM verdict, entry price bands, short/medium/long-term
 views, data gaps, confidence and a source table.
 
-## 🔧 Tools — 32, all keyless
+## 🔧 Tools — 34, all keyless
 
 Nothing below needs an API key, an account, or a config file. Install and run.
 
@@ -334,7 +334,7 @@ Nothing below needs an API key, an account, or a config file. Install and run.
 | **Non-US filings** | `market_financials` `market_coverage` | TWSE keyless; DART/EDINET on a free key; HK/CN documents only |
 | **Market data** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq, 21 macro series + 5 derived |
 | **Options** | `get_options_chain` | CBOE delayed quotes — IV term structure, 25-delta skew, open interest, Greeks |
-| **News** | `get_news` `get_market_narrative` | Yahoo, Google News, SEC Atom, Fed, WSJ, CNBC |
+| **Company sources + news** | `get_company_sources` `get_news` `get_market_narrative` | SEC profile/filings, issuer IR discovery and excerpts, adaptive Yahoo/Google/issuer feeds, Fed, WSJ, CNBC |
 | **Social** | `get_social_pulse` `verify_x_post` | Reddit, Hacker News, Bluesky |
 | **Industry** | `industry_brief` `industry_peers` `industry_coverage` `list_industries` | SIC across all US filers + curated maps |
 | **Workflow** | `analyze_symbol` `plan_visible_run` `collect_evidence` `read_run` and 5 more | — |
@@ -342,8 +342,8 @@ Nothing below needs an API key, an account, or a config file. Install and run.
 **What it deliberately will not do.** Every one of these is stated in the tool output itself,
 not only in the docs, because the payload is what gets quoted downstream:
 
-- **IV percentile is not computable.** The chain is a snapshot with no history, so any claim
-  that volatility is high or low against its own past is reported as an open question.
+- **IV percentile needs accumulated observations.** Valid daily snapshots are saved locally;
+  fewer than 60 distinct trading days stays `building_history`, never a fabricated percentile.
 - **X / Twitter has no free discovery channel** as of 2026-07. Nitter search is dead, the X
   API bills per post and xAI bills per call. Professional FinTwit is **not** covered, and
   Reddit is not a substitute for it.
