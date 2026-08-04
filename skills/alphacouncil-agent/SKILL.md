@@ -371,9 +371,10 @@ explanation, guidance, competitor commentary, and anything not yet filed.
 | Filings-based quality screen | `screen_ticker` | Pass `ticker`; the CIK is resolved for you. A rule whose inputs are missing is `skipped`, **never a pass**. |
 | Screen a list | `screen_candidates` | Capped at 40; a fetch failure is `unavailable`, not an elimination. |
 | Full US filer list | `list_us_universe` | SEC `company_tickers.json`. |
-| Non-US financials | `market_financials`, `market_coverage` | TWSE keyless; KR/JP need a free key; HK/CN are documents only. Check coverage **before** promising a number. |
+| Non-US financials | `market_financials`, `market_coverage`, `get_company_sources` | TWSE is structured and keyless. When KR/JP structured adapters have no optional key, or HK/CN are document-only, continue through the keyless regulator-document and company-source ladder; do not stop at adapter status. |
 | Macro context | `get_macro_snapshot` | 21 series, 5 derived. Observations, not a regime call. |
 | Options positioning | `get_options_chain` | IV term structure, 25-delta skew, put/call ratios, open-interest concentration. |
+| Company-specific source map and starter evidence | `get_company_sources` | Resolves the issuer, probes official IR/news/filing/product pages, retrieves dated cross-topic feeds, and returns the frozen 52-item escalation ladder. Call this before treating an empty fixed feed as a gap. |
 | Dated news and filings | `get_news` | `symbol`, `query` and/or `cik`. Undated items are excluded, not shown as recent. |
 | What the market is talking about | `get_market_narrative` | Themes ranked by coverage, each paired with the series that would corroborate it. |
 | Retail and technical chatter | `get_social_pulse` | Reddit, Hacker News, Bluesky. |
@@ -389,8 +390,9 @@ explanation, guidance, competitor commentary, and anything not yet filed.
   an explicit `building_history` gap; never manufacture it from one snapshot.
 - **X / Twitter has no free discovery channel.** Professional FinTwit is **not** covered and
   Reddit is not a substitute. Say so rather than implying you looked at social media.
-- **Non-US names have no options chain here** and often no structured financials. Report the
-  gap; never substitute a US peer's numbers.
+- **Non-US names have no options chain here** and often no structured financials. Continue with
+  the market-specific regulator/exchange document route from `get_company_sources`; never
+  substitute a US peer's numbers. Only an exhaustively attempted field may remain unavailable.
 - **A skipped screen rule is a gap.** Reporting `6/7 passed` without naming the seventh
   misrepresents the screen.
 

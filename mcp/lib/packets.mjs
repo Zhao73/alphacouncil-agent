@@ -30,6 +30,7 @@ import {
   normalizeCompanyCoverageItems,
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
+import { normalizeCompanySourceAcquisitionLedger } from "./company-source-acquisition.mjs";
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -673,6 +674,7 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     ? normalizeOfficialSourceCoverage(packet.official_source_coverage, task, sourceIdMap)
     : undefined;
   const coverageItems = normalizeCompanyCoverageItems(packet?.coverage_items, task, sourceIdMap);
+  const acquisitionLedger = normalizeCompanySourceAcquisitionLedger(packet?.acquisition_ledger, task, sourceIdMap);
   const openQuestions = Array.isArray(packet?.open_questions) ? [...packet.open_questions] : [];
   for (const gap of coverageGapQuestions(officialSourceCoverage)) {
     if (!openQuestions.includes(gap)) openQuestions.push(gap);
@@ -687,6 +689,7 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     sources,
     open_questions: openQuestions,
     ...(coverageItems.length ? { coverage_items: coverageItems } : {}),
+    ...(acquisitionLedger !== undefined ? { acquisition_ledger: acquisitionLedger } : {}),
     ...(officialSourceCoverage !== undefined ? { official_source_coverage: officialSourceCoverage } : {}),
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
     // How much material this task actually had. Deliberately separate from confidence:
@@ -932,6 +935,9 @@ export function compactEvidence(run) {
         ...(packet.coverage_items
           ? { coverage_items: compactValue(packet.coverage_items) }
           : {}),
+        ...(packet.acquisition_ledger
+          ? { acquisition_ledger: compactValue(packet.acquisition_ledger) }
+          : {}),
         sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
           id: source?.id,
           title: clip(source?.title || "", 260),
@@ -1032,6 +1038,9 @@ export function compactQuickEvidence(run) {
         metrics: compactValue(packet.metrics || {}),
         ...(packet.official_source_coverage
           ? { official_source_coverage: compactValue(packet.official_source_coverage) }
+          : {}),
+        ...(packet.acquisition_ledger
+          ? { acquisition_ledger: compactValue(packet.acquisition_ledger) }
           : {}),
         sources: selectedIds.map((id) => sourceById.get(id)).filter(Boolean).map((source) => ({
           id: source?.id,

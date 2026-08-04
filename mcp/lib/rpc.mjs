@@ -30,6 +30,7 @@ import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, fin
 import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
+import { buildCompanySourceAcquisitionPlan, getCompanySourceMap } from "./company-source-acquisition.mjs";
 
 export function send(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -844,6 +845,14 @@ export function tools() {
         as_of: { type: "string", description: "ISO date treated as now. Defaults to today." },
       },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
+    tool("get_company_sources", "Acquire a company-specific starter pack and freeze the company-agnostic source ladder before research. SEC filers receive CIK resolution, recent filings, filing-text issuer-domain discovery and official-page excerpts. Other listed markets fall back to quote-resolved issuer identity, dated cross-topic feeds, and the correct regulator/exchange search route. Returns the exact 52-item acquisition plan; every official, counterparty, market, local-history, disconfirming and derivation stage must be attempted before unavailable is allowed. Keyless; evidence stays separate from proxy/model outcomes and this tool is not an investment verdict.", {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Listed ticker, including market suffix where needed, e.g. AAPL, 0700.HK, 7203.T or 000660.KS." },
+        cik: { type: "string", description: "Optional SEC CIK for a US filer; skips ticker resolution when supplied." },
+        as_of: { type: "string", description: "YYYY-MM-DD research cutoff; defaults to today." },
+      },
+    }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
     tool("get_social_pulse", "Keyless retail and technical-community discussion for a name or theme, from Reddit (searched inside the equity subreddits, not site-wide), Hacker News, and any Bluesky handles supplied. IMPORTANT: X / Twitter has NO free discovery channel -- Nitter search is dead, the X API bills per post and xAI bills per call -- so this does NOT cover professional FinTwit, and Reddit is not a substitute for it. Mention volume measures attention, never correctness. Nothing here may enter a conclusion alone; it is a lead to be confirmed against a filing or recorded in open_questions.", {
       type: "object",
       properties: {
@@ -1031,7 +1040,15 @@ export async function handleToolCall(id, params) {
       // the host that skips the optional step is exactly the host whose seats fail quietly.
       if (!run.grounding) {
         run.grounding = await gatherGrounding({ symbol: run.symbol, asOf: run.as_of, language: run.language })
-          .catch((error) => ({ error: String(error?.message || error), facts_unavailable: true }));
+          .catch((error) => ({
+            error: String(error?.message || error),
+            facts_unavailable: true,
+            source_acquisition_plan: buildCompanySourceAcquisitionPlan({
+              symbol: run.symbol,
+              asOf: run.as_of,
+              profile: {},
+            }),
+          }));
         saveRun(run);
       }
       const specs = visibleAgentSpecs(run, runArgs.prompt || "");
@@ -1327,6 +1344,18 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(
       `${data.items.length} headlines in the last ${args.days ?? 14}d from ${data.feeds.filter((f) => f.ok).length}/${data.feeds.length} feeds; `
       + `${data.excluded_outside_window} excluded as stale or undated.`,
+      data,
+    ));
+    return;
+  }
+  if (name === "get_company_sources") {
+    const data = await getCompanySourceMap({
+      symbol: args.symbol,
+      cik: args.cik,
+      asOf: args.as_of,
+    });
+    sendResult(id, jsonContent(
+      `Company starter pack for ${data.symbol}: identity resolved via ${data.identity_resolution.mode}, ${data.starter_evidence.filings.length} regulator filings, ${data.starter_evidence.issuer_documents.length} issuer documents, ${data.starter_evidence.news.length} dated cross-topic leads, and ${data.coverage_item_count} frozen coverage routes.`,
       data,
     ));
     return;

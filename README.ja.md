@@ -234,7 +234,7 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 
 最終レポートはチャット上でそのまま読めます。アナリスト作業記録、データと提出書類の要約、ブル/ベア討論、PM裁定、エントリー価格帯、短中長期の見方、データギャップ、確信度、出典表を含みます。
 
-## 🔧 ツール —— 31個、すべてキー不要
+## 🔧 ツール —— 34個、すべてキー不要
 
 以下のいずれもAPIキー、アカウント、設定ファイルを必要としません。
 
@@ -244,14 +244,14 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 | **米国外** | `market_financials` `market_coverage` | 台湾証取はキー不要／DART・EDINETは無料キー／香港・中国は文書のみ |
 | **市場データ** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq、マクロ21系列＋派生5指標 |
 | **オプション** | `get_options_chain` | CBOE遅延気配 —— IVターム構造、25Δスキュー、建玉、グリークス |
-| **ニュース** | `get_news` `get_market_narrative` | Yahoo、Google News、SEC Atom、FRB、WSJ、CNBC |
+| **企業ソースとニュース** | `get_company_sources` `get_news` `get_market_narrative` | SEC、発行体IRの自動探索・本文要約、適応型Yahoo/Google/公式feed、FRB、WSJ、CNBC |
 | **ソーシャル** | `get_social_pulse` `verify_x_post` | Reddit、Hacker News、Bluesky |
 | **業界** | `industry_brief` `industry_peers` `industry_coverage` `list_industries` | 全米国登録企業のSIC分類＋厳選バリューチェーン地図 |
 | **ワークフロー** | `analyze_symbol` `plan_visible_run` `collect_evidence` `read_run` ほか9個 | — |
 
 **あえて行わないこと。** 以下はすべてツールの出力自体に明記されています。下流で引用されるのはペイロードだからです：
 
-- **IVパーセンタイルは算出不能。** オプションチェーンは履歴のないスナップショットであり、「自身の過去と比べて高い/低い」という主張はすべて未解決事項として報告されます。
+- **IVパーセンタイルにはローカル履歴が必要。** 有効な日次スナップショットを保存し、異なる取引日が60日未満なら `building_history` のままとし、分位を捏造しません。
 - **X / Twitter に無料の探索経路は存在しません**（2026年7月時点）。Nitter検索は機能停止、X APIは投稿単位課金、xAIは呼び出し単位課金。**プロのFinTwit層は対象外であり、Redditはその代替にはなりません。**
 - **入力が欠けたスクリーニング規則は `skipped` であり、決して合格扱いにしません。**
 - **解析可能なタイムスタンプを持たないニュースは除外**され、「最新」として表示されません。
@@ -275,7 +275,7 @@ parse-only 修復後も失敗した場合、失敗と診断の成果物を保存
 | オプション | タレブ · ナタンバーグ · シンクレア |
 | v3 拡張 | ダモダラン · アックマン · キャシー・ウッド · パブライ · ボーグル · ジュンジュンワラ |
 
-1.2.0 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
+1.2.1 `solo_test` カタログには 26 個の選択可能な物理 v3 パックがありますが、
 **26 パックは 26 個の承認済みメソッドモデルを意味しません**。全 26 席は provisional
 `operator_lens` のままです。52 個のツールは実行可能な
 `provisional_derived_proxy` テスト代理であり、人間が承認した数式帰属ではありません。

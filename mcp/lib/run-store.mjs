@@ -62,6 +62,11 @@ export function statusSnapshot(run) {
   const recordedMasters = (run.master_opinions || []).map((opinion) => opinion.master);
   const pendingMasters = selectedMasters.filter((master) => masterSeatIncomplete(run, master));
   const visibleDebate = run.execution_mode === "visible_host_threads" ? run.visible_debate : null;
+  const acquisitionItems = (run.packets || []).flatMap((packet) => packet?.acquisition_ledger?.items || []);
+  const acquisitionCounts = Object.fromEntries([
+    "reported_actual", "recomputed_proxy", "modeled_estimate", "unavailable", "not_applicable",
+  ].map((outcome) => [outcome, acquisitionItems.filter((item) => item?.outcome === outcome).length]));
+  const acquisitionPlan = run?.grounding?.source_acquisition_plan || null;
   const visibleDebateRounds = visibleDebate
     ? Object.fromEntries(["bull_researcher", "bear_researcher"].map((role) => [
         role,
@@ -144,6 +149,21 @@ export function statusSnapshot(run) {
     company_dossier_invalid_count: completeness.company_dossier.invalid.length,
     company_dossier_hash: run.company_dossier?.content_hash || null,
     company_dossier_path: run.company_dossier?.path || null,
+    source_acquisition_policy: acquisitionPlan?.policy_id || "not_run_legacy_grounding",
+    source_acquisition_required: Boolean(acquisitionPlan),
+    source_acquisition_expected_count: acquisitionPlan
+      ? (run.tasks || []).reduce((sum, task) => sum + (acquisitionPlan.tasks?.[task]?.length || 0), 0)
+      : 0,
+    source_acquisition_recorded_count: acquisitionItems.length,
+    source_acquisition_outcomes: acquisitionCounts,
+    issuer_official_source_status: run?.grounding?.issuer_source_index?.status || null,
+    issuer_official_source_page_count: run?.grounding?.issuer_source_index?.pages?.length || 0,
+    company_starter_source_status: run?.grounding?.company_starter_evidence?.source_status || null,
+    company_starter_filing_count: run?.grounding?.company_starter_evidence?.filings?.length || 0,
+    company_starter_issuer_document_count: run?.grounding?.company_starter_evidence?.issuer_documents?.length || 0,
+    company_starter_news_count: run?.grounding?.company_starter_evidence?.news?.length || 0,
+    company_starter_feed_success_count: (run?.grounding?.company_starter_evidence?.feed_attempts || [])
+      .filter((attempt) => attempt?.ok).length,
     degraded_evidence_count: completeness.degraded_evidence.length,
     degraded_evidence: completeness.degraded_evidence,
     degraded_debate_count: completeness.degraded_debate.length,

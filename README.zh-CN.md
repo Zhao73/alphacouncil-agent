@@ -52,7 +52,7 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 | ⏱️ **完整 headless 有硬时限，且有三档深度** | 开场分别选择方法席、分析席范围（核心 8 / 全部 11）和 fast / normal / slow（预计 ~13 / ~22 / ~58 分钟，上限 15 / 30 / 60）。三档保留本轮确认的席位；全部已选分析师同波启动。 |
 | 🔍 **可审计,不瞎编** | 每条结论都映射到 source ID;缺失数据写进「数据缺口」章节,绝不隐藏。 |
 | ⏱️ **多周期结论** | 买入/持有/卖出,外加独立的 1-4 周、3-6 月、12 月判断。 |
-| 🔑 **33 个工具,零 API 密钥,零运行时依赖** | 数据全部来自免密钥公开源(SEC EDGAR、CBOE、Yahoo/Stooq、21 组宏观序列),不需要付费行情或券商账号;分析师另通过代理自带的联网搜索实时取证(**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**),只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
+| 🔑 **34 个工具,零 API 密钥,零运行时依赖** | 数据来自免密钥公开源（SEC EDGAR、发行人 IR 自动发现、跨主题公司 feed、CBOE、Yahoo/Stooq、21 组宏观序列），不需要付费行情或券商账号；分析师另通过代理自带的联网搜索实时取证（**Codex 网页搜索** / **Claude Code 的 WebSearch + WebFetch**），只消耗你已有的 Codex / Claude Code 订阅额度。MIT 开源。 |
 | 📚 **内置研究方法论** | 股票研究与投行事件分析的方法论以**本地 skill** 形式打包(`skills/public-equity-investing`、`skills/investment-banking`)——不依赖 Codex 专属远程工作流,Claude Code 也能获得同等研究深度。 |
 | 📈 **真实行情兜底,免 key** | 内置 `get_quote` 通过 Yahoo + Stooq 拉延迟(~15分钟)的指数 / 股指期货(含夜盘)/ 汇率 / 利率 / 波动率 / 商品 / 个股点位——不用 API key,分析师引用真实数字而非猜测。 |
 | 🧭 **公司、ETF 与指数正确分流** | 先识别资产再研究：公司走发行人财务，ETF 走带时点持仓穿透，指数走聚合方法；QQQ/SPY 不会再被当成有自身营收和 EPS 的公司。 |
@@ -256,7 +256,7 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 
 最终报告可直接在对话中阅读，包含分析师工作记录、数据与申报摘要、多空辩论记录、PM 裁决、入场价格区间、短中长期观点、数据缺口、置信度和来源表。
 
-## 🔧 工具 —— 32 个，全部免 key
+## 🔧 工具 —— 34 个，全部免 key
 
 以下没有一项需要 API key、账号或配置文件。装完直接跑。
 
@@ -266,14 +266,14 @@ Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用�
 | **非美申报** | `market_financials` `market_coverage` | 台交所免 key；DART/EDINET 需免费 key；港股/A股仅文档 |
 | **行情** | `get_quote` `get_macro_snapshot` | Yahoo / Stooq，21 条宏观序列 + 5 项派生 |
 | **期权** | `get_options_chain` | CBOE 延迟报价 —— 隐含波动率期限结构、25Δ 偏斜、未平仓量、Greeks |
-| **新闻** | `get_news` `get_market_narrative` | Yahoo、Google News、SEC Atom、美联储、WSJ、CNBC |
+| **公司来源与新闻** | `get_company_sources` `get_news` `get_market_narrative` | SEC 主体/申报、发行人 IR 自动发现与正文摘要、自适应 Yahoo/Google/官网 feed、美联储、WSJ、CNBC |
 | **社交** | `get_social_pulse` `verify_x_post` | Reddit、Hacker News、Bluesky |
 | **行业** | `industry_brief` `industry_peers` `industry_coverage` `list_industries` | 全美股 SIC 分类 + 精选产业地图 |
 | **流程** | `analyze_symbol` `plan_visible_run` `collect_evidence` `read_run` 等 9 个 | — |
 
 **它刻意不做什么。** 以下每一条都写在工具输出本身里，不只写在文档里 —— 因为被下游引用的是 payload：
 
-- **隐含波动率分位算不出来。** 期权链是快照无历史，任何「波动率相对自身历史偏高/偏低」的论断都报为待解问题。
+- **隐含波动率分位需要本地积累。** 每个有效日快照会写入本地账本；少于 60 个不同交易日时保持 `building_history`，绝不伪造分位。
 - **X / Twitter 没有免费发现通道**（截至 2026-07）。Nitter 搜索已死、X API 按条计费、xAI 按次计费。**专业 FinTwit 未被覆盖，Reddit 不是它的替代品。**
 - **缺输入的筛选规则报 `skipped`，绝不当作通过。**
 - **无可解析时间戳的新闻条目被剔除**，不会被展示为「最新」。
