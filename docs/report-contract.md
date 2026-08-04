@@ -72,8 +72,10 @@ remaining limitation; it may not substitute a US peer or model memory.
 
 ### Fixed 52-item coverage roster
 
-The roster is owned by the eight mandatory full evidence roles. Optional analysts may add
-evidence, but they do not replace or waive any item below.
+The 52-item core roster is owned by the eight mandatory full evidence roles. The independent
+`analyst_scope=all` choice adds `macro_regime`, `market_narrative`, and `social_pulse`, for
+exactly eleven receipt-bound packets; those supplemental analysts add evidence but do not
+replace or waive any core item below.
 
 - `market_data` (6): `market.identity_listing_currency`, `market.quote_snapshot`,
   `market.price_history_range`, `market.liquidity_volume`, `market.technical_levels`,
@@ -110,7 +112,8 @@ evidence, but they do not replace or waive any item below.
 
 The authoritative roster is fixed independently of a caller-supplied task subset. A full
 operating-company run cannot become coverage-complete by planning fewer than all eight
-mandatory roles.
+mandatory roles, and an all-scope receipt cannot become complete with fewer than eleven
+analyst packets.
 
 ### Coverage-item semantics
 
@@ -149,11 +152,56 @@ must remain independently visible; `report_quality=passed` cannot upgrade any ot
 An `unavailable` or `not_applicable` row on the fixed critical subset is a decision barrier,
 even when all 52 rows are structurally accounted for.
 
+### Public-data availability boundary
+
+“All analysts received the complete dossier” means every public fact actually acquired for
+this frozen run was distributed and acknowledged. It does not mean private operating data or a
+proprietary vendor history became public. The runtime handles the recurring gaps as follows:
+
+- **Automated keyless observations:** one-year daily price and volume history, 5/21/63/126/252
+  session returns, 20/63-session realised volatility, session-aligned benchmark-relative
+  returns, current filings, reported financials and the current options snapshot are fetched
+  and hash-bound when their public routes respond.
+- **Locally accumulated histories:** each valid ATM-IV snapshot is appended to an owner-local
+  ledger. A historical IV percentile remains unavailable until at least 60 distinct daily
+  observations exist; the system never backfills model memory. Consensus revisions need the
+  same observation-ledger approach, but no reliable, standardized keyless consensus archive is
+  currently treated as canonical, so a 90-day revision series stays unavailable without dated
+  public records.
+- **Section 16:** filing documents are process-rate-limited and cached. Empty
+  `notSubjectToSection16` and valid no-securities-owned filings parse as zero. The system emits
+  an exact ownership ratio only when the applicable candidate set is complete; otherwise it
+  publishes the measured amount as an explicit lower bound with omitted/failure counts.
+- **Disclosure-dependent or proprietary fields:** product acceptance, yield, actual shipment
+  and revenue contribution, order/prepayment coverage, hyperscaler capex allocation, GPU/rack
+  ASP, monthly supply-chain capacity, current stock-loan fee and comparable private transaction
+  detail are `unavailable` unless a dated issuer, customer, supplier, regulator, exchange or
+  other attributable public source actually discloses them. They are never inferred from a
+  promise, headline, model prior or adjacent metric.
+- **Forward free cash flow:** a future-year sustainable FCF figure is a scenario/rederivation,
+  not an observed fact. Its assumptions, units, source IDs and calculation must be explicit;
+  failed independent rederivation remains `needs_verification` on the mandatory triple path.
+
+For a mandatory triple-verification run, transport size is not allowed to weaken coverage. Each
+verifier may process bounded claim chunks concurrently, with a per-chunk structured-output schema
+that requires every exact claim ID as a key. The server converts those keyed results to the public
+row contract and accepts only the exact full union. Source fidelity uses ten-claim chunks because
+each claim may require several original URLs. A syntax/shape failure has one no-search transport
+repair; an actual coverage failure has one bounded web-enabled audit retry against the unchanged
+chunk, after the artifact records the precise claim, reason and omitted URL. An independent rederivation that naturally
+returns to the same primary filing remains valid analytical work when it carries its own query and
+calculation, but is surfaced as a same-source finding rather than claimed as independent-source
+corroboration.
+
+If one of these gaps is method-critical, dossier sufficiency blocks the decision. Otherwise the
+run may continue only with the gap visible in the packet, method receipt and final report.
+
 ### Frozen snapshot, distribution and acknowledgements
 
 The system freezes the applicable dossier as `company_dossier.json` and computes one canonical
-SHA-256 `content_hash`. The eight mandatory evidence analysts collectively populate the
-artifact; all eight normalized packets and all 52 coverage rows are frozen inside it. Every
+SHA-256 `content_hash`. The eight mandatory evidence analysts collectively populate the core
+artifact and all 52 coverage rows. An all-scope run freezes the three supplemental packets in
+the same revision, so the dossier contains eight packets for `core` and eleven for `all`. Every
 mandatory downstream consumer for that dossier revision receives the exact same hash-bound
 artifact, not independently summarized copies:
 
@@ -166,7 +214,11 @@ Compact evidence embedded in a prompt is only an index. Information omitted from
 remains available through the full hash-bound dossier artifact. Before accepting a mandatory
 consumer's output, the runtime revalidates the persisted dossier against the expected hash and
 requires that output (or the deterministic method execution record) to carry the exact
-`company_dossier_hash_ack`. A missing hash, a mismatched hash, a changed dossier artifact, an
+`company_dossier_hash_ack`. Every method voice additionally returns one `evidence_packet_acks`
+row for each packet frozen in that revision: the eight core rows are always mandatory and an
+all-scope run adds the three supplemental rows. Each row must bind the exact task and packet
+hash and use one status: `used`, `reviewed_not_relevant`, or `unavailable`; status-specific
+source IDs or reasons are validated. A missing hash, a mismatched hash, a changed dossier artifact, an
 unresolved source ID, an invalid coverage row or a mandatory consumer that never acknowledged
 the frozen revision fails closed. The run names the affected role, persists diagnostics and
 does not proceed past the relevant evidence, method, debate or PM barrier. A changed accepted
@@ -228,7 +280,7 @@ Its `user_response.md` must also visibly carry:
   source when available, or an explicit statement that the quote is unavailable;
 - every selected stable master ID, its frozen deterministic stance and its complete,
   untruncated recorded statement, or an explicit non-directional terminal failure record;
-- all eight mandatory analyst task IDs, statuses and summaries, including failures or gaps;
+- all eight or eleven receipt-bound analyst task IDs, statuses and summaries, including failures or gaps;
 - terminal status, contract, report quality, elapsed time, deadline state and artifact paths.
 - a machine-marked final section with the exact selected-seat count. Every speaking seat keeps
   its complete recorded statement; every failed/unavailable seat instead carries
@@ -290,13 +342,21 @@ tier changes how long each seat may think, never which seats run. Quick rejects 
 
 The execution topology is:
 
-1. the eight mandatory evidence workers start in one parallel wave;
-2. after the evidence barrier, every selected physical v3 method runs its deterministic
+1. the eight core or eleven all-scope evidence workers start in one parallel wave;
+2. when and only when the frozen receipt is `slow + all methods + all analysts`, three
+   verifier workers run concurrently. Each independently returns one verdict for every frozen
+   material claim: `source_fidelity` opens the cited source, `rederivation` receives no original
+   URLs and recomputes from another source, and `refuter` performs a recorded adverse search.
+   Exact claim-by-verifier coverage is mandatory. A zero count or any missing, duplicate,
+   unexpected or malformed row terminalizes as `needs_verification` and skips every downstream
+   worker. Allowed unresolved/adverse verdicts produce `completed_with_findings`, remain visible,
+   and lower the originating evidence seat's weight rather than pretending the verifier was absent;
+3. after the evidence and applicable verification barriers, every selected physical v3 method runs its deterministic
    policy and freezes a stance, then receives one isolated voice worker that can explain but
    cannot change that stance;
-3. Bull and Bear start together within each of three rounds, with a barrier before the next
+4. Bull and Bear start together within each of three rounds, with a barrier before the next
    round; the PM starts only after both Round-3 outputs pass exact Q&A validation;
-4. deterministic assembly and persistence consume the same global clock.
+5. deterministic assembly and persistence consume the same global clock.
 
 At deadline expiry the run stops opening downstream work and persists fail-closed as
 `incomplete`, naming timed-out, failed and skipped roles. This is a terminal-persistence
@@ -387,7 +447,9 @@ Do not collapse these axes:
 - `completeness`: whether the applicable structural gates were satisfied.
 - `evidence_coverage`: `complete`, quick-only `degraded`, or `incomplete` when mandatory
   evidence is missing or failed.
-- `verification`: scoped source-ID presence; adversarial verification is reported separately.
+- `verification`: source-ID lineage plus, when required, the exact triple-verifier audit.
+- `adversarial_verification`: `not_required`, `pending`, `passed`, or
+  `needs_verification`; a required verifier count of zero is never `complete`.
 - `report_quality`: whether `quick_v1` or `full_v2` report structure passed.
 
 Terminal analysis statuses are:
@@ -415,8 +477,8 @@ Every handoff includes status, report contract, report quality, rating, winner, 
 one judgment paragraph, valuation/position, material gaps and file locations.
 
 A full handoff additionally carries the key earnings result, forward setup, news/voice
-signals and top invalidation conditions. It lists every selected method seat and all eight
-mandatory analysts rather than sampling a subset, and includes the system-owned price
+signals and top invalidation conditions. It lists every selected method seat and all eight or
+eleven receipt-bound analysts rather than sampling a subset, and includes the system-owned price
   snapshot or an explicit quote-data gap. The system-owned method-seat ledger is the final
   handoff section; recorded statements are not clipped and missing statements are explicit
   non-directional failure entries rather than summary/verdict fallbacks.

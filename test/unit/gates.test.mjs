@@ -48,6 +48,22 @@ test("withVerificationBanner is identity on pass and surfaces the gate on failur
   assert.match(withVerificationBanner("BODY", gapped, "English"), /Source Verification Gate/);
 });
 
+test("complete verifier coverage renders adverse findings without claiming missing verification", () => {
+  const gate = {
+    verification: "passed",
+    adversarial_verification: "completed_with_findings",
+    missing_claim_source_ids: [],
+    verifier_audit: {
+      status: "completed_with_findings",
+      non_clean: [{ verifier: "source_fidelity", claim_id: "market_data:C1", verdict: "partial" }],
+    },
+  };
+  const rendered = withVerificationBanner("BODY", gate, "English");
+  assert.match(rendered, /Triple-Verification Findings/);
+  assert.match(rendered, /source_fidelity: market_data:C1 -> partial/);
+  assert.doesNotMatch(rendered, /needs_verification/);
+});
+
 test("completenessStatus requires the portfolio manager, not just the researchers", () => {
   // completeRun() leaves portfolio_manager pending on purpose.
   const gate = completenessStatus(completeRun());

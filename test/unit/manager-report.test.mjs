@@ -24,6 +24,9 @@ function structuredDecision() {
       {
         label: "Do not touch",
         range: "Above the evidence-backed ceiling",
+        lower_bound: 200,
+        upper_bound: null,
+        currency: "USD",
         meaning: "The payoff no longer covers the risk.",
         action: "Do not initiate.",
         basis: "Conditional valuation ceiling.",
@@ -32,6 +35,9 @@ function structuredDecision() {
       {
         label: "Worth starting",
         range: "Inside the evidence-backed range",
+        lower_bound: 100,
+        upper_bound: 200,
+        currency: "USD",
         meaning: "A bounded starter may be justified.",
         action: "Start small only while the thesis holds.",
         basis: "Conditional valuation range.",
@@ -40,6 +46,9 @@ function structuredDecision() {
       {
         label: "Materially undervalued",
         range: "Below the evidence-backed floor",
+        lower_bound: null,
+        upper_bound: 100,
+        currency: "USD",
         meaning: "The margin of safety is wider.",
         action: "Add only if every invalidation test still passes.",
         basis: "Downside case and operating evidence.",

@@ -81,7 +81,15 @@ export function parseOwnershipDocument(xml) {
   }
   const holdings = [...byHoldingBucket.values()];
   const ownerCik = tagText(xml, "rptOwnerCik");
-  if (!ownerCik || !holdings.length) return null;
+  // An initial Form 3 can explicitly state that the reporting owner owns no securities.
+  // That is a successfully parsed zero balance, not a malformed filing. Treating it as a
+  // parse failure made one valid zero-holding form invalidate every other insider record.
+  const explicitlyNoSecuritiesOwned = tagText(xml, "noSecuritiesOwned") === "1";
+  // A final filing can contain empty tables because the person resigned and explicitly says
+  // they are no longer subject to Section 16. Their newest register balance is then zero; it is
+  // not a broken XML record and must supersede older positive holdings for that owner.
+  const noLongerSubjectToSection16 = tagText(xml, "notSubjectToSection16") === "1";
+  if (!ownerCik || (!holdings.length && !explicitlyNoSecuritiesOwned && !noLongerSubjectToSection16)) return null;
   return {
     owner_cik: String(ownerCik).replace(/\D/gu, "").padStart(10, "0"),
     owner_name: tagText(xml, "rptOwnerName"),
@@ -90,6 +98,8 @@ export function parseOwnershipDocument(xml) {
     is_ten_percent_owner: tagText(xml, "isTenPercentOwner") === "1",
     shares_owned: holdings.reduce((total, value) => total + value, 0),
     holding_bucket_count: holdings.length,
+    explicitly_no_securities_owned: explicitlyNoSecuritiesOwned,
+    no_longer_subject_to_section16: noLongerSubjectToSection16,
     period_of_report: tagText(xml, "periodOfReport"),
   };
 }
@@ -228,7 +238,12 @@ export async function fetchPointInTimeCommonSharesOutstanding(cik, { asOf = null
  * share count. The annual weighted-average diluted count is an EPS period measure and is never
  * accepted as an ownership-register denominator.
  */
-export async function fetchInsiderOwnership(cik, { asOf = null, signal, companyFacts = null } = {}) {
+export async function fetchInsiderOwnership(cik, {
+  asOf = null,
+  signal,
+  companyFacts = null,
+  documentCache = true,
+} = {}) {
   const denominator = await fetchPointInTimeCommonSharesOutstanding(cik, { asOf, signal, companyFacts });
   if (!Number.isFinite(denominator.value) || denominator.value <= 0) {
     return gap(`insider ownership skipped: ${denominator.unavailable?.[0] || "point-in-time common shares outstanding unavailable"}`, {
@@ -259,6 +274,10 @@ export async function fetchInsiderOwnership(cik, { asOf = null, signal, companyF
   const numeratorSources = [];
   const unresolvedDocuments = [];
   let attemptedDocumentCount = 0;
+  let cacheHitCount = 0;
+  let cacheMissCount = 0;
+  let skippedAfterRateLimitCount = 0;
+  let rateLimitCircuitOpen = false;
   let newestFiling = null;
   // Read in bounded concurrent batches rather than one filing at a time. Sequentially this was
   // up to sixty throttled round trips on the critical path of every company run, which is what
@@ -269,16 +288,32 @@ export async function fetchInsiderOwnership(cik, { asOf = null, signal, companyF
   for (let offset = 0; offset < candidates.length && byOwner.size < MAX_DISTINCT_OWNERS; offset += OWNERSHIP_BATCH) {
     const batch = candidates.slice(offset, offset + OWNERSHIP_BATCH);
     const documents = await Promise.all(batch.map((filing) => (
-      fetchFilingDocument(index.cik, filing.accession, filing.primary_document, { signal })
+      fetchFilingDocument(index.cik, filing.accession, filing.primary_document, {
+        signal,
+        cache: documentCache,
+      })
         .then((document) => ({ filing, document }))
-        .catch(() => ({ filing, failure_kind: "fetch_failed" }))
+        .catch((error) => {
+          const message = String(error?.message || error);
+          const failureKind = /HTTP (?:429|503)\b/u.test(message) ? "rate_limited"
+            : /HTTP 404\b/u.test(message) ? "not_found"
+              : /abort|timeout/iu.test(message) ? "fetch_timeout"
+                : "fetch_failed";
+          return { filing, failure_kind: failureKind, error: message.slice(0, 500) };
+        })
     )));
     for (const entry of documents) {
       attemptedDocumentCount += 1;
       if (entry.failure_kind) {
-        unresolvedDocuments.push({ accession: entry.filing.accession, failure_kind: entry.failure_kind });
+        unresolvedDocuments.push({
+          accession: entry.filing.accession,
+          failure_kind: entry.failure_kind,
+          error: entry.error,
+        });
         continue;
       }
+      if (entry.document.cache_status === "hit") cacheHitCount += 1;
+      if (entry.document.cache_status === "miss") cacheMissCount += 1;
       const parsed = parseOwnershipDocument(entry.document.text);
       if (!parsed) {
         unresolvedDocuments.push({ accession: entry.filing.accession, failure_kind: "parse_failed" });
@@ -297,15 +332,54 @@ export async function fetchInsiderOwnership(cik, { asOf = null, signal, companyF
       }));
       if (!newestFiling || entry.filing.filing_date > newestFiling) newestFiling = entry.filing.filing_date;
     }
+    const rateLimitedInBatch = documents.filter((entry) => entry.failure_kind === "rate_limited").length;
+    if (rateLimitedInBatch >= Math.max(2, Math.ceil(batch.length / 2))) {
+      // A sustained 429/503 is a host-level block, not eight independent missing filings.
+      // Continuing through the remaining history only extends a doomed grounding call and can
+      // prolong the SEC block. Stop, preserve exactly what was attempted, and let the report
+      // distinguish rate limiting from absent disclosure.
+      rateLimitCircuitOpen = true;
+      skippedAfterRateLimitCount = candidates.length - attemptedDocumentCount;
+      break;
+    }
   }
-  if (unresolvedDocuments.length) {
-    return gap(`insider ownership: ${unresolvedDocuments.length} Section 16 candidate document(s) could not be resolved, so the numerator is incomplete`, {
+  const shares = [...byOwner.values()].reduce((total, owner) => total + owner.shares_owned, 0);
+  const lowerBound = Number.isFinite(shares) && shares >= 0 ? shares / sharesOutstanding : null;
+  const candidateWindowTruncated = ownershipFilings.length > candidates.length;
+  if (unresolvedDocuments.length || candidateWindowTruncated || skippedAfterRateLimitCount) {
+    const reasons = [
+      ...(unresolvedDocuments.length
+        ? [`${unresolvedDocuments.length} Section 16 candidate document(s) could not be resolved`]
+        : []),
+      ...(candidateWindowTruncated
+        ? [`the bounded candidate window omitted ${ownershipFilings.length - candidates.length} older filing(s)`]
+        : []),
+      ...(skippedAfterRateLimitCount
+        ? [`the SEC rate-limit circuit skipped ${skippedAfterRateLimitCount} unattempted candidate document(s)`]
+        : []),
+    ];
+    return gap(`insider ownership: ${reasons.join(" and ")}, so the canonical numerator is incomplete`, {
       denominator,
+      insider_shares_lower_bound: Number.isFinite(shares) ? shares : null,
+      ownership_ratio_lower_bound: Number.isFinite(lowerBound) && lowerBound >= 0 && lowerBound <= 1
+        ? lowerBound
+        : null,
+      owner_count_lower_bound: byOwner.size,
+      numerator_sources: Object.freeze(numeratorSources),
+      numerator_source_ids: Object.freeze(numeratorSources.map((source) => source.source_id)),
+      measurement: "partial_section16_lower_bound_not_canonical",
       coverage: Object.freeze({
+        ownership_filing_count: ownershipFilings.length,
         candidate_count: candidates.length,
         attempted_document_count: attemptedDocumentCount,
         resolved_owner_count: byOwner.size,
+        cache_hit_count: cacheHitCount,
+        cache_miss_count: cacheMissCount,
+        unresolved_document_count: unresolvedDocuments.length,
         unresolved_documents: Object.freeze(unresolvedDocuments),
+        rate_limit_circuit_open: rateLimitCircuitOpen,
+        skipped_after_rate_limit_count: skippedAfterRateLimitCount,
+        candidate_window_truncated: candidateWindowTruncated,
       }),
     });
   }
@@ -313,11 +387,10 @@ export async function fetchInsiderOwnership(cik, { asOf = null, signal, companyF
     return gap(`insider ownership: no Section 16 document for ${index.name || cik} could be parsed`);
   }
 
-  const shares = [...byOwner.values()].reduce((total, owner) => total + owner.shares_owned, 0);
   const value = shares / sharesOutstanding;
   // A ratio above one is not a concentrated register, it is a share count from a different
   // basis than the holdings — a stale count, or an ADR ratio. Refusing beats reporting 340%.
-  if (!Number.isFinite(value) || value <= 0 || value > 1) {
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
     return gap("insider ownership: summed insider holdings do not reconcile against the supplied share count", {
       insider_shares: shares,
       shares_outstanding: sharesOutstanding,
@@ -360,8 +433,12 @@ export async function fetchInsiderOwnership(cik, { asOf = null, signal, companyF
       candidate_count: candidates.length,
       attempted_document_count: attemptedDocumentCount,
       resolved_owner_count: byOwner.size,
+      cache_hit_count: cacheHitCount,
+      cache_miss_count: cacheMissCount,
       unresolved_document_count: 0,
-      candidate_window_truncated: ownershipFilings.length > candidates.length,
+      rate_limit_circuit_open: false,
+      skipped_after_rate_limit_count: 0,
+      candidate_window_truncated: false,
     }),
     denominator,
     method: "sum of every distinct non-derivative holding bucket in the newest Section 16 document per reporting owner, divided by SEC CompanyFacts point-in-time common shares outstanding",

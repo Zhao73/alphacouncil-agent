@@ -1,4 +1,7 @@
-import { LIMITS } from "./constants.mjs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { DATA_DIR, LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { linkedAbort } from "./abort.mjs";
 
@@ -23,12 +26,59 @@ const UA = process.env.ALPHACOUNCIL_SEC_USER_AGENT
   || "AlphaCouncil-Agent/0.4 (alphacouncil@runbox.com)";
 
 const MIN_INTERVAL_MS = 120; // stay under SEC's ~10 req/s guidance
-let lastCall = 0;
+let nextAllowedCallAt = 0;
+let throttleQueue = Promise.resolve();
 
+/**
+ * Serialize the limiter itself, not only each caller's delay.
+ *
+ * Promise.all previously let a whole ownership batch observe the same `lastCall`, sleep for
+ * the same interval, then hit EDGAR together. That made an eight-document batch a burst even
+ * though every individual request called `throttle()`. Chaining turns makes the 120 ms spacing
+ * process-wide and removes the main source of the real Section 16 losses.
+ */
 async function throttle() {
-  const wait = lastCall + MIN_INTERVAL_MS - Date.now();
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastCall = Date.now();
+  const turn = throttleQueue.then(async () => {
+    const wait = nextAllowedCallAt - Date.now();
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    nextAllowedCallAt = Date.now() + MIN_INTERVAL_MS;
+  });
+  throttleQueue = turn.catch(() => {});
+  return turn;
+}
+
+function filingCachePath(url, cacheDir = join(DATA_DIR, "cache", "sec-filings")) {
+  const digest = createHash("sha256").update(url).digest("hex");
+  return join(cacheDir, digest.slice(0, 2), `${digest}.txt`);
+}
+
+let cacheWriteSequence = 0;
+
+function cachedFiling(url, cacheDir) {
+  const path = filingCachePath(url, cacheDir);
+  if (!existsSync(path)) return null;
+  try {
+    const text = readFileSync(path, "utf8");
+    return text ? { url, text, cache_status: "hit", cache_path: path } : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistFiling(url, text, cacheDir) {
+  if (typeof text !== "string" || !text) return null;
+  const path = filingCachePath(url, cacheDir);
+  mkdirSync(dirname(path), { recursive: true });
+  const temporary = `${path}.${process.pid}.${cacheWriteSequence += 1}.tmp`;
+  writeFileSync(temporary, text, { encoding: "utf8", mode: 0o600 });
+  try {
+    renameSync(temporary, path);
+  } catch (error) {
+    // A concurrent request may have materialized the same immutable filing first. Keep the
+    // successful cache entry; only surface errors when no usable final file exists.
+    if (!existsSync(path)) throw error;
+  }
+  return path;
 }
 
 /**
@@ -166,10 +216,18 @@ export async function fetchFilingIndex(cik, { signal } = {}) {
  * lose. `www.sec.gov/Archives` is also throttled harder than `data.sec.gov`, which makes this
  * the path most likely to be limited and was the least protected against it.
  */
-export async function fetchFilingDocument(cik, accession, document, { signal } = {}) {
+export async function fetchFilingDocument(cik, accession, document, {
+  signal,
+  cache = true,
+  cacheDir = join(DATA_DIR, "cache", "sec-filings"),
+} = {}) {
   const stripped = String(cik).replace(/\D/gu, "").replace(/^0+/u, "");
   const folder = String(accession).replace(/-/gu, "");
   const url = `https://www.sec.gov/Archives/edgar/data/${stripped}/${folder}/${document}`;
+  if (cache) {
+    const hit = cachedFiling(url, cacheDir);
+    if (hit) return hit;
+  }
   const outcome = await withRateLimitRetry(async () => {
     await throttle();
     const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, signal);
@@ -179,7 +237,17 @@ export async function fetchFilingDocument(cik, accession, document, { signal } =
         return { rateLimited: true, error: new Error(`HTTP ${res.status} for ${url}`) };
       }
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-      return { rateLimited: false, value: { url, text: await res.text() } };
+      const text = await res.text();
+      const cachePath = cache ? persistFiling(url, text, cacheDir) : null;
+      return {
+        rateLimited: false,
+        value: {
+          url,
+          text,
+          cache_status: cache ? "miss" : "disabled",
+          ...(cachePath ? { cache_path: cachePath } : {}),
+        },
+      };
     } finally {
       abort.cleanup();
     }

@@ -434,6 +434,89 @@ function optionsFacts(grounding, context) {
   }
 }
 
+function marketHistoryFacts(grounding, context) {
+  const history = grounding?.market_history;
+  const subject = history?.subject;
+  const source = (history?.source_records || []).find((record) => record?.id?.startsWith(`market_history:${history.symbol}:`));
+  if (!history?.available || !subject || !source) return;
+  const publicAt = timestampAtOrBefore(source.observed_at, context.cutoff)
+    || timestampAtOrBefore(source.retrieved_at, context.cutoff)
+    || timestampAtOrBefore(grounding.gathered_at, context.cutoff);
+  if (!publicAt) {
+    context.diagnostics.push({
+      code: "missing_public_at",
+      source: "market_history",
+      skipped_fact_ids: ["options.realized_volatility", "market.volume_ratio_20d", "market.relative_return_63d_broad"],
+    });
+    return;
+  }
+  const sources = [sourceId("market_history", history.symbol, subject.latest_date, publicAt)];
+  if (!registerSource(context, {
+    source_id: sources[0],
+    source_kind: "market_history_snapshot",
+    title: source.title,
+    url: source.url,
+    public_at: publicAt,
+    retrieved_at: source.retrieved_at || publicAt,
+    locator: {
+      symbol: history.symbol,
+      first_session: subject.first_date,
+      latest_session: subject.latest_date,
+      session_count: subject.session_count,
+    },
+  })) return;
+  const addRatio = (factId, value, denominator, derivationInput) => {
+    if (!finite(value)) return;
+    addUnique(context.facts, context.diagnostics, baseFact({
+      factId,
+      valueKind: "ratio",
+      value,
+      unit: "decimal",
+      ratioDenominator: denominator,
+      asOf: context.asOf,
+      publicAt,
+      sources,
+      confidence: 0.8,
+      derivation: "rederived",
+      derivationToolId: `${ADAPTER_ID}:market_history`,
+      derivationInput,
+    }));
+  };
+  const vol20 = subject.realized_volatility?.["20d_annualized"];
+  const vol63 = subject.realized_volatility?.["63d_annualized"];
+  addRatio("options.realized_volatility", vol20, "20_session_log_return_standard_deviation_annualized", {
+    sessions: 20, annualization: 252, source_field: "market_history.subject.realized_volatility.20d_annualized",
+  });
+  addRatio("market.realized_volatility_20d", vol20, "20_session_log_return_standard_deviation_annualized", {
+    sessions: 20, annualization: 252,
+  });
+  addRatio("market.realized_volatility_63d", vol63, "63_session_log_return_standard_deviation_annualized", {
+    sessions: 63, annualization: 252,
+  });
+  for (const sessions of [5, 21, 63, 126, 252]) {
+    addRatio(`market.return_${sessions}d`, subject.returns?.[`${sessions}d`], `${sessions}_session_total_return`, {
+      sessions, adjusted_close: true,
+    });
+  }
+  for (const sessions of [20, 63]) {
+    addRatio(`market.volume_ratio_${sessions}d`, subject.volume?.ratios?.[`latest_to_${sessions}d`], `latest_volume_over_${sessions}_session_average`, {
+      sessions,
+    });
+  }
+  const broad = history.benchmark_plan?.broad;
+  const sector = history.benchmark_plan?.sector;
+  for (const sessions of [21, 63, 252]) {
+    addRatio(`market.relative_return_${sessions}d_broad`, history.relative_performance?.[broad]?.windows?.[`${sessions}d`]?.excess_return, `subject_return_minus_${broad || "broad"}_return`, {
+      sessions, benchmark: broad,
+    });
+    if (sector) {
+      addRatio(`market.relative_return_${sessions}d_sector`, history.relative_performance?.[sector]?.windows?.[`${sessions}d`]?.excess_return, `subject_return_minus_${sector}_return`, {
+        sessions, benchmark: sector, benchmark_basis: history.benchmark_plan?.sector_basis,
+      });
+    }
+  }
+}
+
 /**
  * FRED observations carry their own publication date, so unlike the market snapshot they can
  * be converted without stamping the run time onto them. That is the whole reason the macro
@@ -927,6 +1010,7 @@ export function adaptGroundingToTypedFacts(grounding, { asOf, knowledgeAsOf = as
   };
   quoteFacts(grounding, context);
   optionsFacts(grounding, context);
+  marketHistoryFacts(grounding, context);
   screenFacts(grounding, context);
   macroSeriesFacts(grounding, context);
   fundamentalFacts(grounding, context);

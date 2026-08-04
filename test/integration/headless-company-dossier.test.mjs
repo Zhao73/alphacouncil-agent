@@ -131,6 +131,10 @@ if (task) {
   const stance = frozen?.stance
     || /required acknowledged stance:\\s*(constructive|cautious|opposed|out_of_scope)/u.exec(prompt)?.[1]
     || "out_of_scope";
+  const ackLine = prompt.split("\\n").find((line) => line.startsWith("Per-packet acknowledgement template: "));
+  const ackTemplate = ackLine
+    ? JSON.parse(ackLine.slice("Per-packet acknowledgement template: ".length))
+    : [];
   packet = {
     master,
     acknowledged_stance: stance,
@@ -155,6 +159,9 @@ if (task) {
     source_ids: ["market_data:S1"],
     confidence: "medium",
     company_dossier_hash_ack: dossierHash,
+    evidence_packet_acks: ackTemplate.map((ack) => ack.task === "market_data"
+      ? { ...ack, status: "used", source_ids: ["market_data:S1"], note: "I used this packet's cited market evidence." }
+      : { ...ack, status: "reviewed_not_relevant", source_ids: [], note: "I reviewed this packet and my frozen method did not use it." }),
   };
 } else if (role === "portfolio_manager") {
   packet = {
@@ -172,9 +179,9 @@ if (task) {
     source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
     confidence: "medium",
     price_levels: [
-      { label: "Avoid", range: "above the supported range", meaning: "poor risk reward", action: "do not initiate", basis: "conditional valuation", source_ids: ["market_data:S1"] },
-      { label: "Watch", range: "inside the supported range", meaning: "balanced evidence", action: "keep exposure small", basis: "conditional valuation", source_ids: ["market_data:S1"] },
-      { label: "Reassess", range: "below the supported range", meaning: "potential margin of safety", action: "recheck the thesis first", basis: "operating evidence", source_ids: ["earnings_deep_dive:S1"] },
+      { label: "Avoid", range: "above the supported range", lower_bound: 200, upper_bound: null, currency: "USD", meaning: "poor risk reward", action: "do not initiate", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+      { label: "Watch", range: "inside the supported range", lower_bound: 100, upper_bound: 200, currency: "USD", meaning: "balanced evidence", action: "keep exposure small", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+      { label: "Reassess", range: "below the supported range", lower_bound: null, upper_bound: 100, currency: "USD", meaning: "potential margin of safety", action: "recheck the thesis first", basis: "operating evidence", source_ids: ["earnings_deep_dive:S1"] },
     ],
     horizon_views: {
       short_term: "Wait for a dated catalyst and keep sizing bounded.",

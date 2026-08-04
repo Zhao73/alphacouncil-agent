@@ -39,7 +39,7 @@ test("a rate-limited filing document is retried rather than lost", async () => {
     { status: 200, body: "<html>Form 4 transaction table</html>" },
   ]);
   try {
-    const result = await fetchFilingDocument(CIK, ACCESSION, DOCUMENT);
+    const result = await fetchFilingDocument(CIK, ACCESSION, DOCUMENT, { cache: false });
     assert.match(result.text, /transaction table/);
     assert.equal(stub.calls.length, 3, "the first two 429s must be retried");
     assert.equal(
@@ -60,7 +60,7 @@ test("a rate-limited filing document is retried rather than lost", async () => {
 test("a service-unavailable filing document is retried on the same terms", async () => {
   const stub = stubFetch([{ status: 503 }, { status: 200, body: "8-K item 4.02 text" }]);
   try {
-    const result = await fetchFilingDocument(CIK, ACCESSION, DOCUMENT);
+    const result = await fetchFilingDocument(CIK, ACCESSION, DOCUMENT, { cache: false });
     assert.match(result.text, /4\.02/);
     assert.equal(stub.calls.length, 2);
   } finally {
@@ -75,7 +75,7 @@ test("a persistently limited document fails with the status rather than pretendi
   const stub = stubFetch([{ status: 429 }, { status: 429 }, { status: 429 }, { status: 200, body: "never reached" }]);
   try {
     await assert.rejects(
-      () => fetchFilingDocument(CIK, ACCESSION, DOCUMENT),
+      () => fetchFilingDocument(CIK, ACCESSION, DOCUMENT, { cache: false }),
       /HTTP 429/,
     );
     assert.equal(stub.calls.length, 3, "the backoff stays bounded at three attempts");
@@ -87,7 +87,7 @@ test("a persistently limited document fails with the status rather than pretendi
 test("a genuine 404 is not retried, because a missing document will not appear", async () => {
   const stub = stubFetch([{ status: 404 }, { status: 200, body: "never reached" }]);
   try {
-    await assert.rejects(() => fetchFilingDocument(CIK, ACCESSION, DOCUMENT), /HTTP 404/);
+    await assert.rejects(() => fetchFilingDocument(CIK, ACCESSION, DOCUMENT, { cache: false }), /HTTP 404/);
     assert.equal(stub.calls.length, 1);
   } finally {
     stub.restore();

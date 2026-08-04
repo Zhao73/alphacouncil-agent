@@ -16,10 +16,13 @@
           "maxItems": 8,
           "items": {
             "type": "object",
-            "required": ["label", "range", "meaning", "action", "basis", "source_ids"],
+            "required": ["label", "range", "lower_bound", "upper_bound", "currency", "meaning", "action", "basis", "source_ids"],
             "properties": {
               "label": { "type": "string", "pattern": "\\S" },
               "range": { "type": "string", "pattern": "\\S" },
+              "lower_bound": { "type": ["number", "null"], "minimum": 0 },
+              "upper_bound": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+              "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
               "meaning": { "type": "string", "pattern": "\\S" },
               "action": { "type": "string", "pattern": "\\S" },
               "basis": { "type": "string", "pattern": "\\S" },

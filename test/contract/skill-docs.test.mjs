@@ -50,7 +50,8 @@ test("every data tool the server exposes is named in the runtime skill", async (
 // gap from training data, which is the failure this whole project is built against.
 test("the runtime skill carries the limits the tool payloads carry", () => {
   const skill = readFileSync(repoFile("skills/alphacouncil-agent/SKILL.md"), "utf8");
-  assert.match(skill, /IV percentile is not computable/i);
+  assert.match(skill, /IV percentile needs local history/i);
+  assert.match(skill, /at least 60 daily observations/i);
   assert.match(skill, /no free discovery channel/i);
   assert.match(skill, /skipped screen rule is a gap/i);
 });
@@ -67,7 +68,7 @@ test("the master bench and verifiers are host-neutral, not Claude Code only", ()
   assert.ok(visible.length > 500, "the visible workflow section must exist");
   assert.match(visible, /record_master_opinion/,
     "the workflow every host follows must run the master bench");
-  assert.match(visible, /record_verifier_verdict/,
+  assert.match(visible, /record_verifier_batch/,
     "the workflow every host follows must run the verifiers");
   assert.match(visible, /out_of_scope/, "out_of_scope must be described as a conclusion, not an abstention");
   assert.match(visible, /incomplete/, "the bench gate must be stated where the workflow is");
@@ -81,14 +82,16 @@ test("the headless skill never holds a full council inside one MCP response", ()
   assert.match(headless, /complete.*incomplete.*needs_verification.*failed/is);
   assert.match(headless, /verification_scope/,
     "headless users must be told which verification gate actually ran");
-  assert.match(headless, /does not run.*verifier|verifier.*not run/is,
-    "headless execution must not be described as the visible three-verifier fan-out");
+  assert.match(headless, /slow \+ all methods \+ all analysts/i,
+    "headless must state the exact triple-verifier trigger");
+  assert.match(headless, /verifier_zero/,
+    "headless users must be able to distinguish zero verifier output from completion");
 });
 
 // A council runs from 7 to 44 seats, and the bench is where that varies. One question, so
 // the user configures the run without being interviewed; and it names each host, because
 // leaving that implicit is how the bench ended up never running on Codex and OpenCode.
-test("every host asks which masters to run, once, before starting", () => {
+test("every host asks for methods and the independent analyst scope once before starting", () => {
   const skill = readFileSync(repoFile("skills/alphacouncil-agent/SKILL.md"), "utf8");
   const stage0 = skill.slice(skill.indexOf("## Stage 0"), skill.indexOf("## Visible-First Workflow"));
   assert.ok(stage0.length > 400, "Stage 0 must exist ahead of the workflow");
@@ -98,8 +101,10 @@ test("every host asks which masters to run, once, before starting", () => {
   }
   assert.match(stage0, /Skip the question entirely/,
     "re-asking a user who already answered is an interruption");
-  assert.match(stage0, /Do not ask about analysts|not ask about them/i,
-    "the analysts have a default; asking about them every time is a question with an obvious answer");
+  assert.match(stage0, /core = 8.*all = 11/is,
+    "the two explicit analyst choices must be shown with their exact seat counts");
+  assert.match(stage0, /Never collapse.*all methods.*all analysts/is,
+    "method all and analyst all must remain independent choices");
 });
 
 // CLAUDE.md is an instruction file, not a description of one. It listed three roles that

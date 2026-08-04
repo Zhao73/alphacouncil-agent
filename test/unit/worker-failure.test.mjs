@@ -233,9 +233,9 @@ test("headless PM requires report_markdown while bull/bear do not", () => {
 test("full headless structured PM accepts a compact decision while the visible/default PM contract still requires a report", () => {
   const withoutReport = validDebatePacket({
     price_levels: [
-      { label: "high", range: "above range", meaning: "poor odds", action: "avoid", basis: "valuation", source_ids: ["market_data:S1"] },
-      { label: "start", range: "inside range", meaning: "bounded odds", action: "small", basis: "valuation", source_ids: ["market_data:S1"] },
-      { label: "low", range: "below range", meaning: "margin", action: "conditional add", basis: "valuation", source_ids: ["market_data:S1"] },
+      { label: "high", range: "above range", lower_bound: 200, upper_bound: null, currency: "USD", meaning: "poor odds", action: "avoid", basis: "valuation", source_ids: ["market_data:S1"] },
+      { label: "start", range: "inside range", lower_bound: 100, upper_bound: 200, currency: "USD", meaning: "bounded odds", action: "small", basis: "valuation", source_ids: ["market_data:S1"] },
+      { label: "low", range: "below range", lower_bound: null, upper_bound: 100, currency: "USD", meaning: "margin", action: "conditional add", basis: "valuation", source_ids: ["market_data:S1"] },
     ],
     horizon_views: { short_term: "wait", medium_term: "verify", long_term: "compound" },
     data_gaps: ["No critical data gaps were found in the completed fixture packets."],

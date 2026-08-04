@@ -24,6 +24,7 @@ const specs = Object.freeze([
   Object.freeze({ exportName: "validateHeadlessPortfolioManagerDecision", file: "runtime-headless-portfolio-manager-decision-v1.schema.json" }),
   Object.freeze({ exportName: "validatePortfolioManagerPacket", file: "runtime-portfolio-manager-packet-v1.schema.json" }),
   Object.freeze({ exportName: "validateMethodVoice", file: "runtime-method-voice-v1.schema.json" }),
+  Object.freeze({ exportName: "validateVerifierBatch", file: "runtime-verifier-batch-v1.schema.json" }),
 ]);
 
 function schemaBytes(spec) {

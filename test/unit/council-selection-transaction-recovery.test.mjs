@@ -52,7 +52,7 @@ function failWrite(number, { afterCommit = false, capture } = {}) {
   };
 }
 
-function v2ReceiptHash(receipt) {
+function receiptHash(receipt) {
   const payload = {
     schema_version: receipt.schema_version,
     selection_receipt: receipt.selection_receipt,
@@ -69,6 +69,8 @@ function v2ReceiptHash(receipt) {
     expires_at: receipt.expires_at,
     selection_hash_version: receipt.selection_hash_version,
     council_pace: receipt.council_pace,
+    analyst_scope: receipt.analyst_scope,
+    selected_analyst_ids: receipt.selected_analyst_ids,
   };
   return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
@@ -88,6 +90,7 @@ function openSelection(api, suffix, now) {
     display_ack: true,
     selected_master_ids: ["master_buffett", "master_taleb"],
     council_pace: "fast",
+    analyst_scope: "core",
   };
   return { opened, confirmation, prompt };
 }
@@ -115,7 +118,7 @@ test("confirmation keeps one stable receipt id even when the first durable write
   const recovered = restarted.confirmCouncilSelection(confirmation, { now: now + 2_000 });
   assert.equal(recovered.selection_receipt, preparedSelection.selection_receipt);
   const receipt = readJson(receiptFile(recovered.selection_receipt));
-  assert.equal(receipt.selection_hash, v2ReceiptHash(receipt));
+  assert.equal(receipt.selection_hash, receiptHash(receipt));
 });
 
 test("confirmation rebuilds the exact bound receipt after its second write fails", async () => {
@@ -139,7 +142,7 @@ test("confirmation rebuilds the exact bound receipt after its second write fails
   const recovered = restarted.confirmCouncilSelection(confirmation, { now: now + 2_000 });
   assert.equal(recovered.selection_receipt, prepared.selection_receipt);
   const receipt = readJson(receiptFile(recovered.selection_receipt));
-  assert.equal(receipt.selection_hash, v2ReceiptHash(receipt));
+  assert.equal(receipt.selection_hash, receiptHash(receipt));
   assert.equal(receipt.selection_hash, prepared.receipt_recovery.selection_hash);
   assert.deepEqual(receipt.selected_master_ids, prepared.selected_master_ids);
   assert.deepEqual(receipt.selected_master_pack_hashes, recovered.selected_master_pack_hashes);
@@ -188,7 +191,7 @@ test("consumption repairs a receipt-first split only for the same bound run", as
   const splitSelection = readJson(selectionFile(opened.selection_id));
   assert.equal(splitReceipt.status, "consumed");
   assert.equal(splitReceipt.consumed_by_run_id, runId);
-  assert.equal(splitReceipt.selection_hash, v2ReceiptHash(splitReceipt));
+  assert.equal(splitReceipt.selection_hash, receiptHash(splitReceipt));
   assert.equal(splitSelection.status, "confirmed");
 
   const restarted = await restartSelectionModule();
@@ -207,7 +210,7 @@ test("consumption repairs a receipt-first split only for the same bound run", as
   assert.equal(repairedSelection.consumed_by_run_id, runId);
   assert.equal(repairedSelection.consumed_at, repairedReceipt.consumed_at);
   assert.deepEqual(repairedReceipt, splitReceipt, "repair must not rewrite the authoritative receipt");
-  assert.equal(repairedReceipt.selection_hash, v2ReceiptHash(repairedReceipt));
+  assert.equal(repairedReceipt.selection_hash, receiptHash(repairedReceipt));
 
   const idempotent = restarted.consumeCouncilSelection(consume, { now: now + 5_000 });
   assert.equal(idempotent.consumed_by_run_id, runId);

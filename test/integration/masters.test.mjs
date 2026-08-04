@@ -24,6 +24,7 @@ let companyDossierHash;
 
 const selectedMasters = ["master_buffett", "master_munger", "master_duan_yongping", "master_li_lu"];
 const companyGrounding = {
+  gathered_at: "2026-08-03T12:00:00Z",
   facts_unavailable: true,
   instrument: {
     symbol: "ACME",
@@ -104,7 +105,7 @@ function evidencePacket(task) {
   return packet;
 }
 
-function methodVoicePacket(master, stance) {
+function methodVoicePacket(master, stance, dossier = null) {
   return {
     master,
     acknowledged_stance: stance,
@@ -129,6 +130,9 @@ function methodVoicePacket(master, stance) {
     source_ids: ["market_data:S1"],
     confidence: "low",
     company_dossier_hash_ack: companyDossierHash,
+    evidence_packet_acks: (dossier?.packet_manifest || []).map((manifest) => manifest.task === "market_data"
+      ? { task: manifest.task, packet_hash: manifest.packet_hash, status: "used", source_ids: ["market_data:S1"], note: "This method used the market packet." }
+      : { task: manifest.task, packet_hash: manifest.packet_hash, status: "reviewed_not_relevant", source_ids: [], note: "This method reviewed the packet but did not use it." }),
   };
 }
 
@@ -145,6 +149,7 @@ before(async () => {
   plan = structured(await server.callTool("plan_visible_run", {
     symbol: "ACME",
     run_id: runId,
+    as_of: "2026-08-03",
     tasks: DEFAULT_TASKS,
     grounding: companyGrounding,
     selection_receipt: selectionReceipt,
@@ -165,6 +170,7 @@ before(async () => {
   productionPlan = structured(await productionServer.callTool("plan_visible_run", {
     symbol: "ACME",
     run_id: productionRunId,
+    as_of: "2026-08-03",
     tasks: DEFAULT_TASKS,
     grounding: companyGrounding,
     selection_receipt: productionSelectionReceipt,
@@ -223,7 +229,7 @@ test("each declined v3 seat completes only after its own first-person voice retu
       run_id: runId,
       master,
       thread_id: threadId,
-      packet: methodVoicePacket(master, frozen.stance),
+      packet: methodVoicePacket(master, frozen.stance, JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8"))),
     }));
     assert.equal(recorded.opinion.stance, "out_of_scope");
     assert.equal(recorded.opinion.voice_status, "completed");

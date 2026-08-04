@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
-import { COUNCIL_MODES, COUNCIL_PACE_NAMES, DEFAULT_COUNCIL_PACE, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION } from "./constants.mjs";
+import { ANALYST_SCOPES, COUNCIL_MODES, COUNCIL_PACE_NAMES, DEFAULT_COUNCIL_PACE, LIMITS, MASTER_STANCES, OUTPUT_MODES, QUICK_TASKS, SERVER_NAME, VERSION } from "./constants.mjs";
 import { RpcCode, methodNotFound, invalidParams, toRpcError } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { localized, resolveLanguage } from "./lang.mjs";
@@ -26,7 +26,7 @@ import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
 import { table, mark, metricValue, groundingDashboard, label, threshold, skippedMark } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
-import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, finalizeVisibleRun, queueHeadlessRun, recordMasterOpinion, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, finalizeVisibleRun, queueHeadlessRun, recordMasterOpinion, recordVerifierBatch, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
@@ -96,6 +96,7 @@ function renderSelectionCatalog(data) {
     intent_hash: data.intent_hash,
     expires_at: data.expires_at,
     council_mode: data.council_mode,
+    analyst_options: data.analyst_options?.map((option) => ({ scope: option.scope, count: option.count })),
   })}`;
   const cards = data.masters.map((master) => [
     `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? ` [${labels.preselected}]` : ""}`,
@@ -106,6 +107,19 @@ function renderSelectionCatalog(data) {
     `${labels.pack}: ${master.pack_format} (${master.admission_level})`,
   ].join("\n   ")).join("\n\n");
   const quick = data.council_mode === "quick";
+  const analystChoice = quick
+    ? copy({
+      en: `Analyst selection: quick is fixed at ${data.analyst_options[0].count} seats (${data.analyst_options[0].analyst_ids.join(", ")}).`,
+      zh: `分析席选择：quick 固定运行 ${data.analyst_options[0].count} 席（${data.analyst_options[0].analyst_ids.join("、")}）。`,
+      ja: `分析席選択：quick は ${data.analyst_options[0].count} 席固定です（${data.analyst_options[0].analyst_ids.join(", ")}）。`,
+      ko: `분석가 선택: quick은 ${data.analyst_options[0].count}개 좌석으로 고정됩니다(${data.analyst_options[0].analyst_ids.join(", ")}).`,
+    })
+    : copy({
+      en: `Analyst selection is separate from method selection: choose core (${data.analyst_options.find((option) => option.scope === "core")?.count}) or all (${data.analyst_options.find((option) => option.scope === "all")?.count}). "All methods" does not imply "all analysts" and vice versa.`,
+      zh: `分析席与方法席必须分开选择：core（${data.analyst_options.find((option) => option.scope === "core")?.count} 席）或 all（${data.analyst_options.find((option) => option.scope === "all")?.count} 席）。“全部方法席”不再等于“全部分析席”，反之亦然。`,
+      ja: `分析席とメソッド席は別々に選択します：core（${data.analyst_options.find((option) => option.scope === "core")?.count}席）または all（${data.analyst_options.find((option) => option.scope === "all")?.count}席）。`,
+      ko: `분석가 좌석과 방법론 좌석은 별도로 선택합니다: core(${data.analyst_options.find((option) => option.scope === "core")?.count}개) 또는 all(${data.analyst_options.find((option) => option.scope === "all")?.count}개).`,
+    });
   const instructions = quick
     ? copy({
       en: `Quick mode: choose 1 to ${data.maximum} masters. Submit numbers, ranges, or stable IDs, for example: 1 / 1,3,8 / 1-4 / master_buffett. Selecting all is not supported.`,
@@ -129,6 +143,8 @@ function renderSelectionCatalog(data) {
     fallbackContext,
     "",
     cards,
+    "",
+    analystChoice,
     "",
     instructions,
     copy({
@@ -386,14 +402,30 @@ function selectedRunArgs(args = {}, entryTool) {
       prompt: typeof args.prompt === "string" ? args.prompt : "",
       council_mode: args.council_mode || "full",
       council_pace: args.council_pace,
+      analyst_scope: args.analyst_scope,
       total_timeout_ms: args.total_timeout_ms,
     });
+    const outsideFrozenAnalystScope = Array.isArray(args.tasks)
+      ? args.tasks.filter((task) => !selection.selected_analyst_ids.includes(task))
+      : [];
+    if (outsideFrozenAnalystScope.length) {
+      throw invalidParams("tasks cannot add analysts outside the scope frozen in the selection receipt.", {
+        reason: "ANALYST_SELECTION_OVERRIDE_FORBIDDEN",
+        confirmed_analyst_scope: selection.analyst_scope,
+        confirmed_analyst_ids: selection.selected_analyst_ids,
+        submitted_tasks: args.tasks,
+        outside_frozen_scope: outsideFrozenAnalystScope,
+      });
+    }
     return {
       ...args,
       run_id: id,
       entry_tool: entryTool,
       masters: selection.selected_master_ids,
       master_selection: selection,
+      analyst_scope: selection.analyst_scope,
+      selected_analyst_ids: [...selection.selected_analyst_ids],
+      tasks: [...selection.selected_analyst_ids],
       // The gate's decision wins when the caller omitted it.
       council_pace: args.council_pace ?? selection.council_pace ?? undefined,
       existing_run: existing,
@@ -531,7 +563,7 @@ export function tools() {
       type: "string",
       enum: COUNCIL_MODES,
       default: "full",
-      description: "full runs the eight-role evidence fan-out and three-round cross-exam. quick runs the fixed news-inclusive four-role preset, up to four masters, one parallel bull/bear round, a short PM, and a hard global budget.",
+      description: "full runs the analyst scope frozen in the receipt (core=8, all=11) and a three-round cross-exam. quick runs the fixed news-inclusive four-role preset, up to four methods, one parallel bull/bear round, a short PM, and a hard global budget.",
     },
     tasks: { type: "array", items: { type: "string", enum: analystIds } },
     dry_run: { type: "boolean", default: false, description: "Default false. Set true only for planning/self-tests without launching Codex subagents." },
@@ -555,7 +587,7 @@ export function tools() {
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
   return [
-    tool("begin_council_selection", "MANDATORY first step for every council run. Creates a short-lived selection session and returns every enabled master with a stable number, identity, method, best-for description and maturity. It does not create a research run, fetch data or launch workers. Show this catalog to the user even when their request already names masters; named masters may be preselected but must still be submitted for this run.", {
+    tool("begin_council_selection", "MANDATORY first step for every council run. Creates a short-lived selection session and returns two separate choices: method seats and analyst breadth (core=8 or all=11). It does not create a research run, fetch data or launch workers. Show both choices even when the request already names one of them.", {
       type: "object",
       properties: {
         symbol: common.symbol,
@@ -575,10 +607,15 @@ export function tools() {
           enum: COUNCIL_PACE_NAMES,
           description: "Prefill only, when the request already named a speed such as fast or slow. It highlights that tier in the returned pace_options and never confirms one. Full only.",
         },
+        analyst_scope: {
+          type: "string",
+          enum: ANALYST_SCOPES,
+          description: "Prefill only. core means the eight mandatory evidence seats; all means all eleven analyst seats. The user still submits the scope at confirmation.",
+        },
       },
       required: ["symbol"],
     }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
-    tool("confirm_master_selection", "Confirm the user's one-run master choice after the catalog was displayed. Choose exactly one input form: a non-empty array of stable IDs, select_all=true, or a text selection such as '1,4-6', 'master_buffett', or 'all'. Returns a one-time selection_receipt required by every council execution tool.", {
+    tool("confirm_master_selection", "Confirm both independent one-run choices after the catalog was displayed: (1) method seats via IDs/select_all/text and (2) analyst_scope=core|all. Full runs reject an omitted analyst scope. Returns a one-time receipt binding both choices and the pace.", {
       type: "object",
       properties: {
         selection_id: { type: "string" },
@@ -591,6 +628,11 @@ export function tools() {
           type: "string",
           enum: COUNCIL_PACE_NAMES,
           description: "The depth tier the user picked from the pace_options this selection returned. Full only; omit to accept the default (normal, ~20 min expected, 30 min ceiling). Binds into the receipt, so an execution call may repeat it but never change it.",
+        },
+        analyst_scope: {
+          type: "string",
+          enum: ANALYST_SCOPES,
+          description: "Required for full: core runs 8 analyst seats; all runs all 11. Separate from select_all, which selects method seats only. Omit for quick.",
         },
       },
       required: ["selection_id", "catalog_hash", "display_ack"],
@@ -634,7 +676,7 @@ export function tools() {
         run_id: { type: "string" },
         reason: {
           type: "string",
-          enum: ["host_cancelled", "host_timeout", "evidence_worker_failed", "method_worker_failed", "debate_worker_failed", "host_unavailable"],
+          enum: ["host_cancelled", "host_timeout", "evidence_worker_failed", "verifier_worker_failed", "method_worker_failed", "debate_worker_failed", "host_unavailable"],
         },
         failed_tasks: { type: "array", items: { type: "string", enum: analystIds }, uniqueItems: true },
         failed_masters: { type: "array", items: { type: "string", enum: masterIds }, uniqueItems: true },
@@ -830,6 +872,17 @@ export function tools() {
       },
       required: ["run_id", "verifier", "seat", "verdict"],
     }),
+    tool("record_verifier_batch", "Mandatory visible-run recorder for slow + all methods + all analysts. Record one complete batch from source_fidelity, rederivation, or refuter after all analyst packets and before any method seat. Every frozen material claim must appear exactly once; partial batches fail closed.", {
+      type: "object",
+      properties: {
+        run_id: { type: "string" },
+        verifier: { type: "string", enum: ["source_fidelity", "rederivation", "refuter"] },
+        packet: { type: "object" },
+        thread_id: { type: "string" },
+        thread_title: { type: "string" },
+      },
+      required: ["run_id", "verifier", "packet"],
+    }),
     tool("industry_brief", "Start from an industry rather than a ticker. Returns the participant list by position in the value chain -- INCLUDING the non-US names a SEC-only pipeline would silently drop, such as Korean and Japanese makers -- plus who actually drives demand, the questions a run must answer, how the industry behaves through a cycle, and which participants this pipeline can screen mechanically versus which need their own regulator's feed. Returns a frame, never a verdict.", {
       type: "object",
       properties: {
@@ -942,12 +995,14 @@ export async function handleToolCall(id, params) {
       catalog_hash: data.catalog_hash,
       intent_hash: data.intent_hash,
       council_mode: data.council_mode,
+      analyst_scope: data.analyst_scope,
+      selected_analyst_count: data.selected_analyst_count,
     })}`;
     const confirmation = localized(data.language, {
-      en: `Confirmed ${data.selected_count} master seat(s) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
-      zh: `已为 ${data.symbol} 确认 ${data.selected_count} 个大师席位。请使用一次性 selection_receipt 启动本轮运行。`,
-      ja: `${data.symbol} について ${data.selected_count} 席のマスターを確定しました。今回の実行を開始するには1回限りの selection_receipt を使用してください。`,
-      ko: `${data.symbol}에 대해 마스터 ${data.selected_count}개 좌석을 확정했습니다. 이번 실행을 시작하려면 일회용 selection_receipt를 사용하십시오.`,
+      en: `Confirmed ${data.selected_count} method seat(s) and ${data.selected_analyst_count} analyst seat(s) (${data.analyst_scope}) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
+      zh: `已为 ${data.symbol} 分别确认 ${data.selected_count} 个方法席与 ${data.selected_analyst_count} 个分析席（${data.analyst_scope}）。请使用一次性 selection_receipt 启动本轮运行。`,
+      ja: `${data.symbol} についてメソッド${data.selected_count}席と分析担当${data.selected_analyst_count}席（${data.analyst_scope}）を別々に確定しました。1回限りの selection_receipt を使用してください。`,
+      ko: `${data.symbol}에 대해 방법론 ${data.selected_count}개 좌석과 분석가 ${data.selected_analyst_count}개 좌석(${data.analyst_scope})을 별도로 확정했습니다. 일회용 selection_receipt를 사용하십시오.`,
     });
     sendResult(id, jsonContent(`${fallbackContext}\n${confirmation}`, data));
     return;
@@ -1066,6 +1121,20 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(
       `Recorded ${args.verifier} -> ${args.verdict} for ${args.seat}. Effective weight now ${seat ? seat.effective_weight : "n/a"}.`,
       result,
+    ));
+    return;
+  }
+  if (name === "record_verifier_batch") {
+    const result = recordVerifierBatch(args);
+    sendResult(id, jsonContent(
+      `Recorded ${args.verifier} batch for ${result.run.symbol}: ${result.recorded}/${result.expected} material claims; gate ${result.audit.status}.`,
+      recordAck(result.run, {
+        verifier: args.verifier,
+        recorded: result.recorded,
+        expected: result.expected,
+        verifier_audit: result.audit,
+        idempotent_replay: result.idempotent_replay === true,
+      }),
     ));
     return;
   }
@@ -1228,7 +1297,10 @@ export async function handleToolCall(id, params) {
     sendResult(id, jsonContent(
       `${data.symbol} options: ${data.contracts_with_iv}/${data.contracts_total} contracts with usable IV, `
       + `reference ATM IV ${ref ? (ref.atm_iv * 100).toFixed(1) + "% at " + ref.dte + "d (" + ref.expiry + ")" : "unavailable"}, `
-      + `put/call OI ${data.open_interest.put_call_ratio ?? "n/a"}. Delayed. IV percentile is not computable from this snapshot.`,
+      + `put/call OI ${data.open_interest.put_call_ratio ?? "n/a"}. Delayed. `
+      + (data.iv_history?.status === "available"
+        ? `Local ${data.iv_history.observation_count}-session ATM-IV percentile ${data.iv_history.percentile}.`
+        : `IV-percentile history building (${data.iv_history?.observation_count || 0}/${data.iv_history?.minimum_observations || 60}); no percentile yet.`),
       data,
     ));
     return;

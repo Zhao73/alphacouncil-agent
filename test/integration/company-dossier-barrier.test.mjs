@@ -100,7 +100,7 @@ function frozenStance(planned) {
   return seat.stance;
 }
 
-function methodVoicePacket(stance, companyDossierHash) {
+function methodVoicePacket(stance, companyDossierHash, dossier = null) {
   const positionIntent = {
     constructive: "would_buy",
     cautious: "would_hold",
@@ -127,6 +127,9 @@ function methodVoicePacket(stance, companyDossierHash) {
     source_ids: ["market_data:S1"],
     confidence: "medium",
     company_dossier_hash_ack: companyDossierHash,
+    evidence_packet_acks: (dossier?.packet_manifest || []).map((manifest) => manifest.task === "market_data"
+      ? { task: manifest.task, packet_hash: manifest.packet_hash, status: "used", source_ids: ["market_data:S1"], note: "This method used the market packet." }
+      : { task: manifest.task, packet_hash: manifest.packet_hash, status: "reviewed_not_relevant", source_ids: [], note: "This method reviewed the packet but did not use it." }),
   };
 }
 
@@ -239,7 +242,7 @@ test("operating-company dossier materializes only after the eight-packet barrier
     run_id: runId,
     master: SELECTED_MASTER,
     thread_id: "thread-master-wrong-ack",
-    packet: methodVoicePacket(stance, wrongHash),
+    packet: methodVoicePacket(stance, wrongHash, dossier),
   });
   assert.equal(wrongAck.error?.data?.reason, "COMPANY_DOSSIER_HASH_ACK_MISMATCH");
   assert.equal(wrongAck.error?.data?.expected_company_dossier_hash, dossier.content_hash);
@@ -254,7 +257,7 @@ test("operating-company dossier materializes only after the eight-packet barrier
     run_id: runId,
     master: SELECTED_MASTER,
     thread_id: "thread-master-tampered-dossier",
-    packet: methodVoicePacket(stance, dossier.content_hash),
+    packet: methodVoicePacket(stance, dossier.content_hash, dossier),
   });
   assert.equal(tamperedAck.error?.data?.reason, "COMPANY_DOSSIER_ARTIFACT_INTEGRITY_FAILURE");
   assert.equal(readFileSync(evidencePath, "utf8"), beforeWrongAck, "tampered dossier rejection must not mutate run state");
@@ -268,7 +271,7 @@ test("operating-company dossier materializes only after the eight-packet barrier
     run_id: runId,
     master: SELECTED_MASTER,
     thread_id: "thread-master-mismatched-run-evidence",
-    packet: methodVoicePacket(stance, dossier.content_hash),
+    packet: methodVoicePacket(stance, dossier.content_hash, dossier),
   });
   assert.equal(mismatchedRunAck.error?.data?.reason, "COMPANY_DOSSIER_ARTIFACT_INTEGRITY_FAILURE");
   assert.match(mismatchedRunAck.error?.data?.diagnostic || "", /input binding/u);
@@ -278,7 +281,7 @@ test("operating-company dossier materializes only after the eight-packet barrier
     run_id: runId,
     master: SELECTED_MASTER,
     thread_id: "thread-master-correct-ack",
-    packet: methodVoicePacket(stance, dossier.content_hash),
+    packet: methodVoicePacket(stance, dossier.content_hash, dossier),
   }));
   assert.equal(accepted.opinion.voice_status, "completed");
   assert.equal(accepted.opinion.company_dossier_hash, dossier.content_hash);

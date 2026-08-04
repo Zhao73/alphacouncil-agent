@@ -24,7 +24,12 @@ import { packetSummary } from "./markdown.mjs";
 import { parseJsonTransport, parseJsonTransportCandidates } from "./bounded-json.mjs";
 import { assertRuntimeWorkerPayload } from "./runtime-validation.mjs";
 import { canonicalJson } from "./personas-v3/canonical.mjs";
-import { assertCompanyDossierAck, normalizeCompanyCoverageItems, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
+import {
+  assertCompanyDossierAck,
+  assertCompanyDossierPacketAcks,
+  normalizeCompanyCoverageItems,
+  requiresOperatingCompanyDossier,
+} from "./company-dossier.mjs";
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -694,6 +699,71 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
   };
 }
 
+export function assertPriceLevelContinuity(rows, { required = false } = {}) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    if (required) throw invalidParams("portfolio_manager omitted structured price levels", {
+      reason: "PRICE_LEVELS_REQUIRED",
+    });
+    return [];
+  }
+  const problems = [];
+  const normalized = rows.map((row, index) => ({
+    ...row,
+    lower_bound: row?.lower_bound === null ? null : Number(row?.lower_bound),
+    upper_bound: row?.upper_bound === null ? null : Number(row?.upper_bound),
+    currency: typeof row?.currency === "string" ? row.currency : "",
+    _index: index,
+  }));
+  const currencies = new Set(normalized.map((row) => row.currency).filter(Boolean));
+  if (currencies.size !== 1) problems.push({ reason: "price_level_currency_mismatch", currencies: [...currencies] });
+  for (const row of normalized) {
+    if (row.lower_bound !== null && (!Number.isFinite(row.lower_bound) || row.lower_bound < 0)) {
+      problems.push({ index: row._index, reason: "invalid_lower_bound" });
+    }
+    if (row.upper_bound !== null && (!Number.isFinite(row.upper_bound) || row.upper_bound <= 0)) {
+      problems.push({ index: row._index, reason: "invalid_upper_bound" });
+    }
+    if (row.lower_bound !== null && row.upper_bound !== null && row.lower_bound >= row.upper_bound) {
+      problems.push({ index: row._index, reason: "non_positive_price_interval" });
+    }
+  }
+  const ordered = [...normalized].sort((left, right) => (
+    (left.lower_bound === null ? Number.NEGATIVE_INFINITY : left.lower_bound)
+    - (right.lower_bound === null ? Number.NEGATIVE_INFINITY : right.lower_bound)
+  ));
+  if (ordered[0]?.lower_bound !== null) problems.push({ reason: "missing_open_lower_band" });
+  if (ordered.at(-1)?.upper_bound !== null) problems.push({ reason: "missing_open_upper_band" });
+  if (ordered.filter((row) => row.lower_bound === null).length !== 1) {
+    problems.push({ reason: "open_lower_band_count_mismatch" });
+  }
+  if (ordered.filter((row) => row.upper_bound === null).length !== 1) {
+    problems.push({ reason: "open_upper_band_count_mismatch" });
+  }
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1];
+    const current = ordered[index];
+    if (previous.upper_bound === null || current.lower_bound === null) continue;
+    const difference = current.lower_bound - previous.upper_bound;
+    if (Math.abs(difference) > 1e-8) {
+      problems.push({
+        reason: difference > 0 ? "price_level_gap" : "price_level_overlap",
+        previous_index: previous._index,
+        current_index: current._index,
+        previous_upper_bound: previous.upper_bound,
+        current_lower_bound: current.lower_bound,
+        magnitude: Math.abs(difference),
+      });
+    }
+  }
+  if (problems.length) {
+    throw invalidParams("Structured price levels must continuously cover every price with one explicit action.", {
+      reason: "PRICE_LEVEL_CONTINUITY_MISMATCH",
+      problems,
+    });
+  }
+  return normalized.map(({ _index, ...row }) => row);
+}
+
 export function normalizeDebate(packet, role, run, raw = "") {
   const decisionAvailable = packet?.decision_available !== false;
   return {
@@ -724,7 +794,9 @@ export function normalizeDebate(packet, role, run, raw = "") {
     debate_rounds: Array.isArray(packet?.debate_rounds) ? packet.debate_rounds : [],
     // Optional compact full-PM fields. Headless full renders these deterministically after the
     // small decision packet validates; quick and visible contracts may simply leave them empty.
-    price_levels: Array.isArray(packet?.price_levels) ? packet.price_levels : [],
+    price_levels: assertPriceLevelContinuity(packet?.price_levels, {
+      required: role === "portfolio_manager" && Array.isArray(packet?.price_levels),
+    }),
     horizon_views: packet?.horizon_views && typeof packet.horizon_views === "object" && !Array.isArray(packet.horizon_views)
       ? packet.horizon_views
       : {},
@@ -1450,6 +1522,7 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
       allowed_source_ids: allowedSourceIds,
     });
   }
+  const evidencePacketAcks = assertCompanyDossierPacketAcks(packet, run, `master voice ${masterId}`);
 
   return {
     master: masterId,
@@ -1470,6 +1543,7 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
     company_dossier_hash_ack: typeof packet?.company_dossier_hash_ack === "string"
       ? packet.company_dossier_hash_ack
       : undefined,
+    evidence_packet_acks: evidencePacketAcks,
     language: run.language,
     raw_text: raw,
   };

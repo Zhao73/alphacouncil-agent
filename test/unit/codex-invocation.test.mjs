@@ -51,3 +51,12 @@ test("frozen-fact and parse-repair workers can explicitly omit native search", (
   assert.equal(args.at(-1), "/tmp/worker-output.json");
   assert.equal(args.includes("exec"), true);
 });
+
+test("a leaf worker can bind Codex native structured output to a per-run schema", () => {
+  const args = codexWorker.codexWorkerArgs("/tmp/worker-output.json", "/tmp/alpha-data", {
+    outputSchema: "/tmp/verifier-output.schema.json",
+  });
+  const index = args.indexOf("--output-schema");
+  assert.ok(index > args.indexOf("exec"));
+  assert.equal(args[index + 1], "/tmp/verifier-output.schema.json");
+});

@@ -87,10 +87,10 @@ Full remains `full_v2`. When launched through plugin-managed headless
 `analyze_symbol(council_mode="full")`, it runs at one of three depth tiers selected with
 `council_pace` -- `fast` 15 minutes, `normal` (default) 30, `slow` 60 -- measured from durable
 queueing through terminal artifact persistence. The tier raises every per-stage cap with the
-total, which is where the depth difference lives; all three are the same eight-seat,
-three-round `full_v2` contract:
+total, which is where the depth difference lives; all three preserve the separately confirmed
+eight-seat core or eleven-seat all-analyst roster and the three-round `full_v2` contract:
 
-- all eight mandatory evidence workers start in one parallel wave;
+- all receipt-bound evidence workers start in one parallel wave;
 - after the fail-closed evidence barrier, each selected physical v3 method freezes its
   deterministic stance and gets one isolated voice worker that cannot alter it;
 - Bull and Bear start in parallel within each of three rounds, with a barrier between rounds
@@ -103,7 +103,7 @@ the server saves a terminal `incomplete` run naming failed/timed-out/skipped sea
 transport or data providers are unavailable. `plan_visible_run` has no such enforceable
 deadline because the external host owns and schedules its subagents.
 
-A full `user_response.md` lists all eight analyst statuses and summaries, every selected
+A full `user_response.md` lists all eight or eleven receipt-bound analyst statuses and summaries, every selected
 stable master ID with its stance and isolated-worker output/status, and a system-owned price
 snapshot with currency/time/source or an explicit quote-data gap. System-owned labels are
 localized for Chinese (`zh-CN`), English, Japanese and Korean, and worker prompts carry the

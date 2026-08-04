@@ -24,6 +24,20 @@ export const DEFAULT_TASKS = [
   "insider_sec",
   "ib_event_analysis",
 ];
+// The three breadth seats are useful, but were previously reachable only through a caller-
+// supplied `tasks` override. That made "all" ambiguous: a user could select every method
+// while the run still launched only the eight default analysts. The selection receipt now
+// binds one of two explicit analyst scopes, and the all scope always means these eleven seats.
+export const OPTIONAL_ANALYST_TASKS = [
+  "macro_regime",
+  "market_narrative",
+  "social_pulse",
+];
+export const ALL_ANALYST_TASKS = Object.freeze([
+  ...DEFAULT_TASKS,
+  ...OPTIONAL_ANALYST_TASKS,
+]);
+export const ANALYST_SCOPES = Object.freeze(["core", "all"]);
 // A first-class bounded council for users who explicitly ask for a quick read. Keep this
 // list independent of DEFAULT_TASKS ordering: the previous `slice(0, 4)` silently omitted
 // company/industry news, which was the main thing many quick-read users asked for.
@@ -202,7 +216,7 @@ export const LIMITS = Object.freeze({
   // Grounding settles at its own budget and returns a partial result. This is only the
   // backstop for a call that never returns at all, so it sits just beyond the budget.
   GROUNDING_SETTLE_HEADROOM_MS: 5 * 1000,
-  /** All eight full evidence seats launch in one wave under this per-seat cap. */
+  /** All selected full evidence seats (eight core or eleven all-scope) launch in one wave. */
   FULL_EVIDENCE_MS: Math.max(1_000, Math.min(
     Number(process.env.ALPHACOUNCIL_FULL_EVIDENCE_MS) || 6 * 60 * 1000,
     6 * 60 * 1000,
@@ -211,6 +225,11 @@ export const LIMITS = Object.freeze({
   FULL_MASTER_MS: Math.max(1_000, Math.min(
     Number(process.env.ALPHACOUNCIL_FULL_MASTER_MS) || 2 * 60 * 1000,
     2 * 60 * 1000,
+  )),
+  /** Three verifier roles run concurrently; the cap is per verifier, not per claim. */
+  FULL_VERIFIER_MS: Math.max(1_000, Math.min(
+    Number(process.env.ALPHACOUNCIL_FULL_VERIFIER_MS) || 10 * 60 * 1000,
+    10 * 60 * 1000,
   )),
   /** Bull and bear run together inside each of the three full-council rounds. */
   FULL_DEBATE_MS: Math.max(1_000, Math.min(
@@ -229,8 +248,20 @@ export const LIMITS = Object.freeze({
   /** A repair may consume at most this fraction of its pace-specific stage budget. */
   PARSE_REPAIR_STAGE_FRACTION: 2 / 3,
   PARSE_REPAIR_INPUT_CHARS: 80 * 1000,
-  FULL_EVIDENCE_CONCURRENCY: 8,
+  // Eleven is the complete analyst roster. Keeping the whole roster in one wave preserves the
+  // pace budget when analyst_scope=all instead of quietly turning three optional seats into a
+  // second twelve-minute wave.
+  FULL_EVIDENCE_CONCURRENCY: 11,
   FULL_MASTER_CONCURRENCY: 13,
+  FULL_VERIFIER_CONCURRENCY: 3,
+  /** Each verifier processes bounded claim chunks in parallel so six real chunks fit the slow-stage cap. */
+  FULL_VERIFIER_CHUNK_CONCURRENCY: 3,
+  /** Bound one verifier response so an all-scope claim ledger cannot overflow JSON transport. */
+  FULL_VERIFIER_CLAIMS_PER_BATCH: 20,
+  /** Fidelity opens every cited URL; smaller chunks reduce missed-source attention failures. */
+  FULL_SOURCE_FIDELITY_CLAIMS_PER_BATCH: 10,
+  /** Eleven fidelity chunks still fit two waves inside the same verifier-stage ceiling. */
+  FULL_SOURCE_FIDELITY_CHUNK_CONCURRENCY: 6,
   /** Non-overridable public ceiling for a quick council, including retries and synthesis. */
   QUICK_HARD_MAX_MS: 10 * 60 * 1000,
   /** Default quick budget. Operators may lower it for stricter environments, never raise it. */
@@ -308,6 +339,8 @@ export const COUNCIL_PACES = Object.freeze({
     grounding_ms: 20 * 1000,
     evidence_ms: 210 * 1000,
     master_ms: 60 * 1000,
+    master_waves: 2,
+    verifier_ms: 0,
     debate_ms: 90 * 1000,
     pm_ms: 120 * 1000,
     finalize_reserve_ms: 45 * 1000,
@@ -318,6 +351,8 @@ export const COUNCIL_PACES = Object.freeze({
     grounding_ms: 30 * 1000,
     evidence_ms: 6 * 60 * 1000,
     master_ms: 2 * 60 * 1000,
+    master_waves: 2,
+    verifier_ms: 0,
     debate_ms: 150 * 1000,
     pm_ms: 180 * 1000,
     finalize_reserve_ms: 45 * 1000,
@@ -327,7 +362,13 @@ export const COUNCIL_PACES = Object.freeze({
     total_ms: 60 * 60 * 1000,
     grounding_ms: 45 * 1000,
     evidence_ms: 12 * 60 * 1000,
-    master_ms: 4 * 60 * 1000,
+    // Leaves at least 90s of total scheduling headroom while reserving a short final
+    // language-only repair after the normal worker and transport repair.
+    master_ms: (4 * 60 * 1000) + 15 * 1000,
+    master_waves: 2,
+    // `slow + all methods + all analysts` spends this bounded stage on all three verifier
+    // roles. The workers run in parallel, so the stage costs one cap rather than three.
+    verifier_ms: 10 * 60 * 1000,
     debate_ms: 6 * 60 * 1000,
     pm_ms: 8 * 60 * 1000,
     finalize_reserve_ms: 60 * 1000,
@@ -340,7 +381,8 @@ export const COUNCIL_PACE_NAMES = Object.freeze(Object.keys(COUNCIL_PACES));
 /** Serial worst case for one full council at a pace: grounding, evidence wave, method wave, three debate rounds, PM, persistence. */
 export const COUNCIL_PACE_STAGE_TOTAL = (profile) => profile.grounding_ms
   + profile.evidence_ms
-  + profile.master_ms
+  + (profile.master_ms * (profile.master_waves || 1))
+  + (profile.verifier_ms || 0)
   + (3 * profile.debate_ms)
   + profile.pm_ms
   + profile.finalize_reserve_ms;

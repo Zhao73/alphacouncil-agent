@@ -5,6 +5,11 @@ import { internalError, invalidParams } from "./errors.mjs";
 import { isChineseLanguage, localized } from "./lang.mjs";
 
 export const COMPANY_DOSSIER_CONTRACT_ID = "operating_company_dossier_v1";
+export const EVIDENCE_PACKET_ACK_STATUSES = Object.freeze([
+  "used",
+  "reviewed_not_relevant",
+  "unavailable",
+]);
 
 // Missing one of these surfaces means the council cannot make a decision-grade company call.
 // Other unavailable fields remain visible as limitations but do not erase otherwise usable
@@ -436,6 +441,17 @@ function packetManifest(packet) {
   };
 }
 
+export function companyDossierPacketAckTemplate(run) {
+  if (!requiresOperatingCompanyDossier(run)) return [];
+  return (run.packets || []).map(packetManifest).map((manifest) => ({
+    task: manifest.task,
+    packet_hash: manifest.packet_hash,
+    status: "reviewed_not_relevant",
+    source_ids: [],
+    note: "<replace with the method-specific reason, or mark used and cite packet-local source IDs>",
+  }));
+}
+
 function claimLedger(packets) {
   return packets.flatMap((packet) => (packet?.claims || []).map((claim, index) => ({
     claim_id: `${packet.task}:C${index + 1}`,
@@ -502,6 +518,10 @@ export function buildCompanyDossier(run, sourceManifest = null) {
       downstream_roles: ["bull_researcher", "bear_researcher", "portfolio_manager"],
       read_mode: "full_artifact_by_path_and_hash",
       acknowledgement_field: "company_dossier_hash_ack",
+      method_packet_acknowledgement_field: "evidence_packet_acks",
+      method_packet_acknowledgement_statuses: EVIDENCE_PACKET_ACK_STATUSES,
+      core_packet_acknowledgement_count: Object.keys(OPERATING_COMPANY_COVERAGE).length,
+      selected_packet_acknowledgement_count: packets.length,
     },
   };
   const contentHash = hashCanonical(content);
@@ -542,6 +562,8 @@ export function companyDossierPromptBlock(run) {
   const ref = run?.company_dossier;
   if (!requiresOperatingCompanyDossier(run) || !ref?.path || !ref?.content_hash) return "";
   verifyCompanyDossierArtifact(run);
+  const manifests = run.packets.map(packetManifest);
+  const ackContract = JSON.stringify(companyDossierPacketAckTemplate(run));
   return localized(run.language, {
     zh: [
       "## 统一公司资料包（强制读取）",
@@ -549,6 +571,9 @@ export function companyDossierPromptBlock(run) {
       `内容哈希：${ref.content_hash}`,
       "下面内嵌的 bounded evidence 只是索引，不是完整资料。回答前必须读取上述 JSON 全文；不得只依据被截断的索引。",
       `输出必须原样带回 \`company_dossier_hash_ack\`: \`${ref.content_hash}\`。哈希缺失或不一致会使该席位失败。`,
+      `每个方法席还必须逐包返回 \`evidence_packet_acks\`，本轮共 ${manifests.length} 包（其中核心包固定 8 个）。每个 task 与 packet_hash 必须恰好出现一次。`,
+      "status 只能是 used / reviewed_not_relevant / unavailable：used 必须列出本包实际使用且同时出现在顶层 source_ids 的来源；reviewed_not_relevant 必须写明本方法为何未使用；unavailable 只能用于本包确实没有任何可用论断时，并写明原因。",
+      `逐包回执模板：${ackContract}`,
     ].join("\n"),
     en: [
       "## Shared company dossier (mandatory read)",
@@ -556,9 +581,12 @@ export function companyDossierPromptBlock(run) {
       `Content hash: ${ref.content_hash}`,
       "The bounded evidence embedded below is an index, not the full dossier. Read the JSON file in full before answering; do not reason only from the truncated index.",
       `Return \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`; a missing or different hash fails this worker.`,
+      `Every method seat must also return \`evidence_packet_acks\` for all ${manifests.length} packets (exactly eight are core packets). Every task and packet_hash must occur exactly once.`,
+      "Status is only used / reviewed_not_relevant / unavailable. used requires packet-local source IDs that also appear in top-level source_ids; reviewed_not_relevant requires a method-specific reason; unavailable is allowed only when the packet contains no usable claim and requires a reason.",
+      `Per-packet acknowledgement template: ${ackContract}`,
     ].join("\n"),
-    ja: `完全な会社資料 ${ref.path}（${ref.content_hash}）を回答前に全文読み、company_dossier_hash_ack に同じハッシュを返してください。埋め込み evidence は索引にすぎません。`,
-    ko: `답변 전에 전체 회사 자료 ${ref.path} (${ref.content_hash})를 모두 읽고 company_dossier_hash_ack에 같은 해시를 반환하십시오. 내장 evidence는 색인일 뿐입니다.`,
+    ja: `完全な会社資料 ${ref.path}（${ref.content_hash}）を回答前に全文読み、company_dossier_hash_ack に同じハッシュを返してください。さらに全${manifests.length}件の evidence_packet_acks を task/packet_hash ごとに一度だけ返し、status は used / reviewed_not_relevant / unavailable のいずれかにしてください。テンプレート: ${ackContract}`,
+    ko: `답변 전에 전체 회사 자료 ${ref.path} (${ref.content_hash})를 모두 읽고 company_dossier_hash_ack에 같은 해시를 반환하십시오. 또한 ${manifests.length}개 전체 evidence_packet_acks를 task/packet_hash별로 정확히 한 번 반환하고 status는 used / reviewed_not_relevant / unavailable 중 하나여야 합니다. 템플릿: ${ackContract}`,
   });
 }
 
@@ -615,4 +643,103 @@ export function assertCompanyDossierAck(packet, run, label, { client = false } =
   throw (client
     ? invalidParams(`${label} did not acknowledge the shared company dossier hash`, data)
     : internalError(`${label} did not acknowledge the shared company dossier hash`, data));
+}
+
+/**
+ * Prove that a method worker opened every packet in the frozen dossier, not merely the file.
+ * A single dossier hash proves integrity; this ledger proves per-packet disposition and binds
+ * every `used` declaration to packet-local sources that the method actually cited.
+ */
+export function assertCompanyDossierPacketAcks(packet, run, label, { client = false } = {}) {
+  if (!requiresOperatingCompanyDossier(run)) return [];
+  const dossier = verifyCompanyDossierArtifact(run, { client });
+  const supplied = packet?.evidence_packet_acks;
+  const problems = [];
+  if (!Array.isArray(supplied)) {
+    problems.push({ reason: "missing_evidence_packet_acks" });
+  }
+  const rows = Array.isArray(supplied) ? supplied : [];
+  const byTask = new Map();
+  for (const row of rows) {
+    const task = typeof row?.task === "string" ? row.task : "";
+    if (!task) {
+      problems.push({ reason: "ack_without_task" });
+      continue;
+    }
+    if (byTask.has(task)) problems.push({ task, reason: "duplicate_ack" });
+    else byTask.set(task, row);
+  }
+  const expectedTasks = new Set((dossier.packet_manifest || []).map((manifest) => manifest.task));
+  for (const task of byTask.keys()) {
+    if (!expectedTasks.has(task)) problems.push({ task, reason: "unexpected_ack" });
+  }
+  const topLevelSourceIds = new Set(Array.isArray(packet?.source_ids) ? packet.source_ids : []);
+  const packetByTask = new Map((dossier.packets || []).map((entry) => [entry.task, entry]));
+  const normalized = [];
+  for (const manifest of dossier.packet_manifest || []) {
+    const row = byTask.get(manifest.task);
+    if (!row) {
+      problems.push({ task: manifest.task, reason: "missing_ack" });
+      continue;
+    }
+    const status = row.status;
+    const sourceIds = Array.isArray(row.source_ids)
+      ? [...new Set(row.source_ids.filter((id) => typeof id === "string" && id.trim()))]
+      : [];
+    const note = typeof row.note === "string" ? row.note.trim() : "";
+    if (row.packet_hash !== manifest.packet_hash) {
+      problems.push({
+        task: manifest.task,
+        reason: "packet_hash_mismatch",
+        expected_packet_hash: manifest.packet_hash,
+        supplied_packet_hash: row.packet_hash || null,
+      });
+    }
+    if (!EVIDENCE_PACKET_ACK_STATUSES.includes(status)) {
+      problems.push({ task: manifest.task, reason: "invalid_ack_status", status: status || null });
+    }
+    const evidencePacket = packetByTask.get(manifest.task) || {};
+    const localSourceIds = new Set((evidencePacket.sources || []).map((source) => source?.id).filter(Boolean));
+    const outsidePacket = sourceIds.filter((id) => !localSourceIds.has(id));
+    const outsideMethod = sourceIds.filter((id) => !topLevelSourceIds.has(id));
+    if (status === "used") {
+      if (!sourceIds.length) problems.push({ task: manifest.task, reason: "used_without_source_ids" });
+      if (outsidePacket.length) problems.push({ task: manifest.task, reason: "used_source_outside_packet", source_ids: outsidePacket });
+      if (outsideMethod.length) problems.push({ task: manifest.task, reason: "used_source_missing_from_method_source_ids", source_ids: outsideMethod });
+    } else if (status === "reviewed_not_relevant") {
+      if (!note) problems.push({ task: manifest.task, reason: "reviewed_not_relevant_without_note" });
+      if (sourceIds.length) problems.push({ task: manifest.task, reason: "reviewed_not_relevant_with_source_ids" });
+    } else if (status === "unavailable") {
+      if (!note) problems.push({ task: manifest.task, reason: "unavailable_without_note" });
+      if (sourceIds.length) problems.push({ task: manifest.task, reason: "unavailable_with_source_ids" });
+      const usable = (evidencePacket.claims || []).length > 0 && (evidencePacket.sources || []).length > 0;
+      if (usable) problems.push({ task: manifest.task, reason: "unavailable_but_packet_has_usable_evidence" });
+    }
+    normalized.push({
+      task: manifest.task,
+      packet_hash: manifest.packet_hash,
+      status,
+      source_ids: sourceIds,
+      note,
+    });
+  }
+  if (!problems.length && rows.length === (dossier.packet_manifest || []).length) return normalized;
+  if (rows.length !== (dossier.packet_manifest || []).length) {
+    problems.push({
+      reason: "ack_count_mismatch",
+      expected: (dossier.packet_manifest || []).length,
+      supplied: rows.length,
+    });
+  }
+  const data = {
+    reason: "COMPANY_DOSSIER_PACKET_ACK_MISMATCH",
+    contract_id: COMPANY_DOSSIER_CONTRACT_ID,
+    label,
+    expected_packet_count: (dossier.packet_manifest || []).length,
+    core_packet_count: Object.keys(OPERATING_COMPANY_COVERAGE).length,
+    problems,
+  };
+  throw (client
+    ? invalidParams(`${label} did not acknowledge every frozen evidence packet`, data)
+    : internalError(`${label} did not acknowledge every frozen evidence packet`, data));
 }

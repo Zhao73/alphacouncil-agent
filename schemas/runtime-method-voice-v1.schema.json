@@ -48,7 +48,27 @@
       }
     },
     "confidence": { "enum": ["high", "medium", "low"] },
-    "company_dossier_hash_ack": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+    "company_dossier_hash_ack": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "evidence_packet_acks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["task", "packet_hash", "status", "source_ids", "note"],
+        "properties": {
+          "task": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "packet_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "status": { "enum": ["used", "reviewed_not_relevant", "unavailable"] },
+          "source_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "maxLength": 512, "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$" }
+          },
+          "note": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
   },
   "allOf": [
     {

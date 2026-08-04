@@ -4,13 +4,16 @@ import {
   closeSync,
   existsSync,
   fstatSync,
+  mkdtempSync,
   mkdirSync,
   openSync,
   readSync,
   readdirSync,
+  rmSync,
   statSync,
   unlinkSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CODEX_CMD, DATA_DIR, LIMITS } from "./constants.mjs";
 import { MAX_WORKER_JSON_CHARS } from "./bounded-json.mjs";
@@ -124,7 +127,7 @@ export function stopChild(child, force = false) {
  * second Codex-backed search bridge, creating recursive workers and multi-minute nested
  * timeouts. Authentication still comes from CODEX_HOME according to the Codex CLI contract.
  */
-export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true } = {}) {
+export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true, outputSchema = null } = {}) {
   return [
     ...(search ? ["--search"] : []),
     "-s",
@@ -135,6 +138,7 @@ export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true } =
     "--ignore-user-config",
     "--ephemeral",
     "--skip-git-repo-check",
+    ...(outputSchema ? ["--output-schema", outputSchema] : []),
     "-C",
     dataDir,
     "-o",
@@ -146,19 +150,46 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
   return new Promise((resolvePromise) => {
     const workerDataDir = runtime.dataDir || DATA_DIR;
     mkdirSync(workerDataDir, { recursive: true });
+    // Some Codex builds still start installed MCP plugins even with --ignore-user-config.
+    // A nested AlphaCouncil server must never scan or recover the parent run. Isolate only
+    // plugin runtime data; authentication still comes from the caller's CODEX_HOME and the
+    // worker's output/cwd remain in workerDataDir.
+    const ownsLeafRuntimeDir = !runtime.leafRuntimeDir;
+    const leafRuntimeDir = runtime.leafRuntimeDir
+      || mkdtempSync(join(runtime.leafRuntimeRoot || tmpdir(), "alphacouncil-leaf-"));
+    const childEnv = {
+      ...process.env,
+      ...(runtime.env || {}),
+      ALPHACOUNCIL_AGENT_DATA_DIR: leafRuntimeDir,
+    };
     const outFile = join(workerDataDir, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
-    const args = codexWorkerArgs(outFile, workerDataDir, { search: runtime.search !== false });
-    const invocation = codexInvocation(args);
+    const args = codexWorkerArgs(outFile, workerDataDir, {
+      search: runtime.search !== false,
+      outputSchema: runtime.outputSchema || null,
+    });
+    const invocation = codexInvocation(args, process.platform, childEnv);
     const spawnWorker = runtime.spawn || spawn;
     const stopWorker = runtime.stopChild || stopChild;
     const killGraceMs = Number.isFinite(runtime.sigkillGraceMs)
       ? Math.max(0, runtime.sigkillGraceMs)
       : LIMITS.SIGKILL_GRACE_MS;
-    const child = spawnWorker(invocation.command, invocation.args, {
-      cwd: workerDataDir,
-      stdio: ["pipe", "pipe", "pipe"],
-      ...invocation.options,
-    });
+    let child;
+    try {
+      child = spawnWorker(invocation.command, invocation.args, {
+        cwd: workerDataDir,
+        stdio: ["pipe", "pipe", "pipe"],
+        env: childEnv,
+        ...invocation.options,
+      });
+    } catch (error) {
+      // Promise executors turn the rethrow into a rejection. Clean the directory first:
+      // a synchronous ENOENT/EACCES must not leak one private plugin runtime per attempt.
+      try { unlinkSync(outFile); } catch {}
+      if (ownsLeafRuntimeDir) {
+        try { rmSync(leafRuntimeDir, { recursive: true, force: true }); } catch {}
+      }
+      throw error;
+    }
     child.stdin.on("error", () => {});
     child.stdin.end(prompt, "utf8");
     onStart({ pid: child.pid, output: outFile });
@@ -180,6 +211,9 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         unlinkSync(outFile);
       } catch {
         // Codex may never have created it (spawn error, immediate timeout).
+      }
+      if (ownsLeafRuntimeDir) {
+        try { rmSync(leafRuntimeDir, { recursive: true, force: true }); } catch {}
       }
       resolvePromise(value);
     };

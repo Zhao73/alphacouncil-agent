@@ -8,7 +8,7 @@ import { groundingBlock } from "./grounding.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 import { intentsForStance } from "./voice.mjs";
-import { companyDossierPromptBlock, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
+import { companyDossierPacketAckTemplate, companyDossierPromptBlock, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
 
 /**
  * Prompt text lives in personas/, not here.
@@ -230,13 +230,13 @@ export function debatePrompt(role, run, context = {}) {
         ? [
           "最终输出改用 HEADLESS_STRUCTURED_PM_DECISION_V1。只返回紧凑的结构化决策 JSON；不要返回 `report_markdown`，也不要在任何 JSON 字符串里嵌入 Markdown 报告。服务端会从已冻结的证据、三轮辩论和本决策确定性渲染完整 full_v2 报告。",
           "保留 debate packet 的必需字段：verdict、rating、winner、summary、long_thesis、short_thesis、valuation_range、catalysts、risks、position、invalidation、source_ids、confidence。每个来源 ID 必须来自提供的已冻结证据。",
-          "另请返回：`price_levels`（3–8 项；每项含非空 label、range、meaning、action、basis，以及至少一个 source_ids）、`horizon_views`（short_term、medium_term、long_term 三个非空字符串）、`data_gaps`（至少一个非空字符串；若无关键缺口，明确写出未发现关键数据缺口）以及提示中要求的 `company_dossier_hash_ack`。这些字段也必须简洁，不能重复整份证据。",
+          "另请返回：`price_levels`（3–8 项；每项含非空 label、range、lower_bound、upper_bound、currency、meaning、action、basis，以及至少一个 source_ids）。lower_bound/upper_bound 用数值，开放端用 null；全部档位按数值必须从下方开放端连续覆盖到上方开放端，不得留空档或重叠，因此像 120–160 没动作这样的区间会被拒绝。另含 `horizon_views`（short_term、medium_term、long_term 三个非空字符串）、`data_gaps`（至少一个非空字符串；若无关键缺口，明确写出未发现关键数据缺口）以及提示中要求的 `company_dossier_hash_ack`。",
           "这是本 prompt 对输出形式的最后约束；前文要求撰写长报告的说明由服务端渲染器履行。只输出一个 JSON 对象。",
         ].join("\n")
         : [
           "Final output uses HEADLESS_STRUCTURED_PM_DECISION_V1. Return only compact structured-decision JSON. Do not return `report_markdown`, and do not embed a Markdown report inside any JSON string. The server deterministically renders the complete full_v2 report from the frozen evidence, three debate rounds, and this decision.",
           "Keep the required debate-packet fields: verdict, rating, winner, summary, long_thesis, short_thesis, valuation_range, catalysts, risks, position, invalidation, source_ids, and confidence. Every source ID must come from the supplied frozen evidence.",
-          "Also return `price_levels` (3-8 items, each with non-empty label, range, meaning, action, basis, and at least one source_ids entry), `horizon_views` (non-empty short_term, medium_term, and long_term strings), `data_gaps` (at least one non-empty string; explicitly state that no critical gaps were found when applicable), and the prompt-required `company_dossier_hash_ack`. Keep these fields concise and do not restate the whole evidence set.",
+          "Also return `price_levels` (3-8 items, each with non-empty label, range, lower_bound, upper_bound, currency, meaning, action, basis, and at least one source_ids entry). Bounds are numbers with null only for an open end; the bands must continuously cover the price line from the open lower end to the open upper end with no gap or overlap, so an actionless interval such as 120-160 is rejected. Also return `horizon_views` (non-empty short_term, medium_term, and long_term strings), `data_gaps` (at least one non-empty string), and the prompt-required `company_dossier_hash_ack`.",
           "This is the final output-form instruction in the prompt; the server renderer satisfies earlier instructions to author a long report. Return exactly one JSON object.",
         ].join("\n"))
     : "";
@@ -351,7 +351,10 @@ export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
     source_ids: allowedSourceIds.slice(0, 1),
     confidence,
     ...(requiresOperatingCompanyDossier(run)
-      ? { company_dossier_hash_ack: run.company_dossier?.content_hash }
+      ? {
+        company_dossier_hash_ack: run.company_dossier?.content_hash,
+        evidence_packet_acks: companyDossierPacketAckTemplate(run),
+      }
       : {}),
   };
   return [

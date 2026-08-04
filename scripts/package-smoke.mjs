@@ -108,7 +108,7 @@ export async function runPackageSmoke() {
 
     const listed = await server.request("tools/list", {});
     const tools = listed.result?.tools || [];
-    assert.equal(tools.length, 32, "installed server must expose exactly 32 MCP tools");
+    assert.equal(tools.length, 33, "installed server must expose exactly 33 MCP tools");
     const names = new Set(tools.map((tool) => tool.name));
     for (const required of ["begin_council_selection", "confirm_master_selection", "plan_visible_run", "analyze_symbol"]) {
       assert.ok(names.has(required), `installed server is missing ${required}`);
@@ -146,6 +146,7 @@ export async function runPackageSmoke() {
       catalog_hash: opened.catalog_hash,
       display_ack: true,
       selected_master_ids: ["master_buffett"],
+      analyst_scope: "core",
     }));
     assert.deepEqual(confirmed.selected_master_ids, ["master_buffett"]);
 

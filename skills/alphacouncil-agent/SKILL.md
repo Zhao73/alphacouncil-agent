@@ -26,14 +26,16 @@ Every council run has an explicit `council_mode`. `full` is the default. Never i
 from impatience, a short prompt, a deadline, or a model/tool failure, and never switch modes
 after Stage 0.
 
-- **Full council (`full_v2`)**: run all 8 planned evidence roles (`market_data`,
+- **Full council (`full_v2`)**: first bind an independent analyst scope. `core` runs the 8
+  mandatory evidence roles (`market_data`,
   `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`,
-  `news_industry_management`, `insider_sec`, `ib_event_analysis`), then every selected
+  `news_industry_management`, `insider_sec`, `ib_event_analysis`); `all` runs those eight plus
+  `macro_regime`, `market_narrative`, and `social_pulse`, for exactly 11 analyst seats. Then every selected
   master, then the three-round bull/bear cross-exam, then `portfolio_manager`. In the
-  plugin-managed headless path the eight roles start in one parallel wave; each selected v3
+  plugin-managed headless path every receipt-bound analyst role starts in one parallel wave; each selected v3
   method freezes its deterministic stance before one isolated voice worker explains it; and
-  Bull/Bear run in parallel within each round with a barrier between rounds. When a plan
-  explicitly adds optional analyst seats, every added seat is equally mandatory. A mandatory
+  Bull/Bear run in parallel within each round with a barrier between rounds. Every selected
+  analyst seat is equally mandatory. A mandatory
   evidence failure is a fail-fast barrier: persist the failure and final diagnostic artifacts,
   skip masters/debate/PM model calls, and terminate `incomplete`; do not synthesize around it.
   Headless full runs at one of three depth tiers set by `council_pace`: `fast` 900000 ms,
@@ -79,9 +81,10 @@ language. Always pass the original user request in `prompt` and the inferred lan
 can do. It does **not** create a selection session, prove that the individual catalog was
 displayed, or issue a receipt, so it never substitutes for the steps below.
 
-The analysts have a sensible default -- the eight-seat fan-out -- and asking about them every
-time is a question with an obvious answer. The gate takes two decisions in ONE interaction:
-which methods sit on the bench, and which depth tier the run uses.
+The gate takes three decisions in ONE interaction: which methods sit on the bench, whether the
+analyst scope is `core` (8) or `all` (11), and which depth tier the run uses. Method selection
+and analyst scope are independent: selecting all methods never silently selects or omits analyst
+seats, and selecting all analysts never changes the method bench.
 
 **Ask the tier; never make the user type `fast` or `slow`.** `begin_council_selection` returns
 `pace_options`, one row per tier with `expected_minutes`, `hard_ceiling_minutes` and what the
@@ -92,10 +95,10 @@ the run's language:
 
 ```
 本次分析要跑多深？（默认 2）
-  1. 快速   预计 ~12 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
-  2. 标准   预计 ~20 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
-  3. 深入   预计 ~44 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
-三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM。只有每席能想多久不同。
+  1. 快速   预计 ~13 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
+  2. 标准   预计 ~22 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
+  3. 深入   预计 ~58 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
+三档都保留已选择的分析席、方法席、三轮辩论和 PM；slow + 全部方法席 + 全部分析席另强制加入三重核验。
 ```
 
 Pass the answer as `council_pace` to `confirm_master_selection`; it binds into the receipt, so an
@@ -106,7 +109,7 @@ highlight the row, still show the menu, still take the answer. No answer means `
 Quick returns an empty `pace_options` and rejects the field: it is a smaller contract, not a
 slower one. Say that plainly if a user asks for a fast quick run.
 
-Then take this run's method selection:
+Then take this run's method selection and the separate analyst-scope choice:
 
 1. Call `begin_council_selection` with `symbol`, the original `prompt`, inferred `language`,
    the calling `host`, and the intended `council_mode` (`full` by default). If the request
@@ -117,7 +120,8 @@ Then take this run's method selection:
    individually in the returned order**. Preserve the stable number and show `identity`,
    `method`, `best_for` and `maturity` for every row. A school summary, preset or seat count
    does not satisfy this step.
-3. Take one submission covering both decisions. The universal fallback is a numbered text reply: one index in
+3. Take one submission covering all three decisions. Explicitly show `core = 8` and `all = 11`
+   for the analyst scope. The universal method fallback is a numbered text reply: one index in
    `1..N`, any comma/space-separated combination, ranges such as `1-4` or `1..4`, or stable
    IDs/names. Full also accepts `all`; quick requires 1-4 distinct methods and rejects `all`.
    - **Claude Code, Codex, OpenCode and Grok Build** may use a native multi-select when it can
@@ -132,7 +136,8 @@ Then take this run's method selection:
    The obsolete rule **"Skip the question entirely"** is prohibited for council runs: a
    prefill reduces typing but never replaces this run's displayed catalog and receipt.
 5. Call `confirm_master_selection` with the exact `selection_id`, `catalog_hash`,
-   `display_ack: true`, the answered `council_pace` (omit to accept `normal`), and exactly one
+   `display_ack: true`, the answered `council_pace` (omit to accept `normal`), the explicit
+   `analyst_scope: "core" | "all"`, and exactly one
    of:
    - `selected_master_ids: [...]` for a native multi-select;
    - `select_all: true` for all in full mode only;
@@ -143,8 +148,9 @@ Then take this run's method selection:
    or `masters_roster`; the confirmed receipt is authoritative. Missing, expired, stale,
    consumed or mode-mismatched receipts restart at step 1.
 
-Do not ask about analysts: they default to the eight-seat fan-out. Use all eleven only if
-the user asked for breadth, and say so in the report rather than asking first.
+Never collapse “all methods” and “all analysts” into one `all`. Both choices must be displayed
+and confirmed independently. If the user selects full analyst breadth, the frozen receipt and
+the run must contain exactly the 11 canonical analyst IDs.
 
 ### Full v2 plugin-managed contract
 
@@ -153,13 +159,36 @@ Use this contract when full runs through headless `analyze_symbol`:
 - Call `analyze_symbol` once with the full-mode receipt, `council_mode: "full"`,
   `wait_for_completion: false`, and no task override unless the user explicitly requested
   optional breadth. Poll the one durable `run_id`; never create a replacement.
-- The eight mandatory evidence roles start together. Each has one bounded parse-only repair;
+- All analyst roles frozen in the receipt (8 core or exactly 11 all-scope roles) start together.
+  Each has one bounded parse-only repair;
   repair converts malformed output and does not repeat web research.
 - After the evidence barrier, every selected physical v3 method executes its deterministic
   policy and freezes its stance. Each seat that reached a stance then gets exactly one isolated
   voice worker for that stable ID. It may explain the recorded policy result in the user's
   language, but cannot change the stance, invent a typed fact or speak as the real named person.
+  If both the original voice and normal no-search transport repair remain in the wrong reader
+  language, one final no-search language-only translation pass may preserve the same stance,
+  figures, source IDs, dossier hash, and packet acknowledgements; any further mismatch fails closed.
   A missing voice result remains visible and prevents a false complete bench.
+- On an operating-company run, every method voice must return the exact shared dossier hash and
+  one `evidence_packet_acks` row per frozen packet. The eight core rows are mandatory in every
+  full run; all-scope runs also acknowledge the three supplemental packets. Each row is exactly
+  `used`, `reviewed_not_relevant`, or `unavailable`, with the packet hash and the status-specific
+  source/reason fields required by the runtime.
+- `slow + all methods + all analysts` forcibly inserts the three parallel verifier batches
+  `source_fidelity`, `rederivation`, and `refuter` before any method worker. Each batch must cover
+  every frozen material claim. The headless runner may schedule bounded claim-transport chunks
+  concurrently within each verifier; Codex structured output keys every expected claim and the
+  server records only the exact canonical union. Source fidelity uses smaller ten-claim chunks.
+  A transport/schema defect gets one no-search repair; a verifier-coverage defect gets one
+  web-enabled audit retry over the same frozen chunk with its exact failed checks recorded first.
+  Neither retry may mutate or redispatch the analyst packets. Zero, missing, duplicate,
+  unexpected, or malformed coverage makes
+  the terminal state `needs_verification`; the runtime must not run methods/debate/PM or write
+  `complete`. A complete batch may legitimately find `partial`, `cannot_confirm`, contradiction,
+  refutation, or an independently retrieved same-source rederivation: those become visible
+  `completed_with_findings` results and reduce or qualify the originating evidence seat instead
+  of being relabelled as a missing verifier.
 - Every selected physical v3 seat gets an isolated explanation worker, including
   `out_of_scope`. Require `voice_mode=first_person_public_method_simulation_v1`, the exact
   disclosure ack, a stance-compatible `position_intent`, and all five strong first-person
@@ -181,9 +210,10 @@ Use this contract when full runs through headless `analyze_symbol`:
 - The tier moves every per-stage cap with the total, because those caps are what bound each
   worker: evidence 3.5/6/12 minutes per seat, method 1/2/4 minutes per seat, debate 90/150/360
   seconds per round, PM 2/3/8 minutes. Raising `total_timeout_ms` alone buys idle time rather
-  than depth; the tier is what buys depth. All three tiers are `full_v2` — same eight evidence
-  seats, same three rounds, same PM — so a tier changes how long each seat may think, never what
-  the council is. Quick rejects `council_pace`.
+  than depth; the tier is what buys depth. All three tiers are `full_v2` and preserve the
+  separately selected analyst scope, method bench, three rounds and PM. The exact
+  `slow + all methods + all analysts` combination also activates the mandatory triple-verifier
+  stage. Quick rejects `council_pace`.
 - The tier also shapes each worker's output, and this is the part that makes `fast` fast rather
   than merely short of time. A cap alone is a timeout, and the same prompt with a shorter fuse
   produces a packet the worker could not finish. Since an LLM call's wall clock is dominated by
@@ -195,7 +225,7 @@ Use this contract when full runs through headless `analyze_symbol`:
   filling a number from memory never is. `slow` instead asks for the derivation written out step
   by step with explicit falsification conditions. `normal` adds nothing.
 - The concise handoff lists every selected stable master ID, frozen stance and voice-worker
-  explanation/status; all eight analyst task IDs, statuses and summaries; and a system-owned
+  explanation/status; all 8 or 11 receipt-bound analyst task IDs, statuses and summaries; and a system-owned
   price snapshot with currency/time/source or an explicit unavailable-data gap.
 
 #### Operating-company dossier barrier
@@ -302,9 +332,19 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - A master whose method cannot judge this name returns `stance: "out_of_scope"`. That is a conclusion, not an abstention, and it carries zero weight rather than being coerced into a view.
    - **The run is `incomplete` until every selected master has reported.** A bench nobody consulted is worse than no bench: the reader believes the verdict survived every lens when it survived none.
    - Feed the masters' disagreements into the bull and bear prompts. Their disagreement is the point; a bench that agrees with the analysts has added nothing.
-5. **Verifiers — every host executing this full visible/deep path.** Build a claim ledger from the merged packets, take only thesis-bearing claims, and run `source_fidelity`, `rederivation` and `refuter` against each. Record each with `record_verifier_verdict(run_id, verifier, seat, verdict, claim)`.
-   - Failed verification **down-weights the seat that made the claim** in the PM synthesis; a seat is never silently erased.
-   - `cannot_confirm` and `stands` are real results. Manufacturing a `weakened` verdict to look diligent lowers a seat's weight for no reason, and weight moves the final rating.
+5. **Mandatory triple verifier for `slow + all methods + all analysts`.** After all 11 packets
+   are frozen, run `source_fidelity`, `rederivation`, and `refuter` independently over the exact
+   same complete material-claim ledger. Record one claim-complete result from each via
+   `record_verifier_batch(run_id, verifier, packet, thread_id=...)`; never use a sampled subset
+   or individual `record_verifier_verdict` calls to satisfy this path.
+   - Zero verifier verdicts or a missing/duplicate/unexpected/malformed claim binding leaves the
+     run `needs_verification` and blocks every method, debate, and PM write. It can never be
+     published as `complete`. Allowed adverse or unresolved verdicts are findings, not missing
+     execution: exact coverage becomes `completed_with_findings`, is shown in the report, and
+     down-weights the originating evidence seat.
+   - `rederivation` must not receive the original URLs; it searches independently. `refuter`
+     records a concrete negative query for every claim. `source_fidelity` opens a cited URL and
+     records an excerpt for every supported claim.
 6. Wait for the evidence agents, merge their outputs into a shared evidence set in the main thread, then run bull, bear, and portfolio-manager agents.
    - Round 1: bull writes the long case; bear writes the short case; launch both in parallel and wait for both.
    - Round 2: pass bull's packet to bear and bear's packet to bull for rebuttal; each side
@@ -340,11 +380,13 @@ explanation, guidance, competitor commentary, and anything not yet filed.
 | Confirm a quoted X post | `verify_x_post` | A decoded timestamp proves nothing; any invented id decodes to a plausible date. |
 | Industry map | `industry_brief`, `industry_peers`, `industry_coverage` | Ask coverage first — it says whether the participant list is authoritative. |
 | Facts + brief in one call | `compose_research_brief` | Grounding for a whole run. |
+| Persist slow/all verification | `record_verifier_batch` | Visible slow + all-method + all-analyst runs; one complete batch per verifier. |
 
 ### Limits you must carry into the report, not discover later
 
-- **IV percentile is not computable.** The chain is a snapshot with no history. Any claim that
-  volatility is high or low versus its own past goes in `open_questions`.
+- **IV percentile needs local history.** Each successful current CBOE observation is appended
+  to the plugin's local ledger. Until at least 60 daily observations exist, percentile stays
+  an explicit `building_history` gap; never manufacture it from one snapshot.
 - **X / Twitter has no free discovery channel.** Professional FinTwit is **not** covered and
   Reddit is not a substitute. Say so rather than implying you looked at social media.
 - **Non-US names have no options chain here** and often no structured financials. Report the
@@ -375,12 +417,11 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
    artifacts after a terminal status. Use `wait_for_completion=true` only when the caller
    explicitly requires a synchronous run and its MCP connection is known to outlive the
    entire council.
-4. Headless `analyze_symbol` does not run the host-visible Stage 2b verifier fan-out. Read
-   `status.verification_scope`: `source_id_presence_only` means only that cited IDs resolve
-   inside the saved packets, while `status.adversarial_verification=not_run` means the
-   `source_fidelity`, `rederivation`, and `refuter` agents did not run. Use the Visible-First
-   deep workflow when those verifiers are required; never relabel source-ID presence as
-   adversarial verification.
+4. Headless `analyze_symbol` forcibly runs `source_fidelity`, `rederivation`, and `refuter`
+   when the receipt is exactly `slow + all methods + all analysts`. Read
+   `status.verification_scope`, `verifier_required`, `verifier_expected_count`,
+   `verifier_verdict_count`, and `verifier_zero`. Every other combination remains
+   `source_id_presence_only`; never relabel source-ID presence as adversarial verification.
 5. Call `council_diagnostics` over saved run IDs to measure descriptive agreement, unique
    cited-source contribution, and repeated-input behavioural differentiation. Do not turn
    its seat count or agreement into `N_eff`; that remains `null` without the separately
@@ -424,7 +465,7 @@ Call `plan_visible_run` with `symbol`, `prompt` (original user request), `as_of`
 Every planned prompt is written to `<run>/prompts/` and each agent spec carries `prompt_file`. Check `prompts_inline`: when it is `false` the prompt bodies were deliberately left out of the result, because returning them together would exceed what a host accepts, and you must `Read` each `prompt_file` instead of the inline field. What drives that size is the grounding each prompt embeds rather than the seat count, so a run with a full macro series crosses the budget where a sparse one does not. A truncated or rejected plan result is never a reason to write prompts from memory.
 
 ### Stage 1 — Evidence fan-out (one turn, isolated context)
-In a SINGLE assistant turn, emit one `Task` (subagent_type: general-purpose) call for every evidence role returned by the plan. The default eight are `market_data`, `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `insider_sec`, and `ib_event_analysis`. Each subagent:
+In a SINGLE assistant turn, emit one `Task` (subagent_type: general-purpose) call for every evidence role returned by the plan. `analyst_scope=core` returns the eight core roles: `market_data`, `earnings_deep_dive`, `forward_expectations`, `quant_factor`, `valuation_long_short`, `news_industry_management`, `insider_sec`, and `ib_event_analysis`. `analyst_scope=all` returns those eight plus `macro_regime`, `market_narrative`, and `social_pulse`, for exactly eleven analyst seats. Run the returned list exactly; do not add, omit, or replace seats. Each subagent:
 - May use ONLY `WebSearch` + `WebFetch`. It must NOT call `@alphacouncil-agent`, `collect_evidence`, `analyze_symbol`, or `read_run` (leaf-worker rule, Boundaries).
 - Runs a query ladder: a primary-locator search (use `allowed_domains` such as `sec.gov` and the company IR/exchange domain), a dated recency search, and one mandatory disconfirming search (e.g. `<ticker> guidance cut`, `downgrade`, `accounting concern`).
 - WebFetches the actual primary doc where one exists (`insider_sec` -> EDGAR full-text + Form 4; `earnings_deep_dive` -> 8-K Ex-99.1 plus the IR transcript; `ib_event_analysis` -> 8-K / 424B / deal release; `market_data` -> exchange/quote page) and quotes exact figures with real dates.
@@ -433,12 +474,15 @@ In a SINGLE assistant turn, emit one `Task` (subagent_type: general-purpose) cal
 ### Stage 2 — Collect + barrier
 As each Task returns, call `record_visible_packet(run_id, task, packet, thread_id=<subagent id>)`. The server upserts by `task`, rescopes sources to `<task>:S1`, rewrites `source_manifest.json` + `all_agents.md`, and flips the run phase toward `visible_debate`. HARD GATE: do not start the master stage or debate until every task returned by the full plan is recorded and completed. If a bounded repair still leaves a task failed or degraded, call `finalize_visible_run(run_id, reason="evidence_worker_failed", failed_tasks=[...])`; it persists the run as `incomplete`, names skipped downstream roles, and returns the mandatory `user_response_markdown`. Deliver that body unchanged instead of authoring a fallback recap. Proceeding with fewer than the planned count violates the barrier.
 
-### Stage 2b — Adversarial verify + repair (loop-until-dry, max 2 rounds)
-Build a claim ledger from the merged packets (only non-low / thesis-bearing claims are "material"). For each material claim, fan out up to 3 verifier `Task` subagents in one turn, each with fresh context and seeing only the bare claim + ticker:
-- source_fidelity: `WebFetch` the exact cited URL; return supported | partial | contradicted | source_unreachable | source_does_not_mention.
-- rederivation: find the fact fresh from OTHER sources; return agree | disagree | cannot_confirm with a new source.
-- refuter: search for disconfirming / newer evidence respecting `as_of` (newer truth that supersedes is a data gap, not a contradiction).
-Compute per-claim survived-confidence: keep `high` only if source_fidelity != contradicted AND >=2/3 verifiers confirm; force DISPUTED on any contradiction; force UNVERIFIABLE if >=2 cannot_confirm/unreachable. Re-dispatch ONLY analysts with remaining `missing_claim_source_ids`, parse failures, or DISPUTED claims, with a stricter prompt; re-`record_visible_packet` (idempotent). Cap at 2 rounds; log residual gaps for the PM to report honestly. Verifiers also obey the leaf-worker rule.
+### Stage 2b — Mandatory triple verification for `slow + all methods + all analysts`
+This is a fail-closed audit stage, not an optional repair loop. It is required only when the frozen receipt is exactly `council_pace=slow`, `selection_mode=all`, and `analyst_scope=all`; every other full combination records `source_id_presence_only` and must not claim adversarial verification.
+
+Build the frozen material-claim ledger from every non-low source-backed claim (or every source-backed claim if all claims are low). In one turn, run exactly three verifier `Task` subagents, each over the complete ledger:
+- `source_fidelity`: open the original cited URL for every claim and return one allowed verdict plus the checked URL and supporting excerpt.
+- `rederivation`: receive no original URLs, independently search and recompute every claim, and return one allowed verdict plus query, different URL, and derivation when confirmed or contradicted.
+- `refuter`: run at least one concrete disconfirming/newer-evidence query for every claim and return one allowed verdict with its search record.
+
+Record each complete result with `record_verifier_batch(run_id, verifier, packet)`. Each batch must contain every frozen `claim_id` exactly once; missing, duplicate, unexpected, or malformed coverage fails the audit. Allowed unresolved or adverse verdicts are preserved as `completed_with_findings`, visibly reduce the originating evidence seat's weight, and do not masquerade as a missing verifier. Do not mutate or re-dispatch the frozen analyst packets from this stage. Continue to method seats only after all three batches achieve exact coverage. If no verifier verdict is recorded, or if the exact expected count/coverage does not pass, call `finalize_visible_run`; the terminal status must be `needs_verification`, never `complete`. Verifiers also obey the leaf-worker rule.
 
 ### Stage 2c - Selected master methods
 
@@ -532,7 +576,8 @@ Debate agents return:
 - Full `full_v2` reports must also include an "Analyst Work Log" / "分析师工作记录" section summarizing every evidence agent packet, plus a "Bull/Bear Debate" / "多空辩论记录" section summarizing the long case, short case, rebuttals, exact Round-3 Q&A, unanswered questions, and who won. Do not replace these with a one-paragraph execution summary.
 - Quick `quick_v1` reports use the fixed 13-section contract stated above. Do not fail a quick report merely because it lacks full-only quant, event-banking, three-horizon, three-round-Q&A, or adversarial-verifier sections; likewise, never present a passing quick report as full-equivalent.
 - Terminal runs must preserve the standard artifacts appropriate to the executed contract, including `final_report.md`, `user_response.md`, `artifact_index.md`, `report_quality.json`, evidence-role Markdown, selected-method output, and bull/bear/PM output or explicit failure records. If `report_quality.json` is not `passed`, report `needs_revision`, not complete. A passing report-quality gate checks structure only: it does not convert a quick `degraded` execution into `complete` or prove evidence coverage.
-- A full `user_response.md` lists all eight mandatory analyst statuses/summaries, every
+- A full `user_response.md` lists every selected analyst status/summary (eight for `core`,
+  exactly eleven for `all`), every
   selected stable master ID with frozen stance and readable explanation/status, and one
   system-owned price snapshot with currency/time/source or an explicit unavailable gap. Its
   machine-gated final section contains the exact selected-seat count and either the complete,

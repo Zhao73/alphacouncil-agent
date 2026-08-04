@@ -29,12 +29,12 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the 1.1.9 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
+test("the 1.2.0 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "1.1.9");
+  assert.equal(expected, "1.2.0");
   assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "latest");
   assert.equal(profile.channel, "solo_test");

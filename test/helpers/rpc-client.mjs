@@ -123,6 +123,7 @@ export async function confirmMasterSelection(server, {
   // The depth tier is the gate's second decision, so a fixture picks it here rather than at
   // execution time -- the receipt binds it and execution may no longer change it.
   council_pace,
+  analyst_scope = council_mode === "quick" ? null : "core",
 } = {}) {
   const opened = structured(await server.callTool("begin_council_selection", {
     symbol, language, prompt, host, council_mode,
@@ -138,5 +139,6 @@ export async function confirmMasterSelection(server, {
     display_ack: true,
     ...choice,
     ...(council_pace ? { council_pace } : {}),
+    ...(analyst_scope ? { analyst_scope } : {}),
   }));
 }

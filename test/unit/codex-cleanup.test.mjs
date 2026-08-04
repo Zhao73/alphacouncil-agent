@@ -163,6 +163,62 @@ test("runCodex does not reject valid CJK text merely because UTF-8 uses more byt
   }
 });
 
+test("leaf workers isolate nested plugin data from the parent run and remove the temp directory", async () => {
+  const dir = makeDataDir();
+  class ClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 454545;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  let outFile;
+  let leafRuntimeDir;
+  try {
+    const result = await runCodex("fixture", 1000, ({ output }) => { outFile = output; }, () => {}, {
+      dataDir: dir,
+      spawn: (_command, _args, options) => {
+        leafRuntimeDir = options.env.ALPHACOUNCIL_AGENT_DATA_DIR;
+        assert.notEqual(leafRuntimeDir, dir);
+        assert.equal(existsSync(leafRuntimeDir), true);
+        const child = new ClosingChild();
+        queueMicrotask(() => {
+          writeFileSync(outFile, JSON.stringify({ ok: true }));
+          child.emit("close", 0);
+        });
+        return child;
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(existsSync(leafRuntimeDir), false, "owned leaf plugin data must be removed after settlement");
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("a synchronous worker spawn failure does not leak the isolated plugin directory", async () => {
+  const dir = makeDataDir();
+  try {
+    await assert.rejects(
+      runCodex("fixture", 1000, () => {}, () => {}, {
+        dataDir: dir,
+        leafRuntimeRoot: dir,
+        spawn: () => { throw new Error("spawn fixture failed"); },
+      }),
+      /spawn fixture failed/u,
+    );
+    assert.deepEqual(
+      readdirSync(dir).filter((name) => name.startsWith("alphacouncil-leaf-")),
+      [],
+      "failed spawn must remove the owned leaf plugin data directory",
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
 test("bounded output reader diagnoses a sparse 50 MiB file with bounded samples", () => {
   const dir = makeDataDir();
   const path = join(dir, "huge-worker.txt");

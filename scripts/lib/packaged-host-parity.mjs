@@ -50,7 +50,7 @@ const PROMPT = "packaged adapter parity fixture";
 const TASKS = Object.freeze(["market_data"]);
 const REQUEST_TIMEOUT_MS = 30_000;
 const PROCESS_TIMEOUT_MS = 120_000;
-const EXPECTED_TOOL_COUNT = 32;
+const EXPECTED_TOOL_COUNT = 33;
 const INSTALLED_LOCALE_CASES = Object.freeze([
   Object.freeze({ language: "en-US", prompt: "installed package locale smoke", key: "en", script: /[A-Za-z]/u }),
   Object.freeze({ language: "zh-CN", prompt: "安装包语言烟雾测试", key: "zh", script: /\p{Script=Han}/u }),
@@ -725,6 +725,7 @@ async function executePackagedAdapters({ pack, surfaces, tempRoot }) {
         catalog_hash: opened.catalog_hash,
         display_ack: true,
         selected_master_ids: PACKAGED_SELECTION_INPUT,
+        analyst_scope: "core",
       }), `${session.hostId} confirm_master_selection`);
       session.opened = opened;
       session.confirmed = confirmed;

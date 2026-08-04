@@ -19,7 +19,7 @@ test("parse repair budgets scale across every fast, normal and slow stage", () =
   const expected = {
     fast: { evidence_ms: 140_000, master_ms: 40_000, debate_ms: 60_000, pm_ms: 80_000 },
     normal: { evidence_ms: 240_000, master_ms: 80_000, debate_ms: 100_000, pm_ms: 120_000 },
-    slow: { evidence_ms: 240_000, master_ms: 160_000, debate_ms: 240_000, pm_ms: 240_000 },
+    slow: { evidence_ms: 240_000, master_ms: 170_000, debate_ms: 240_000, pm_ms: 240_000 },
   };
   for (const [pace, stages] of Object.entries(expected)) {
     const run = fullRun(pace);
