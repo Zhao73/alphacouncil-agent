@@ -8,6 +8,7 @@ import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
 function scriptedCodexCommand(dataDir, {
+  targetTask = "forward_expectations",
   recoverOnSecondAttempt = false,
   failOnSecondAttempt = false,
   lateValidOnSecondAttempt = false,
@@ -75,11 +76,40 @@ const outputIndex = args.indexOf("-o");
 if (outputIndex === -1 || !args[outputIndex + 1]) process.exit(2);
 const outputPath = args[outputIndex + 1];
 const counterPath = ${JSON.stringify(counter)};
-const attempt = existsSync(counterPath) ? Number(readFileSync(counterPath, "utf8")) + 1 : 1;
-writeFileSync(counterPath, String(attempt));
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk.toString();
-appendFileSync(${JSON.stringify(promptLog)}, JSON.stringify({ attempt, search: args.includes("--search"), prompt }) + "\\n");
+const tasks = ${JSON.stringify(DEFAULT_TASKS)};
+const task = tasks.find((id) => prompt.includes("Task:" + id) || prompt.includes("Task: " + id) || prompt.includes(id))
+  || /Target task:\\s*([a-z_]+)/u.exec(prompt)?.[1]
+  || null;
+const tracked = task === ${JSON.stringify(targetTask)};
+const attempt = tracked
+  ? (existsSync(counterPath) ? Number(readFileSync(counterPath, "utf8")) + 1 : 1)
+  : 0;
+if (tracked) writeFileSync(counterPath, String(attempt));
+appendFileSync(${JSON.stringify(promptLog)}, JSON.stringify({ attempt, task, search: args.includes("--search"), prompt }) + "\\n");
+if (!tracked) {
+  const asOf = /as[-_ ]of(?: date)?\\s*:\\s*(\\d{4}-\\d{2}-\\d{2})/iu.exec(prompt)?.[1] || "2026-08-04";
+  const chinese = /Reader-facing language:\\s*中文|读者语言：中文|请使用中文/u.test(prompt);
+  const baseline = {
+    summary: chinese ? "该非目标分析席已完成有界测试并保留明确限制。" : "This non-target analyst completed the bounded fixture with explicit limits.",
+    claims: [], metrics: {}, sources: [],
+    open_questions: [chinese ? "该非目标测试席没有额外可核验论断。" : "This non-target fixture carries no additional sourced claim."],
+    confidence: "low", information_richness: "C",
+  };
+  if (task === "news_industry_management") {
+    const source = { id: "S1", title: "Official fixture item", url: "https://example.com/official-item", published_at: asOf, retrieved_at: asOf };
+    const item = { title: source.title, url: source.url, published_at: asOf, source_id: "S1" };
+    baseline.sources = [source];
+    baseline.official_source_coverage = {
+      status: "complete",
+      regulator: { status: "complete", entry_url: "https://example.com/regulator", checked_through: asOf, latest_dated_item: item, dated_items_checked: [item], gap: null },
+      issuer: { status: "complete", entry_url: "https://example.com/issuer", checked_through: asOf, latest_dated_item: item, dated_items_checked: [item], gap: null },
+    };
+  }
+  writeFileSync(outputPath, JSON.stringify(baseline));
+  process.exit(0);
+}
 if (${JSON.stringify(failOnSecondAttempt)} && attempt === 2) process.exit(17);
 if (${JSON.stringify(lateValidOnSecondAttempt)} && attempt === 2) {
   process.on("SIGTERM", () => {
@@ -183,6 +213,12 @@ test("headless failures stay out of evidence and full council stops before expen
 }
 });
 
+function packetFor(run, task) {
+  const packet = run.packets.find((candidate) => candidate.task === task);
+  assert.ok(packet, `missing packet for ${task}`);
+  return packet;
+}
+
 test("a safe local syntax repair avoids a second Codex worker", async () => {
   const dataDir = makeDataDir();
   const fake = scriptedCodexCommand(dataDir, { locallyRepairableFirst: true });
@@ -209,7 +245,7 @@ test("a safe local syntax repair avoids a second Codex worker", async () => {
     assert.equal(run.status, "evidence_complete");
     assert.equal(run.task_status.forward_expectations.status, "completed");
     assert.equal(run.task_status.forward_expectations.attempts, 1);
-    assert.equal(run.packets[0].summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
+    assert.equal(packetFor(run, "forward_expectations").summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
     assert.equal(existsSync(join(dataDir, "runs", runId, "forward_expectations.attempt-1.failure.json")), false);
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
@@ -222,7 +258,7 @@ test("a safe local syntax repair avoids a second Codex worker", async () => {
 
 test("schema repair receives bounded validator paths and a pace-aware budget", async () => {
   const dataDir = makeDataDir();
-  const fake = scriptedCodexCommand(dataDir, { schemaInvalidFirst: true });
+  const fake = scriptedCodexCommand(dataDir, { schemaInvalidFirst: true, targetTask: "insider_sec" });
   const server = startServer({
     dataDir,
     env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.command },
@@ -311,9 +347,9 @@ test("a code-zero malformed worker response is isolated in a failure artifact", 
       assert.equal(statSync(firstDiagnosticPath).mode & 0o777, 0o600, "retry diagnostics must be owner-only");
     }
     assert.equal(readFileSync(fake.counter, "utf8"), "2", "a parse failure gets exactly one retry");
-    assert.deepEqual(result.packets[0].claims, []);
-    assert.deepEqual(result.packets[0].sources, []);
-    assert.equal(result.packets[0].raw_text, "");
+    assert.deepEqual(packetFor(result, "forward_expectations").claims, []);
+    assert.deepEqual(packetFor(result, "forward_expectations").sources, []);
+    assert.equal(packetFor(result, "forward_expectations").raw_text, "");
     assert.equal(result.task_status.forward_expectations.diagnostic, diagnosticPath);
     assert.equal(result.task_status.forward_expectations.retry_diagnostic, firstDiagnosticPath);
     assert.equal(result.task_status.forward_expectations.attempts, 2);
@@ -367,9 +403,9 @@ test("valid JSON in the wrong reader language remains reader_language_mismatch a
     assert.equal(diagnostic.status, "reader_language_mismatch");
     assert.equal(firstDiagnostic.status, "reader_language_mismatch");
     assert.match(diagnostic.reader_language_error, /reader language mismatch/);
-    assert.match(run.packets[0].summary, /错误语言/);
-    assert.deepEqual(run.packets[0].claims, []);
-    assert.equal(run.packets[0].raw_text, "");
+    assert.match(packetFor(run, "forward_expectations").summary, /错误语言/);
+    assert.deepEqual(packetFor(run, "forward_expectations").claims, []);
+    assert.equal(packetFor(run, "forward_expectations").raw_text, "");
     const events = readFileSync(join(runDir, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
     const retry = events.filter((event) => event.type === "task_retry");
@@ -412,9 +448,9 @@ test("a transport failure on the parse retry remains empty evidence", async () =
     assert.equal(run.task_status.forward_expectations.status, "failed");
     assert.equal(run.task_status.forward_expectations.attempts, 2);
     assert.equal(run.task_status.forward_expectations.error, "exit code 17");
-    assert.deepEqual(evidence.packets[0].claims, []);
-    assert.deepEqual(evidence.packets[0].sources, []);
-    assert.equal(evidence.packets[0].raw_text, "");
+    assert.deepEqual(packetFor(evidence, "forward_expectations").claims, []);
+    assert.deepEqual(packetFor(evidence, "forward_expectations").sources, []);
+    assert.equal(packetFor(evidence, "forward_expectations").raw_text, "");
     assert.doesNotMatch(JSON.stringify(evidence), /first-object|second-object/);
     assert.doesNotMatch(manifestText, /first-object|second-object/);
   } finally {
@@ -456,8 +492,8 @@ test("a worker that exits zero with valid JSON after its timeout is still reject
     assert.equal(run.task_status.forward_expectations.status, "timed_out");
     assert.equal(run.task_status.forward_expectations.attempts, 2);
     assert.equal(run.task_status.forward_expectations.error, "timeout");
-    assert.deepEqual(run.packets[0].claims, []);
-    assert.equal(run.packets[0].raw_text, "");
+    assert.deepEqual(packetFor(run, "forward_expectations").claims, []);
+    assert.equal(packetFor(run, "forward_expectations").raw_text, "");
     assert.doesNotMatch(evidenceText, /LATE-AFTER-TIMEOUT|late claim|late evidence/);
     assert.doesNotMatch(manifestText, /LATE-AFTER-TIMEOUT|late claim|late evidence/);
   } finally {
@@ -497,8 +533,8 @@ test("one bounded parse-only retry can recover a valid evidence packet", async (
     assert.equal(run.task_status.forward_expectations.status, "completed");
     assert.equal(run.task_status.forward_expectations.attempts, 2);
     assert.equal(run.task_status.forward_expectations.retry_diagnostic, retryDiagnostic);
-    assert.equal(run.packets[0].summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
-    assert.equal(run.packets[0].raw_text.includes("first-object"), false);
+    assert.equal(packetFor(run, "forward_expectations").summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
+    assert.equal(packetFor(run, "forward_expectations").raw_text.includes("first-object"), false);
     assert.ok(existsSync(retryDiagnostic));
     assert.equal(existsSync(join(runDir, "forward_expectations.failure.json")), false);
 
@@ -542,7 +578,7 @@ test("parse-only retry accepts one schema-valid packet beside non-contract JSON 
     assert.equal(run.status, "evidence_complete");
     assert.equal(run.task_status.forward_expectations.status, "completed");
     assert.equal(run.task_status.forward_expectations.attempts, 2);
-    assert.equal(run.packets[0].summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
+    assert.equal(packetFor(run, "forward_expectations").summary, "The bounded retry recovered a valid evidence packet without changing any facts or source identifiers.");
     assert.equal(existsSync(join(dir, "forward_expectations.failure.json")), false);
     assert.equal(existsSync(join(dir, "forward_expectations.attempt-1.failure.json")), true);
   } finally {

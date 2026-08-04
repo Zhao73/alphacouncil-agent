@@ -35,7 +35,7 @@
 
 ## 该验哪一条（验证有预算，选错就白费）
 
-如果给了你多条论断，按这个顺序选，并写出你为什么选它：
+如果给了你多条已冻结的重大论断，**每一条都必须核验，不能只选一条**。下面的顺序只决定检查顺序和时间分配，不得用来删减批次：
 1. **结论承重的**：如果这条错了，评级会变。这类必须优先，哪怕它看起来很可信。
 2. **单一来源支撑的**：只有一处出处、且没有交叉印证的。
 3. **数字精确得可疑的**：过于精确的数字（「市占率 23.7%」）往往是二手加工或幻觉的产物。
@@ -75,7 +75,7 @@ The verdict must be one of: refuted (direct evidence it is wrong), weakened (a m
 
 ## Which claim to verify -- the pass has a budget, and the wrong choice wastes it
 
-When given several claims, choose in this order and say why you chose it:
+When given a frozen batch of material claims, **verify every claim; never select only one**. The order below controls sequencing and effort, not whether a claim is omitted:
 1. **Load-bearing on the conclusion**: if this is wrong, the rating changes. These come first even when they look credible.
 2. **Single-sourced**: one origin, with no cross-confirmation.
 3. **Suspiciously precise**: an over-precise figure ("23.7% share") is often the product of secondary processing or of hallucination.

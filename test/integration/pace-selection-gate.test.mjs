@@ -71,6 +71,7 @@ async function gate({ prefill, choice, mode = "full" } = {}) {
     catalog_hash: opened.catalog_hash,
     display_ack: true,
     selected_master_ids: ["master_marks"],
+    ...(mode === "quick" ? {} : { analyst_scope: "core" }),
     ...(choice ? { council_pace: choice } : {}),
   });
   return { opened, confirmed, prompt };
@@ -104,7 +105,7 @@ test("the gate offers every tier with both its estimate and its ceiling", async 
     assert.ok(option.buys.en.includes("evidence seat"), option.pace);
     assert.equal(option.debate_seconds_per_round, Math.round(profile.debate_ms / 1000));
   }
-  assert.deepEqual(opened.pace_options.map((option) => option.expected_minutes), [12, 20, 44]);
+  assert.deepEqual(opened.pace_options.map((option) => option.expected_minutes), [13, 22, 58]);
   assert.deepEqual(opened.pace_options.map((option) => option.hard_ceiling_minutes), [15, 30, 60]);
   assert.deepEqual(opened.pace_options.filter((option) => option.is_default).map((o) => o.pace), ["normal"]);
 });
@@ -112,7 +113,7 @@ test("the gate offers every tier with both its estimate and its ceiling", async 
 test("the tier chosen at the gate binds into the receipt and reaches the run", async () => {
   const { confirmed, prompt } = await gate({ choice: "slow" });
   assert.equal(structured(confirmed).council_pace, "slow");
-  assert.equal(structured(confirmed).selection_hash_version, 2);
+  assert.equal(structured(confirmed).selection_hash_version, 3);
   // Omitted at execution: the gate's decision is what runs.
   const result = structured(await run(structured(confirmed).selection_receipt, prompt));
   assert.equal(result.run.council_pace, "slow");
@@ -282,6 +283,7 @@ test("an already confirmed selection cannot be replayed with another pace", asyn
     display_ack: true,
     selected_master_ids: ["master_marks"],
     council_pace: "fast",
+    analyst_scope: "core",
   }));
   const changed = await server.callTool("confirm_master_selection", {
     selection_id: opened.selection_id,
@@ -289,6 +291,7 @@ test("an already confirmed selection cannot be replayed with another pace", asyn
     display_ack: true,
     selected_master_ids: ["master_marks"],
     council_pace: "slow",
+    analyst_scope: "core",
   });
   assert.ok(changed.error);
   assert.equal(changed.error.data.reason, "MASTER_SELECTION_ALREADY_CONFIRMED");
@@ -301,6 +304,7 @@ test("an already confirmed selection cannot be replayed with another pace", asyn
     display_ack: true,
     selected_master_ids: ["master_marks"],
     council_pace: "fast",
+    analyst_scope: "core",
   }));
   assert.equal(replay.selection_receipt, first.selection_receipt);
 });

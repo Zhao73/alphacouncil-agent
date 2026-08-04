@@ -81,6 +81,7 @@ test("opening a selection returns a text-complete individual catalog without sta
     intent_hash: opened.intent_hash,
     expires_at: opened.expires_at,
     council_mode: "full",
+    analyst_options: [{ scope: "core", count: 8 }, { scope: "all", count: 11 }],
   });
   assert.equal(existsSync(join(dataDir, "runs")), false);
 });
@@ -109,14 +110,15 @@ test("selection and confirmation text use the requested supported language", asy
       catalog_hash: opened.catalog_hash,
       display_ack: true,
       selected_master_ids: ["master_buffett"],
+      analyst_scope: "core",
     });
     const confirmed = structured(confirmedResponse);
     assert.equal(confirmed.language, resolved);
     const confirmedText = confirmedResponse.result.content[0].text;
-    if (language === "zh-CN") assert.match(confirmedText, /已为 QQQ 确认 1 个大师席位/);
-    else if (language === "ja-JP") assert.match(confirmedText, /QQQ について 1 席のマスターを確定しました/);
-    else if (language === "ko-KR") assert.match(confirmedText, /QQQ에 대해 마스터 1개 좌석을 확정했습니다/);
-    else assert.match(confirmedText, /Confirmed 1 master seat\(s\) for QQQ/);
+    if (language === "zh-CN") assert.match(confirmedText, /分别确认 1 个方法席与 8 个分析席/);
+    else if (language === "ja-JP") assert.match(confirmedText, /メソッド1席と分析担当8席/);
+    else if (language === "ko-KR") assert.match(confirmedText, /방법론 1개 좌석과 분석가 8개 좌석/);
+    else assert.match(confirmedText, /Confirmed 1 method seat\(s\) and 8 analyst seat\(s\)/);
   }
 });
 
@@ -131,6 +133,7 @@ test("auto infers the prompt language and binds the same canonical locale throug
     catalog_hash: opened.catalog_hash,
     display_ack: true,
     selected_master_ids: ["master_buffett"],
+    analyst_scope: "core",
   }));
   assert.equal(confirmed.language, "日本語");
   const runId = `SELECTION-AUTO-LOCALE-${process.pid}`;
@@ -139,7 +142,6 @@ test("auto infers the prompt language and binds the same canonical locale throug
     language: "auto",
     prompt,
     run_id: runId,
-    tasks: ["market_data"],
     grounding: { facts_unavailable: true },
     selection_receipt: confirmed.selection_receipt,
   }));
@@ -158,6 +160,7 @@ test("an omitted language is inferred consistently at selection and receipt cons
     catalog_hash: opened.catalog_hash,
     display_ack: true,
     selected_master_ids: ["master_buffett"],
+    analyst_scope: "core",
   }));
   assert.equal(confirmed.language, "中文");
   const runId = `SELECTION-OMITTED-LOCALE-${process.pid}`;
@@ -165,7 +168,6 @@ test("an omitted language is inferred consistently at selection and receipt cons
     symbol: "QQQ",
     prompt,
     run_id: runId,
-    tasks: ["market_data"],
     grounding: { facts_unavailable: true },
     selection_receipt: confirmed.selection_receipt,
   }));
@@ -194,6 +196,7 @@ test("text-only MCP hosts can complete the selection handshake without structure
     catalog_hash: openedContext.catalog_hash,
     display_ack: true,
     selected_master_ids: ["master_buffett"],
+    analyst_scope: "core",
   });
   const confirmed = structured(confirmedResponse);
   const confirmedText = confirmedResponse.result.content[0].text;
@@ -206,6 +209,8 @@ test("text-only MCP hosts can complete the selection handshake without structure
     catalog_hash: confirmed.catalog_hash,
     intent_hash: confirmed.intent_hash,
     council_mode: "full",
+    analyst_scope: "core",
+    selected_analyst_count: 8,
   });
   assert.match(confirmedContext.selection_receipt, /^RCP-/);
   const runCountAfter = existsSync(runsDir) ? readdirSync(runsDir).length : 0;

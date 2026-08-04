@@ -227,9 +227,9 @@ if (task) {
     position: "bounded position only", invalidation: ["verified milestones fail"],
     source_ids: ["market_data:S1", "earnings_deep_dive:S1"], confidence: "medium",
     price_levels: [
-      { label: "Do not touch", range: "above the supported range", meaning: "poor risk reward", action: "do not initiate", basis: "conditional valuation", source_ids: ["market_data:S1"] },
-      { label: "Worth starting", range: "inside the supported range", meaning: "bounded upside and downside", action: "start small", basis: "conditional valuation", source_ids: ["market_data:S1"] },
-      { label: "Materially undervalued", range: "below the supported range", meaning: "margin of safety", action: "add only if thesis holds", basis: "conditional valuation", source_ids: ["earnings_deep_dive:S1"] }
+      { label: "Do not touch", range: "above the supported range", lower_bound: 200, upper_bound: null, currency: "USD", meaning: "poor risk reward", action: "do not initiate", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+      { label: "Worth starting", range: "inside the supported range", lower_bound: 100, upper_bound: 200, currency: "USD", meaning: "bounded upside and downside", action: "start small", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+      { label: "Materially undervalued", range: "below the supported range", lower_bound: null, upper_bound: 100, currency: "USD", meaning: "margin of safety", action: "add only if thesis holds", basis: "conditional valuation", source_ids: ["earnings_deep_dive:S1"] }
     ],
     horizon_views: { short_term: "Wait for the next filing.", medium_term: "Require operating progress.", long_term: "Require durable economics." },
     data_gaps: ["No critical data gaps were found in the completed fixture packets."]

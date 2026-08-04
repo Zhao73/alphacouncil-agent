@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS, councilPaceProfile } from "./constants.mjs";
+import { ALL_ANALYST_TASKS, COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS, councilPaceProfile } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
@@ -9,7 +9,7 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, sourceManifest, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
@@ -29,6 +29,17 @@ import {
   companyDossierPromptBlock,
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
+import {
+  REQUIRED_VERIFIER_IDS,
+  buildVerifierBatchInput,
+  buildVerifierHeadlessOutputSchema,
+  initializeVerificationPolicy,
+  normalizeVerifierBatch,
+  normalizeVerifierHeadlessTransport,
+  tripleVerificationRequired,
+  verificationAuditStatus,
+  verifierBatchPrompt,
+} from "./verification.mjs";
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/u;
 
@@ -172,10 +183,19 @@ function bindVisibleMastersToCompanyDossier(run) {
 }
 
 function refreshVisibleDownstreamPromptFiles(run) {
-  if (!requiresOperatingCompanyDossier(run) || !run?.company_dossier?.content_hash) return [];
   const dir = join(runPath(run.run_id), "prompts");
   if (!existsSync(dir)) return [];
   const refreshed = [];
+  if (tripleVerificationRequired(run)) {
+    for (const verifier of REQUIRED_VERIFIER_IDS) {
+      const input = join(runPath(run.run_id), `verification.${verifier}.input.json`);
+      writeJson(input, buildVerifierBatchInput(run, verifier), { mode: 0o600 });
+      const file = join(dir, `verifier.${verifier}.prompt.md`);
+      writeFileSync(file, `${verifierBatchPrompt(run, verifier, input).trimEnd()}\n`, { encoding: "utf8", mode: 0o600 });
+      refreshed.push(file);
+    }
+  }
+  if (!requiresOperatingCompanyDossier(run) || !run?.company_dossier?.content_hash) return refreshed;
   const frozenById = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
   for (const id of selectedMasters(run)) {
     const file = join(dir, `master.${id}.prompt.md`);
@@ -202,6 +222,10 @@ function councilMode(args = {}) {
 
 function plannedTasks(args = {}) {
   if (councilMode(args) === "quick") return QUICK_TASKS;
+  // Selection-gated public runs take analyst breadth only from the one-use receipt. A caller-
+  // supplied tasks array cannot turn an approved 11-seat run back into eight (or vice versa).
+  const receiptTasks = args.master_selection?.selected_analyst_ids || args.selected_analyst_ids;
+  if (Array.isArray(receiptTasks) && receiptTasks.length) return [...receiptTasks];
   // Public full-council entry tools may add optional breadth, never subtract one of the eight
   // mandatory evidence roles. Direct library callers retain a narrow-task seam for isolated
   // tests and data-only development helpers; every selected MCP run carries entry_tool.
@@ -243,6 +267,11 @@ export function masterStageTimeout(args = {}, run = {}) {
     : runPace(run).master_ms;
   const requested = Number.isFinite(args.timeout_ms) ? Number(args.timeout_ms) : cap;
   return Math.min(requested, cap);
+}
+
+export function verifierStageTimeout(run = {}) {
+  if (!tripleVerificationRequired(run)) return 0;
+  return councilPaceProfile(run.council_pace).verifier_ms || LIMITS.FULL_VERIFIER_MS;
 }
 
 function explicitSynthesisCeiling(args = {}) {
@@ -290,8 +319,10 @@ function councilTiming(args, startedAt) {
 
 function visibleCouncilTiming(args) {
   const mode = councilMode(args);
+  const profile = mode === "quick" ? null : councilPaceProfile(args.council_pace);
   return {
     council_mode: mode,
+    council_pace: profile?.pace || null,
     debate_format: mode === "quick" ? "single_round_parallel" : "host_managed_visible_debate",
     time_budget_ms: null,
     deadline_at: null,
@@ -421,6 +452,21 @@ function frozenMasterSelection(args = {}) {
       reason: "MASTER_SELECTION_RECEIPT_MISMATCH",
     });
   }
+  if (!Array.isArray(selection.selected_analyst_ids) || selection.selected_analyst_ids.length === 0) {
+    throw invalidParams("The consumed selection receipt has no analyst-seat selection.", {
+      reason: "ANALYST_SELECTION_REQUIRED",
+    });
+  }
+  const validAnalysts = selection.analyst_scope === "all" ? ALL_ANALYST_TASKS
+    : selection.analyst_scope === "quick" ? QUICK_TASKS : DEFAULT_TASKS;
+  if (JSON.stringify(selection.selected_analyst_ids) !== JSON.stringify(validAnalysts)) {
+    throw invalidParams("Selected analysts do not match the consumed receipt's analyst scope.", {
+      reason: "ANALYST_SELECTION_RECEIPT_MISMATCH",
+      analyst_scope: selection.analyst_scope,
+      selected_analyst_ids: selection.selected_analyst_ids,
+      expected_analyst_ids: validAnalysts,
+    });
+  }
   const reg = registry();
   const unknown = args.masters.filter((id) => reg.get(id)?.kind !== "master" || reg.get(id)?.enabled === false);
   if (unknown.length) {
@@ -445,6 +491,7 @@ function frozenMasterSelection(args = {}) {
   }
   return {
     masters: [...args.masters],
+    analysts: [...selection.selected_analyst_ids],
     selection: {
       ...selection,
       selected_master_ids: [...args.masters],
@@ -486,6 +533,7 @@ export function visibleRun(args) {
     status: "planned",
     phase: "visible_planned",
     tasks,
+    analyst_scope: frozen.selection.analyst_scope,
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
     agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
     // Visible hosts call record_visible_decision once per role and round. Keep those
@@ -563,6 +611,22 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     ].filter(Boolean).join("\n"),
     output_contract: localized(run.language, { en: `Return one JSON debate packet with reader-facing fields in ${run.language}.`, zh: "只返回一个 JSON debate packet。", ja: "読者向けフィールドを日本語にした JSON debate packet を1つだけ返してください。", ko: "독자용 필드를 한국어로 작성한 JSON debate packet 하나만 반환하십시오." }),
   }));
+  const verifier_agents = tripleVerificationRequired(run)
+    ? REQUIRED_VERIFIER_IDS.map((verifier) => {
+      const input = join(runPath(run.run_id), `verification.${verifier}.input.json`);
+      return {
+        role: verifier,
+        title: `AlphaCouncil Agent ${run.symbol} ${verifier}`,
+        prompt_template: verifierBatchPrompt(run, verifier, input),
+        output_contract: localized(run.language, {
+          en: "Return one verifier-batch JSON with exactly one result for every frozen material claim. Record it with record_verifier_batch before any method seat runs.",
+          zh: "只返回一个 verifier-batch JSON，必须逐条覆盖全部冻结的重大论断；任何方法席运行前先用 record_verifier_batch 记录。",
+          ja: "凍結された全重要主張を1件ずつ網羅する verifier-batch JSON を1つ返し、メソッド席より先に record_verifier_batch で記録してください。",
+          ko: "동결된 모든 중요 주장에 정확히 하나씩 결과를 내는 verifier-batch JSON 하나를 반환하고 방법론 좌석 전에 record_verifier_batch로 기록하십시오.",
+        }),
+      };
+    })
+    : [];
   // The deterministic pass freezes every physical v3 stance before language generation.
   // Visible v3 workers below may explain that frozen result after evidence completes, but
   // cannot turn an out_of_scope method into a directional vote.
@@ -714,6 +778,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   saveRun(run);
   const prompts = externalizeVisiblePrompts(run, [
     { kind: "evidence", agents: evidence_agents },
+    { kind: "verifier", agents: verifier_agents },
     { kind: "master", agents: orderedMasterAgents },
     { kind: "debate", agents: debate_agents },
   ]);
@@ -725,6 +790,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     prompt_dir: prompts.prompt_dir,
     prompt_chars_total: prompts.prompt_chars_total,
     evidence_agents: prompts.byKind.get("evidence"),
+    verifier_agents: prompts.byKind.get("verifier"),
     master_agents: prompts.byKind.get("master"),
     debate_agents: prompts.byKind.get("debate"),
     // Recorded, not hidden: a reader must be able to tell a method that judged from a method
@@ -880,6 +946,14 @@ export function recordMasterOpinion(args) {
       coverage: dossierCoverage,
     });
   }
+  const verifierGate = verificationStatus(run);
+  if (verifierGate.verification === "needs_verification") {
+    throw invalidParams("record_master_opinion rejected: the required source/triple-verification gate has not passed.", {
+      reason: "VISIBLE_MASTER_VERIFICATION_INCOMPLETE",
+      run_id: run.run_id,
+      verification: verifierGate,
+    });
+  }
   const dir = runPath(run.run_id);
   const frozenOpinion = (run.master_opinions || []).find((item) => item.master === args.master);
   const v3Voice = frozenOpinion?.engine === "v3_method_runtime"
@@ -938,6 +1012,7 @@ export function recordMasterOpinion(args) {
       evidence_source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
       confidence: voice.confidence,
       company_dossier_hash_ack: voice.company_dossier_hash_ack,
+      evidence_packet_acks: voice.evidence_packet_acks,
       thread_id: args.thread_id,
       dedicated_worker: {
         status: "completed",
@@ -977,6 +1052,12 @@ export function recordMasterOpinion(args) {
     master: args.master,
     status: "completed",
     company_dossier_hash_ack: opinion.company_dossier_hash_ack || null,
+    evidence_packet_ack_count: Array.isArray(opinion.evidence_packet_acks)
+      ? opinion.evidence_packet_acks.length
+      : 0,
+    evidence_packet_ack_statuses: Array.isArray(opinion.evidence_packet_acks)
+      ? Object.fromEntries(opinion.evidence_packet_acks.map((ack) => [ack.task, ack.status]))
+      : {},
     completed_at: new Date().toISOString(),
   };
   writeJson(join(dir, `${args.master}.json`), opinion);
@@ -1059,6 +1140,7 @@ export function recordVisiblePacket(args) {
     const dossierRef = materializeCompanyDossier(run);
     if (dossierRef) {
       bindVisibleMastersToCompanyDossier(run);
+      initializeVerificationPolicy(run);
       const refreshed = refreshVisibleDownstreamPromptFiles(run);
       appendEvent(run, "company_dossier_ready", {
         contract_id: dossierRef.contract_id,
@@ -1069,7 +1151,12 @@ export function recordVisiblePacket(args) {
         unavailable_count: dossierRef.unavailable_count,
         refreshed_prompt_count: refreshed.length,
       });
+    } else {
+      initializeVerificationPolicy(run);
+      refreshVisibleDownstreamPromptFiles(run);
     }
+    run.status = "running";
+    run.phase = tripleVerificationRequired(run) ? "visible_verification" : "visible_methods";
     saveRun(run);
   }
   writeJson(join(dir, "evidence.json"), run);
@@ -1203,12 +1290,19 @@ function recordVisibleDebateRound(run, args) {
   const missingMasters = selectedMasters(run).filter((master) => masterSeatIncomplete(run, master));
   const dossierCoverage = companyDossierCoverageStatus(run);
   const dossierReady = !dossierCoverage.required || dossierCoverage.decision_barrier_ready;
-  if (missingEvidence.length || missingMasters.length || !dossierReady) {
+  const verifierGate = verificationStatus(run);
+  if (missingEvidence.length || missingMasters.length || !dossierReady
+    || verifierGate.verification === "needs_verification") {
     rejectVisibleDecision(
       run,
       "VISIBLE_DEBATE_PREREQUISITES_INCOMPLETE",
       "Bull/Bear debate rejected: complete every evidence packet and returned method-seat worker first.",
-      { missing_evidence: missingEvidence, missing_masters: missingMasters, company_dossier: dossierCoverage },
+      {
+        missing_evidence: missingEvidence,
+        missing_masters: missingMasters,
+        company_dossier: dossierCoverage,
+        verification: verifierGate,
+      },
     );
   }
   const expected = run.council_mode === "quick" ? [1] : [1, 2, 3];
@@ -1342,6 +1436,7 @@ function visiblePmPrerequisites(run, state) {
   const qnaRequired = run.council_mode !== "quick";
   const dossier = companyDossierCoverageStatus(run);
   const dossierReady = !dossier.required || dossier.decision_barrier_ready;
+  const verification = verificationStatus(run);
   return {
     missing_evidence: missingEvidence,
     missing_masters: missingMasters,
@@ -1349,11 +1444,13 @@ function visiblePmPrerequisites(run, state) {
     missing_debate_sides: missingSides,
     qna_gate: state.qna_gate,
     company_dossier: dossier,
+    verification,
     passed: missingEvidence.length === 0
       && missingMasters.length === 0
       && missingRounds.length === 0
       && missingSides.length === 0
       && dossierReady
+      && verification.verification === "passed"
       && (!qnaRequired || state.qna_gate.status === "passed"),
   };
 }
@@ -1375,6 +1472,7 @@ function recordVisiblePortfolioManager(run, args) {
     run_id: run.run_id,
     role: "portfolio_manager",
   });
+  assertPriceLevelContinuity(validated.price_levels, { required: run.council_mode === "full" });
   assertCompanyDossierAck(validated, run, "visible portfolio_manager", { client: true });
   const source_ids = assertSourceIdsResolve(run, validated.source_ids, "portfolio_manager");
   const packet = normalizeDebate({
@@ -1509,6 +1607,7 @@ const VISIBLE_FINALIZE_REASONS = new Set([
   "host_cancelled",
   "host_timeout",
   "evidence_worker_failed",
+  "verifier_worker_failed",
   "method_worker_failed",
   "debate_worker_failed",
   "host_unavailable",
@@ -1717,6 +1816,23 @@ function boundedSchemaRepairIssues(errorOrIssues) {
     ...(typeof issue?.missing_property === "string"
       ? { missing_property: cleanLog(issue.missing_property, 120) }
       : {}),
+  }));
+}
+
+function boundedVerifierCoverageProblems(error, limit = 80) {
+  const problems = Array.isArray(error?.data?.problems) ? error.data.problems : [];
+  return problems.slice(0, limit).map((problem) => ({
+    ...(problem?.claim_id ? { claim_id: cleanLog(String(problem.claim_id), 120) } : {}),
+    reason: cleanLog(String(problem?.reason || "verification_problem"), 160),
+    ...(problem?.verdict ? { verdict: cleanLog(String(problem.verdict), 80) } : {}),
+    ...(Array.isArray(problem?.missing_urls)
+      ? { missing_urls: problem.missing_urls.slice(0, 12).map((url) => cleanLog(String(url), 500)) }
+      : {}),
+    ...(Array.isArray(problem?.urls)
+      ? { urls: problem.urls.slice(0, 12).map((url) => cleanLog(String(url), 500)) }
+      : {}),
+    ...(Number.isSafeInteger(problem?.expected) ? { expected: problem.expected } : {}),
+    ...(Number.isSafeInteger(problem?.supplied) ? { supplied: problem.supplied } : {}),
   }));
 }
 
@@ -1999,6 +2115,15 @@ export function masterAttemptFailureDiagnostic({
   const safeMaster = boundedDiagnosticMaster(master);
   const safeFailureKind = boundedDiagnosticCode(failureKind, "unexpected_error");
   const safeStage = boundedDiagnosticCode(stage, "worker_output");
+  const readerLanguage = safeFailureKind === "reader_language_mismatch" && error?.data
+    ? {
+      requested_locale: boundedDiagnosticCode(error.data.requested_locale, "unknown", 16),
+      observed_locale: boundedDiagnosticCode(error.data.observed_locale, "unknown", 16),
+      target_characters: Number.isSafeInteger(error.data.target_characters) ? error.data.target_characters : null,
+      reader_characters: Number.isSafeInteger(error.data.reader_characters) ? error.data.reader_characters : null,
+      ratio: Number.isFinite(error.data.ratio) ? error.data.ratio : null,
+    }
+    : null;
   return {
     schema_version: 1,
     master: safeMaster,
@@ -2008,6 +2133,7 @@ export function masterAttemptFailureDiagnostic({
     // Error messages may contain the forged ID or rejected worker body. Persist only codes
     // produced by this process; the raw worker output is represented by the digest below.
     diagnostic: `${safeFailureKind} during ${safeStage}`,
+    ...(readerLanguage ? { reader_language: readerLanguage } : {}),
     ...(schemaErrors.length ? {
       schema_id: boundedDiagnosticCode(error?.data?.schema_id, "unknown", 160),
       schema_kind: boundedDiagnosticCode(error?.data?.kind, "unknown", 80),
@@ -2184,6 +2310,7 @@ export function queueHeadlessRun(args) {
     status: "queued",
     phase: "queued",
     tasks,
+    analyst_scope: frozen.selection.analyst_scope,
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
     agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
     packets: [],
@@ -2266,6 +2393,7 @@ export async function collectEvidence(args) {
     status: "running",
     phase: "evidence",
     tasks,
+    analyst_scope: frozen.selection.analyst_scope,
     task_status: Object.fromEntries(tasks.map((task) => [task, { task, status: "pending" }])),
     agent_status: Object.fromEntries(DEBATE_ROLES.map((role) => [role, { role, status: "pending" }])),
     packets: [],
@@ -2580,6 +2708,281 @@ export async function collectEvidence(args) {
   return run;
 }
 
+function updateVerifierStatus(run, verifier, status, patch = {}) {
+  run.verifier_status = run.verifier_status || {};
+  run.verifier_status[verifier] = {
+    ...(run.verifier_status[verifier] || {}),
+    ...patch,
+    verifier,
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  if (["completed", "failed", "skipped"].includes(status)) saveRun(run);
+  else writeStatus(run);
+  appendEvent(run, `verifier_${status}`, { verifier, ...patch });
+}
+
+/**
+ * The slow/full/all path runs three independent batch workers over the exact same frozen
+ * material-claim set. Each worker must account for every claim; partial batches never satisfy
+ * the gate, and zero verdicts are explicitly terminal needs_verification rather than complete.
+ */
+export async function runHeadlessVerification(run, args = {}) {
+  const dir = runPath(run.run_id);
+  const policy = initializeVerificationPolicy(run);
+  saveRun(run);
+  if (!policy.required) return run;
+
+  run.phase = "verification";
+  run.status = "running";
+  run.completed_at = null;
+  appendEvent(run, "verification_started", {
+    policy_id: policy.policy_id,
+    verifier_ids: policy.verifier_ids,
+    material_claim_count: policy.material_claim_count,
+    expected_verdict_count: policy.expected_verdict_count,
+  });
+  if (policy.material_claim_count === 0 || run.dry_run) {
+    for (const verifier of REQUIRED_VERIFIER_IDS) {
+      updateVerifierStatus(run, verifier, run.dry_run ? "skipped" : "failed", {
+        error: run.dry_run ? "dry_run_not_executed" : "no_material_claims",
+        completed_at: new Date().toISOString(),
+      });
+    }
+    run.verification_policy.status = "needs_verification";
+    saveRun(run);
+    return run;
+  }
+
+  const timeoutMs = verifierStageTimeout(run);
+  const fullInputPaths = Object.fromEntries(REQUIRED_VERIFIER_IDS.map((verifier) => {
+    const path = join(dir, `verification.${verifier}.input.json`);
+    writeJson(path, buildVerifierBatchInput(run, verifier), { mode: 0o600 });
+    return [verifier, path];
+  }));
+  await mapLimit(REQUIRED_VERIFIER_IDS, LIMITS.FULL_VERIFIER_CONCURRENCY, async (verifier) => {
+    const claimsPerBatch = verifier === "source_fidelity"
+      ? LIMITS.FULL_SOURCE_FIDELITY_CLAIMS_PER_BATCH
+      : LIMITS.FULL_VERIFIER_CLAIMS_PER_BATCH;
+    const claimChunks = [];
+    for (let offset = 0; offset < policy.material_claim_ids.length; offset += claimsPerBatch) {
+      claimChunks.push(policy.material_claim_ids.slice(offset, offset + claimsPerBatch));
+    }
+    const chunkConcurrency = verifier === "source_fidelity"
+      ? LIMITS.FULL_SOURCE_FIDELITY_CHUNK_CONCURRENCY
+      : LIMITS.FULL_VERIFIER_CHUNK_CONCURRENCY;
+    const startedAtMs = Date.now();
+    updateVerifierStatus(run, verifier, "running", {
+      started_at: new Date().toISOString(),
+      input: fullInputPaths[verifier],
+      attempts: 1,
+      chunks_total: claimChunks.length,
+      chunks_completed: 0,
+    });
+    let pid = null;
+    const remainingVerifierBudget = () => Math.max(0, timeoutMs - (Date.now() - startedAtMs));
+    const execute = async (workerPrompt, budgetMs, attempt, search, outputSchema = null) => {
+      const allowedMs = remainingCouncilBudget(run, Math.min(budgetMs, remainingVerifierBudget()));
+      if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
+      const result = await runCodex(workerPrompt, allowedMs, ({ pid: workerPid, output }) => {
+        pid = workerPid;
+        updateVerifierStatus(run, verifier, "running", { pid: workerPid, output, attempts: attempt });
+      }, ({ pid: workerPid, output, elapsed_ms }) => {
+        updateVerifierStatus(run, verifier, "running", { pid: workerPid, output, elapsed_ms, attempts: attempt });
+      }, { search, outputSchema, sigkillGraceMs: councilKillGrace(run) });
+      return { ...result, budget_ms: allowedMs };
+    };
+    const chunkResults = new Array(claimChunks.length);
+    let chunksCompleted = 0;
+    let verifierFailed = false;
+    await mapLimit(claimChunks, chunkConcurrency, async (expectedClaimIds, index) => {
+      if (verifierFailed) return;
+      const chunkNumber = String(index + 1).padStart(2, "0");
+      const inputPath = join(dir, `verification.${verifier}.chunk-${chunkNumber}.input.json`);
+      writeJson(inputPath, buildVerifierBatchInput(run, verifier, { expectedClaimIds }), { mode: 0o600 });
+      const outputSchemaPath = join(dir, `verification.${verifier}.chunk-${chunkNumber}.output.schema.json`);
+      writeJson(
+        outputSchemaPath,
+        buildVerifierHeadlessOutputSchema(run, verifier, expectedClaimIds),
+        { mode: 0o600 },
+      );
+      const prompt = verifierBatchPrompt(run, verifier, inputPath, { keyedResults: true });
+      const chunkStartedAtMs = Date.now();
+      updateVerifierStatus(run, verifier, "running", {
+        input: fullInputPaths[verifier],
+        active_chunk: index + 1,
+        active_chunk_claim_count: expectedClaimIds.length,
+        chunks_total: claimChunks.length,
+        chunks_completed: chunksCompleted,
+        attempts: 1,
+      });
+      // The headless transport is intentionally keyed so Codex Structured Outputs can make
+      // omission and duplication impossible. Parse the bounded JSON value first, convert it
+      // to the public row contract, and only then invoke the runtime verifier-batch schema.
+      // Running the public schema before conversion would reject the correct keyed object.
+      const parse = (result) => normalizeVerifierBatch(
+        normalizeVerifierHeadlessTransport(extractJson(result.text), run, verifier, expectedClaimIds),
+        run,
+        verifier,
+        { expectedClaimIds },
+      );
+
+      let result = await execute(prompt, remainingVerifierBudget(), 1, true, outputSchemaPath);
+      let normalizedChunk = null;
+      let diagnostic = null;
+      if (result.ok) {
+        try {
+          normalizedChunk = parse(result);
+        } catch (error) {
+          diagnostic = error;
+        }
+      }
+      if (!normalizedChunk && result.ok && diagnostic) {
+        const retryBudget = parseRepairBudget(run, {
+          stageBudgetMs: Math.min(result.budget_ms || 0, remainingVerifierBudget()),
+          stageStartedAtMs: chunkStartedAtMs,
+        });
+        const diagnosticPath = join(dir, `verification.${verifier}.chunk-${chunkNumber}.attempt-1.failure.json`);
+        const coverageProblems = boundedVerifierCoverageProblems(diagnostic);
+        const semanticRetry = diagnostic?.data?.reason === "VERIFIER_BATCH_COVERAGE_MISMATCH";
+        writeJson(diagnosticPath, {
+          verifier,
+          chunk: index + 1,
+          claim_ids: expectedClaimIds,
+          failure_kind: outputFailureKind(diagnostic),
+          diagnostic: cleanLog(diagnostic?.message || diagnostic, 2_000),
+          schema_errors: boundedSchemaRepairIssues(diagnostic),
+          ...(coverageProblems.length ? { coverage_problems: coverageProblems } : {}),
+          retry_kind: semanticRetry ? "verification_research_retry" : "parse_only_transport_repair",
+          output_sha256: sha256(String(result.text || "")),
+          recorded_at: new Date().toISOString(),
+        }, { mode: 0o600 });
+        if (retryBudget > 0) {
+          updateVerifierStatus(run, verifier, "running", {
+            attempts: 2,
+            active_chunk: index + 1,
+            retry_diagnostic: diagnosticPath,
+            retry_kind: semanticRetry ? "verification_research_retry" : "parse_only_transport_repair",
+          });
+          const repairPrompt = semanticRetry ? [
+            "VERIFIER COVERAGE RETRY. This is the only research retry for one frozen claim chunk. Use native web search and actual page checks; do not alter the frozen analyst input.",
+            `Verifier: ${verifier}; run_id: ${run.run_id}; chunk: ${index + 1}/${claimChunks.length}.`,
+            `Read the same frozen input again at ${inputPath}. Return every exact claim ID as one key in results: ${JSON.stringify(expectedClaimIds)}.`,
+            `The first audit failed these exact checks: ${JSON.stringify(coverageProblems)}`,
+            "Correct those checks with real retrieval/search. You may change a verifier verdict only when the renewed check justifies it. Never claim a URL was checked unless you actually attempted it.",
+            `Allowed verdicts: ${registry().get(verifier).verdict_values.join(" | ")}. Return only the schema-bound JSON object.`,
+          ].join("\n\n") : [
+            "PARSE-ONLY VERIFIER TRANSPORT REPAIR. Do not search, browse, fetch, change a verdict, add a claim, or drop a claim.",
+            `Verifier: ${verifier}; run_id: ${run.run_id}; chunk: ${index + 1}/${claimChunks.length}.`,
+            `Return exactly one valid verifier-batch JSON object whose results object has every exact claim ID as a key: ${JSON.stringify(expectedClaimIds)}. Do not repeat claim_id inside a result value.`,
+            `Allowed verdicts: ${registry().get(verifier).verdict_values.join(" | ")}. Preserve note, checked_urls, queries, excerpt and rederivation from the supplied output.`,
+            `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+          ].join("\n\n");
+          result = await execute(repairPrompt, retryBudget, 2, semanticRetry, outputSchemaPath);
+          if (result.ok) {
+            try {
+              normalizedChunk = parse(result);
+              diagnostic = null;
+            } catch (error) {
+              diagnostic = error;
+            }
+          }
+        }
+      }
+
+      if (!result.ok || !normalizedChunk) {
+        const error = result.deadline_exhausted ? "global_deadline"
+          : result.timedOut ? "timeout"
+            : diagnostic ? outputFailureKind(diagnostic)
+              : `exit code ${result.code}`;
+        if (verifierFailed) return;
+        verifierFailed = true;
+        const failurePath = join(dir, `verification.${verifier}.failure.json`);
+        writeJson(failurePath, {
+          verifier,
+          chunk: index + 1,
+          chunks_total: claimChunks.length,
+          claim_ids: expectedClaimIds,
+          error,
+          diagnostic: diagnostic ? cleanLog(diagnostic.message || diagnostic, 2_000) : null,
+          ...(diagnostic && boundedVerifierCoverageProblems(diagnostic).length
+            ? { coverage_problems: boundedVerifierCoverageProblems(diagnostic) }
+            : {}),
+          stderr: cleanLog(result.stderr || "", 2_000),
+          recorded_at: new Date().toISOString(),
+        }, { mode: 0o600 });
+        updateVerifierStatus(run, verifier, "failed", {
+          pid,
+          error,
+          failed_chunk: index + 1,
+          chunks_total: claimChunks.length,
+          chunks_completed: chunksCompleted,
+          diagnostic: failurePath,
+          completed_at: new Date().toISOString(),
+        });
+        return;
+      }
+
+      // Another in-flight chunk may have failed while this worker was finishing. The verifier
+      // remains failed and no partial union is promoted.
+      if (verifierFailed) return;
+
+      const chunkOutputPath = join(dir, `verification.${verifier}.chunk-${chunkNumber}.json`);
+      writeJson(chunkOutputPath, normalizedChunk, { mode: 0o600 });
+      chunkResults[index] = normalizedChunk.results;
+      chunksCompleted += 1;
+      updateVerifierStatus(run, verifier, "running", {
+        chunks_total: claimChunks.length,
+        chunks_completed: chunksCompleted,
+        active_chunk: null,
+        result_count: chunkResults.filter(Boolean).reduce((sum, rows) => sum + rows.length, 0),
+      });
+    });
+    if (verifierFailed) return;
+    const flattenedChunkResults = chunkResults.flat();
+
+    const normalized = normalizeVerifierBatch({
+      verifier,
+      run_id: run.run_id,
+      results: flattenedChunkResults,
+    }, run, verifier);
+    const outputPath = join(dir, `verification.${verifier}.json`);
+    writeJson(outputPath, normalized, { mode: 0o600 });
+    run.verifier_verdicts = [
+      ...(run.verifier_verdicts || []).filter((row) => row.verifier !== verifier),
+      ...normalized.results,
+    ];
+    updateVerifierStatus(run, verifier, "completed", {
+      pid,
+      result_count: normalized.results.length,
+      chunks_total: claimChunks.length,
+      chunks_completed: claimChunks.length,
+      output: outputPath,
+      completed_at: new Date().toISOString(),
+    });
+  });
+
+  const audit = verificationAuditStatus(run);
+  run.verification_policy.status = audit.status;
+  run.verification_policy.completed_at = new Date().toISOString();
+  const auditComplete = audit.status !== "needs_verification";
+  run.phase = auditComplete ? "verification_complete" : "needs_verification";
+  run.status = auditComplete ? "running" : "needs_verification";
+  saveRun(run);
+  writeSourceManifest(run);
+  writeStatus(run);
+  appendEvent(run, auditComplete ? "verification_complete" : "needs_verification", {
+    policy_id: audit.policy_id,
+    recorded_verdict_count: audit.recorded_verdict_count,
+    expected_verdict_count: audit.expected_verdict_count,
+    missing_count: audit.missing.length,
+    non_clean_count: audit.non_clean.length,
+    verifier_zero: audit.verifier_zero,
+  });
+  writeAllAgentsMarkdown(run);
+  return run;
+}
+
 function updateMasterStatus(run, master, status, patch = {}) {
   run.master_status = run.master_status || {};
   run.master_status[master] = {
@@ -2657,6 +3060,13 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
     voice_status: outcome.opinion.voice_status || "completed",
     ...(outcome.opinion.company_dossier_hash_ack
       ? { company_dossier_hash_ack: outcome.opinion.company_dossier_hash_ack }
+      : {}),
+    ...(Array.isArray(outcome.opinion.evidence_packet_acks)
+      ? {
+        evidence_packet_ack_count: outcome.opinion.evidence_packet_acks.length,
+        evidence_packet_ack_statuses: Object.fromEntries(outcome.opinion.evidence_packet_acks
+          .map((ack) => [ack.task, ack.status])),
+      }
       : {}),
     completed_at: completedAt,
     output: outputPath,
@@ -2880,6 +3290,7 @@ export async function runHeadlessMasters(run, args = {}) {
           evidence_source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
           confidence: voice.confidence,
           company_dossier_hash_ack: voice.company_dossier_hash_ack,
+          evidence_packet_acks: voice.evidence_packet_acks,
           dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
         }, engine);
       }
@@ -2976,9 +3387,64 @@ export async function runHeadlessMasters(run, args = {}) {
       try {
         return { id, opinion: parse(result, { repairedTransport: true }), engine };
       } catch (secondParseError) {
+        const secondFailureKind = outputFailureKind(secondParseError);
+        if (secondFailureKind === "reader_language_mismatch") {
+          const secondDiagnosticPath = join(dir, `${id}.attempt-2.failure.json`);
+          const secondDiagnostic = masterAttemptFailureDiagnostic({
+            master: id,
+            attempt: 2,
+            failureKind: secondFailureKind,
+            error: secondParseError,
+            result,
+            stage: "language_repair_output",
+          });
+          writeJson(secondDiagnosticPath, secondDiagnostic, { mode: 0o600 });
+          const languageBudget = parseRepairBudget(run, {
+            stageBudgetMs: timeoutMs,
+            stageStartedAtMs: workerStartedAt,
+          });
+          if (languageBudget > 0) {
+            appendEvent(run, "master_language_repair", {
+              master: id,
+              budget_ms: languageBudget,
+              reason: secondFailureKind,
+              retry_diagnostic: secondDiagnosticPath,
+            });
+            updateMasterStatus(run, id, "running", {
+              attempts: 3,
+              retry_diagnostic: secondDiagnosticPath,
+              retry_kind: "language_only_translation_repair",
+            });
+            const languagePrompt = [
+              "FINAL LANGUAGE-ONLY TRANSPORT REPAIR. Do not browse, search, add facts, remove facts, change numbers, change source IDs, change packet acknowledgements, or change the frozen stance.",
+              `Master ID: ${id}; required acknowledged stance: ${frozenOpinion?.stance || "preserve input"}; output language: ${run.language}.`,
+              `Translate EVERY reader-facing prose string into ${run.language}: all five voice fields, key_findings, disagreements, what_would_change_my_mind, and every evidence_packet_acks.note. Keep the method in first person.`,
+              "Do not translate JSON keys or contract values: master, acknowledged_stance, voice_mode, disclosure_ack, position_intent, confidence, task, packet_hash, status, source_ids, URLs, tickers, formulas, and numbers. Return exactly one JSON object and no commentary.",
+              `Valid but wrong-language input JSON:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+            ].join("\n\n");
+            result = await execute(languagePrompt, languageBudget, 3);
+            if (result.ok) {
+              try {
+                return { id, opinion: parse(result, { repairedTransport: true }), engine };
+              } catch (thirdParseError) {
+                return {
+                  id,
+                  error: outputFailureKind(thirdParseError),
+                  raw: cleanLog(thirdParseError?.message || result.text),
+                  schema_errors: boundedSchemaRepairIssues(thirdParseError),
+                };
+              }
+            }
+            return {
+              id,
+              error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`,
+              raw: cleanLog(result.stderr || "method language repair failed"),
+            };
+          }
+        }
         return {
           id,
-          error: outputFailureKind(secondParseError),
+          error: secondFailureKind,
           raw: cleanLog(secondParseError?.message || result.text),
           schema_errors: boundedSchemaRepairIssues(secondParseError),
         };
@@ -3314,6 +3780,43 @@ function finalizeBeforeDebate(run, args, reason) {
   return { bull: null, bear: null, manager, ...finalArtifacts };
 }
 
+function finalizeNeedsVerification(run, args, reason = "verification_gate_failed") {
+  const dir = runPath(run.run_id);
+  for (const master of selectedMasters(run)) {
+    if (["pending", "waiting", "running"].includes(run.master_status?.[master]?.status || "pending")) {
+      updateMasterStatus(run, master, "failed", {
+        error: reason,
+        error_code: "TRIPLE_VERIFICATION_REQUIRED",
+        completed_at: new Date().toISOString(),
+      });
+    }
+  }
+  for (const role of DEBATE_ROLES) {
+    if (["pending", "waiting", "running"].includes(agentState(run, role).status)) {
+      updateAgent(run, role, "skipped", { error: reason, completed_at: new Date().toISOString() });
+    }
+  }
+  const manager = managerFallback(run, args.prompt || "");
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  run.phase = "needs_verification";
+  run.status = "needs_verification";
+  run.completed_at = new Date().toISOString();
+  const gate = verificationStatus(run);
+  appendEvent(run, "needs_verification", {
+    reason,
+    downstream_model_calls_skipped: true,
+    verifier_zero: gate.verifier_audit.verifier_zero,
+    verifier_recorded: gate.verifier_audit.recorded_verdict_count,
+    verifier_expected: gate.verifier_audit.expected_verdict_count,
+    verifier_missing: gate.verifier_audit.missing.length,
+    verifier_non_clean: gate.verifier_audit.non_clean.length,
+    missing_source_ids: gate.missing_claim_source_ids.length,
+  });
+  const finalArtifacts = commitFinalArtifacts(run, { manager });
+  return { bull: null, bear: null, manager, ...finalArtifacts };
+}
+
 function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRounds = []) {
   const dir = runPath(run.run_id);
   const bull = mergeDebateRounds(bullRounds.map((step) => step?.packet).filter(Boolean));
@@ -3574,6 +4077,20 @@ export async function analyzeSymbol(args) {
       artifacts: debate.artifacts || artifactPaths(run),
     };
   }
+  await runHeadlessVerification(run, args);
+  const verificationGate = verificationStatus(run);
+  if (verificationGate.verification === "needs_verification") {
+    const debate = finalizeNeedsVerification(run, args, "verification_gate_failed_before_methods");
+    return {
+      run,
+      debate,
+      decision: debate.manager,
+      final_report_markdown: debate.final_report_markdown,
+      user_response_markdown: debate.user_response_markdown,
+      report_quality: debate.report_quality,
+      artifacts: debate.artifacts || artifactPaths(run),
+    };
+  }
   if (remainingCouncilBudget(run, 1) <= 0) {
     const debate = finalizeBeforeDebate(run, args, "global_deadline_before_masters");
     return {
@@ -3684,6 +4201,13 @@ export function recordVerifierVerdict(args) {
     throw invalidParams("record_verifier_verdict requires a run created by plan_visible_run.");
   }
   assertVisibleRunOpen(run, "record a verifier verdict");
+  if (tripleVerificationRequired(run)) {
+    throw invalidParams("This slow + all run requires one complete batch from each verifier; single manual verdicts cannot satisfy it.", {
+      reason: "VERIFIER_BATCH_REQUIRED",
+      required_verifiers: REQUIRED_VERIFIER_IDS,
+      alternative_tool: "record_verifier_batch",
+    });
+  }
   const verifier = registry().get(args.verifier);
   if (!verifier || verifier.kind !== "verifier") {
     throw invalidParams(`unknown verifier: ${args.verifier}`);
@@ -3706,6 +4230,86 @@ export function recordVerifierVerdict(args) {
   writeJson(join(runPath(run.run_id), "evidence.json"), run);
   appendEvent(run, "verifier_verdict", { verifier: args.verifier, seat: args.seat, verdict: args.verdict });
   return { run_id: run.run_id, recorded: run.verifier_verdicts.length, weights: resolveSeatWeights(run, run.seat_weight_overrides) };
+}
+
+export function recordVerifierBatch(args) {
+  const dir = runPath(args.run_id);
+  const run = readJson(join(dir, "evidence.json"));
+  if (run.execution_mode !== "visible_host_threads") {
+    throw invalidParams("record_verifier_batch requires a run created by plan_visible_run.");
+  }
+  assertVisibleRunOpen(run, "record a verifier batch");
+  const missingEvidence = (run.tasks || []).filter((task) => taskState(run, task).status !== "completed");
+  if (missingEvidence.length) {
+    throw invalidParams("record_verifier_batch rejected: every selected analyst packet must complete first.", {
+      reason: "VISIBLE_VERIFIER_EVIDENCE_INCOMPLETE",
+      missing_evidence: missingEvidence,
+    });
+  }
+  if (!run.verification_policy) initializeVerificationPolicy(run);
+  if (!tripleVerificationRequired(run)) {
+    throw invalidParams("This run does not require the triple verifier batch stage.", {
+      reason: "VERIFIER_BATCH_NOT_REQUIRED",
+    });
+  }
+  if (!REQUIRED_VERIFIER_IDS.includes(args.verifier)) {
+    throw invalidParams(`unknown required verifier: ${args.verifier}`);
+  }
+  const normalized = normalizeVerifierBatch(args.packet, run, args.verifier, { client: true });
+  const outputPath = join(dir, `verification.${args.verifier}.json`);
+  if (existsSync(outputPath)) {
+    const existing = readJson(outputPath);
+    if (sha256(existing) !== sha256(normalized)) {
+      throw invalidParams(`Verifier batch ${args.verifier} is already frozen; conflicting content requires a new run.`, {
+        reason: "VISIBLE_VERIFIER_BATCH_CONFLICT",
+        verifier: args.verifier,
+        existing_hash: sha256(existing),
+        submitted_hash: sha256(normalized),
+      });
+    }
+    return {
+      run,
+      verifier: args.verifier,
+      recorded: normalized.results.length,
+      expected: run.verification_policy.material_claim_count,
+      idempotent_replay: true,
+      audit: verificationAuditStatus(run),
+    };
+  }
+  writeJson(outputPath, normalized, { mode: 0o600 });
+  run.verifier_verdicts = [
+    ...(run.verifier_verdicts || []).filter((row) => row.verifier !== args.verifier),
+    ...normalized.results,
+  ];
+  updateVerifierStatus(run, args.verifier, "completed", {
+    output: outputPath,
+    result_count: normalized.results.length,
+    thread_id: args.thread_id,
+    thread_title: args.thread_title,
+    completed_at: new Date().toISOString(),
+  });
+  const audit = verificationAuditStatus(run);
+  run.verification_policy.status = audit.status;
+  run.phase = audit.status !== "needs_verification" ? "visible_methods" : "visible_verification";
+  run.status = "running";
+  saveRun(run);
+  writeStatus(run);
+  appendEvent(run, "verifier_batch_recorded", {
+    verifier: args.verifier,
+    result_count: normalized.results.length,
+    recorded_verdict_count: audit.recorded_verdict_count,
+    expected_verdict_count: audit.expected_verdict_count,
+    audit_status: audit.status,
+  });
+  writeAllAgentsMarkdown(run, existingDebate(dir));
+  return {
+    run,
+    verifier: args.verifier,
+    recorded: normalized.results.length,
+    expected: run.verification_policy.material_claim_count,
+    idempotent_replay: false,
+    audit,
+  };
 }
 
 /** Current weighting for a run, for the PM prompt and for the report. */

@@ -1,5 +1,6 @@
 import { LIMITS } from "./constants.mjs";
 import { fetchText } from "./quotes.mjs";
+import { recordOptionObservation } from "./option-observations.mjs";
 
 /**
  * Keyless delayed options chains from CBOE.
@@ -264,5 +265,30 @@ export async function fetchOptionsChain(symbol, { asOf, signal } = {}) {
   }
   const summary = summarizeChain(payload, { asOf, retrievedAt: new Date().toISOString() });
   if (!summary) return { symbol: sym, available: false, reason: `CBOE returned no option rows for ${sym}` };
-  return { symbol: sym, available: true, source_url: CBOE(sym), ...summary };
+  const sourceUrl = CBOE(sym);
+  const reference = summary.reference_expiry;
+  const ivHistory = reference?.atm_iv
+    ? recordOptionObservation({
+      symbol: sym,
+      observedAt: summary.retrieved_at,
+      atmIv: reference.atm_iv,
+      expiry: reference.expiry,
+      dte: reference.dte,
+      sourceUrl,
+    })
+    : { status: "unavailable", observation_count: 0, percentile: null };
+  const unavailable = (summary.unavailable || []).filter((item) => !String(item).startsWith("IV percentile or rank:"));
+  if (ivHistory.status !== "available") {
+    unavailable.push(
+      `IV percentile or rank: local history is still building (${ivHistory.observation_count || 0}/${ivHistory.minimum_observations || 60} daily observations); no percentile is reported yet.`,
+    );
+  }
+  return {
+    symbol: sym,
+    available: true,
+    source_url: sourceUrl,
+    ...summary,
+    iv_history: ivHistory,
+    unavailable,
+  };
 }

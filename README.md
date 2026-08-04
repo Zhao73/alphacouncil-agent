@@ -51,7 +51,8 @@
 </div>
 
 **Ask an LLM "is this stock a buy" and you get one confident paragraph of training-data
-vibes. Ask AlphaCouncil and you get an argument** — eight evidence agents pull the primary
+vibes. Ask AlphaCouncil and you get an argument** — eight core or eleven all-scope evidence
+agents pull the primary
 sources, twenty-six investor-method lenses read the same facts and disagree in public,
 bull and bear cross-examine each other for three rounds, and a portfolio manager signs a
 verdict with entry bands and the conditions that would invalidate it. Every claim traces
@@ -75,13 +76,13 @@ evidence, run selected method seats and produce an auditable portfolio-manager r
 | 📰 **A basket gets its own industry news** | `SOX` has no press office. Its industry is derived from the weighted SIC groups of its holdings, so SOXX resolves to semiconductors and survives a rebalance. Where no group dominates, the basket is queried as the several industries it actually is. |
 | 🌏 **What else you are betting on** | Correlation to the broad market, to KOSPI, to KOSDAQ and to the semiconductor cycle, plus dispersion across the eleven sector SPDRs. Sessions pair by date, because Korea and the United States keep different holidays. |
 | 💵 **Fund flow that refuses to be faked** | Creations minus redemptions, priced. Only a filed share count or the issuer's own assets-over-NAV identity may price a flow; a count reconstructed from positions is refused, because a difference cancels the number and keeps the error. |
-| 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam and the visible/deep path can add three adversarial verifiers. Quick runs one parallel bull/bear statement round and a short PM; it checks scoped source IDs but explicitly does not claim adversarial verification. |
-| ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the expected time beside the hard ceiling for each tier — you never type a speed. All three are the same full contract: eight analysts, three debate rounds, the PM. What changes is how long each seat may think, and a tier shapes the output too, because a shorter fuse on the same prompt buys unfinished work rather than faster work. Plugin-managed full starts all eight analysts together, runs Bull/Bear together inside each round, and persists a terminal run inside the chosen tier. Provider failures produce an explicit `incomplete` result, never silently missing seats. |
+| 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam. The exact `slow + all methods + all analysts` path must first pass `source_fidelity`, independent `rederivation`, and `refuter` over every material claim; zero verifier verdicts means `needs_verification`, never `complete`. Quick explicitly does not claim adversarial verification. |
+| ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the expected time beside the hard ceiling for each tier — you never type a speed. Method seats and analyst breadth are separate choices: `core` runs 8 analysts, `all` runs exactly 11. Every full tier preserves the confirmed roster, three debate rounds and PM. Plugin-managed full starts all selected analysts together and persists a terminal run inside the tier. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
-| 📚 **One complete company dossier for every downstream seat** | A full operating-company run accounts for a fixed 52-item roster across eight analysts, freezes `company_dossier.json`, and gives the same hash-bound artifact to every selected method, every Bull/Bear round and the PM. Critical missing data stops the decision instead of disappearing inside a summary. |
+| 📚 **One complete company dossier for every downstream seat** | A full operating-company run accounts for the fixed 52-item core roster, freezes `company_dossier.json`, and gives the same hash-bound artifact to every selected method, every Bull/Bear round and the PM. Each method returns a task/hash/status receipt for all selected packets: 8 in `core`, 11 in `all`. Critical missing data stops the decision instead of disappearing inside a summary. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
-| 🔑 **32 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🔑 **33 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
 | 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
@@ -181,7 +182,7 @@ VERDICT: Overweight  (confidence: medium)
 The concise handoff is written to `~/.alphacouncil-agent/runs/<run_id>/user_response.md`.
 The full report is written to `~/.alphacouncil-agent/runs/<run_id>/final_report.md`,
 with analyst Markdown files and `artifact_index.md` in the same run directory. Full handoff
-shows the system quote (or an explicit quote-data gap), all eight analyst statuses/summaries,
+shows the system quote (or an explicit quote-data gap), every receipt-bound analyst status/summary,
 and every selected method seat's frozen stance plus readable explanation/status. Its final
 section is a system-gated ledger: completed seats retain their full, untruncated statement;
 failed seats explicitly say that no directional view was produced and why. `all` therefore
@@ -191,7 +192,7 @@ method-seat outputs, never quotes from the named people. If a visible hard gate 
 must not replace it with a shorter manual recap.
 
 For a full operating-company decision, the directory also contains `company_dossier.json`:
-all eight normalized evidence packets, the fixed 52-item coverage ledger, source/claim lineage,
+the 8 core packets plus any 3 all-scope packets, the fixed 52-item core coverage ledger, source/claim lineage,
 typed facts and one canonical hash. Compact prompt evidence is only an index; downstream seats
 must read and acknowledge this same complete artifact before their output is accepted.
 
@@ -228,12 +229,13 @@ tier side by side.
 
 | tier | expected | ceiling | evidence / seat | debate / round / side |
 | --- | --- | --- | --- | --- |
-| `fast` | ~12 min | 15 min | 3.5 min | 90 s |
-| `normal` (default) | ~20 min | 30 min | 6 min | 150 s |
-| `slow` | ~44 min | 60 min | 12 min | 6 min |
+| `fast` | ~13 min | 15 min | 3.5 min | 90 s |
+| `normal` (default) | ~22 min | 30 min | 6 min | 150 s |
+| `slow` | ~58 min | 60 min | 12 min | 6 min |
 
-**All three are the same `full_v2` contract** — eight evidence seats, every selected method,
-three debate rounds, the PM. A tier changes how long each seat may think, never which seats run.
+**All three are the same `full_v2` contract** — the separately selected 8- or 11-seat analyst
+roster, every selected method, three debate rounds and the PM. A tier changes how long each seat
+may think, never which seats run.
 Both numbers are published because a ceiling shown alone reads as the estimate, and then every
 fast run looks like it takes fifteen minutes.
 
@@ -249,7 +251,7 @@ The chosen tier binds into the one-use `selection_receipt`, so an execution call
 but never change it: a run approved as fifteen minutes cannot become an hour, and `status.json`
 records which tier produced it. Quick has no tier — it is a smaller contract, not a slower one.
 
-All eight mandatory evidence workers start in one parallel wave. After the evidence barrier,
+All receipt-bound evidence workers start in one parallel wave. After the evidence barrier,
 each selected physical v3 method freezes its deterministic stance and then gets one isolated
 voice worker that explains, but cannot change, that result in a strong method-specific first
 person. This includes a frozen abstention. Bull and
@@ -261,7 +263,7 @@ tier's ceiling is a terminal-persistence guarantee, not a promise that search, m
 data providers will let every seat succeed. A visible-host `plan_visible_run` is scheduled
 outside the plugin and cannot be force-stopped, so it carries no time claim at all.
 
-The resulting full handoff names every selected stable master ID and all eight analysts, and
+The resulting full handoff names every selected stable master ID and all 8 or 11 analysts, and
 includes a system-owned price snapshot or explicit unavailable-data record. Method-seat
 voice is a recorded provisional lens explanation, not a quote, endorsement or current
 statement by the named person. System-owned output supports Chinese (`zh-CN`), English,

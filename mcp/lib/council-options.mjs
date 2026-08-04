@@ -1,5 +1,5 @@
 import { registry, selectRoster, personaTitle } from "./personas/registry.mjs";
-import { DEFAULT_TASKS, LIMITS, QUICK_TASKS } from "./constants.mjs";
+import { ALL_ANALYST_TASKS, DEFAULT_TASKS, LIMITS, QUICK_TASKS } from "./constants.mjs";
 import { loadPacks } from "./personas-v2/loader.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
@@ -49,7 +49,18 @@ export function councilOptions({ language = "English" } = {}) {
   const packs = loadPacks();
   const v3Packs = compiledPersonaPacks();
 
-  const allAnalysts = reg.ids("analyst").map((id) => reg.get(id)).filter((p) => p.enabled);
+  // Selection receipts and the orchestrator must bind the same canonical order. Registry file
+  // order is an implementation detail and previously put the same eleven IDs in a different
+  // sequence, so an `all` receipt confirmed successfully and then failed at run creation.
+  const enabledAnalystById = new Map(reg.ids("analyst")
+    .map((id) => reg.get(id))
+    .filter((persona) => persona.enabled)
+    .map((persona) => [persona.id, persona]));
+  const missingCanonicalAnalysts = ALL_ANALYST_TASKS.filter((id) => !enabledAnalystById.has(id));
+  if (missingCanonicalAnalysts.length) {
+    throw new Error(`canonical analyst roster is missing enabled persona(s): ${missingCanonicalAnalysts.join(", ")}`);
+  }
+  const allAnalysts = ALL_ANALYST_TASKS.map((id) => enabledAnalystById.get(id));
   const masterRosters = [...new Set(
     reg.ids("master").flatMap((id) => reg.get(id).rosters || []),
   )].filter((r) => r !== "masters-core").sort();

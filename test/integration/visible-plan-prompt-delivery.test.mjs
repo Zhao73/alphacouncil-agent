@@ -58,6 +58,7 @@ async function plan(server, {
     catalog_hash: opened.catalog_hash,
     display_ack: true,
     ...(masters === "all" ? { select_all: true } : { selected_master_ids: masters }),
+    analyst_scope: "core",
   }));
   return structured(await server.callTool("plan_visible_run", {
     symbol,

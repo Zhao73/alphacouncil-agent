@@ -104,6 +104,28 @@ test("a document with an owner but no reported holding produces nothing", () => 
   assert.equal(parseOwnershipDocument(noHolding), null);
 });
 
+test("an explicit noSecuritiesOwned Form 3 is a valid zero balance, not a parse failure", () => {
+  const noSecurities = form4()
+    .replace("<documentType>4</documentType>", "<documentType>3</documentType><noSecuritiesOwned>1</noSecuritiesOwned>")
+    .replace(/<nonDerivativeTable>[\s\S]*?<\/nonDerivativeTable>/u, "");
+  const parsed = parseOwnershipDocument(noSecurities);
+  assert.equal(parsed.owner_cik, "0001780525");
+  assert.equal(parsed.shares_owned, 0);
+  assert.equal(parsed.holding_bucket_count, 0);
+  assert.equal(parsed.explicitly_no_securities_owned, true);
+});
+
+test("a final no-longer-subject Form 4 supersedes stale holdings with a valid zero balance", () => {
+  const finalForm = form4()
+    .replace("<periodOfReport>", "<notSubjectToSection16>1</notSubjectToSection16><periodOfReport>")
+    .replace(/<nonDerivativeTable>[\s\S]*?<\/nonDerivativeTable>/u, "");
+  const parsed = parseOwnershipDocument(finalForm);
+  assert.equal(parsed.owner_cik, "0001780525");
+  assert.equal(parsed.shares_owned, 0);
+  assert.equal(parsed.holding_bucket_count, 0);
+  assert.equal(parsed.no_longer_subject_to_section16, true);
+});
+
 test("non-string and empty input never throw", () => {
   for (const input of [null, undefined, 42, "", "<ownershipDocument>"]) {
     assert.equal(parseOwnershipDocument(input), null);
@@ -209,6 +231,7 @@ test("fetchInsiderOwnership divides by its CompanyFacts instant and exposes both
     const owned = await fetchInsiderOwnership("0000320193", {
       asOf: "2026-08-03",
       companyFacts: companyFacts({ dei: [shareFact()] }),
+      documentCache: false,
     });
     assert.equal(owned.value, 0.0955);
     assert.equal(owned.shares_outstanding, 1_000_000);
@@ -254,14 +277,19 @@ test("a partial Section 16 fetch failure withholds the canonical ownership ratio
     const owned = await fetchInsiderOwnership("0000320193", {
       asOf: "2026-08-03",
       companyFacts: companyFacts({ dei: [shareFact()] }),
+      documentCache: false,
     });
     assert.equal(owned.value, null);
     assert.match(owned.unavailable[0], /numerator is incomplete/u);
     assert.equal(owned.coverage.attempted_document_count, 2);
     assert.deepEqual(owned.coverage.unresolved_documents, [{
       accession: "0000320193-26-000100",
-      failure_kind: "fetch_failed",
+      failure_kind: "not_found",
+      error: "HTTP 404 for https://www.sec.gov/Archives/edgar/data/320193/000032019326000100/form4.xml",
     }]);
+    assert.equal(owned.insider_shares_lower_bound, 95_500);
+    assert.equal(owned.ownership_ratio_lower_bound, 0.0955);
+    assert.equal(owned.measurement, "partial_section16_lower_bound_not_canonical");
   } finally {
     globalThis.fetch = originalFetch;
   }

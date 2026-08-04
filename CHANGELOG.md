@@ -2,6 +2,59 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.2.0] — 2026-08-04
+
+### Added
+
+- Method-seat choice and analyst breadth are now two independent receipt-bound decisions.
+  `analyst_scope=core` freezes the eight core evidence roles; `analyst_scope=all` freezes the
+  canonical eleven-role roster and cannot be narrowed or expanded by execution arguments.
+- The exact `slow + all methods + all analysts` path now inserts three mandatory, independent
+  claim-complete verifier batches: `source_fidelity`, `rederivation`, and `refuter`. Zero,
+  missing, duplicate, unexpected, or malformed coverage terminalizes the run as
+  `needs_verification` before any method, debate, or portfolio-manager worker can start.
+  Complete coverage with adverse/unresolved findings proceeds as `completed_with_findings` and
+  transparently reduces the originating evidence seat's weight.
+- Every operating-company method voice now acknowledges the canonical dossier hash and each
+  selected evidence packet by task/hash with `used`, `reviewed_not_relevant`, or `unavailable`.
+  The eight core acknowledgements are always required; all-scope runs add all three
+  supplemental acknowledgements.
+- Keyless market grounding now records one-year price/volume history, 20/63-session realised
+  volatility, 5/21/63/126/252-session returns, benchmark-relative returns, and a local
+  append-only ATM-IV observation history that publishes a percentile only after 60 daily
+  observations.
+
+### Fixed
+
+- Section 16 retrieval is process-rate-limited, locally cached and fail-closed. Empty
+  `notSubjectToSection16` filings and valid zero-holding forms no longer become parse failures;
+  incomplete candidate coverage is labelled a lower bound instead of an exact ownership ratio.
+- Every leaf `codex exec` now gives any unexpectedly inherited MCP/plugin process an isolated
+  temporary AlphaCouncil data directory. A nested older plugin can no longer run startup
+  recovery against the parent council's live `status.json` and `evidence.json`.
+- A method voice that remains in the wrong reader language after the normal transport repair
+  receives one final no-search, language-only translation pass. It must preserve the frozen
+  stance, figures, source IDs, dossier hash and every packet acknowledgement; a third mismatch
+  still fails the seat. Slow mode reserves 4m15s per method wave while retaining more than the
+  required 90-second total scheduling headroom.
+- Portfolio-manager price bands must be continuous and use one currency; gaps or overlaps can
+  no longer pass the report contract.
+- Verifier responses now have compact field bounds and source-fidelity workers must attempt every
+  cited URL. Large ledgers use bounded, concurrently scheduled transport chunks whose keyed
+  claim objects are enforced by Codex native structured output and then merged into one exact
+  canonical batch. This reduces transport and deadline pressure without weakening the
+  all-claim coverage gate.
+- Source-fidelity transport uses smaller ten-claim chunks. A pure JSON/shape failure receives
+  only the existing no-search transport repair; a real verifier-coverage failure receives one
+  bounded web-enabled audit retry against the same frozen chunk, with exact claim IDs, reasons
+  and missing URLs persisted before it runs. Neither path mutates analyst evidence.
+- Rederivation still receives no original URL list and must independently query and recompute
+  every claim. If that independent search lands on the same authoritative filing, the overlap
+  is preserved as `agree_same_source_only` finding rather than being mislabeled as missing
+  verifier coverage.
+- The canonical all-analyst order is shared by the catalog, selection receipt and orchestrator,
+  preventing a valid eleven-seat confirmation from failing when the registry file order differs.
+
 ## [1.1.9] — 2026-08-03
 
 ### Added

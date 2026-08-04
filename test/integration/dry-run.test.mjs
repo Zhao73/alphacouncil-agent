@@ -173,7 +173,7 @@ test("status.json surfaces completion, quality, and verification", () => {
   assert.equal(status.report_quality, "passed");
   assert.equal(status.verification, "passed");
   assert.equal(status.verification_scope, "source_id_presence_only");
-  assert.equal(status.adversarial_verification, "not_run");
+  assert.equal(status.adversarial_verification, "not_required");
   assert.equal(status.verifier_verdict_count, 0);
   assert.equal(status.missing_source_count, 0);
   assert.equal(status.selected_master_count, 1);

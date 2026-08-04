@@ -11,8 +11,9 @@ import {
 } from "./constants.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
-import { isChineseLanguage, languageKey, readerLanguageStatus } from "./lang.mjs";
+import { isChineseLanguage, languageKey, localized, readerLanguageStatus } from "./lang.mjs";
 import { companyDossierCoverageStatus } from "./company-dossier.mjs";
+import { verificationAuditStatus } from "./verification.mjs";
 
 export function withDisclaimer(markdown, language) {
   const text = typeof markdown === "string" ? markdown : "";
@@ -28,16 +29,38 @@ export function withDisclaimer(markdown, language) {
 
 export function withVerificationBanner(markdown, gate, language) {
   const text = typeof markdown === "string" ? markdown : "";
-  if (!gate || gate.verification !== "needs_verification") return text;
+  if (!gate) return text;
   const pairs = gate.missing_claim_source_ids || [];
-  const lines = pairs.length
-    ? pairs.map((item) => `- ${item.task}: ${item.source_id}`).join("\n")
-    : "- (unspecified)";
+  const verifier = gate.verifier_audit || {};
+  if (gate.verification !== "needs_verification" && verifier.status === "completed_with_findings") {
+    const findings = (verifier.non_clean || []).slice(0, 24)
+      .map((item) => `- ${item.verifier}: ${item.claim_id} -> ${item.verdict}`)
+      .join("\n");
+    const more = Math.max(0, (verifier.non_clean || []).length - 24);
+    const banner = localized(language, {
+      zh: `\n\n---\n\n## 三重核验发现\n\n**状态：completed_with_findings。** 三类 verifier 已逐条覆盖全部重大论断；以下结果会降低对应证据席权重，但不会被误写成验证器缺失：\n\n${findings}${more ? `\n- 另有 ${more} 条，见验证工件。` : ""}\n`,
+      en: `\n\n---\n\n## Triple-Verification Findings\n\n**Status: completed_with_findings.** All three verifiers covered every material claim. These findings reduce the originating evidence seat's weight; they are not mislabeled as missing verification:\n\n${findings}${more ? `\n- ${more} more; see the verification artifacts.` : ""}\n`,
+      ja: `\n\n---\n\n## 三重検証の所見\n\n**状態：completed_with_findings。** 3つの verifier は全重要主張を網羅しました。以下の所見は該当する証拠席の重みを下げますが、検証未実施とは扱いません：\n\n${findings}${more ? `\n- ほか ${more} 件は検証成果物を参照。` : ""}\n`,
+      ko: `\n\n---\n\n## 삼중 검증 결과\n\n**상태: completed_with_findings.** 세 verifier가 모든 중요 주장을 다뤘습니다. 다음 결과는 해당 증거 좌석의 가중치를 낮추지만 검증 누락으로 표시하지 않습니다:\n\n${findings}${more ? `\n- 추가 ${more}건은 검증 산출물을 참조하십시오.` : ""}\n`,
+    });
+    return `${text}${banner}`;
+  }
+  if (gate.verification !== "needs_verification") return text;
+  const issues = [
+    ...pairs.map((item) => `${item.task}: missing source ID ${item.source_id}`),
+    ...(verifier.required && verifier.verifier_zero ? ["required verifier verdict count is 0"] : []),
+    ...(verifier.material_claim_count === 0 && verifier.required ? ["no material claim set was available to verify"] : []),
+    ...(verifier.required && verifier.analyst_roster_complete === false ? ["all-analyst scope did not materialize the complete 11-seat roster"] : []),
+    ...(verifier.missing || []).slice(0, 24).map((item) => `${item.verifier}: missing ${item.claim_id}`),
+    ...(verifier.duplicates || []).slice(0, 12).map((item) => `${item.verifier}: duplicate ${item.claim_id}`),
+    ...(verifier.unexpected || []).slice(0, 12).map((item) => `${item.verifier}: unexpected ${item.claim_id}`),
+  ];
+  const lines = issues.length ? issues.map((item) => `- ${item}`).join("\n") : "- (unspecified)";
   const banner = {
-    zh: `\n\n---\n\n## 来源核验\n\n**状态：needs_verification。** 以下重大论断引用了证据包中不存在的来源 ID；本轮尚未通过来源核验：\n\n${lines}\n`,
-    en: `\n\n---\n\n## Source Verification Gate\n\n**Status: needs_verification.** The following material claims cite source IDs that are not present in any evidence packet; this run has NOT passed source verification:\n\n${lines}\n`,
-    ja: `\n\n---\n\n## 出典検証ゲート\n\n**状態：needs_verification。** 次の重要な主張は証拠パケットに存在しない出典 ID を参照しています。この実行は出典検証を通過していません：\n\n${lines}\n`,
-    ko: `\n\n---\n\n## 출처 검증 게이트\n\n**상태: needs_verification.** 다음 중요 주장은 증거 패킷에 없는 출처 ID를 참조합니다. 이 실행은 출처 검증을 통과하지 못했습니다:\n\n${lines}\n`,
+    zh: `\n\n---\n\n## 来源与三重核验\n\n**状态：needs_verification。** 来源追溯或 slow + 全部方法席 + 全部分析席所要求的 source_fidelity / rederivation / refuter 三重核验尚未全部通过；不得写成 complete：\n\n${lines}\n`,
+    en: `\n\n---\n\n## Source Verification Gate and Triple Verification\n\n**Status: needs_verification.** Source lineage or the source_fidelity / rederivation / refuter gate required by slow + all methods + all analysts has not fully passed; this run may not be marked complete:\n\n${lines}\n`,
+    ja: `\n\n---\n\n## 出典・三重検証ゲート\n\n**状態：needs_verification。** 出典追跡、または slow + 全メソッド席 + 全分析席に必須の三重検証が完了していないため complete にはできません：\n\n${lines}\n`,
+    ko: `\n\n---\n\n## 출처 및 삼중 검증 게이트\n\n**상태: needs_verification.** 출처 계보 또는 slow + 전체 방법론 + 전체 분석가에 필수인 삼중 검증을 모두 통과하지 못해 complete로 표시할 수 없습니다:\n\n${lines}\n`,
   }[languageKey(language)];
   return `${text}${banner}`;
 }
@@ -137,9 +160,18 @@ export function sourceManifest(run) {
 
 export function verificationStatus(run) {
   const missing = sourceManifest(run).missing_claim_source_ids;
+  const verifierAudit = verificationAuditStatus(run);
+  const verifierFailed = verifierAudit.required && verifierAudit.status === "needs_verification";
   return {
-    verification: missing.length ? "needs_verification" : "passed",
+    verification: missing.length || verifierFailed ? "needs_verification" : "passed",
+    verification_scope: verifierAudit.required
+      ? "source_id_presence_plus_triple_material_claim_v1"
+      : "source_id_presence_only",
+    adversarial_verification: verifierAudit.required
+      ? verifierAudit.status
+      : ((run.verifier_verdicts || []).length ? "recorded_not_required" : "not_required"),
     missing_claim_source_ids: missing,
+    verifier_audit: verifierAudit,
   };
 }
 

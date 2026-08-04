@@ -1,7 +1,17 @@
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { COUNCIL_MODES, COUNCIL_PACE_NAMES, COUNCIL_PACE_STAGE_TOTAL, DEFAULT_COUNCIL_PACE, LIMITS, SELECTIONS_DIR, councilPaceProfile } from "./constants.mjs";
+import {
+  ANALYST_SCOPES,
+  COUNCIL_MODES,
+  COUNCIL_PACE_NAMES,
+  COUNCIL_PACE_STAGE_TOTAL,
+  DEFAULT_COUNCIL_PACE,
+  LIMITS,
+  QUICK_TASKS,
+  SELECTIONS_DIR,
+  councilPaceProfile,
+} from "./constants.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
@@ -14,7 +24,8 @@ const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
 const QUICK_MASTER_MAX = 4;
 const LEGACY_SELECTION_HASH_VERSION = 1;
-const CURRENT_SELECTION_HASH_VERSION = 2;
+const PACE_SELECTION_HASH_VERSION = 2;
+const CURRENT_SELECTION_HASH_VERSION = 3;
 const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(["中文", "English", "日本語", "한국어"]);
 
 function digest(value) {
@@ -29,11 +40,15 @@ function selectionHashVersion(record) {
   const version = Object.hasOwn(record, "selection_hash_version")
     ? record.selection_hash_version
     : LEGACY_SELECTION_HASH_VERSION;
-  if (version !== LEGACY_SELECTION_HASH_VERSION && version !== CURRENT_SELECTION_HASH_VERSION) {
+  if (![LEGACY_SELECTION_HASH_VERSION, PACE_SELECTION_HASH_VERSION, CURRENT_SELECTION_HASH_VERSION].includes(version)) {
     throw invalidParams(`Unsupported selection hash version: ${version}`, {
       reason: "MASTER_SELECTION_HASH_VERSION_UNSUPPORTED",
       selection_hash_version: version,
-      supported_selection_hash_versions: [LEGACY_SELECTION_HASH_VERSION, CURRENT_SELECTION_HASH_VERSION],
+      supported_selection_hash_versions: [
+        LEGACY_SELECTION_HASH_VERSION,
+        PACE_SELECTION_HASH_VERSION,
+        CURRENT_SELECTION_HASH_VERSION,
+      ],
     });
   }
   return version;
@@ -57,10 +72,16 @@ function receiptSelectionHash(receipt) {
     expires_at: receipt.expires_at,
   };
   if (version === LEGACY_SELECTION_HASH_VERSION) return digest(legacyPayload);
-  return digest({
+  const pacePayload = {
     ...legacyPayload,
     selection_hash_version: version,
     council_pace: receipt.council_pace,
+  };
+  if (version === PACE_SELECTION_HASH_VERSION) return digest(pacePayload);
+  return digest({
+    ...pacePayload,
+    analyst_scope: receipt.analyst_scope,
+    selected_analyst_ids: receipt.selected_analyst_ids,
   });
 }
 
@@ -77,7 +98,7 @@ function selectedMasterPackHashes(record, ids = record.selected_master_ids) {
  * immutable confirmation inputs means a crash before the first durable confirmation write cannot
  * make an identical retry mint a second one-use capability.
  */
-function stableReceiptId(record, resolved, councilPace) {
+function stableReceiptId(record, resolved, councilPace, analystSelection) {
   const raw = digest({
     schema_version: 1,
     selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
@@ -87,6 +108,8 @@ function stableReceiptId(record, resolved, councilPace) {
     selection_mode: resolved.mode,
     selected_master_ids: resolved.ids,
     council_pace: councilPace,
+    analyst_scope: analystSelection.scope,
+    selected_analyst_ids: analystSelection.ids,
   }).slice(0, 32);
   // Preserve the UUID grammar required by the lock layer: deterministic v5 nibble and RFC 4122
   // variant, while the remaining 122 bits still come from the confirmation digest.
@@ -95,9 +118,10 @@ function stableReceiptId(record, resolved, councilPace) {
 }
 
 function confirmedReceiptRecord(record) {
+  const hashVersion = selectionHashVersion(record);
   const receiptRecord = {
     schema_version: record.schema_version,
-    selection_hash_version: selectionHashVersion(record),
+    selection_hash_version: hashVersion,
     selection_receipt: assertReceiptId(record.selection_receipt),
     selection_id: record.selection_id,
     status: "confirmed",
@@ -110,6 +134,10 @@ function confirmedReceiptRecord(record) {
     selected_master_ids: record.selected_master_ids,
     selected_master_pack_hashes: selectedMasterPackHashes(record),
     selection_mode: record.selection_mode,
+    ...(hashVersion >= CURRENT_SELECTION_HASH_VERSION ? {
+      analyst_scope: record.analyst_scope,
+      selected_analyst_ids: record.selected_analyst_ids,
+    } : {}),
     created_at: record.confirmed_at,
     expires_at: record.expires_at,
     consumed_at: null,
@@ -294,8 +322,33 @@ export function catalogSnapshot(language = "English") {
     masters: options.masters,
     all_master_ids: options.all_master_ids,
     master_rosters: options.master_rosters,
+    analysts: options.analysts,
+    core_analyst_ids: options.default_analysts,
+    all_analyst_ids: options.analysts.map((analyst) => analyst.id),
   };
   return { ...catalog, catalog_hash: digest(catalog) };
+}
+
+export function analystScopeMenu(catalog, mode = "full") {
+  if (councilMode(mode) === "quick") {
+    return [{ scope: "quick", analyst_ids: [...QUICK_TASKS], count: QUICK_TASKS.length, is_default: true }];
+  }
+  return [
+    {
+      scope: "core",
+      analyst_ids: [...catalog.core_analyst_ids],
+      count: catalog.core_analyst_ids.length,
+      is_default: true,
+      label: { en: "Core analyst set", zh: "8 个核心分析席" },
+    },
+    {
+      scope: "all",
+      analyst_ids: [...catalog.all_analyst_ids],
+      count: catalog.all_analyst_ids.length,
+      is_default: false,
+      label: { en: "All analyst seats", zh: "全部 11 个分析席" },
+    },
+  ];
 }
 
 /**
@@ -341,6 +394,9 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const preselected = args.preselected_master_ids === undefined
     ? []
     : normalizeExplicit(args.preselected_master_ids, catalog.all_master_ids);
+  const preselectedAnalystScope = ANALYST_SCOPES.includes(String(args.analyst_scope || ""))
+    ? String(args.analyst_scope)
+    : null;
   const selectionId = `SEL-${randomUUID()}`;
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(now + LIMITS.SELECTION_TTL_MS).toISOString();
@@ -361,6 +417,9 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     selected_master_ids: [],
     preselected_master_ids: preselected,
     selection_mode: null,
+    preselected_analyst_scope: mode === "quick" ? null : preselectedAnalystScope,
+    analyst_scope: mode === "quick" ? "quick" : null,
+    selected_analyst_ids: mode === "quick" ? [...QUICK_TASKS] : [],
     // A pace named in the request is a prefill, exactly like a named master: it highlights the
     // row and never confirms it. The confirmed value lands here at confirm time.
     preselected_council_pace: COUNCIL_PACE_NAMES.includes(String(args.council_pace || "")) ? String(args.council_pace) : null,
@@ -388,12 +447,16 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     masters: catalog.masters,
     master_rosters: catalog.master_rosters,
     preselected_master_ids: preselected,
+    analyst_options: analystScopeMenu(catalog, mode),
+    preselected_analyst_scope: record.preselected_analyst_scope,
     // Ask the pace in the same interaction as the catalog: two decisions, one question. Quick
     // gets an empty menu because it is a smaller contract rather than a slower one.
     pace_options: councilPaceMenu(mode),
     default_council_pace: mode === "quick" ? null : DEFAULT_COUNCIL_PACE,
     preselected_council_pace: record.preselected_council_pace,
-    actions: mode === "quick" ? ["explicit_selection"] : ["explicit_selection", "select_all"],
+    actions: mode === "quick"
+      ? ["explicit_selection"]
+      : ["explicit_method_selection", "select_all_methods", "choose_analyst_scope"],
   };
 }
 
@@ -526,6 +589,33 @@ function resolveConfirmation(args, record) {
   return parseMasterSelection(args.selection, masters);
 }
 
+function resolveAnalystSelection(args, record) {
+  const quick = (record.council_mode || "full") === "quick";
+  if (quick) {
+    if (args.analyst_scope !== undefined && args.analyst_scope !== null) {
+      throw invalidParams("analyst_scope applies to the full council only; quick has a fixed four-seat analyst set.", {
+        reason: "QUICK_ANALYST_SCOPE_FORBIDDEN",
+        selected_analyst_ids: QUICK_TASKS,
+      });
+    }
+    return { scope: "quick", ids: [...QUICK_TASKS] };
+  }
+  if (!ANALYST_SCOPES.includes(String(args.analyst_scope || ""))) {
+    throw invalidParams("Choose analyst_scope=core or analyst_scope=all separately from the method-seat selection.", {
+      reason: "ANALYST_SCOPE_REQUIRED",
+      allowed: ANALYST_SCOPES,
+      analyst_options: analystScopeMenu(record.catalog, record.council_mode),
+    });
+  }
+  const scope = String(args.analyst_scope);
+  return {
+    scope,
+    ids: scope === "all"
+      ? [...record.catalog.all_analyst_ids]
+      : [...record.catalog.core_analyst_ids],
+  };
+}
+
 function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
   const now = options.now ?? Date.now();
   ensureStore();
@@ -574,6 +664,7 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
     ? null
     : String(args.council_pace || record.preselected_council_pace || DEFAULT_COUNCIL_PACE);
   const resolved = resolveConfirmation(args, record);
+  const analystSelection = resolveAnalystSelection(args, record);
   if (record.council_mode === "quick" && resolved.ids.length > QUICK_MASTER_MAX) {
     throw invalidParams(`Quick council accepts at most ${QUICK_MASTER_MAX} selected masters.`, {
       reason: "QUICK_MASTER_LIMIT_EXCEEDED",
@@ -584,14 +675,18 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
   if (record.status === "confirmed") {
     if (record.selection_mode === resolved.mode
       && JSON.stringify(record.selected_master_ids) === JSON.stringify(resolved.ids)
-      && (record.council_pace || null) === chosenPace) {
+      && (record.council_pace || null) === chosenPace
+      && record.analyst_scope === analystSelection.scope
+      && JSON.stringify(record.selected_analyst_ids) === JSON.stringify(analystSelection.ids)) {
       ensureConfirmedReceipt(record, options);
       return confirmationResult(record);
     }
-    throw invalidParams("This selection was already confirmed with different method choices or pace.", {
+    throw invalidParams("This selection was already confirmed with different method choices, analyst scope, or pace.", {
       reason: "MASTER_SELECTION_ALREADY_CONFIRMED",
       confirmed_council_pace: record.council_pace || null,
       submitted_council_pace: chosenPace,
+      confirmed_analyst_scope: record.analyst_scope || null,
+      submitted_analyst_scope: analystSelection.scope,
     });
   }
   if (record.status !== "awaiting_user_selection") {
@@ -600,13 +695,15 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
     });
   }
 
-  const receipt = stableReceiptId(record, resolved, chosenPace);
+  const receipt = stableReceiptId(record, resolved, chosenPace, analystSelection);
   const confirmedAt = new Date(now).toISOString();
   Object.assign(record, {
     status: "confirmed",
     selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
     selection_mode: resolved.mode,
     selected_master_ids: resolved.ids,
+    analyst_scope: analystSelection.scope,
+    selected_analyst_ids: analystSelection.ids,
     selection_receipt: receipt,
     confirmed_at: confirmedAt,
     updated_at: confirmedAt,
@@ -652,6 +749,10 @@ function confirmationResult(record) {
     selected_master_ids: record.selected_master_ids,
     selected_master_pack_hashes: selectedMasterPackHashes(record),
     selected_count: record.selected_master_ids.length,
+    analyst_scope: record.analyst_scope,
+    selected_analyst_ids: [...record.selected_analyst_ids],
+    selected_analyst_count: record.selected_analyst_ids.length,
+    all_master_count: record.catalog.count,
     council_pace: record.council_pace || null,
     expires_at: record.expires_at,
   };
@@ -792,6 +893,13 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
     ["created_at", receipt.created_at, selection.confirmed_at],
     ["expires_at", receipt.expires_at, selection.expires_at],
   ];
+  if (receiptHashVersion >= CURRENT_SELECTION_HASH_VERSION
+    && selectionRecordHashVersion >= CURRENT_SELECTION_HASH_VERSION) {
+    recordBindings.push(
+      ["analyst_scope", receipt.analyst_scope, selection.analyst_scope],
+      ["selected_analyst_ids", receipt.selected_analyst_ids, selection.selected_analyst_ids],
+    );
+  }
   const mismatchedBindings = recordBindings
     .filter(([, receiptValue, selectionValue, present = true]) => !present || !sameJson(receiptValue, selectionValue))
     .map(([field]) => field);
@@ -849,6 +957,26 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
       mismatched_master_ids: mismatchedPackHashes,
     });
   }
+  const effectiveAnalystScope = receiptHashVersion >= CURRENT_SELECTION_HASH_VERSION
+    ? receipt.analyst_scope
+    : ((receipt.council_mode || "full") === "quick" ? "quick" : "core");
+  const effectiveAnalystIds = receiptHashVersion >= CURRENT_SELECTION_HASH_VERSION
+    ? receipt.selected_analyst_ids
+    : (effectiveAnalystScope === "quick" ? QUICK_TASKS : currentCatalog.core_analyst_ids);
+  const expectedAnalystIds = effectiveAnalystScope === "all"
+    ? currentCatalog.all_analyst_ids
+    : effectiveAnalystScope === "quick"
+      ? QUICK_TASKS
+      : currentCatalog.core_analyst_ids;
+  if (!["core", "all", "quick"].includes(effectiveAnalystScope)
+    || !sameJson(effectiveAnalystIds, expectedAnalystIds)) {
+    throw invalidParams("The analyst scope does not match the frozen analyst catalog.", {
+      reason: "ANALYST_SELECTION_RECORD_MISMATCH",
+      analyst_scope: effectiveAnalystScope,
+      selected_analyst_ids: effectiveAnalystIds,
+      expected_analyst_ids: expectedAnalystIds,
+    });
+  }
   const prompt = typeof args.prompt === "string" ? args.prompt : "";
   const language = selectionLanguage({ language: args.language, prompt });
   const mode = councilMode(args.council_mode);
@@ -884,6 +1012,17 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
         confirmed_council_pace: selection.council_pace,
         submitted_council_pace: String(args.council_pace),
         remedy: "Send the confirmed pace or start a new selection to change it.",
+      },
+    );
+  }
+  if (args.analyst_scope !== undefined
+    && String(args.analyst_scope) !== effectiveAnalystScope) {
+    throw invalidParams(
+      `analyst_scope ${args.analyst_scope} does not match the scope confirmed at the selection gate (${effectiveAnalystScope}).`,
+      {
+        reason: "ANALYST_SCOPE_RECEIPT_MISMATCH",
+        confirmed_analyst_scope: effectiveAnalystScope,
+        submitted_analyst_scope: String(args.analyst_scope),
       },
     );
   }
@@ -932,6 +1071,14 @@ export function consumeCouncilSelection(args = {}, options = {}) {
 }
 
 function consumedResult(selection, receipt) {
+  const hashVersion = selectionHashVersion(receipt);
+  const mode = selection.council_mode || "full";
+  const analystScope = hashVersion >= CURRENT_SELECTION_HASH_VERSION
+    ? selection.analyst_scope
+    : (mode === "quick" ? "quick" : "core");
+  const selectedAnalystIds = hashVersion >= CURRENT_SELECTION_HASH_VERSION
+    ? selection.selected_analyst_ids
+    : (analystScope === "quick" ? QUICK_TASKS : selection.catalog.core_analyst_ids);
   return {
     selection_id: selection.selection_id,
     selection_receipt: receipt.selection_receipt,
@@ -944,6 +1091,10 @@ function consumedResult(selection, receipt) {
     // The pace approved at the gate must survive consumption, or the run silently falls back to
     // the default and the approved tier is lost with nothing in the record showing the switch.
     council_pace: selection.council_pace || null,
+    analyst_scope: analystScope,
+    selected_analyst_ids: [...selectedAnalystIds],
+    selected_analyst_count: selectedAnalystIds.length,
+    all_master_count: selection.catalog.count,
     selected_master_ids: [...selection.selected_master_ids],
     selected_master_pack_hashes: { ...(receipt.selected_master_pack_hashes || {}) },
     selected_count: selection.selected_master_ids.length,

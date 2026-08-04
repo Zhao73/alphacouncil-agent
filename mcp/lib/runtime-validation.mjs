@@ -5,6 +5,7 @@ import {
   validateMethodVoice,
   validateNewsEvidencePacket,
   validatePortfolioManagerPacket,
+  validateVerifierBatch,
 } from "../generated/runtime-validators.mjs";
 import { canonicalJson } from "./personas-v3/canonical.mjs";
 import { internalError, invalidParams } from "./errors.mjs";
@@ -39,6 +40,10 @@ const VALIDATORS = Object.freeze({
   method_voice: Object.freeze({
     id: "runtime-method-voice-v1",
     validate: validateMethodVoice,
+  }),
+  verifier_batch: Object.freeze({
+    id: "runtime-verifier-batch-v1",
+    validate: validateVerifierBatch,
   }),
 });
 

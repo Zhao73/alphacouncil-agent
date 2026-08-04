@@ -17,6 +17,7 @@ const output = args[args.indexOf("-o") + 1];
 let prompt = "";
 for await (const chunk of process.stdin) prompt += chunk;
 const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
+const languageRepair = prompt.includes("FINAL LANGUAGE-ONLY TRANSPORT REPAIR");
 const tasks = ${JSON.stringify(DEFAULT_TASKS)};
 const regularTask = tasks.find((id) => [
   "Task:" + id,
@@ -33,7 +34,7 @@ const role = /You are the bull_researcher|Role: bull_researcher|你站在多头�
   : /You are the bear_researcher|Role: bear_researcher|你站在空头一方/i.test(prompt) ? "bear_researcher"
   : /You are the portfolio_manager|Role: portfolio_manager|你是最终 Portfolio Manager/i.test(prompt) ? "portfolio_manager"
   : master || task || "unknown";
-appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, parseRepair, search: args.includes("--search") }) + "\\n");
+appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, parseRepair, languageRepair, search: args.includes("--search") }) + "\\n");
 
 let packet;
 if (task) {
@@ -82,7 +83,8 @@ if (task) {
   const frozenLine = prompt.split("\\n").find((line) => line.startsWith("Frozen method result JSON: "));
   const frozen = frozenLine ? JSON.parse(frozenLine.slice("Frozen method result JSON: ".length)) : null;
   const stance = frozen?.stance || /required acknowledged stance:\\s*([^;]+)/u.exec(prompt)?.[1]?.trim() || "out_of_scope";
-  const wrong = ${JSON.stringify(failureTarget)} === "master";
+  const wrong = ${JSON.stringify(failureTarget)} === "master"
+    || (${JSON.stringify(failureTarget)} === "master_recover" && !languageRepair);
   packet = wrong
     ? {
       master, acknowledged_stance: stance,
@@ -185,7 +187,7 @@ async function runChineseFullFailure(failureTarget) {
   return { dataDir, fake, server, runId, result };
 }
 
-test("master valid JSON remains reader_language_mismatch after one bounded repair", async () => {
+test("master valid JSON remains reader_language_mismatch after bounded transport and language repairs", async () => {
   const fixture = await runChineseFullFailure("master");
   try {
     const { dataDir, fake, runId, result } = fixture;
@@ -200,9 +202,31 @@ test("master valid JSON remains reader_language_mismatch after one bounded repai
     assert.equal(diagnostic.failure_kind, "reader_language_mismatch");
     assert.match(diagnostic.public_summary, /错误语言/);
     const launches = readJsonl(fake.log).filter((item) => item.role === "master_buffett");
-    assert.equal(launches.length, 2);
-    assert.deepEqual(launches.map((item) => item.parseRepair), [false, true]);
+    assert.equal(launches.length, 3);
+    assert.deepEqual(launches.map((item) => item.parseRepair), [false, true, false]);
+    assert.deepEqual(launches.map((item) => item.languageRepair), [false, false, true]);
     assert.equal(launches[1].search, false);
+    assert.equal(launches[2].search, false);
+  } finally {
+    await fixture.server.close();
+    removeDataDir(fixture.dataDir);
+  }
+});
+
+test("a final language-only repair can recover a contract-valid method voice without changing its stance", async () => {
+  const fixture = await runChineseFullFailure("master_recover");
+  try {
+    const { fake, result } = fixture;
+    // The shared fake PM is intentionally too small for a full_v2 completion; this test owns
+    // only the method-language barrier.
+    assert.equal(result.run.master_status.master_buffett.status, "completed");
+    const opinion = result.run.master_opinions.find((item) => item.master === "master_buffett");
+    assert.ok(opinion);
+    assert.equal(opinion.voice_language, "中文");
+    const launches = readJsonl(fake.log).filter((item) => item.role === "master_buffett");
+    assert.equal(launches.length, 3);
+    assert.deepEqual(launches.map((item) => item.languageRepair), [false, false, true]);
+    assert.ok(launches.every((item) => !item.search));
   } finally {
     await fixture.server.close();
     removeDataDir(fixture.dataDir);

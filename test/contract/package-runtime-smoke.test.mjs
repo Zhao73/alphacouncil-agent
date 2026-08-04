@@ -11,7 +11,7 @@ import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 test("the release package smoke executes selection and rejects receipt replay", async () => {
   const result = await runPackageSmoke();
   assert.deepEqual(result, {
-    tools: 32,
+    tools: 33,
     catalog: CANONICAL_MASTER_COUNT,
     locales: 4,
     selected: 1,

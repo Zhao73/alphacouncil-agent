@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/runtime-verifier-batch-v1.schema.json",
+  "title": "AlphaCouncil material-claim verifier batch",
+  "type": "object",
+  "required": ["verifier", "run_id", "results"],
+  "properties": {
+    "verifier": { "enum": ["source_fidelity", "rederivation", "refuter"] },
+    "run_id": { "type": "string", "pattern": "\\S" },
+    "results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "claim_id",
+          "verdict",
+          "note",
+          "checked_urls",
+          "queries",
+          "excerpt",
+          "rederivation"
+        ],
+        "properties": {
+          "claim_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*:C[1-9][0-9]*$" },
+          "verdict": {
+            "enum": [
+              "supported", "partial", "contradicted", "source_unreachable", "source_does_not_mention",
+              "agree", "disagree", "cannot_confirm",
+              "refuted", "weakened", "stands", "superseded_by_newer"
+            ]
+          },
+          "note": { "type": "string", "pattern": "\\S", "maxLength": 240 },
+          "checked_urls": {
+            "type": "array",
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": { "type": "string", "format": "uri", "pattern": "^https?://" }
+          },
+          "queries": {
+            "type": "array",
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "\\S" }
+          },
+          "excerpt": { "type": "string", "maxLength": 600 },
+          "rederivation": { "type": "string", "maxLength": 360 }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -232,6 +232,9 @@ function methodVoicePacket(runId, extra = {}) {
     out_of_scope: "not_in_my_circle",
   }[stance];
   assert.ok(positionIntent, `unexpected frozen stance: ${stance}`);
+  const frozenDossier = existsSync(join(dataDir, "runs", runId, "company_dossier.json"))
+    ? dossier(runId)
+    : null;
   return {
     master: selectedMaster,
     acknowledged_stance: stance,
@@ -253,8 +256,33 @@ function methodVoicePacket(runId, extra = {}) {
     source_ids: ["market_data:S1"],
     confidence: "low",
     company_dossier_hash_ack: companyDossierHash(runId),
+    ...(frozenDossier ? {
+      evidence_packet_acks: frozenDossier.packet_manifest.map((manifest) => manifest.task === "market_data"
+        ? {
+          task: manifest.task,
+          packet_hash: manifest.packet_hash,
+          status: "used",
+          source_ids: ["market_data:S1"],
+          note: "I used this packet's market evidence.",
+        }
+        : {
+          task: manifest.task,
+          packet_hash: manifest.packet_hash,
+          status: "reviewed_not_relevant",
+          source_ids: [],
+          note: "I reviewed this packet and did not use it in the frozen method result.",
+        }),
+    } : {}),
     ...extra,
   };
+}
+
+function continuousPriceLevels() {
+  return [
+    { label: "Avoid", range: "above", lower_bound: 200, upper_bound: null, currency: "USD", meaning: "poor risk reward", action: "do not initiate", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+    { label: "Watch", range: "middle", lower_bound: 100, upper_bound: 200, currency: "USD", meaning: "balanced evidence", action: "keep exposure small", basis: "conditional valuation", source_ids: ["market_data:S1"] },
+    { label: "Reassess", range: "below", lower_bound: null, upper_bound: 100, currency: "USD", meaning: "possible margin of safety", action: "recheck the thesis", basis: "operating evidence", source_ids: ["market_data:S1"] },
+  ];
 }
 
 async function recordMaster(runId, packet = methodVoicePacket(runId)) {
@@ -308,6 +336,7 @@ async function recordPm(runId) {
       invalidation: ["A contradictory primary filing invalidates the decision."],
       source_ids: ["market_data:S1"],
       confidence: "medium",
+      price_levels: continuousPriceLevels(),
       report_markdown: fullCouncilReport,
       company_dossier_hash_ack: dossier(runId).content_hash,
     },
@@ -342,6 +371,7 @@ async function recordThinPm(runId) {
       invalidation: ["A contradictory primary filing invalidates the decision."],
       source_ids: ["market_data:S1"],
       confidence: "medium",
+      price_levels: continuousPriceLevels(),
       report_markdown: unloggedReport,
       company_dossier_hash_ack: dossier(runId).content_hash,
     },
@@ -838,6 +868,7 @@ test("a portfolio manager packet with no report body is rejected at submission, 
       invalidation: ["A contradictory primary filing invalidates the decision."],
       source_ids: ["market_data:S1"],
       confidence: "medium",
+      price_levels: continuousPriceLevels(),
       company_dossier_hash_ack: dossier(runId).content_hash,
     },
   });

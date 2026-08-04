@@ -35,6 +35,7 @@ import { fetchMarketFinancials, coverageFor, marketFor } from "./markets.mjs";
 import { inclusiveCutoffTime } from "./personas-v3/source-anchor.mjs";
 import { adaptGroundingToTypedFacts } from "./personas-v3/grounding-adapter.mjs";
 import { classifyInstrument, instrumentResearchChecklist, isFundOrIndex } from "./instruments.mjs";
+import { fetchEquityMarketHistory } from "./equity-history.mjs";
 // Aliased: this module already has a private `localized(label, chinese)` for metric labels.
 import { localized as localizedText } from "./lang.mjs";
 
@@ -326,6 +327,29 @@ export async function gatherGrounding({
       ja: `事業会社向け SEC Company Facts スクリーン：${out.instrument.asset_type} には適用されません。`,
       ko: `사업회사용 SEC Company Facts 스크린: ${out.instrument.asset_type}에는 적용되지 않습니다.`,
     }));
+  }
+
+  // A quote snapshot cannot answer volume versus average, realised volatility, or aligned
+  // relative performance. Fetch one year of keyless daily history once and share the same
+  // deterministic calculations with every analyst and method seat. The sector proxy is chosen
+  // from SEC SIC when available (for example a semiconductor issuer maps to SMH), while SPY is
+  // always the broad US benchmark.
+  if (symbol && symbolMarket?.id === "US" && !isFundOrIndex(out.instrument) && snapshotPolicy.allowed) {
+    jobs.push(safely("market history", () => fetchEquityMarketHistory(symbol, {
+      asOf,
+      sic: out.filer?.sic,
+      signal,
+    })).then((result) => {
+      if (!result.ok) { out.unavailable.push(result.error); return; }
+      if (!result.value.available) {
+        out.unavailable.push(...(result.value.unavailable || []).map((gap) => `market history: ${gap}`));
+        return;
+      }
+      out.market_history = result.value;
+      out.unavailable.push(...(result.value.unavailable || []).map((gap) => `market history partial: ${gap}`));
+    }));
+  } else if (symbol && symbolMarket?.id === "US" && !isFundOrIndex(out.instrument)) {
+    out.unavailable.push("market history: historical cutoff requires an archived daily-price snapshot; current Yahoo history was not fetched");
   }
 
   // Non-US symbols never reach the SEC path, so without this they arrived at the analyst
