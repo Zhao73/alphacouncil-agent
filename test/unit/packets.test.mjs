@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { __test__ } from "../../mcp/server.mjs";
-import { debateQnaGate, firstFailedDebateResult, managerFallback } from "../../mcp/lib/packets.mjs";
+import { debateQnaGate, debateRoundQnaGate, firstFailedDebateResult, managerFallback } from "../../mcp/lib/packets.mjs";
 
 import { scopedPacket } from "../helpers/fixtures.mjs";
 
@@ -196,6 +196,38 @@ test("the debate Q&A gate requires three cross-fed questions and three answers p
   });
   assert.equal(unrelated.status, "failed");
   assert.match(unrelated.errors[0], /exact question bindings/);
+});
+
+test("one headless debate round validates against its frozen Q&A context before persistence", () => {
+  const own = ["own q1", "own q2", "own q3"];
+  const opponent = ["opponent q1", "opponent q2", "opponent q3"];
+  assert.equal(debateRoundQnaGate({
+    role: "bull_researcher",
+    round: 2,
+    packet: { questions: own.slice(0, 2) },
+  }).status, "failed");
+  assert.deepEqual(debateRoundQnaGate({
+    role: "bull_researcher",
+    round: 3,
+    questionsYouAsked: own,
+    questionsForYou: opponent,
+    packet: {
+      questions: own,
+      questions_answered: opponent.map((question, index) => ({ question, answer: `answer ${index + 1}` })),
+    },
+  }), { status: "passed", errors: [] });
+  const drifted = debateRoundQnaGate({
+    role: "bull_researcher",
+    round: 3,
+    questionsYouAsked: own,
+    questionsForYou: opponent,
+    packet: {
+      questions: [...own].reverse(),
+      questions_answered: [...opponent].reverse().map((question, index) => ({ question, answer: `answer ${index + 1}` })),
+    },
+  });
+  assert.equal(drifted.status, "failed");
+  assert.equal(drifted.errors.length, 2);
 });
 
 test("debate transport diagnostics retain an early-round failure after a later success", () => {

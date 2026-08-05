@@ -2,6 +2,61 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.2.2] — 2026-08-05
+
+### Fixed
+
+- Source-acquisition `policy_id`, task ownership and source-ID scoping are now server-bound.
+  Worker typos can no longer force a lossy rewrite of the complete evidence packet, and a
+  ledger-only repair may bind `S1` only to an already-frozen task-scoped source.
+- The fixed 52 acquisition routes belong only to the eight core evidence roles. `slow + all`
+  still runs and freezes all eleven analyst packets, but `macro_regime`, `market_narrative`
+  and `social_pulse` no longer fail on a synthetic zero-row plan.
+- One `reported_actual` row may retain several disclosed metrics as typed observations rather
+  than being rejected for lacking one artificial scalar. Observation history now keys metric
+  and scope as well as period/unit/outcome, while missing numeric units or periods remain a
+  hard failure instead of being guessed from the run date.
+- Direct observations are now route-aware: cited exchange/market or local snapshots may support
+  market and quant actuals, and a dated public estimate sample may support an expectations actual
+  without being misrepresented as issuer guidance or full-market consensus. Recomputed proxies
+  may use cited local/market inputs and multiple derived observations.
+- A sourced domain may remain `coverage_items=covered` while its exact requested scalar is
+  explicitly `unavailable`. This partial-coverage state requires shared source IDs, a concrete
+  reason and the complete frozen terminal ladder; the exact unavailable scalar does not need a
+  contradictory `succeeded` result. When a worker omits the ledger's copy of source IDs, the
+  server binds only the already-validated matching coverage sources. It never invents a source.
+- Worker-shaped input maps, numeric-string low/base/high ranges and known supplemental acquisition
+  stages are normalized without weakening the frozen route audit. An external page-open marked
+  successful without a resolvable source becomes `not_disclosed`; an incomplete actual, proxy or
+  model becomes fail-closed `unavailable` with its `proposed_outcome` retained for audit.
+- Cited non-official market pages now use the explicit supplemental `public_market_data` stage.
+  Common worker spellings normalize to it without promoting the page to `market_official`,
+  treating retrieval as a derivation, or bypassing any frozen terminal-stage attempt.
+- An acquisition-only semantic failure receives one bounded no-search ledger repair. Claims,
+  sources, coverage rows and official-news coverage remain frozen, preventing a repair worker
+  from changing a valid dated URL or publication boundary while fixing ledger structure.
+- Company evidence now has two disjoint repair budgets instead of one shared slot. A general
+  transport/schema repair may be followed by one acquisition-ledger-only repair when—and only
+  when—the repaired packet has already passed every non-ledger gate. The chain is capped at
+  three total attempts, uses no search for either repair and records both diagnostics.
+- Issuer-site discovery now ranks current earnings/results, event and financial-document detail
+  URLs ahead of navigation/governance pages within a bounded ten-page fetch budget. A current
+  release linked after a long IR navigation menu therefore reaches every analyst's starter pack
+  instead of being recorded only as an unfetched URL lead.
+- Headless Round-2/3 outputs now cross the exact-Q&A gate inside each worker's bounded repair
+  path. One no-search repair receives the authoritative question arrays and may restore exact
+  count/order/bindings; a second mismatch still terminates the debate fail-closed before PM.
+- Schema-aware multi-root repair arbitration now applies the same lossless nullable-coverage
+  normalization as the ordinary single-root path. One complete evidence packet beside a
+  non-contract diagnostic can be recovered; two distinct valid packets or any truncated or
+  malformed additional root remain ambiguous and are rejected.
+- Full `slow + all` regression coverage now exercises eleven analysts, all 26 methods, all
+  three verifier batches, the zero-verifier fail-closed barrier, VSH-shaped multi-metric and
+  partial-coverage data, direct market/consensus observations, object-form proxy inputs,
+  incomplete-model downgrades, supplemental-seat separation and a real ledger-only retry. The
+  language fixture also uses an explicit `as_of`, so a UTC date rollover cannot create an
+  unrelated news retry.
+
 ## [1.2.1] — 2026-08-05
 
 ### Added

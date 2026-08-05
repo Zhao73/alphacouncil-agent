@@ -106,6 +106,7 @@ function fakeFullCodex(dataDir, {
   malformedMasterModes = {},
   pmFailureMode = null,
   pmContractFailureMode = null,
+  debateQnaFailureMode = null,
 } = {}) {
   const driver = join(dataDir, "fake-full-codex.mjs");
   const log = join(dataDir, "full-worker-log.jsonl");
@@ -124,10 +125,11 @@ const master = /dedicated, isolated method-seat explanation worker[^\\n]*\\((mas
   || /Master ID:\\s*(master_[a-z0-9_]+)/u.exec(prompt)?.[1]
   || null;
 const role = /You are the portfolio_manager|Role:[ ]*portfolio_manager/i.test(prompt) ? "portfolio_manager"
-  : /You are the bull_researcher/i.test(prompt) ? "bull_researcher"
-  : /You are the bear_researcher/i.test(prompt) ? "bear_researcher"
+  : /You are the bull_researcher|Role:[ ]*bull_researcher/i.test(prompt) ? "bull_researcher"
+  : /You are the bear_researcher|Role:[ ]*bear_researcher/i.test(prompt) ? "bear_researcher"
   : master || task || "unknown";
-const round = Number(/Debate round:\\s*(\\d+)/u.exec(prompt)?.[1] || 0);
+const roundMatch = /Debate round:\\s*(\\d+)|round:\\s*(\\d+)/iu.exec(prompt);
+const round = Number(roundMatch?.[1] || roundMatch?.[2] || 0);
 const parseRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR");
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   role, task, master, round, parseRepair, search: args.includes("--search"), at: Date.now(), pid: process.pid,
@@ -251,6 +253,18 @@ if (task) {
     questions_answered: opponent.map((question, index) => ({ question, answer: role + "_A" + (index + 1) + " exact fixture answer" })),
     report_markdown: ""
   };
+  const qnaFailureMode = ${JSON.stringify(debateQnaFailureMode)};
+  if ((qnaFailureMode === "round2_and_round3_once" && !parseRepair)
+    || (qnaFailureMode === "round3_always" && round === 3)) {
+    if (round === 2) packet.questions = ownQuestions.slice(0, 2);
+    if (round === 3) {
+      packet.questions = [...preserved].reverse();
+      packet.questions_answered = [...opponent].reverse().map((question, index) => ({
+        question,
+        answer: role + "_DRIFTED_A" + (index + 1),
+      }));
+    }
+  }
 }
 writeFileSync(output, JSON.stringify(packet));
 `);
@@ -478,6 +492,74 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
   } finally {
     await server.close();
     removeDataDir(dataDir);
+  }
+});
+
+async function runDebateQnaFixture(debateQnaFailureMode) {
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir, { malformedTask: null, debateQnaFailureMode });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  await server.request("initialize", {});
+  const prompt = `Exercise bounded exact-Q&A repair: ${debateQnaFailureMode}.`;
+  const confirmed = await confirmMasterSelection(server, {
+    symbol: "QQQ", language: "English", prompt, selected_master_ids: ["master_buffett"],
+  });
+  const runId = `FULL-QNA-${debateQnaFailureMode.toUpperCase()}-${process.pid}`;
+  const result = structured(await server.callTool("analyze_symbol", {
+    symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+    council_mode: "full", total_timeout_ms: 45_000, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+    wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+    grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
+  }, { timeoutMs: 60_000 }));
+  return { dataDir, fake, server, runId, result };
+}
+
+test("headless round-2 and round-3 Q&A drift receives one bounded no-search repair", async () => {
+  const fixture = await runDebateQnaFixture("round2_and_round3_once");
+  try {
+    const { dataDir, fake, runId, result } = fixture;
+    assert.equal(result.run.status, "complete", JSON.stringify(result.run.agent_status, null, 2));
+    const dir = join(dataDir, "runs", runId);
+    const events = readJsonl(join(dir, "events.jsonl"));
+    const repairs = events.filter((event) => event.type === "agent_parse_repair"
+      && ["bull_researcher", "bear_researcher"].includes(event.role));
+    assert.equal(repairs.length, 4);
+    assert.deepEqual(repairs.map((event) => event.round).sort(), [2, 2, 3, 3]);
+    assert.ok(repairs.every((event) => event.reason === "parse_failed"));
+    const repairLaunches = readJsonl(fake.log).filter((item) => item.parseRepair
+      && ["bull_researcher", "bear_researcher"].includes(item.role));
+    assert.equal(repairLaunches.length, 4);
+    assert.deepEqual(repairLaunches.map((item) => item.round).sort(), [2, 2, 3, 3]);
+    assert.ok(repairLaunches.every((item) => item.search === false));
+    const bull = readJson(join(dir, "bull_researcher.json"));
+    const bear = readJson(join(dir, "bear_researcher.json"));
+    assert.deepEqual(bull.debate_rounds[2].questions, bull.debate_rounds[1].questions);
+    assert.deepEqual(bear.debate_rounds[2].questions, bear.debate_rounds[1].questions);
+    assert.deepEqual(bull.debate_rounds[2].questions_answered.map((row) => row.question), bear.debate_rounds[1].questions);
+    assert.deepEqual(bear.debate_rounds[2].questions_answered.map((row) => row.question), bull.debate_rounds[1].questions);
+  } finally {
+    await fixture.server.close();
+    removeDataDir(fixture.dataDir);
+  }
+});
+
+test("headless Q&A remains fail-closed when the bounded repair still changes exact bindings", async () => {
+  const fixture = await runDebateQnaFixture("round3_always");
+  try {
+    const { dataDir, runId, result } = fixture;
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(result.run.agent_status.bull_researcher.status, "failed");
+    assert.equal(result.run.agent_status.bear_researcher.status, "failed");
+    assert.equal(result.run.agent_status.portfolio_manager.status, "skipped");
+    const events = readJsonl(join(dataDir, "runs", runId, "events.jsonl"));
+    const repairs = events.filter((event) => event.type === "agent_parse_repair"
+      && ["bull_researcher", "bear_researcher"].includes(event.role));
+    assert.equal(repairs.length, 2);
+    assert.ok(events.some((event) => event.type === "incomplete"
+      && String(event.reason).includes("debate_round_3_failed:parse_failed")));
+  } finally {
+    await fixture.server.close();
+    removeDataDir(fixture.dataDir);
   }
 });
 

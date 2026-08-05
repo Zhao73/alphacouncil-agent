@@ -162,6 +162,32 @@ test("parse-repair arbitration accepts only one distinct schema-valid complete r
     packet,
   );
 
+  const nullableCoverage = {
+    ...packet,
+    coverage_items: [{
+      id: "market.quote_snapshot",
+      status: "covered",
+      source_ids: ["S1"],
+      note: null,
+      attempted: null,
+      attempted_urls: null,
+      gap: null,
+    }],
+  };
+  assert.deepEqual(
+    extractRepairedWorkerJson(`${diagnostic}\n${JSON.stringify(nullableCoverage)}`, "evidence")
+      .coverage_items[0],
+    {
+      id: "market.quote_snapshot",
+      status: "covered",
+      source_ids: ["S1"],
+      note: "",
+      attempted: "",
+      attempted_urls: [],
+      gap: "",
+    },
+  );
+
   const competing = JSON.stringify({ ...packet, summary: "A different valid evidence packet." });
   assert.throws(
     () => extractRepairedWorkerJson(`${valid}\n${competing}`, "evidence"),
@@ -226,6 +252,17 @@ test("candidate enumeration preserves complete roots but never chooses one", () 
 test("standalone runtime schemas accept complete packets and expose missing content", () => {
   const complete = evidence();
   assert.equal(assertRuntimeWorkerPayload("evidence", complete), complete);
+
+  // Acquisition identity and semantic rows are bound to the frozen run after transport
+  // parsing. A worker typo here must reach the server canonicalizer instead of forcing a
+  // lossy rewrite of the entire otherwise-valid evidence packet.
+  const workerBoundMetadata = evidence();
+  workerBoundMetadata.acquisition_ledger = {
+    policy_id: "worker_typo",
+    task: "wrong_task",
+    items: [{ coverage_id: "financials.business_model", outcome: "reported_actual" }],
+  };
+  assert.equal(assertRuntimeWorkerPayload("evidence", workerBoundMetadata), workerBoundMetadata);
 
   const incomplete = evidence();
   delete incomplete.sources;

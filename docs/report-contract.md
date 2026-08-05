@@ -162,6 +162,9 @@ set of same-site earnings/news/filing/product links, stores content hashes and e
 queries dated company, financial, customer/supplier/capacity, product/delivery/quality,
 regulatory/litigation and management/capital-allocation feeds. These starter records and their
 failed feed attempts are included in the one dossier shared with every analyst and method seat.
+Within the bounded issuer-site crawl, current earnings/results detail pages, event pages and
+financial documents rank ahead of generic navigation and governance pages. The order in an IR
+menu therefore cannot consume the whole detail-page budget before the latest release is fetched.
 
 Each of the 52 coverage IDs has a frozen ordered source ladder. Depending on the field, the
 stages include regulator filings, issuer IR/product documents, exchange or market-official
@@ -173,8 +176,12 @@ therefore only one recorded attempt; it is never completion.
 The evidence packet returns one `acquisition_ledger.items` row per owned coverage ID. Its
 `outcome` is exactly one of:
 
-- `reported_actual`: an authorised source actually disclosed the value; the packet records
-  value, unit, period and scope.
+- `reported_actual`: an authorised source actually disclosed the value, or the frozen route
+  permits a cited direct market, public-estimate-sample or local observation. The packet records
+  either one value/unit/period/scope tuple or, when the same coverage ID contains several
+  disclosed metrics, `observations[]` rows with metric, value, unit, period and scope. A public
+  estimate sample stays scoped as a sample and is never relabelled issuer guidance or complete
+  market consensus.
 - `recomputed_proxy`: cited public inputs support a reproducible value; the packet records
   value, unit, period, formula and inputs. It is never relabelled as an actual.
 - `modeled_estimate`: cited public inputs support a bounded scenario; the packet records
@@ -185,9 +192,54 @@ The evidence packet returns one `acquisition_ledger.items` row per owned coverag
   or a missing optional API fails the runtime gate.
 - `not_applicable`: the fact genuinely does not apply, with a concrete reason.
 
+`coverage_items=covered` means that the named domain has usable cited evidence; it does not
+assert that every desired scalar exists. When the exact acquisition outcome is still not
+publishable, the matching ledger row may therefore remain `unavailable` while coverage stays
+`covered`, but only when the two rows share a resolved source, every frozen terminal stage is
+recorded, and the ledger gives a concrete reason. The exact target may
+have no successful attempt—that is consistent with `unavailable`; the cited coverage source
+proves useful domain evidence, not the missing scalar. If a worker omits the ledger copy of that
+source ID, the server may bind only the already-validated source IDs from the matching coverage
+row. This is sourced partial coverage, not a successful scalar. It preserves the evidence packet without allowing a
+missing range, formula, unit or period to become a fact.
+
+`policy_id`, `task` and the ownership of every coverage ID are server-frozen bindings rather
+than model judgments. Only the eight core evidence roles own this 52-row acquisition ledger;
+the three all-scope supplemental packets are still frozen into the dossier and acknowledged by
+every method seat, but they neither receive nor satisfy synthetic acquisition rows. Transport
+parsing deliberately leaves ledger semantics to the post-normalization gate, which validates
+the exact frozen plan, sources, attempts and outcomes. The normalizer may turn a worker input
+map into bounded input rows, parse strict numeric low/base/high strings, and retain known
+supplemental source stages for audit. It never invents a source, value, unit, period, formula,
+assumption or missing range bound. A successful external attempt without a resolvable source is
+recorded as `not_disclosed`; a proposed actual/proxy/model that lacks its required evidence or
+metadata is downgraded to `unavailable` with `proposed_outcome` and a rejection reason rather
+than repaired into a publishable value.
+
+The canonical supplemental stage for an already-cited, non-official public market-data page is
+`public_market_data`. The observed worker spelling `market_data_provider` and mistaken task-name
+spelling `market_data` normalize to that stage with the proposed spelling retained for audit. This
+stage may support a route-appropriate market/quant direct observation only after every frozen
+`required_terminal_stage` is recorded for that row. It is never treated as `market_official`,
+never counts as a derivation, and never replaces a frozen terminal-stage attempt.
+
+If an otherwise-valid evidence packet fails only this ledger gate, the one bounded retry is a
+no-search `acquisition_ledger` repair. The runtime freezes and preserves the original claims,
+sources, coverage rows and official-news coverage, accepts no new source, locator or fact, and
+merges only the repaired ledger. An unscoped repair ID such as `S1` may bind only to that
+packet's already-existing scoped source; an unresolved ID still fails closed.
+
+A company packet may first need the separate bounded transport/schema repair. If that repair
+produces a packet that passes the transport, source, coverage and reader-language gates but then
+reveals an acquisition-ledger-only error, the runtime may invoke the ledger repair once as a
+third and final attempt. Both repairs run without search and have disjoint mutation authority;
+the second repair receives the now-frozen packet and may replace only `acquisition_ledger`.
+Another transport, language, coverage or ledger failure does not receive a fourth attempt.
+
 Successful actual, proxy and model observations are stored by ticker, coverage ID, period,
-unit and outcome. Later runs compare only like-for-like records; a 90-day change is emitted
-only when an observation at least 90 days old exists for the same period, unit and outcome.
+metric, unit, scope and outcome. Later runs compare only like-for-like records; a 90-day change is emitted
+only when an observation at least 90 days old exists for the same metric, period, unit, scope
+and outcome.
 This makes the acquisition system improve with use without silently mixing forecast vintages
 or turning a changed fiscal period into a revision.
 
@@ -398,6 +450,12 @@ The execution topology is:
 4. Bull and Bear start together within each of three rounds, with a barrier before the next
    round; the PM starts only after both Round-3 outputs pass exact Q&A validation;
 5. deterministic assembly and persistence consume the same global clock.
+
+For headless full runs, each Round-2/3 worker is checked against its own frozen Q&A context
+before that round is accepted. A schema-valid Round 2 with other than three non-empty questions,
+or a Round 3 that rewrites/reorders either exact question array, receives the same single bounded
+no-search transport repair as other packet-contract errors. The repair prompt includes the two
+authoritative arrays and may only restore their bindings; a second mismatch remains fail-closed.
 
 At deadline expiry the run stops opening downstream work and persists fail-closed as
 `incomplete`, naming timed-out, failed and skipped roles. This is a terminal-persistence
