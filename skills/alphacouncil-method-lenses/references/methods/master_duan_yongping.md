@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:3aaa0e6af49058ddda0659e122bb1f33825d89959a79a44a72b9331554baf5dd`
+- Pack snapshot hash: `sha256:e895be732bab3669819b5d731652baa5b8a3c2d61fd0c65a878c7c01fad662de`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.

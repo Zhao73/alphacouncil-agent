@@ -59,9 +59,7 @@
       "macro.long_bond_yield"
     ],
     "hard_vetoes": [
-      "master_bogle.expected_return_below_inflation",
-      "master_bogle.single_business",
-      "master_bogle.past_performance_claim"
+      "master_bogle.expected_return_below_inflation"
     ],
     "native_output": "expected_market_return_v1"
   },

@@ -1,4 +1,7 @@
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import os from "node:os";
 
@@ -8,7 +11,69 @@ export const SELECTIONS_DIR = join(DATA_DIR, "selections");
 export const SERVER_NAME = "alphacouncil-agent";
 // Single source of truth for the version. Resolved from import.meta.url, never process.cwd(),
 // because hosts launch this server from arbitrary working directories.
-export const VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version;
+const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+export const VERSION = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")).version;
+
+const RUNTIME_FINGERPRINT_FILES = Object.freeze([
+  "package.json",
+  "mcp/server.mjs",
+  "mcp/generated/runtime-validators.mjs",
+  "mcp/lib/company-dossier.mjs",
+  "mcp/lib/company-source-acquisition.mjs",
+  "mcp/lib/constants.mjs",
+  "mcp/lib/grounding.mjs",
+  "mcp/lib/manager-report.mjs",
+  "mcp/lib/markdown.mjs",
+  "mcp/lib/orchestrator.mjs",
+  "mcp/lib/packets.mjs",
+  "mcp/lib/prompts.mjs",
+  "mcp/lib/runtime-validation.mjs",
+  "mcp/lib/verification.mjs",
+  "schemas/runtime-evidence-packet-v1.schema.json",
+  "schemas/runtime-headless-portfolio-manager-decision-v1.schema.json",
+  "schemas/runtime-method-voice-v1.schema.json",
+]);
+
+function criticalRuntimeSourceHash() {
+  const hash = createHash("sha256");
+  for (const relativePath of RUNTIME_FINGERPRINT_FILES) {
+    hash.update(relativePath);
+    hash.update("\0");
+    hash.update(readFileSync(join(PACKAGE_ROOT, relativePath)));
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+
+function gitRuntimeIdentity() {
+  try {
+    const options = { cwd: PACKAGE_ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] };
+    const commit = execFileSync("git", ["rev-parse", "--verify", "HEAD"], options).trim();
+    const trackedChanges = execFileSync(
+      "git",
+      ["status", "--porcelain=v1", "--untracked-files=no"],
+      options,
+    ).trim();
+    return {
+      git_commit: /^[0-9a-f]{40}$/u.test(commit) ? commit : null,
+      git_tracked_tree_dirty: trackedChanges.length > 0,
+    };
+  } catch {
+    return { git_commit: null, git_tracked_tree_dirty: null };
+  }
+}
+
+// Every saved run carries both the semantic package version and a hash of the critical
+// executable/schema surface. A packaged plugin may not contain .git, so the source hash is
+// mandatory while the commit is best-effort. This distinguishes "code edited" from a run
+// actually produced by the installed bytes without requiring any external service or API.
+export const RUNTIME_BUILD_IDENTITY = Object.freeze({
+  contract_id: "alphacouncil_runtime_build_v1",
+  package_version: VERSION,
+  critical_source_sha256: criticalRuntimeSourceHash(),
+  critical_source_files: [...RUNTIME_FINGERPRINT_FILES],
+  ...gitRuntimeIdentity(),
+});
 export const CODEX_CMD = process.env.ALPHACOUNCIL_AGENT_CODEX_CMD || "codex";
 // Eight roles, down from eleven. The three removed were merged rather than dropped:
 // the earnings call is part of the earnings read, sell-side revisions are part of the
@@ -260,7 +325,9 @@ export const LIMITS = Object.freeze({
   FULL_VERIFIER_CLAIMS_PER_BATCH: 20,
   /** Fidelity opens every cited URL; smaller chunks reduce missed-source attention failures. */
   FULL_SOURCE_FIDELITY_CLAIMS_PER_BATCH: 10,
-  /** Eleven fidelity chunks still fit two waves inside the same verifier-stage ceiling. */
+  /** Also bound per-claim URL obligations; repeated URLs across claims still require separate result coverage. */
+  FULL_SOURCE_FIDELITY_URLS_PER_BATCH: 12,
+  /** URL-weighted fidelity chunks run in bounded parallel waves inside the verifier-stage ceiling. */
   FULL_SOURCE_FIDELITY_CHUNK_CONCURRENCY: 6,
   /** Non-overridable public ceiling for a quick council, including retries and synthesis. */
   QUICK_HARD_MAX_MS: 10 * 60 * 1000,

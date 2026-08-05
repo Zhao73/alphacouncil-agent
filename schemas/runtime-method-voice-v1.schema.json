@@ -54,7 +54,7 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["task", "packet_hash", "status", "source_ids", "note"],
+        "required": ["task", "status", "source_ids", "note"],
         "properties": {
           "task": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
           "packet_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },

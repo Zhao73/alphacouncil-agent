@@ -62,7 +62,6 @@
       "financial.owner_earnings"
     ],
     "hard_vetoes": [
-      "master_buffett.outside_competence",
       "master_buffett.leverage_dependency",
       "master_buffett.owner_earnings_unreliable"
     ],

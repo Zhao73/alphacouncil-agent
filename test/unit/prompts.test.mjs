@@ -135,6 +135,64 @@ test("full headless portfolio-manager prompt ends with the compact decision cont
   assert.match(prompt, /HEADLESS_STRUCTURED_PM_DECISION_V1/);
   assert.match(prompt, /Do not return `report_markdown`/);
   assert.match(prompt, /price_levels.*horizon_views.*data_gaps/s);
+  assert.match(prompt, /verification_findings_ack/);
+  assert.match(prompt, /never list internal file paths, filesystem visibility, tool permissions/u);
   assert.ok(prompt.lastIndexOf("HEADLESS_STRUCTURED_PM_DECISION_V1") > prompt.lastIndexOf("Evidence JSON:"),
     "the compact transport contract must be the final output-form instruction");
+});
+
+test("a method voice receives frozen decision causality and hard verification corrections", async () => {
+  const { masterVoicePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "VRT-METHOD-VOICE",
+    symbol: "VRT",
+    as_of: "2026-08-05",
+    language: "English",
+    council_mode: "full",
+    tasks: ["valuation"],
+    packets: [{
+      task: "valuation",
+      status: "complete",
+      confidence: "high",
+      sources: [{ source_id: "valuation:S1", title: "Frozen valuation source" }],
+      claims: [{
+        claim: "The index earnings yield proves the company is overvalued.",
+        evidence: "The original packet substituted an index aggregate for company valuation.",
+        confidence: "high",
+        source_ids: ["valuation:S1"],
+      }],
+    }],
+    verifier_verdicts: [{
+      verifier: "source_fidelity",
+      verdict: "contradicted",
+      claim_id: "valuation:C1",
+      task: "valuation",
+      claim: "The index earnings yield proves the company is overvalued.",
+      note: "The source is a broad-market aggregate, not VRT company valuation evidence.",
+      rederivation: "Exclude the index proxy until company-specific valuation inputs exist.",
+    }],
+  };
+  const frozenOpinion = {
+    stance: "opposed",
+    deterministic_stance: "opposed",
+    decision_reason: "veto",
+    common_projection: {
+      stance: "opposed",
+      reason: "veto",
+      score_ratio: 1,
+      veto_ids: ["master_taleb.absorbing_barrier"],
+    },
+    native_decision: { state: "no_trade", metrics: { metric_1: 1, metric_2: 0.2 } },
+    evidence_source_ids: ["valuation:S1"],
+  };
+
+  const prompt = masterVoicePrompt("master_taleb", run, frozenOpinion);
+  assert.match(prompt, /Scoring and hard vetoes are independent decision branches/);
+  assert.match(prompt, /named veto independently overrides the score/);
+  assert.match(prompt, /"decision_reason":"veto"/);
+  assert.match(prompt, /"score_ratio":1/);
+  assert.match(prompt, /Hard findings JSON/);
+  assert.match(prompt, /"verdict":"contradicted"/);
+  assert.match(prompt, /override the original analyst packets/);
+  assert.match(prompt, /may not continue using it as support/);
 });

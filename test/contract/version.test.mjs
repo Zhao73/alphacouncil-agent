@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { __test__ } from "../../mcp/server.mjs";
 import { repoFile } from "../helpers/paths.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
+import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(repoFile(rel), "utf8"));
 
@@ -29,12 +30,23 @@ test("every manifest and the served VERSION agree with package.json", () => {
   }
 });
 
-test("the 1.2.2 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
+test("runtime build identity binds the version to the critical executable source bytes", () => {
+  assert.equal(RUNTIME_BUILD_IDENTITY.contract_id, "alphacouncil_runtime_build_v1");
+  assert.equal(RUNTIME_BUILD_IDENTITY.package_version, readJson("package.json").version);
+  assert.match(RUNTIME_BUILD_IDENTITY.critical_source_sha256, /^[0-9a-f]{64}$/u);
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/orchestrator.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/company-source-acquisition.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("schemas/runtime-headless-portfolio-manager-decision-v1.schema.json"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.git_commit === null || /^[0-9a-f]{40}$/u.test(RUNTIME_BUILD_IDENTITY.git_commit));
+  assert.ok([true, false, null].includes(RUNTIME_BUILD_IDENTITY.git_tracked_tree_dirty));
+});
+
+test("the 1.2.3 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "1.2.2");
+  assert.equal(expected, "1.2.3");
   assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "latest");
   assert.equal(profile.channel, "solo_test");

@@ -63,9 +63,8 @@
       "valuation.downside_floor"
     ],
     "hard_vetoes": [
-      "master_pabrai.cloned_not_rebuilt",
       "master_pabrai.no_downside_floor",
-      "master_pabrai.complex_success_path"
+      "master_pabrai.financing_fails_before_resolution"
     ],
     "native_output": "dhandho_payoff_v1"
   },

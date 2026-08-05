@@ -34,7 +34,9 @@ export const SOURCE_ATTEMPT_RESULTS = Object.freeze([
 const OUTCOMES = new Set(COMPANY_DATA_OUTCOMES);
 const ATTEMPT_RESULTS = new Set(SOURCE_ATTEMPT_RESULTS);
 const MAX_OFFICIAL_DETAIL_PAGES = 10;
+const MAX_OFFICIAL_LEAD_PAGES = 6;
 const MAX_STARTER_NEWS_ITEMS = 80;
+const MIN_STARTER_NEWS_ITEMS_PER_TOPIC = 6;
 const MAX_SOURCE_BODY_BYTES = 1_500_000;
 const GENERIC_IDENTITY_WORDS = new Set([
   "and", "company", "corporation", "corp", "inc", "incorporated", "limited", "ltd",
@@ -108,7 +110,9 @@ const SPECIFIC_STAGES = Object.freeze({
     "regulator_filing", "issuer_ir", "customer_official", "supplier_official", "derived_proxy",
   ],
   "financials.guidance": ["issuer_ir", "regulator_filing", "customer_official", "disconfirming_search"],
-  "financials.earnings_call_qna": ["issuer_ir", "regulator_filing", "disconfirming_search"],
+  "financials.earnings_call_qna": [
+    "issuer_ir", "regulator_filing", "public_market_data", "disconfirming_search",
+  ],
   "expectations.consensus_revenue_eps": [
     "issuer_ir", "public_consensus", "local_observation", "disconfirming_search",
   ],
@@ -118,8 +122,11 @@ const SPECIFIC_STAGES = Object.freeze({
   "expectations.ratings_target_changes": [
     "public_consensus", "local_observation", "issuer_ir", "disconfirming_search",
   ],
+  "expectations.next_reporting_date": [
+    "issuer_ir", "public_consensus", "local_observation",
+  ],
   "quant.short_interest_borrow": [
-    "market_official", "local_observation", "disconfirming_search", "derived_proxy",
+    "market_official", "local_observation", "public_market_data", "disconfirming_search", "derived_proxy",
   ],
   "quant.options_iv_skew_expected_move": [
     "market_official", "local_observation", "derived_proxy",
@@ -163,6 +170,10 @@ const KNOWN_ACQUISITION_STAGES = new Set([
 ]);
 const DIRECT_OBSERVATION_PREFIXES = new Set(["market", "expectations", "quant"]);
 const PUBLIC_MARKET_DATA_PREFIXES = new Set(["market", "quant"]);
+// A speaker-labelled public earnings-call transcript is a permitted direct observation only
+// for the dedicated Q&A coverage row, after the issuer and regulator ladder has been attempted.
+// Do not widen this to all financial fields: a secondary transcript cannot replace filings.
+const PUBLIC_DIRECT_OBSERVATION_COVERAGE_IDS = new Set(["financials.earnings_call_qna"]);
 const DERIVATION_SUCCESS_STAGES = new Set(["derived_proxy", "local_observation"]);
 
 const RECOVERY_RECIPES = Object.freeze({
@@ -185,6 +196,11 @@ const RECOVERY_RECIPES = Object.freeze({
     mode: "recomputed_proxy",
     formula: "compare like-for-like locally saved estimate snapshots; report sample count and dates",
     inputs: ["current estimate snapshot", "prior like-for-like snapshots"],
+  },
+  "expectations.next_reporting_date": {
+    mode: "reported_actual",
+    formula: "record an issuer-confirmed date when available; otherwise record the actually observed public-calendar estimate and label it not issuer-confirmed",
+    inputs: ["issuer event calendar", "dated public earnings calendar observation"],
   },
   "quant.short_interest_borrow": {
     mode: "modeled_estimate",
@@ -399,7 +415,11 @@ function officialDetailPriority(url, asOf) {
   let path;
   try { path = `${new URL(url).pathname}${new URL(url).search}`.toLowerCase(); } catch { return -Infinity; }
   let score = 0;
-  if (/(?:news-release-details|press-release-details|event-details|article|announcement)/u.test(path)) score += 90;
+  if (/(?:news-release-details|press-release-details|event-details|corporate-news|press-releases?|news-releases?|article|announcement)/u.test(path)) score += 90;
+  // Newsroom indexes are often the only root-page link that exposes current dated detail URLs.
+  // Rank them ahead of product/navigation pages so the bounded crawler can spend its second hop
+  // on the actual issuer announcements instead of stopping at an undated index surface.
+  if (/(?:news-and-events|newsroom|press-room)(?:\/(?:home)?)?\/?$/u.test(path)) score += 75;
   if (/(?:earnings|results?|quarter|annual|financial|guidance|trading-update)/u.test(path)) score += 80;
   if (/(?:presentation|webcast|transcript|static-files|download|\.pdf(?:\?|$))/u.test(path)) score += 45;
   if (/(?:quarterly-results|events-presentations|news-releases)/u.test(path)) score += 30;
@@ -439,6 +459,39 @@ function decodeHtml(value) {
 function htmlTitle(html) {
   const match = /<title\b[^>]*>([\s\S]*?)<\/title>/iu.exec(String(html || ""));
   return match ? decodeHtml(match[1]).slice(0, 300) : null;
+}
+
+function normalizedPublishedDay(value) {
+  const text = decodeHtml(value).trim();
+  const numeric = /^((?:19|20)\d{2})[-/]([01]\d)[-/]([0-3]\d)/u.exec(text);
+  if (numeric) {
+    const day = `${numeric[1]}-${numeric[2]}-${numeric[3]}`;
+    return new Date(`${day}T00:00:00.000Z`).toISOString().slice(0, 10) === day ? day : null;
+  }
+  const instant = Date.parse(text);
+  return Number.isFinite(instant) ? new Date(instant).toISOString().slice(0, 10) : null;
+}
+
+function htmlPublishedAt(html) {
+  const source = String(html || "");
+  const candidates = [];
+  const jsonLd = /["']datePublished["']\s*:\s*["']([^"']+)["']/giu;
+  let match;
+  while ((match = jsonLd.exec(source))) candidates.push(match[1]);
+  for (const tag of source.match(/<meta\b[^>]*>/giu) || []) {
+    if (!/(?:article:published_time|datepublished|publishdate|pubdate)/iu.test(tag)) continue;
+    const content = /\bcontent\s*=\s*["']([^"']+)["']/iu.exec(tag)?.[1];
+    if (content) candidates.push(content);
+  }
+  for (const tag of source.match(/<time\b[^>]*>/giu) || []) {
+    const datetime = /\bdatetime\s*=\s*["']([^"']+)["']/iu.exec(tag)?.[1];
+    if (datetime) candidates.push(datetime);
+  }
+  for (const candidate of candidates) {
+    const day = normalizedPublishedDay(candidate);
+    if (day) return day;
+  }
+  return null;
 }
 
 function htmlExcerpt(html) {
@@ -499,6 +552,7 @@ async function fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs }) {
       status: "succeeded",
       content_type: contentType || null,
       title: htmlTitle(body),
+      published_at: htmlPublishedAt(body),
       excerpt: htmlExcerpt(body),
       content_hash: `sha256:${createHash("sha256").update(body).digest("hex")}`,
       retrieved_at: retrievedAt,
@@ -546,10 +600,24 @@ export async function discoverIssuerOfficialSources(profile = {}, {
   }
   const rootAttempts = await Promise.all(roots.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
   const discoveredPages = unique(rootAttempts.flatMap((attempt) => attempt.links || []));
+  // Reserve part of the fixed ten-page budget for one bounded second hop. Many issuer sites
+  // expose current announcement URLs only from a newsroom index discovered on the home page.
+  // Fetching all ten first-hop links would archive the index but never the dated detail pages.
+  const firstHopLimit = Math.max(1, Math.ceil(MAX_OFFICIAL_DETAIL_PAGES * 0.6));
   const detailUrls = prioritizeOfficialDetailUrls(discoveredPages, asOf)
     .filter((url) => !roots.includes(url))
-    .slice(0, MAX_OFFICIAL_DETAIL_PAGES);
-  const detailAttempts = await Promise.all(detailUrls.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
+    .slice(0, firstHopLimit);
+  const firstHopAttempts = await Promise.all(detailUrls.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
+  const attempted = new Set([...roots, ...detailUrls]);
+  const remaining = Math.max(0, MAX_OFFICIAL_DETAIL_PAGES - detailUrls.length);
+  const secondHopUrls = prioritizeOfficialDetailUrls(
+    unique(firstHopAttempts.flatMap((attempt) => attempt.links || [])),
+    asOf,
+  )
+    .filter((url) => !attempted.has(url))
+    .slice(0, remaining);
+  const secondHopAttempts = await Promise.all(secondHopUrls.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
+  const detailAttempts = [...firstHopAttempts, ...secondHopAttempts];
   const attempts = [...rootAttempts, ...detailAttempts];
   const pages = unique([
     ...roots,
@@ -563,6 +631,7 @@ export async function discoverIssuerOfficialSources(profile = {}, {
     documents: attempts.filter((attempt) => attempt.status === "succeeded").map((attempt) => ({
       url: attempt.final_url || attempt.url,
       title: attempt.title,
+      published_at: attempt.published_at,
       excerpt: attempt.excerpt,
       content_hash: attempt.content_hash,
       retrieved_at: attempt.retrieved_at,
@@ -580,8 +649,182 @@ function adaptiveQuerySpecs({ symbol, issuer }) {
     { topic: "customers_suppliers_capacity", ...queryNewsFeed(`${identity} customer OR supplier OR order OR capacity OR shipment`) },
     { topic: "product_delivery_quality", ...queryNewsFeed(`${identity} product launch OR acceptance OR delay OR quality OR yield`) },
     { topic: "regulation_litigation", ...queryNewsFeed(`${identity} regulation OR antitrust OR lawsuit OR investigation`) },
+    { topic: "management_changes", ...queryNewsFeed(`${identity} appoints OR appointed OR resignation OR executive OR "chief officer" OR director`) },
     { topic: "management_capital_allocation", ...queryNewsFeed(`${identity} management OR board OR insider OR buyback OR debt`) },
   ];
+}
+
+function starterNewsKey(item) {
+  return `${String(item?.link || "").trim()}|${String(item?.title || "").trim().toLowerCase()}`;
+}
+
+/**
+ * Preserve bounded breadth instead of letting one high-volume topic consume the whole starter
+ * pack. The first pass gives every fetched topic an equal, small quota; the second pass fills
+ * remaining capacity by global recency. Items are already date-sorted by applyRecencyGate.
+ */
+function selectBalancedStarterNews(items, {
+  limit = MAX_STARTER_NEWS_ITEMS,
+  perTopic = MIN_STARTER_NEWS_ITEMS_PER_TOPIC,
+} = {}) {
+  const topics = unique(items.map((item) => item.topic));
+  const grouped = new Map(topics.map((topic) => [topic, items
+    .filter((item) => item.topic === topic)
+    // Query feeds are relevance-ranked. Preserve their top leads inside each topic even
+    // though applyRecencyGate globally sorts the combined set by publication timestamp.
+    .sort((left, right) => (
+      (Number.isInteger(left.feed_rank) ? left.feed_rank : Number.MAX_SAFE_INTEGER)
+        - (Number.isInteger(right.feed_rank) ? right.feed_rank : Number.MAX_SAFE_INTEGER)
+      || Date.parse(right.published_at || 0) - Date.parse(left.published_at || 0)
+    ))]));
+  const selected = [];
+  const seen = new Set();
+  const selectedPerTopic = new Map(topics.map((topic) => [topic, 0]));
+  const cursors = new Map(topics.map((topic) => [topic, 0]));
+  let progressed = true;
+  while (selected.length < limit && progressed) {
+    progressed = false;
+    for (const topic of topics) {
+      if ((selectedPerTopic.get(topic) || 0) >= perTopic || selected.length >= limit) continue;
+      const group = grouped.get(topic) || [];
+      let cursor = cursors.get(topic) || 0;
+      while (cursor < group.length) {
+        const item = group[cursor];
+        cursor += 1;
+        const key = starterNewsKey(item);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        selected.push(item);
+        selectedPerTopic.set(topic, (selectedPerTopic.get(topic) || 0) + 1);
+        progressed = true;
+        break;
+      }
+      cursors.set(topic, cursor);
+    }
+  }
+  for (const item of items) {
+    if (selected.length >= limit) break;
+    const key = starterNewsKey(item);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    selected.push(item);
+  }
+  return selected;
+}
+
+function cleanLeadHeadline(title) {
+  return String(title || "")
+    .replace(/\s+-\s+[^-]{2,100}$/u, "")
+    .replace(/[™®©]/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function headlineSlug(title) {
+  return cleanLeadHeadline(title)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, "-")
+    .replace(/^-+|-+$/gu, "")
+    .slice(0, 180);
+}
+
+function officialLeadCandidates(news, issuerIndex) {
+  const templates = unique([
+    ...(issuerIndex?.pages || []),
+    ...(issuerIndex?.documents || []).map((document) => document.url),
+  ]).filter((value) => {
+    const url = safeUrl(value);
+    if (!url) return false;
+    const pathname = new URL(url).pathname;
+    const segments = pathname.split("/").filter(Boolean);
+    const last = segments.at(-1) || "";
+    return /(?:corporate-news|news-release-details|press-release-details|press-releases?|news-releases?)\//iu.test(pathname)
+      && /(?:19|20)\d{2}/u.test(pathname)
+      && !/(?:corporate-news|news-release-details|press-release-details|press-releases?|news-releases?|\$|%7b)/iu.test(last);
+  });
+  const leads = news.filter((item) => item.topic === "management_changes").slice(0, 3);
+  const candidates = [];
+  for (const lead of leads) {
+    const slug = headlineSlug(lead.title);
+    const year = String(lead.published_at || "").slice(0, 4);
+    if (!slug || !/^(?:19|20)\d{2}$/u.test(year)) continue;
+    for (const template of templates) {
+      const parsed = new URL(template);
+      const segments = parsed.pathname.split("/").filter(Boolean);
+      if (!segments.length) continue;
+      const yearIndex = segments.findIndex((segment) => /^(?:19|20)\d{2}$/u.test(segment));
+      if (yearIndex >= 0) segments[yearIndex] = year;
+      const last = segments.length - 1;
+      const extension = /\.[a-z0-9]{2,5}$/iu.exec(segments[last])?.[0] || "";
+      segments[last] = `${slug}${extension}`;
+      parsed.pathname = `/${segments.join("/")}${extension ? "" : "/"}`;
+      parsed.search = "";
+      parsed.hash = "";
+      candidates.push({ lead, url: parsed.href });
+      if (/^[a-z]{2}(?:-[a-z]{2,}|-[a-z]+)$/iu.test(segments[0]) && segments[0].toLowerCase() !== "en-us") {
+        const english = new URL(parsed.href);
+        const englishSegments = english.pathname.split("/").filter(Boolean);
+        englishSegments[0] = "en-us";
+        english.pathname = `/${englishSegments.join("/")}${extension ? "" : "/"}`;
+        candidates.push({ lead, url: english.href });
+      }
+    }
+  }
+  const seen = new Set();
+  return candidates.filter(({ url }) => {
+    if (seen.has(url)) return false;
+    seen.add(url);
+    return true;
+  }).slice(0, MAX_OFFICIAL_LEAD_PAGES);
+}
+
+function officialLeadMatches(attempt, lead) {
+  if (attempt.status !== "succeeded") return false;
+  const target = new Set(cleanLeadHeadline(lead.title).toLowerCase().match(/[a-z0-9]{4,}/gu) || []);
+  const observed = new Set(`${attempt.title || ""} ${attempt.excerpt || ""}`.toLowerCase().match(/[a-z0-9]{4,}/gu) || []);
+  const overlap = [...target].filter((token) => observed.has(token)).length;
+  const leadDay = String(lead.published_at || "").slice(0, 10);
+  const dateMatches = !attempt.published_at || !leadDay || attempt.published_at === leadDay;
+  return target.size > 0 && overlap >= Math.min(3, target.size) && dateMatches;
+}
+
+async function resolveOfficialNewsLeads(news, issuerIndex, { signal, fetchImpl, timeoutMs }) {
+  const candidates = officialLeadCandidates(news, issuerIndex);
+  const attempts = await Promise.all(candidates.map(async ({ lead, url }) => {
+    const attempt = await fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs });
+    return { ...attempt, lead_title: lead.title, lead_published_at: lead.published_at, topic: lead.topic };
+  }));
+  const matched = attempts.filter((attempt) => officialLeadMatches(attempt, {
+    title: attempt.lead_title,
+    published_at: attempt.lead_published_at,
+  }));
+  return {
+    documents: matched.map((attempt) => ({
+      url: attempt.final_url || attempt.url,
+      title: attempt.title,
+      published_at: attempt.published_at,
+      excerpt: attempt.excerpt,
+      content_hash: attempt.content_hash,
+      retrieved_at: attempt.retrieved_at,
+      discovery_topic: attempt.topic,
+      discovery_lead_title: attempt.lead_title,
+    })),
+    attempts: attempts.map((attempt) => ({
+      topic: attempt.topic,
+      lead_title: attempt.lead_title,
+      lead_published_at: attempt.lead_published_at,
+      url: attempt.url,
+      final_url: attempt.final_url || null,
+      status: attempt.status,
+      reason: attempt.reason || null,
+      matched: officialLeadMatches(attempt, {
+        title: attempt.lead_title,
+        published_at: attempt.lead_published_at,
+      }),
+    })),
+  };
 }
 
 export function companyStarterFeedSpecs({ symbol, profile = {}, issuerIndex = null } = {}) {
@@ -648,16 +891,17 @@ export async function acquireCompanyStarterEvidence({
   signal,
   fetchImpl = fetch,
   timeoutMs = 12_000,
-  days = 45,
+  days = 120,
 } = {}) {
   const specs = companyStarterFeedSpecs({ symbol, profile, issuerIndex });
   const attempts = await Promise.all(specs.map((spec) => fetchStarterFeed(spec, {
     signal, fetchImpl, timeoutMs,
   })));
-  const allItems = attempts.flatMap((attempt) => attempt.items.map((item) => ({
+  const allItems = attempts.flatMap((attempt) => attempt.items.map((item, index) => ({
     ...item,
     topic: attempt.topic,
     feed_url: attempt.url,
+    feed_rank: index + 1,
   })));
   const tokens = unique([
     ...identityTokens({ ...profile, tickers: unique([...(profile.tickers || []), symbol]) }),
@@ -672,14 +916,17 @@ export async function acquireCompanyStarterEvidence({
     (relevant ? relevantItems : irrelevantItems).push(item);
   }
   const recency = applyRecencyGate(relevantItems, { days, asOf });
-  const news = [];
-  const seen = new Set();
-  for (const item of recency.included) {
-    const key = `${String(item.link || "").trim()}|${String(item.title || "").trim().toLowerCase()}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    news.push(item);
-    if (news.length >= MAX_STARTER_NEWS_ITEMS) break;
+  const news = selectBalancedStarterNews(recency.included);
+  const officialLeadResolution = await resolveOfficialNewsLeads(news, issuerIndex, {
+    signal, fetchImpl, timeoutMs,
+  });
+  const issuerDocuments = [];
+  const seenDocuments = new Set();
+  for (const document of [...(issuerIndex?.documents || []), ...officialLeadResolution.documents]) {
+    const key = safeUrl(document?.url);
+    if (!key || seenDocuments.has(key)) continue;
+    seenDocuments.add(key);
+    issuerDocuments.push(document);
   }
   const cutoff = asOf ? Date.parse(`${asOf}T23:59:59.999Z`) : Infinity;
   const filings = (profile.recent_filings || []).filter((filing) => {
@@ -696,7 +943,7 @@ export async function acquireCompanyStarterEvidence({
       ? "succeeded"
       : "unreachable",
     filings,
-    issuer_documents: issuerIndex?.documents || [],
+    issuer_documents: issuerDocuments,
     news,
     feed_attempts: attempts.map((attempt) => ({
       topic: attempt.topic,
@@ -706,6 +953,7 @@ export async function acquireCompanyStarterEvidence({
       reason: attempt.reason || null,
       raw_item_count: attempt.items.length,
     })),
+    official_lead_attempts: officialLeadResolution.attempts,
     excluded_irrelevant: irrelevantItems.length,
     excluded_irrelevant_sample: irrelevantItems.slice(0, 8).map((item) => ({
       topic: item.topic,
@@ -827,12 +1075,36 @@ function domainQuery(domains) {
 function stageLocators(stage, context, topic) {
   const {
     symbol, issuer, cik, asOf, regulatorUrl, regulatorDomains, marketDomains,
-    issuerUrls, sicDescription,
+    issuerUrls, sicDescription, exchange,
   } = context;
   const quoted = `"${issuer}"`;
   const suffix = `${topic} ${asOf}`;
   const regulatorSites = domainQuery(regulatorDomains);
   const marketSites = domainQuery(marketDomains);
+  const lowerSymbol = String(symbol || "").toLowerCase();
+  const year = String(asOf || "").slice(0, 4);
+  const exchangeSlug = coverageIdSafe(exchange || "");
+  const publicMarketLocators = topic === "earnings call qna"
+    ? unique([
+      lowerSymbol ? `https://stockanalysis.com/stocks/${lowerSymbol}/transcripts/` : null,
+      `site:stockanalysis.com/stocks/${lowerSymbol}/transcripts/ ${quoted} earnings call full transcript Q&A ${year}`,
+    ])
+    : topic === "short interest borrow"
+      ? unique([
+        exchangeSlug && lowerSymbol
+          ? `https://www.marketbeat.com/stocks/${exchangeSlug.toUpperCase()}/${symbol}/short-interest/`
+          : null,
+        exchangeSlug && lowerSymbol
+          ? `https://chartexchange.com/symbol/${exchangeSlug}-${lowerSymbol}/short-interest/`
+          : null,
+        `${symbol} short interest settlement shares short float days to cover ${asOf} site:marketbeat.com OR site:chartexchange.com`,
+      ])
+      : [`${symbol} ${topic} public market data ${asOf}`];
+  const disconfirmingLocators = topic === "earnings call qna"
+    ? [`${quoted} ${symbol} ${year} earnings call transcript Q&A speaker`]
+    : topic === "short interest borrow"
+      ? [`${symbol} short interest borrow fee availability utilisation ${asOf}`]
+      : [`${quoted} guidance cut delay cancellation accounting concern litigation ${asOf}`];
   const byStage = {
     regulator_filing: unique([
       regulatorUrl,
@@ -849,6 +1121,7 @@ function stageLocators(stage, context, topic) {
     issuer_ir: unique([...issuerUrls, `${quoted} investor relations ${suffix}`]),
     issuer_product_docs: unique([...issuerUrls, `${quoted} official product documentation ${suffix}`]),
     market_official: [ `${symbol} ${topic} (${marketSites}) ${asOf}` ],
+    public_market_data: publicMarketLocators,
     public_consensus: [ `${symbol} analyst consensus revenue EPS target revision ${asOf}` ],
     local_observation: [ `local:${symbol}:${coverageIdSafe(topic)}` ],
     customer_official: [ `${quoted} customer capex orders acceptance deployment official ${suffix}` ],
@@ -858,7 +1131,7 @@ function stageLocators(stage, context, topic) {
     counterparty_official: [ `${quoted} counterparty material contract official ${suffix}` ],
     other_regulator: [ `${quoted} ${topic} site:ftc.gov OR site:justice.gov OR site:commerce.gov ${asOf}` ],
     court_record: [ `${quoted} ${topic} court docket official ${asOf}` ],
-    disconfirming_search: [ `${quoted} guidance cut delay cancellation accounting concern litigation ${asOf}` ],
+    disconfirming_search: disconfirmingLocators,
     derived_proxy: [ `derive:${coverageIdSafe(topic)}` ],
   };
   return byStage[stage] || [`${quoted} ${suffix} official`];
@@ -896,6 +1169,7 @@ export function buildCompanySourceAcquisitionPlan({
     marketDomains: sourceRoute.market_domains,
     issuerUrls,
     sicDescription: profile.sic_description || null,
+    exchange: Array.isArray(profile.exchanges) ? profile.exchanges[0] : null,
   };
   const tasks = Object.fromEntries(Object.entries(OPERATING_COMPANY_COVERAGE).map(([task, coverageIds]) => [
     task,
@@ -1176,7 +1450,10 @@ function acquisitionAttemptState(item, route) {
     // the missing ladder visible to the validator.
     if (attempt.stage === "public_market_data") {
       if (terminalLadderRecorded) {
-        if (PUBLIC_MARKET_DATA_PREFIXES.has(prefix)) directObservationSuccess = true;
+        if (PUBLIC_MARKET_DATA_PREFIXES.has(prefix)
+          || PUBLIC_DIRECT_OBSERVATION_COVERAGE_IDS.has(route?.coverage_id)) {
+          directObservationSuccess = true;
+        }
         citedInputSuccess = true;
       }
       continue;
@@ -1317,6 +1594,17 @@ export function canonicalizeCompanySourceAcquisitionPacket(packet, run) {
         if (coverageSourceIds.length && !existingSourceIds.some((id) => coverageSourceIds.includes(id))) {
           normalized = { ...normalized, source_ids: unique([...existingSourceIds, ...coverageSourceIds]) };
         }
+      }
+      if (normalized.outcome === "unavailable" && coverage?.status !== "covered"
+        && Array.isArray(normalized.attempts)) {
+        normalized = {
+          ...normalized,
+          attempts: normalized.attempts.map((attempt) => (
+            attempt?.result === "succeeded" && !DERIVATION_SUCCESS_STAGES.has(attempt.stage)
+              ? { ...attempt, result: "not_disclosed", proposed_result: attempt.proposed_result || "succeeded" }
+              : attempt
+          )),
+        };
       }
       if (normalized.outcome === "reported_actual" || (normalized.outcome === "recomputed_proxy" && Array.isArray(normalized.data?.observations))) {
         const observations = reportedActualObservations(normalized.data, normalized.coverage_id);
@@ -1534,7 +1822,7 @@ export function sourceAcquisitionPromptBlock(plan, task, language = "English") {
       `顶层必须返回 acquisition_ledger={policy_id:"${COMPANY_SOURCE_ACQUISITION_POLICY_ID}",task:"${task}",items}，items 与本席位 coverage_id 一一对应。policy_id、task 和 coverage_id 是服务器冻结值，不得改名或自行选择。每项记录 outcome、source_ids、attempts、data/reason。attempts 每行固定为 {stage,locator_type:url|query|local,locator,result:succeeded|not_found|not_disclosed|unreachable|blocked|not_applicable,source_ids,note}。`,
       "outcome 只能是 reported_actual / recomputed_proxy / modeled_estimate / unavailable / not_applicable。reported_actual 来自有权主体正式披露，或该路由允许的带来源市场/共识/本地直接观测，并返回 data={value,unit,period,scope}；一个 coverage_id 含多个指标时改用 data={observations:[{metric,value,unit,period,scope}]}。recomputed_proxy 必须给 value/unit/period/formula/inputs，多个派生指标可用 observations 且逐项或顶层给 formula/inputs；modeled_estimate 必须把数值 low/base/high 放在 data.range 中，并给 unit/period/formula/assumptions。代理和模型都不能冒充 actual。",
       "引用非官方公开行情网页时，补充阶段必须准确写成 public_market_data。它不是 market_official，也不能替代任何冻结 required_terminal_stage；不得把任务名 market_data 当作阶段名。",
-      "只有冻结 required_terminal_stages 全部留下实际 URL、查询或本地账本定位后，才允许 unavailable。领域已有带来源证据、但精确目标值仍不可发布时，coverage_items 可保持 covered，账本必须保留共同 source_ids、完整逐层尝试和具体 unavailable reason；精确目标没有 succeeded 尝试本身不矛盾，因为该目标正是 unavailable。不得把缺失区间或缺失公式的估计冒充完整数值。只写‘未找到’而没有逐层尝试会被运行时拒绝。可记录冻结路由之外的已知补充来源阶段，但它不能替代 required_terminal_stages。",
+      "只有冻结 required_terminal_stages 全部留下实际 URL、查询或本地账本定位后，才允许 unavailable。网页成功打开但没有披露目标字段时，attempt.result 必须写 not_disclosed，即使 source_ids 保留该网页；不得把传输成功写成数据 succeeded。领域已有带来源证据、但精确目标值仍不可发布时，coverage_items 可保持 covered，账本必须保留共同 source_ids、完整逐层尝试和具体 unavailable reason；精确目标没有 succeeded 尝试本身不矛盾，因为该目标正是 unavailable。不得把缺失区间或缺失公式的估计冒充完整数值。只写‘未找到’而没有逐层尝试会被运行时拒绝。可记录冻结路由之外的已知补充来源阶段，但它不能替代 required_terminal_stages。",
       `固定账本外壳：${JSON.stringify({ policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID, task, items: compact.map((route) => ({ coverage_id: route.coverage_id })) })}`,
       `冻结来源计划：${JSON.stringify(compact)}`,
     ]
@@ -1544,7 +1832,7 @@ export function sourceAcquisitionPromptBlock(plan, task, language = "English") {
       `Return top-level acquisition_ledger={policy_id:"${COMPANY_SOURCE_ACQUISITION_POLICY_ID}",task:"${task}",items}, exactly one item per coverage_id. policy_id, task and coverage_id are server-frozen bindings; never rename or choose them. Each item records outcome, source_ids, attempts, and data/reason. Every attempt is {stage,locator_type:url|query|local,locator,result:succeeded|not_found|not_disclosed|unreachable|blocked|not_applicable,source_ids,note}.`,
       "Outcome is only reported_actual / recomputed_proxy / modeled_estimate / unavailable / not_applicable. reported_actual needs an authorised disclosure or a route-appropriate sourced market/consensus/local direct observation and data={value,unit,period,scope}; when one coverage id contains several metrics, use data={observations:[{metric,value,unit,period,scope}]}. recomputed_proxy needs value/unit/period/formula/inputs, or observations with per-row/top-level formula and inputs. modeled_estimate needs data.range={low,base,high} plus unit/period/formula/assumptions. Neither may be labelled actual.",
       "For a cited non-official public market-data page, use the supplemental stage public_market_data exactly. It is not market_official and never replaces a frozen required_terminal_stage. Never use the task id market_data as a stage name.",
-      "unavailable is allowed only after every frozen required_terminal_stage records the URL, query, or local-ledger locator actually attempted. When the domain has sourced partial evidence but the exact target is not publishable, coverage_items may remain covered only if the ledger retains the shared source_ids, the complete attempt ladder, and a concrete unavailable reason. No succeeded attempt for the exact target is inherently consistent with unavailable. Never publish an estimate with a missing range/formula. Known extra source stages may be recorded but do not replace required_terminal_stages. A bare 'not found' fails the runtime gate.",
+      "unavailable is allowed only after every frozen required_terminal_stage records the URL, query, or local-ledger locator actually attempted. If a page opened but did not disclose the target field, attempt.result must be not_disclosed even when source_ids retain that page; transport success is not data succeeded. When the domain has sourced partial evidence but the exact target is not publishable, coverage_items may remain covered only if the ledger retains the shared source_ids, the complete attempt ladder, and a concrete unavailable reason. No succeeded attempt for the exact target is inherently consistent with unavailable. Never publish an estimate with a missing range/formula. Known extra source stages may be recorded but do not replace required_terminal_stages. A bare 'not found' fails the runtime gate.",
       `Frozen ledger shell: ${JSON.stringify({ policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID, task, items: compact.map((route) => ({ coverage_id: route.coverage_id })) })}`,
       `Frozen source plan: ${JSON.stringify(compact)}`,
     ];

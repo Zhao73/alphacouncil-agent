@@ -59,9 +59,7 @@
       "options.implied_volatility"
     ],
     "hard_vetoes": [
-      "master_sinclair.no_oos_forecast",
-      "master_sinclair.cost_erasure",
-      "master_sinclair.error_dominates"
+      "master_sinclair.edge_dies_in_the_spread"
     ],
     "native_output": "volatility_edge_v1"
   },

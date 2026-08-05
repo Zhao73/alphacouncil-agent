@@ -234,7 +234,8 @@ if (task) {
       { label: "Materially undervalued", range: "below the supported range", lower_bound: null, upper_bound: 100, currency: "USD", meaning: "margin of safety", action: "add only if thesis holds", basis: "conditional valuation", source_ids: ["earnings_deep_dive:S1"] }
     ],
     horizon_views: { short_term: "Wait for the next filing.", medium_term: "Require operating progress.", long_term: "Require durable economics." },
-    data_gaps: ["No critical data gaps were found in the completed fixture packets."]
+    data_gaps: ["No critical data gaps were found in the completed fixture packets."],
+    verification_findings_ack: []
   };
   if (${JSON.stringify(pmContractFailureMode)} === "missing_price_levels") delete packet.price_levels;
   if (${JSON.stringify(pmContractFailureMode)} === "invalid_horizon_views") packet.horizon_views.short_term = "  ";
@@ -457,6 +458,9 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     const manager = readJson(join(dir, "manager_synthesis.json"));
     assert.equal(manager.rating, "Hold");
     assert.equal(manager.decision_available, true);
+    assert.equal(manager.debate_rounds.length, 3);
+    assert.deepEqual(manager.debate_rounds.map((round) => round.round), [1, 2, 3]);
+    assert.ok(manager.debate_rounds.every((round) => round.bull && round.bear));
     assert.match(manager.report_markdown, /## Analyst Work Log/);
     assert.match(manager.report_markdown, /#### Round 3/);
     assert.match(manager.report_markdown, /## Resolved Seat-Weight Audit/);
@@ -477,6 +481,8 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.deepEqual(bear.debate_rounds[2].questions, bear.debate_rounds[1].questions);
     assert.deepEqual(bull.debate_rounds[2].questions_answered.map((item) => item.question), bear.debate_rounds[1].questions);
     assert.deepEqual(bear.debate_rounds[2].questions_answered.map((item) => item.question), bull.debate_rounds[1].questions);
+    assert.deepEqual(manager.debate_rounds[1].bull.questions, bull.debate_rounds[1].questions);
+    assert.deepEqual(manager.debate_rounds[2].bear.questions_answered, bear.debate_rounds[2].questions_answered);
     const events = readJsonl(join(dir, "events.jsonl"));
     assert.deepEqual(validateHeadlessTrace(events, { mode: "full" }), []);
     assert.equal(events.find((event) => event.type === "debate_qna_gate")?.status, "passed");

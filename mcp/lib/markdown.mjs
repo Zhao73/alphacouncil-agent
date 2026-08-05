@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
 import {
   COUNCIL_PACES,
   DEBATE_ROLES,
@@ -30,6 +30,7 @@ import {
   writePublicationManifest,
 } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
+import { hardVerificationFindings } from "./verification.mjs";
 
 export function renderPacketMarkdown(packet, index = 0, language = packet?.language) {
   const key = languageKey(language);
@@ -825,10 +826,10 @@ function withRecordedPriceSnapshot(run, markdown) {
   const heading = { zh: "## 系统记录价格快照", en: "## System-Recorded Price Snapshot", ja: "## システム記録価格スナップショット", ko: "## 시스템 기록 가격 스냅샷" }[key];
   const unavailable = { zh: "本轮未取得可验证报价；不得补造价格。", en: "No verifiable quote was retrieved; no price was invented.", ja: "検証可能な価格を取得できなかったため、価格は補完していません。", ko: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다." }[key];
   const label = {
-    zh: { symbol: "代码", price: "价格", change: "涨跌", time: "报价时间", exchange: "交易所", feed: "数据源", source: "原始链接", unknown: "未知", unavailable: "不可用", delayed: "延迟数据" },
-    en: { symbol: "Symbol", price: "Price", change: "Change", time: "Quote time", exchange: "Exchange", feed: "Feed", source: "Source", unknown: "unknown", unavailable: "unavailable", delayed: "delayed data" },
-    ja: { symbol: "銘柄コード", price: "価格", change: "騰落", time: "価格時刻", exchange: "取引所", feed: "データ源", source: "原典リンク", unknown: "不明", unavailable: "取得不可", delayed: "遅延データ" },
-    ko: { symbol: "종목 코드", price: "가격", change: "등락", time: "시세 시각", exchange: "거래소", feed: "데이터 소스", source: "원문 링크", unknown: "알 수 없음", unavailable: "확인 불가", delayed: "지연 데이터" },
+    zh: { symbol: "代码", price: "价格", change: "涨跌", time: "报价时间", exchange: "交易所", basis: "价格口径", realtime: "实时性", feed: "数据源", source: "原始链接", unknown: "未知", unavailable: "不可用", delayed: "延迟数据" },
+    en: { symbol: "Symbol", price: "Price", change: "Change", time: "Quote time", exchange: "Exchange", basis: "Price basis", realtime: "Real-time", feed: "Feed", source: "Source", unknown: "unknown", unavailable: "unavailable", delayed: "delayed data" },
+    ja: { symbol: "銘柄コード", price: "価格", change: "騰落", time: "価格時刻", exchange: "取引所", basis: "価格基準", realtime: "リアルタイム性", feed: "データ源", source: "原典リンク", unknown: "不明", unavailable: "取得不可", delayed: "遅延データ" },
+    ko: { symbol: "종목 코드", price: "가격", change: "등락", time: "시세 시각", exchange: "거래소", basis: "가격 기준", realtime: "실시간 여부", feed: "데이터 소스", source: "원문 링크", unknown: "알 수 없음", unavailable: "확인 불가", delayed: "지연 데이터" },
   }[key];
   const body = quote && Number.isFinite(Number(quote.price))
     ? [
@@ -837,6 +838,8 @@ function withRecordedPriceSnapshot(run, markdown) {
       `- ${label.change}: ${quote.change ?? label.unavailable} (${quote.change_pct ?? label.unavailable}%)`,
       `- ${label.time}: ${quote.quote_time || label.unknown}`,
       `- ${label.exchange}: ${quote.exchange || label.unknown}`,
+      `- ${label.basis}: ${localizedDisplayValue(quote.quote_status || "unavailable", run.language)}`,
+      `- ${label.realtime}: ${localizedDisplayValue(quote.is_realtime === true, run.language)}`,
       `- ${label.feed}: ${quote.source || label.unknown}; ${quote.note || label.delayed}`,
       `- ${label.source}: ${quote.source_url || label.unavailable}`,
     ].join("\n")
@@ -937,11 +940,37 @@ export function writeArtifactIndex(run, debate = {}) {
     && new Set(["complete", "degraded", "incomplete", "needs_verification", "needs_revision", "failed"]).has(run.status);
   const key = languageKey(run.language);
   const label = {
-    zh: { title: "AlphaCouncil 工件索引", run: "运行 ID", status: "状态", quality: "报告质量", main: "主要文件", final: "最终报告", handoff: "聊天交接摘要", trace: "全部代理审计追踪", evidence: "证据 JSON", dossier: "统一公司资料包", decision: "决策 JSON", sources: "来源清单", statusFile: "状态", events: "事件", qualityFile: "报告质量", publication: "发布提交标记", analysts: "分析师 Markdown 文件", masters: "方法席 Markdown 文件" },
-    en: { title: "AlphaCouncil Artifact Index", run: "Run ID", status: "Status", quality: "Report quality", main: "Main Files", final: "Final report", handoff: "Chat handoff summary", trace: "Full agent audit trace", evidence: "Evidence JSON", dossier: "Shared company dossier", decision: "Decision JSON", sources: "Source manifest", statusFile: "Status", events: "Events", qualityFile: "Report quality", publication: "Publication commit marker", analysts: "Analyst Markdown Files", masters: "Method-Seat Markdown Files" },
-    ja: { title: "AlphaCouncil 成果物索引", run: "実行 ID", status: "状態", quality: "レポート品質", main: "主要ファイル", final: "最終レポート", handoff: "チャット引継ぎ要約", trace: "全エージェント監査トレース", evidence: "証拠 JSON", dossier: "共有会社資料", decision: "判断 JSON", sources: "出典一覧", statusFile: "状態", events: "イベント", qualityFile: "レポート品質", publication: "公開コミットマーカー", analysts: "分析担当 Markdown ファイル", masters: "メソッド席 Markdown ファイル" },
-    ko: { title: "AlphaCouncil 산출물 색인", run: "실행 ID", status: "상태", quality: "보고서 품질", main: "주요 파일", final: "최종 보고서", handoff: "채팅 인계 요약", trace: "전체 에이전트 감사 추적", evidence: "증거 JSON", dossier: "공유 회사 자료", decision: "판단 JSON", sources: "출처 목록", statusFile: "상태", events: "이벤트", qualityFile: "보고서 품질", publication: "게시 커밋 마커", analysts: "분석가 Markdown 파일", masters: "방법론 좌석 Markdown 파일" },
+    zh: { title: "AlphaCouncil 工件索引", run: "运行 ID", status: "状态", quality: "报告质量", main: "主要文件", final: "最终报告", handoff: "聊天交接摘要", trace: "全部代理审计追踪", evidence: "证据 JSON", dossier: "统一公司资料包", decision: "决策 JSON", sources: "来源清单", statusFile: "状态", events: "事件", qualityFile: "报告质量", publication: "发布提交标记", analysts: "分析师 Markdown 文件", masters: "方法席 Markdown 文件", completeMap: "完整 JSON / JSONL / Markdown 工件清单" },
+    en: { title: "AlphaCouncil Artifact Index", run: "Run ID", status: "Status", quality: "Report quality", main: "Main Files", final: "Final report", handoff: "Chat handoff summary", trace: "Full agent audit trace", evidence: "Evidence JSON", dossier: "Shared company dossier", decision: "Decision JSON", sources: "Source manifest", statusFile: "Status", events: "Events", qualityFile: "Report quality", publication: "Publication commit marker", analysts: "Analyst Markdown Files", masters: "Method-Seat Markdown Files", completeMap: "Complete JSON / JSONL / Markdown Artifact Map" },
+    ja: { title: "AlphaCouncil 成果物索引", run: "実行 ID", status: "状態", quality: "レポート品質", main: "主要ファイル", final: "最終レポート", handoff: "チャット引継ぎ要約", trace: "全エージェント監査トレース", evidence: "証拠 JSON", dossier: "共有会社資料", decision: "判断 JSON", sources: "出典一覧", statusFile: "状態", events: "イベント", qualityFile: "レポート品質", publication: "公開コミットマーカー", analysts: "分析担当 Markdown ファイル", masters: "メソッド席 Markdown ファイル", completeMap: "JSON / JSONL / Markdown 成果物の完全一覧" },
+    ko: { title: "AlphaCouncil 산출물 색인", run: "실행 ID", status: "상태", quality: "보고서 품질", main: "주요 파일", final: "최종 보고서", handoff: "채팅 인계 요약", trace: "전체 에이전트 감사 추적", evidence: "증거 JSON", dossier: "공유 회사 자료", decision: "판단 JSON", sources: "출처 목록", statusFile: "상태", events: "이벤트", qualityFile: "보고서 품질", publication: "게시 커밋 마커", analysts: "분석가 Markdown 파일", masters: "방법론 좌석 Markdown 파일", completeMap: "전체 JSON / JSONL / Markdown 산출물 목록" },
   }[key];
+  const artifactFiles = [];
+  const collectArtifactFiles = (dir) => {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) collectArtifactFiles(path);
+      else if (entry.isFile() && /\.(?:json|jsonl|md)$/u.test(entry.name)) artifactFiles.push(path);
+    }
+  };
+  collectArtifactFiles(artifacts.run_dir);
+  artifactFiles.push(
+    artifacts.final_report_md,
+    artifacts.user_response_md,
+    artifacts.artifact_index_md,
+    artifacts.all_agents_md,
+    artifacts.evidence_json,
+    artifacts.source_manifest_json,
+    artifacts.status_json,
+    artifacts.events_jsonl,
+    artifacts.report_quality_json,
+    artifacts.decision_json,
+  );
+  if (existsSync(artifacts.company_dossier_json)) artifactFiles.push(artifacts.company_dossier_json);
+  if (publicationExpected) artifactFiles.push(artifacts.publication_manifest_json);
+  const completeArtifactFiles = [...new Set(artifactFiles)]
+    .sort((a, b) => relative(artifacts.run_dir, a).localeCompare(relative(artifacts.run_dir, b)));
   const lines = [
     `# ${run.symbol} ${label.title}`,
     "",
@@ -977,6 +1006,10 @@ export function writeArtifactIndex(run, debate = {}) {
       ? ["", `## ${label.masters}`, "",
         ...(run.master_opinions || []).map((o) => `- ${o.master} (${o.stance || "unknown"}): ${join(runPath(run.run_id), `${o.master}.md`)}`)]
       : []),
+    "",
+    `## ${label.completeMap}`,
+    "",
+    ...completeArtifactFiles.map((path) => `- ${relative(artifacts.run_dir, path)}: ${path}`),
   ].filter(Boolean);
   writeTextAtomic(artifacts.artifact_index_md, `${lines.join("\n")}\n`);
   return artifacts.artifact_index_md;
@@ -984,6 +1017,23 @@ export function writeArtifactIndex(run, debate = {}) {
 
 export function packetSummary(run, task) {
   return (run.packets || []).find((packet) => packet.task === task)?.summary || "";
+}
+
+function verifiedHandoffPacketSummary(run, task) {
+  const packet = (run.packets || []).find((item) => item.task === task);
+  if (!packet) return "";
+  const hardClaimIds = new Set(hardVerificationFindings(run)
+    .filter((finding) => finding.task === task)
+    .map((finding) => finding.claim_id));
+  if (!hardClaimIds.size) return packet.summary || "";
+
+  const correctionNotice = localized(run.language, {
+    zh: "该席存在三重验证硬反证；为避免上游错误污染依赖计算，原摘要及同包其余原始论断均不进入交接结论。请以组合经理修正和不可变原始工件审计为准。",
+    en: "This seat has a hard triple-verification finding. To prevent an upstream error from contaminating dependent calculations, neither its raw summary nor sibling raw claims enter the handoff conclusion; use the PM corrections and immutable analyst artifact for audit.",
+    ja: "この席には三重検証の重大な反証があります。上流の誤りが依存計算を汚染しないよう、元要約と同一パケット内の他の生の主張は引継ぎ結論に含めません。PM の修正と不変の分析成果物を監査してください。",
+    ko: "이 좌석에는 삼중 검증의 중대한 반증이 있습니다. 상위 오류가 종속 계산을 오염시키지 않도록 원래 요약과 같은 패킷의 다른 원시 주장을 인계 결론에 포함하지 않습니다. PM 수정과 변경 불가능한 분석 산출물을 감사 기준으로 사용하십시오.",
+  });
+  return correctionNotice;
 }
 
 function quickUserResponse(run, manager, artifacts, chinese) {
@@ -1254,12 +1304,20 @@ function localizedDisplayValue(value, language) {
   const key = languageKey(language);
   const token = value === true ? "true" : value === false ? "false" : String(value || "unknown");
   const maps = {
-    zh: { unknown: "未知", unavailable: "不可用", true: "是", false: "否", pending: "待运行", running: "运行中", waiting: "等待中", completed: "已完成", complete: "完整", failed: "失败", degraded: "降级", incomplete: "不完整", skipped: "未运行", declined: "不适用", constructive: "建设性", cautious: "谨慎", opposed: "反对", out_of_scope: "证据范围外", deterministic_fallback: "确定性方法规则", completed_worker: "隔离方法席代理", recorded: "已记录", high: "高", medium: "中", low: "低", Buy: "买入", Overweight: "增持", Hold: "持有", Underweight: "减持", Sell: "卖出", bull: "多方", bear: "空方", balanced: "平衡" },
-    en: { unknown: "unknown", unavailable: "unavailable", true: "yes", false: "no", deterministic_fallback: "deterministic method policy", completed_worker: "isolated method-seat worker", recorded: "recorded" },
-    ja: { unknown: "不明", unavailable: "取得不可", true: "はい", false: "いいえ", pending: "待機中", running: "実行中", waiting: "待機中", completed: "完了", complete: "完了", failed: "失敗", degraded: "縮退", incomplete: "不完全", skipped: "未実行", declined: "適用外", constructive: "前向き", cautious: "慎重", opposed: "反対", out_of_scope: "証拠範囲外", deterministic_fallback: "決定論的メソッド規則", completed_worker: "分離メソッド席ワーカー", recorded: "記録済み", high: "高", medium: "中", low: "低", Buy: "買い", Overweight: "オーバーウェイト", Hold: "中立", Underweight: "アンダーウェイト", Sell: "売り", bull: "強気", bear: "弱気", balanced: "均衡" },
-    ko: { unknown: "알 수 없음", unavailable: "확인 불가", true: "예", false: "아니요", pending: "대기 중", running: "실행 중", waiting: "대기 중", completed: "완료", complete: "완료", failed: "실패", degraded: "성능 저하", incomplete: "불완전", skipped: "미실행", declined: "적용 범위 밖", constructive: "긍정적", cautious: "신중", opposed: "반대", out_of_scope: "증거 범위 밖", deterministic_fallback: "결정론적 방법 규칙", completed_worker: "격리 방법론 좌석 워커", recorded: "기록됨", high: "높음", medium: "중간", low: "낮음", Buy: "매수", Overweight: "비중 확대", Hold: "보유", Underweight: "비중 축소", Sell: "매도", bull: "강세", bear: "약세", balanced: "균형" },
+    zh: { unknown: "未知", unavailable: "不可用", true: "是", false: "否", pending: "待运行", running: "运行中", waiting: "等待中", completed: "已完成", complete: "完整", failed: "失败", degraded: "降级", incomplete: "不完整", skipped: "未运行", declined: "不适用", constructive: "建设性", cautious: "谨慎", opposed: "反对", out_of_scope: "证据范围外", deterministic_fallback: "确定性方法规则", dedicated_method_voice_worker: "独立方法陈词代理", v3_method_runtime: "确定性方法运行记录", completed_worker: "隔离方法席代理", recorded: "已记录", veto: "硬否决记录", score: "评分记录", real_time: "实时（提供方标记）", regular_session_delayed: "常规交易时段延迟行情", regular_close: "常规交易时段收盘价", end_of_day_close: "日终收盘价", last_regular_trade: "最近常规交易价", high: "高", medium: "中", low: "低", Buy: "买入", Overweight: "增持", Hold: "持有", Underweight: "减持", Sell: "卖出", bull: "多方", bear: "空方", balanced: "平衡" },
+    en: { unknown: "unknown", unavailable: "unavailable", true: "yes", false: "no", deterministic_fallback: "deterministic method policy", dedicated_method_voice_worker: "dedicated method-statement worker", v3_method_runtime: "deterministic method record", completed_worker: "isolated method-seat worker", recorded: "recorded", veto: "hard-veto record", score: "score record", real_time: "real-time (provider flagged)", regular_session_delayed: "regular-session delayed observation", regular_close: "regular-session close", end_of_day_close: "end-of-day close", last_regular_trade: "last regular trade" },
+    ja: { unknown: "不明", unavailable: "取得不可", true: "はい", false: "いいえ", pending: "待機中", running: "実行中", waiting: "待機中", completed: "完了", complete: "完了", failed: "失敗", degraded: "縮退", incomplete: "不完全", skipped: "未実行", declined: "適用外", constructive: "前向き", cautious: "慎重", opposed: "反対", out_of_scope: "証拠範囲外", deterministic_fallback: "決定論的メソッド規則", dedicated_method_voice_worker: "専用メソッド見解ワーカー", v3_method_runtime: "決定論的メソッド記録", completed_worker: "分離メソッド席ワーカー", recorded: "記録済み", veto: "ハード拒否記録", score: "スコア記録", real_time: "リアルタイム（提供元表示）", regular_session_delayed: "通常取引時間の遅延価格", regular_close: "通常取引時間の終値", end_of_day_close: "日終値", last_regular_trade: "直近通常取引価格", high: "高", medium: "中", low: "低", Buy: "買い", Overweight: "オーバーウェイト", Hold: "中立", Underweight: "アンダーウェイト", Sell: "売り", bull: "強気", bear: "弱気", balanced: "均衡" },
+    ko: { unknown: "알 수 없음", unavailable: "확인 불가", true: "예", false: "아니요", pending: "대기 중", running: "실행 중", waiting: "대기 중", completed: "완료", complete: "완료", failed: "실패", degraded: "성능 저하", incomplete: "불완전", skipped: "미실행", declined: "적용 범위 밖", constructive: "긍정적", cautious: "신중", opposed: "반대", out_of_scope: "증거 범위 밖", deterministic_fallback: "결정론적 방법 규칙", dedicated_method_voice_worker: "전용 방법론 발언 워커", v3_method_runtime: "결정론적 방법 기록", completed_worker: "격리 방법론 좌석 워커", recorded: "기록됨", veto: "하드 거부 기록", score: "점수 기록", real_time: "실시간(제공자 표시)", regular_session_delayed: "정규장 지연 관측", regular_close: "정규장 종가", end_of_day_close: "일일 종가", last_regular_trade: "최근 정규장 거래가", high: "높음", medium: "중간", low: "낮음", Buy: "매수", Overweight: "비중 확대", Hold: "보유", Underweight: "비중 축소", Sell: "매도", bull: "강세", bear: "약세", balanced: "균형" },
   };
   return maps[key]?.[token] || token;
+}
+
+function localizedFrozenRecord(value, language) {
+  const token = String(value || "recorded");
+  return new Set(["dedicated_method_voice_worker", "v3_method_runtime", "deterministic_fallback"])
+    .has(token)
+    ? localizedDisplayValue(token, language)
+    : token;
 }
 
 /**
@@ -1308,7 +1366,7 @@ function handoffMethodTail(run, copy) {
         if (text && !statement.includes(text)) lines.push(`  - **${voiceFieldLabel(field, run.language)}**: ${text}`);
       }
     }
-    lines.push(`  - [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${frozenRecord}]`);
+    lines.push(`  - [${copy.record}: ${localizedDisplayValue(opinion.stance, run.language)}/${localizedDisplayValue(opinion.confidence || "low", run.language)}; ${copy.worker}: ${localizedDisplayValue(statementSource, run.language)}; ${localizedFrozenRecord(frozenRecord, run.language)}]`);
     return lines.join("\n");
   });
   return [
@@ -1344,20 +1402,22 @@ export function userResponseMarkdown(run, manager) {
   const dossier = completenessStatus(run).company_dossier;
   const dossierLine = `${localizedDisplayValue(dossier.status, run.language)}; retrieval=${localizedDisplayValue(dossier.retrieval_status, run.language)}; sufficiency=${localizedDisplayValue(dossier.sufficiency, run.language)}; covered=${dossier.covered_count}/${dossier.expected_count}; unavailable=${dossier.unavailable_count}; hash=${run.company_dossier?.content_hash || localizedDisplayValue("unavailable", run.language)}`;
   const priceLine = quote && Number.isFinite(Number(quote.price))
-    ? `${quote.price} ${quote.currency || ""}; ${quote.quote_time || localizedDisplayValue("unknown", run.language)}; ${quote.exchange || localizedDisplayValue("unknown", run.language)}; ${copy.delayed}; ${quote.source_url || localizedDisplayValue("unavailable", run.language)}`
+    ? `${quote.price} ${quote.currency || ""}; ${quote.quote_time || localizedDisplayValue("unknown", run.language)}; ${quote.exchange || localizedDisplayValue("unknown", run.language)}; ${localizedDisplayValue(quote.quote_status || "unavailable", run.language)}; realtime=${localizedDisplayValue(quote.is_realtime === true, run.language)}; ${quote.source_url || localizedDisplayValue("unavailable", run.language)}`
     : copy.noPrice;
   const masterTail = handoffMethodTail(run, copy);
   const analystLines = (run.tasks || []).map((task) => {
     const packet = (run.packets || []).find((item) => item.task === task);
     const state = taskState(run, task);
-    return `- \`${task}\` [${localizedDisplayValue(state.status, run.language)}/${localizedDisplayValue(packet?.confidence || "low", run.language)}]: ${clipAtBoundary(packet?.summary || "", 520) || localizedFailure(state.error, run.language) || copy.missing}`;
+    return `- \`${task}\` [${localizedDisplayValue(state.status, run.language)}/${localizedDisplayValue(packet?.confidence || "low", run.language)}]: ${clipAtBoundary(verifiedHandoffPacketSummary(run, task), 520) || localizedFailure(state.error, run.language) || copy.missing}`;
   }).join("\n") || `- ${copy.missing}`;
   const gaps = [...new Set([
     ...(run.tasks || []).filter((task) => taskState(run, task).status !== "completed")
       .map((task) => `${task}: ${localizedFailure(taskState(run, task).error || taskState(run, task).status, run.language)}`),
     ...(run.masters || []).filter((id) => !(run.master_opinions || []).some((opinion) => opinion.master === id))
       .map((id) => `${id}: ${localizedFailure(run.master_status?.[id]?.error || run.master_status?.[id]?.status, run.language)}`),
-    ...(run.packets || []).flatMap((packet) => packet.open_questions || []),
+    ...(decisionAvailable
+      ? (manager?.data_gaps || [])
+      : (run.packets || []).flatMap((packet) => packet.open_questions || [])),
   ])].slice(0, 12).map((item) => `- ${clipAtBoundary(item, 360)}`).join("\n") || `- ${copy.noGaps}`;
   const invalidation = decisionAvailable
     ? (manager.invalidation || []).slice(0, 3).map((item) => `- ${clipAtBoundary(item, 260)}`).join("\n") || `- ${copy.noInvalidation}`
@@ -1395,14 +1455,14 @@ export function userResponseMarkdown(run, manager) {
     analystLines,
     "",
     `## ${copy.recentNews}`,
-    `- ${copy.newsSummary}: ${clipAtBoundary(news.packet?.summary || "", 620) || copy.missing}`,
+    `- ${copy.newsSummary}: ${clipAtBoundary(verifiedHandoffPacketSummary(run, "news_industry_management"), 620) || copy.missing}`,
     news.sources,
     news.exclusion,
     "",
     `## ${copy.key}`,
-    `- ${copy.earnings}: ${clipAtBoundary(packetSummary(run, "earnings_deep_dive"), 520) || copy.missing}`,
-    `- ${copy.forward}: ${clipAtBoundary(packetSummary(run, "forward_expectations"), 520) || copy.missing}`,
-    `- ${copy.news}: ${clipAtBoundary(packetSummary(run, "news_industry_management"), 620) || copy.missing}`,
+    `- ${copy.earnings}: ${clipAtBoundary(verifiedHandoffPacketSummary(run, "earnings_deep_dive"), 520) || copy.missing}`,
+    `- ${copy.forward}: ${clipAtBoundary(verifiedHandoffPacketSummary(run, "forward_expectations"), 520) || copy.missing}`,
+    `- ${copy.news}: ${clipAtBoundary(verifiedHandoffPacketSummary(run, "news_industry_management"), 620) || copy.missing}`,
     `- ${copy.valuation}: ${decisionAvailable ? (clipAtBoundary(manager.valuation_range, 620) || copy.missing) : localizedDisplayValue("unavailable", run.language)}`,
     `- ${copy.position}: ${decisionAvailable ? (clipAtBoundary(manager.position, 520) || copy.missing) : localizedDisplayValue("unavailable", run.language)}`,
     "",

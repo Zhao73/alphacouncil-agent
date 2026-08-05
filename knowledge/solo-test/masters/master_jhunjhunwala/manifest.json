@@ -63,9 +63,7 @@
       "accounting.cash_conversion"
     ],
     "hard_vetoes": [
-      "master_jhunjhunwala.promoter_integrity",
-      "master_jhunjhunwala.cash_conversion",
-      "master_jhunjhunwala.liquidity_limit"
+      "master_jhunjhunwala.cash_conversion"
     ],
     "native_output": "india_growth_governance_v1"
   },

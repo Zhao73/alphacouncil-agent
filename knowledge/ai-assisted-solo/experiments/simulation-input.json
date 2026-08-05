@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:508ba6498765420637708e1e2113179001cf23b30f7776250a39991f0f20c8ea",
+  "input_hash": "sha256:02b47b29091e7f7dae08961d9441c524f4054cf0969ab810528351365d0414ec",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -330,11 +330,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:d4f4cbd76ce3b4bbc537afb5a2d90bf25d020e538fa4c991e647338acfeb67c1",
-      "pack_hash": "sha256:6d4086fdb93b21154cff009cfb50e0efb9c5ee5d066f06a1d95c138292233187",
+      "pack_hash": "sha256:358fa624effabd3825157d38bf8031fb0e2197db728336413f99ae92059a3fc3",
       "pack_manifest_binding": {
-        "byte_length": 5121,
+        "byte_length": 5078,
         "path": "knowledge/solo-test/masters/master_buffett/manifest.json",
-        "physical_file_hash": "sha256:6ae8a9270074acb5f49ccee9b9b138c3c758b476970285e4c8430f94d58c637d"
+        "physical_file_hash": "sha256:45676404e3ff18f7dd2a79b6015a0cb5bc2cfc3a739d6d1e8df1abbef2e1ec64"
       },
       "persona_id": "master_buffett"
     },
@@ -668,11 +668,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:97359f0d1582bce46a422d28c45f792570e489047ab40ba31667d2a790061408",
-      "pack_hash": "sha256:9803265f889ffeab6178c53a9d538a2cc9e973fce210dcdd7b8b061eae48bb43",
+      "pack_hash": "sha256:274ce174647d33221677878e364b890077ea2324bf1c99d2f2bef4c9c4e785b9",
       "pack_manifest_binding": {
-        "byte_length": 5165,
+        "byte_length": 5138,
         "path": "knowledge/solo-test/masters/master_graham/manifest.json",
-        "physical_file_hash": "sha256:085e02aca01007d4e69a99f5001fd8f3101980ff8bb1c322840cadaef3352822"
+        "physical_file_hash": "sha256:e8d3f659389875ced6a2fc303ebfd9d46d5f120dbd6809dd99caeadaa4f5eacf"
       },
       "persona_id": "master_graham"
     },
@@ -956,11 +956,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:b0038701a22c779748bd26f507dea20c3c8207f9a57a8b6846e82c9b4471b55f",
-      "pack_hash": "sha256:95e8bf01c4c826ba228197f6ec72f6019197788df3d3dc977541383811560917",
+      "pack_hash": "sha256:7b15d30673d3ca0a83f8b6eb4b279c23614189206b29df721980be90f8388efa",
       "pack_manifest_binding": {
-        "byte_length": 5008,
+        "byte_length": 4951,
         "path": "knowledge/solo-test/masters/master_simons/manifest.json",
-        "physical_file_hash": "sha256:1e36d6c4b22d32fb0aece09a6fb7ecaa26b188862976f32138edf9c185b0e22e"
+        "physical_file_hash": "sha256:8653f1435d26605353429af7460bcc941393e3c5c3f4a97f8a2d71abf2ad0f63"
       },
       "persona_id": "master_simons"
     },
@@ -1217,11 +1217,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:0020e9b684b04d79490579d31c2a850a5520369cb3be4890bd36520e9fa13d0e",
-      "pack_hash": "sha256:b42e0751559ed95e8f48154fec7d4792a593d24f70278a495550b644f672cb92",
+      "pack_hash": "sha256:25e8733305c0a14c0b15981a889f58238baef3e51b7d6482f76b3732e877095a",
       "pack_manifest_binding": {
-        "byte_length": 4939,
+        "byte_length": 4905,
         "path": "knowledge/solo-test/masters/master_soros/manifest.json",
-        "physical_file_hash": "sha256:ae0dc285a1538bb7ea5a1174b13afd5ae80e3d9160ad8c0aa9d7dcd715b5ab57"
+        "physical_file_hash": "sha256:3a4c59d1a192246559af25189da15898032378c348c4d9e0308031f30744926b"
       },
       "persona_id": "master_soros"
     },
@@ -1529,11 +1529,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:5e202cc3175eb5627e5e2385fee3639e7cd48ff9ace84ef0e8b809b0335fd3e5",
-      "pack_hash": "sha256:b5ae31de33e45f643d88d45c3157aa4d08ed737de74f3083cecf62014e70c589",
+      "pack_hash": "sha256:9212caa8d506cb74d54785876973d19116957a88dcf84a624bc39a60e045c3c2",
       "pack_manifest_binding": {
-        "byte_length": 5385,
+        "byte_length": 5294,
         "path": "knowledge/solo-test/masters/master_cathie_wood/manifest.json",
-        "physical_file_hash": "sha256:5bb783b2ab02509114267fdbee8b0315a2f53041e3d7a3185efee9df1cde8f52"
+        "physical_file_hash": "sha256:95facb3df1e4fefac60cb63ad268f45bc679818cf3ed8df42ac3281976162f6b"
       },
       "persona_id": "master_cathie_wood"
     },
@@ -1817,11 +1817,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:fcc71151ed05f353b3137bb102817bd84e1fc4ea6d83db25c8bb2ceccc7b3e60",
-      "pack_hash": "sha256:0afac0e27da131dcaf4ec52252f5a1b1393c6df3a077a493f353590d614f27ef",
+      "pack_hash": "sha256:a4c8b0582a8844e4fe0a3d43bd96c8f4b37bc21c087c553c641cdd728e5135dc",
       "pack_manifest_binding": {
-        "byte_length": 5206,
+        "byte_length": 5124,
         "path": "knowledge/solo-test/masters/master_druckenmiller/manifest.json",
-        "physical_file_hash": "sha256:6671ef1842ee556e4d54ce744d9fcd52715335c0f7d9bd4627e1b94ee09c9eba"
+        "physical_file_hash": "sha256:5b274b66bfb1d34571aed29ab62d0dc7916f71bcaf7adb86943fa3717b6968f9"
       },
       "persona_id": "master_druckenmiller"
     },
@@ -2132,11 +2132,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:0cfcfb3ebd2dae88505345a4c59889b3b86b2e4c7bf6b1667ac238dfe8a5a333",
-      "pack_hash": "sha256:fb7195eba6dd2e38e6c578ca383e753fd0c0bca58a5b1ff9d437023c4f4fc85f",
+      "pack_hash": "sha256:42f9001e05ccab00eddc4263f6f403371b4026c467d333eb6f73480b4641b99c",
       "pack_manifest_binding": {
-        "byte_length": 5138,
+        "byte_length": 5095,
         "path": "knowledge/solo-test/masters/master_fisher/manifest.json",
-        "physical_file_hash": "sha256:2779ad70536f580b9f2cbf414951d0abe3dd02a887212a7cd807d4f8b50666ca"
+        "physical_file_hash": "sha256:1d0762b43dc3f17d703f94a2f9ff0b562cd21b6c2b947f09d4e35bfdcbdf4eb2"
       },
       "persona_id": "master_fisher"
     },
@@ -2420,11 +2420,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:6d7b0cff55c41a75a7b901909260d462e34b0c494b79f308b7d4b5d402b96ed3",
-      "pack_hash": "sha256:fdcc183ac5f82ad672d9066aa96afac81e2f7d544a457e9a6bda658d1646906b",
+      "pack_hash": "sha256:1788be0ebe6f4040904489df661f6220e2a9ca15dbfb56f3394ee98623cb148a",
       "pack_manifest_binding": {
-        "byte_length": 5008,
+        "byte_length": 4980,
         "path": "knowledge/solo-test/masters/master_munger/manifest.json",
-        "physical_file_hash": "sha256:8fe2a102ec368d647268fce82044c17f526a63cb6286e80780e6cd25747985c6"
+        "physical_file_hash": "sha256:1c09565ed2d18d9a5da5cf04239478e95ddd953aa549221df27e4796fee2a83b"
       },
       "persona_id": "master_munger"
     },
@@ -2735,11 +2735,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:990bb3b7dd896b9cd8e570cc290f2074a90cf7a8a69b14e1368106e26ac77250",
-      "pack_hash": "sha256:d0366064da890b851c02d696ca2a0d0b9ee37547092ba02af83a77007322702f",
+      "pack_hash": "sha256:a4076ea994ca9b9a540fb20749097754fdd2fdeaf3067364960b0a855f9838aa",
       "pack_manifest_binding": {
-        "byte_length": 4906,
+        "byte_length": 4831,
         "path": "knowledge/solo-test/masters/master_thorp/manifest.json",
-        "physical_file_hash": "sha256:b61c6990ef9ef8a61e501155bbc0dec05b6db115047519fe396df62bd6a6d075"
+        "physical_file_hash": "sha256:0bd93ec67a9db033171ee1030c102d17c8a55df40025ff52470d85d7c69d1cf5"
       },
       "persona_id": "master_thorp"
     },
@@ -3077,11 +3077,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:3ce3734daa86b97b12487f8f9e7c9dff35709f4ed749c14333645f42d07b6cf4",
-      "pack_hash": "sha256:ab33083dc0f1b4446dadc1d0f694d87b142a9837a615fe32f922091f1be3e42b",
+      "pack_hash": "sha256:55b044354167ec90889a11168f5379caa9182becb03b2fed1e1c19a8a091418e",
       "pack_manifest_binding": {
-        "byte_length": 5193,
+        "byte_length": 5116,
         "path": "knowledge/solo-test/masters/master_asness/manifest.json",
-        "physical_file_hash": "sha256:0b8e4edf5c74c310dc9d6f112a18408fa9b94f55f1f27d6f08823d7459b9e44e"
+        "physical_file_hash": "sha256:3c389b287500d82142f1a0155f437c2cb9c0a8da7a241f0e02febd78a30dc7f3"
       },
       "persona_id": "master_asness"
     },
@@ -3391,11 +3391,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:1db59a536907c2e8b28fe6509cbd1b9fbba702557eacf0b820941d429bc9a015",
-      "pack_hash": "sha256:d2908ca8e34fd96dab6c09cbb70b8496b8e3df7a6c32468af705bcc7a0e3983e",
+      "pack_hash": "sha256:c188114a7ae8def5f08311d7f0891d396e66d3a37dd7cb083009e98f3196607d",
       "pack_manifest_binding": {
-        "byte_length": 5009,
+        "byte_length": 4930,
         "path": "knowledge/solo-test/masters/master_dalio/manifest.json",
-        "physical_file_hash": "sha256:87e0a04f86b8771984fd72a95bdc91e475f5443eac9594e97aea3277aa4c9876"
+        "physical_file_hash": "sha256:34e4ded5aaa810860193d8a4d529842f4362655693f180fe9b62f812e44e1f26"
       },
       "persona_id": "master_dalio"
     },
@@ -3757,11 +3757,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:43d3700720195964d3bd11916c7f4c10913e88b849df5d15c7ad5495f2b29a9a",
-      "pack_hash": "sha256:95de2e05e3358b5c07d566dedc324c28b2125f682ea3ae69158ec08f09627f2f",
+      "pack_hash": "sha256:843a35510b4537215539cf55be8e3770aa9bd4e72b8f40b18aff847ac564c093",
       "pack_manifest_binding": {
-        "byte_length": 5273,
+        "byte_length": 5239,
         "path": "knowledge/solo-test/masters/master_duan_yongping/manifest.json",
-        "physical_file_hash": "sha256:f38ac07ee036b3625698715da74644db47db05ba0a44d331e773aa23f88b1c26"
+        "physical_file_hash": "sha256:c9bf1dcc917ad5b101bb0e70e79a5d36227da77d690762e8863021087582836c"
       },
       "persona_id": "master_duan_yongping"
     },
@@ -4072,11 +4072,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:37d6ca81795c191964ebae30d0c418ab3731f49f8e08127b52df94eb4886752c",
-      "pack_hash": "sha256:10c29f4db74628471b7549544ed3563677cd7efe76d4ee82f59f35f4392fae8d",
+      "pack_hash": "sha256:d45b86c6ce57c4ceed1ca3e4ed276cbdf2d3fb01bb35c9b75e4bfff47114992e",
       "pack_manifest_binding": {
-        "byte_length": 5464,
+        "byte_length": 5371,
         "path": "knowledge/solo-test/masters/master_jhunjhunwala/manifest.json",
-        "physical_file_hash": "sha256:fb3e45d17f2ebe13b043d4852a45039dd839ff7237c6d9bf7d17f317dc9e9490"
+        "physical_file_hash": "sha256:d1319412831381d5fbf2508d113eae05dbe9b8cea7d8bd192bbe231384ea2946"
       },
       "persona_id": "master_jhunjhunwala"
     },
@@ -4438,11 +4438,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:db61ebf949502af81f0b0060067f1d2be6d61a8f53fac26ba19c0638d4343bb6",
-      "pack_hash": "sha256:b12bf8c88315bbf6189b8b2d1796d6a67f73f31b5446d4004da2f3e328783548",
+      "pack_hash": "sha256:8ff6ccb961592341f9d5ecf79cdc53dd4397f8c566cdd28d0c9b80aa53a90b96",
       "pack_manifest_binding": {
-        "byte_length": 5386,
+        "byte_length": 5342,
         "path": "knowledge/solo-test/masters/master_lynch/manifest.json",
-        "physical_file_hash": "sha256:0d28d497fe6d1c9d65e42271736e823b45b14c08214a03e6e8d07675cbc40874"
+        "physical_file_hash": "sha256:2216b7ff33e4cf20e9246478639f87c8ab3c3d1b10fea61fb54ce94f95f842dc"
       },
       "persona_id": "master_lynch"
     },
@@ -4699,11 +4699,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:7c862a1cca1fc90a2a97efc685e11bab0a544704b6fee58ce4c49e4345c18656",
-      "pack_hash": "sha256:44fa04d4af52560464bf4a974c2f8dac1903b32ab2ee58c74163bb0fc6c92c31",
+      "pack_hash": "sha256:a38e7318181706a0b13f6038d981a6ab3ad9f4f85093cdda594d98effd3352ee",
       "pack_manifest_binding": {
-        "byte_length": 5238,
+        "byte_length": 5147,
         "path": "knowledge/solo-test/masters/master_forensic_short/manifest.json",
-        "physical_file_hash": "sha256:634c00e1bd1d4bb809f5deba80a5824b597d98698afbf41cc9d5f084c669e32b"
+        "physical_file_hash": "sha256:e8112fc72ead00ea849477c1b8829c38cd02c068040ed1a4df25ae2ffb381c0b"
       },
       "persona_id": "master_forensic_short"
     },
@@ -5041,11 +5041,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:af2d247eef6af1ab0f66bf67bbd595499eb1adf8fc65787ed597f2ed944a87a4",
-      "pack_hash": "sha256:ff907accec9e265eed94408d84bf8fa99d4d0458ebbdef6d6f6682c2be977df8",
+      "pack_hash": "sha256:e25dc5a6e305acd29cb86acadd235524ef65ca80f9846a153a3ae31ba079a06d",
       "pack_manifest_binding": {
-        "byte_length": 5207,
+        "byte_length": 5177,
         "path": "knowledge/solo-test/masters/master_li_lu/manifest.json",
-        "physical_file_hash": "sha256:72029a69d36314a295a19316e048b959f8f3e172bbd7db41fe4b6e33b86de704"
+        "physical_file_hash": "sha256:0253309618c822841cf14d7db2b84396324873257433210db1069abd45f57cc3"
       },
       "persona_id": "master_li_lu"
     },
@@ -5329,11 +5329,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:3a43c5c6b41f86ac0650794538a789163167641cfacaa795212f52c13f2c5526",
-      "pack_hash": "sha256:978195b32dbe10ffef689afd152e8a1b6cab4a4ec8baff781500ad2b18449bc1",
+      "pack_hash": "sha256:c7e864910e186d6a27e1b48a16ab6cd950d02377cae5bbc22306a5dff6b123a6",
       "pack_manifest_binding": {
-        "byte_length": 5159,
+        "byte_length": 5079,
         "path": "knowledge/solo-test/masters/master_marks/manifest.json",
-        "physical_file_hash": "sha256:6724601c6542083d45bbe84c756346dd9928c7d0ce432aa0782900ece49b1e15"
+        "physical_file_hash": "sha256:51c4767ced86c7262ea1632eaad0ee0eb87a8c7774784281eed84646294c8d79"
       },
       "persona_id": "master_marks"
     },
@@ -5668,11 +5668,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:677b2f1ca5891f7561512ede08ada7e76e4373c1b662d2f332c6f11f407ebac0",
-      "pack_hash": "sha256:8bfec8e223a75dc819ef48b71076d0a45575e4d2248ba90d24556a85f2511c3e",
+      "pack_hash": "sha256:e4fab15e8f477f62fe29f1d9141130010962f7d68107cd78d6cea851908a3ddc",
       "pack_manifest_binding": {
-        "byte_length": 5413,
+        "byte_length": 5335,
         "path": "knowledge/solo-test/masters/master_burry/manifest.json",
-        "physical_file_hash": "sha256:4e1ff0bbea8730397307582a8457eaaa872f16bdbb453cd7320836a9e7865d15"
+        "physical_file_hash": "sha256:400c63eeae6e66b51413af2fb294c7ffddfbae7f72cd129529bbb55c5e3f3b4d"
       },
       "persona_id": "master_burry"
     },
@@ -5980,11 +5980,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:56539a7eafe2a731bae7f63424555ab05579de40a95d7db427696d5d1f83572d",
-      "pack_hash": "sha256:2b4a457b16511d0bbde044127b417125393a8b0597d9be163498c637981aa5dd",
+      "pack_hash": "sha256:a2803d0c32390146e86a9c49cb8b17a1e8a219da419beb7026fcc3a45f88ddd6",
       "pack_manifest_binding": {
-        "byte_length": 5128,
+        "byte_length": 5116,
         "path": "knowledge/solo-test/masters/master_klarman/manifest.json",
-        "physical_file_hash": "sha256:39c282f96c146c27825575be09bfb5a4c9ce42971769bf67f12fa36e0769b8ea"
+        "physical_file_hash": "sha256:e40d6a5f977ae7226d0caa63fa829ef75fd520138989467427190a05f323bfad"
       },
       "persona_id": "master_klarman"
     },
@@ -6292,11 +6292,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:ea190912e30a3fa45a4a51809310c852d5a51dbba2626d1ed9dac8065e62924a",
-      "pack_hash": "sha256:019926922280a5ccb472ec403ccd43a9fb37de8ae9789d5e817b356239eca6fb",
+      "pack_hash": "sha256:30a2e52c08f73c2b921d959e17c8602e2183949d91f7e90196b58e0b8b77507b",
       "pack_manifest_binding": {
-        "byte_length": 5323,
+        "byte_length": 5294,
         "path": "knowledge/solo-test/masters/master_pabrai/manifest.json",
-        "physical_file_hash": "sha256:871b154710b123b3bb141f2d2a36aa03e8cf67842d6bfdccf5fa39f6206a436c"
+        "physical_file_hash": "sha256:6ebee249b38ae7e52b113336e6ef4f12d477315c9f2d02966c8326d4eeaa4b1c"
       },
       "persona_id": "master_pabrai"
     },
@@ -6658,131 +6658,23 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:4ea39cf125d17ebb5d01940d908d9ffc746813fda089bd43ee9e52fdb3c7e7f0",
-      "pack_hash": "sha256:401c69aee094f879d1c898389a43271191ee974c8da1368695971f9bbb33c3ed",
+      "pack_hash": "sha256:96d76e72e80c81145779f4e1848cc4a640233994828ef0df1b90f037b110c710",
       "pack_manifest_binding": {
-        "byte_length": 5381,
+        "byte_length": 5362,
         "path": "knowledge/solo-test/masters/master_ackman/manifest.json",
-        "physical_file_hash": "sha256:aba81ed0c669a29c600d1554a29ae67c4bd4f9c3b550488947d2f1ada44267db"
+        "physical_file_hash": "sha256:d68964f7499ac7e07d24bfde9811a26ddb2b4bad01f111bfc60dbb8c72bcd99f"
       },
       "persona_id": "master_ackman"
     },
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:ea60934e5f10dab7daa9077407dcba7e864fffafe31f0cc1e7aab109ae529e53",
+        "fact_pack_hash": "sha256:8722733fc5c540efb84efa7698374becbe90c64f24cf7e31d657da27a9885099",
         "facts": [
           {
             "as_of": "2026-07-27",
             "confidence": 1,
-            "currency": null,
-            "derivation": "reported",
-            "fact_id": "index.aggregate_earnings_yield",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": null,
-            "period_start": null,
-            "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "decimal",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": null,
-            "derivation": "reported",
-            "fact_id": "index.aggregate_pe_forward",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": null,
-            "period_start": null,
-            "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "multiple",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": null,
-            "derivation": "reported",
-            "fact_id": "macro.aaa_corporate_yield",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": null,
-            "period_start": null,
-            "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "decimal",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": null,
-            "derivation": "reported",
-            "fact_id": "macro.long_bond_yield",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": null,
-            "period_start": null,
-            "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "decimal",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": null,
+            "currency": "USD",
             "derivation": "reported",
             "fact_id": "valuation.cash_flow",
             "fiscal_year": null,
@@ -6795,16 +6687,15 @@
             "period_end": null,
             "period_start": null,
             "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
+            "scale": 1,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "decimal",
+            "unit": "currency_units",
             "value": 1,
-            "value_kind": "ratio"
+            "value_kind": "monetary"
           },
           {
             "as_of": "2026-07-27",
@@ -6900,8 +6791,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -6954,8 +6845,8 @@
               "tool_id": null,
               "tool_version": null
             },
-            "period_end": null,
-            "period_start": null,
+            "period_end": "2026-07-27",
+            "period_start": "2025-07-27",
             "public_at": "2026-07-27",
             "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
@@ -6972,19 +6863,19 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:ea60934e5f10dab7daa9077407dcba7e864fffafe31f0cc1e7aab109ae529e53",
-      "pack_hash": "sha256:71aa157532b37b40f13a3e0b02b645a75cfb0608451f47645bcac835772dfe9c",
+      "fact_pack_hash": "sha256:8722733fc5c540efb84efa7698374becbe90c64f24cf7e31d657da27a9885099",
+      "pack_hash": "sha256:8b4f9d365b82c9404c4894342346cc2b8d32c4f3868db203ebf143051cdf304a",
       "pack_manifest_binding": {
-        "byte_length": 5391,
+        "byte_length": 5073,
         "path": "knowledge/solo-test/masters/master_damodaran/manifest.json",
-        "physical_file_hash": "sha256:767dad87997a029810096ef16816a7335a78ac1dab13f5ef1208abc44c6b20b0"
+        "physical_file_hash": "sha256:89e0f21a0e67119c92f24bdc9c946601b4e704f65a3f219af1eccea886b96cdb"
       },
       "persona_id": "master_damodaran"
     },
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:d8e1c2149858c87246d445d0615309698822a57c05a8bb6092307eca9e3a554e",
+        "fact_pack_hash": "sha256:a9a52093f82732222c2c7ea3d1ac433bf834aa278447d853af0dfe8481d33f1d",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -7002,16 +6893,15 @@
             "period_end": null,
             "period_start": null,
             "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "decimal",
-            "value": 1,
-            "value_kind": "ratio"
+            "unit": null,
+            "value": true,
+            "value_kind": "boolean"
           },
           {
             "as_of": "2026-07-27",
@@ -7036,61 +6926,7 @@
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "decimal",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": null,
-            "derivation": "reported",
-            "fact_id": "financial.interest_coverage",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": "2026-07-27",
-            "period_start": "2025-07-27",
-            "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "multiple",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": null,
-            "derivation": "reported",
-            "fact_id": "financial.leverage",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": null,
-            "period_start": null,
-            "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": null,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "decimal",
+            "unit": "decimal_of_mid",
             "value": 1,
             "value_kind": "ratio"
           },
@@ -7144,7 +6980,7 @@
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "decimal",
+            "unit": "decimal_annualized_volatility",
             "value": 1,
             "value_kind": "ratio"
           },
@@ -7207,6 +7043,33 @@
             "confidence": 1,
             "currency": null,
             "derivation": "reported",
+            "fact_id": "payoff.max_loss",
+            "fiscal_year": null,
+            "lineage": {
+              "calculation_hash": null,
+              "input_fact_ids": [],
+              "tool_id": null,
+              "tool_version": null
+            },
+            "period_end": null,
+            "period_start": null,
+            "public_at": "2026-07-27",
+            "ratio_denominator": "synthetic_denominator",
+            "restatement_policy": "frozen synthetic machine-simulation fixture",
+            "scale": null,
+            "schema_version": 1,
+            "source_ids": [
+              "synthetic:machine-simulation"
+            ],
+            "unit": "decimal_of_invested_capital",
+            "value": 1,
+            "value_kind": "ratio"
+          },
+          {
+            "as_of": "2026-07-27",
+            "confidence": 1,
+            "currency": null,
+            "derivation": "reported",
             "fact_id": "risk.hidden_leverage",
             "fiscal_year": null,
             "lineage": {
@@ -7245,53 +7108,26 @@
             "period_end": null,
             "period_start": null,
             "public_at": "2026-07-27",
-            "ratio_denominator": "synthetic_denominator",
             "restatement_policy": "frozen synthetic machine-simulation fixture",
             "scale": null,
             "schema_version": 1,
             "source_ids": [
               "synthetic:machine-simulation"
             ],
-            "unit": "decimal",
-            "value": 1,
-            "value_kind": "ratio"
-          },
-          {
-            "as_of": "2026-07-27",
-            "confidence": 1,
-            "currency": "USD",
-            "derivation": "reported",
-            "fact_id": "valuation.downside_floor",
-            "fiscal_year": null,
-            "lineage": {
-              "calculation_hash": null,
-              "input_fact_ids": [],
-              "tool_id": null,
-              "tool_version": null
-            },
-            "period_end": null,
-            "period_start": null,
-            "public_at": "2026-07-27",
-            "restatement_policy": "frozen synthetic machine-simulation fixture",
-            "scale": 1,
-            "schema_version": 1,
-            "source_ids": [
-              "synthetic:machine-simulation"
-            ],
-            "unit": "currency_units",
-            "value": 1,
-            "value_kind": "monetary"
+            "unit": null,
+            "value": true,
+            "value_kind": "boolean"
           }
         ],
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:d8e1c2149858c87246d445d0615309698822a57c05a8bb6092307eca9e3a554e",
-      "pack_hash": "sha256:9ccbae324c05e845a16a7f3d8a0ebe2436815fc8267291f0fb753c08e13427d0",
+      "fact_pack_hash": "sha256:a9a52093f82732222c2c7ea3d1ac433bf834aa278447d853af0dfe8481d33f1d",
+      "pack_hash": "sha256:8fae30d0c74315fd7114b54873f87a9097eb66a83b816ba43b8ec1be447e02a6",
       "pack_manifest_binding": {
-        "byte_length": 5260,
+        "byte_length": 5108,
         "path": "knowledge/solo-test/masters/master_taleb/manifest.json",
-        "physical_file_hash": "sha256:46d37ff0e843059411037f322f006892161652d76f68887c1496a90ba0806689"
+        "physical_file_hash": "sha256:73a7cdc0240a84b4497752f452907550a9add06b02fdd6f604d85d00db6b90cd"
       },
       "persona_id": "master_taleb"
     },
@@ -7521,11 +7357,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:31cf4c34fb8a581b502f6133491c343b6a05297503ce0dbc5f09fac8af77a65c",
-      "pack_hash": "sha256:496f573dcb7f88469ff3b20f2c11b533ce5b1461ef6018de285157dda3692ae2",
+      "pack_hash": "sha256:3b5403100a9fd68651e2e2446d027e72561c75063ad778facf86b3d96abd9121",
       "pack_manifest_binding": {
-        "byte_length": 5281,
+        "byte_length": 5198,
         "path": "knowledge/solo-test/masters/master_natenberg/manifest.json",
-        "physical_file_hash": "sha256:bd5d64525c6a638ae5a9f72b149e15a529f297c04610d6445b81e8b9b920e953"
+        "physical_file_hash": "sha256:ce4ff240630273224e6137cbbda89c47bd3e92e428ee27aa03ae9e91930c2cd6"
       },
       "persona_id": "master_natenberg"
     },
@@ -7755,11 +7591,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:e0264f664e970d6bec7c385fba9de78fb4da5190f595231a46e12e73c248302b",
-      "pack_hash": "sha256:aaeccc8bf336a8fb641c2143c6695dcf725ae2dfd1756eb31f1e76a574876bc6",
+      "pack_hash": "sha256:a11d75bb5da9460a79d8cf7d1efd6a82aec687898732e229fcf989ffaed0525d",
       "pack_manifest_binding": {
-        "byte_length": 5457,
+        "byte_length": 5386,
         "path": "knowledge/solo-test/masters/master_sinclair/manifest.json",
-        "physical_file_hash": "sha256:fe29a2705d5ad2ab7d33bbf478be357079b9c892138ed68a408654488fb287ac"
+        "physical_file_hash": "sha256:a3916c02a733d4780e916bcbd2a041920e37d1146842b82c614381067e846752"
       },
       "persona_id": "master_sinclair"
     },
@@ -7935,11 +7771,11 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:d035c7f7cbace9a80cce787b1ea3204f7b85437e4552dec34681765f0ab3af26",
-      "pack_hash": "sha256:154d7264538e46fe28d9d19ca9905aa2b39c46013732078d6ec6c85f2a7b3ea2",
+      "pack_hash": "sha256:79fc7ff40d23e1b370bff5151553c04198a0f478fba3047f8abd555dccb7b42f",
       "pack_manifest_binding": {
-        "byte_length": 5369,
+        "byte_length": 5286,
         "path": "knowledge/solo-test/masters/master_bogle/manifest.json",
-        "physical_file_hash": "sha256:a0dd1f4ae20b4298cbfbced7d0c646c8cf827b25152a607ec562f20990a457a5"
+        "physical_file_hash": "sha256:4f8e166ed25ac8e9ce1cabd149fb505461384f5a5d4e2e0e94d7a31f17667e91"
       },
       "persona_id": "master_bogle"
     }

@@ -63,9 +63,7 @@
       "macro.real_rate"
     ],
     "hard_vetoes": [
-      "master_dalio.refinancing_break",
-      "master_dalio.hidden_driver_concentration",
-      "master_dalio.false_analogue"
+      "master_dalio.short_term_debt_cycle_top"
     ],
     "native_output": "regime_balance_v1"
   },

@@ -66,8 +66,7 @@
     ],
     "hard_vetoes": [
       "master_ackman.no_standalone_downside",
-      "master_ackman.no_power_path",
-      "master_ackman.cost_time_erasure"
+      "master_ackman.balance_sheet_cannot_finance_change"
     ],
     "native_output": "engagement_feasibility_v1"
   },

@@ -4,61 +4,48 @@
   "derivation_spec": {
     "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
     "assurance_class": "provisional_derived_proxy",
-    "authoring_candidate_hash": "sha256:56e5fcca865bf387decfd6d58227929ba1966ca61baebe4f650363d07a10a3d6",
+    "authoring_candidate_hash": "sha256:26ab757634a5b9c20d3f610123a445ce91bdb834c0dd8dbfbedcb6e3de10b769",
     "derivation_policy": "ai_authored_method_formula_v1",
-    "derivation_spec_id": "master_damodaran.implied_equity_risk_premium.prototype_v1.derived_proxy_v1",
+    "derivation_spec_id": "master_damodaran.company_cash_flow.prototype_v1.derived_proxy_v1",
     "formula": {
       "inputs": [
         {
           "on_missing": "fail",
           "operand": {
-            "fact_id": "index.aggregate_earnings_yield"
+            "fact_id": "valuation.cash_flow"
           },
           "period": {
             "alignment": "as_of",
             "basis": "instant",
             "window": null
           },
-          "unit": "decimal",
-          "value_kind": "ratio"
-        },
-        {
-          "on_missing": "fail",
-          "operand": {
-            "fact_id": "macro.long_bond_yield"
-          },
-          "period": {
-            "alignment": "as_of",
-            "basis": "instant",
-            "window": null
-          },
-          "unit": "decimal",
-          "value_kind": "ratio"
+          "unit": "currency_units",
+          "value_kind": "monetary"
         }
       ],
       "kind": "recomputation",
       "on_missing": "fail",
-      "operation": "subtract",
+      "operation": "identity",
       "output": {
-        "output_id": "index.implied_equity_risk_premium.master_damodaran",
+        "output_id": "valuation.company_cash_flow.master_damodaran",
         "period": {
           "alignment": "as_of",
           "basis": "instant",
           "window": null
         },
-        "unit": "decimal",
-        "value_kind": "ratio"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       },
       "version": "0.2.0"
     },
     "input_contract_source": "grounding_adapter_canonical_contract_v1",
     "persona_id": "master_damodaran",
-    "prototype_content_hash": "sha256:ebc193ca1ae9952a593665c8cba5ef72681abecab6fdfa7793d8a99e7f86d62f",
-    "prototype_id": "master_damodaran.implied_equity_risk_premium.prototype_v1",
+    "prototype_content_hash": "sha256:a92df8403a51e0ed967a4b6543c3a0b0e20e696322ba5d19fe42ed0de1df8042",
+    "prototype_id": "master_damodaran.company_cash_flow.prototype_v1",
     "schema_version": 1,
-    "tool_id": "master_damodaran.implied_equity_risk_premium"
+    "tool_id": "master_damodaran.company_cash_flow"
   },
-  "derivation_spec_hash": "sha256:b256595a8aed8861a196eb7335efbc72e3ed70bac462d8021abe47efde3597fe",
+  "derivation_spec_hash": "sha256:76c0546c9f92f414d91a5b7368d9cc6ea55c31b9aa5fb43068483ddf38394db1",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

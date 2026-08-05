@@ -16,19 +16,15 @@
     ],
     "native_decision_schema": "valuation_distribution_v1",
     "optional_fact_types": [
-      "index.aggregate_pe_forward",
-      "macro.aaa_corporate_yield",
       "valuation.revenue_growth",
       "valuation.target_margin",
       "valuation.reinvestment_rate",
       "valuation.cost_of_capital",
-      "valuation.failure_probability",
-      "valuation.cash_flow",
-      "valuation.implied_story"
+      "valuation.failure_probability"
     ],
     "required_fact_types": [
-      "index.aggregate_earnings_yield",
-      "macro.long_bond_yield"
+      "valuation.cash_flow",
+      "valuation.implied_story"
     ]
   },
   "components": {
@@ -49,8 +45,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_damodaran.implied_equity_risk_premium",
-      "master_damodaran.premium_versus_long_run_average"
+      "master_damodaran.company_cash_flow",
+      "master_damodaran.reverse_valuation_story"
     ]
   },
   "decision": {
@@ -58,14 +54,10 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "index.aggregate_earnings_yield",
-      "macro.long_bond_yield"
+      "valuation.cash_flow",
+      "valuation.implied_story"
     ],
-    "hard_vetoes": [
-      "master_damodaran.story_number_gap",
-      "master_damodaran.reinvestment_inconsistency",
-      "master_damodaran.terminal_inconsistency"
-    ],
+    "hard_vetoes": [],
     "native_output": "valuation_distribution_v1"
   },
   "evaluation": {

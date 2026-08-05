@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { DEBATE_ROLES, RUNS_DIR } from "./constants.mjs";
+import { DEBATE_ROLES, RUNS_DIR, RUNTIME_BUILD_IDENTITY } from "./constants.mjs";
 import { internalError, invalidParams } from "./errors.mjs";
 import { jsonlEntryHash, readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { agentState, completenessStatus, masterSeatIncomplete, sourceManifest, taskState, verificationStatus } from "./gates.mjs";
@@ -76,6 +76,7 @@ export function statusSnapshot(run) {
   const evidenceOnly = run.decision_requested === false || run.entry_tool === "collect_evidence";
   return {
     run_id: run.run_id,
+    runtime_provenance: run.runtime_provenance || null,
     symbol: run.symbol,
     asset_type: run.grounding?.instrument?.asset_type || "unknown",
     research_model: run.grounding?.instrument?.research_model || "unknown",
@@ -196,6 +197,7 @@ export function statusSnapshot(run) {
 
 export function writeStatus(run, patch = {}) {
   Object.assign(run, patch, { updated_at: new Date().toISOString() });
+  ensureRuntimeProvenance(run);
   writeJson(join(runPath(run.run_id), "status.json"), statusSnapshot(run));
 }
 
@@ -348,6 +350,7 @@ export function writePublicationManifest(run, debate = {}) {
     schema: "alphacouncil_publication_manifest_v1",
     schema_version: 1,
     run_id: run.run_id,
+    runtime_provenance: run.runtime_provenance || null,
     status: run.status,
     quality: run.report_quality.status,
     artifacts,
@@ -404,7 +407,17 @@ export function existingDebate(dir) {
 
 export function saveRun(run) {
   run.updated_at = new Date().toISOString();
+  ensureRuntimeProvenance(run);
   writeJson(join(runPath(run.run_id), "evidence.json"), run);
   writeSourceManifest(run);
   writeJson(join(runPath(run.run_id), "status.json"), statusSnapshot(run));
+}
+
+function ensureRuntimeProvenance(run) {
+  if (run.runtime_provenance) return run.runtime_provenance;
+  run.runtime_provenance = {
+    ...RUNTIME_BUILD_IDENTITY,
+    observed_at: run.started_at || new Date().toISOString(),
+  };
+  return run.runtime_provenance;
 }

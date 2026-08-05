@@ -1,5 +1,6 @@
 import { languageKey } from "./lang.mjs";
 import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
+import { hardVerificationFindings } from "./verification.mjs";
 
 /**
  * Render the long full_v2 report inside the trusted process instead of asking a worker to
@@ -40,6 +41,7 @@ const COPY = Object.freeze({
     analystLog: "Analyst Work Log",
     debate: "Bull/Bear Debate Record",
     weights: "Resolved Seat-Weight Audit",
+    verification: "Triple-Verification Corrections",
     long: "Long Thesis",
     short: "Short Thesis",
     market: "Market Expectations and Implied Thresholds",
@@ -62,11 +64,15 @@ const COPY = Object.freeze({
     confidence: "Confidence",
     sources: "Source Table",
     rating: "Rating", winner: "Debate winner", summary: "Summary", verdict: "Verdict",
+    findingId: "Finding ID", verifier: "Verifier", claim: "Original claim", disposition: "Disposition", handling: "Portfolio-manager handling",
+    withdrawnClaim: "Original claim withdrawn after triple verification; it is not a current fact.",
+    claimFamilyClosed: "The remaining raw claims in this analyst packet are withheld from decision-facing sections because a hard finding can contaminate dependent calculations. The immutable analyst artifact remains available for audit.",
     status: "Status", findings: "Key findings", questions: "Open questions", sourceIds: "sources",
     noEvidence: "No usable packet was recorded for this required analyst; this remains an explicit data gap.",
     noFindings: "No additional sourced finding was recorded.",
     noQuestions: "No additional open question was recorded.",
     noDebate: "No usable debate packet was recorded.",
+    noVerificationCorrections: "No contradicted, disagree, or refuted finding required a portfolio-manager correction.",
     noSectionEvidence: "The applicable evidence packet recorded no additional detail; treat this as unavailable data, not as a positive finding.",
     noCatalysts: "No additional sourced catalyst was recorded.",
     noRisks: "No additional risk was recorded beyond the stated invalidation conditions.",
@@ -87,6 +93,7 @@ const COPY = Object.freeze({
     analystLog: "分析师工作记录",
     debate: "多空辩论记录",
     weights: "最终席位权重审计",
+    verification: "三重验证修正",
     long: "多头观点",
     short: "空头观点",
     market: "市场预期与隐含门槛",
@@ -109,11 +116,15 @@ const COPY = Object.freeze({
     confidence: "置信度",
     sources: "来源表",
     rating: "评级", winner: "辩论胜方", summary: "摘要", verdict: "最终判断",
+    findingId: "结论 ID", verifier: "核验器", claim: "原始说法", disposition: "处理方式", handling: "组合经理处理说明",
+    withdrawnClaim: "原结论已被三重核验撤销，不再作为当前事实发布。",
+    claimFamilyClosed: "该分析包其余原始论断不再进入决策正文，因为上游硬错误可能污染依赖计算；不可变的分析席原始工件仍保留供审计。",
     status: "状态", findings: "关键发现", questions: "待确认问题", sourceIds: "来源",
     noEvidence: "该必需分析席没有留下可用证据包；这是一项明确的数据缺口。",
     noFindings: "没有记录更多带来源的发现。",
     noQuestions: "没有记录更多待确认问题。",
     noDebate: "没有记录可用辩论包。",
+    noVerificationCorrections: "没有需要组合经理修正的 contradicted、disagree 或 refuted 结论。",
     noSectionEvidence: "对应证据包没有记录更多细节；应视为数据不可得，而不是正面结论。",
     noCatalysts: "没有记录更多带来源的催化剂。",
     noRisks: "除已列反证条件外，没有记录更多风险。",
@@ -134,6 +145,7 @@ const COPY = Object.freeze({
     analystLog: "アナリスト作業記録",
     debate: "強気弱気討論記録",
     weights: "確定済み座席ウェイト監査",
+    verification: "三重検証の修正",
     long: "強気論点",
     short: "弱気論点",
     market: "市場予想と織り込み条件",
@@ -156,11 +168,15 @@ const COPY = Object.freeze({
     confidence: "信頼度",
     sources: "出典表",
     rating: "評価", winner: "討論の優勢側", summary: "要約", verdict: "最終判断",
+    findingId: "所見 ID", verifier: "検証器", claim: "元の主張", disposition: "処理", handling: "PM の処理説明",
+    withdrawnClaim: "元の主張は三重検証後に撤回され、現在の事実としては公開されません。",
+    claimFamilyClosed: "重大な所見が依存計算を汚染し得るため、この分析パケットの残りの生の主張は意思決定向け本文には掲載しません。不変の分析成果物は監査用に保持されます。",
     status: "状態", findings: "主な所見", questions: "未解決事項", sourceIds: "出典",
     noEvidence: "この必須分析席には利用可能な証拠パケットがなく、明示的なデータ欠落として扱います。",
     noFindings: "追加の出典付き所見は記録されていません。",
     noQuestions: "追加の未解決事項は記録されていません。",
     noDebate: "利用可能な討論パケットは記録されていません。",
+    noVerificationCorrections: "PM による修正が必要な contradicted、disagree、refuted 所見はありません。",
     noSectionEvidence: "該当する証拠パケットに追加情報がなく、肯定的所見ではなく利用不可データとして扱います。",
     noCatalysts: "追加の出典付きカタリストは記録されていません。",
     noRisks: "無効化条件以外の追加リスクは記録されていません。",
@@ -181,6 +197,7 @@ const COPY = Object.freeze({
     analystLog: "분석가 작업 기록",
     debate: "강세·약세 토론 기록",
     weights: "확정 좌석 가중치 감사",
+    verification: "삼중 검증 수정",
     long: "강세 논거",
     short: "약세 논거",
     market: "시장 기대",
@@ -203,11 +220,15 @@ const COPY = Object.freeze({
     confidence: "신뢰도",
     sources: "출처 표",
     rating: "등급", winner: "토론 우세 측", summary: "요약", verdict: "최종 판단",
+    findingId: "결과 ID", verifier: "검증기", claim: "원래 주장", disposition: "처리", handling: "포트폴리오 매니저 처리 설명",
+    withdrawnClaim: "원래 주장은 삼중 검증 후 철회되었으며 현재 사실로 게시되지 않습니다.",
+    claimFamilyClosed: "중대한 검증 결과가 종속 계산을 오염시킬 수 있으므로 이 분석 패킷의 나머지 원시 주장은 의사결정 본문에서 보류합니다. 변경 불가능한 분석 산출물은 감사를 위해 유지됩니다.",
     status: "상태", findings: "핵심 발견", questions: "미해결 질문", sourceIds: "출처",
     noEvidence: "이 필수 분석 좌석에는 사용 가능한 증거 패킷이 없으며 명시적인 데이터 공백입니다.",
     noFindings: "추가로 기록된 출처 기반 발견이 없습니다.",
     noQuestions: "추가로 기록된 미해결 질문이 없습니다.",
     noDebate: "사용 가능한 토론 패킷이 기록되지 않았습니다.",
+    noVerificationCorrections: "포트폴리오 매니저 수정이 필요한 contradicted, disagree 또는 refuted 결과가 없습니다.",
     noSectionEvidence: "해당 증거 패킷에 추가 세부 정보가 없으며 긍정적 발견이 아닌 사용 불가 데이터로 처리합니다.",
     noCatalysts: "추가로 기록된 출처 기반 촉매가 없습니다.",
     noRisks: "무효화 조건 외에 추가로 기록된 위험이 없습니다.",
@@ -235,35 +256,89 @@ function packetSourceIds(packet) {
   ]);
 }
 
-function packetBody(run, task, copy) {
+function claimVerificationSuffix(run, claimId, copy) {
+  const findings = hardVerificationFindings(run).filter((finding) => finding.claim_id === claimId);
+  if (!findings.length) return "";
+  return ` [${copy.verification}: ${findings.map((finding) => [
+    `${inline(finding.verifier)}=${inline(finding.verdict)}`,
+    inline(finding.note),
+    inline(finding.rederivation),
+  ].filter(Boolean).join(" — ")).join("; ")}]`;
+}
+
+function withdrawnClaimRow(run, decision, claimId, copy) {
+  const findings = hardVerificationFindings(run).filter((finding) => finding.claim_id === claimId);
+  if (!findings.length) return null;
+  const acknowledgements = (decision?.verification_findings_ack || [])
+    .filter((row) => row?.claim_id === claimId || findings.some((finding) => finding.finding_id === row?.finding_id));
+  const verification = findings.map((finding) => (
+    `${inline(finding.verifier)}=${inline(finding.verdict)}`
+  )).join("; ");
+  const dispositions = uniqueStrings(acknowledgements.map((row) => row?.disposition));
+  const handling = uniqueStrings(acknowledgements.map((row) => (
+    row?.acknowledgement_note || row?.note || row?.rederivation
+  )));
+  return [
+    `${copy.withdrawnClaim} (${copy.findingId}: \`${claimId.replaceAll("`", "")}\`)`,
+    verification ? `${copy.verification}: ${verification}` : "",
+    dispositions.length ? `${copy.disposition}: ${dispositions.join(", ")}` : "",
+    handling.length ? `${copy.handling}: ${handling.join("; ")}` : "",
+  ].filter(Boolean).join(" — ");
+}
+
+function taskHasHardVerificationFinding(run, task) {
+  return hardVerificationFindings(run).some((finding) => finding.task === task);
+}
+
+function packetBody(run, task, copy, decision) {
   const packet = packetFor(run, task);
   if (!packet) return copy.noEvidence;
-  const claims = (packet.claims || []).map((claim) => {
+  // Packet summaries and open questions have no claim IDs. Once any claim in the task has a
+  // hard finding, only the claim-level rows can be rendered with an exact verifier binding.
+  const hasHardFinding = taskHasHardVerificationFinding(run, task);
+  const mappedClaims = (packet.claims || []).map((claim, index) => {
+    const claimId = `${task}:C${index + 1}`;
+    const withdrawn = withdrawnClaimRow(run, decision, claimId, copy);
+    if (withdrawn) return withdrawn;
     const body = [inline(claim?.claim), inline(claim?.evidence)].filter(Boolean).join(" — ");
-    return `${body}${sourceSuffix(claim?.source_ids, copy)}`;
+    return `${body}${sourceSuffix(claim?.source_ids, copy)}${claimVerificationSuffix(run, claimId, copy)}`;
   });
-  const gaps = (packet.open_questions || []).map(inline).filter(Boolean);
+  const claims = hasHardFinding
+    ? [...mappedClaims.filter((claim) => claim?.startsWith(copy.withdrawnClaim)), copy.claimFamilyClosed]
+    : mappedClaims;
+  const gaps = hasHardFinding
+    ? []
+    : (packet.open_questions || []).map(inline).filter(Boolean);
   return [
-    inline(packet.summary) || copy.noSectionEvidence,
+    hasHardFinding ? "" : (inline(packet.summary) || copy.noSectionEvidence),
     claims.length ? bullets(claims, copy.noFindings) : `- ${copy.noFindings}`,
     gaps.length ? `${copy.questions}:\n${bullets(gaps, copy.noQuestions)}` : "",
     sourceSuffix(packetSourceIds(packet), copy).trim(),
   ].filter(Boolean).join("\n\n");
 }
 
-function analystLog(run, copy) {
+function analystLog(run, copy, decision) {
   return (run?.tasks || []).map((task) => {
     const packet = packetFor(run, task);
     const status = run?.task_status?.[task]?.status || (packet ? "completed" : "missing");
+    const hasHardFinding = taskHasHardVerificationFinding(run, task);
+    const mappedClaims = (packet?.claims || []).map((claim, index) => {
+      const claimId = `${task}:C${index + 1}`;
+      return withdrawnClaimRow(run, decision, claimId, copy)
+        || `${inline(claim?.claim)}${sourceSuffix(claim?.source_ids, copy)}${claimVerificationSuffix(run, claimId, copy)}`;
+    });
+    const claims = hasHardFinding
+      ? [...mappedClaims.filter((claim) => claim?.startsWith(copy.withdrawnClaim)), copy.claimFamilyClosed]
+      : mappedClaims;
     return [
       `### ${inline(task)}`,
       `- ${copy.status}: ${inline(status)}`,
-      `- ${copy.summary}: ${inline(packet?.summary) || copy.noEvidence}`,
+      hasHardFinding ? "" : `- ${copy.summary}: ${inline(packet?.summary) || copy.noEvidence}`,
       `- ${copy.findings}:`,
-      bullets((packet?.claims || []).map((claim) => `${inline(claim?.claim)}${sourceSuffix(claim?.source_ids, copy)}`), copy.noFindings),
-      `- ${copy.questions}:`,
-      bullets(packet?.open_questions, copy.noQuestions),
-    ].join("\n");
+      bullets(claims, copy.noFindings),
+      hasHardFinding ? "" : `- ${copy.questions}:`,
+      hasHardFinding ? "" : bullets(packet?.open_questions, copy.noQuestions),
+    ].filter(Boolean).join("\n");
   }).join("\n\n") || copy.noEvidence;
 }
 
@@ -285,6 +360,18 @@ function debateSide(label, packet, copy) {
       bullets((round?.questions_answered || []).map((item) => `${inline(item?.question)} — ${inline(item?.answer)}`), copy.noQuestions),
     ].join("\n\n")),
   ].join("\n\n");
+}
+
+function verificationCorrectionRows(decision, copy) {
+  const rows = Array.isArray(decision?.verification_findings_ack)
+    ? decision.verification_findings_ack
+    : [];
+  if (!rows.length) return `- ${copy.noVerificationCorrections}`;
+  return [
+    `| ${copy.findingId} | ${copy.verifier} / ${copy.verdict} | ${copy.claim} | ${copy.findings} | ${copy.disposition} | ${copy.handling} |`,
+    "| --- | --- | --- | --- | --- | --- |",
+    ...rows.map((row) => `| ${inline(row?.finding_id)} | ${inline(row?.verifier)} / ${inline(row?.verdict)} | ${inline(row?.claim)} | ${inline(row?.note) || inline(row?.rederivation)} | ${inline(row?.disposition)} | ${inline(row?.acknowledgement_note || row?.note)} |`),
+  ].join("\n");
 }
 
 function priceRows(decision, copy) {
@@ -333,10 +420,9 @@ export function renderStructuredManagerReport(run, decision, { bull = null, bear
     resolveSeatWeights(run || {}, run?.seat_weight_overrides || {}),
     run?.language,
   );
-  const gaps = uniqueStrings([
-    ...(decision?.data_gaps || []),
-    ...(run?.packets || []).flatMap((packet) => packet?.open_questions || []),
-  ]);
+  // The PM acknowledgement is post-verification; packet open questions are frozen pre-verification
+  // records and must not be promoted back into the global decision-facing gap section.
+  const gaps = uniqueStrings(decision?.data_gaps || []);
   const citations = sourceSuffix(decision?.source_ids, copy);
   const conclusion = [
     `- ${copy.rating}: ${inline(decision?.rating)}`,
@@ -347,19 +433,20 @@ export function renderStructuredManagerReport(run, decision, { bull = null, bear
   return [
     `# ${inline(run?.symbol)} ${copy.title}`,
     `## ${copy.conclusion}\n${conclusion}`,
-    `## ${copy.analystLog}\n${analystLog(run, copy)}`,
+    `## ${copy.analystLog}\n${analystLog(run, copy, decision)}`,
     `## ${copy.debate}\n${debateSide(copy.bull, bull, copy)}\n\n${debateSide(copy.bear, bear, copy)}\n\n- ${copy.winner}: ${inline(decision?.winner)}`,
     resolvedWeightTable ? `## ${copy.weights}\n${resolvedWeightTable}` : "",
+    `## ${copy.verification}\n${verificationCorrectionRows(decision, copy)}`,
     `## ${copy.long}\n${bullets(decision?.long_thesis, copy.noFindings)}\n${citations}`,
     `## ${copy.short}\n${bullets(decision?.short_thesis, copy.noFindings)}\n${citations}`,
-    `## ${copy.market}\n${packetBody(run, "forward_expectations", copy)}`,
-    `## ${copy.analystRating}\n${packetBody(run, "forward_expectations", copy)}`,
-    `## ${copy.earnings}\n${packetBody(run, "earnings_deep_dive", copy)}`,
-    `## ${copy.quant}\n${packetBody(run, "quant_factor", copy)}`,
-    `## ${copy.news}\n${packetBody(run, "news_industry_management", copy)}`,
-    `## ${copy.shortInterest}\n${packetBody(run, "quant_factor", copy)}`,
-    `## ${copy.strategic}\n${packetBody(run, "ib_event_analysis", copy)}`,
-    `## ${copy.valuation}\n${inline(decision?.valuation_range) || copy.noSectionEvidence}${citations}\n\n${packetBody(run, "valuation_long_short", copy)}`,
+    `## ${copy.market}\n${packetBody(run, "forward_expectations", copy, decision)}`,
+    `## ${copy.analystRating}\n${packetBody(run, "forward_expectations", copy, decision)}`,
+    `## ${copy.earnings}\n${packetBody(run, "earnings_deep_dive", copy, decision)}`,
+    `## ${copy.quant}\n${packetBody(run, "quant_factor", copy, decision)}`,
+    `## ${copy.news}\n${packetBody(run, "news_industry_management", copy, decision)}`,
+    `## ${copy.shortInterest}\n${packetBody(run, "quant_factor", copy, decision)}`,
+    `## ${copy.strategic}\n${packetBody(run, "ib_event_analysis", copy, decision)}`,
+    `## ${copy.valuation}\n${inline(decision?.valuation_range) || copy.noSectionEvidence}${citations}\n\n${packetBody(run, "valuation_long_short", copy, decision)}`,
     `## ${copy.price}\n${priceRows(decision, copy)}`,
     `## ${copy.catalysts}\n${bullets(decision?.catalysts, copy.noCatalysts)}\n${citations}`,
     `## ${copy.risks}\n${bullets(decision?.risks, copy.noRisks)}\n${citations}`,

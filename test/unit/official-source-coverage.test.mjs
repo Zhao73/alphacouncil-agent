@@ -122,6 +122,23 @@ test("official coverage rejects a stale latest item when later checked items exi
   );
 });
 
+test("issuer coverage is rebound to the packet-local official-site inventory", () => {
+  const input = inputPacket();
+  const regulator = structuredClone(input.official_source_coverage.regulator.latest_dated_item);
+  input.official_source_coverage.issuer.dated_items_checked = [
+    structuredClone(input.official_source_coverage.issuer.dated_items_checked[0]),
+    regulator,
+  ];
+  input.official_source_coverage.issuer.latest_dated_item = regulator;
+
+  const packet = normalized(input);
+  const issuer = packet.official_source_coverage.issuer;
+  assert.ok(issuer.dated_items_checked.length >= 2);
+  assert.ok(issuer.dated_items_checked.every((item) => !item.url.includes("sec.gov")));
+  assert.equal(issuer.latest_dated_item.published_at, "2026-07-27T13:00:00Z");
+  assert.doesNotThrow(() => assertOfficialSourceCoverage(packet, { task: TASK, asOfDate: AS_OF, grounding }));
+});
+
 test("an unreachable official surface is recorded as a gap but rejected before rating", () => {
   const input = inputPacket();
   input.official_source_coverage.status = "incomplete";

@@ -61,6 +61,7 @@ function structuredDecision() {
       long_term: "Require durable economics and financing discipline.",
     },
     data_gaps: ["No critical data gaps were found in the completed fixture packets."],
+    verification_findings_ack: [],
   };
 }
 
@@ -110,6 +111,8 @@ const invalidStructuredDecisions = [
   ["missing data_gaps", (decision) => { delete decision.data_gaps; }],
   ["empty data_gaps", (decision) => { decision.data_gaps = []; }],
   ["hollow data gap", (decision) => { decision.data_gaps = ["  "]; }],
+  ["missing verification_findings_ack", (decision) => { delete decision.verification_findings_ack; }],
+  ["invalid verification disposition", (decision) => { decision.verification_findings_ack = [{ finding_id: "source_fidelity:market_data:C1", disposition: "ignored", note: "This fixture note is long enough." }]; }],
   ["worker-authored report", (decision) => { decision.report_markdown = "# Untrusted report"; }],
 ];
 
@@ -145,4 +148,66 @@ test("deterministic report keeps every price-row source ID and the exact resolve
   assert.ok(report.includes(`## Resolved Seat-Weight Audit\n${expectedTable}`));
   assert.match(expectedTable, /market_data.*contradicted/u);
   assert.match(expectedTable, /master_buffett.*2 \(override\)/u);
+});
+
+test("deterministic report exposes hard verifier findings and the PM disposition", () => {
+  const run = reportRun();
+  const packet = run.packets.find((item) => item.task === "valuation_long_short");
+  packet.summary = "RAW HARD-FINDING SUMMARY MUST NOT SURVIVE.";
+  packet.open_questions = ["RAW HARD-FINDING OPEN QUESTION MUST NOT SURVIVE."];
+  packet.claims[0].evidence = "RAW HARD-FINDING EVIDENCE MUST NOT SURVIVE.";
+  packet.claims.push({
+    claim: "UNAFFECTED CLAIM MUST SURVIVE.",
+    evidence: "Unaffected bounded evidence.",
+    source_ids: ["valuation_long_short:S1"],
+  });
+  run.verifier_verdicts = [{
+    verifier: "source_fidelity",
+    claim_id: "valuation_long_short:C1",
+    task: "valuation_long_short",
+    verdict: "contradicted",
+    claim: "valuation_long_short fixture claim.",
+    note: "The cited page does not support the original value.",
+  }];
+  const decision = structuredDecision();
+  decision.verification_findings_ack = [{
+    finding_id: "source_fidelity:valuation_long_short:C1",
+    verifier: "source_fidelity",
+    claim_id: "valuation_long_short:C1",
+    task: "valuation_long_short",
+    verdict: "contradicted",
+    claim: "valuation_long_short fixture claim.",
+    note: "The cited page does not support the original value.",
+    rederivation: "",
+    disposition: "excluded",
+    acknowledgement_note: "Removed the unsupported value from every final decision field.",
+  }];
+  const report = renderStructuredManagerReport(run, decision);
+  assert.match(report, /## Triple-Verification Corrections/u);
+  assert.match(report, /source_fidelity:valuation_long_short:C1/u);
+  assert.match(report, /Removed the unsupported value/u);
+  assert.match(report, /Triple-Verification Corrections: source_fidelity=contradicted/u);
+  assert.match(report, /Original claim withdrawn after triple verification/u);
+  assert.match(report, /remaining raw claims.*withheld from decision-facing sections/u);
+  assert.doesNotMatch(report, /UNAFFECTED CLAIM MUST SURVIVE/u);
+  assert.doesNotMatch(report, /RAW HARD-FINDING SUMMARY MUST NOT SURVIVE/u);
+  assert.doesNotMatch(report, /RAW HARD-FINDING OPEN QUESTION MUST NOT SURVIVE/u);
+  assert.doesNotMatch(report, /RAW HARD-FINDING EVIDENCE MUST NOT SURVIVE/u);
+  assert.equal(
+    (report.match(/valuation_long_short fixture claim\./gu) || []).length,
+    1,
+    "the withdrawn prose may appear only in the explicitly labelled correction ledger",
+  );
+});
+
+test("global data gaps come only from the structured PM decision", () => {
+  const run = reportRun();
+  run.packets[0].open_questions = ["PACKET-LOCAL GAP MUST NOT ENTER THE GLOBAL DATA-GAPS SECTION."];
+  const decision = structuredDecision();
+  decision.data_gaps = ["PM-AUTHORITATIVE DATA GAP."];
+  const report = renderStructuredManagerReport(run, decision);
+  const gaps = report.match(/## Data Gaps \/ Unavailable Data\n([\s\S]*?)\n\n## Invalidation Conditions/u)?.[1] || "";
+
+  assert.match(gaps, /PM-AUTHORITATIVE DATA GAP/u);
+  assert.doesNotMatch(gaps, /PACKET-LOCAL GAP/u);
 });

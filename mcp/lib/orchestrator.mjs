@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ALL_ANALYST_TASKS, COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS, councilPaceProfile } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
@@ -9,15 +10,16 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, sourceManifest, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
-import { debatePrompt, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
+import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
 import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
+import { intentsForStance, VOICE_FIELDS } from "./voice.mjs";
 import { managerDecisionNestedSourceIds, renderStructuredManagerReport } from "./manager-report.mjs";
 import {
   assertCompanyCoveragePacket,
@@ -39,6 +41,7 @@ import { recordCompanyAcquisitionObservations } from "./company-observations.mjs
 import {
   REQUIRED_VERIFIER_IDS,
   buildVerifierBatchInput,
+  buildVerifierClaimChunks,
   buildVerifierHeadlessOutputSchema,
   initializeVerificationPolicy,
   normalizeVerifierBatch,
@@ -48,7 +51,200 @@ import {
   verifierBatchPrompt,
 } from "./verification.mjs";
 
+const HEADLESS_EVIDENCE_ENVELOPE_SCHEMA_PATH = fileURLToPath(
+  new URL("../../schemas/headless-evidence-envelope-v1.schema.json", import.meta.url),
+);
+const EVIDENCE_OUTPUT_SCHEMA_PATH = HEADLESS_EVIDENCE_ENVELOPE_SCHEMA_PATH;
+
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/u;
+
+function headlessMethodVoiceInstruction(kind, run) {
+  const packetAckInstruction = requiresOperatingCompanyDossier(run)
+    ? "Return evidence_packet_acks as the task-keyed object shown in the exact shape. The server converts it to the canonical per-packet array after validating every required task."
+    : "This run has no operating-company dossier contract: return company_dossier_hash_ack as null and evidence_packet_acks as an empty array exactly as shown in the schema.";
+  return [
+    "NATIVE STRUCTURED METHOD OUTPUT (mandatory): return the method packet directly; do not serialize it into packet_json and do not add Markdown or commentary.",
+    `Set transport to segmented_method_voice_v1 and return the one complete ${kind} required above.`,
+    packetAckInstruction,
+    "The run-specific response schema locks the master, stance, permitted action intents, dossier hash and packet tasks. Allowed source IDs are locked by the schema when within native limits and always revalidated fail-closed by the runtime.",
+  ].join(" ");
+}
+
+function firstPersonPattern(language) {
+  const key = String(language || "").toLowerCase();
+  if (/中文|chinese|zh/u.test(key)) return "我";
+  if (/日本語|japanese|ja/u.test(key)) return "私";
+  if (/한국어|korean|ko/u.test(key)) return "(?:나|내|저|제)";
+  return "(?:\\bI\\b|\\bme\\b|\\bmy\\b|\\bmine\\b|\\bmyself\\b)";
+}
+
+function sourceIdSchema(sourceIds, { requireOne = false, enumerate = true } = {}) {
+  const allowed = [...new Set((sourceIds || []).filter((id) => typeof id === "string" && id))];
+  if (!allowed.length) {
+    return {
+      type: "array",
+      ...(requireOne ? { minItems: 1 } : {}),
+      maxItems: 0,
+      items: { type: "string" },
+    };
+  }
+  return {
+    type: "array",
+    ...(requireOne ? { minItems: 1 } : {}),
+    items: enumerate
+      ? { type: "string", enum: allowed }
+      : { type: "string", pattern: "^[^\\s\\x00-\\x1F\\x7F]+$", maxLength: 512 },
+  };
+}
+
+const METHOD_SCHEMA_ENUM_VALUE_LIMIT = 900;
+const METHOD_SCHEMA_JSON_CHAR_LIMIT = 100_000;
+
+function schemaEnumValueCount(value) {
+  if (Array.isArray(value)) return value.reduce((sum, item) => sum + schemaEnumValueCount(item), 0);
+  if (!value || typeof value !== "object") return 0;
+  return Object.entries(value).reduce((sum, [key, item]) => (
+    sum + (key === "enum" && Array.isArray(item) ? item.length : schemaEnumValueCount(item))
+  ), 0);
+}
+
+function schemaLargeEnumStringsFit(value) {
+  if (Array.isArray(value)) return value.every(schemaLargeEnumStringsFit);
+  if (!value || typeof value !== "object") return true;
+  for (const [key, item] of Object.entries(value)) {
+    if (key === "enum" && Array.isArray(item) && item.length > 250) {
+      const stringChars = item.reduce((sum, entry) => sum + (
+        typeof entry === "string" ? entry.length : 0
+      ), 0);
+      if (stringChars > 15_000) return false;
+    }
+    if (!schemaLargeEnumStringsFit(item)) return false;
+  }
+  return true;
+}
+
+/** Build one OpenAI-compatible schema from the already-frozen method context. */
+export function buildMethodVoiceHeadlessOutputSchema(run, masterId, frozenOpinion) {
+  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion);
+  const allowed = new Set(allowedSourceIds);
+  const dossierRequired = requiresOperatingCompanyDossier(run);
+  const prosePattern = firstPersonPattern(run.language);
+  const build = (enumerateSources) => {
+    const packetAckProperties = Object.fromEntries((run.packets || []).map((packet) => {
+      const packetSourceIds = (packet.sources || [])
+        .map((source) => source?.id)
+        .filter((id) => allowed.has(id));
+      return [packet.task, {
+        type: "object",
+        properties: {
+          status: { enum: ["used", "reviewed_not_relevant", "unavailable"] },
+          source_ids: sourceIdSchema(packetSourceIds, { enumerate: enumerateSources }),
+          note: { type: "string", minLength: 1 },
+        },
+        required: ["status", "source_ids", "note"],
+        additionalProperties: false,
+      }];
+    }));
+    return {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    title: `${masterId} frozen method voice structured output`,
+    type: "object",
+    properties: {
+      transport: { type: "string", const: "segmented_method_voice_v1" },
+      master: { type: "string", const: masterId },
+      acknowledged_stance: { type: "string", const: frozenOpinion?.stance || "out_of_scope" },
+      voice_mode: { type: "string", const: "first_person_public_method_simulation_v1" },
+      disclosure_ack: { type: "string", const: "alphacouncil.first_person_public_method_simulation.v1" },
+      position_intent: { enum: intentsForStance(frozenOpinion?.stance) },
+      company_dossier_hash_ack: dossierRequired
+        ? { type: "string", const: run.company_dossier.content_hash }
+        : { type: "null" },
+      evidence_packet_acks: dossierRequired
+        ? {
+          type: "object",
+          properties: packetAckProperties,
+          required: Object.keys(packetAckProperties),
+          additionalProperties: false,
+        }
+        : { type: "array", maxItems: 0, items: { type: "string" } },
+      voice: {
+        type: "object",
+        properties: Object.fromEntries(VOICE_FIELDS.map((field) => [field, {
+          type: "string",
+          minLength: 2,
+          pattern: prosePattern,
+        }])),
+        required: [...VOICE_FIELDS],
+        additionalProperties: false,
+      },
+      key_findings: { type: "array", items: { type: "string", minLength: 1 } },
+      disagreements: { type: "array", items: { type: "string", minLength: 1 } },
+      what_would_change_my_mind: { type: "array", items: { type: "string", minLength: 1 } },
+      source_ids: sourceIdSchema(allowedSourceIds, {
+        requireOne: dossierRequired || frozenOpinion?.stance !== "out_of_scope",
+        enumerate: enumerateSources,
+      }),
+      confidence: { enum: ["high", "medium", "low"] },
+    },
+    required: [
+      "transport", "master", "acknowledged_stance", "voice_mode", "disclosure_ack",
+      "position_intent", "company_dossier_hash_ack", "evidence_packet_acks", "voice",
+      "key_findings", "disagreements", "what_would_change_my_mind", "source_ids", "confidence",
+    ],
+    additionalProperties: false,
+    };
+  };
+  const exact = build(true);
+  if (schemaEnumValueCount(exact) <= METHOD_SCHEMA_ENUM_VALUE_LIMIT
+    && JSON.stringify(exact).length <= METHOD_SCHEMA_JSON_CHAR_LIMIT
+    && schemaLargeEnumStringsFit(exact)) return exact;
+  // OpenAI Structured Outputs rejects schemas above its global enum/string budgets. In large
+  // dossiers, keep the native structural guarantees and defer only source membership to the
+  // existing fail-closed provenance/scope validators rather than rejecting the worker request.
+  return build(false);
+}
+
+function headlessEvidenceEnvelopeInstruction(kind) {
+  return [
+    "NATIVE SEGMENTED STRUCTURED-OUTPUT ENVELOPE (mandatory): return the exact outer fields required by segmented_evidence_v1; do not return the evidence packet as one monolithic string.",
+    `The decoded fields together represent the one complete ${kind} required above. Set transport exactly to segmented_evidence_v1.`,
+    "Serialize claims, metrics, sources, and open_questions separately into their matching *_json strings as compact single-line JSON.",
+    "Serialize coverage_items, acquisition_ledger, and official_source_coverage into their matching *_json strings; use the literal string null when that top-level field is not applicable or absent under the packet contract. In particular, macro_regime, market_narrative, and social_pulse must set coverage_items_json and acquisition_ledger_json to the literal string null because those supplemental seats own no company dossier routes.",
+    "Do not confuse the two coverage shapes: every coverage_items_json row uses id, status, source_ids, note, attempted, attempted_urls, and gap. note, attempted, and gap are plain strings (never arrays or objects); attempted_urls is an array of HTTP URLs. acquisition_ledger_json items separately use coverage_id, outcome, source_ids, attempts, and data/reason.",
+    "Put summary, confidence, and information_richness directly in the outer object. Silently discard drafts before answering; never append a correction or a second JSON root inside any segment.",
+  ].join(" ");
+}
+
+function headlessMethodLanguageInstruction(language) {
+  return `FINAL READER-LANGUAGE GATE: all five voice fields, every item in key_findings, disagreements, and what_would_change_my_mind, and every evidence_packet_acks note must be natural ${language}. Do not copy an English source title, English sentence, JSON key, or machine metric label into reader prose. Translate the meaning before returning; only stable IDs, tickers, formulas, numbers, and standard abbreviations may remain unchanged.`;
+}
+
+export function headlessMethodVoicePrompt(masterId, run, frozenOpinion) {
+  return [
+    masterVoicePrompt(masterId, run, frozenOpinion),
+    headlessMethodLanguageInstruction(run.language),
+    headlessMethodVoiceInstruction(`${masterId} method voice packet`, run),
+  ].join("\n\n");
+}
+
+export function methodVoiceReaderText(voice) {
+  return [
+    voice?.statement,
+    ...(voice?.key_findings || []),
+    ...(voice?.disagreements || []),
+    ...(voice?.what_would_change_my_mind || []),
+    ...(voice?.evidence_packet_acks || []).map((ack) => ack?.note),
+  ].filter(Boolean).join("\n");
+}
+
+export function assertMethodVoiceReaderLanguage(voice, language, label) {
+  assertReaderLanguage(methodVoiceReaderText(voice), language, label);
+  for (const ack of voice?.evidence_packet_acks || []) {
+    if (!ack?.note) continue;
+    assertReaderLanguage(ack.note, language, `${label} evidence packet ${ack.task || "unknown"} note`);
+  }
+  return voice;
+}
 
 /** A council cannot certify an information set whose cutoff has not happened yet. */
 export function councilAsOf(value, { now = new Date() } = {}) {
@@ -68,6 +264,36 @@ export function councilAsOf(value, { now = new Date() } = {}) {
     });
   }
   return asOfDate;
+}
+
+function compactDecisionDebateSide(round) {
+  if (!round) return null;
+  return {
+    summary: round.summary || "",
+    long_thesis: round.long_thesis || [],
+    short_thesis: round.short_thesis || [],
+    questions: round.questions || [],
+    questions_answered: round.questions_answered || [],
+    company_dossier_hash_ack: round.company_dossier_hash_ack || null,
+  };
+}
+
+export function bindDecisionDebateRounds(manager, bull, bear) {
+  if (!manager) return manager;
+  const bullRounds = Array.isArray(bull?.debate_rounds) ? bull.debate_rounds : [];
+  const bearRounds = Array.isArray(bear?.debate_rounds) ? bear.debate_rounds : [];
+  const count = Math.max(bullRounds.length, bearRounds.length);
+  return {
+    ...manager,
+    // The PM itself does not debate, but decision.json is the canonical consumer artifact.
+    // Preserve the completed paired record here so a consumer never sees `debate_rounds: []`
+    // beside a status file that says three rounds and the Q&A gate passed.
+    debate_rounds: Array.from({ length: count }, (_, index) => ({
+      round: index + 1,
+      bull: compactDecisionDebateSide(bullRounds[index]),
+      bear: compactDecisionDebateSide(bearRounds[index]),
+    })),
+  };
 }
 
 function commitFinalArtifacts(run, debate = {}) {
@@ -1108,7 +1334,9 @@ export function recordVisiblePacket(args) {
     thread_id: args.thread_id,
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
-  }, task, run.symbol, run.as_of, rawRecordText(args.packet));
+  }, task, run.symbol, run.as_of, rawRecordText(args.packet), {
+    observationTime: run.grounding?.gathered_at,
+  });
   applyGroundedRegulatorCoverage(packet, { task, asOfDate: run.as_of, grounding: run.grounding });
   assertOfficialSourceCoverage(packet, { task, asOfDate: run.as_of, grounding: run.grounding });
   assertCompanyCoveragePacket(packet, run, { client: true });
@@ -1489,13 +1717,15 @@ function recordVisiblePortfolioManager(run, args) {
   assertPriceLevelContinuity(validated.price_levels, { required: run.council_mode === "full" });
   assertCompanyDossierAck(validated, run, "visible portfolio_manager", { client: true });
   const source_ids = assertSourceIdsResolve(run, validated.source_ids, "portfolio_manager");
-  const packet = normalizeDebate({
+  const normalizedPacket = normalizeDebate({
     ...validated,
     source_ids,
     thread_id: args.thread_id,
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
   }, "portfolio_manager", run, rawRecordText(args.packet));
+  const recordedDebate = existingDebate(dir);
+  const packet = bindDecisionDebateRounds(normalizedPacket, recordedDebate.bull, recordedDebate.bear);
   assertVisibleReaderLanguage(debateReaderText(packet), run, "visible portfolio_manager decision");
   // Reject a report body that cannot pass the report gate before the packet takes the
   // idempotency lock, and say which headings are owed. Previously the gate ran only after the
@@ -1874,7 +2104,7 @@ const EVIDENCE_REPAIR_SCHEMA_CONTRACT = [
   "Evidence schema contract: required top-level fields are summary (non-empty string), claims (array), metrics (object), sources (array), open_questions (array), and confidence (high|medium|low).",
   "Every claim requires non-empty claim and evidence strings, confidence (high|medium|low), and source_ids containing at least one non-empty source id.",
   "Every source requires non-empty id, title, url, published_at, and retrieved_at. At least one of claims or open_questions must be non-empty.",
-  "Every coverage_items row uses strings for note, attempted and gap (empty string when unused), and arrays for source_ids and attempted_urls (empty array when unused). For a directly observed dynamic quote/table/index with no publication date, preserve published_at as unknown and add source_kind=dynamic_snapshot plus observed_at from the actual retrieval observation. Never apply this label to an ordinary undated article; news and event claims still need dated evidence.",
+  "Every coverage_items row uses strings for note, attempted and gap (empty string when unused), and arrays for source_ids and attempted_urls (empty array when unused). For a directly observed dynamic quote/table/index with no publication date, preserve published_at as unknown and add source_kind=dynamic_snapshot plus observed_at from the actual UTC retrieval observation. Never substitute the host's next local calendar date for the UTC timestamp, and never set observed_at after as_of. Never apply this label to an ordinary undated article; news and event claims still need dated evidence.",
   "When the prompt carries company_source_acquisition_v1, preserve top-level acquisition_ledger with exactly one item per owned coverage id. Do not delete acquisition attempts, formulas, inputs, assumptions, or actual/proxy/model labels during transport repair.",
   "Use only source ids already present in the supplied sources array. Never invent a source id or fact; remove an unsupported claim and record the lost point in open_questions instead of returning empty source_ids.",
 ].join(" ");
@@ -2050,15 +2280,31 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
 }
 
 function evidenceReaderText(packet) {
-  const acquisitionMachine = new Set([
-    "policy_id", "task", "coverage_id", "outcome", "source_ids", "stage", "locator_type",
-    "locator", "result", "unit", "period", "value",
+  // Validate prose that a reader will actually see, not source titles or the acquisition
+  // ledger's metric names, formulas, locators and input labels. Those machine fields often
+  // remain in their source language by design; forcing their translation changes identifiers
+  // and can corrupt an otherwise correctly localised packet.
+  const coverageProse = (packet?.coverage_items || []).flatMap((item) => [
+    item?.note,
+    item?.attempted,
+    item?.gap,
   ]);
+  const acquisitionProse = (packet?.acquisition_ledger?.items || []).flatMap((item) => [
+    item?.reason,
+    ...(item?.attempts || []).map((attempt) => attempt?.note),
+    ...(Array.isArray(item?.data?.assumptions) ? item.data.assumptions : []),
+  ]);
+  const officialCoverageProse = [
+    packet?.official_source_coverage?.regulator?.gap,
+    packet?.official_source_coverage?.issuer?.gap,
+  ];
   return [
     packet?.summary,
     ...(packet?.claims || []).flatMap((claim) => [claim?.claim, claim?.evidence]),
     ...(packet?.open_questions || []),
-    ...readerStrings(packet?.acquisition_ledger, acquisitionMachine),
+    ...coverageProse,
+    ...acquisitionProse,
+    ...officialCoverageProse,
   ].filter(Boolean).join("\n");
 }
 
@@ -2135,11 +2381,65 @@ export function outputFailureKind(error) {
   }
   if (reason === "SOURCE_PROVENANCE_MISMATCH") return "source_provenance_mismatch";
   if (reason === "SOURCE_PROVENANCE_REQUIRED") return "source_provenance_required";
+  const methodContractFailures = {
+    WORKER_OUTPUT_SCHEMA_MISMATCH: "schema_mismatch",
+    WORKER_OUTPUT_TRANSPORT_MISMATCH: "transport_mismatch",
+    WORKER_JSON_NOT_TEXT: "json_not_text",
+    WORKER_JSON_TOO_LARGE: "json_too_large",
+    WORKER_JSON_CANDIDATE_LIMIT: "json_candidate_limit",
+    WORKER_JSON_INCOMPLETE_ADDITIONAL_VALUE: "json_incomplete_additional_value",
+    WORKER_JSON_MALFORMED_ADDITIONAL_VALUE: "json_malformed_additional_value",
+    WORKER_JSON_UNRECOVERABLE: "json_unrecoverable",
+    WORKER_JSON_MULTIPLE_VALUES: "multiple_json_values",
+    COMPANY_DOSSIER_HASH_ACK_MISMATCH: "company_dossier_hash_ack_mismatch",
+    COMPANY_DOSSIER_PACKET_ACK_MISMATCH: "company_dossier_packet_ack_mismatch",
+    METHOD_VOICE_MASTER_MISMATCH: "method_voice_master_mismatch",
+    METHOD_VOICE_STANCE_MISMATCH: "method_voice_stance_mismatch",
+    METHOD_VOICE_MODE_MISMATCH: "method_voice_mode_mismatch",
+    METHOD_VOICE_DISCLOSURE_ACK_MISMATCH: "method_voice_disclosure_ack_mismatch",
+    METHOD_VOICE_FIELDS_MISSING: "method_voice_fields_missing",
+    METHOD_VOICE_FIRST_PERSON_MISMATCH: "method_voice_first_person_mismatch",
+    METHOD_VOICE_POSITION_INTENT_MISSING: "method_voice_position_intent_missing",
+    METHOD_VOICE_POSITION_INTENT_MISMATCH: "method_voice_position_intent_mismatch",
+    METHOD_VOICE_SOURCE_SCOPE_MISMATCH: "method_voice_source_scope_mismatch",
+  };
+  if (methodContractFailures[reason]) return methodContractFailures[reason];
   return "parse_failed";
 }
 
+function evidenceOutputFailureKind(error) {
+  const kind = outputFailureKind(error);
+  // Evidence artifacts have a long-standing public two-way transport contract: malformed or
+  // schema-invalid JSON is parse_failed, while reader-language mismatch remains independent.
+  // Method workers use the granular classifier because their bounded contract diagnostic can
+  // safely distinguish identity, dossier, acknowledgement and source-scope failures.
+  return kind === "reader_language_mismatch" ? kind : "parse_failed";
+}
+
+export function workerExecutionFailureKind(result = {}) {
+  if (result.deadline_exhausted) return "global_deadline";
+  if (result.timedOut) return "timeout";
+  const stderr = String(result.stderr || "");
+  if (/invalid_json_schema|Invalid schema for response_format/iu.test(stderr)) {
+    return "output_schema_rejected";
+  }
+  if (/context_length_exceeded|maximum context length/iu.test(stderr)) {
+    return "context_length_exceeded";
+  }
+  return `exit_code_${Number.isInteger(result.code) ? result.code : "unknown"}`;
+}
+
 function repairableOutputFailure(failureKind) {
-  return ["parse_failed", "reader_language_mismatch"].includes(failureKind);
+  return [
+    "parse_failed",
+    "reader_language_mismatch",
+    "schema_mismatch",
+    "transport_mismatch",
+    "multiple_json_values",
+    "json_incomplete_additional_value",
+    "json_malformed_additional_value",
+    "json_unrecoverable",
+  ].includes(failureKind);
 }
 
 /**
@@ -2181,6 +2481,24 @@ export function masterAttemptFailureDiagnostic({
     .includes(error?.data?.reason)
     ? error.data.reason
     : null;
+  const contractReason = typeof error?.data?.reason === "string"
+    && /^(?:WORKER_|COMPANY_DOSSIER_|METHOD_VOICE_)/u.test(error.data.reason)
+    ? boundedDiagnosticCode(error.data.reason, "METHOD_VOICE_CONTRACT_FAILURE", 120)
+    : null;
+  const contractProblems = Array.isArray(error?.data?.problems)
+    ? error.data.problems.slice(0, 16).map((problem) => ({
+      reason: boundedDiagnosticCode(problem?.reason, "contract_problem", 120),
+      ...(typeof problem?.task === "string"
+        ? { task: boundedDiagnosticCode(problem.task, "unknown", 96) }
+        : {}),
+      ...(Number.isSafeInteger(problem?.expected) ? { expected: problem.expected } : {}),
+      ...(Number.isSafeInteger(problem?.supplied) ? { supplied: problem.supplied } : {}),
+    }))
+    : [];
+  const contractFields = [
+    ...(Array.isArray(error?.data?.missing_fields) ? error.data.missing_fields : []),
+    ...(Array.isArray(error?.data?.invalid_fields) ? error.data.invalid_fields : []),
+  ].filter((field) => VOICE_FIELDS.includes(field));
   const unknownSourceIds = Array.isArray(error?.data?.unknown_source_ids)
     ? error.data.unknown_source_ids
       .filter((id) => typeof id === "string" && id)
@@ -2190,6 +2508,7 @@ export function masterAttemptFailureDiagnostic({
     ? error.data.unknown_source_ids.length
     : 0;
   const rawOutput = typeof result?.text === "string" ? result.text : null;
+  const stderr = typeof result?.stderr === "string" ? result.stderr : null;
   const safeMaster = boundedDiagnosticMaster(master);
   const safeFailureKind = boundedDiagnosticCode(failureKind, "unexpected_error");
   const safeStage = boundedDiagnosticCode(stage, "worker_output");
@@ -2230,10 +2549,28 @@ export function masterAttemptFailureDiagnostic({
         unknown_source_id_hash_scope: "utf8_length_plus_first_512_chars",
       },
     } : {}),
+    ...(contractReason ? {
+      contract: {
+        reason: contractReason,
+        ...(Number.isSafeInteger(error?.data?.expected_packet_count)
+          ? { expected_packet_count: error.data.expected_packet_count }
+          : {}),
+        ...(Number.isSafeInteger(error?.data?.supplied_packet_count)
+          ? { supplied_packet_count: error.data.supplied_packet_count }
+          : {}),
+        ...(contractFields.length ? { fields: [...new Set(contractFields)] } : {}),
+        ...(contractProblems.length ? { problems: contractProblems } : {}),
+      },
+    } : {}),
     ...(rawOutput !== null ? {
       output_chars: rawOutput.length,
       output_bytes: Buffer.byteLength(rawOutput, "utf8"),
       output_sha256: sha256(rawOutput),
+    } : {}),
+    ...(stderr !== null ? {
+      stderr_chars: stderr.length,
+      stderr_bytes: Buffer.byteLength(stderr, "utf8"),
+      stderr_sha256: sha256(stderr),
     } : {}),
     recorded_at: new Date().toISOString(),
   };
@@ -2584,6 +2921,7 @@ export async function collectEvidence(args) {
     const prompt = [
       taskPrompt(task, symbol, asOfDate, workerObjective, language, run.grounding, run.council_pace),
       companyCoverageInstruction(task, run),
+      headlessEvidenceEnvelopeInstruction(`${task} evidence packet`),
     ].filter(Boolean).join("\n\n");
     updateTask(run, task, "running", { started_at: new Date().toISOString() });
     if (dryRun) {
@@ -2593,7 +2931,10 @@ export async function collectEvidence(args) {
       return packet;
     }
     const workerStartedAt = Date.now();
-    const runAttempt = async (workerPrompt, budgetMs, attempt, { search = true } = {}) => {
+    const runAttempt = async (workerPrompt, budgetMs, attempt, {
+      search = true,
+      outputSchema = EVIDENCE_OUTPUT_SCHEMA_PATH,
+    } = {}) => {
       const allowedMs = remainingCouncilBudget(run, budgetMs);
       if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
       const result = await runCodex(workerPrompt, allowedMs, ({ pid, output }) => {
@@ -2601,7 +2942,7 @@ export async function collectEvidence(args) {
       }, ({ pid, output, elapsed_ms }) => {
         updateTask(run, task, "running", { pid, output, attempts: attempt });
         appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms, attempt });
-      }, { search, sigkillGraceMs: councilKillGrace(run) });
+      }, { search, outputSchema, sigkillGraceMs: councilKillGrace(run) });
       return { ...result, budget_ms: allowedMs };
     };
     const commitFailure = ({ failedResult, budgetMs, attempts, failureKind, parseError, retryDiagnostic }) => {
@@ -2641,7 +2982,13 @@ export async function collectEvidence(args) {
     }
     let packet;
     try {
-      packet = normalizePacket(extractWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"), task, symbol, asOfDate, result.text);
+      packet = normalizePacket(extractWorkerJson(
+        result.text,
+        task === "news_industry_management" ? "news_evidence" : "evidence",
+        { task },
+      ), task, symbol, asOfDate, result.text, {
+        observationTime: run.grounding?.gathered_at,
+      });
       applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
       assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
       assertCompanyCoveragePacket(packet, run);
@@ -2651,7 +2998,7 @@ export async function collectEvidence(args) {
       persistTerminalTask(task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
       return packet;
     } catch (firstParseError) {
-      const firstFailureKind = outputFailureKind(firstParseError);
+      const firstFailureKind = evidenceOutputFailureKind(firstParseError);
       const firstFailure = workerFailureArtifacts({
         task,
         symbol,
@@ -2720,8 +3067,15 @@ export async function collectEvidence(args) {
           schemaRepairIssuePrompt(firstParseError),
           `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
           `Malformed worker output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+          headlessEvidenceEnvelopeInstruction(`${task} repaired evidence packet`),
         ].join("\n\n");
-      result = await runAttempt(retryPrompt, retryTimeoutMs, 2, { search: false });
+      result = await runAttempt(retryPrompt, retryTimeoutMs, 2, {
+        search: false,
+        // A ledger-only repair returns { acquisition_ledger }, not a complete evidence packet.
+        // General transport repair still uses the native evidence schema so it cannot emit a
+        // second JSON root or another invalid attempted URL.
+        outputSchema: acquisitionLedgerOnlyRepair ? null : EVIDENCE_OUTPUT_SCHEMA_PATH,
+      });
       if (!result.ok) {
         return commitFailure({
           failedResult: result,
@@ -2734,11 +3088,16 @@ export async function collectEvidence(args) {
         packet = acquisitionLedgerOnlyRepair
           ? mergeAcquisitionLedgerRepair(packet, result.text)
           : normalizePacket(
-            extractRepairedWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"),
+            extractRepairedWorkerJson(
+              result.text,
+              task === "news_industry_management" ? "news_evidence" : "evidence",
+              { task },
+            ),
             task,
             symbol,
             asOfDate,
             result.text,
+            { observationTime: run.grounding?.gathered_at },
           );
         applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
@@ -2764,7 +3123,7 @@ export async function collectEvidence(args) {
         });
         return packet;
       } catch (secondParseError) {
-        const secondFailureKind = outputFailureKind(secondParseError);
+        const secondFailureKind = evidenceOutputFailureKind(secondParseError);
         // A transport repair can reveal a ledger-only semantic defect that the transport
         // schema could not see. Give that disjoint surface one bounded no-search repair while
         // freezing the now-valid claims, sources and coverage rows. Never grant a third try for
@@ -2822,7 +3181,7 @@ export async function collectEvidence(args) {
             asOfDate,
             language,
             error: secondParseError,
-          }), acquisitionRetryTimeoutMs, 3, { search: false });
+          }), acquisitionRetryTimeoutMs, 3, { search: false, outputSchema: null });
           if (!acquisitionResult.ok) {
             return commitFailure({
               failedResult: acquisitionResult,
@@ -2865,7 +3224,7 @@ export async function collectEvidence(args) {
               failedResult: acquisitionResult,
               budgetMs: acquisitionResult.budget_ms ?? acquisitionRetryTimeoutMs,
               attempts: 3,
-              failureKind: outputFailureKind(thirdParseError),
+              failureKind: evidenceOutputFailureKind(thirdParseError),
               parseError: thirdParseError,
               retryDiagnostic: acquisitionRetryDiagnostic,
             });
@@ -2998,13 +3357,9 @@ export async function runHeadlessVerification(run, args = {}) {
     return [verifier, path];
   }));
   await mapLimit(REQUIRED_VERIFIER_IDS, LIMITS.FULL_VERIFIER_CONCURRENCY, async (verifier) => {
-    const claimsPerBatch = verifier === "source_fidelity"
-      ? LIMITS.FULL_SOURCE_FIDELITY_CLAIMS_PER_BATCH
-      : LIMITS.FULL_VERIFIER_CLAIMS_PER_BATCH;
-    const claimChunks = [];
-    for (let offset = 0; offset < policy.material_claim_ids.length; offset += claimsPerBatch) {
-      claimChunks.push(policy.material_claim_ids.slice(offset, offset + claimsPerBatch));
-    }
+    const claimChunks = buildVerifierClaimChunks(run, verifier, {
+      expectedClaimIds: policy.material_claim_ids,
+    });
     const chunkConcurrency = verifier === "source_fidelity"
       ? LIMITS.FULL_SOURCE_FIDELITY_CHUNK_CONCURRENCY
       : LIMITS.FULL_VERIFIER_CHUNK_CONCURRENCY;
@@ -3043,7 +3398,10 @@ export async function runHeadlessVerification(run, args = {}) {
         buildVerifierHeadlessOutputSchema(run, verifier, expectedClaimIds),
         { mode: 0o600 },
       );
-      const prompt = verifierBatchPrompt(run, verifier, inputPath, { keyedResults: true });
+      const prompt = verifierBatchPrompt(run, verifier, inputPath, {
+        keyedResults: true,
+        expectedClaimIds,
+      });
       const chunkStartedAtMs = Date.now();
       updateVerifierStatus(run, verifier, "running", {
         input: fullInputPaths[verifier],
@@ -3434,11 +3792,15 @@ export async function runHeadlessMasters(run, args = {}) {
   await mapLimit(runnableVotingItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
     const outcome = await (async () => {
     const prompt = frozenOpinion
-      ? masterVoicePrompt(id, run, frozenOpinion)
+      ? headlessMethodVoicePrompt(id, run, frozenOpinion)
       : [
         masterPrompt(id, run),
         decision ? deterministicVerdictBlock(decision, isChineseLanguage(run.language)) : "",
       ].filter(Boolean).join("\n\n");
+    const methodVoiceSchemaPath = frozenOpinion ? join(dir, `${id}.output-schema.json`) : null;
+    if (methodVoiceSchemaPath) {
+      writeJson(methodVoiceSchemaPath, buildMethodVoiceHeadlessOutputSchema(run, id, frozenOpinion), { mode: 0o600 });
+    }
     updateMasterStatus(run, id, "running", {
       started_at: new Date().toISOString(),
       worker_kind: frozenOpinion ? "dedicated_method_voice" : "dedicated_method_judgment",
@@ -3489,7 +3851,11 @@ export async function runHeadlessMasters(run, args = {}) {
         updateMasterStatus(run, id, "running", { pid: workerPid, output, attempts: attempt });
       }, ({ pid: workerPid, output, elapsed_ms }) => {
         updateMasterStatus(run, id, "running", { pid: workerPid, output, elapsed_ms, attempts: attempt });
-      }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+      }, {
+        search: false,
+        outputSchema: methodVoiceSchemaPath,
+        sigkillGraceMs: councilKillGrace(run),
+      });
       return { ...result, budget_ms: allowedMs };
     };
     const parse = (result, { repairedTransport = false } = {}) => {
@@ -3499,12 +3865,7 @@ export async function runHeadlessMasters(run, args = {}) {
           : extractWorkerJson(result.text, "method_voice");
         assertCompanyDossierAck(voicePacket, run, `master voice ${id}`);
         const voice = normalizeMasterVoice(voicePacket, id, run, frozenOpinion, result.text);
-        assertReaderLanguage([
-          voice.statement,
-          ...(voice.key_findings || []),
-          ...(voice.disagreements || []),
-          ...(voice.what_would_change_my_mind || []),
-        ].filter(Boolean).join("\n"), run.language, `master voice ${id}`);
+        assertMethodVoiceReaderLanguage(voice, run.language, `master voice ${id}`);
         return attachMasterRuntimeProvenance(run, id, {
           ...frozenOpinion,
           deterministic_summary: frozenOpinion.summary,
@@ -3553,7 +3914,23 @@ export async function runHeadlessMasters(run, args = {}) {
     const workerStartedAt = Date.now();
     let result = await execute(prompt, timeoutMs, 1);
     if (!result.ok) {
-      return { id, error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`, raw: cleanLog(result.stderr || result.stdout || "method worker failed") };
+      const failureKind = workerExecutionFailureKind(result);
+      return {
+        id,
+        engine,
+        error: failureKind,
+        raw: cleanLog(result.stderr || result.stdout || "method worker failed"),
+        attempts: 1,
+        failure_stage: "worker_execution",
+        diagnostic: masterAttemptFailureDiagnostic({
+          master: id,
+          attempt: 1,
+          failureKind,
+          error: new Error(failureKind),
+          result,
+          stage: "worker_execution",
+        }),
+      };
     }
     try {
       return { id, opinion: parse(result), engine };
@@ -3570,13 +3947,15 @@ export async function runHeadlessMasters(run, args = {}) {
       });
       writeJson(retryDiagnostic, firstDiagnostic, { mode: 0o600 });
       if (!repairableOutputFailure(firstFailureKind)) {
+        const provenanceFailure = ["source_provenance_mismatch", "source_provenance_required"]
+          .includes(firstFailureKind);
         return {
           id,
           engine,
           error: firstFailureKind,
           attempts: 1,
           retry_diagnostic: retryDiagnostic,
-          failure_stage: "worker_output_provenance",
+          failure_stage: provenanceFailure ? "worker_output_provenance" : "worker_output_contract",
           diagnostic: firstDiagnostic,
         };
       }
@@ -3611,6 +3990,10 @@ export async function runHeadlessMasters(run, args = {}) {
         schemaRepairIssuePrompt(firstParseError),
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve the frozen stance, facts, numbers and source IDs.`,
         `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+        ...(frozenOpinion ? [
+          headlessMethodLanguageInstruction(run.language),
+          headlessMethodVoiceInstruction(`${id} repaired method voice packet`, run),
+        ] : []),
       ].join("\n\n");
       result = await execute(repairPrompt, repairBudget, 2);
       if (!result.ok) {
@@ -3658,6 +4041,8 @@ export async function runHeadlessMasters(run, args = {}) {
               `Translate EVERY reader-facing prose string into ${run.language}: all five voice fields, key_findings, disagreements, what_would_change_my_mind, and every evidence_packet_acks.note. Keep the method in first person.`,
               "Do not translate JSON keys or contract values: master, acknowledged_stance, voice_mode, disclosure_ack, position_intent, confidence, task, packet_hash, status, source_ids, URLs, tickers, formulas, and numbers. Return exactly one JSON object and no commentary.",
               `Valid but wrong-language input JSON:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+              headlessMethodLanguageInstruction(run.language),
+              headlessMethodVoiceInstruction(`${id} translated method voice packet`, run),
             ].join("\n\n");
             result = await execute(languagePrompt, languageBudget, 3);
             if (result.ok) {
@@ -3857,11 +4242,12 @@ export async function runDebateRole(run, role, context, timeoutMs) {
             ].join("\n")
             : "",
         structuredManagerDecision
-          ? "Return only HEADLESS_STRUCTURED_PM_DECISION_V1: the compact required debate fields plus price_levels, horizon_views and data_gaps. Omit report_markdown completely; the server renders it deterministically."
+          ? "Return only HEADLESS_STRUCTURED_PM_DECISION_V1: the compact required debate fields plus price_levels, horizon_views, data_gaps and verification_findings_ack. Omit report_markdown completely; the server renders it deterministically."
           : role === "portfolio_manager"
             ? `portfolio_manager.report_markdown is mandatory and must contain every authored report section. Required headings: ${requiredReportSectionAliases(run).map((section) => section.suggested_heading).join("; ")}.`
           : "",
         companyDossierPromptBlock(run),
+        hardVerificationPromptBlock(run, role, { structuredDecisionOnly: structuredManagerDecision }),
         schemaRepairIssuePrompt(packet.schema_errors),
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve facts, numbers, source IDs and exact Q&A bindings.`,
         `Malformed output:\n${String(result.text || "").slice(0, structuredManagerDecision
@@ -3984,7 +4370,11 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode }, managerBudget);
   const managerError = debateFailure(managerStep);
   const managerOk = !managerError;
-  const manager = managerOk ? managerStep.packet : managerFallback(run, args.prompt || "", managerStep.packet);
+  const manager = bindDecisionDebateRounds(
+    managerOk ? managerStep.packet : managerFallback(run, args.prompt || "", managerStep.packet),
+    bull,
+    bear,
+  );
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
   updateAgent(run, "portfolio_manager", managerOk ? "completed" : "failed", {
@@ -4109,7 +4499,7 @@ function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRoun
     error: reason,
     completed_at: new Date().toISOString(),
   });
-  const manager = managerFallback(run, args.prompt || "");
+  const manager = bindDecisionDebateRounds(managerFallback(run, args.prompt || ""), bull, bear);
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
   run.phase = "incomplete";
@@ -4148,7 +4538,7 @@ export async function synthesizeDecision(run, args) {
     const bear = dryDebate("bear_researcher", run, debatePrompt("bear_researcher", run, { bull }));
     updateAgent(run, "bear_researcher", "completed", { completed_at: new Date().toISOString(), output: join(dir, "bear_researcher.json") });
     updateAgent(run, "portfolio_manager", "running", { started_at: new Date().toISOString() });
-    const fallback = managerFallback(run, args.prompt || "");
+    const fallback = bindDecisionDebateRounds(managerFallback(run, args.prompt || ""), bull, bear);
     updateAgent(run, "portfolio_manager", "completed", { completed_at: new Date().toISOString(), output: join(dir, "manager_synthesis.json") });
     writeJson(join(dir, "bull_researcher.json"), bull);
     writeJson(join(dir, "bear_researcher.json"), bear);
@@ -4299,7 +4689,11 @@ export async function synthesizeDecision(run, args) {
     structuredDecisionOnly: true,
   }, pmBudget);
   const managerOk = !debateFailure(managerStep);
-  const manager = managerOk ? managerStep.packet : managerFallback(run, args.prompt || "", managerStep.packet);
+  const manager = bindDecisionDebateRounds(
+    managerOk ? managerStep.packet : managerFallback(run, args.prompt || "", managerStep.packet),
+    bull,
+    bear,
+  );
   const gate = verificationStatus(run);
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);

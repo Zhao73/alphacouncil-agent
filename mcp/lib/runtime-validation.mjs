@@ -81,8 +81,43 @@ function assertRuntimePayload(kind, value, { client = false, context = {} } = {}
 export function normalizeMethodVoiceWorkerTransport(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   let normalized = value;
+  if (value.transport === "segmented_method_voice_v1") {
+    const { transport: _transport, ...packet } = value;
+    normalized = packet;
+    if (packet.company_dossier_hash_ack === null) {
+      const { company_dossier_hash_ack: _hash, ...withoutNullHash } = normalized;
+      normalized = withoutNullHash;
+    }
+    if (normalized.evidence_packet_acks && !Array.isArray(normalized.evidence_packet_acks)
+      && typeof normalized.evidence_packet_acks === "object") {
+      normalized = {
+        ...normalized,
+        evidence_packet_acks: Object.entries(normalized.evidence_packet_acks)
+          .map(([task, ack]) => ({ task, ...(ack || {}) })),
+      };
+    }
+    if (Array.isArray(normalized.evidence_packet_acks)) {
+      const acknowledgedSourceIds = normalized.evidence_packet_acks
+        .filter((ack) => ack?.status === "used")
+        .flatMap((ack) => Array.isArray(ack?.source_ids) ? ack.source_ids : []);
+      normalized = {
+        ...normalized,
+        // The task-keyed acknowledgements are worker-authored. Binding their cited IDs into the
+        // redundant top-level citation list removes transcription drift without inventing a
+        // source, fact, disposition or packet use.
+        source_ids: [...new Set([
+          ...(Array.isArray(normalized.source_ids) ? normalized.source_ids : []),
+          ...acknowledgedSourceIds,
+        ])],
+      };
+    }
+    if (Array.isArray(normalized.evidence_packet_acks) && normalized.evidence_packet_acks.length === 0) {
+      const { evidence_packet_acks: _acks, ...withoutEmptyAcks } = normalized;
+      normalized = withoutEmptyAcks;
+    }
+  }
   for (const field of METHOD_VOICE_PROSE_ARRAYS) {
-    const items = value[field];
+    const items = normalized[field];
     if (!Array.isArray(items)) continue;
     let changed = false;
     const next = items.map((item, index) => {

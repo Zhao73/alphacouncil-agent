@@ -64,9 +64,7 @@
       "market.price"
     ],
     "hard_vetoes": [
-      "master_burry.secondary_only",
-      "master_burry.opinion_not_structure",
-      "master_burry.cannot_survive_early"
+      "master_burry.cannot_survive_the_wait"
     ],
     "native_output": "structural_mispricing_v1"
   },

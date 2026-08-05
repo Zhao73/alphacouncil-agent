@@ -2,9 +2,144 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildMethodVoiceHeadlessOutputSchema,
+  assertMethodVoiceReaderLanguage,
+  methodVoiceReaderText,
   masterAttemptFailureDiagnostic,
   outputFailureKind,
+  workerExecutionFailureKind,
 } from "../../mcp/lib/orchestrator.mjs";
+import { assertSourceIdsResolve } from "../../mcp/lib/packets.mjs";
+
+test("run-specific method schema locks identity, decision, dossier and packet tasks", () => {
+  const run = {
+    language: "中文",
+    packets: [
+      { task: "market_data", sources: [{ id: "market_data:S1" }] },
+      { task: "earnings_deep_dive", sources: [{ id: "earnings_deep_dive:S1" }] },
+    ],
+    grounding: { instrument: { asset_type: "operating_company" } },
+    entry_tool: "run_council",
+    company_dossier: { content_hash: `sha256:${"a".repeat(64)}` },
+  };
+  const frozen = {
+    master: "master_fisher",
+    stance: "cautious",
+    source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
+    evidence_source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
+  };
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  assert.equal(schema.properties.master.const, "master_fisher");
+  assert.equal(schema.properties.acknowledged_stance.const, "cautious");
+  assert.deepEqual(schema.properties.position_intent.enum, ["would_hold", "would_watch"]);
+  assert.equal(schema.properties.company_dossier_hash_ack.const, run.company_dossier.content_hash);
+  assert.deepEqual(schema.properties.evidence_packet_acks.required, ["market_data", "earnings_deep_dive"]);
+  assert.equal(schema.properties.evidence_packet_acks.additionalProperties, false);
+  assert.deepEqual(
+    schema.properties.evidence_packet_acks.properties.market_data.properties.source_ids.items.enum,
+    ["market_data:S1"],
+  );
+  assert.equal(schema.properties.voice.properties.what_i_see.pattern, "我");
+  assert.equal(Object.hasOwn(schema.properties.voice.properties.what_i_see, "maxLength"), false);
+  assert.equal(Object.hasOwn(schema.properties.key_findings, "maxItems"), false);
+});
+
+test("non-company method schema agrees with the null-hash and empty-ack prompt contract", () => {
+  const run = {
+    language: "中文",
+    packets: [{ task: "market_data", sources: [] }],
+    grounding: { instrument: { asset_type: "etf", research_model: "fund_lookthrough" } },
+    entry_tool: "run_council",
+  };
+  const frozen = { master: "master_bogle", stance: "out_of_scope", source_ids: [], evidence_source_ids: [] };
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  assert.deepEqual(schema.properties.company_dossier_hash_ack, { type: "null" });
+  assert.equal(schema.properties.evidence_packet_acks.type, "array");
+  assert.equal(schema.properties.evidence_packet_acks.maxItems, 0);
+  assert.equal(schema.properties.source_ids.maxItems, 0);
+});
+
+test("method voice language gate includes rendered per-packet acknowledgement notes", () => {
+  const voice = {
+    statement: "我会谨慎观察。我只使用已核实的事实。".repeat(80),
+    key_findings: ["我看到需求仍然增长。".repeat(20)],
+    disagreements: [],
+    what_would_change_my_mind: ["我会等待下一季数据。"],
+    evidence_packet_acks: [{ note: "This English acknowledgement must not reach a Chinese report." }],
+  };
+  assert.throws(
+    () => assertMethodVoiceReaderLanguage(voice, "中文", "method voice fixture"),
+    (error) => error?.code === "READER_LANGUAGE_MISMATCH",
+  );
+});
+
+test("oversized source enums fall back to the same fail-closed runtime source validation", () => {
+  const sources = Array.from({ length: 500 }, (_, index) => ({ id: `market_data:S${index + 1}` }));
+  const run = {
+    language: "中文",
+    packets: [{ task: "market_data", sources }],
+    grounding: { instrument: { research_model: "operating_company" } },
+    entry_tool: "run_council",
+    company_dossier: { content_hash: `sha256:${"b".repeat(64)}` },
+  };
+  const frozen = {
+    master: "master_fisher",
+    stance: "cautious",
+    source_ids: [sources[0].id],
+    evidence_source_ids: [sources[0].id],
+  };
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  assert.equal(Object.hasOwn(schema.properties.source_ids.items, "enum"), false);
+  assert.equal(schema.properties.source_ids.items.maxLength, 512);
+  assert.equal(Object.hasOwn(
+    schema.properties.evidence_packet_acks.properties.market_data.properties.source_ids.items,
+    "enum",
+  ), false);
+  assert.ok(JSON.stringify(schema).length < 100_000);
+  assert.throws(
+    () => assertSourceIdsResolve(run, ["market_data:FORGED"], "large-schema fixture"),
+    (error) => error?.data?.reason === "SOURCE_PROVENANCE_MISMATCH",
+  );
+});
+
+test("one large enum over the native 15k character sub-limit also falls back", () => {
+  const sources = Array.from({ length: 260 }, (_, index) => ({
+    id: `market_data:SEC-LIKE-${String(index + 1).padStart(3, "0")}-${"x".repeat(58)}`,
+  }));
+  const run = {
+    language: "中文",
+    packets: [{ task: "market_data", sources }],
+    grounding: { instrument: { research_model: "operating_company" } },
+    entry_tool: "run_council",
+    company_dossier: { content_hash: `sha256:${"c".repeat(64)}` },
+  };
+  const frozen = {
+    master: "master_fisher",
+    stance: "cautious",
+    source_ids: [sources[0].id],
+    evidence_source_ids: [sources[0].id],
+  };
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  assert.equal(Object.hasOwn(schema.properties.source_ids.items, "enum"), false);
+  assert.ok(JSON.stringify(schema).length < 100_000);
+});
+
+test("worker execution diagnostics classify schema rejection without persisting stderr", () => {
+  const stderr = "SENSITIVE prompt text Invalid schema for response_format: invalid_json_schema";
+  const result = { ok: false, code: 1, stderr, text: "" };
+  assert.equal(workerExecutionFailureKind(result), "output_schema_rejected");
+  const diagnostic = masterAttemptFailureDiagnostic({
+    master: "master_fisher",
+    attempt: 1,
+    failureKind: workerExecutionFailureKind(result),
+    error: new Error("output schema rejected"),
+    result,
+    stage: "worker_execution",
+  });
+  assert.equal(diagnostic.stderr_chars, stderr.length);
+  assert.match(diagnostic.stderr_sha256, /^sha256:[a-f0-9]{64}$/u);
+  assert.doesNotMatch(JSON.stringify(diagnostic), /SENSITIVE|Invalid schema/u);
+});
 
 test("source provenance failures are not classified as parse failures", () => {
   assert.equal(outputFailureKind({
@@ -14,7 +149,46 @@ test("source provenance failures are not classified as parse failures", () => {
     data: { reason: "SOURCE_PROVENANCE_REQUIRED" },
   }), "source_provenance_required");
   assert.equal(outputFailureKind({ code: "READER_LANGUAGE_MISMATCH" }), "reader_language_mismatch");
+  assert.equal(outputFailureKind({
+    data: { reason: "COMPANY_DOSSIER_PACKET_ACK_MISMATCH" },
+  }), "company_dossier_packet_ack_mismatch");
+  assert.equal(outputFailureKind({
+    data: { reason: "METHOD_VOICE_FIRST_PERSON_MISMATCH" },
+  }), "method_voice_first_person_mismatch");
+  assert.equal(outputFailureKind({
+    data: { reason: "WORKER_OUTPUT_SCHEMA_MISMATCH" },
+  }), "schema_mismatch");
+  assert.equal(outputFailureKind({
+    data: { reason: "WORKER_JSON_UNRECOVERABLE" },
+  }), "json_unrecoverable");
   assert.equal(outputFailureKind(new SyntaxError("bad JSON")), "parse_failed");
+});
+
+test("master attempt diagnostics expose bounded method contract reasons without prose", () => {
+  const error = Object.assign(new Error("sensitive worker prose"), {
+    data: {
+      reason: "COMPANY_DOSSIER_PACKET_ACK_MISMATCH",
+      expected_packet_count: 11,
+      supplied_packet_count: 10,
+      problems: [
+        { task: "social_pulse", reason: "missing_ack", note: "sensitive note" },
+      ],
+    },
+  });
+  const diagnostic = masterAttemptFailureDiagnostic({
+    master: "master_fisher",
+    attempt: 1,
+    failureKind: outputFailureKind(error),
+    error,
+    result: { text: "sensitive worker output" },
+  });
+  assert.deepEqual(diagnostic.contract, {
+    reason: "COMPANY_DOSSIER_PACKET_ACK_MISMATCH",
+    expected_packet_count: 11,
+    supplied_packet_count: 10,
+    problems: [{ task: "social_pulse", reason: "missing_ack" }],
+  });
+  assert.doesNotMatch(JSON.stringify(diagnostic), /sensitive/u);
 });
 
 test("master attempt diagnostics retain bounded paths and provenance hashes without output bodies", () => {

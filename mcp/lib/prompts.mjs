@@ -10,6 +10,7 @@ import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/
 import { intentsForStance } from "./voice.mjs";
 import { companyDossierPacketAckTemplate, companyDossierPromptBlock, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
 import { sourceAcquisitionPromptBlock } from "./company-source-acquisition.mjs";
+import { compactHardVerificationFindings } from "./verification.mjs";
 
 /**
  * Prompt text lives in personas/, not here.
@@ -185,6 +186,29 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
   ].filter(Boolean).join("\n\n");
 }
 
+export function hardVerificationPromptBlock(run, role, { structuredDecisionOnly = false } = {}) {
+  const findings = compactHardVerificationFindings(run);
+  const chinese = isChineseLanguage(run?.language || "English");
+  if (!findings.length && !(role === "portfolio_manager" && structuredDecisionOnly)) return "";
+  const payload = JSON.stringify(findings);
+  if (chinese) {
+    return [
+      "三重验证的逐条硬结论如下。这些结论优先于原分析席证据包：凡 verdict 为 contradicted、disagree 或 refuted 的原说法，不得再当作已确认事实，也不得原样进入估值区间、价格条件或投资结论。必须排除，或使用冻结来源重新计算后明确更正。",
+      `硬结论 JSON：${payload}`,
+      role === "portfolio_manager" && structuredDecisionOnly
+        ? "你必须返回 `verification_findings_ack` 数组，按上面顺序对每个 finding_id 恰好回执一次；每项只能含 `finding_id`、`disposition`、`note`。disposition 只能是 `excluded` 或 `corrected`；note 至少 12 个字符，说明从最终判断中排除了什么，或采用了什么更正结果。不得多报、漏报或重复。若硬结论为空，仍必须返回空数组。"
+        : "你的论证必须服从这些硬结论；可以讨论原说法为何失败，但不得把它继续作为支持论点。",
+    ].join("\n");
+  }
+  return [
+    "Claim-level triple-verification hard findings follow. They override the original analyst packets: any claim marked contradicted, disagree, or refuted must not be treated as established evidence or copied unchanged into valuation ranges, price levels, or the investment conclusion. Exclude it, or explicitly correct it by rederiving from the frozen sources.",
+    `Hard findings JSON: ${payload}`,
+    role === "portfolio_manager" && structuredDecisionOnly
+      ? "Return `verification_findings_ack` in the same order with exactly one row per finding_id. Each row may contain only `finding_id`, `disposition`, and `note`. disposition must be `excluded` or `corrected`; note must contain at least 12 characters explaining what was excluded from the final decision or the corrected result used. Do not omit, duplicate, or add findings. Return an empty array when there are no hard findings."
+      : "Your case must obey these hard findings. You may explain why an original claim failed, but may not continue using it as support.",
+  ].join("\n");
+}
+
 export function debatePrompt(role, run, context = {}) {
   const evidencePath = join(runPath(run.run_id), "evidence.json");
   const quick = run.council_mode === "quick";
@@ -233,13 +257,13 @@ export function debatePrompt(role, run, context = {}) {
         ? [
           "最终输出改用 HEADLESS_STRUCTURED_PM_DECISION_V1。只返回紧凑的结构化决策 JSON；不要返回 `report_markdown`，也不要在任何 JSON 字符串里嵌入 Markdown 报告。服务端会从已冻结的证据、三轮辩论和本决策确定性渲染完整 full_v2 报告。",
           "保留 debate packet 的必需字段：verdict、rating、winner、summary、long_thesis、short_thesis、valuation_range、catalysts、risks、position、invalidation、source_ids、confidence。每个来源 ID 必须来自提供的已冻结证据。",
-          "另请返回：`price_levels`（3–8 项；每项含非空 label、range、lower_bound、upper_bound、currency、meaning、action、basis，以及至少一个 source_ids）。lower_bound/upper_bound 用数值，开放端用 null；全部档位按数值必须从下方开放端连续覆盖到上方开放端，不得留空档或重叠，因此像 120–160 没动作这样的区间会被拒绝。另含 `horizon_views`（short_term、medium_term、long_term 三个非空字符串）、`data_gaps`（至少一个非空字符串；若无关键缺口，明确写出未发现关键数据缺口）以及提示中要求的 `company_dossier_hash_ack`。",
+          "另请返回：`price_levels`（3–8 项；每项含非空 label、range、lower_bound、upper_bound、currency、meaning、action、basis，以及至少一个 source_ids）。lower_bound/upper_bound 用数值，开放端用 null；全部档位按数值必须从下方开放端连续覆盖到上方开放端，不得留空档或重叠，因此像 120–160 没动作这样的区间会被拒绝。另含 `horizon_views`（short_term、medium_term、long_term 三个非空字符串）、`data_gaps`（至少一个非空字符串；若无关键缺口，明确写出未发现关键数据缺口）、`verification_findings_ack`（逐条处理三重验证硬结论）以及提示中要求的 `company_dossier_hash_ack`。`data_gaps` 只能写公司或投资证据缺口；提示内嵌的 Evidence JSON 就是完整冻结输入，不得把内部文件路径、文件系统可见性、工具权限或执行环境写成投资数据缺口。",
           "这是本 prompt 对输出形式的最后约束；前文要求撰写长报告的说明由服务端渲染器履行。只输出一个 JSON 对象。",
         ].join("\n")
         : [
           "Final output uses HEADLESS_STRUCTURED_PM_DECISION_V1. Return only compact structured-decision JSON. Do not return `report_markdown`, and do not embed a Markdown report inside any JSON string. The server deterministically renders the complete full_v2 report from the frozen evidence, three debate rounds, and this decision.",
           "Keep the required debate-packet fields: verdict, rating, winner, summary, long_thesis, short_thesis, valuation_range, catalysts, risks, position, invalidation, source_ids, and confidence. Every source ID must come from the supplied frozen evidence.",
-          "Also return `price_levels` (3-8 items, each with non-empty label, range, lower_bound, upper_bound, currency, meaning, action, basis, and at least one source_ids entry). Bounds are numbers with null only for an open end; the bands must continuously cover the price line from the open lower end to the open upper end with no gap or overlap, so an actionless interval such as 120-160 is rejected. Also return `horizon_views` (non-empty short_term, medium_term, and long_term strings), `data_gaps` (at least one non-empty string), and the prompt-required `company_dossier_hash_ack`.",
+          "Also return `price_levels` (3-8 items, each with non-empty label, range, lower_bound, upper_bound, currency, meaning, action, basis, and at least one source_ids entry). Bounds are numbers with null only for an open end; the bands must continuously cover the price line from the open lower end to the open upper end with no gap or overlap, so an actionless interval such as 120-160 is rejected. Also return `horizon_views` (non-empty short_term, medium_term, and long_term strings), `data_gaps` (at least one non-empty string), `verification_findings_ack` (claim-by-claim handling of every hard triple-verification finding), and the prompt-required `company_dossier_hash_ack`. data_gaps may contain only company or investment-evidence gaps. The inline Evidence JSON is the complete frozen input; never list internal file paths, filesystem visibility, tool permissions, or the execution environment as an investment data gap.",
           "This is the final output-form instruction in the prompt; the server renderer satisfies earlier instructions to author a long report. Return exactly one JSON object.",
         ].join("\n"))
     : "";
@@ -279,6 +303,7 @@ export function debatePrompt(role, run, context = {}) {
     // The tier's shaping is the final word on form. Quick has its own shaping already.
     quick ? "" : paceShapingInstruction(run.council_pace, role, chinese),
     `Evidence JSON: ${evidenceJson}`,
+    hardVerificationPromptBlock(run, role, { structuredDecisionOnly: context.structuredDecisionOnly === true }),
     // Headless full PMs return a small decision object. Keep this last so the shared persona's
     // legacy long-report-in-JSON contract cannot override it and recreate the truncation risk.
     structuredManagerDecisionInstruction,
@@ -335,12 +360,26 @@ export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
   const confidence = ["high", "medium", "low"].includes(frozenOpinion?.confidence)
     ? frozenOpinion.confidence
     : "low";
+  const packetAckObject = Object.fromEntries(
+    companyDossierPacketAckTemplate(run, { includePacketHash: false })
+      .map(({ task, ...ack }) => [task, ack]),
+  );
   const example = {
+    transport: "segmented_method_voice_v1",
     master: masterId,
     acknowledged_stance: stance,
     voice_mode: "first_person_public_method_simulation_v1",
     disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
     position_intent: intentsForStance(stance)[0],
+    ...(requiresOperatingCompanyDossier(run)
+      ? {
+        company_dossier_hash_ack: run.company_dossier?.content_hash,
+        evidence_packet_acks: packetAckObject,
+      }
+      : {
+        company_dossier_hash_ack: null,
+        evidence_packet_acks: [],
+      }),
     voice: {
       would_i_act: `<first-person ${language} text; at least two complete sentences>`,
       what_i_see: `<first-person ${language} text; at least two complete sentences>`,
@@ -353,12 +392,6 @@ export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
     what_would_change_my_mind: [],
     source_ids: allowedSourceIds.slice(0, 1),
     confidence,
-    ...(requiresOperatingCompanyDossier(run)
-      ? {
-        company_dossier_hash_ack: run.company_dossier?.content_hash,
-        evidence_packet_acks: companyDossierPacketAckTemplate(run),
-      }
-      : {}),
   };
   return [
     `Allowed investment-evidence source_ids JSON: ${JSON.stringify(allowedSourceIds)}`,
@@ -366,6 +399,7 @@ export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
       ? "`source_ids` MUST contain at least one ID from that exact allowed list, even for out_of_scope: cite the dossier evidence your method actually read. Never put `proxy:*` or method-definition provenance in `source_ids`; the system preserves those separately as `method_source_ids`."
       : "`source_ids` MUST contain only a subset of that exact allowed list. A directional stance requires at least one ID. Never put `proxy:*` or any method-definition provenance in `source_ids`; the system preserves those separately as `method_source_ids`.",
     "`key_findings`, `disagreements`, and `what_would_change_my_mind` MUST each be an array of plain strings. Never place objects or nested arrays inside them.",
+    "Keep transport concise without deleting distinct findings: do not duplicate the five voice fields into the three summary arrays, and do not copy the entire allowed-source list merely to prove access. The dossier hash plus every task-keyed packet disposition prove full review; source_ids should contain the evidence actually cited by this method.",
     "`confidence` MUST be exactly one of: high | medium | low.",
     `Return ONLY one valid JSON object, no Markdown fence. Exact required shape (replace the angle-bracket voice text, preserve every key): ${JSON.stringify(example)}`,
   ].join("\n");
@@ -383,11 +417,16 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
     `Write every reader-facing field in ${language}. Keep stable IDs, tickers and source IDs unchanged.`,
     "This is a first-person simulation of a project-derived provisional public-method lens, not the named person's identity, current statement, endorsement, quotation, holding, or private information.",
     "The structured method decision below is already frozen. You MUST NOT change, soften, strengthen or reinterpret its stance. Explain why that frozen result follows, identify the highest-information facts or missing facts, state any disagreement with analyst interpretation, and say what evidence would change the method result. Do not browse or add facts.",
+    "Scoring and hard vetoes are independent decision branches. When `decision_reason` is `veto`, say that the named veto independently overrides the score; never say that the score triggered the veto. When it is not `veto`, do not invent a veto.",
     `Frozen method result JSON: ${JSON.stringify({
       master: masterId,
       stance: frozenOpinion?.stance,
+      deterministic_stance: frozenOpinion?.deterministic_stance,
       verdict: frozenOpinion?.verdict,
       summary: frozenOpinion?.summary,
+      decision_reason: frozenOpinion?.decision_reason,
+      common_projection: frozenOpinion?.common_projection,
+      native_decision: frozenOpinion?.native_decision,
       disqualifiers_triggered: frozenOpinion?.disqualifiers_triggered || [],
       what_would_change_my_mind: frozenOpinion?.what_would_change_my_mind || [],
       evidence_source_ids: frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [],
@@ -397,6 +436,7 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
     })}`,
     `Method instructions (for explanation only):\n${render(personaPrompt(persona, language), values)}`,
     companyDossierPromptBlock(run),
+    hardVerificationPromptBlock(run, masterId),
     [
       "MANDATORY VOICE MODE: every one of the five `voice` fields must speak directly in the first person as the METHOD -- \"I look for X; I see Y; therefore I would Z\". A neutral third-person summary such as \"Buffett would...\" is invalid.",
       "Open with the action verdict, then reason in this method's characteristic order. Use its distinctive public-method questions, vocabulary, cadence, priorities, and failure mode from the Method instructions. A reader should hear this particular method reasoning, not a generic analyst or checklist.",

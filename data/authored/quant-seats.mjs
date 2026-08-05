@@ -73,42 +73,45 @@
 export const quantSeats = Object.freeze({
   master_taleb: {
     provenance:
-      "Nassim Nicholas Taleb: Dynamic Hedging (1997) on the volatility surface and the wings, where the price of a tail is judged against the level of at-the-money volatility rather than in absolute volatility points; The Black Swan (2007) and Antifragile (2012) on absorbing barriers, on convexity as the property worth paying for, and on debt as the mechanism that turns a survivable loss into a terminal one; \"The Fourth Quadrant\" (Edge, 2008) and Statistical Consequences of Fat Tails (2020) on ruin as an absorbing state that no expected-return argument survives. The ordering of this seat is his: ruin is tested first and only in the vetoes, and the score is then only about the shape of the payoff. What is missing is the payoff itself - there is no position, no strike and no exposure map in this pack - so convexity is read off the price of the tail rather than off a payoff diagram. `risk.debt_service_cushion` is interest cover less one, the same number the Munger seat builds and deliberately the same output id: Munger reads it as one half of a coupled failure, this seat reads it as the distance to the absorbing barrier. One-times cover is a definitional break-even, not a calibration. Three lines here are this project's reading because he published none: the two-turn cushion the score asks for, the leverage veto at one, and the five-per-cent normalised-skew line. The tail measure is the same normalised skew the Natenberg seat builds, read in the opposite direction - Natenberg wants a shape to spread against, this seat wants a tail the market has not already bid up, so that convexity can still be bought cheaply. The middle band is earned by either leg alone, so it should be read as ruin ruled out and nothing further claimed.",
+      "Nassim Nicholas Taleb's published method puts a specified payoff, maximum loss, hidden leverage and absorbing ruin state ahead of expected return. A negative NCAV or tangible-book floor means an equity lacks asset-backed recovery; it does not make an unlevered long stock's loss unbounded, because that payoff is still capped at the capital paid. This seat therefore refuses to infer ruin from `valuation.downside_floor` and declines until the actual payoff/max-loss, leverage, volatility, friction and event-expiry facts are frozen.",
     tools: [
       {
-        tool_id: "master_taleb.debt_service_cushion",
-        operation: "subtract",
-        inputs: [{ fact_id: "financial.interest_coverage" }, { literal: 1 }],
-        output_id: "risk.debt_service_cushion",
+        tool_id: "master_taleb.maximum_loss",
+        operation: "identity",
+        inputs: [{ fact_id: "payoff.max_loss" }],
+        output_id: "payoff.maximum_loss",
         value_kind: "ratio",
-        unit: "multiple",
+        unit: "decimal_of_invested_capital",
         purpose:
-          "Distance from the absorbing barrier, in turns of operating earnings. Coverage of one is not a safety line but the failure itself, so what matters is how far the business stands from it; a coverage level on its own does not say that.",
+          "The specified exposure's finite maximum loss as a fraction of invested capital; this is the payoff bound, not an accounting liquidation floor.",
       },
       {
-        tool_id: "master_taleb.normalised_skew",
-        operation: "divide",
-        inputs: [{ fact_id: "options.skew_25d" }, { fact_id: "options.implied_volatility" }],
-        output_id: "options.normalised_skew",
+        tool_id: "master_taleb.payoff_convexity",
+        operation: "identity",
+        inputs: [{ fact_id: "payoff.convexity" }],
+        output_id: "payoff.convexity_score",
         value_kind: "ratio",
         unit: "decimal",
         purpose:
-          "What the market currently charges for the downside tail, as a fraction of the volatility level it is charged against. Four volatility points of skew are a different price on a twelve-volatility name than on an eighty-volatility one, which is why the tail's price is the ratio and not the difference.",
+          "The explicitly modelled payoff convexity; an options skew snapshot is market context and cannot substitute for the position's payoff diagram.",
       },
     ],
     eligibility: {
       all: [
-        // He will not size an exposure whose downside he cannot bound. Bounding it needs two
-        // things this pack can supply: a floor under the assets, and the borrowed money standing
-        // in front of the equity. Missing either, the loss is unbounded as far as this seat can
-        // see, and the honest answer is silence rather than a score.
+        // Tool inputs already require payoff.max_loss and payoff.convexity. The remaining facts
+        // make the payoff executable and distinguish a bounded loss from an absorbing ruin state.
         {
-          condition_id: "master_taleb.downside_is_boundable",
+          condition_id: "master_taleb.payoff_and_execution_are_bound",
           condition: {
             op: "all",
             conditions: [
-              { op: "exists", value: { fact_id: "valuation.downside_floor" } },
-              { op: "exists", value: { fact_id: "financial.leverage" } },
+              { op: "exists", value: { fact_id: "risk.ruin_possible" } },
+              { op: "exists", value: { fact_id: "risk.hidden_leverage" } },
+              { op: "exists", value: { fact_id: "options.implied_volatility" } },
+              { op: "exists", value: { fact_id: "options.realized_volatility" } },
+              { op: "exists", value: { fact_id: "options.skew_25d" } },
+              { op: "exists", value: { fact_id: "execution.round_trip_cost" } },
+              { op: "eq", left: { fact_id: "event.expiry_coverage" }, right: { literal: true } },
             ],
           },
           on_false: { native_state: "no_trade", common_stance: "out_of_scope" },
@@ -120,47 +123,41 @@ export const quantSeats = Object.freeze({
       {
         veto_id: "master_taleb.absorbing_barrier",
         rationale:
-          "The first test, in the order he insists it be taken. A business whose operating earnings do not cover its fixed charges is not in a drawdown, it is in an absorbing state, and that distinction is the whole of his argument against reasoning from expected returns (The Black Swan on ruin; Statistical Consequences of Fat Tails on the absorbing barrier). A cushion at or below zero is one-times cover, which is the definitional break-even and not a threshold this project chose.",
-        condition: { op: "lte", left: { output_id: "risk.debt_service_cushion" }, right: { literal: 0 } },
-        on_trigger: { common_stance: "opposed", native_state: "no_trade" },
-      },
-      {
-        veto_id: "master_taleb.unbounded_downside",
-        rationale:
-          "He refuses to size anything whose downside he cannot bound, which is the load-bearing half of the barbell. A downside floor at or below zero says the assets bound nothing, so the loss has no observable limit and no price makes the exposure sizeable.",
-        condition: { op: "lte", left: { fact_id: "valuation.downside_floor" }, right: { literal: 0 } },
+          "The supplied payoff analysis identifies an absorbing ruin state. This veto is independent of scoring and overrides any otherwise favourable payoff-shape score.",
+        condition: { op: "eq", left: { fact_id: "risk.ruin_possible" }, right: { literal: true } },
         on_trigger: { common_stance: "opposed", native_state: "no_trade" },
       },
       {
         veto_id: "master_taleb.leverage_is_the_fragility",
         rationale:
-          "Antifragile's mechanism for fragility is debt, not volatility: borrowing is what converts a bad outcome into a terminal one. Borrowed money larger than the equity beneath it is this project's reading of where his refusal begins - he published no ratio - and it is deliberately stricter than the three-times tolerance the value seats carry, because this test is about survival rather than about the quality of a business.",
-        condition: { op: "gt", left: { fact_id: "financial.leverage" }, right: { literal: 1 } },
+          "Hidden position leverage can turn a bounded market move into forced liquidation or loss beyond posted capital; that payoff fact, not a negative NCAV, is the relevant fragility test.",
+        condition: { op: "gt", left: { fact_id: "risk.hidden_leverage" }, right: { literal: 0 } },
         on_trigger: { common_stance: "opposed", native_state: "no_trade" },
       },
     ],
     scoring: [
       {
-        rule_id: "taleb_survives_its_own_fixed_charges",
+        rule_id: "taleb_maximum_loss_is_bounded_to_capital",
         points: 1,
         coverage_weight: 1,
         rationale:
-          "Robustness is a different property from convexity - surviving the tail is not the same as being paid by it - and his own state ladder separates them, so the two rules are those two properties. A cushion of two turns above break-even, which is three-times cover, is this project's reading of enough distance from the barrier to call an exposure robust; it sits deliberately above the veto's break-even and below the five-times fixed-charge minimum the Graham tradition uses, and Taleb set neither number.",
-        condition: { op: "gte", left: { output_id: "risk.debt_service_cushion" }, right: { literal: 2 } },
+          "The specified payoff cannot lose more than the capital deliberately allocated to it. This is a bounded-payoff statement, not an asset-value claim.",
+        condition: { op: "lte", left: { output_id: "payoff.maximum_loss" }, right: { literal: 1 } },
       },
       {
-        rule_id: "taleb_tail_not_already_bid",
+        rule_id: "taleb_payoff_is_positively_convex",
         points: 1,
         coverage_weight: 1,
         rationale:
-          "The convexity leg. His trade is owning the wing the model underprices, and that requires the market not to have bid the wing up already: a normalised skew above five per cent of the at-the-money level means somebody is paying for the tail and the cheap convexity is gone. The five-per-cent line is this project's reading of a visible tail premium, and it is the same line the Natenberg seat reads for materiality - the same number, in the opposite direction.",
-        condition: { op: "lte", left: { output_id: "options.normalised_skew" }, right: { literal: 0.05 } },
+          "The supplied payoff map is positively convex; market skew and friction still constrain implementation but cannot manufacture convexity when the payoff itself is absent.",
+        condition: { op: "gt", left: { output_id: "payoff.convexity_score" }, right: { literal: 0 } },
       },
     ],
     bands: [
-      { min_ratio: 0, common_stance: "cautious", native_state: "hedge_only" },
-      { min_ratio: 0.5, common_stance: "cautious", native_state: "robust" },
-      { min_ratio: 1, common_stance: "constructive", native_state: "convex_opportunity" },
+      { min_ratio: 0, common_stance: "opposed", native_state: "no_trade" },
+      { min_ratio: 0.5, common_stance: "cautious", native_state: "hedge_only" },
+      { min_ratio: 0.75, common_stance: "cautious", native_state: "robust" },
+      { min_ratio: 1, common_stance: "cautious", native_state: "convex_opportunity" },
     ],
   },
 

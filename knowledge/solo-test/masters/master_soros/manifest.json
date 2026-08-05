@@ -61,8 +61,7 @@
     ],
     "hard_vetoes": [
       "master_soros.no_reflexive_link",
-      "master_soros.unfinanceable_timing",
-      "master_soros.no_reversal_signal"
+      "master_soros.price_outruns_its_financing"
     ],
     "native_output": "reflexive_loop_v1"
   },

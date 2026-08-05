@@ -104,8 +104,21 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "financial.incremental_return_on_capital": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
   "financial.leverage": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "valuation.revenue_growth": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration(ANY_REPORTING_INTERVAL) }),
+  "valuation.target_margin": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration(ANY_REPORTING_INTERVAL) }),
+  "valuation.reinvestment_rate": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration(ANY_REPORTING_INTERVAL) }),
+  "valuation.cost_of_capital": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "valuation.failure_probability": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "valuation.cash_flow": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "valuation.implied_story": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "valuation.downside_asset_value": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
   "valuation.downside_floor": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: INSTANT_AS_OF }),
+  "payoff.max_loss": Object.freeze({ value_kind: "ratio", unit: "decimal_of_invested_capital", period: INSTANT_AS_OF }),
+  "payoff.convexity": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "risk.ruin_possible": Object.freeze({ value_kind: "boolean", unit: null, period: INSTANT_AS_OF }),
+  "risk.hidden_leverage": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
+  "options.realized_volatility": Object.freeze({ value_kind: "ratio", unit: "decimal_annualized_volatility", period: INSTANT_AS_OF }),
+  "execution.round_trip_cost": Object.freeze({ value_kind: "ratio", unit: "decimal_of_mid", period: INSTANT_AS_OF }),
+  "event.expiry_coverage": Object.freeze({ value_kind: "boolean", unit: null, period: INSTANT_AS_OF }),
   // Shares outstanding is measured AT a date, not over one. The filing reports it inside a
   // fiscal year, which is where the interval came from, but a count is an instant quantity --
   // and a fund's share count, which carries no fiscal year at all, could satisfy no duration.

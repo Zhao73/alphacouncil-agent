@@ -63,9 +63,7 @@
       "options.implied_volatility"
     ],
     "hard_vetoes": [
-      "master_thorp.no_measurable_edge",
-      "master_thorp.ruin_constraint",
-      "master_thorp.liquidity_constraint"
+      "master_thorp.edge_inside_the_friction"
     ],
     "native_output": "edge_sizing_v1"
   },

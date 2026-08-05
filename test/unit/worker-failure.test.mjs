@@ -239,6 +239,7 @@ test("full headless structured PM accepts a compact decision while the visible/d
     ],
     horizon_views: { short_term: "wait", medium_term: "verify", long_term: "compound" },
     data_gaps: ["No critical data gaps were found in the completed fixture packets."],
+    verification_findings_ack: [],
   });
   const result = debateFromCodex({
     ok: true, timedOut: false, code: 0, text: JSON.stringify(withoutReport),

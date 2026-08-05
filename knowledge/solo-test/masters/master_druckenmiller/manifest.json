@@ -63,9 +63,7 @@
       "macro.breakeven_inflation"
     ],
     "hard_vetoes": [
-      "master_druckenmiller.driver_ambiguity",
-      "master_druckenmiller.price_nonconfirmation",
-      "master_druckenmiller.asymmetry_absent"
+      "master_druckenmiller.liquidity_draining_into_inversion"
     ],
     "native_output": "macro_inflection_v1"
   },

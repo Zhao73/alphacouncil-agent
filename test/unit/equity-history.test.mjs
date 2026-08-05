@@ -26,6 +26,30 @@ function historyPayload(count = 253) {
   };
 }
 
+function liveSessionPayload() {
+  const first = Date.parse("2026-08-04T13:30:00Z") / 1000;
+  const current = Date.parse("2026-08-05T13:30:00Z") / 1000;
+  return {
+    chart: {
+      result: [{
+        meta: {
+          currentTradingPeriod: {
+            regular: {
+              start: current,
+              end: Date.parse("2026-08-05T20:00:00Z") / 1000,
+            },
+          },
+        },
+        timestamp: [first, current],
+        indicators: {
+          quote: [{ close: [275, 280.04], volume: [1_000_000, 650_000] }],
+          adjclose: [{ adjclose: [275, 280.04] }],
+        },
+      }],
+    },
+  };
+}
+
 test("SEC semiconductor SIC selects SMH plus the broad SPY benchmark without ticker-specific logic", () => {
   const mapped = benchmarkSymbolsForSic(3674);
   assert.equal(mapped.sector, "SMH");
@@ -46,6 +70,11 @@ test("daily history produces volume ratios, 20/63-session realised volatility an
   assert.ok(Number.isFinite(summary.realized_volatility["63d_annualized"]));
   assert.equal(summary.volume.latest, 1_252_000);
   assert.ok(summary.volume.ratios.latest_to_63d > 1);
+  assert.ok(Number.isFinite(summary.technical_levels.moving_averages["50d"]));
+  assert.ok(Number.isFinite(summary.technical_levels.moving_averages["200d"]));
+  assert.ok(Number.isFinite(summary.technical_levels.ranges["252d"].low));
+  assert.ok(Number.isFinite(summary.technical_levels.ranges["252d"].high));
+  assert.ok(summary.technical_levels.latest_vs_252d_low > 0);
 });
 
 test("relative performance aligns by session date rather than array position", () => {
@@ -57,4 +86,30 @@ test("relative performance aligns by session date rather than array position", (
   assert.equal(result.aligned_session_count, benchmark.length);
   assert.ok(result.windows["21d"].excess_return > 0);
   assert.equal(result.latest_aligned_date, benchmark.at(-1).date);
+});
+
+test("an unfinished same-day Yahoo bar is excluded instead of being called a daily close", () => {
+  const rows = parseEquityHistory(liveSessionPayload(), {
+    asOf: "2026-08-05",
+    observedAt: "2026-08-05T18:56:38Z",
+  });
+  assert.deepEqual(rows.map((row) => row.date), ["2026-08-04"]);
+  assert.equal(summarizeEquityHistory(rows).latest_adjusted_close, 275);
+});
+
+test("a same-day Yahoo bar is retained after the provider session end", () => {
+  const rows = parseEquityHistory(liveSessionPayload(), {
+    asOf: "2026-08-05",
+    observedAt: "2026-08-05T20:05:00Z",
+  });
+  assert.deepEqual(rows.map((row) => row.date), ["2026-08-04", "2026-08-05"]);
+  assert.equal(summarizeEquityHistory(rows).latest_adjusted_close, 280.04);
+});
+
+test("a historical cutoff retains its completed cutoff-date bar", () => {
+  const rows = parseEquityHistory(liveSessionPayload(), {
+    asOf: "2026-08-04",
+    observedAt: "2026-08-05T18:56:38Z",
+  });
+  assert.deepEqual(rows.map((row) => row.date), ["2026-08-04"]);
 });

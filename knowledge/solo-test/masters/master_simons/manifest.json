@@ -61,9 +61,7 @@
       "options.implied_volatility"
     ],
     "hard_vetoes": [
-      "master_simons.lookahead",
-      "master_simons.no_holdout",
-      "master_simons.cost_erasure"
+      "master_simons.no_observation_to_test"
     ],
     "native_output": "out_of_sample_signal_v1"
   },

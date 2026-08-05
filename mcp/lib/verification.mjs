@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { ALL_ANALYST_TASKS } from "./constants.mjs";
+import { ALL_ANALYST_TASKS, LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { localized } from "./lang.mjs";
 import { personaPrompt, registry } from "./personas/registry.mjs";
@@ -16,6 +16,12 @@ export const CLEAN_VERIFIER_VERDICTS = Object.freeze({
   source_fidelity: Object.freeze(["supported"]),
   rederivation: Object.freeze(["agree"]),
   refuter: Object.freeze(["stands"]),
+});
+
+const HARD_VERIFIER_VERDICTS = Object.freeze({
+  source_fidelity: Object.freeze(["contradicted"]),
+  rederivation: Object.freeze(["disagree"]),
+  refuter: Object.freeze(["refuted"]),
 });
 
 function uniqueStrings(value) {
@@ -50,6 +56,89 @@ export function materialEvidenceClaims(run) {
   const all = allEvidenceClaims(run).filter((claim) => claim.claim && claim.source_ids.length);
   const nonLow = all.filter((claim) => claim.confidence !== "low");
   return nonLow.length ? nonLow : all;
+}
+
+/** Claim-level findings that a portfolio manager may not silently treat as clean evidence. */
+export function hardVerificationFindings(run = {}) {
+  const claimOrder = new Map(materialEvidenceClaims(run).map((claim, index) => [claim.claim_id, index]));
+  return (Array.isArray(run.verifier_verdicts) ? run.verifier_verdicts : [])
+    .filter((row) => HARD_VERIFIER_VERDICTS[row?.verifier]?.includes(row?.verdict))
+    .map((row) => ({
+      finding_id: `${row.verifier}:${row.claim_id}`,
+      verifier: row.verifier,
+      claim_id: row.claim_id,
+      task: row.task || row.seat || String(row.claim_id || "").split(":")[0] || null,
+      verdict: row.verdict,
+      claim: typeof row.claim === "string" ? row.claim : "",
+      note: typeof row.note === "string" ? row.note : "",
+      rederivation: typeof row.rederivation === "string" ? row.rederivation : "",
+    }))
+    .sort((left, right) => (
+      REQUIRED_VERIFIER_IDS.indexOf(left.verifier) - REQUIRED_VERIFIER_IDS.indexOf(right.verifier)
+      || (claimOrder.get(left.claim_id) ?? Number.MAX_SAFE_INTEGER)
+        - (claimOrder.get(right.claim_id) ?? Number.MAX_SAFE_INTEGER)
+      || left.finding_id.localeCompare(right.finding_id)
+    ));
+}
+
+/** Bounded, explicit correction context injected into every full debate and PM prompt. */
+export function compactHardVerificationFindings(run = {}) {
+  return hardVerificationFindings(run).map((finding) => ({
+    ...finding,
+    claim: finding.claim.slice(0, 900),
+    note: finding.note.slice(0, 900),
+    rederivation: finding.rederivation.slice(0, 1_200),
+  }));
+}
+
+/**
+ * A headless full PM must account for every hard finding exactly once. The worker chooses only
+ * excluded or corrected; claim identity and verifier verdict remain server-owned bindings.
+ */
+export function assertVerificationFindingsAck(packet, run, label = "portfolio_manager") {
+  const expected = hardVerificationFindings(run);
+  const supplied = packet?.verification_findings_ack;
+  if (!Array.isArray(supplied)) {
+    throw invalidParams(`${label} omitted verification_findings_ack`, {
+      reason: "VERIFICATION_FINDINGS_ACK_MISMATCH",
+      missing_finding_ids: expected.map((row) => row.finding_id),
+    });
+  }
+  const byId = new Map();
+  const duplicates = [];
+  const extras = [];
+  const expectedById = new Map(expected.map((row) => [row.finding_id, row]));
+  for (const row of supplied) {
+    const id = typeof row?.finding_id === "string" ? row.finding_id.trim() : "";
+    if (!expectedById.has(id)) {
+      if (id) extras.push(id);
+      continue;
+    }
+    if (byId.has(id)) duplicates.push(id);
+    else byId.set(id, row);
+  }
+  const missing = expected.filter((row) => !byId.has(row.finding_id)).map((row) => row.finding_id);
+  const invalid = [];
+  const normalized = expected.map((finding) => {
+    const row = byId.get(finding.finding_id) || {};
+    const disposition = typeof row.disposition === "string" ? row.disposition.trim() : "";
+    const note = typeof row.note === "string" ? row.note.trim() : "";
+    if (!new Set(["excluded", "corrected"]).has(disposition)) {
+      invalid.push({ finding_id: finding.finding_id, reason: "invalid_disposition" });
+    }
+    if (note.length < 12) invalid.push({ finding_id: finding.finding_id, reason: "note_too_short" });
+    return { ...finding, disposition, acknowledgement_note: note };
+  });
+  if (missing.length || duplicates.length || extras.length || invalid.length) {
+    throw invalidParams(`${label} did not account for every hard verification finding exactly once`, {
+      reason: "VERIFICATION_FINDINGS_ACK_MISMATCH",
+      missing_finding_ids: missing,
+      duplicate_finding_ids: [...new Set(duplicates)],
+      extra_finding_ids: [...new Set(extras)],
+      invalid,
+    });
+  }
+  return normalized;
 }
 
 function selectedMaterialClaims(run, expectedClaimIds) {
@@ -219,6 +308,79 @@ function citedSourcesForClaim(claim, sourcesById) {
   }));
 }
 
+function requiredCheckedUrls(citedSources = []) {
+  const seen = new Set();
+  const urls = [];
+  for (const source of citedSources) {
+    const exactUrl = typeof source?.url === "string" ? source.url.trim() : "";
+    const normalized = normalizedUrl(exactUrl);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    urls.push(exactUrl);
+  }
+  return urls;
+}
+
+function sourceFidelityRequiredUrlChecklist(run, expectedClaimIds) {
+  const input = buildVerifierBatchInput(run, "source_fidelity", { expectedClaimIds });
+  return input.claims.map((claim) => ({
+    claim_id: claim.claim_id,
+    required_checked_urls: requiredCheckedUrls(claim.cited_sources),
+  }));
+}
+
+/**
+ * Preserve frozen claim order while bounding source-fidelity work by both result rows and
+ * per-claim URL obligations. A single oversized claim remains atomic and occupies its own chunk.
+ */
+export function buildVerifierClaimChunks(run, verifierId, {
+  expectedClaimIds,
+  maxClaimsPerBatch = verifierId === "source_fidelity"
+    ? LIMITS.FULL_SOURCE_FIDELITY_CLAIMS_PER_BATCH
+    : LIMITS.FULL_VERIFIER_CLAIMS_PER_BATCH,
+  maxSourceUrlsPerBatch = LIMITS.FULL_SOURCE_FIDELITY_URLS_PER_BATCH,
+} = {}) {
+  if (!REQUIRED_VERIFIER_IDS.includes(verifierId)) throw new Error(`unknown required verifier: ${verifierId}`);
+  if (!Number.isInteger(maxClaimsPerBatch) || maxClaimsPerBatch < 1) {
+    throw new Error("max verifier claims per batch must be a positive integer");
+  }
+  if (verifierId === "source_fidelity"
+    && (!Number.isInteger(maxSourceUrlsPerBatch) || maxSourceUrlsPerBatch < 1)) {
+    throw new Error("max source-fidelity URLs per batch must be a positive integer");
+  }
+  const claims = selectedMaterialClaims(run, expectedClaimIds);
+  if (!claims.length) return [];
+  if (verifierId !== "source_fidelity") {
+    const chunks = [];
+    for (let offset = 0; offset < claims.length; offset += maxClaimsPerBatch) {
+      chunks.push(claims.slice(offset, offset + maxClaimsPerBatch).map((claim) => claim.claim_id));
+    }
+    return chunks;
+  }
+
+  const claimIds = claims.map((claim) => claim.claim_id);
+  const urlCountByClaim = new Map(sourceFidelityRequiredUrlChecklist(run, claimIds)
+    .map((row) => [row.claim_id, row.required_checked_urls.length]));
+  const chunks = [];
+  let chunk = [];
+  let chunkUrlCount = 0;
+  for (const claimId of claimIds) {
+    const claimUrlCount = urlCountByClaim.get(claimId) || 0;
+    if (chunk.length && (
+      chunk.length >= maxClaimsPerBatch
+      || chunkUrlCount + claimUrlCount > maxSourceUrlsPerBatch
+    )) {
+      chunks.push(chunk);
+      chunk = [];
+      chunkUrlCount = 0;
+    }
+    chunk.push(claimId);
+    chunkUrlCount += claimUrlCount;
+  }
+  if (chunk.length) chunks.push(chunk);
+  return chunks;
+}
+
 export function buildVerifierBatchInput(run, verifierId, { expectedClaimIds } = {}) {
   if (!REQUIRED_VERIFIER_IDS.includes(verifierId)) throw new Error(`unknown required verifier: ${verifierId}`);
   const claims = selectedMaterialClaims(run, expectedClaimIds);
@@ -316,7 +478,10 @@ export function normalizeVerifierHeadlessTransport(packet, run, verifierId, expe
   };
 }
 
-export function verifierBatchPrompt(run, verifierId, inputPath, { keyedResults = false } = {}) {
+export function verifierBatchPrompt(run, verifierId, inputPath, {
+  keyedResults = false,
+  expectedClaimIds,
+} = {}) {
   const persona = registry().get(verifierId);
   if (!persona || persona.kind !== "verifier") throw new Error(`unknown verifier persona: ${verifierId}`);
   const result = {
@@ -339,6 +504,11 @@ export function verifierBatchPrompt(run, verifierId, inputPath, { keyedResults =
       ...result,
     }],
   };
+  const sourceFidelityInstructions = verifierId === "source_fidelity" ? [
+    "Process one claim at a time. For that claim, actually open or attempt EVERY URL in its required_checked_urls list before deciding the verdict. After each attempt, copy that exact URL into the same claim's checked_urls result.",
+    `REQUIRED checked_urls BY CLAIM (binding work checklist): ${JSON.stringify(sourceFidelityRequiredUrlChecklist(run, expectedClaimIds))}`,
+    "The checklist defines required work; it is NOT evidence that retrieval happened and MUST NOT be copied blindly. If a URL cannot be opened after a real attempt, still include that exact attempted URL and use the appropriate source_unreachable or partial verdict. A supported verdict requires a short exact excerpt and joint support for the whole bounded claim.",
+  ] : [];
   return [
     `You are the isolated ${verifierId} worker for AlphaCouncil run ${run.run_id}.`,
     `Read the complete frozen verification input at ${inputPath}. Its claim_count is binding.`,
@@ -346,15 +516,16 @@ export function verifierBatchPrompt(run, verifierId, inputPath, { keyedResults =
       ? "You MUST return exactly one result for EVERY supplied claim_id, using each exact claim_id once as a key inside the results object. Do not repeat claim_id inside the result value. Missing or unexpected keys fail the entire verification stage."
       : "You MUST return exactly one result for EVERY supplied claim_id, in the same order. Do not select a subset, merge claims, add claims, or stop after one. Missing, duplicate, or unexpected claim IDs fail the entire verification stage.",
     "Keep transport compact: note is one sentence (<=240 characters), at most 12 checked_urls and 2 queries, excerpt <=600 characters, and rederivation <=360 characters. Do not add methodology preambles or repeat the claim.",
-    verifierId === "source_fidelity"
-      ? "Actually open EVERY distinct cited URL for every claim. A supported verdict requires a short exact excerpt and joint support for the whole bounded claim; source_unreachable still lists every URL attempted."
-      : verifierId === "rederivation"
+    ...sourceFidelityInstructions,
+    verifierId === "rederivation"
         ? "The input deliberately omits the original URLs. Search independently for every claim. agree/disagree require at least one independently located URL and a non-empty rederivation; cannot_confirm requires the queries attempted. Independently landing on the same primary filing is allowed and will be transparently marked as source overlap by the server."
-        : "Run at least one concrete disconfirming query for every claim. Record those queries. refuted/weakened/superseded_by_newer require the URLs checked; stands is valid only after the negative search.",
+        : verifierId === "refuter"
+          ? "Run at least one concrete disconfirming query for every claim. Record those queries. refuted/weakened/superseded_by_newer require the URLs checked; stands is valid only after the negative search."
+          : null,
     `Write reader-facing note/excerpt/rederivation in ${run.language}; preserve stable IDs and URLs exactly.`,
     `Verifier method instructions:\n${personaPrompt(persona, run.language)}`,
     `Return only JSON matching this shape: ${JSON.stringify(contract)}`,
-  ].join("\n\n");
+  ].filter(Boolean).join("\n\n");
 }
 
 function normalizedUrl(value) {

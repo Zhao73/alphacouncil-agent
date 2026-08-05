@@ -58,6 +58,7 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   round,
   dossier_hash: dossierHash,
   search: args.includes("--search"),
+  outputSchema: args.includes("--output-schema"),
 }) + "\\n");
 
 let packet;
@@ -136,6 +137,7 @@ if (task) {
     ? JSON.parse(ackLine.slice("Per-packet acknowledgement template: ".length))
     : [];
   packet = {
+    transport: "segmented_method_voice_v1",
     master,
     acknowledged_stance: stance,
     voice_mode: "first_person_public_method_simulation_v1",
@@ -159,9 +161,11 @@ if (task) {
     source_ids: ["market_data:S1"],
     confidence: "medium",
     company_dossier_hash_ack: dossierHash,
-    evidence_packet_acks: ackTemplate.map((ack) => ack.task === "market_data"
-      ? { ...ack, status: "used", source_ids: ["market_data:S1"], note: "I used this packet's cited market evidence." }
-      : { ...ack, status: "reviewed_not_relevant", source_ids: [], note: "I reviewed this packet and my frozen method did not use it." }),
+    evidence_packet_acks: Object.fromEntries(Object.entries(ackTemplate).map(([task, ack]) => [task,
+      task === "market_data"
+        ? { ...ack, status: "used", source_ids: ["market_data:S1"], note: "I used this packet's cited market evidence." }
+        : { ...ack, status: "reviewed_not_relevant", source_ids: [], note: "I reviewed this packet and my frozen method did not use it." },
+    ])),
   };
 } else if (role === "portfolio_manager") {
   packet = {
@@ -189,6 +193,7 @@ if (task) {
       long_term: "Require durable economics and financing discipline.",
     },
     data_gaps: ["No critical data gaps were found in the completed integration fixture."],
+    verification_findings_ack: [],
     company_dossier_hash_ack: dossierHash,
   };
 } else if (role === "bull_researcher" || role === "bear_researcher") {
@@ -345,6 +350,7 @@ test("headless operating-company full council freezes one dossier after typed gr
     downstreamWorkers.filter((entry) => entry.master).map((entry) => entry.master),
     [SELECTED_MASTER],
   );
+  assert.ok(downstreamWorkers.filter((entry) => entry.master).every((entry) => entry.outputSchema));
 
   assert.ok(existsSync(join(dir, "final_report.md")));
   assert.equal(manifest.artifacts.company_dossier_json.path, dossierPath);
