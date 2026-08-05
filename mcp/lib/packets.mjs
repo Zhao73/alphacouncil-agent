@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
+import { workerExecutionFailureKind } from "./codex.mjs";
 // A worker returning a malformed packet is a client contract violation, not a server bug:
 // these three checks used to raise -32603 while the equivalent checks in the orchestrator
 // correctly raised -32602.
@@ -1091,7 +1092,7 @@ export function normalizeDebate(packet, role, run, raw = "") {
 }
 
 export function debateFailurePacket(role, run, failureKind) {
-  const kind = ["global_deadline", "timeout", "exit", "parse_failed", "reader_language_mismatch", "unexpected_error"]
+  const kind = ["global_deadline", "timeout", "exit", "usage_limit_exhausted", "parse_failed", "reader_language_mismatch", "unexpected_error"]
     .includes(failureKind)
     ? failureKind
     : "unexpected_error";
@@ -1100,6 +1101,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role} did not complete before the council's global deadline.`,
       timeout: `${role} timed out and produced no usable debate statement.`,
       exit: `${role} exited unsuccessfully and produced no usable debate statement.`,
+      usage_limit_exhausted: `${role} could not start because the Codex usage limit was exhausted; no usable debate statement was produced.`,
       parse_failed: `${role} returned output that violated the debate JSON contract.`,
       reader_language_mismatch: `${role} returned reader-facing content in the wrong language.`,
       unexpected_error: `${role} failed unexpectedly and produced no usable debate statement.`,
@@ -1108,6 +1110,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role} 未能在委员会全局截止时间前完成。`,
       timeout: `${role} 执行超时，未生成可用的辩论发言。`,
       exit: `${role} 异常退出，未生成可用的辩论发言。`,
+      usage_limit_exhausted: `${role} 因 Codex 使用额度已耗尽而无法启动，未生成可用的辩论发言。`,
       parse_failed: `${role} 的输出违反辩论 JSON 契约。`,
       reader_language_mismatch: `${role} 返回了错误语言的读者内容。`,
       unexpected_error: `${role} 意外失败，未生成可用的辩论发言。`,
@@ -1116,6 +1119,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role} は委員会全体の期限までに完了しませんでした。`,
       timeout: `${role} はタイムアウトし、利用可能な討論発言を生成しませんでした。`,
       exit: `${role} は異常終了し、利用可能な討論発言を生成しませんでした。`,
+      usage_limit_exhausted: `${role} は Codex の使用上限に達したため開始できず、利用可能な討論発言を生成しませんでした。`,
       parse_failed: `${role} の出力は討論 JSON 契約に違反しています。`,
       reader_language_mismatch: `${role} は指定と異なる言語の読者向け内容を返しました。`,
       unexpected_error: `${role} は予期せず失敗し、利用可能な討論発言を生成しませんでした。`,
@@ -1124,6 +1128,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role}이 위원회 전체 마감 시간 전에 완료되지 않았습니다.`,
       timeout: `${role}이 시간 초과되어 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
       exit: `${role}이 비정상 종료되어 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
+      usage_limit_exhausted: `${role}은 Codex 사용 한도가 소진되어 시작하지 못했고, 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
       parse_failed: `${role}의 출력이 토론 JSON 계약을 위반했습니다.`,
       reader_language_mismatch: `${role}이 지정과 다른 언어의 독자용 내용을 반환했습니다.`,
       unexpected_error: `${role}이 예기치 않게 실패해 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
@@ -1377,10 +1382,11 @@ export function debateFromCodex(result, role, run, fallbackPrompt, {
   repairedTransport = false,
 } = {}) {
   if (!result.ok) {
-    const failureKind = result.deadline_exhausted
-      ? "global_deadline"
-      : result.timedOut
-        ? "timeout"
+    const classified = workerExecutionFailureKind(result);
+    const failureKind = classified === "global_deadline" || classified === "timeout"
+      ? classified
+      : classified === "usage_limit_exhausted"
+        ? classified
         : Number.isInteger(result.code)
           ? "exit"
           : "unexpected_error";

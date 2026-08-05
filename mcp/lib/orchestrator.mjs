@@ -12,7 +12,7 @@ import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId,
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
-import { mapLimit, runCodex } from "./codex.mjs";
+import { mapLimit, runCodex, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
@@ -2416,18 +2416,7 @@ function evidenceOutputFailureKind(error) {
   return kind === "reader_language_mismatch" ? kind : "parse_failed";
 }
 
-export function workerExecutionFailureKind(result = {}) {
-  if (result.deadline_exhausted) return "global_deadline";
-  if (result.timedOut) return "timeout";
-  const stderr = String(result.stderr || "");
-  if (/invalid_json_schema|Invalid schema for response_format/iu.test(stderr)) {
-    return "output_schema_rejected";
-  }
-  if (/context_length_exceeded|maximum context length/iu.test(stderr)) {
-    return "context_length_exceeded";
-  }
-  return `exit_code_${Number.isInteger(result.code) ? result.code : "unknown"}`;
-}
+export { workerExecutionFailureKind } from "./codex.mjs";
 
 function repairableOutputFailure(failureKind) {
   return [
@@ -2629,6 +2618,38 @@ export function portfolioManagerAttemptDiagnostic({ attempt, failureKind, packet
     contract_error_count: Array.isArray(packet?.contract_errors)
       ? Math.min(packet.contract_errors.length, 1_000_000)
       : 0,
+    recorded_at: new Date().toISOString(),
+  };
+}
+
+/**
+ * Persist a bounded debate transport diagnostic before runCodex removes its temporary file.
+ * Provider prose and the worker prompt stay out of the run; an exhausted membership retains
+ * only a stable failure code and the provider-authored retry timestamp when one is present.
+ */
+export function debateTransportAttemptDiagnostic({ role, round, attempt, result }) {
+  const safeRole = ["bull_researcher", "bear_researcher", "portfolio_manager"].includes(role)
+    ? role
+    : "unknown";
+  const failureKind = workerExecutionFailureKind(result);
+  const retryHint = failureKind === "usage_limit_exhausted"
+    ? workerUsageLimitRetryHint(result)
+    : null;
+  const stderr = typeof result?.stderr === "string" ? result.stderr : "";
+  return {
+    schema_version: 1,
+    role: safeRole,
+    round: Number.isInteger(round) ? Math.max(1, Math.min(round, 3)) : null,
+    attempt: Number.isInteger(attempt) ? Math.max(1, Math.min(attempt, 2)) : 1,
+    stage: "debate_transport",
+    failure_kind: failureKind,
+    transport_ok: result?.ok === true,
+    timed_out: result?.timedOut === true,
+    exit_code: Number.isInteger(result?.code) ? result.code : null,
+    ...(retryHint ? { provider_retry_hint: retryHint } : {}),
+    stderr_chars: stderr.length,
+    stderr_bytes: Buffer.byteLength(stderr, "utf8"),
+    stderr_sha256: sha256(stderr),
     recorded_at: new Date().toISOString(),
   };
 }
@@ -4216,7 +4237,37 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     return path;
   };
 
+  const persistTransportAttemptDiagnostic = (attempt, workerResult) => {
+    if (workerResult?.ok === true) return null;
+    const roundPart = Number.isInteger(context.round) ? `.round-${context.round}` : "";
+    const path = join(runPath(run.run_id), `${role}${roundPart}.attempt-${attempt}.failure.json`);
+    const diagnostic = debateTransportAttemptDiagnostic({
+      role,
+      round: context.round,
+      attempt,
+      result: workerResult,
+    });
+    writeJson(path, diagnostic, { mode: 0o600 });
+    attemptDiagnostics.push(path);
+    appendEvent(run, "agent_attempt_diagnostic", {
+      role,
+      round: context.round,
+      attempt,
+      failure_kind: diagnostic.failure_kind,
+      diagnostic: path,
+      ...(diagnostic.provider_retry_hint ? { provider_retry_hint: diagnostic.provider_retry_hint } : {}),
+    });
+    updateAgent(run, role, "running", {
+      attempts: attempt,
+      attempt_diagnostics: [...attemptDiagnostics],
+      failure_kind: diagnostic.failure_kind,
+      ...(diagnostic.provider_retry_hint ? { provider_retry_hint: diagnostic.provider_retry_hint } : {}),
+    });
+    return path;
+  };
+
   let packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, prompt)));
+  persistTransportAttemptDiagnostic(1, result);
   if (result.ok && ["parse_failed", "reader_language_mismatch"].includes(packet.failure_kind)) {
     persistManagerAttemptDiagnostic(1, packet, result);
     const repairBudget = parseRepairBudget(run, {
@@ -4258,6 +4309,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
         updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
+      persistTransportAttemptDiagnostic(2, result);
       packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, repairPrompt, { repairedTransport: true })));
       if (packet?.failure_kind) persistManagerAttemptDiagnostic(2, packet, result);
     }
@@ -4283,7 +4335,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       ok: result.ok,
       timed_out: result.timedOut === true,
       verdict: packet.verdict,
-      failure_kind: packet.failure_kind,
+      failure_kind: result.ok ? packet.failure_kind : workerExecutionFailureKind(result),
       question_count: packet.questions.length,
       answered_count: packet.questions_answered.length,
     });
@@ -4309,10 +4361,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
 
 function debateFailure(step) {
   if (!step.result.ok) {
-    if (step.result.deadline_exhausted) return "global_deadline";
-    if (step.result.timedOut) return "timeout";
-    if (Number.isInteger(step.result.code)) return `exit code ${step.result.code}`;
-    return "unexpected_error";
+    return workerExecutionFailureKind(step.result);
   }
   if (step.packet.failure_kind) return step.packet.failure_kind;
   if (step.packet.verdict === "PARSE_FAILED") return "parse_failed";

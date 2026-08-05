@@ -25,6 +25,30 @@ const OUTPUT_DIAGNOSTIC_BYTES = 4096;
 // pre-read ceiling must preserve every payload the downstream character contract can accept.
 export const MAX_WORKER_OUTPUT_BYTES = MAX_WORKER_JSON_CHARS * 4;
 
+const USAGE_LIMIT_PATTERN = /(?:you(?:'|’)ve hit your usage limit|usage limit[^\r\n]{0,160}purchase more credits|purchase more credits[^\r\n]{0,160}usage limit)/iu;
+const USAGE_LIMIT_RETRY_PATTERN = /try again at ([A-Za-z]{3,9} \d{1,2}(?:st|nd|rd|th)?, \d{4} \d{1,2}:\d{2} (?:AM|PM))/iu;
+
+/** Classify process failures before callers reduce every provider rejection to exit code 1. */
+export function workerExecutionFailureKind(result = {}) {
+  if (result.deadline_exhausted) return "global_deadline";
+  if (result.timedOut) return "timeout";
+  const stderr = String(result.stderr || "");
+  if (USAGE_LIMIT_PATTERN.test(stderr)) return "usage_limit_exhausted";
+  if (/invalid_json_schema|Invalid schema for response_format/iu.test(stderr)) {
+    return "output_schema_rejected";
+  }
+  if (/context_length_exceeded|maximum context length/iu.test(stderr)) {
+    return "context_length_exceeded";
+  }
+  return `exit_code_${Number.isInteger(result.code) ? result.code : "unknown"}`;
+}
+
+/** Return only the provider-authored retry timestamp, never the surrounding stderr body. */
+export function workerUsageLimitRetryHint(result = {}) {
+  const match = String(result.stderr || "").match(USAGE_LIMIT_RETRY_PATTERN);
+  return match?.[1] || null;
+}
+
 function readExactly(fd, length, position = 0) {
   const output = Buffer.alloc(length);
   let offset = 0;

@@ -6,6 +6,7 @@ import {
   assertMethodVoiceReaderLanguage,
   methodVoiceReaderText,
   masterAttemptFailureDiagnostic,
+  debateTransportAttemptDiagnostic,
   outputFailureKind,
   workerExecutionFailureKind,
 } from "../../mcp/lib/orchestrator.mjs";
@@ -162,6 +163,22 @@ test("source provenance failures are not classified as parse failures", () => {
     data: { reason: "WORKER_JSON_UNRECOVERABLE" },
   }), "json_unrecoverable");
   assert.equal(outputFailureKind(new SyntaxError("bad JSON")), "parse_failed");
+});
+
+test("Codex membership exhaustion is classified and persisted without provider prose", () => {
+  const stderr = "ERROR: You've hit your usage limit. Visit settings to purchase more credits or try again at Aug 10th, 2026 1:56 PM. PRIVATE_SENTINEL";
+  const result = { ok: false, timedOut: false, code: 1, stderr };
+  assert.equal(workerExecutionFailureKind(result), "usage_limit_exhausted");
+  const diagnostic = debateTransportAttemptDiagnostic({
+    role: "bull_researcher",
+    round: 2,
+    attempt: 1,
+    result,
+  });
+  assert.equal(diagnostic.failure_kind, "usage_limit_exhausted");
+  assert.equal(diagnostic.provider_retry_hint, "Aug 10th, 2026 1:56 PM");
+  assert.match(diagnostic.stderr_sha256, /^sha256:[a-f0-9]{64}$/u);
+  assert.doesNotMatch(JSON.stringify(diagnostic), /PRIVATE_SENTINEL|purchase more credits/u);
 });
 
 test("master attempt diagnostics expose bounded method contract reasons without prose", () => {
