@@ -4316,12 +4316,13 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   }
   const roundCompletedAt = new Date().toISOString();
   if (Number.isInteger(context.round)) {
+    const roundSucceeded = result.ok === true && !packet.failure_kind;
     // A role can run three times. Leaving it marked `running` after one awaited invocation
     // returned made sequential rounds look concurrent in status.json. Record the dependency
     // boundary explicitly while reserving `completed` for the merged three-round artifact.
     updateAgent(run, role, "waiting", {
       round: context.round,
-      round_status: "completed",
+      round_status: roundSucceeded ? "completed" : "failed",
       last_completed_round: context.round,
       round_completed_at: roundCompletedAt,
       pid: null,

@@ -107,6 +107,7 @@ function fakeFullCodex(dataDir, {
   pmFailureMode = null,
   pmContractFailureMode = null,
   debateQnaFailureMode = null,
+  debateTransportFailureMode = null,
 } = {}) {
   const driver = join(dataDir, "fake-full-codex.mjs");
   const log = join(dataDir, "full-worker-log.jsonl");
@@ -143,6 +144,12 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   omitsPmReport: prompt.includes("Omit report_markdown completely")
     || (prompt.includes("Do not return") && prompt.includes("report_markdown")),
 }) + "\\n");
+
+if (${JSON.stringify(debateTransportFailureMode)} === "round2_usage_limit"
+  && ["bull_researcher", "bear_researcher"].includes(role) && round === 2) {
+  process.stderr.write("ERROR: You've hit your usage limit. Visit settings to purchase more credits or try again at Aug 10th, 2026 1:56 PM. PRIVATE_PROVIDER_SENTINEL\\n");
+  process.exit(1);
+}
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const lineJson = (prefix) => {
@@ -566,6 +573,69 @@ test("headless Q&A remains fail-closed when the bounded repair still changes exa
   } finally {
     await fixture.server.close();
     removeDataDir(fixture.dataDir);
+  }
+});
+
+test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", async () => {
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir, {
+    malformedTask: null,
+    debateTransportFailureMode: "round2_usage_limit",
+  });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Classify a provider usage limit after a valid first debate round.";
+    const confirmed = await confirmMasterSelection(server, {
+      symbol: "QQQ", language: "English", prompt, selected_master_ids: ["master_buffett"],
+    });
+    const runId = `FULL-DEBATE-USAGE-LIMIT-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+      council_mode: "full", total_timeout_ms: 45_000, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+      wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+      grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
+    }, { timeoutMs: 60_000 }));
+
+    const dir = join(dataDir, "runs", runId);
+    const status = readJson(join(dir, "status.json"));
+    const events = readJsonl(join(dir, "events.jsonl"));
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(status.status, "incomplete");
+    assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "skipped");
+    for (const role of ["bull_researcher", "bear_researcher"]) {
+      const agent = status.agents.find((entry) => entry.role === role);
+      assert.equal(agent.status, "failed");
+      assert.equal(agent.round_status, "failed");
+      assert.equal(agent.failure_kind, "usage_limit_exhausted");
+      assert.equal(agent.provider_retry_hint, "Aug 10th, 2026 1:56 PM");
+      const diagnosticPath = join(dir, `${role}.round-2.attempt-1.failure.json`);
+      const diagnosticText = readFileSync(diagnosticPath, "utf8");
+      const diagnostic = JSON.parse(diagnosticText);
+      assert.equal(diagnostic.failure_kind, "usage_limit_exhausted");
+      assert.equal(diagnostic.timed_out, false);
+      assert.equal(diagnostic.exit_code, 1);
+      assert.equal(diagnostic.provider_retry_hint, "Aug 10th, 2026 1:56 PM");
+      assert.match(diagnostic.stderr_sha256, /^sha256:[0-9a-f]{64}$/u);
+      assert.doesNotMatch(diagnosticText, /PRIVATE_PROVIDER_SENTINEL|purchase more credits/u);
+      if (process.platform !== "win32") assert.equal(statSync(diagnosticPath).mode & 0o777, 0o600);
+      const debate = readJson(join(dir, `${role}.json`));
+      assert.equal(debate.debate_rounds[0].round, 1);
+      assert.equal(debate.debate_rounds[0].company_dossier_hash_ack, null);
+      assert.equal(debate.debate_rounds[1].round, 2);
+      assert.equal(debate.debate_rounds[1].summary.includes("usage limit"), true);
+    }
+    assert.ok(events.some((event) => event.type === "incomplete"
+      && event.reason === "debate_round_2_failed:usage_limit_exhausted,usage_limit_exhausted"));
+    assert.equal(events.some((event) => event.type === "agent_parse_repair" && event.round === 2), false);
+    assert.equal(events.some((event) => event.type === "debate_round" && event.round === 3), false);
+    assert.equal(readJsonl(fake.log).some((entry) => entry.role === "portfolio_manager"), false);
+    const durableText = ["status.json", "evidence.json", "events.jsonl", "decision.json"]
+      .map((name) => readFileSync(join(dir, name), "utf8")).join("\n");
+    assert.doesNotMatch(durableText, /PRIVATE_PROVIDER_SENTINEL|purchase more credits/u);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
   }
 });
 
