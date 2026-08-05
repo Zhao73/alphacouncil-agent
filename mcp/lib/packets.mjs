@@ -90,7 +90,11 @@ export function extractRepairedWorkerJson(text, kind) {
     const valid = [];
     for (const candidate of candidates) {
       try {
-        valid.push(assertRuntimeWorkerPayload(kind, candidate));
+        // Candidate arbitration must use the same lossless transport normalization as the
+        // ordinary single-root path. Otherwise one valid evidence packet with optional
+        // coverage fields serialized as null is incorrectly discarded beside a diagnostic
+        // root, and the repair fails even though exactly one contract-valid value exists.
+        valid.push(assertRuntimeWorkerPayload(kind, normalizeNullableCoverageTransport(kind, candidate)));
       } catch (candidateError) {
         if (candidateError?.data?.reason !== "WORKER_OUTPUT_SCHEMA_MISMATCH") {
           throw candidateError;
@@ -1253,7 +1257,28 @@ function threeBoundAnswers(value, expectedQuestions) {
       && item.question === expectedQuestions[index]
       && typeof item.answer === "string"
       && item.answer.trim().length > 0
-    ));
+  ));
+}
+
+/** Validate one headless debate worker against the Q&A context that was frozen for its round. */
+export function debateRoundQnaGate({ role, round, packet, questionsYouAsked, questionsForYou } = {}) {
+  if (!new Set(["bull_researcher", "bear_researcher"]).has(role) || ![2, 3].includes(round)) {
+    return { status: "passed", errors: [] };
+  }
+  const errors = [];
+  if (round === 2 && !threeNonEmptyStrings(packet?.questions)) {
+    errors.push(`${role} round 2 must ask exactly 3 opponent questions`);
+  }
+  if (round === 3) {
+    if (!threeBoundAnswers(packet?.questions_answered, questionsForYou)) {
+      errors.push(`${role} round 3 must answer exactly 3 opponent questions with exact question bindings`);
+    }
+    if (!threeNonEmptyStrings(questionsYouAsked)
+      || JSON.stringify(packet?.questions) !== JSON.stringify(questionsYouAsked)) {
+      errors.push(`${role} round 3 must preserve its round 2 questions`);
+    }
+  }
+  return { status: errors.length ? "failed" : "passed", errors };
 }
 
 /** Fail closed when the advertised Q&A round did not actually exchange questions. */

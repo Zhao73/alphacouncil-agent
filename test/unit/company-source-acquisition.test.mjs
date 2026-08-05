@@ -5,6 +5,7 @@ import {
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
   acquireCompanyStarterEvidence,
   buildCompanySourceAcquisitionPlan,
+  canonicalizeCompanySourceAcquisitionPacket,
   companySourceAcquisitionIssues,
   discoverIssuerOfficialSources,
   discoverIssuerRootsFromFilings,
@@ -101,6 +102,39 @@ test("issuer discovery keeps same-site official links and rejects unrelated link
   assert.ok(result.pages.every((url) => !/unrelated\.example\.net/u.test(url)));
   assert.ok(result.pages.every((url) => !/\/careers$/u.test(url)));
   assert.ok(result.documents.every((document) => document.excerpt));
+});
+
+test("issuer discovery prioritizes current earnings detail pages over early navigation links", async () => {
+  const calls = [];
+  const navigation = [
+    "governance-overview", "board-of-directors", "committee-composition", "investor-faqs",
+    "annual-reports", "sec-filings", "news-releases", "events-presentations",
+    "quarterly-results", "stock-information", "contact-us",
+  ].map((path) => `<a href="https://ir.example.com/${path}">${path}</a>`);
+  const earnings = '<a href="https://ir.example.com/news-release-details/example-reports-second-quarter-2026-results">Q2 results</a>';
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    const root = url === "https://ir.example.com/";
+    return {
+      ok: true,
+      status: 200,
+      url,
+      headers: { get: () => "text/html" },
+      text: async () => root ? [...navigation, earnings].join("") : `<html><title>${url}</title><body>dated issuer evidence</body></html>`,
+    };
+  };
+  const result = await discoverIssuerOfficialSources({
+    investor_website: "https://ir.example.com/",
+  }, {
+    asOf: "2026-08-05",
+    fetchImpl,
+    timeoutMs: 1_000,
+    filingIndexImpl: async () => ({ filings: [] }),
+  });
+  assert.equal(result.status, "succeeded");
+  assert.ok(calls.includes("https://ir.example.com/news-release-details/example-reports-second-quarter-2026-results"));
+  assert.ok(result.documents.some((document) => /second-quarter-2026-results/u.test(document.url)));
+  assert.ok(calls.length <= 1 + 10, "the bounded detail-page limit must remain enforced");
 });
 
 test("SEC filing text discovers issuer-owned roots without a ticker exception", async () => {
@@ -253,6 +287,537 @@ test("the acquisition gate rejects a lazy gap and accepts an audited modeled ran
   assert.ok(companySourceAcquisitionIssues(lazy, run).some((issue) => issue.keyword === "exhaustive"));
 });
 
+test("server-owned bindings and structured reported actuals survive real worker-shaped data", () => {
+  const plan = buildCompanySourceAcquisitionPlan({
+    symbol: "VSH",
+    asOf: "2026-08-05",
+    profile: profile({ cik: "0000103730", name: "Vishay Intertechnology, Inc." }),
+  });
+  const task = "earnings_deep_dive";
+  const routes = plan.tasks[task];
+  const items = routes.map(exhaustiveUnavailable);
+  const coverageItems = routes.map((route) => ({
+    id: route.coverage_id,
+    status: "unavailable",
+    source_ids: [],
+  }));
+  const target = routes.findIndex((route) => route.coverage_id === "financials.customer_supplier_concentration");
+  coverageItems[target] = {
+    id: routes[target].coverage_id,
+    status: "covered",
+    source_ids: [`${task}:S1`],
+  };
+  items[target] = {
+    coverage_id: routes[target].coverage_id,
+    outcome: "reported_actual",
+    // Ledger-only repair output may echo the worker-local spelling after packet sources have
+    // already been scoped. The server must bind it to the existing source, never invent one.
+    source_ids: ["S1"],
+    attempts: [{
+      stage: "regulator_filing",
+      locator_type: "url",
+      locator: "https://www.sec.gov/Archives/edgar/data/103730/form10k.htm",
+      result: "succeeded",
+      source_ids: ["S1"],
+      note: "customer concentration disclosure",
+    }],
+    data: {
+      period: "FY2025",
+      top_30_customer_revenue_share_pct: 74,
+      largest_single_customer_share: "below 10%",
+    },
+  };
+  const packet = {
+    task,
+    as_of: "2026-08-05",
+    sources: [{ id: `${task}:S1`, url: "https://www.sec.gov/Archives/edgar/data/103730/form10k.htm" }],
+    coverage_items: coverageItems,
+    acquisition_ledger: { policy_id: "worker_chosen_policy", task: "wrong_task", items },
+  };
+  const run = {
+    council_mode: "full",
+    dry_run: false,
+    decision_requested: true,
+    entry_tool: "analyze_symbol",
+    as_of: "2026-08-05",
+    grounding: { instrument: { research_model: "operating_company" }, source_acquisition_plan: plan },
+  };
+  canonicalizeCompanySourceAcquisitionPacket(packet, run);
+  assert.equal(packet.acquisition_ledger.policy_id, COMPANY_SOURCE_ACQUISITION_POLICY_ID);
+  assert.equal(packet.acquisition_ledger.task, task);
+  assert.deepEqual(packet.acquisition_ledger.items[target].source_ids, [`${task}:S1`]);
+  assert.deepEqual(packet.acquisition_ledger.items[target].attempts[0].source_ids, [`${task}:S1`]);
+  const observations = packet.acquisition_ledger.items[target].data.observations;
+  assert.equal(observations.length, 2);
+  assert.equal(observations[0].period, "FY2025");
+  assert.equal(observations[0].scope, routes[target].coverage_id);
+  assert.ok(observations.some((row) => row.unit === "%" && row.value === 74));
+  assert.deepEqual(companySourceAcquisitionIssues(packet, run), []);
+});
+
+test("all-scope supplemental analysts do not own synthetic 52-item acquisition routes", () => {
+  const plan = buildCompanySourceAcquisitionPlan({
+    symbol: "VSH",
+    asOf: "2026-08-05",
+    profile: profile({ cik: "0000103730", name: "Vishay Intertechnology, Inc." }),
+  });
+  const run = {
+    council_mode: "full",
+    dry_run: false,
+    decision_requested: true,
+    entry_tool: "analyze_symbol",
+    grounding: { instrument: { research_model: "operating_company" }, source_acquisition_plan: plan },
+  };
+  for (const task of ["macro_regime", "market_narrative", "social_pulse"]) {
+    const packet = {
+      task,
+      acquisition_ledger: { policy_id: "wrong", task: "wrong", items: [{ malformed: true }] },
+    };
+    assert.deepEqual(companySourceAcquisitionIssues(packet, run), []);
+    assert.equal(Object.hasOwn(packet, "acquisition_ledger"), false);
+    assert.equal(sourceAcquisitionPromptBlock(plan, task, "中文"), "");
+  }
+});
+
+test("canonicalization never invents an unknown numeric unit or substitutes as_of for period", () => {
+  const plan = buildCompanySourceAcquisitionPlan({
+    symbol: "VSH",
+    asOf: "2026-08-05",
+    profile: profile({ cik: "0000103730", name: "Vishay Intertechnology, Inc." }),
+  });
+  const task = "earnings_deep_dive";
+  const routes = plan.tasks[task];
+  const items = routes.map(exhaustiveUnavailable);
+  const target = 0;
+  items[target] = {
+    coverage_id: routes[target].coverage_id,
+    outcome: "reported_actual",
+    source_ids: ["S1"],
+    attempts: [{
+      stage: routes[target].required_terminal_stages.find((stage) => ["regulator_filing", "issuer_ir"].includes(stage)),
+      locator_type: "url",
+      locator: "https://www.sec.gov/Archives/edgar/data/103730/form10k.htm",
+      result: "succeeded",
+      source_ids: ["S1"],
+    }],
+    data: { unexplained_numeric: 123 },
+  };
+  const packet = {
+    task,
+    as_of: "2026-08-05",
+    sources: [{ id: `${task}:S1`, url: "https://www.sec.gov/Archives/edgar/data/103730/form10k.htm" }],
+    coverage_items: routes.map((route, index) => ({
+      id: route.coverage_id,
+      status: index === target ? "covered" : "unavailable",
+      source_ids: index === target ? [`${task}:S1`] : [],
+    })),
+    acquisition_ledger: { items },
+  };
+  const run = {
+    council_mode: "full",
+    dry_run: false,
+    decision_requested: true,
+    entry_tool: "analyze_symbol",
+    as_of: "2026-08-05",
+    grounding: { instrument: { research_model: "operating_company" }, source_acquisition_plan: plan },
+  };
+  canonicalizeCompanySourceAcquisitionPacket(packet, run);
+  const observation = packet.acquisition_ledger.items[target].data.observations[0];
+  assert.equal(observation.unit, null);
+  assert.equal(observation.period, null);
+  assert.equal(packet.acquisition_ledger.items[target].proposed_outcome, "reported_actual");
+  assert.equal(packet.acquisition_ledger.items[target].outcome, "unavailable");
+  assert.match(packet.acquisition_ledger.items[target].reason, /not publishable/u);
+  const issues = companySourceAcquisitionIssues(packet, run);
+  assert.ok(issues.some((issue) => issue.keyword === "exhaustive"));
+  assert.ok(!issues.some((issue) => issue.path.endsWith("/unit") || issue.path.endsWith("/period")));
+});
+
+function acquisitionFixture({ task, targetId, item, covered = true }) {
+  const plan = buildCompanySourceAcquisitionPlan({
+    symbol: "VSH",
+    asOf: "2026-08-05",
+    profile: profile({ cik: "0000103730", name: "Vishay Intertechnology, Inc." }),
+  });
+  const routes = plan.tasks[task];
+  const target = routes.findIndex((route) => route.coverage_id === targetId);
+  assert.notEqual(target, -1, `missing fixture route ${targetId}`);
+  const sourceId = `${task}:S1`;
+  const items = routes.map(exhaustiveUnavailable);
+  items[target] = typeof item === "function" ? item(routes[target], sourceId) : item;
+  const packet = {
+    task,
+    as_of: "2026-08-05",
+    sources: [{ id: sourceId, url: "https://example.com/dated-source" }],
+    coverage_items: routes.map((route, index) => ({
+      id: route.coverage_id,
+      status: index === target && covered ? "covered" : "unavailable",
+      source_ids: index === target && covered ? [sourceId] : [],
+    })),
+    acquisition_ledger: { items },
+  };
+  const run = {
+    council_mode: "full",
+    dry_run: false,
+    decision_requested: true,
+    entry_tool: "analyze_symbol",
+    as_of: "2026-08-05",
+    grounding: { instrument: { research_model: "operating_company" }, source_acquisition_plan: plan },
+  };
+  return { packet, plan, route: routes[target], run, sourceId, target };
+}
+
+test("route-appropriate public and local observations can publish cited direct actuals", () => {
+  const fixtures = [
+    {
+      task: "market_data",
+      targetId: "market.quote_snapshot",
+      stage: "local_observation",
+      metric: "close_price",
+      unit: "USD per share",
+    },
+    {
+      task: "forward_expectations",
+      targetId: "expectations.consensus_revenue_eps",
+      stage: "public_consensus",
+      metric: "public_sample_revenue",
+      unit: "USD million",
+    },
+  ];
+  for (const fixture of fixtures) {
+    const { packet, run, sourceId } = acquisitionFixture({
+      task: fixture.task,
+      targetId: fixture.targetId,
+      item: (route, sourceId) => ({
+        coverage_id: route.coverage_id,
+        outcome: "reported_actual",
+        source_ids: [sourceId],
+        attempts: [{
+          stage: fixture.stage,
+          locator_type: fixture.stage === "local_observation" ? "local" : "url",
+          locator: fixture.stage === "local_observation" ? "snapshot:2026-08-05" : "https://example.com/consensus",
+          result: "succeeded",
+          source_ids: [sourceId],
+        }],
+        data: {
+          observations: [{
+            metric: fixture.metric,
+            value: 123.45,
+            unit: fixture.unit,
+            period: "2026-08-05 close",
+            scope: route.coverage_id,
+          }],
+        },
+      }),
+    });
+    canonicalizeCompanySourceAcquisitionPacket(packet, run);
+    assert.equal(packet.acquisition_ledger.items.find((row) => row.coverage_id === fixture.targetId).outcome, "reported_actual");
+    assert.deepEqual(companySourceAcquisitionIssues(packet, run), []);
+  }
+});
+
+test("public market-data stage aliases normalize without posing as an official source", () => {
+  for (const proposedStage of ["market_data_provider", "market_data", "public_market_data"]) {
+    const fixture = acquisitionFixture({
+      task: "market_data",
+      targetId: "market.quote_snapshot",
+      item: (route, sourceId) => ({
+        coverage_id: route.coverage_id,
+        outcome: "reported_actual",
+        source_ids: [sourceId],
+        attempts: [
+          ...exhaustiveUnavailable(route).attempts,
+          {
+            stage: proposedStage,
+            locator_type: "url",
+            locator: "https://stockanalysis.com/stocks/vsh/history/",
+            result: "succeeded",
+            source_ids: [sourceId],
+          },
+        ],
+        data: {
+          observations: [{
+            metric: "close_price",
+            value: 38.85,
+            unit: "USD per share",
+            period: "2026-08-04 close",
+            scope: "VSH regular-session close",
+          }],
+        },
+      }),
+    });
+    canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+    const row = fixture.packet.acquisition_ledger.items[fixture.target];
+    const supplemental = row.attempts.at(-1);
+    assert.equal(supplemental.stage, "public_market_data");
+    assert.equal(supplemental.proposed_stage, proposedStage === "public_market_data" ? undefined : proposedStage);
+    assert.equal(row.outcome, "reported_actual");
+    assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+  }
+});
+
+test("a public market page cannot bypass the frozen terminal ladder", () => {
+  const actual = acquisitionFixture({
+    task: "market_data",
+    targetId: "market.quote_snapshot",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "reported_actual",
+      source_ids: [sourceId],
+      attempts: [{
+        stage: "market_data_provider",
+        locator_type: "url",
+        locator: "https://stockanalysis.com/stocks/vsh/history/",
+        result: "succeeded",
+        source_ids: [sourceId],
+      }],
+      data: {
+        observations: [{
+          metric: "close_price",
+          value: 38.85,
+          unit: "USD per share",
+          period: "2026-08-04 close",
+          scope: "VSH regular-session close",
+        }],
+      },
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(actual.packet, actual.run);
+  const actualRow = actual.packet.acquisition_ledger.items[actual.target];
+  assert.equal(actualRow.outcome, "unavailable");
+  assert.equal(actualRow.proposed_outcome, "reported_actual");
+  assert.ok(companySourceAcquisitionIssues(actual.packet, actual.run).some((issue) => issue.keyword === "exhaustive"));
+
+  const proxy = acquisitionFixture({
+    task: "market_data",
+    targetId: "market.technical_levels",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "recomputed_proxy",
+      source_ids: [sourceId],
+      attempts: [
+        {
+          stage: "market_data",
+          locator_type: "url",
+          locator: "https://stockanalysis.com/stocks/vsh/statistics/",
+          result: "succeeded",
+          source_ids: [sourceId],
+        },
+        {
+          stage: "derived_proxy",
+          locator_type: "local",
+          locator: "derive:price_vs_50dma",
+          result: "succeeded",
+          source_ids: [],
+        },
+      ],
+      data: {
+        observations: [{
+          metric: "price_vs_50dma",
+          value: -20.71,
+          unit: "percent",
+          period: "2026-08-04",
+          scope: "VSH close relative to 50-day moving average",
+          formula: "(close / ma_50 - 1) * 100",
+          inputs: [{ name: "close", value: 38.85, source_ids: [sourceId] }],
+        }],
+      },
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(proxy.packet, proxy.run);
+  const proxyRow = proxy.packet.acquisition_ledger.items[proxy.target];
+  assert.equal(proxyRow.outcome, "unavailable");
+  assert.equal(proxyRow.proposed_outcome, "recomputed_proxy");
+  assert.ok(companySourceAcquisitionIssues(proxy.packet, proxy.run).some((issue) => issue.keyword === "exhaustive"));
+});
+
+test("public market data cannot masquerade as expectations consensus", () => {
+  const fixture = acquisitionFixture({
+    task: "forward_expectations",
+    targetId: "expectations.consensus_revenue_eps",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "reported_actual",
+      source_ids: [sourceId],
+      attempts: [
+        ...exhaustiveUnavailable(route).attempts,
+        {
+          stage: "public_market_data",
+          locator_type: "url",
+          locator: "https://stockanalysis.com/stocks/vsh/forecast/",
+          result: "succeeded",
+          source_ids: [sourceId],
+        },
+      ],
+      data: {
+        observations: [{
+          metric: "consensus_revenue",
+          value: 960,
+          unit: "USD million",
+          period: "2026Q3",
+          scope: "public sample",
+        }],
+      },
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  const row = fixture.packet.acquisition_ledger.items[fixture.target];
+  assert.equal(row.outcome, "unavailable");
+  assert.equal(row.proposed_outcome, "reported_actual");
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+});
+
+test("sourced partial coverage remains covered while an exact scalar stays unavailable", () => {
+  const fixture = acquisitionFixture({
+    task: "market_data",
+    targetId: "market.price_history_range",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "unavailable",
+      source_ids: [sourceId],
+      attempts: route.required_terminal_stages.map((stage, index) => ({
+        stage,
+        locator_type: stage === "local_observation" || stage === "derived_proxy" ? "local" : "query",
+        locator: `${stage}:${route.coverage_id}`,
+        result: index === 0 ? "succeeded" : "not_disclosed",
+        source_ids: index === 0 ? [sourceId] : [],
+      })),
+      reason: "The cited source covers the price-history domain, but the exact requested range was not disclosed in a publishable shape.",
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+});
+
+test("server binds covered-domain sources to an exhaustively unavailable ledger row", () => {
+  const fixture = acquisitionFixture({
+    task: "quant_factor",
+    targetId: "quant.relative_strength_factors",
+    item: (route) => exhaustiveUnavailable(route),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  const row = fixture.packet.acquisition_ledger.items[fixture.target];
+  assert.equal(row.outcome, "unavailable");
+  assert.deepEqual(row.source_ids, [fixture.sourceId]);
+  assert.ok(row.attempts.every((attempt) => attempt.result !== "succeeded"));
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+});
+
+test("object inputs normalize into cited rows for a recomputed proxy", () => {
+  const fixture = acquisitionFixture({
+    task: "quant_factor",
+    targetId: "quant.options_iv_skew_expected_move",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "recomputed_proxy",
+      source_ids: [sourceId],
+      attempts: [
+        {
+          stage: "market_official", locator_type: "url", locator: "https://example.com/options",
+          result: "succeeded", source_ids: [sourceId],
+        },
+        {
+          stage: "derived_proxy", locator_type: "local", locator: "derive:expected-move",
+          result: "succeeded", source_ids: [],
+        },
+      ],
+      data: {
+        value: 4.2,
+        unit: "% of spot",
+        period: "next listed expiry as of 2026-08-05",
+        formula: "at-the-money straddle divided by spot",
+        inputs: {
+          option_snapshot: { value: "dated chain", source_ids: [sourceId] },
+          spot: 123.45,
+        },
+      },
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  const row = fixture.packet.acquisition_ledger.items[fixture.target];
+  assert.ok(Array.isArray(row.data.inputs));
+  assert.deepEqual(row.data.inputs[0].source_ids, [fixture.sourceId]);
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+});
+
+test("an incomplete modeled range is preserved as a proposal but fails closed to unavailable", () => {
+  const fixture = acquisitionFixture({
+    task: "earnings_deep_dive",
+    targetId: "financials.customer_supplier_concentration",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "modeled_estimate",
+      source_ids: [sourceId],
+      attempts: route.required_terminal_stages.map((stage) => ({
+        stage,
+        locator_type: stage === "derived_proxy" ? "local" : "query",
+        locator: `${stage}:${route.coverage_id}`,
+        result: stage === "regulator_filing" || stage === "derived_proxy" ? "succeeded" : "not_disclosed",
+        source_ids: stage === "regulator_filing" ? [sourceId] : [],
+      })),
+      data: {
+        range: { low: 0, base: null, high: null },
+        unit: "% of revenue",
+        period: "FY2026 scenario",
+        formula: "bound from disclosed concentration",
+        assumptions: ["No anonymous customer is assigned a name."],
+      },
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  const row = fixture.packet.acquisition_ledger.items[fixture.target];
+  assert.equal(row.outcome, "unavailable");
+  assert.equal(row.proposed_outcome, "modeled_estimate");
+  assert.equal(row.data.range.base, null);
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+});
+
+test("an external page-open success without a source id is normalized to not_disclosed", () => {
+  const fixture = acquisitionFixture({
+    task: "ib_event_analysis",
+    targetId: "events.mna_strategic_transactions",
+    covered: false,
+    item: (route) => ({
+      ...exhaustiveUnavailable(route),
+      attempts: route.required_terminal_stages.map((stage, index) => ({
+        stage,
+        locator_type: stage === "derived_proxy" ? "local" : "query",
+        locator: `${stage}:${route.coverage_id}`,
+        result: index === 0 ? "succeeded" : "not_disclosed",
+        source_ids: [],
+      })),
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  const attempt = fixture.packet.acquisition_ledger.items[fixture.target].attempts[0];
+  assert.equal(attempt.result, "not_disclosed");
+  assert.equal(attempt.proposed_result, "succeeded");
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+});
+
+test("known extra acquisition stages are auditable but unknown stages are rejected", () => {
+  const fixture = acquisitionFixture({
+    task: "market_data",
+    targetId: "market.quote_snapshot",
+    covered: false,
+    item: (route) => ({
+      ...exhaustiveUnavailable(route),
+      attempts: [
+        ...exhaustiveUnavailable(route).attempts,
+        {
+          stage: "court_record", locator_type: "query", locator: "court_record:extra-check",
+          result: "not_disclosed", source_ids: [],
+        },
+      ],
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
+  const unknown = structuredClone(fixture.packet);
+  unknown.acquisition_ledger.items[fixture.target].attempts.at(-1).stage = "invented_worker_stage";
+  assert.ok(companySourceAcquisitionIssues(unknown, fixture.run).some((issue) => issue.keyword === "enum"));
+});
+
 test("the prompt contract requires actual, proxy, model, or an exhausted ladder", () => {
   const plan = buildCompanySourceAcquisitionPlan({
     symbol: "ACME",
@@ -264,4 +829,7 @@ test("the prompt contract requires actual, proxy, model, or an exhausted ladder"
   assert.match(prompt, /recomputed_proxy/u);
   assert.match(prompt, /modeled_estimate/u);
   assert.match(prompt, /required_terminal_stages/u);
+  assert.match(prompt, /company_source_acquisition_v1/u);
+  assert.match(prompt, /task:"quant_factor"/u);
+  assert.match(prompt, /observations/u);
 });

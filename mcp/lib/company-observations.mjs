@@ -33,12 +33,32 @@ function boundedData(data) {
     : null;
   if (value === null && range === null) return null;
   return {
+    metric: typeof data.metric === "string" ? data.metric.slice(0, 160) : null,
     value,
     range,
     unit: typeof data.unit === "string" ? data.unit.slice(0, 80) : null,
     period: typeof data.period === "string" ? data.period.slice(0, 120) : null,
     scope: typeof data.scope === "string" ? data.scope.slice(0, 180) : null,
     formula: typeof data.formula === "string" ? data.formula.slice(0, 600) : null,
+  };
+}
+
+function boundedObservation(observation, parent = null) {
+  if (!observation || typeof observation !== "object" || Array.isArray(observation)) return null;
+  const value = typeof observation.value === "number" || typeof observation.value === "string" || typeof observation.value === "boolean"
+    ? observation.value
+    : null;
+  if (value === null || (typeof value === "number" && !Number.isFinite(value))) return null;
+  return {
+    metric: typeof observation.metric === "string" ? observation.metric.slice(0, 160) : null,
+    value,
+    range: null,
+    unit: typeof observation.unit === "string" ? observation.unit.slice(0, 80) : null,
+    period: typeof observation.period === "string" ? observation.period.slice(0, 120) : null,
+    scope: typeof observation.scope === "string" ? observation.scope.slice(0, 180) : null,
+    formula: typeof observation.formula === "string"
+      ? observation.formula.slice(0, 600)
+      : typeof parent?.formula === "string" ? parent.formula.slice(0, 600) : null,
   };
 }
 
@@ -56,9 +76,11 @@ export function recordCompanyAcquisitionObservations({
   const date = new Date(instant).toISOString().slice(0, 10);
   const rows = ledger.items.flatMap((item) => {
     if (!["reported_actual", "recomputed_proxy", "modeled_estimate"].includes(item?.outcome)) return [];
-    const data = boundedData(item.data);
-    if (!data) return [];
-    return [{
+    const values = ["reported_actual", "recomputed_proxy"].includes(item.outcome)
+      && Array.isArray(item?.data?.observations)
+      ? item.data.observations.map((observation) => boundedObservation(observation, item.data)).filter(Boolean)
+      : [boundedData(item.data)].filter(Boolean);
+    return values.map((data) => ({
       date,
       observed_at: new Date(instant).toISOString(),
       task: String(task || ledger.task || "").slice(0, 80),
@@ -66,16 +88,16 @@ export function recordCompanyAcquisitionObservations({
       outcome: item.outcome,
       source_ids: Array.isArray(item.source_ids) ? item.source_ids.slice(0, 24) : [],
       ...data,
-    }];
+    }));
   });
   const file = companyObservationFile(symbol, dataDir);
   const prior = readLedger(file);
   const byKey = new Map(prior.map((row) => [
-    `${row.date}|${row.task}|${row.coverage_id}|${row.outcome}|${row.period || ""}|${row.unit || ""}`,
+    `${row.date}|${row.task}|${row.coverage_id}|${row.outcome}|${row.metric || ""}|${row.period || ""}|${row.unit || ""}|${row.scope || ""}`,
     row,
   ]));
   for (const row of rows) {
-    byKey.set(`${row.date}|${row.task}|${row.coverage_id}|${row.outcome}|${row.period || ""}|${row.unit || ""}`, row);
+    byKey.set(`${row.date}|${row.task}|${row.coverage_id}|${row.outcome}|${row.metric || ""}|${row.period || ""}|${row.unit || ""}|${row.scope || ""}`, row);
   }
   const observations = [...byKey.values()]
     .sort((left, right) => String(left.observed_at).localeCompare(String(right.observed_at)))
@@ -105,7 +127,7 @@ export function companyObservationHistory(symbol, {
   });
   const groups = new Map();
   for (const row of rows) {
-    const key = `${row.coverage_id}|${row.period || ""}|${row.unit || ""}|${row.outcome}`;
+    const key = `${row.coverage_id}|${row.metric || ""}|${row.period || ""}|${row.unit || ""}|${row.scope || ""}|${row.outcome}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(row);
   }
@@ -119,6 +141,7 @@ export function companyObservationHistory(symbol, {
     const priorValue = numericValue(prior);
     return {
       coverage_id: latest.coverage_id,
+      metric: latest.metric || null,
       outcome: latest.outcome,
       period: latest.period,
       unit: latest.unit,

@@ -83,62 +83,7 @@
     },
     "acquisition_ledger": {
       "type": "object",
-      "required": ["policy_id", "task", "items"],
-      "properties": {
-        "policy_id": { "const": "company_source_acquisition_v1" },
-        "task": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["coverage_id", "outcome", "source_ids", "attempts"],
-            "properties": {
-              "coverage_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z0-9_.]+$" },
-              "outcome": {
-                "enum": ["reported_actual", "recomputed_proxy", "modeled_estimate", "unavailable", "not_applicable"]
-              },
-              "source_ids": {
-                "type": "array",
-                "uniqueItems": true,
-                "items": {
-                  "type": "string",
-                  "maxLength": 512,
-                  "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
-                }
-              },
-              "attempts": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "required": ["stage", "locator_type", "locator", "result", "source_ids"],
-                  "properties": {
-                    "stage": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
-                    "locator_type": { "enum": ["url", "query", "local"] },
-                    "locator": { "type": "string", "pattern": "\\S" },
-                    "result": {
-                      "enum": ["succeeded", "not_found", "not_disclosed", "unreachable", "blocked", "not_applicable"]
-                    },
-                    "source_ids": {
-                      "type": "array",
-                      "uniqueItems": true,
-                      "items": {
-                        "type": "string",
-                        "maxLength": 512,
-                        "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
-                      }
-                    },
-                    "note": { "type": "string" }
-                  },
-                  "additionalProperties": true
-                }
-              },
-              "data": { "type": "object" },
-              "reason": { "type": "string" }
-            },
-            "additionalProperties": true
-          }
-        }
-      },
+      "description": "Worker-proposed acquisition audit. Exact policy, task ownership, rows, attempts and outcome semantics are canonicalized and validated against the frozen per-run plan after transport parsing.",
       "additionalProperties": true
     },
     "confidence": { "enum": ["high", "medium", "low"] },

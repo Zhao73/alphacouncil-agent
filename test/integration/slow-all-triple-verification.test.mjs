@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { ALL_ANALYST_TASKS, DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { expectedCoverageItems } from "../../mcp/lib/company-dossier.mjs";
+import { buildCompanySourceAcquisitionPlan } from "../../mcp/lib/company-source-acquisition.mjs";
 import { CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
 import { REQUIRED_VERIFIER_IDS } from "../../mcp/lib/verification.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
@@ -37,6 +38,8 @@ const verifier = /isolated (source_fidelity|rederivation|refuter) worker/u.exec(
   || /Verifier:\\s*(source_fidelity|rederivation|refuter)/u.exec(prompt)?.[1]
   || null;
 const coverageRetry = prompt.includes("VERIFIER COVERAGE RETRY");
+const acquisitionRepair = prompt.includes("SOURCE-ACQUISITION LEDGER TRANSPORT REPAIR ONLY");
+const transportRepair = prompt.includes("PARSE-ONLY TRANSPORT REPAIR.");
 const task = tasks.find((id) => prompt.includes("Task:" + id) || prompt.includes("Task: " + id))
   || /Target task:\\s*([a-z_]+)/u.exec(prompt)?.[1]
   || null;
@@ -57,7 +60,8 @@ const lineJson = (prefix) => {
 };
 
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({
-  role, task, verifier, master, round, coverageRetry, search: args.includes("--search"), pid: process.pid, at: Date.now(),
+  role, task, verifier, master, round, coverageRetry, acquisitionRepair, transportRepair,
+  search: args.includes("--search"), pid: process.pid, at: Date.now(),
 }) + "\\n");
 
 if (verifier && ${JSON.stringify(failVerifiers)}) process.exit(17);
@@ -112,6 +116,7 @@ if (verifier) {
   };
 } else if (task) {
   const coverageIds = lineJson("Required coverage IDs JSON: ");
+  const acquisitionRoutes = lineJson("Frozen source plan: ");
   const source = {
     id: "S1",
     title: task + " dated slow-all fixture source",
@@ -120,7 +125,56 @@ if (verifier) {
     retrieved_at: ${JSON.stringify(AS_OF)},
   };
   const official = { title: source.title, published_at: source.published_at, url: source.url, source_id: "S1" };
-  packet = {
+  const officialStages = new Set([
+    "regulator_filing", "issuer_ir", "issuer_product_docs", "market_official",
+    "customer_official", "supplier_official", "competitor_official", "other_regulator",
+    "court_record", "peer_filing", "ownership_filing",
+  ]);
+  const validAcquisitionLedger = acquisitionRoutes.length ? {
+    // Deliberately wrong worker-owned metadata: the runtime, not the model, must bind these.
+    policy_id: "worker_must_not_choose_policy",
+    task: "worker_must_not_reassign_task",
+    items: acquisitionRoutes.map((route) => {
+      const stage = route.required_terminal_stages.find((candidate) => officialStages.has(candidate));
+      return {
+        coverage_id: route.coverage_id,
+        outcome: "reported_actual",
+        source_ids: ["S1"],
+        attempts: [{
+          stage,
+          locator_type: "url",
+          locator: source.url,
+          result: "succeeded",
+          source_ids: ["S1"],
+          note: "The bounded fixture source is the authorised disclosure for this integration row.",
+        }],
+        // Mirrors the VSH failure shape: one coverage row can legitimately contain several
+        // reported metrics instead of one artificial value/unit/scope tuple.
+        data: {
+          period: ${JSON.stringify(AS_OF)},
+          fixture_primary_count: 1,
+          fixture_secondary_pct: 2,
+        },
+      };
+    }),
+  } : null;
+  if (acquisitionRepair) {
+    packet = { acquisition_ledger: validAcquisitionLedger };
+  } else {
+    const initialAcquisitionLedger = validAcquisitionLedger
+      ? JSON.parse(JSON.stringify(validAcquisitionLedger))
+      : null;
+    // Exercise the exact production failure path once. The retry may repair only this ledger;
+    // it must not regenerate the already-valid evidence packet around it.
+    if (task === "earnings_deep_dive" && initialAcquisitionLedger?.items?.length) {
+      delete initialAcquisitionLedger.items[0].data;
+    }
+    // Reproduce the real VSH chain: attempt 1 needs a general packet-shape repair, and the
+    // repaired packet then reveals a disjoint acquisition-ledger semantic defect.
+    if (task === "market_data" && transportRepair && initialAcquisitionLedger?.items?.length) {
+      delete initialAcquisitionLedger.items[0].data;
+    }
+    packet = {
     summary: task + " completed its full slow-all assignment with dated evidence and explicit limits.",
     claims: [
       {
@@ -146,6 +200,11 @@ if (verifier) {
     })),
     confidence: "medium",
     information_richness: "B",
+    ...(initialAcquisitionLedger ? { acquisition_ledger: initialAcquisitionLedger } : {
+      // The three supplemental seats may echo an irrelevant malformed ledger. The runtime
+      // strips it because only the eight core evidence seats own the fixed 52 routes.
+      acquisition_ledger: { policy_id: "irrelevant", task: "irrelevant", items: [{ malformed: true }] },
+    }),
     ...(task === "news_industry_management" ? {
       official_source_coverage: {
         status: "complete",
@@ -160,7 +219,9 @@ if (verifier) {
         },
       },
     } : {}),
-  };
+    };
+    if (task === "market_data" && !transportRepair) packet.claims[0].source_ids = [];
+  }
 } else if (master) {
   const frozenLine = prompt.split("\\n").find((line) => line.startsWith("Frozen method result JSON: "));
   const frozen = frozenLine ? JSON.parse(frozenLine.slice("Frozen method result JSON: ".length)) : null;
@@ -297,6 +358,11 @@ async function runSlowAll(t, { failVerifiers = false, semanticFidelityRetry = fa
         currency: "USD",
       },
       quote: { symbol, price: 101.25, currency: "USD", timestamp: `${AS_OF}T15:30:00Z` },
+      source_acquisition_plan: buildCompanySourceAcquisitionPlan({
+        symbol,
+        asOf: AS_OF,
+        profile: { name: "Acme Slow-All Fixture Corporation", cik: "0000000001" },
+      }),
     },
   }, { timeoutMs: 120_000 }));
   return { dataDir, fake, result, runId, selection };
@@ -316,8 +382,50 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   assert.deepEqual(persisted.tasks, ALL_ANALYST_TASKS);
   assert.equal(persisted.packets.length, 11);
   assert.equal(persisted.masters.length, CANONICAL_MASTER_IDS.length);
-  assert.equal(persisted.status, "complete");
+  assert.equal(persisted.status, "complete", JSON.stringify({
+    task_status: persisted.task_status,
+    dossier_coverage: persisted.company_dossier?.coverage,
+  }, null, 2));
   assert.equal(status.status, "complete");
+
+  for (const packet of persisted.packets.filter((item) => DEFAULT_TASKS.includes(item.task))) {
+    assert.equal(packet.acquisition_ledger.policy_id, "company_source_acquisition_v1");
+    assert.equal(packet.acquisition_ledger.task, packet.task);
+    assert.equal(packet.acquisition_ledger.items.length, expectedCoverageItems(packet.task).length);
+    assert.ok(packet.acquisition_ledger.items.every((item) => item.data.observations.length === 2));
+  }
+  for (const packet of persisted.packets.filter((item) => !DEFAULT_TASKS.includes(item.task))) {
+    assert.equal(Object.hasOwn(packet, "acquisition_ledger"), false);
+  }
+  const events = readJsonl(join(dir, "events.jsonl"));
+  const acquisitionRetry = events.find((event) => event.type === "task_retry"
+    && event.task === "earnings_deep_dive");
+  const acquisitionRepair = events.find((event) => event.type === "task_repair_succeeded"
+    && event.task === "earnings_deep_dive");
+  assert.equal(acquisitionRetry.repair_scope, "acquisition_ledger_only");
+  assert.equal(acquisitionRepair.repair_scope, "acquisition_ledger_only");
+  assert.match(
+    persisted.packets.find((packet) => packet.task === "earnings_deep_dive").summary,
+    /completed its full slow-all assignment/u,
+  );
+  const repairLaunch = launches.find((entry) => entry.task === "earnings_deep_dive" && entry.acquisitionRepair);
+  assert.ok(repairLaunch);
+  assert.equal(repairLaunch.search, false);
+
+  const marketRetries = events.filter((event) => event.type === "task_retry"
+    && event.task === "market_data");
+  const marketRepair = events.find((event) => event.type === "task_repair_succeeded"
+    && event.task === "market_data");
+  assert.deepEqual(marketRetries.map(({ attempt, max_attempts, repair_scope }) => ({
+    attempt, max_attempts, repair_scope,
+  })), [
+    { attempt: 2, max_attempts: 3, repair_scope: "evidence_packet_transport" },
+    { attempt: 3, max_attempts: 3, repair_scope: "acquisition_ledger_only" },
+  ]);
+  assert.deepEqual(marketRepair.repair_chain, [
+    "evidence_packet_transport", "acquisition_ledger_only",
+  ]);
+  assert.equal(persisted.task_status.market_data.attempts, 3);
 
   assert.equal(persisted.verification_policy.required, true);
   assert.equal(persisted.verification_policy.status, "passed");
@@ -341,16 +449,23 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   }
 
   const evidenceLaunches = launches.filter((entry) => ALL_ANALYST_TASKS.includes(entry.role));
+  const initialEvidenceLaunches = evidenceLaunches.filter((entry) => !entry.acquisitionRepair && !entry.transportRepair);
+  const transportRepairLaunches = evidenceLaunches.filter((entry) => entry.transportRepair);
+  const acquisitionRepairLaunches = evidenceLaunches.filter((entry) => entry.acquisitionRepair);
   const verifierLaunches = launches.filter((entry) => REQUIRED_VERIFIER_IDS.includes(entry.role));
   const masterLaunches = launches.filter((entry) => CANONICAL_MASTER_IDS.includes(entry.role));
-  assert.equal(evidenceLaunches.length, 11);
+  assert.equal(initialEvidenceLaunches.length, 11);
+  assert.equal(transportRepairLaunches.length, 1);
+  assert.equal(acquisitionRepairLaunches.length, 2);
   assert.equal(verifierLaunches.filter((entry) => entry.role === "source_fidelity").length, 3,
     "22 claims require three smaller fidelity chunks");
   assert.equal(verifierLaunches.filter((entry) => entry.role === "rederivation").length, 2);
   assert.equal(verifierLaunches.filter((entry) => entry.role === "refuter").length, 2);
   assert.equal(verifierLaunches.length, 7);
   assert.equal(masterLaunches.length, CANONICAL_MASTER_IDS.length);
-  assert.ok(evidenceLaunches.every((entry) => entry.search));
+  assert.ok(initialEvidenceLaunches.every((entry) => entry.search));
+  assert.ok(transportRepairLaunches.every((entry) => !entry.search));
+  assert.ok(acquisitionRepairLaunches.every((entry) => !entry.search));
   assert.ok(verifierLaunches.every((entry) => entry.search));
   assert.ok(masterLaunches.every((entry) => !entry.search));
   assert.equal(result.run.status, "complete");

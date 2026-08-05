@@ -33,7 +33,7 @@ export const SOURCE_ATTEMPT_RESULTS = Object.freeze([
 
 const OUTCOMES = new Set(COMPANY_DATA_OUTCOMES);
 const ATTEMPT_RESULTS = new Set(SOURCE_ATTEMPT_RESULTS);
-const MAX_OFFICIAL_DETAIL_PAGES = 6;
+const MAX_OFFICIAL_DETAIL_PAGES = 10;
 const MAX_STARTER_NEWS_ITEMS = 80;
 const MAX_SOURCE_BODY_BYTES = 1_500_000;
 const GENERIC_IDENTITY_WORDS = new Set([
@@ -88,6 +88,7 @@ const OFFICIAL_SUCCESS_STAGES = new Set([
   "court_record",
   "peer_filing",
   "ownership_filing",
+  "counterparty_official",
 ]);
 
 const GENERIC_STAGES = Object.freeze({
@@ -145,6 +146,24 @@ const SPECIFIC_STAGES = Object.freeze({
     "regulator_filing", "issuer_ir", "counterparty_official", "customer_official", "derived_proxy",
   ],
 });
+
+// Public, cited market-data pages are useful direct observations, but they are neither an
+// exchange/regulator surface nor a derivation step. Keep that distinction explicit so a
+// worker cannot promote StockAnalysis/Yahoo-style pages to `market_official`, while still
+// retaining the source as an auditable supplement after the frozen terminal ladder ran.
+const SUPPLEMENTAL_ACQUISITION_STAGES = new Set(["public_market_data"]);
+const ACQUISITION_STAGE_ALIASES = new Map([
+  ["market_data_provider", "public_market_data"],
+  ["market_data", "public_market_data"],
+]);
+const KNOWN_ACQUISITION_STAGES = new Set([
+  ...Object.values(GENERIC_STAGES).flat(),
+  ...Object.values(SPECIFIC_STAGES).flat(),
+  ...SUPPLEMENTAL_ACQUISITION_STAGES,
+]);
+const DIRECT_OBSERVATION_PREFIXES = new Set(["market", "expectations", "quant"]);
+const PUBLIC_MARKET_DATA_PREFIXES = new Set(["market", "quant"]);
+const DERIVATION_SUCCESS_STAGES = new Set(["derived_proxy", "local_observation"]);
 
 const RECOVERY_RECIPES = Object.freeze({
   "financials.cash_flow_capex": {
@@ -376,6 +395,30 @@ function extractOfficialLinks(html, pageUrl, rootUrls) {
   return unique(found).slice(0, 48);
 }
 
+function officialDetailPriority(url, asOf) {
+  let path;
+  try { path = `${new URL(url).pathname}${new URL(url).search}`.toLowerCase(); } catch { return -Infinity; }
+  let score = 0;
+  if (/(?:news-release-details|press-release-details|event-details|article|announcement)/u.test(path)) score += 90;
+  if (/(?:earnings|results?|quarter|annual|financial|guidance|trading-update)/u.test(path)) score += 80;
+  if (/(?:presentation|webcast|transcript|static-files|download|\.pdf(?:\?|$))/u.test(path)) score += 45;
+  if (/(?:quarterly-results|events-presentations|news-releases)/u.test(path)) score += 30;
+  if (/(?:filing|sec)/u.test(path)) score += 20;
+  if (/(?:governance|board|committee|faq|contact)/u.test(path)) score -= 30;
+  const asOfYear = Number(String(asOf || "").slice(0, 4));
+  const years = [...path.matchAll(/(?:^|[^0-9])((?:19|20)\d{2})(?:[^0-9]|$)/gu)]
+    .map((match) => Number(match[1]));
+  if (Number.isInteger(asOfYear) && years.includes(asOfYear)) score += 25;
+  else if (Number.isInteger(asOfYear) && years.includes(asOfYear - 1)) score += 10;
+  return score;
+}
+
+function prioritizeOfficialDetailUrls(urls, asOf) {
+  return urls.map((url, index) => ({ url, index, score: officialDetailPriority(url, asOf) }))
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .map((row) => row.url);
+}
+
 function decodeHtml(value) {
   return String(value || "")
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, " ")
@@ -503,7 +546,7 @@ export async function discoverIssuerOfficialSources(profile = {}, {
   }
   const rootAttempts = await Promise.all(roots.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
   const discoveredPages = unique(rootAttempts.flatMap((attempt) => attempt.links || []));
-  const detailUrls = discoveredPages
+  const detailUrls = prioritizeOfficialDetailUrls(discoveredPages, asOf)
     .filter((url) => !roots.includes(url))
     .slice(0, MAX_OFFICIAL_DETAIL_PAGES);
   const detailAttempts = await Promise.all(detailUrls.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
@@ -900,34 +943,113 @@ function mappedSourceIds(values, sourceIdMap) {
   }));
 }
 
+const MAX_ACQUISITION_INPUT_ROWS = 64;
+
+function strictFiniteNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const text = value.trim().replace(/,/gu, "");
+  if (!/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/u.test(text)) return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeAcquisitionInputs(value, sourceIdMap) {
+  const rows = Array.isArray(value)
+    ? value.slice(0, MAX_ACQUISITION_INPUT_ROWS).map((input, index) => {
+      if (input && typeof input === "object" && !Array.isArray(input)) return input;
+      return { name: `input_${index + 1}`, value: input };
+    })
+    : value && typeof value === "object"
+      ? Object.entries(value).slice(0, MAX_ACQUISITION_INPUT_ROWS).map(([name, input]) => (
+        input && typeof input === "object" && !Array.isArray(input)
+          ? { name, ...input }
+          : { name, value: input }
+      ))
+      : value;
+  return Array.isArray(rows) ? rows.map((input) => ({
+    ...input,
+    source_ids: mappedSourceIds(input?.source_ids, sourceIdMap),
+  })) : rows;
+}
+
+function normalizeAcquisitionRange(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return data?.range;
+  const candidate = data.range && typeof data.range === "object" && !Array.isArray(data.range)
+    ? data.range
+    : ["low", "base", "high"].some((key) => Object.hasOwn(data, key))
+      ? { low: data.low, base: data.base, high: data.high }
+      : null;
+  if (!candidate) return data.range;
+  const low = strictFiniteNumber(candidate.low);
+  const base = strictFiniteNumber(candidate.base);
+  const high = strictFiniteNumber(candidate.high);
+  return [low, base, high].every(Number.isFinite)
+    ? { ...candidate, low, base, high }
+    : candidate;
+}
+
+function normalizeAcquisitionData(data, sourceIdMap) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return data;
+  const range = normalizeAcquisitionRange(data);
+  return {
+    ...data,
+    ...(range !== undefined ? { range } : {}),
+    source_ids: mappedSourceIds(data.source_ids, sourceIdMap),
+    inputs: normalizeAcquisitionInputs(data.inputs, sourceIdMap),
+    observations: Array.isArray(data.observations) ? data.observations.map((observation) => (
+      observation && typeof observation === "object" && !Array.isArray(observation)
+        ? {
+          ...observation,
+          source_ids: mappedSourceIds(observation.source_ids, sourceIdMap),
+          inputs: normalizeAcquisitionInputs(observation.inputs, sourceIdMap),
+        }
+        : observation
+    )) : data.observations,
+  };
+}
+
+function normalizeAcquisitionAttempt(attempt, sourceIdMap) {
+  if (!attempt || typeof attempt !== "object" || Array.isArray(attempt)) return attempt;
+  const proposedStage = typeof attempt.stage === "string" ? attempt.stage.trim() : attempt.stage;
+  const stage = ACQUISITION_STAGE_ALIASES.get(proposedStage) || proposedStage;
+  const sourceIds = mappedSourceIds(attempt.source_ids, sourceIdMap);
+  const proposedResult = typeof attempt.result === "string" ? attempt.result.trim() : attempt.result;
+  // Workers often use succeeded to mean "the page opened". Without a cited source this is
+  // not evidence success, so bind it to the fail-closed semantic result the validator already
+  // asks for. Local/derived stages may legitimately succeed against an in-process ledger.
+  const result = proposedResult === "succeeded" && !sourceIds.length
+    && !DERIVATION_SUCCESS_STAGES.has(stage)
+    ? "not_disclosed"
+    : proposedResult;
+  return {
+    ...attempt,
+    stage,
+    locator_type: typeof attempt.locator_type === "string" ? attempt.locator_type.trim() : attempt.locator_type,
+    locator: typeof attempt.locator === "string" ? attempt.locator.trim() : attempt.locator,
+    result,
+    source_ids: sourceIds,
+    ...(stage !== proposedStage ? { proposed_stage: proposedStage } : {}),
+    ...(result !== proposedResult ? { proposed_result: proposedResult } : {}),
+  };
+}
+
 export function normalizeCompanySourceAcquisitionLedger(value, task, sourceIdMap = new Map()) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
   return {
-    policy_id: typeof value.policy_id === "string" ? value.policy_id.trim() : value.policy_id,
-    task: typeof value.task === "string" ? value.task.trim() : value.task,
+    // These are server-owned bindings. A worker may echo them, omit them, or mistype them,
+    // but it may never select the policy or reassign a ledger to another analyst task.
+    policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+    task,
     items: Array.isArray(value.items) ? value.items.map((item) => ({
       ...(item && typeof item === "object" ? item : {}),
       coverage_id: typeof item?.coverage_id === "string" ? item.coverage_id.trim() : item?.coverage_id,
       outcome: typeof item?.outcome === "string" ? item.outcome.trim() : item?.outcome,
       source_ids: mappedSourceIds(item?.source_ids, sourceIdMap),
-      attempts: Array.isArray(item?.attempts) ? item.attempts.map((attempt) => ({
-        ...(attempt && typeof attempt === "object" ? attempt : {}),
-        stage: typeof attempt?.stage === "string" ? attempt.stage.trim() : attempt?.stage,
-        locator_type: typeof attempt?.locator_type === "string" ? attempt.locator_type.trim() : attempt?.locator_type,
-        locator: typeof attempt?.locator === "string" ? attempt.locator.trim() : attempt?.locator,
-        result: typeof attempt?.result === "string" ? attempt.result.trim() : attempt?.result,
-        source_ids: mappedSourceIds(attempt?.source_ids, sourceIdMap),
-      })) : item?.attempts,
-      data: item?.data && typeof item.data === "object" && !Array.isArray(item.data)
-        ? {
-          ...item.data,
-          source_ids: mappedSourceIds(item.data.source_ids, sourceIdMap),
-          inputs: Array.isArray(item.data.inputs) ? item.data.inputs.map((input) => ({
-            ...(input && typeof input === "object" ? input : {}),
-            source_ids: mappedSourceIds(input?.source_ids, sourceIdMap),
-          })) : item.data.inputs,
-        }
-        : item?.data,
+      attempts: Array.isArray(item?.attempts)
+        ? item.attempts.map((attempt) => normalizeAcquisitionAttempt(attempt, sourceIdMap))
+        : item?.attempts,
+      data: normalizeAcquisitionData(item?.data, sourceIdMap),
     })) : value.items,
   };
 }
@@ -941,12 +1063,278 @@ function dataValuePresent(data) {
     && Object.hasOwn(data, "value") && data.value !== null && data.value !== "";
 }
 
+const REPORTED_DATA_METADATA_FIELDS = new Set([
+  "value", "unit", "period", "scope", "metric", "label", "source_ids", "observations",
+  "range", "formula", "inputs", "assumptions",
+]);
+const MAX_REPORTED_ACTUAL_OBSERVATIONS = 48;
+
+function observationValuePresent(value) {
+  return (typeof value === "number" && Number.isFinite(value))
+    || (typeof value === "string" && value.trim().length > 0)
+    || typeof value === "boolean";
+}
+
+function inferredObservationUnit(metric, value) {
+  const key = String(metric || "").toLowerCase();
+  if (/(?:^|[._])(?:pct|percent)$/u.test(key) || (typeof value === "string" && /%/u.test(value))) return "%";
+  if (/(?:^|[._])bps$/u.test(key)) return "basis points";
+  if (/(?:^|[._])usd_b$/u.test(key)) return "USD billion";
+  if (/(?:^|[._])usd_m$/u.test(key)) return "USD million";
+  if (/(?:^|[._])usd$/u.test(key)) return "USD";
+  if (/(?:^|[._])shares?$/u.test(key)) return "shares";
+  if (/(?:^|[._])days?$/u.test(key)) return "days";
+  if (/(?:^|[._])(?:ratio|multiple)$/u.test(key)) return "ratio";
+  if (/(?:^|[._])date$/u.test(key)) return "date";
+  if (/(?:^|[._])count$/u.test(key)) return "count";
+  if (typeof value === "boolean") return "boolean";
+  if (typeof value === "string") return "text";
+  // A generic numeric value has no inferable unit. Leave it absent so the semantic gate
+  // requests a ledger-only repair instead of laundering missing metadata into completion.
+  return null;
+}
+
+function inferredObservationPeriod(metric, fallback) {
+  const key = String(metric || "");
+  const quarter = /(?:^|[._-])((?:19|20)\d{2})[._-]?[qQ]([1-4])(?:$|[._-])/u.exec(key);
+  if (quarter) return `${quarter[1]}Q${quarter[2]}`;
+  const fiscal = /(?:^|[._-])[fF][yY][._-]?((?:19|20)\d{2})(?:$|[._-])/u.exec(key);
+  if (fiscal) return `FY${fiscal[1]}`;
+  return nonEmpty(fallback) ? fallback.trim() : null;
+}
+
+function flattenReportedActualData(value, prefix, rows, depth = 0) {
+  if (rows.length >= MAX_REPORTED_ACTUAL_OBSERVATIONS || depth > 4) return;
+  if (observationValuePresent(value)) {
+    rows.push({ metric: prefix, value });
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.slice(0, MAX_REPORTED_ACTUAL_OBSERVATIONS - rows.length)
+      .forEach((entry, index) => flattenReportedActualData(entry, `${prefix}.${index + 1}`, rows, depth + 1));
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, entry] of Object.entries(value)) {
+    if (REPORTED_DATA_METADATA_FIELDS.has(key)) continue;
+    flattenReportedActualData(entry, prefix ? `${prefix}.${key}` : key, rows, depth + 1);
+    if (rows.length >= MAX_REPORTED_ACTUAL_OBSERVATIONS) break;
+  }
+}
+
+function reportedActualObservations(data, coverageId) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
+  const supplied = Array.isArray(data.observations)
+    ? data.observations
+    : dataValuePresent(data)
+      ? [{
+        metric: data.metric || data.label || coverageId,
+        value: data.value,
+        unit: data.unit,
+        period: data.period,
+        scope: data.scope,
+      }]
+      : (() => {
+        const rows = [];
+        flattenReportedActualData(data, "", rows);
+        return rows;
+      })();
+  return supplied.slice(0, MAX_REPORTED_ACTUAL_OBSERVATIONS).flatMap((observation, index) => {
+    if (!observation || typeof observation !== "object" || Array.isArray(observation)) return [];
+    if (!observationValuePresent(observation.value)) return [];
+    const metric = nonEmpty(observation.metric) ? observation.metric.trim() : `${coverageId}.${index + 1}`;
+    return [{
+      ...observation,
+      metric,
+      unit: nonEmpty(observation.unit)
+        ? observation.unit.trim()
+        : inferredObservationUnit(metric, observation.value),
+      // as_of is a retrieval boundary, not an accounting/operating period. Never substitute it.
+      period: inferredObservationPeriod(metric, observation.period || data.period),
+      scope: nonEmpty(observation.scope) ? observation.scope.trim() : coverageId,
+    }];
+  });
+}
+
+function acquisitionAttemptState(item, route) {
+  const prefix = String(route?.coverage_id || "").split(".")[0];
+  const attemptedStages = new Set((item?.attempts || []).map((attempt) => attempt?.stage));
+  const terminalLadderRecorded = (route?.required_terminal_stages || [])
+    .every((stage) => attemptedStages.has(stage));
+  let officialSuccess = false;
+  let directObservationSuccess = false;
+  let citedInputSuccess = false;
+  let derivedSuccess = false;
+  for (const attempt of item?.attempts || []) {
+    if (attempt?.result !== "succeeded") continue;
+    const ids = Array.isArray(attempt.source_ids) ? attempt.source_ids : [];
+    if (DERIVATION_SUCCESS_STAGES.has(attempt.stage)) derivedSuccess = true;
+    if (!ids.length) continue;
+    // A cited public market page is a fallback supplement, not an authorised source and not
+    // a replacement for the frozen ladder. It contributes only after every required stage is
+    // physically recorded for this row; otherwise fail-closed outcome normalization will make
+    // the missing ladder visible to the validator.
+    if (attempt.stage === "public_market_data") {
+      if (terminalLadderRecorded) {
+        if (PUBLIC_MARKET_DATA_PREFIXES.has(prefix)) directObservationSuccess = true;
+        citedInputSuccess = true;
+      }
+      continue;
+    }
+    if (OFFICIAL_SUCCESS_STAGES.has(attempt.stage)) officialSuccess = true;
+    if (attempt.stage === "public_consensus" && prefix === "expectations") directObservationSuccess = true;
+    if (attempt.stage === "local_observation" && DIRECT_OBSERVATION_PREFIXES.has(prefix)) {
+      directObservationSuccess = true;
+    }
+    if (attempt.stage !== "derived_proxy") citedInputSuccess = true;
+  }
+  return {
+    officialSuccess,
+    directObservationSuccess,
+    reportedSourceSuccess: officialSuccess || directObservationSuccess,
+    citedInputSuccess,
+    derivedSuccess,
+  };
+}
+
+function completeObservationRows(data, { derivation = false } = {}) {
+  const observations = Array.isArray(data?.observations) ? data.observations : [];
+  if (!observations.length) return false;
+  return observations.every((observation) => {
+    if (!observationValuePresent(observation?.value)) return false;
+    if (!["metric", "unit", "period", "scope"].every((field) => nonEmpty(observation?.[field]))) return false;
+    if (!derivation) return true;
+    const formula = observation?.formula || data?.formula;
+    const inputs = observation?.inputs || data?.inputs;
+    return nonEmpty(formula) && Array.isArray(inputs) && inputs.length > 0;
+  });
+}
+
+function completeActualData(data) {
+  return (dataValuePresent(data) && ["unit", "period", "scope"].every((field) => nonEmpty(data?.[field])))
+    || completeObservationRows(data);
+}
+
+function completeProxyData(data) {
+  const inputs = data?.inputs;
+  const scalar = dataValuePresent(data)
+    && ["unit", "period", "formula"].every((field) => nonEmpty(data?.[field]))
+    && Array.isArray(inputs) && inputs.length > 0;
+  return scalar || completeObservationRows(data, { derivation: true });
+}
+
+function completeModeledData(data) {
+  const range = data?.range;
+  return Boolean(range)
+    && [range.low, range.base, range.high].every(Number.isFinite)
+    && range.low <= range.base && range.base <= range.high
+    && ["unit", "period", "formula"].every((field) => nonEmpty(data?.[field]))
+    && Array.isArray(data?.assumptions) && data.assumptions.length > 0;
+}
+
+function acquisitionOutcomeDeficiency(item, route) {
+  if (!item || !["reported_actual", "recomputed_proxy", "modeled_estimate"].includes(item.outcome)) return null;
+  const state = acquisitionAttemptState(item, route);
+  const sourceIds = Array.isArray(item.source_ids) ? item.source_ids : [];
+  const reasons = [];
+  if (!sourceIds.length) reasons.push("no cited item source");
+  if (item.outcome === "reported_actual") {
+    if (!state.reportedSourceSuccess) reasons.push("no successful authorised or route-appropriate direct observation stage");
+    if (!completeActualData(item.data)) reasons.push("actual data lacks a complete scalar or observation set");
+  }
+  if (item.outcome === "recomputed_proxy") {
+    if (!state.derivedSuccess) reasons.push("no successful derived_proxy/local_observation stage");
+    if (!state.citedInputSuccess) reasons.push("no successful cited input stage");
+    if (!completeProxyData(item.data)) reasons.push("proxy data lacks complete value/formula/inputs or derived observations");
+  }
+  if (item.outcome === "modeled_estimate") {
+    if (!state.derivedSuccess) reasons.push("no successful derived_proxy/local_observation stage");
+    if (!state.citedInputSuccess) reasons.push("no successful cited input stage");
+    if (!completeModeledData(item.data)) reasons.push("model data lacks a finite ordered range or required metadata");
+  }
+  return reasons.length ? reasons.join("; ") : null;
+}
+
+function failClosedAcquisitionOutcome(item, route) {
+  const deficiency = acquisitionOutcomeDeficiency(item, route);
+  if (!deficiency) return item;
+  return {
+    ...item,
+    proposed_outcome: item.outcome,
+    outcome: "unavailable",
+    reason: nonEmpty(item.reason)
+      ? item.reason
+      : `Proposed ${item.outcome} was not publishable (${deficiency}); retained sourced partial coverage without publishing the unsupported value.`,
+  };
+}
+
+/**
+ * Bind worker-proposed acquisition metadata to the frozen server policy before validation.
+ * The transformation may add labels around values the worker already returned, but never a
+ * source, attempt, outcome, formula, assumption, range value, or external fact.
+ */
+export function canonicalizeCompanySourceAcquisitionPacket(packet, run) {
+  if (!packet || typeof packet !== "object" || Array.isArray(packet)) return packet;
+  if (!requiresOperatingCompanyDossier(run)) return packet;
+  const plan = run?.grounding?.source_acquisition_plan;
+  if (!plan) return packet;
+  const task = packet.task;
+  // The fixed 52-item roster belongs only to the eight core evidence roles. The three
+  // all-scope breadth packets are still frozen into the dossier, but they do not own a
+  // synthetic zero-row acquisition plan and must not be rejected for plan_missing.
+  if (!Object.hasOwn(OPERATING_COMPANY_COVERAGE, task)) {
+    delete packet.acquisition_ledger;
+    return packet;
+  }
+  // The first-pass packet normalizer scopes worker IDs (S1 -> task:S1). A ledger-only repair
+  // is intentionally merged after that pass, so accept either spelling and bind it back to
+  // the already-frozen packet source. This cannot create a source: unresolved IDs still fail.
+  const sourceIdMap = new Map();
+  for (const source of packet.sources || []) {
+    const id = typeof source?.id === "string" ? source.id.trim() : "";
+    if (!id) continue;
+    sourceIdMap.set(id, id);
+    if (id.startsWith(`${task}:`)) sourceIdMap.set(id.slice(task.length + 1), id);
+  }
+  const ledger = normalizeCompanySourceAcquisitionLedger(packet.acquisition_ledger, task, sourceIdMap);
+  if (!ledger || typeof ledger !== "object" || Array.isArray(ledger)) return packet;
+  const routeById = new Map((plan.tasks?.[task] || []).map((route) => [route.coverage_id, route]));
+  const coverageById = new Map((packet.coverage_items || []).map((coverage) => [coverage?.id, coverage]));
+  packet.acquisition_ledger = {
+    ...ledger,
+    items: Array.isArray(ledger.items) ? ledger.items.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      let normalized = item;
+      const coverage = coverageById.get(item.coverage_id);
+      // The coverage row and ledger row describe the same server-owned domain. If the domain
+      // is covered by resolved packet sources while the exact scalar is exhaustively marked
+      // unavailable, bind those already-declared sources to the ledger row. This adds no fact,
+      // URL or success claim; it removes a worker bookkeeping mismatch that otherwise discards
+      // the whole packet despite the cited domain evidence remaining valid.
+      if (item.outcome === "unavailable" && coverage?.status === "covered") {
+        const coverageSourceIds = mappedSourceIds(coverage.source_ids, sourceIdMap);
+        const existingSourceIds = Array.isArray(item.source_ids) ? item.source_ids : [];
+        if (coverageSourceIds.length && !existingSourceIds.some((id) => coverageSourceIds.includes(id))) {
+          normalized = { ...normalized, source_ids: unique([...existingSourceIds, ...coverageSourceIds]) };
+        }
+      }
+      if (normalized.outcome === "reported_actual" || (normalized.outcome === "recomputed_proxy" && Array.isArray(normalized.data?.observations))) {
+        const observations = reportedActualObservations(normalized.data, normalized.coverage_id);
+        if (observations.length) normalized = { ...normalized, data: { ...(normalized.data || {}), observations } };
+      }
+      return failClosedAcquisitionOutcome(normalized, routeById.get(normalized.coverage_id));
+    }) : ledger.items,
+  };
+  return packet;
+}
+
 function addIssue(issues, path, keyword, message) {
   issues.push({ path, keyword, message });
 }
 
 export function companySourceAcquisitionIssues(packet, run) {
   if (!requiresOperatingCompanyDossier(run)) return [];
+  canonicalizeCompanySourceAcquisitionPacket(packet, run);
   const task = packet?.task;
   const plan = run?.grounding?.source_acquisition_plan;
   const routes = plan?.tasks?.[task];
@@ -955,6 +1343,7 @@ export function companySourceAcquisitionIssues(packet, run) {
   // read/replay compatibility, but never claim the new acquisition policy ran. Every fresh
   // gatherGrounding path installs the plan and therefore takes the strict branch below.
   if (!plan) return issues;
+  if (!Object.hasOwn(OPERATING_COMPANY_COVERAGE, task)) return issues;
   if (!Array.isArray(routes)) {
     addIssue(issues, "/acquisition_ledger", "plan_missing", `source acquisition plan is missing for ${task}`);
     return issues;
@@ -997,8 +1386,6 @@ export function companySourceAcquisitionIssues(packet, run) {
       continue;
     }
     const attemptedStages = new Set();
-    let officialSuccess = false;
-    let derivedSuccess = false;
     for (let aIndex = 0; aIndex < item.attempts.length; aIndex += 1) {
       const attempt = item.attempts[aIndex];
       const aPath = `${path}/attempts/${aIndex}`;
@@ -1006,9 +1393,10 @@ export function companySourceAcquisitionIssues(packet, run) {
         addIssue(issues, aPath, "type", "must be an object");
         continue;
       }
-      if (!route.required_terminal_stages.includes(attempt.stage)) {
-        addIssue(issues, `${aPath}/stage`, "enum", "stage is not in the frozen route");
-      } else attemptedStages.add(attempt.stage);
+      if (!KNOWN_ACQUISITION_STAGES.has(attempt.stage)) {
+        addIssue(issues, `${aPath}/stage`, "enum", "stage is not a recognized acquisition stage");
+      }
+      if (route.required_terminal_stages.includes(attempt.stage)) attemptedStages.add(attempt.stage);
       if (!["url", "query", "local"].includes(attempt.locator_type)) {
         addIssue(issues, `${aPath}/locator_type`, "enum", "must be url|query|local");
       }
@@ -1020,13 +1408,24 @@ export function companySourceAcquisitionIssues(packet, run) {
       if (attempt.result === "succeeded" && !ids.length && attempt.stage !== "local_observation" && attempt.stage !== "derived_proxy") {
         addIssue(issues, `${aPath}/source_ids`, "minItems", "a successful external attempt requires at least one source id");
       }
-      if (attempt.result === "succeeded" && OFFICIAL_SUCCESS_STAGES.has(attempt.stage) && ids.length) officialSuccess = true;
-      if (attempt.result === "succeeded" && attempt.stage === "derived_proxy") derivedSuccess = true;
     }
     const itemSourceIds = Array.isArray(item.source_ids) ? item.source_ids : [];
     for (const sourceId of itemSourceIds) if (!sourceIds.has(sourceId)) addIssue(issues, `${path}/source_ids`, "source_resolution", `${sourceId} does not resolve to packet.sources`);
     const coverage = coverageById.get(id);
-    if (coverage?.status === "covered" && ["unavailable", "not_applicable"].includes(item.outcome)) {
+    const coverageSourceIds = Array.isArray(coverage?.source_ids) ? coverage.source_ids : [];
+    const sourceOverlap = itemSourceIds.some((sourceId) => coverageSourceIds.includes(sourceId));
+    const hasSucceededAttempt = item.attempts.some((attempt) => attempt?.result === "succeeded");
+    // `coverage_items=covered` means the domain has usable evidence, not that every desired
+    // scalar exists. Preserve that partial evidence while the ledger explicitly marks the
+    // unsupported exact outcome unavailable/not-applicable. This is fail-closed, not a pass:
+    // it requires shared cited domain sources and the exhaustive attempt checks below. The
+    // exact scalar may legitimately have no succeeded attempt—that is why it is unavailable.
+    const partialCoveredOutcome = coverage?.status === "covered"
+      && ["unavailable", "not_applicable"].includes(item.outcome)
+      && itemSourceIds.length > 0
+      && sourceOverlap
+      && item.attempts.length > 0;
+    if (coverage?.status === "covered" && ["unavailable", "not_applicable"].includes(item.outcome) && !partialCoveredOutcome) {
       addIssue(issues, `${path}/outcome`, "coverage_alignment", `coverage_items marks ${id} covered`);
     }
     if (coverage?.status === "unavailable" && item.outcome !== "unavailable") {
@@ -1035,23 +1434,51 @@ export function companySourceAcquisitionIssues(packet, run) {
     if (coverage?.status === "not_applicable" && item.outcome !== "not_applicable") {
       addIssue(issues, `${path}/outcome`, "coverage_alignment", `coverage_items marks ${id} not_applicable`);
     }
+    const attemptState = acquisitionAttemptState(item, route);
     if (item.outcome === "reported_actual") {
-      if (!officialSuccess) addIssue(issues, `${path}/attempts`, "official_source", "reported_actual requires a successful official-source stage");
+      if (!attemptState.reportedSourceSuccess) {
+        addIssue(issues, `${path}/attempts`, "official_source", "reported_actual requires a successful authorised source or route-appropriate direct observation stage");
+      }
       if (!itemSourceIds.length) addIssue(issues, `${path}/source_ids`, "minItems", "reported_actual requires cited source ids");
-      if (!dataValuePresent(item.data)) addIssue(issues, `${path}/data/value`, "required", "reported_actual requires a non-null value");
-      for (const field of ["unit", "period", "scope"]) if (!nonEmpty(item.data?.[field])) addIssue(issues, `${path}/data/${field}`, "required", `${field} is required`);
+      const legacyActual = dataValuePresent(item.data)
+        && ["unit", "period", "scope"].every((field) => nonEmpty(item.data?.[field]));
+      const observations = Array.isArray(item.data?.observations) ? item.data.observations : [];
+      if (!legacyActual && !observations.length) {
+        addIssue(issues, `${path}/data`, "required", "reported_actual requires value/unit/period/scope or at least one structured observation");
+      }
+      observations.forEach((observation, observationIndex) => {
+        const observationPath = `${path}/data/observations/${observationIndex}`;
+        if (!observationValuePresent(observation?.value)) addIssue(issues, `${observationPath}/value`, "required", "observation requires a finite number, non-empty string, or boolean");
+        for (const field of ["metric", "unit", "period", "scope"]) {
+          if (!nonEmpty(observation?.[field])) addIssue(issues, `${observationPath}/${field}`, "required", `${field} is required`);
+        }
+      });
     }
     if (item.outcome === "recomputed_proxy") {
-      if (!derivedSuccess) addIssue(issues, `${path}/attempts`, "derived_stage", "recomputed_proxy requires a successful derived_proxy stage");
-      if (!officialSuccess) addIssue(issues, `${path}/attempts`, "official_input", "recomputed_proxy requires at least one successful official-source input stage");
+      if (!attemptState.derivedSuccess) addIssue(issues, `${path}/attempts`, "derived_stage", "recomputed_proxy requires a successful derived_proxy or local_observation stage");
+      if (!attemptState.citedInputSuccess) addIssue(issues, `${path}/attempts`, "cited_input", "recomputed_proxy requires at least one successful cited input stage");
       if (!itemSourceIds.length) addIssue(issues, `${path}/source_ids`, "minItems", "recomputed_proxy requires cited source ids");
-      if (!dataValuePresent(item.data)) addIssue(issues, `${path}/data/value`, "required", "recomputed_proxy requires a non-null value");
-      for (const field of ["unit", "period", "formula"]) if (!nonEmpty(item.data?.[field])) addIssue(issues, `${path}/data/${field}`, "required", `${field} is required`);
-      if (!Array.isArray(item.data?.inputs) || !item.data.inputs.length) addIssue(issues, `${path}/data/inputs`, "minItems", "recomputed_proxy requires cited inputs");
+      const legacyProxy = dataValuePresent(item.data)
+        && ["unit", "period", "formula"].every((field) => nonEmpty(item.data?.[field]))
+        && Array.isArray(item.data?.inputs) && item.data.inputs.length > 0;
+      const observations = Array.isArray(item.data?.observations) ? item.data.observations : [];
+      if (!legacyProxy && !observations.length) {
+        addIssue(issues, `${path}/data`, "required", "recomputed_proxy requires value/unit/period/formula/inputs or derived observations");
+      }
+      observations.forEach((observation, observationIndex) => {
+        const observationPath = `${path}/data/observations/${observationIndex}`;
+        if (!observationValuePresent(observation?.value)) addIssue(issues, `${observationPath}/value`, "required", "observation requires a finite number, non-empty string, or boolean");
+        for (const field of ["metric", "unit", "period", "scope"]) {
+          if (!nonEmpty(observation?.[field])) addIssue(issues, `${observationPath}/${field}`, "required", `${field} is required`);
+        }
+        if (!nonEmpty(observation?.formula || item.data?.formula)) addIssue(issues, `${observationPath}/formula`, "required", "derived observation requires a formula");
+        const inputs = observation?.inputs || item.data?.inputs;
+        if (!Array.isArray(inputs) || !inputs.length) addIssue(issues, `${observationPath}/inputs`, "minItems", "derived observation requires cited inputs");
+      });
     }
     if (item.outcome === "modeled_estimate") {
-      if (!derivedSuccess) addIssue(issues, `${path}/attempts`, "derived_stage", "modeled_estimate requires a successful derived_proxy stage");
-      if (!officialSuccess) addIssue(issues, `${path}/attempts`, "official_input", "modeled_estimate requires at least one successful official-source input stage");
+      if (!attemptState.derivedSuccess) addIssue(issues, `${path}/attempts`, "derived_stage", "modeled_estimate requires a successful derived_proxy or local_observation stage");
+      if (!attemptState.citedInputSuccess) addIssue(issues, `${path}/attempts`, "cited_input", "modeled_estimate requires at least one successful cited input stage");
       if (!itemSourceIds.length) addIssue(issues, `${path}/source_ids`, "minItems", "modeled_estimate requires cited source ids");
       const range = item.data?.range;
       if (!range || ![range.low, range.base, range.high].every(Number.isFinite) || !(range.low <= range.base && range.base <= range.high)) {
@@ -1061,7 +1488,7 @@ export function companySourceAcquisitionIssues(packet, run) {
       if (!Array.isArray(item.data?.assumptions) || !item.data.assumptions.length) addIssue(issues, `${path}/data/assumptions`, "minItems", "modeled_estimate requires explicit assumptions");
     }
     if (item.outcome === "unavailable") {
-      if (item.attempts.some((attempt) => attempt?.result === "succeeded")) {
+      if (hasSucceededAttempt && !partialCoveredOutcome) {
         addIssue(issues, `${path}/attempts`, "terminal_result", "unavailable cannot contain succeeded; use not_disclosed for an opened source that did not disclose the field");
       }
       for (const stage of route.required_terminal_stages) {
@@ -1104,17 +1531,21 @@ export function sourceAcquisitionPromptBlock(plan, task, language = "English") {
     ? [
       "## 公司无关来源获取契约（强制）",
       "固定新闻 feed 只是线索入口，不是完成条件。对本席位每个 coverage_id 按冻结来源梯逐层执行；找到实际披露可以停止该项，其余情况必须继续到客户、供应商、同业、监管或可复算代理阶段。",
-      "顶层必须返回 acquisition_ledger={policy_id,task,items}，items 与本席位 coverage_id 一一对应。每项记录 outcome、source_ids、attempts、data/reason。attempts 每行固定为 {stage,locator_type:url|query|local,locator,result:succeeded|not_found|not_disclosed|unreachable|blocked|not_applicable,source_ids,note}。",
-      "outcome 只能是 reported_actual / recomputed_proxy / modeled_estimate / unavailable / not_applicable。reported_actual 只能来自有权主体正式披露；recomputed_proxy 必须给 value/unit/period/formula/inputs；modeled_estimate 必须给 unit/period/formula/assumptions 和数值 low/base/high；两者都不能冒充 actual。",
-      "只有冻结 required_terminal_stages 全部留下实际 URL、查询或本地账本定位后，才允许 unavailable。只写‘未找到’而没有逐层尝试会被运行时拒绝。",
+      `顶层必须返回 acquisition_ledger={policy_id:"${COMPANY_SOURCE_ACQUISITION_POLICY_ID}",task:"${task}",items}，items 与本席位 coverage_id 一一对应。policy_id、task 和 coverage_id 是服务器冻结值，不得改名或自行选择。每项记录 outcome、source_ids、attempts、data/reason。attempts 每行固定为 {stage,locator_type:url|query|local,locator,result:succeeded|not_found|not_disclosed|unreachable|blocked|not_applicable,source_ids,note}。`,
+      "outcome 只能是 reported_actual / recomputed_proxy / modeled_estimate / unavailable / not_applicable。reported_actual 来自有权主体正式披露，或该路由允许的带来源市场/共识/本地直接观测，并返回 data={value,unit,period,scope}；一个 coverage_id 含多个指标时改用 data={observations:[{metric,value,unit,period,scope}]}。recomputed_proxy 必须给 value/unit/period/formula/inputs，多个派生指标可用 observations 且逐项或顶层给 formula/inputs；modeled_estimate 必须把数值 low/base/high 放在 data.range 中，并给 unit/period/formula/assumptions。代理和模型都不能冒充 actual。",
+      "引用非官方公开行情网页时，补充阶段必须准确写成 public_market_data。它不是 market_official，也不能替代任何冻结 required_terminal_stage；不得把任务名 market_data 当作阶段名。",
+      "只有冻结 required_terminal_stages 全部留下实际 URL、查询或本地账本定位后，才允许 unavailable。领域已有带来源证据、但精确目标值仍不可发布时，coverage_items 可保持 covered，账本必须保留共同 source_ids、完整逐层尝试和具体 unavailable reason；精确目标没有 succeeded 尝试本身不矛盾，因为该目标正是 unavailable。不得把缺失区间或缺失公式的估计冒充完整数值。只写‘未找到’而没有逐层尝试会被运行时拒绝。可记录冻结路由之外的已知补充来源阶段，但它不能替代 required_terminal_stages。",
+      `固定账本外壳：${JSON.stringify({ policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID, task, items: compact.map((route) => ({ coverage_id: route.coverage_id })) })}`,
       `冻结来源计划：${JSON.stringify(compact)}`,
     ]
     : [
       "## Company-agnostic source-acquisition contract (mandatory)",
       "Fixed news feeds are discovery leads, not completion. Execute the frozen ladder for every coverage_id. A direct authorised disclosure may stop that item; otherwise continue through customer, supplier, peer, regulator, or reproducible-proxy stages.",
-      "Return top-level acquisition_ledger={policy_id,task,items}, exactly one item per coverage_id. Each item records outcome, source_ids, attempts, and data/reason. Every attempt is {stage,locator_type:url|query|local,locator,result:succeeded|not_found|not_disclosed|unreachable|blocked|not_applicable,source_ids,note}.",
-      "Outcome is only reported_actual / recomputed_proxy / modeled_estimate / unavailable / not_applicable. reported_actual needs an authorised official disclosure. recomputed_proxy needs value/unit/period/formula/inputs. modeled_estimate needs unit/period/formula/assumptions and numeric low/base/high. Neither may be labelled actual.",
-      "unavailable is allowed only after every frozen required_terminal_stage records the URL, query, or local-ledger locator actually attempted. A bare 'not found' fails the runtime gate.",
+      `Return top-level acquisition_ledger={policy_id:"${COMPANY_SOURCE_ACQUISITION_POLICY_ID}",task:"${task}",items}, exactly one item per coverage_id. policy_id, task and coverage_id are server-frozen bindings; never rename or choose them. Each item records outcome, source_ids, attempts, and data/reason. Every attempt is {stage,locator_type:url|query|local,locator,result:succeeded|not_found|not_disclosed|unreachable|blocked|not_applicable,source_ids,note}.`,
+      "Outcome is only reported_actual / recomputed_proxy / modeled_estimate / unavailable / not_applicable. reported_actual needs an authorised disclosure or a route-appropriate sourced market/consensus/local direct observation and data={value,unit,period,scope}; when one coverage id contains several metrics, use data={observations:[{metric,value,unit,period,scope}]}. recomputed_proxy needs value/unit/period/formula/inputs, or observations with per-row/top-level formula and inputs. modeled_estimate needs data.range={low,base,high} plus unit/period/formula/assumptions. Neither may be labelled actual.",
+      "For a cited non-official public market-data page, use the supplemental stage public_market_data exactly. It is not market_official and never replaces a frozen required_terminal_stage. Never use the task id market_data as a stage name.",
+      "unavailable is allowed only after every frozen required_terminal_stage records the URL, query, or local-ledger locator actually attempted. When the domain has sourced partial evidence but the exact target is not publishable, coverage_items may remain covered only if the ledger retains the shared source_ids, the complete attempt ladder, and a concrete unavailable reason. No succeeded attempt for the exact target is inherently consistent with unavailable. Never publish an estimate with a missing range/formula. Known extra source stages may be recorded but do not replace required_terminal_stages. A bare 'not found' fails the runtime gate.",
+      `Frozen ledger shell: ${JSON.stringify({ policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID, task, items: compact.map((route) => ({ coverage_id: route.coverage_id })) })}`,
       `Frozen source plan: ${JSON.stringify(compact)}`,
     ];
   return contract.join("\n");

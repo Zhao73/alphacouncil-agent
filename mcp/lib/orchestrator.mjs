@@ -9,7 +9,7 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, sourceManifest, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { mapLimit, runCodex } from "./codex.mjs";
 import { debatePrompt, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
@@ -29,7 +29,12 @@ import {
   companyDossierPromptBlock,
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
-import { assertCompanySourceAcquisition, buildCompanySourceAcquisitionPlan, sourceAcquisitionPromptBlock } from "./company-source-acquisition.mjs";
+import {
+  assertCompanySourceAcquisition,
+  buildCompanySourceAcquisitionPlan,
+  COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+  sourceAcquisitionPromptBlock,
+} from "./company-source-acquisition.mjs";
 import { recordCompanyAcquisitionObservations } from "./company-observations.mjs";
 import {
   REQUIRED_VERIFIER_IDS,
@@ -1888,6 +1893,62 @@ function evidenceRepairSchemaContract(task) {
     : EVIDENCE_REPAIR_SCHEMA_CONTRACT;
 }
 
+function isCompanySourceAcquisitionFailure(error) {
+  return error?.data?.schema_id === COMPANY_SOURCE_ACQUISITION_POLICY_ID
+    || ["WORKER_SOURCE_ACQUISITION_MISMATCH", "VISIBLE_SOURCE_ACQUISITION_MISMATCH"].includes(error?.data?.reason);
+}
+
+function acquisitionRepairPacketSubset(packet) {
+  return {
+    task: packet?.task,
+    symbol: packet?.symbol,
+    as_of: packet?.as_of,
+    sources: (packet?.sources || []).slice(0, 48).map((source) => ({
+      id: source?.id,
+      title: String(source?.title || "").slice(0, 240),
+      url: source?.url,
+      published_at: source?.published_at,
+      retrieved_at: source?.retrieved_at,
+    })),
+    claims: (packet?.claims || []).slice(0, 24).map((claim) => ({
+      claim: String(claim?.claim || "").slice(0, 600),
+      evidence: String(claim?.evidence || "").slice(0, 1_200),
+      source_ids: claim?.source_ids || [],
+      confidence: claim?.confidence,
+    })),
+    coverage_items: packet?.coverage_items || [],
+    acquisition_ledger: packet?.acquisition_ledger,
+  };
+}
+
+function acquisitionLedgerRepairPrompt({ packet, run, task, symbol, asOfDate, language, error }) {
+  const subset = JSON.stringify(acquisitionRepairPacketSubset(packet));
+  return [
+    "SOURCE-ACQUISITION LEDGER TRANSPORT REPAIR ONLY. Do not search, browse, fetch, add facts, alter claims, alter sources, alter coverage_items, or redo research.",
+    `Target task: ${task}; symbol: ${symbol}; as_of: ${asOfDate}; reader language: ${language}.`,
+    `Return exactly one JSON object shaped {\"acquisition_ledger\":{\"policy_id\":\"${COMPANY_SOURCE_ACQUISITION_POLICY_ID}\",\"task\":\"${task}\",\"items\":[]}} and nothing else.`,
+    "Repair only the listed validator paths by structurally restating information already present below. Do not introduce a new source id, URL/query/local locator, successful attempt, value, formula, input, assumption, date, or scope. If the supplied record lacks evidence needed for an outcome, keep that deficiency visible; never manufacture completion.",
+    "For a reported actual with several disclosed metrics, use data.observations rows with metric/value/unit/period/scope. For a single actual, value/unit/period/scope is also valid. A proxy uses value/unit/period/formula/inputs or derived observations with formula/inputs. A model puts finite ordered low/base/high under data.range. Preserve proxy and model labels; never convert them to actual.",
+    "If coverage_items says covered because the domain has real sourced evidence but the exact scalar/model is incomplete, keep the shared source_ids and complete attempted ladder, set only that acquisition row to unavailable with a concrete reason, and do not alter coverage_items. The exact target need not have a succeeded attempt because it remains unavailable. This preserves evidence without publishing an unsupported value.",
+    "Use public_market_data exactly for an already-cited non-official public market-data page. It is a supplemental stage, not market_official, and it cannot replace any required_terminal_stage. Do not use market_data_provider or the task id market_data as a stage name.",
+    sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
+    schemaRepairIssuePrompt(error),
+    `Validated evidence packet subset whose non-ledger fields are frozen:\n${subset}`,
+  ].join("\n\n");
+}
+
+function mergeAcquisitionLedgerRepair(packet, text) {
+  const parsed = extractJson(text);
+  const ledger = parsed?.acquisition_ledger ?? parsed;
+  if (!ledger || typeof ledger !== "object" || Array.isArray(ledger)) {
+    throw invalidParams("source-acquisition repair must return one acquisition_ledger object", {
+      reason: "WORKER_SOURCE_ACQUISITION_REPAIR_MISSING",
+      schema_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+    });
+  }
+  return { ...packet, acquisition_ledger: ledger };
+}
+
 /**
  * Keep execution diagnostics separate from investment evidence.
  *
@@ -2618,29 +2679,48 @@ export async function collectEvidence(args) {
         });
       }
 
+      const acquisitionLedgerOnlyRepair = Boolean(packet) && isCompanySourceAcquisitionFailure(firstParseError);
+      const chainedAcquisitionRepairEligible = !acquisitionLedgerOnlyRepair
+        && Array.isArray(run.grounding?.source_acquisition_plan?.tasks?.[task]);
       appendEvent(run, "task_retry", {
         task,
         attempt: 2,
-        max_attempts: 2,
+        // A company packet may need one transport repair followed by one disjoint ledger-only
+        // repair. They never share mutation authority: attempt 2 may repair the packet shape,
+        // while an optional attempt 3 may replace only acquisition_ledger after all other
+        // fields have passed and been frozen.
+        max_attempts: chainedAcquisitionRepairEligible ? 3 : 2,
         reason: firstFailureKind,
+        repair_scope: acquisitionLedgerOnlyRepair
+          ? "acquisition_ledger_only"
+          : "evidence_packet_transport",
         retry_diagnostic: retryDiagnostic,
         remaining_ms: retryTimeoutMs,
       });
       updateTask(run, task, "running", { attempts: 2, retry_diagnostic: retryDiagnostic });
-      const malformed = String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS);
-      const retryPrompt = [
-        "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, fetch, add facts, or redo the research.",
-        `Target task: ${task}; symbol: ${symbol}; as_of: ${asOfDate}; reader language: ${language}.`,
-        firstFailureKind === "reader_language_mismatch"
-          ? "Translate only the reader-facing strings in the supplied valid JSON into the requested language. Preserve the evidence packet schema, claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. Return exactly one JSON object and nothing else."
-          : "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
-        evidenceRepairSchemaContract(task),
-        companyCoverageInstruction(task, run),
-        sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
-        schemaRepairIssuePrompt(firstParseError),
-        `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
-        `Malformed worker output:\n${malformed}`,
-      ].join("\n\n");
+      const retryPrompt = acquisitionLedgerOnlyRepair
+        ? acquisitionLedgerRepairPrompt({
+          packet,
+          run,
+          task,
+          symbol,
+          asOfDate,
+          language,
+          error: firstParseError,
+        })
+        : [
+          "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, fetch, add facts, or redo the research.",
+          `Target task: ${task}; symbol: ${symbol}; as_of: ${asOfDate}; reader language: ${language}.`,
+          firstFailureKind === "reader_language_mismatch"
+            ? "Translate only the reader-facing strings in the supplied valid JSON into the requested language. Preserve the evidence packet schema, claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. Return exactly one JSON object and nothing else."
+            : "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
+          evidenceRepairSchemaContract(task),
+          companyCoverageInstruction(task, run),
+          sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
+          schemaRepairIssuePrompt(firstParseError),
+          `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
+          `Malformed worker output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
+        ].join("\n\n");
       result = await runAttempt(retryPrompt, retryTimeoutMs, 2, { search: false });
       if (!result.ok) {
         return commitFailure({
@@ -2651,7 +2731,15 @@ export async function collectEvidence(args) {
         });
       }
       try {
-        packet = normalizePacket(extractRepairedWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"), task, symbol, asOfDate, result.text);
+        packet = acquisitionLedgerOnlyRepair
+          ? mergeAcquisitionLedgerRepair(packet, result.text)
+          : normalizePacket(
+            extractRepairedWorkerJson(result.text, task === "news_industry_management" ? "news_evidence" : "evidence"),
+            task,
+            symbol,
+            asOfDate,
+            result.text,
+          );
         applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertCompanyCoveragePacket(packet, run);
@@ -2663,6 +2751,9 @@ export async function collectEvidence(args) {
           original_failure_kind: firstFailureKind,
           original_output_sha256: firstFailure.diagnostic.output_sha256 || null,
           repaired_packet_hash: companyEvidencePacketHash(packet),
+          repair_scope: acquisitionLedgerOnlyRepair
+            ? "acquisition_ledger_only"
+            : "evidence_packet_transport",
           retry_diagnostic: retryDiagnostic,
         });
         persistTerminalTask(task, "completed", {
@@ -2674,6 +2765,112 @@ export async function collectEvidence(args) {
         return packet;
       } catch (secondParseError) {
         const secondFailureKind = outputFailureKind(secondParseError);
+        // A transport repair can reveal a ledger-only semantic defect that the transport
+        // schema could not see. Give that disjoint surface one bounded no-search repair while
+        // freezing the now-valid claims, sources and coverage rows. Never grant a third try for
+        // another transport/language/coverage failure or after a ledger repair already ran.
+        if (chainedAcquisitionRepairEligible
+          && !acquisitionLedgerOnlyRepair
+          && packet
+          && isCompanySourceAcquisitionFailure(secondParseError)) {
+          const secondFailure = workerFailureArtifacts({
+            task,
+            symbol,
+            asOfDate,
+            language,
+            timeoutMs: retryTimeoutMs,
+            result,
+            failureKind: secondFailureKind,
+            parseError: secondParseError,
+          });
+          const acquisitionRetryDiagnostic = join(dir, `${task}.attempt-2.failure.json`);
+          writeJson(acquisitionRetryDiagnostic, secondFailure.diagnostic, { mode: 0o600 });
+          const acquisitionRetryTimeoutMs = parseRepairBudget(run, {
+            stageBudgetMs: timeoutMs,
+            stageStartedAtMs: workerStartedAt,
+          });
+          if (acquisitionRetryTimeoutMs <= 0) {
+            return commitFailure({
+              failedResult: result,
+              budgetMs: result.budget_ms ?? retryTimeoutMs,
+              attempts: 2,
+              failureKind: secondFailureKind,
+              parseError: secondParseError,
+              retryDiagnostic: acquisitionRetryDiagnostic,
+            });
+          }
+          appendEvent(run, "task_retry", {
+            task,
+            attempt: 3,
+            max_attempts: 3,
+            reason: secondFailureKind,
+            repair_scope: "acquisition_ledger_only",
+            retry_diagnostic: acquisitionRetryDiagnostic,
+            previous_retry_diagnostic: retryDiagnostic,
+            remaining_ms: acquisitionRetryTimeoutMs,
+          });
+          updateTask(run, task, "running", {
+            attempts: 3,
+            retry_diagnostic: acquisitionRetryDiagnostic,
+            retry_diagnostics: [retryDiagnostic, acquisitionRetryDiagnostic],
+          });
+          const acquisitionResult = await runAttempt(acquisitionLedgerRepairPrompt({
+            packet,
+            run,
+            task,
+            symbol,
+            asOfDate,
+            language,
+            error: secondParseError,
+          }), acquisitionRetryTimeoutMs, 3, { search: false });
+          if (!acquisitionResult.ok) {
+            return commitFailure({
+              failedResult: acquisitionResult,
+              budgetMs: acquisitionResult.budget_ms ?? acquisitionRetryTimeoutMs,
+              attempts: 3,
+              retryDiagnostic: acquisitionRetryDiagnostic,
+            });
+          }
+          try {
+            packet = mergeAcquisitionLedgerRepair(packet, acquisitionResult.text);
+            applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
+            assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
+            assertCompanyCoveragePacket(packet, run);
+            assertCompanySourceAcquisition(packet, run);
+            assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} chained acquisition repair`);
+            commitPacket(packet);
+            appendEvent(run, "task_repair_succeeded", {
+              task,
+              attempt: 3,
+              original_failure_kind: firstFailureKind,
+              intermediate_failure_kind: secondFailureKind,
+              original_output_sha256: firstFailure.diagnostic.output_sha256 || null,
+              transport_repair_output_sha256: secondFailure.diagnostic.output_sha256 || null,
+              repaired_packet_hash: companyEvidencePacketHash(packet),
+              repair_scope: "acquisition_ledger_only",
+              repair_chain: ["evidence_packet_transport", "acquisition_ledger_only"],
+              retry_diagnostic: acquisitionRetryDiagnostic,
+              previous_retry_diagnostic: retryDiagnostic,
+            });
+            persistTerminalTask(task, "completed", {
+              completed_at: new Date().toISOString(),
+              output: join(dir, `${task}.json`),
+              attempts: 3,
+              retry_diagnostic: acquisitionRetryDiagnostic,
+              retry_diagnostics: [retryDiagnostic, acquisitionRetryDiagnostic],
+            });
+            return packet;
+          } catch (thirdParseError) {
+            return commitFailure({
+              failedResult: acquisitionResult,
+              budgetMs: acquisitionResult.budget_ms ?? acquisitionRetryTimeoutMs,
+              attempts: 3,
+              failureKind: outputFailureKind(thirdParseError),
+              parseError: thirdParseError,
+              retryDiagnostic: acquisitionRetryDiagnostic,
+            });
+          }
+        }
         return commitFailure({
           failedResult: result,
           budgetMs: result.budget_ms ?? retryTimeoutMs,
@@ -3583,6 +3780,32 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       return debateFailurePacket(role, run, "reader_language_mismatch");
     }
   };
+  const enforceRoundQna = (candidate) => {
+    if (candidate?.failure_kind || !Number.isInteger(context.round)) return candidate;
+    const gate = debateRoundQnaGate({
+      role,
+      round: context.round,
+      packet: candidate,
+      questionsYouAsked: context.questionsYouAsked,
+      questionsForYou: context.questionsForYou,
+    });
+    if (gate.status === "passed") return candidate;
+    const schemaErrors = gate.errors.map((message) => ({
+      path: message.includes("answer") ? "/questions_answered" : "/questions",
+      keyword: "exact_qna",
+      message,
+    }));
+    return {
+      ...debateFailurePacket(role, run, "parse_failed"),
+      contract_errors: [...gate.errors],
+      schema_errors: schemaErrors,
+      output_contract_diagnostic: {
+        reason: "DEBATE_QNA_CONTRACT_MISMATCH",
+        schema_error_count: schemaErrors.length,
+        schema_errors: schemaErrors,
+      },
+    };
+  };
   const persistManagerAttemptDiagnostic = (attempt, candidate, workerResult) => {
     if (!structuredManagerDecision || !candidate?.failure_kind) return null;
     const path = join(runPath(run.run_id), `portfolio_manager.attempt-${attempt}.failure.json`);
@@ -3608,7 +3831,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     return path;
   };
 
-  let packet = enforceLanguage(parseWorkerPacket(result, prompt));
+  let packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, prompt)));
   if (result.ok && ["parse_failed", "reader_language_mismatch"].includes(packet.failure_kind)) {
     persistManagerAttemptDiagnostic(1, packet, result);
     const repairBudget = parseRepairBudget(run, {
@@ -3624,6 +3847,15 @@ export async function runDebateRole(run, role, context, timeoutMs) {
         repairReason === "reader_language_mismatch"
           ? "Translate only the reader-facing strings in the supplied valid debate-packet JSON. Preserve exact round-2 questions, exact round-3 question bindings, facts, numbers, source IDs and uncertainty. Return one JSON object only."
           : "Convert only the supplied malformed output into one valid debate-packet JSON object. Preserve exact round-2 questions and exact round-3 question bindings when present. Return JSON only.",
+        context.round === 2
+          ? "Round 2 questions must be exactly three non-empty strings. Keep the worker's substantive challenge, but return exactly three questions."
+          : context.round === 3
+            ? [
+              `Your round 2 questions to preserve JSON: ${JSON.stringify(context.questionsYouAsked || [])}`,
+              `Questions you must answer JSON: ${JSON.stringify(context.questionsForYou || [])}`,
+              "Round 3 questions must equal the first array byte-for-byte and in order. questions_answered must contain exactly three rows whose question fields equal the second array byte-for-byte and in order; preserve or repair only the answers around those frozen bindings.",
+            ].join("\n")
+            : "",
         structuredManagerDecision
           ? "Return only HEADLESS_STRUCTURED_PM_DECISION_V1: the compact required debate fields plus price_levels, horizon_views and data_gaps. Omit report_markdown completely; the server renders it deterministically."
           : role === "portfolio_manager"
@@ -3640,7 +3872,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
         updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
-      packet = enforceLanguage(parseWorkerPacket(result, repairPrompt, { repairedTransport: true }));
+      packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, repairPrompt, { repairedTransport: true })));
       if (packet?.failure_kind) persistManagerAttemptDiagnostic(2, packet, result);
     }
   }

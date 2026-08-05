@@ -387,7 +387,7 @@ test("valid JSON in the wrong reader language remains reader_language_mismatch a
     });
     const runId = `HEADLESS-LANGUAGE-MISMATCH-${process.pid}`;
     const run = structured(await server.callTool("collect_evidence", {
-      symbol: "RKLB", run_id: runId, language: "中文", prompt,
+      symbol: "RKLB", run_id: runId, as_of: "2026-08-04", language: "中文", prompt,
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
@@ -409,8 +409,15 @@ test("valid JSON in the wrong reader language remains reader_language_mismatch a
     const events = readFileSync(join(runDir, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
     const retry = events.filter((event) => event.type === "task_retry");
-    assert.equal(retry.length, 1);
-    assert.equal(retry[0].reason, "reader_language_mismatch");
+    const targetRetry = retry.filter((event) => event.task === "forward_expectations");
+    const unexpectedRetry = retry.filter((event) => event.task !== "forward_expectations");
+    const unexpectedDiagnostics = unexpectedRetry.map((event) => ({
+      event,
+      diagnostic: JSON.parse(readFileSync(event.retry_diagnostic, "utf8")),
+    }));
+    assert.equal(unexpectedRetry.length, 0, JSON.stringify(unexpectedDiagnostics, null, 2));
+    assert.equal(targetRetry.length, 1, JSON.stringify(targetRetry, null, 2));
+    assert.equal(targetRetry[0].reason, "reader_language_mismatch");
   } finally {
     await server.close();
     removeDataDir(dataDir);
