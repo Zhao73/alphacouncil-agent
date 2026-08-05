@@ -116,6 +116,35 @@ export function normalizeMethodVoiceWorkerTransport(value) {
       normalized = withoutEmptyAcks;
     }
   }
+  const splitDelimitedSourceIds = (values) => {
+    if (!Array.isArray(values)) return values;
+    let changed = false;
+    const next = values.flatMap((item) => {
+      if (typeof item !== "string" || !/\s/u.test(item)) return [item];
+      const parts = item.split(/[\s,，;；]+/u).filter(Boolean);
+      if (parts.length < 2 || !parts.every((part) => (
+        part.includes(":") && /^[^\s\x00-\x1F\x7F]+$/u.test(part)
+      ))) return [item];
+      changed = true;
+      return parts;
+    });
+    return changed ? [...new Set(next)] : values;
+  };
+  const source_ids = splitDelimitedSourceIds(normalized.source_ids);
+  let evidence_packet_acks = normalized.evidence_packet_acks;
+  if (Array.isArray(evidence_packet_acks)) {
+    let changed = false;
+    evidence_packet_acks = evidence_packet_acks.map((ack) => {
+      const ids = splitDelimitedSourceIds(ack?.source_ids);
+      if (ids === ack?.source_ids) return ack;
+      changed = true;
+      return { ...ack, source_ids: ids };
+    });
+    if (!changed) evidence_packet_acks = normalized.evidence_packet_acks;
+  }
+  if (source_ids !== normalized.source_ids || evidence_packet_acks !== normalized.evidence_packet_acks) {
+    normalized = { ...normalized, source_ids, evidence_packet_acks };
+  }
   for (const field of METHOD_VOICE_PROSE_ARRAYS) {
     const items = normalized[field];
     if (!Array.isArray(items)) continue;

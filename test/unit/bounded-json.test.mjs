@@ -568,6 +568,28 @@ test("native structured method voice transport unwraps without a nested packet_j
   assert.deepEqual(parsed.voice, native.voice);
 });
 
+test("method voice transport locally separates whitespace-delimited source IDs", () => {
+  const combined = methodVoice();
+  combined.source_ids = ["market_data:S1, earnings_deep_dive:S1"];
+  combined.evidence_packet_acks = [{
+    task: "market_data",
+    status: "used",
+    source_ids: ["market_data:S1 quant_factor:S1"],
+    note: "I used the bounded evidence packet.",
+  }];
+  const normalized = normalizeMethodVoiceWorkerTransport(combined);
+  assert.deepEqual(normalized.source_ids, ["market_data:S1", "earnings_deep_dive:S1"]);
+  assert.deepEqual(normalized.evidence_packet_acks[0].source_ids, ["market_data:S1", "quant_factor:S1"]);
+
+  const prose = methodVoice();
+  prose.source_ids = ["not a source id"];
+  assert.equal(normalizeMethodVoiceWorkerTransport(prose).source_ids[0], "not a source id");
+  assert.throws(
+    () => assertRuntimeWorkerPayload("method_voice", prose),
+    (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
+  );
+});
+
 test("method voice transport does not coerce provenance or invalid prose primitives", () => {
   const badSource = methodVoice();
   badSource.source_ids = [{ id: "market_data:S1" }];
