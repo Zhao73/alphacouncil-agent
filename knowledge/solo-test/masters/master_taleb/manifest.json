@@ -16,19 +16,17 @@
     ],
     "native_decision_schema": "convexity_ruin_v1",
     "optional_fact_types": [
-      "valuation.downside_floor",
-      "financial.leverage",
       "risk.ruin_possible",
       "risk.hidden_leverage",
-      "payoff.convexity",
+      "options.implied_volatility",
       "options.realized_volatility",
+      "options.skew_25d",
       "execution.round_trip_cost",
       "event.expiry_coverage"
     ],
     "required_fact_types": [
-      "financial.interest_coverage",
-      "options.skew_25d",
-      "options.implied_volatility"
+      "payoff.max_loss",
+      "payoff.convexity"
     ]
   },
   "components": {
@@ -49,8 +47,8 @@
   "computation": {
     "dsl_version": "1.1",
     "pipeline": [
-      "master_taleb.debt_service_cushion",
-      "master_taleb.normalised_skew"
+      "master_taleb.maximum_loss",
+      "master_taleb.payoff_convexity"
     ]
   },
   "decision": {
@@ -58,14 +56,12 @@
     "common_projection": "common_stance_v1",
     "confidence_calibrator": null,
     "eligibility": [
-      "financial.interest_coverage",
-      "options.skew_25d",
-      "options.implied_volatility"
+      "payoff.max_loss",
+      "payoff.convexity"
     ],
     "hard_vetoes": [
-      "master_taleb.ruin",
-      "master_taleb.negative_convexity",
-      "master_taleb.friction_erases_edge"
+      "master_taleb.absorbing_barrier",
+      "master_taleb.leverage_is_the_fragility"
     ],
     "native_output": "convexity_ruin_v1"
   },

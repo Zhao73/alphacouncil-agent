@@ -6,12 +6,16 @@ import { verificationStatus } from "../../mcp/lib/gates.mjs";
 import {
   REQUIRED_VERIFIER_IDS,
   buildVerifierBatchInput,
+  buildVerifierClaimChunks,
   buildVerifierHeadlessOutputSchema,
+  hardVerificationFindings,
+  assertVerificationFindingsAck,
   initializeVerificationPolicy,
   materialEvidenceClaims,
   normalizeVerifierBatch,
   normalizeVerifierHeadlessTransport,
   verificationAuditStatus,
+  verifierBatchPrompt,
 } from "../../mcp/lib/verification.mjs";
 
 function slowAllRun() {
@@ -50,6 +54,39 @@ function slowAllRun() {
     packets,
     grounding: {},
     verifier_verdicts: [],
+  };
+}
+
+function urlWeightedRun() {
+  const run = slowAllRun();
+  const task = ALL_ANALYST_TASKS[0];
+  const urlCounts = [3, 2, 1, 5, 1];
+  let sourceNumber = 0;
+  const sources = [];
+  const claims = urlCounts.map((urlCount, claimIndex) => {
+    const source_ids = Array.from({ length: urlCount }, () => {
+      sourceNumber += 1;
+      const id = `${task}:S${sourceNumber}`;
+      sources.push({
+        id,
+        title: `${task} source ${sourceNumber}`,
+        url: `https://example.com/${task}/source-${sourceNumber}`,
+        published_at: "2026-08-03",
+        retrieved_at: "2026-08-03",
+      });
+      return id;
+    });
+    return {
+      claim: `${task} URL-weighted claim ${claimIndex + 1}`,
+      evidence: `${task} URL-weighted fixture evidence ${claimIndex + 1}`,
+      confidence: "medium",
+      source_ids,
+    };
+  });
+  return {
+    ...run,
+    tasks: [task],
+    packets: [{ task, confidence: "medium", claims, sources }],
   };
 }
 
@@ -95,6 +132,41 @@ test("the triple gate requires exact coverage and preserves adverse findings for
   assert.equal(verificationAuditStatus(adverse).non_clean.length, 1);
 });
 
+test("the portfolio manager must acknowledge every hard verifier finding exactly once", () => {
+  const run = slowAllRun();
+  initializeVerificationPolicy(run);
+  run.verifier_verdicts = cleanVerdicts(run);
+  run.verifier_verdicts.find((row) => row.verifier === "source_fidelity").verdict = "contradicted";
+  run.verifier_verdicts.find((row) => row.verifier === "rederivation").verdict = "disagree";
+  run.verifier_verdicts.find((row) => row.verifier === "refuter").verdict = "refuted";
+
+  const findings = hardVerificationFindings(run);
+  assert.equal(findings.length, 3);
+  const acknowledgement = findings.map((finding) => ({
+    finding_id: finding.finding_id,
+    disposition: finding.verifier === "rederivation" ? "corrected" : "excluded",
+    note: `The final decision explicitly handles ${finding.finding_id}.`,
+  }));
+  const normalized = assertVerificationFindingsAck({ verification_findings_ack: acknowledgement }, run);
+  assert.deepEqual(normalized.map((row) => row.finding_id), findings.map((row) => row.finding_id));
+  assert.ok(normalized.every((row) => row.acknowledgement_note.length >= 12));
+
+  assert.throws(
+    () => assertVerificationFindingsAck({ verification_findings_ack: acknowledgement.slice(1) }, run),
+    (error) => error?.data?.reason === "VERIFICATION_FINDINGS_ACK_MISMATCH",
+  );
+  assert.throws(
+    () => assertVerificationFindingsAck({ verification_findings_ack: [...acknowledgement, acknowledgement[0]] }, run),
+    (error) => error?.data?.reason === "VERIFICATION_FINDINGS_ACK_MISMATCH",
+  );
+  const invalid = structuredClone(acknowledgement);
+  invalid[0].disposition = "ignored";
+  assert.throws(
+    () => assertVerificationFindingsAck({ verification_findings_ack: invalid }, run),
+    (error) => error?.data?.reason === "VERIFICATION_FINDINGS_ACK_MISMATCH",
+  );
+});
+
 test("rederivation input hides original sources while source fidelity receives them", () => {
   const run = slowAllRun();
   const fidelity = buildVerifierBatchInput(run, "source_fidelity");
@@ -102,6 +174,51 @@ test("rederivation input hides original sources while source fidelity receives t
   assert.equal(fidelity.claim_count, 11);
   assert.ok(fidelity.claims.every((claim) => claim.cited_sources.length === 1));
   assert.ok(rederivation.claims.every((claim) => !Object.hasOwn(claim, "cited_sources")));
+});
+
+test("source fidelity chunks by per-claim URL obligations while preserving frozen claim order", () => {
+  const run = urlWeightedRun();
+  const claimIds = materialEvidenceClaims(run).map((claim) => claim.claim_id);
+  const chunks = buildVerifierClaimChunks(run, "source_fidelity", {
+    maxClaimsPerBatch: 3,
+    maxSourceUrlsPerBatch: 4,
+  });
+  assert.deepEqual(chunks, [
+    [claimIds[0]],
+    [claimIds[1], claimIds[2]],
+    [claimIds[3]],
+    [claimIds[4]],
+  ]);
+  assert.deepEqual(chunks.flat(), claimIds);
+
+  const input = buildVerifierBatchInput(run, "source_fidelity");
+  const urlsByClaim = new Map(input.claims.map((claim) => [claim.claim_id, claim.cited_sources.length]));
+  for (const chunk of chunks) {
+    const urlCount = chunk.reduce((sum, claimId) => sum + urlsByClaim.get(claimId), 0);
+    assert.ok(urlCount <= 4 || chunk.length === 1, "only one atomic oversized claim may exceed the URL budget");
+  }
+  assert.deepEqual(buildVerifierClaimChunks(run, "refuter", { maxClaimsPerBatch: 3 }), [
+    claimIds.slice(0, 3),
+    claimIds.slice(3),
+  ]);
+});
+
+test("source fidelity prompt binds every required URL to its claim without treating the checklist as evidence", () => {
+  const run = urlWeightedRun();
+  const expectedClaimIds = materialEvidenceClaims(run).slice(0, 2).map((claim) => claim.claim_id);
+  const input = buildVerifierBatchInput(run, "source_fidelity", { expectedClaimIds });
+  const prompt = verifierBatchPrompt(run, "source_fidelity", "/tmp/fidelity-input.json", {
+    keyedResults: true,
+    expectedClaimIds,
+  });
+  assert.match(prompt, /REQUIRED checked_urls BY CLAIM \(binding work checklist\)/u);
+  assert.match(prompt, /actually open or attempt EVERY URL/u);
+  assert.match(prompt, /NOT evidence that retrieval happened and MUST NOT be copied blindly/u);
+  for (const claim of input.claims) {
+    assert.ok(prompt.includes(claim.claim_id));
+    assert.ok(claim.cited_sources.every((source) => prompt.includes(source.url)));
+  }
+  assert.ok(!prompt.includes(`${ALL_ANALYST_TASKS[0]}:C3`));
 });
 
 test("headless structured output keys every frozen claim and converts to the canonical row contract", () => {
@@ -195,6 +312,8 @@ test("a verifier batch must cover every frozen claim exactly once and obey its v
       problem.reason === "source_fidelity_did_not_check_every_cited_url"
     )),
   );
+  assert.deepEqual(packet.results[0].checked_urls, [`https://example.com/${ALL_ANALYST_TASKS[0]}`],
+    "coverage validation must not auto-fill an unchecked URL");
 
   const partial = structuredClone(packet);
   partial.results.pop();

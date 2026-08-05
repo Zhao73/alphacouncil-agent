@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:f6d0990a4f03f88b685bf3db069bb0b752f719b865ffeea7550fc88c519bdf31`
+- Pack snapshot hash: `sha256:c6c4a7372387f019795c3e451473cb57162cea7e3948ee651e567827e3d428c0`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -44,17 +44,13 @@ Known limits:
 
 Make the complete evidence pack available, then prioritize these declared fact types:
 
-- `index.aggregate_earnings_yield`
-- `macro.long_bond_yield`
-- `index.aggregate_pe_forward`
-- `macro.aaa_corporate_yield`
+- `valuation.cash_flow`
+- `valuation.implied_story`
 - `valuation.revenue_growth`
 - `valuation.target_margin`
 - `valuation.reinvestment_rate`
 - `valuation.cost_of_capital`
 - `valuation.failure_probability`
-- `valuation.cash_flow`
-- `valuation.implied_story`
 
 Do not infer a missing fact from the method reference. Enforce unit, period, point-in-time, source-ID, and lineage checks before applying any rule.
 
@@ -72,9 +68,9 @@ Do not infer a missing fact from the method reference. Enforce unit, period, poi
   ],
   "states": [
     "unvalued",
-    "overvalued",
-    "fair_range",
-    "undervalued"
+    "company_inputs_partial",
+    "company_valuation_recomputable",
+    "company_valuation_review_required"
   ],
   "required_outputs": [
     "story-to-number map",
@@ -108,7 +104,7 @@ These are project-derived, machine-reviewed hypotheses. They are not approved at
   {
     "assurance_class": "provisional_derived_proxy",
     "attribution_status": "provisional_not_human_reviewed",
-    "claim": "What the market is currently paying for equity risk over the risk-free rate. the named source's argument is that this number, not a historical average, is what a valuation should discount at.",
+    "claim": "Carry the subject company's explicitly sourced cash-flow input into the frozen valuation record without replacing it with a broad-market earnings yield.",
     "rule_id": "proxy_rule_2",
     "source_ids": [
       "proxy:bcabfc2d756d028b0"
@@ -117,7 +113,7 @@ These are project-derived, machine-reviewed hypotheses. They are not approved at
   {
     "assurance_class": "provisional_derived_proxy",
     "attribution_status": "provisional_not_human_reviewed",
-    "claim": "The current implied premium against its own long-run average of about 4.2%, which is how he judges whether the market as a whole is cheap or rich.",
+    "claim": "Carry the subject price-implied story into the frozen record so the operating-company conclusion is bound to that company rather than to the S&P 500.",
     "rule_id": "proxy_rule_3",
     "source_ids": [
       "proxy:bcabfc2d756d028b0"
@@ -206,11 +202,11 @@ Numeric thresholds or transformations below belong to the current project proxy 
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:500b290e0e13e80c02f1072f33f879ab79f9cfa81a749295634e763dda75b6f2",
-    "derivation_spec_hash": "sha256:b256595a8aed8861a196eb7335efbc72e3ed70bac462d8021abe47efde3597fe",
-    "derivation_spec_id": "master_damodaran.implied_equity_risk_premium.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:3a3fa3d73009c23a6e6e29e48dccc7ce325224dc3ee4fd38256ebf7ef4bfedfb",
+    "derivation_spec_hash": "sha256:76c0546c9f92f414d91a5b7368d9cc6ea55c31b9aa5fb43068483ddf38394db1",
+    "derivation_spec_id": "master_damodaran.company_cash_flow.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_damodaran.implied_equity_risk_premium",
+    "id": "master_damodaran.company_cash_flow",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -219,57 +215,44 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "basis": "instant",
           "window": null
         },
-        "unit": "decimal",
-        "value_kind": "ratio"
-      },
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "instant",
-          "window": null
-        },
-        "unit": "decimal",
-        "value_kind": "ratio"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:2ed1240f33f9ed42d241ff758e8d43c9ee68fed7edcaacede625db0c08ef5ba4",
+    "input_schema_hash": "sha256:49e91d211e613874f12d72382d85cf30af89c2ab0594a4bde7bf41f65876d619",
     "inputs": [
       {
-        "fact_id": "index.aggregate_earnings_yield"
-      },
-      {
-        "fact_id": "macro.long_bond_yield"
+        "fact_id": "valuation.cash_flow"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "subtract",
-    "output_id": "index.implied_equity_risk_premium.master_damodaran",
+    "operation": "identity",
+    "output_id": "valuation.company_cash_flow.master_damodaran",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c2fcd47a4aa4014f89d12390ec92f592067ef12d2f18982fcf201f4c8d713d4e",
+    "output_schema_hash": "sha256:00e6d02309e0f62c240e0dcae58d460b93a7766e6027428d75edc1643cfe5cd3",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:bcabfc2d756d028b0"
     ],
-    "unit": "decimal",
-    "value_kind": "ratio",
+    "unit": "currency_units",
+    "value_kind": "monetary",
     "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:5b557801dbdfeb202198eca16cfd22eaa009252ca9a39c3357e5000a1efabb90",
-    "derivation_spec_hash": "sha256:3743c713e5c27017406e6d6bc79ed177415f868a7abd3a00093f308f0e79f744",
-    "derivation_spec_id": "master_damodaran.premium_versus_long_run_average.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:d498c5ae5d8d4b7c33d9e4cfa53793abdb97d3cd8b56845206cf832be3e3612b",
+    "derivation_spec_hash": "sha256:202f19b814669c46b731d7ff578f678f2dce4105a39fcdd866e2042f1c77d3cc",
+    "derivation_spec_id": "master_damodaran.reverse_valuation_story.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_damodaran.premium_versus_long_run_average",
+    "id": "master_damodaran.reverse_valuation_story",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -280,38 +263,25 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "unit": "decimal",
         "value_kind": "ratio"
-      },
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "instant",
-          "window": null
-        },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:5f30cc56513316e32142651b812911eef0fcbce86aea6a5c7f3cc005d507e012",
+    "input_schema_hash": "sha256:34753e5f4a218b7e6b78397fb0ad9069bdbfc039b03966a34baf2acfa122d9e7",
     "inputs": [
       {
-        "output_id": "index.implied_equity_risk_premium.master_damodaran"
-      },
-      {
-        "literal": 0.042
+        "fact_id": "valuation.implied_story"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "subtract",
-    "output_id": "index.implied_premium_gap.master_damodaran",
+    "operation": "identity",
+    "output_id": "valuation.reverse_valuation_story.master_damodaran",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:4b68698678a20f720d47bf9b66c5bb1e4839e72cd55fb4d8f978f7e4f82f418f",
+    "output_schema_hash": "sha256:369d881b956edd744a21b5af88d140c9c606913475d4ca601513eb3374c2412a",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -335,12 +305,41 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "all": [
       {
         "condition": {
-          "op": "exists",
-          "value": {
-            "fact_id": "index.aggregate_pe_forward"
-          }
+          "conditions": [
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "valuation.revenue_growth"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "valuation.target_margin"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "valuation.reinvestment_rate"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "valuation.cost_of_capital"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "valuation.failure_probability"
+              }
+            }
+          ],
+          "op": "all"
         },
-        "condition_id": "master_damodaran.forward_earnings_available",
+        "condition_id": "master_damodaran.company_valuation_inputs_available",
         "on_false": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_unvalued"
@@ -361,77 +360,50 @@ Numeric thresholds or transformations below belong to the current project proxy 
       "native_state": "provisional_unvalued"
     }
   },
-  "hard_vetoes": [
-    {
-      "condition": {
-        "left": {
-          "output_id": "index.implied_equity_risk_premium.master_damodaran"
-        },
-        "op": "lte",
-        "right": {
-          "literal": 0
-        }
-      },
-      "on_trigger": {
-        "common_stance": "opposed",
-        "native_state": "provisional_overvalued"
-      },
-      "on_uncomputable": {
-        "action": "abstain",
-        "decision": {
-          "common_stance": "out_of_scope",
-          "native_state": "provisional_unvalued"
-        }
-      },
-      "source_ids": [
-        "proxy:bcabfc2d756d028b0"
-      ],
-      "veto_id": "master_damodaran.no_premium_over_riskfree"
-    }
-  ],
+  "hard_vetoes": [],
   "native_decision_schema": "valuation_distribution_v1",
   "native_output_fields": [
     {
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "index.implied_equity_risk_premium.master_damodaran"
+        "output_id": "valuation.company_cash_flow.master_damodaran"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "index.implied_premium_gap.master_damodaran"
+        "output_id": "valuation.reverse_valuation_story.master_damodaran"
       }
     }
   ],
   "native_states": [
     "provisional_unvalued",
-    "provisional_overvalued",
-    "provisional_fair_range",
-    "provisional_undervalued"
+    "provisional_company_inputs_partial",
+    "provisional_company_valuation_recomputable",
+    "provisional_company_valuation_review_required"
   ],
   "schema_version": 1,
   "score_bands": [
     {
       "decision": {
-        "common_stance": "opposed",
-        "native_state": "provisional_overvalued"
+        "common_stance": "out_of_scope",
+        "native_state": "provisional_company_inputs_partial"
       },
       "min_ratio": 0
     },
     {
       "decision": {
         "common_stance": "cautious",
-        "native_state": "provisional_fair_range"
+        "native_state": "provisional_company_valuation_recomputable"
       },
       "min_ratio": 0.5
     },
     {
       "decision": {
-        "common_stance": "constructive",
-        "native_state": "provisional_undervalued"
+        "common_stance": "cautious",
+        "native_state": "provisional_company_valuation_review_required"
       },
       "min_ratio": 1
     }
@@ -446,34 +418,28 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "rules": [
       {
         "condition": {
-          "left": {
-            "output_id": "index.implied_premium_gap.master_damodaran"
-          },
-          "op": "gt",
-          "right": {
-            "literal": 0
+          "op": "exists",
+          "value": {
+            "output_id": "valuation.company_cash_flow.master_damodaran"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "damodaran_premium_above_long_run_average",
+        "rule_id": "damodaran_company_cash_flow_recomputable",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
         ]
       },
       {
         "condition": {
-          "left": {
-            "fact_id": "index.aggregate_earnings_yield"
-          },
-          "op": "gt",
-          "right": {
-            "fact_id": "macro.aaa_corporate_yield"
+          "op": "exists",
+          "value": {
+            "output_id": "valuation.reverse_valuation_story.master_damodaran"
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "damodaran_equity_out_yields_corporate_debt",
+        "rule_id": "damodaran_reverse_valuation_recomputable",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
         ]
@@ -514,7 +480,7 @@ A listed finding blocks the affected comparison from being presented as an appro
         "status": "pending"
       },
       "author": "AlphaCouncil project build specification",
-      "content_hash": "sha256:8e68b654954f3bf4ef1d28ff060d3246671dfa0f495fe26ae24dfc1f87ff31e8",
+      "content_hash": "sha256:78d4d4ac5326be9d0a9717c8dd2520c5f9dd4ed6ddeac8d5378406e31c0ddfaa",
       "grade": "E",
       "known_at": "2026-07-27",
       "locator": {

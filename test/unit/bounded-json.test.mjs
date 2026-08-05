@@ -9,7 +9,7 @@ import {
   stripJsonComments,
   stripTrailingCommas,
 } from "../../mcp/lib/bounded-json.mjs";
-import { extractRepairedWorkerJson, extractWorkerJson } from "../../mcp/lib/packets.mjs";
+import { extractRepairedWorkerJson, extractWorkerJson, normalizePacket } from "../../mcp/lib/packets.mjs";
 import {
   assertRuntimeClientPayload,
   assertRuntimeWorkerPayload,
@@ -230,6 +230,195 @@ test("evidence transport normalizes only nullable optional coverage fields", () 
   });
 });
 
+test("evidence transport losslessly maps acquisition coverage aliases in coverage_items", () => {
+  const packet = evidence();
+  packet.coverage_items = [{
+    coverage_id: "valuation.current_multiples",
+    outcome: "reported_actual",
+    source_ids: ["S1"],
+    note: null,
+    attempted: [{
+      stage: "regulator_filing",
+      locator_type: "url",
+      locator: "https://example.com/filing",
+      note: "已检查监管申报原文。",
+    }],
+    attempted_urls: null,
+    gap: null,
+    reason: "该数值未单独披露。",
+  }];
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.equal(parsed.coverage_items[0].id, "valuation.current_multiples");
+  assert.equal(parsed.coverage_items[0].status, "covered");
+  assert.deepEqual(parsed.coverage_items[0].source_ids, ["S1"]);
+  assert.equal(parsed.coverage_items[0].attempted, "已检查监管申报原文。");
+  assert.deepEqual(parsed.coverage_items[0].attempted_urls, ["https://example.com/filing"]);
+  assert.equal(parsed.coverage_items[0].gap, "该数值未单独披露。");
+});
+
+test("evidence transport removes non-web acquisition locators from attempted URLs", () => {
+  const packet = evidence();
+  packet.coverage_items = [{
+    id: "ownership.insider_transactions",
+    status: "covered",
+    source_ids: ["S1"],
+    note: "Covered by the cited filing.",
+    attempted: "Checked the filing and a deterministic local derivation.",
+    attempted_urls: [
+      "local:VRT:insider_transactions",
+      "derive:insider_transactions",
+      "https://www.sec.gov/Archives/example.htm",
+      "https://www.sec.gov/Archives/example.htm",
+    ],
+    gap: "",
+  }];
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.deepEqual(parsed.coverage_items[0].attempted_urls, [
+    "https://www.sec.gov/Archives/example.htm",
+  ]);
+});
+
+test("headless structured-output envelopes unwrap before stage validation", () => {
+  const packet = evidence();
+  const envelope = JSON.stringify({ packet_json: JSON.stringify(packet) });
+  assert.deepEqual(extractWorkerJson(envelope, "evidence"), packet);
+  assert.deepEqual(
+    extractWorkerJson(JSON.stringify({ packet_json: `${JSON.stringify(packet)}\n${JSON.stringify(packet)}` }), "evidence"),
+    packet,
+  );
+  const competing = { ...packet, summary: "A materially different valid packet." };
+  assert.throws(
+    () => extractWorkerJson(JSON.stringify({ packet_json: `${JSON.stringify(packet)}\n${JSON.stringify(competing)}` }), "evidence"),
+    /multiple JSON payloads/u,
+  );
+});
+
+test("segmented evidence envelopes reconstruct one runtime packet without a monolithic JSON root", () => {
+  const packet = evidence();
+  const envelope = {
+    transport: "segmented_evidence_v1",
+    summary: packet.summary,
+    claims_json: JSON.stringify(packet.claims),
+    metrics_json: JSON.stringify(packet.metrics),
+    sources_json: JSON.stringify(packet.sources),
+    open_questions_json: JSON.stringify(packet.open_questions),
+    coverage_items_json: "null",
+    acquisition_ledger_json: "null",
+    official_source_coverage_json: "null",
+    confidence: packet.confidence,
+    information_richness: "unrated",
+  };
+  assert.deepEqual(extractWorkerJson(JSON.stringify(envelope), "evidence"), {
+    ...packet,
+    information_richness: "unrated",
+  });
+  envelope.claims_json = `${JSON.stringify(packet.claims)}${JSON.stringify(packet.claims)}`;
+  assert.throws(
+    () => extractWorkerJson(JSON.stringify(envelope), "evidence"),
+    /multiple JSON payloads/u,
+  );
+});
+
+test("supplemental analyst transport drops company-route fields it does not own", () => {
+  const packet = evidence();
+  packet.coverage_items = [{ id: "invented", status: "unknown", source_ids: [] }];
+  packet.acquisition_ledger = { invented: true };
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence", { task: "macro_regime" });
+  assert.equal(Object.hasOwn(parsed, "coverage_items"), false);
+  assert.equal(Object.hasOwn(parsed, "acquisition_ledger"), false);
+  assert.equal(parsed.claims.length, 1);
+  assert.throws(() => extractWorkerJson(JSON.stringify(packet), "evidence", { task: "market_data" }));
+});
+
+test("an explicit unsourced gap is downgraded to an open question, never accepted as evidence", () => {
+  const packet = evidence();
+  packet.claims.push({
+    claim: "截至日的 200 日均线不可得。",
+    evidence: "已检索官方市场页和发行人网站，但未取得该数值。",
+    confidence: "low",
+    source_ids: [],
+  });
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.equal(parsed.claims.length, 1);
+  assert.ok(parsed.open_questions.some((question) => question.includes("200 日均线不可得")));
+
+  const positive = evidence();
+  positive.claims[0].source_ids = [];
+  assert.throws(
+    () => extractWorkerJson(JSON.stringify(positive), "evidence"),
+    (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
+  );
+});
+
+test("unavailable coverage gaps are mirrored exactly into open questions", () => {
+  const packet = evidence();
+  const gap = "The exact 200-day moving average was not obtainable from the checked surfaces.";
+  packet.coverage_items = [{
+    id: "market.technical_levels",
+    status: "unavailable",
+    source_ids: [],
+    note: "",
+    attempted: "Checked the exchange and issuer surfaces.",
+    attempted_urls: ["https://example.com/checked"],
+    gap,
+  }];
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.ok(parsed.open_questions.includes(gap));
+});
+
+test("covered live root surfaces inherit their supplied retrieval time as an observation", () => {
+  const packet = evidence();
+  packet.sources.push({
+    id: "S2",
+    title: "Issuer official website",
+    url: "https://issuer.example/",
+    published_at: "unknown",
+    retrieved_at: "2026-08-05T12:00:00Z",
+  });
+  packet.coverage_items = [{
+    id: "market.identity_listing_currency",
+    status: "covered",
+    source_ids: ["S2"],
+    note: "Observed on the current issuer surface.",
+  }];
+  const parsed = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.equal(parsed.sources[1].source_kind, "dynamic_snapshot");
+  assert.equal(parsed.sources[1].observed_at, "2026-08-05T12:00:00Z");
+
+  packet.sources[1].url = "https://issuer.example/articles/undated-story";
+  const article = extractWorkerJson(JSON.stringify(packet), "evidence");
+  assert.equal(article.sources[1].source_kind, undefined);
+});
+
+test("a same-day UTC observation corrects only a one-day local-calendar spill", () => {
+  const packet = evidence();
+  packet.sources[0] = {
+    id: "S1",
+    title: "Live issuer overview",
+    url: "https://issuer.example/overview/",
+    published_at: "unknown",
+    retrieved_at: "2026-08-06",
+    source_kind: "dynamic_snapshot",
+    observed_at: "2026-08-06",
+  };
+  const corrected = normalizePacket(packet, "market_data", "ACME", "2026-08-05", "", {
+    observationTime: "2026-08-05T17:55:42.548Z",
+  });
+  assert.equal(corrected.sources[0].observed_at, "2026-08-05T17:55:42.548Z");
+  assert.equal(corrected.sources[0].retrieved_at, "2026-08-05T17:55:42.548Z");
+
+  const historical = normalizePacket(packet, "market_data", "ACME", "2026-08-05", "", {
+    observationTime: "2026-08-06T01:00:00Z",
+  });
+  assert.equal(historical.sources[0].observed_at, "2026-08-06");
+
+  packet.sources[0].observed_at = "2099-01-01";
+  const farFuture = normalizePacket(packet, "market_data", "ACME", "2026-08-05", "", {
+    observationTime: "2026-08-05T17:55:42.548Z",
+  });
+  assert.equal(farFuture.sources[0].observed_at, "2099-01-01");
+});
+
 test("candidate enumeration preserves complete roots but never chooses one", () => {
   assert.deepEqual(
     parseJsonTransportCandidates('{"a":1}\ntransport note\n{"b":2,}'),
@@ -338,6 +527,66 @@ test("headless method voice preserves strings and canonically serializes structu
   assert.throws(
     () => assertRuntimeClientPayload("method_voice", structured),
     (error) => error?.data?.reason === "VISIBLE_INPUT_SCHEMA_MISMATCH",
+  );
+});
+
+test("method voice packet dispositions do not require workers to transcribe server-owned hashes", () => {
+  const unbound = methodVoice();
+  unbound.evidence_packet_acks = [{
+    task: "market_data",
+    status: "used",
+    source_ids: ["market_data:S1"],
+    note: "I used the market packet.",
+  }];
+  assert.equal(assertRuntimeWorkerPayload("method_voice", unbound), unbound);
+});
+
+test("native structured method voice transport unwraps without a nested packet_json string", () => {
+  const native = {
+    transport: "segmented_method_voice_v1",
+    ...methodVoice(),
+    company_dossier_hash_ack: null,
+    evidence_packet_acks: {
+      market_data: {
+        status: "used",
+        source_ids: ["market_data:S1"],
+        note: "I used the market packet.",
+      },
+    },
+  };
+  const parsed = extractWorkerJson(JSON.stringify(native), "method_voice");
+  assert.equal(Object.hasOwn(parsed, "transport"), false);
+  assert.equal(Object.hasOwn(parsed, "company_dossier_hash_ack"), false);
+  assert.deepEqual(parsed.evidence_packet_acks, [{
+    task: "market_data",
+    status: "used",
+    source_ids: ["market_data:S1"],
+    note: "I used the market packet.",
+  }]);
+  assert.ok(parsed.source_ids.includes("market_data:S1"));
+  assert.equal(parsed.master, native.master);
+  assert.deepEqual(parsed.voice, native.voice);
+});
+
+test("method voice transport locally separates whitespace-delimited source IDs", () => {
+  const combined = methodVoice();
+  combined.source_ids = ["market_data:S1, earnings_deep_dive:S1"];
+  combined.evidence_packet_acks = [{
+    task: "market_data",
+    status: "used",
+    source_ids: ["market_data:S1 quant_factor:S1"],
+    note: "I used the bounded evidence packet.",
+  }];
+  const normalized = normalizeMethodVoiceWorkerTransport(combined);
+  assert.deepEqual(normalized.source_ids, ["market_data:S1", "earnings_deep_dive:S1"]);
+  assert.deepEqual(normalized.evidence_packet_acks[0].source_ids, ["market_data:S1", "quant_factor:S1"]);
+
+  const prose = methodVoice();
+  prose.source_ids = ["not a source id"];
+  assert.equal(normalizeMethodVoiceWorkerTransport(prose).source_ids[0], "not a source id");
+  assert.throws(
+    () => assertRuntimeWorkerPayload("method_voice", prose),
+    (error) => error?.data?.reason === "WORKER_OUTPUT_SCHEMA_MISMATCH",
   );
 });
 

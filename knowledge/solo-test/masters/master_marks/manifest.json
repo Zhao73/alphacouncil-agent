@@ -62,9 +62,7 @@
       "macro.aaa_corporate_yield"
     ],
     "hard_vetoes": [
-      "master_marks.euphoria",
-      "master_marks.consensus_only",
-      "master_marks.unbounded_impairment"
+      "master_marks.euphoria"
     ],
     "native_output": "cycle_risk_posture_v1"
   },

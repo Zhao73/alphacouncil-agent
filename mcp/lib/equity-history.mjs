@@ -5,6 +5,8 @@ const TRADING_DAYS = 252;
 const RETURN_WINDOWS = Object.freeze([5, 21, 63, 126, 252]);
 const VOL_WINDOWS = Object.freeze([20, 63]);
 const VOLUME_WINDOWS = Object.freeze([20, 63]);
+const MOVING_AVERAGE_WINDOWS = Object.freeze([20, 50, 200]);
+const RANGE_WINDOWS = Object.freeze([20, 63, 252]);
 
 const BROAD_BENCHMARK = "SPY";
 const SIC_SECTOR_BENCHMARKS = Object.freeze([
@@ -29,12 +31,33 @@ export function equityHistoryUrl(symbol) {
   return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d&events=history`;
 }
 
-export function parseEquityHistory(json, { asOf = null } = {}) {
+function unfinishedCurrentSessionDate(result, observedAt) {
+  const observedMs = Date.parse(observedAt || "");
+  if (!Number.isFinite(observedMs)) return null;
+
+  const regular = result?.meta?.currentTradingPeriod?.regular;
+  const regularEndMs = Number.isFinite(regular?.end) ? regular.end * 1000 : null;
+  const regularStartMs = Number.isFinite(regular?.start) ? regular.start * 1000 : null;
+  if (Number.isFinite(regularEndMs)) {
+    if (observedMs >= regularEndMs) return null;
+    const anchorMs = Number.isFinite(regularStartMs) ? regularStartMs : observedMs;
+    return new Date(anchorMs).toISOString().slice(0, 10);
+  }
+
+  // Yahoo's newest 1d bar is mutable until the exchange session closes. If the
+  // provider omits a session calendar, a same-day bar cannot be proven final and
+  // must not be promoted to a daily close. Historical as-of runs are unaffected
+  // because their cutoff date is earlier than the live observation date.
+  return new Date(observedMs).toISOString().slice(0, 10);
+}
+
+export function parseEquityHistory(json, { asOf = null, observedAt = null } = {}) {
   const result = json?.chart?.result?.[0];
   const timestamps = result?.timestamp;
   const quote = result?.indicators?.quote?.[0];
   const adjusted = result?.indicators?.adjclose?.[0]?.adjclose;
   if (!Array.isArray(timestamps) || !Array.isArray(quote?.close)) return [];
+  const unfinishedDate = unfinishedCurrentSessionDate(result, observedAt);
   const rows = [];
   for (let index = 0; index < timestamps.length; index += 1) {
     const stamp = timestamps[index];
@@ -44,6 +67,7 @@ export function parseEquityHistory(json, { asOf = null } = {}) {
     if (!Number.isFinite(stamp) || !Number.isFinite(close) || close <= 0) continue;
     const date = new Date(stamp * 1000).toISOString().slice(0, 10);
     if (asOf && date > asOf) continue;
+    if (unfinishedDate && date === unfinishedDate) continue;
     const volume = Number.isFinite(quote.volume?.[index]) && quote.volume[index] >= 0
       ? quote.volume[index]
       : null;
@@ -83,6 +107,19 @@ function average(values) {
   return usable.length ? usable.reduce((sum, value) => sum + value, 0) / usable.length : null;
 }
 
+function trailingAverage(rows, sessions) {
+  if (!Array.isArray(rows) || rows.length < sessions) return null;
+  return average(rows.slice(-sessions).map((row) => row.close));
+}
+
+function trailingRange(rows, sessions) {
+  if (!Array.isArray(rows) || rows.length < sessions) return { low: null, high: null };
+  const closes = rows.slice(-sessions).map((row) => row.close).filter(Number.isFinite);
+  return closes.length === sessions
+    ? { low: round(Math.min(...closes), 6), high: round(Math.max(...closes), 6) }
+    : { low: null, high: null };
+}
+
 export function summarizeEquityHistory(rows) {
   if (!Array.isArray(rows) || !rows.length) return null;
   const latest = rows.at(-1);
@@ -105,6 +142,19 @@ export function summarizeEquityHistory(rows) {
     const mean = volume.averages[`${sessions}d`];
     return [`latest_to_${sessions}d`, Number.isFinite(volume.latest) && mean > 0 ? round(volume.latest / mean, 4) : null];
   }));
+  const movingAverages = Object.fromEntries(MOVING_AVERAGE_WINDOWS.map((sessions) => [
+    `${sessions}d`,
+    round(trailingAverage(rows, sessions), 6),
+  ]));
+  const ranges = Object.fromEntries(RANGE_WINDOWS.map((sessions) => [
+    `${sessions}d`,
+    trailingRange(rows, sessions),
+  ]));
+  const latestVsMovingAverage = Object.fromEntries(MOVING_AVERAGE_WINDOWS.map((sessions) => {
+    const mean = movingAverages[`${sessions}d`];
+    return [`${sessions}d`, Number.isFinite(mean) && mean > 0 ? round((latest.close / mean) - 1) : null];
+  }));
+  const annualRange = ranges["252d"];
   return {
     first_date: rows[0].date,
     latest_date: latest.date,
@@ -113,6 +163,17 @@ export function summarizeEquityHistory(rows) {
     returns,
     realized_volatility: realizedVol,
     volume,
+    technical_levels: {
+      moving_averages: movingAverages,
+      ranges,
+      latest_vs_moving_average: latestVsMovingAverage,
+      latest_vs_252d_high: Number.isFinite(annualRange.high) && annualRange.high > 0
+        ? round((latest.close / annualRange.high) - 1)
+        : null,
+      latest_vs_252d_low: Number.isFinite(annualRange.low) && annualRange.low > 0
+        ? round((latest.close / annualRange.low) - 1)
+        : null,
+    },
   };
 }
 
@@ -151,10 +212,10 @@ export function relativePerformance(subjectRows, benchmarkRows) {
   };
 }
 
-async function fetchOne(symbol, { asOf, signal } = {}) {
+async function fetchOne(symbol, { asOf, observedAt, signal } = {}) {
   const sourceUrl = equityHistoryUrl(symbol);
   const text = await fetchText(sourceUrl, LIMITS.QUOTE_FETCH_MS * 2, signal);
-  const rows = parseEquityHistory(JSON.parse(text), { asOf });
+  const rows = parseEquityHistory(JSON.parse(text), { asOf, observedAt });
   if (!rows.length) throw new Error(`${symbol}: no dated daily history`);
   return { symbol, source_url: sourceUrl, rows, summary: summarizeEquityHistory(rows) };
 }
@@ -170,7 +231,11 @@ export async function fetchEquityMarketHistory(symbol, {
     ? { broad: null, sector: null, sector_basis: "caller_supplied", symbols: [...new Set(benchmarks)] }
     : benchmarkSymbolsForSic(sic);
   const symbols = [...new Set([symbol, ...benchmarkPlan.symbols].filter(Boolean))];
-  const settled = await Promise.allSettled(symbols.map((entry) => fetchOne(entry, { asOf, signal })));
+  const settled = await Promise.allSettled(symbols.map((entry) => fetchOne(entry, {
+    asOf,
+    observedAt: retrievedAt,
+    signal,
+  })));
   const bySymbol = new Map();
   const unavailable = [];
   settled.forEach((result, index) => {

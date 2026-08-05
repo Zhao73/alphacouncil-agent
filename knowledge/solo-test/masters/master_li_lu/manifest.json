@@ -64,9 +64,8 @@
       "accounting.cash_conversion"
     ],
     "hard_vetoes": [
-      "master_li_lu.integrity_breach",
-      "master_li_lu.structural_decline",
-      "master_li_lu.ten_year_unknowable"
+      "master_li_lu.reported_return_is_not_cash",
+      "master_li_lu.decline_not_a_cycle"
     ],
     "native_output": "ten_year_certainty_decision_v1"
   },

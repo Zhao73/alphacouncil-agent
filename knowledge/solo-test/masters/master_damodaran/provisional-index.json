@@ -3,31 +3,31 @@
   "assurance_class": "provisional_derived_proxy",
   "build_profile": "solo_test",
   "common_projection": {
-    "provisional_fair_range": "cautious",
-    "provisional_overvalued": "opposed",
-    "provisional_undervalued": "cautious",
+    "provisional_company_inputs_partial": "cautious",
+    "provisional_company_valuation_recomputable": "cautious",
+    "provisional_company_valuation_review_required": "cautious",
     "provisional_unvalued": "out_of_scope"
   },
   "declared_state_hypotheses": [
     "unvalued",
-    "overvalued",
-    "fair_range",
-    "undervalued"
+    "company_inputs_partial",
+    "company_valuation_recomputable",
+    "company_valuation_review_required"
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:d7ae835fe0fc5c648fab6f234a8d493696353c777742e6d0343ec4930c866d17",
+  "formula_compilation_manifest_hash": "sha256:f716b1b98171144661962df3f4a54cb6256cadc867e08a91710c3659f14face9",
   "method_model_eligible": false,
   "native_states": [
     "provisional_unvalued",
-    "provisional_overvalued",
-    "provisional_fair_range",
-    "provisional_undervalued"
+    "provisional_company_inputs_partial",
+    "provisional_company_valuation_recomputable",
+    "provisional_company_valuation_review_required"
   ],
   "persona_id": "master_damodaran",
   "planned_tool_ids": [
-    "master_damodaran.implied_equity_risk_premium",
-    "master_damodaran.premium_versus_long_run_average"
+    "master_damodaran.company_cash_flow",
+    "master_damodaran.reverse_valuation_story"
   ],
   "production_eligible": false,
   "review_status": "not_human_reviewed",

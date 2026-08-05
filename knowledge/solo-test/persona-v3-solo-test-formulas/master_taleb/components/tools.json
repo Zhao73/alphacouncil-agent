@@ -1,22 +1,12 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:3289b24b65e14cbd73a54701c6b3227f25d0b813a8831666a0c6d9fb47246161",
-    "derivation_spec_hash": "sha256:5b78e79b939648a637fbf773b55890a54eadf081fe1c22c36935f296ce103744",
-    "derivation_spec_id": "master_taleb.debt_service_cushion.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:ffafd5153e0a377184d6207602804c1ef2f5d2057c52086afb476aadc87a6266",
+    "derivation_spec_hash": "sha256:8e104ec8a9463f8536247969b70aaf154fa6ee728a5c848d692770e15e4f02e2",
+    "derivation_spec_id": "master_taleb.maximum_loss.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_taleb.debt_service_cushion",
+    "id": "master_taleb.maximum_loss",
     "input_contracts": [
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "duration",
-          "window": "ANY"
-        },
-        "unit": "multiple",
-        "value_kind": "ratio"
-      },
       {
         "on_missing": "fail",
         "period": {
@@ -24,47 +14,44 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal_of_invested_capital",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:9ff235b64fd337b45ade7fd44beee6ea7b4d2df01f98654294e47d9136c52ff3",
+    "input_schema_hash": "sha256:0e13c376f999b94b9deabdf592cc6629d13cc4bb0101e39d5f34c1965e7ce0c0",
     "inputs": [
       {
-        "fact_id": "financial.interest_coverage"
-      },
-      {
-        "literal": 1
+        "fact_id": "payoff.max_loss"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "subtract",
-    "output_id": "risk.debt_service_cushion.master_taleb",
+    "operation": "identity",
+    "output_id": "payoff.maximum_loss.master_taleb",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:2097c0ae539de66a16d56c45b60a0d4ddd9f52e0807c6eafd080bd9b25bcedd9",
+    "output_schema_hash": "sha256:d09d0821df34b7ea00fa2f9e2a586894abc1f8bbcc7b50578795d7ac79bea3c7",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_taleb.debt_service_cushion.prototype_v1"
+      "derived_proxy:master_taleb.maximum_loss.prototype_v1"
     ],
-    "unit": "multiple",
+    "unit": "decimal_of_invested_capital",
     "value_kind": "ratio",
     "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:f6bcc23d1175c84de9fdb866499c869436b14f18c48391b5eac08e0a02862430",
-    "derivation_spec_hash": "sha256:88bc4482c18c31314609170fbc6d8ffe0168e5e2476a8f54a48596694958b0c7",
-    "derivation_spec_id": "master_taleb.normalised_skew.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:ede70486c9abb48287ec1c5746e3ba78926cc7cbfcc5c35683bddce2c888d6ec",
+    "derivation_spec_hash": "sha256:0f107910314af70ba3ac93723662ecac818f03c0dc4ac001c135aa92d13c680e",
+    "derivation_spec_id": "master_taleb.payoff_convexity.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_taleb.normalised_skew",
+    "id": "master_taleb.payoff_convexity",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -73,45 +60,32 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "decimal_volatility_difference",
-        "value_kind": "ratio"
-      },
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "instant",
-          "window": null
-        },
-        "unit": "decimal_annualized_volatility",
+        "unit": "decimal",
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:8ec59deb743a70ba637b31c006f574ab24fabb63385f6726f6ffec8767abfb5a",
+    "input_schema_hash": "sha256:486eaa6f5203ddb411dab013beec1326f7c722cbd806dbd0e21f091567799d5a",
     "inputs": [
       {
-        "fact_id": "options.skew_25d"
-      },
-      {
-        "fact_id": "options.implied_volatility"
+        "fact_id": "payoff.convexity"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "divide",
-    "output_id": "options.normalised_skew.master_taleb",
+    "operation": "identity",
+    "output_id": "payoff.convexity_score.master_taleb",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:2eff3fbac2dd2c56975e2c5e1a346ba87c66a43eafcd309cdb0ed4ad37a9691d",
+    "output_schema_hash": "sha256:fa9721fa54cc80b7a3fe491ea2652f803a4a918aae9aadcf6bd6af71dfcb2c8a",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
-      "derived_proxy:master_taleb.normalised_skew.prototype_v1"
+      "derived_proxy:master_taleb.payoff_convexity.prototype_v1"
     ],
     "unit": "decimal",
     "value_kind": "ratio",

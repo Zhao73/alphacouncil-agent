@@ -64,8 +64,7 @@
       "macro.aaa_corporate_yield"
     ],
     "hard_vetoes": [
-      "master_fisher.single_source_story",
-      "master_fisher.management_depth_gap",
+      "master_fisher.no_worthwhile_margin",
       "master_fisher.research_without_return"
     ],
     "native_output": "scuttlebutt_quality_v1"

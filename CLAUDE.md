@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.2.2`; verify npm/GitHub/installed-host state separately
+The declared package/plugin version is `1.2.3`; verify npm/GitHub/installed-host state separately
 before claiming which build is the current published default.
 The packaged tree contains 26 physical v3 packs and 52 executable method tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,

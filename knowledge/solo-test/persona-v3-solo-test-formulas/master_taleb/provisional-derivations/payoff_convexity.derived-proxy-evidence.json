@@ -4,43 +4,30 @@
   "derivation_spec": {
     "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
     "assurance_class": "provisional_derived_proxy",
-    "authoring_candidate_hash": "sha256:013548657ab17d6891fcde5b1431cc58f6777f057d158e6c9a98d45729803f33",
+    "authoring_candidate_hash": "sha256:8479822bc67cf0767c3ae211322cc0b7140ab475dc38640cf87eec22d278fdb4",
     "derivation_policy": "ai_authored_method_formula_v1",
-    "derivation_spec_id": "master_taleb.normalised_skew.prototype_v1.derived_proxy_v1",
+    "derivation_spec_id": "master_taleb.payoff_convexity.prototype_v1.derived_proxy_v1",
     "formula": {
       "inputs": [
         {
           "on_missing": "fail",
           "operand": {
-            "fact_id": "options.skew_25d"
+            "fact_id": "payoff.convexity"
           },
           "period": {
             "alignment": "as_of",
             "basis": "instant",
             "window": null
           },
-          "unit": "decimal_volatility_difference",
-          "value_kind": "ratio"
-        },
-        {
-          "on_missing": "fail",
-          "operand": {
-            "fact_id": "options.implied_volatility"
-          },
-          "period": {
-            "alignment": "as_of",
-            "basis": "instant",
-            "window": null
-          },
-          "unit": "decimal_annualized_volatility",
+          "unit": "decimal",
           "value_kind": "ratio"
         }
       ],
       "kind": "recomputation",
       "on_missing": "fail",
-      "operation": "divide",
+      "operation": "identity",
       "output": {
-        "output_id": "options.normalised_skew.master_taleb",
+        "output_id": "payoff.convexity_score.master_taleb",
         "period": {
           "alignment": "as_of",
           "basis": "instant",
@@ -53,12 +40,12 @@
     },
     "input_contract_source": "grounding_adapter_canonical_contract_v1",
     "persona_id": "master_taleb",
-    "prototype_content_hash": "sha256:351fc55882ebd97d5f327375f8b9b61b7fc910c519a8d34f86e0384f35a2dc80",
-    "prototype_id": "master_taleb.normalised_skew.prototype_v1",
+    "prototype_content_hash": "sha256:63978c3f76e3016f43d478d6bdc70a21422b82e429e7e17f7f928925d0e2aa50",
+    "prototype_id": "master_taleb.payoff_convexity.prototype_v1",
     "schema_version": 1,
-    "tool_id": "master_taleb.normalised_skew"
+    "tool_id": "master_taleb.payoff_convexity"
   },
-  "derivation_spec_hash": "sha256:88bc4482c18c31314609170fbc6d8ffe0168e5e2476a8f54a48596694958b0c7",
+  "derivation_spec_hash": "sha256:0f107910314af70ba3ac93723662ecac818f03c0dc4ac001c135aa92d13c680e",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

@@ -884,7 +884,7 @@ const seats = [
     decision: {
       schemaId: "valuation_distribution_v1",
       eligibility: ["explicit story-variable bridge", "recomputable cash-flow inputs", "risk and failure assumptions", "current price"],
-      states: ["unvalued", "overvalued", "fair_range", "undervalued"],
+      states: ["unvalued", "company_inputs_partial", "company_valuation_recomputable", "company_valuation_review_required"],
       outputs: ["story-to-number map", "valuation distribution", "reverse-valuation story", "sensitivity and breakpoints"],
       failClosed: ["story-variable mapping absent", "currency or unit lineage missing", "terminal economics inconsistent"],
     },
@@ -918,7 +918,7 @@ const seats = [
     scope: "Reject ruin and hidden concavity first, then evaluate whether a payoff is robust or positively convex after liquidity, tail pricing and execution friction.",
     domains: ["tail_risk", "convexity", "options", "fragility"],
     excludes: ["directional target prices attributed to the named author", "missing volatility facts filled by model memory", "private trading positions"],
-    facts: ["risk.ruin_possible", "risk.hidden_leverage", "payoff.convexity", "options.implied_volatility", "options.realized_volatility", "options.skew_25d", "execution.round_trip_cost", "event.expiry_coverage"],
+    facts: ["risk.ruin_possible", "risk.hidden_leverage", "payoff.max_loss", "payoff.convexity", "options.implied_volatility", "options.realized_volatility", "options.skew_25d", "execution.round_trip_cost", "event.expiry_coverage"],
     decision: {
       schemaId: "convexity_ruin_v1",
       eligibility: ["typed payoff and leverage facts", "realized and implied volatility", "executable options surface", "event-expiry map"],

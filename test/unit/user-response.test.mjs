@@ -271,6 +271,45 @@ test("a seat's own conclusion reaches the handoff instead of being clipped away"
   assert.match(markdown, /\[冻结记录: 反对\/中; 陈词来源: 已完成; recorded\]/);
 });
 
+test("handoff localizes internal method origin tokens and preserves quote basis", () => {
+  const fixture = localizedRun("zh-CN", "中文分析", "中文专属方法席发言");
+  fixture.grounding.quote.quote_status = "last_regular_trade";
+  fixture.grounding.quote.is_realtime = false;
+  fixture.master_opinions[0].statement_origin = "dedicated_method_voice_worker";
+  const markdown = userResponseMarkdown(fixture, manager("中文最终判断"));
+  assert.match(markdown, /最近常规交易价/);
+  assert.match(markdown, /realtime=否/);
+  assert.match(markdown, /独立方法陈词代理/);
+  assert.doesNotMatch(markdown, /dedicated_method_voice_worker/);
+});
+
+test("handoff closes a hard-refuted claim family and uses only PM-authoritative data gaps", () => {
+  const fixture = localizedRun("zh-CN", "安全的未反证论断", "中文专属方法席发言");
+  const packet = fixture.packets.find((item) => item.task === "earnings_deep_dive");
+  packet.summary = "错误原摘要不得出现：5805 万美元。";
+  packet.claims = [
+    { claim: "错误逐条论断不得作为干净内容出现。", source_ids: ["earnings_deep_dive:S1"] },
+    { claim: "安全的未反证论断。", source_ids: ["earnings_deep_dive:S2"] },
+  ];
+  packet.open_questions = ["过时的 packet 缺口不得进入最终交接。"];
+  fixture.verifier_verdicts = [{
+    verifier: "refuter",
+    task: "earnings_deep_dive",
+    claim_id: "earnings_deep_dive:C1",
+    verdict: "refuted",
+    claim: "错误逐条论断不得作为干净内容出现。",
+    note: "复算不成立。",
+  }];
+  const decision = { ...manager("中文最终判断"), data_gaps: ["PM 确认仍存在的唯一缺口。"] };
+  const markdown = userResponseMarkdown(fixture, decision);
+  assert.doesNotMatch(markdown, /错误原摘要不得出现|过时的 packet 缺口/u);
+  assert.equal(markdown.includes("安全的未反证论断。"), false);
+  assert.match(markdown, /存在三重验证硬反证/u);
+  assert.match(markdown, /上游错误污染依赖计算/u);
+  assert.match(markdown, /PM 确认仍存在的唯一缺口/u);
+  assert.equal((markdown.match(/`market_data`/g) || []).length, 1, "analyst ledger must not be duplicated");
+});
+
 test("an incomplete handoff ends with every selected seat and diagnoses a failed seat without inventing a view", () => {
   const run = {
     run_id: "FAILED-METHOD-TAIL",

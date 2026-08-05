@@ -106,6 +106,60 @@ test("the block carries the actual figures, not a summary of them", () => {
   assert.match(block, /YMTC \(unlisted\)/, "an unlisted participant must still be named");
 });
 
+test("deterministic market history and aligned relative returns reach the analyst prompt", () => {
+  const marketHistory = {
+    available: true,
+    symbol: "VRT",
+    source: "Yahoo Finance chart endpoint, keyless delayed daily history",
+    subject: {
+      first_date: "2025-08-05",
+      latest_date: "2026-08-05",
+      session_count: 252,
+      latest_adjusted_close: 277.85,
+      returns: { "5d": 0.245741, "21d": -0.090745, "63d": -0.185069, "126d": 0.461867, "252d": null },
+      realized_volatility: { "20d_annualized": 0.893067, "63d_annualized": 0.786913 },
+      volume: { latest: 1_616_094, averages: { "20d": 6_130_524.7 }, ratios: { latest_to_20d: 0.2636 } },
+      technical_levels: {
+        moving_averages: { "20d": 291.5, "50d": 312.57, "200d": 245.44 },
+        ranges: { "252d": { low: 110.06, high: 379.94 } },
+        latest_vs_252d_high: -0.2687,
+        latest_vs_252d_low: 1.5246,
+      },
+    },
+    benchmark_plan: { broad: "SPY", sector: null, symbols: ["SPY"] },
+    relative_performance: {
+      SPY: {
+        aligned_session_count: 252,
+        latest_aligned_date: "2026-08-05",
+        windows: {
+          "5d": { subject_return: 0.245741, benchmark_return: 0.06136, excess_return: 0.18438 },
+          "21d": { subject_return: -0.090745, benchmark_return: 0.035455, excess_return: -0.1262 },
+          "63d": { subject_return: -0.185069, benchmark_return: 0.07246, excess_return: -0.257529 },
+          "126d": { subject_return: 0.461867, benchmark_return: 0.12879, excess_return: 0.333077 },
+          "252d": { subject_return: null, benchmark_return: null, excess_return: null },
+        },
+      },
+    },
+    source_records: [{
+      id: "market_history:VRT:2026-08-05",
+      url: "https://query1.finance.yahoo.com/v8/finance/chart/VRT?range=1y&interval=1d&events=history",
+      observed_at: "2026-08-05T14:44:02.871Z",
+    }],
+  };
+  const block = groundingBlock({ market_history: marketHistory }, "English");
+  assert.match(block, /Server-recomputed daily history/);
+  assert.match(block, /5d \+24\.57%/);
+  assert.match(block, /VRT vs SPY .*excess \+18\.44%/);
+  assert.match(block, /50d MA 312\.57/);
+  assert.match(block, /252-session low\/high 110\.06\/379\.94/);
+  assert.match(block, /market_history:VRT:2026-08-05/);
+  assert.match(block, /cannot report them missing because another page was blocked/);
+  const zh = groundingBlock({ market_history: marketHistory }, "中文");
+  assert.match(zh, /服务器复算日线历史/);
+  assert.match(zh, /同步相对收益 VRT vs SPY/);
+  assert.match(zh, /服务器复算技术位/);
+});
+
 test("ETF grounding exposes the look-through route and Company Facts as not applicable", () => {
   const grounding = {
     instrument: {
@@ -271,6 +325,28 @@ test("grounding renders the measured age of a weekend close instead of a fixed 1
   const zh = groundingBlock(grounding, "中文");
   assert.match(zh, /常规交易时段收盘价/);
   assert.match(zh, /实际陈旧 60\.84 小时/);
+  assert.doesNotMatch(zh, /不是收盘价/);
+});
+
+test("grounding explicitly forbids relabeling an intraday delayed trade as a close", () => {
+  const grounding = {
+    quote: {
+      symbol: "VRT",
+      price: 280,
+      currency: "USD",
+      source: "yahoo",
+      quote_time: "2026-08-05T18:56:38.000Z",
+      gathered_at: "2026-08-05T18:56:44.000Z",
+      stale_age_hours: 0,
+      quote_status: "last_regular_trade",
+      is_realtime: false,
+    },
+  };
+  const zh = groundingBlock(grounding, "中文");
+  assert.match(zh, /最近常规交易价/);
+  assert.match(zh, /这是报价快照，不是收盘价/);
+  const en = groundingBlock(grounding, "English");
+  assert.match(en, /quote snapshot, not a closing price/);
 });
 
 test("grounding exposes the authoritative latest SEC submission and feed coverage", () => {
@@ -456,7 +532,7 @@ test("the market's earnings yield reaches the typed pack and unblocks the seats 
   };
   const without = unmetFor(adaptGroundingToTypedFacts({ as_of: asOf }, { asOf }).fact_pack);
   const with_ = unmetFor(adapted.fact_pack);
-  for (const seat of ["master_damodaran", "master_marks", "master_asness"]) {
+  for (const seat of ["master_marks", "master_asness"]) {
     assert.ok(
       without[seat].includes("index.aggregate_earnings_yield"),
       `${seat} was expected to require the market earnings yield`,
@@ -466,4 +542,9 @@ test("the market's earnings yield reaches the typed pack and unblocks the seats 
       `${seat} still reports the market earnings yield as unmet: ${JSON.stringify(with_[seat])}`,
     );
   }
+  assert.ok(
+    !without.master_damodaran.includes("index.aggregate_earnings_yield")
+      && !with_.master_damodaran.includes("index.aggregate_earnings_yield"),
+    "Damodaran must not use a broad-index earnings yield as an operating-company valuation input",
+  );
 });

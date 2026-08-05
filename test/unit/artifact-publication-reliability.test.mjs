@@ -197,6 +197,10 @@ test("publication marker commits last, covers the delivery set, and terminal rep
   assert.equal(manifest.run_id, run.run_id);
   assert.equal(manifest.status, "complete");
   assert.equal(manifest.quality, "passed");
+  assert.equal(manifest.runtime_provenance?.contract_id, "alphacouncil_runtime_build_v1");
+  assert.match(manifest.runtime_provenance?.critical_source_sha256 || "", /^[0-9a-f]{64}$/u);
+  assert.deepEqual(readJson(result.artifacts.evidence_json).runtime_provenance, manifest.runtime_provenance);
+  assert.deepEqual(readJson(result.artifacts.status_json).runtime_provenance, manifest.runtime_provenance);
   assert.ok(!Object.values(manifest.artifacts).some((record) => record.path === markerPath), "marker must not hash itself");
   assert.ok(Object.hasOwn(manifest.artifacts, "evidence_json"));
   assert.ok(Object.hasOwn(manifest.artifacts, "status_json"));
@@ -216,6 +220,12 @@ test("publication marker commits last, covers the delivery set, and terminal rep
   assert.ok(Object.hasOwn(manifest.artifacts, "all_agents_md"));
   assert.ok(Object.keys(manifest.artifacts).filter((key) => key.startsWith("seat_")).length >= QUICK_TASKS.length + 1);
   assert.equal(readdirSync(dir).some((name) => name.endsWith(".tmp")), false, "all atomic Markdown temps must be gone");
+  const completeIndex = readFileSync(result.artifacts.artifact_index_md, "utf8");
+  const indexableFiles = readdirSync(dir)
+    .filter((name) => /\.(?:json|jsonl|md)$/u.test(name));
+  for (const name of indexableFiles) {
+    assert.match(completeIndex, new RegExp(`- ${name.replaceAll(".", "\\.")}: `, "u"), `${name} missing from complete artifact map`);
+  }
 
   const eventsBeforeReplay = readJsonl(join(dir, "events.jsonl")).entries;
   assert.equal(eventsBeforeReplay.at(-1).type, "artifacts_published");

@@ -63,8 +63,6 @@
       "financial.free_cash_flow_5y"
     ],
     "hard_vetoes": [
-      "master_cathie_wood.theme_company_gap",
-      "master_cathie_wood.capital_need_gap",
       "master_cathie_wood.adoption_already_priced"
     ],
     "native_output": "innovation_adoption_scenario_v1"

@@ -57,6 +57,30 @@ test("company source plans are issuer-driven rather than ticker-specific", () =>
     "customer_official", "supplier_official", "issuer_ir", "regulator_filing", "derived_proxy",
   ]);
   assert.equal(gapRoute.recovery.mode, "modeled_estimate");
+  const reportingDate = beta.tasks.forward_expectations.find((row) => (
+    row.coverage_id === "expectations.next_reporting_date"
+  ));
+  assert.deepEqual(reportingDate.required_terminal_stages, [
+    "issuer_ir", "public_consensus", "local_observation",
+  ]);
+  assert.equal(reportingDate.recovery.mode, "reported_actual");
+  assert.match(reportingDate.recovery.formula, /public-calendar estimate/u);
+
+  const transcript = alpha.tasks.earnings_deep_dive.find((row) => (
+    row.coverage_id === "financials.earnings_call_qna"
+  ));
+  assert.deepEqual(transcript.required_terminal_stages, [
+    "issuer_ir", "regulator_filing", "public_market_data", "disconfirming_search",
+  ]);
+  assert.match(JSON.stringify(transcript), /stockanalysis\.com\/stocks\/acir\/transcripts/u);
+
+  const shortInterest = alpha.tasks.quant_factor.find((row) => (
+    row.coverage_id === "quant.short_interest_borrow"
+  ));
+  assert.deepEqual(shortInterest.required_terminal_stages, [
+    "market_official", "local_observation", "public_market_data", "disconfirming_search", "derived_proxy",
+  ]);
+  assert.match(JSON.stringify(shortInterest), /site:marketbeat\.com OR site:chartexchange\.com/u);
 });
 
 test("non-US companies receive their own regulator and market routes", () => {
@@ -137,6 +161,38 @@ test("issuer discovery prioritizes current earnings detail pages over early navi
   assert.ok(calls.length <= 1 + 10, "the bounded detail-page limit must remain enforced");
 });
 
+test("issuer discovery follows a bounded newsroom index to dated announcement details", async () => {
+  const calls = [];
+  const root = "https://www.example.com/";
+  const newsroom = "https://www.example.com/en-us/about/news-and-events/home/";
+  const announcement = "https://www.example.com/en-us/about/news-and-events/corporate-news/2026/example-launches-current-product/";
+  const fetchImpl = async (url) => {
+    calls.push(url);
+    const body = url === root
+      ? `<a href="${newsroom}">Newsroom</a>`
+      : url === newsroom
+        ? `<a href="${announcement}">Current announcement</a>`
+        : "<html><title>Current issuer announcement</title><script type=\"application/ld+json\">{\"datePublished\":\"2026/08/05 09:30:00\"}</script><body>August 5, 2026 dated issuer evidence</body></html>";
+    return {
+      ok: true,
+      status: 200,
+      url,
+      headers: { get: () => "text/html" },
+      text: async () => body,
+    };
+  };
+  const result = await discoverIssuerOfficialSources({ website: root }, {
+    asOf: "2026-08-05",
+    fetchImpl,
+    timeoutMs: 1_000,
+    filingIndexImpl: async () => ({ filings: [] }),
+  });
+  assert.ok(calls.includes(newsroom));
+  assert.ok(calls.includes(announcement));
+  assert.ok(result.documents.some((document) => document.url === announcement && document.published_at === "2026-08-05"));
+  assert.ok(calls.length <= 1 + 10, "both hops must share the fixed detail-page budget");
+});
+
 test("SEC filing text discovers issuer-owned roots without a ticker exception", async () => {
   const filingIndexImpl = async () => ({
     filings: [{
@@ -206,6 +262,72 @@ test("adaptive starter evidence retrieves dated cross-topic content without an A
   assert.ok(result.excluded_irrelevant >= result.feed_attempts.length);
   assert.ok(result.feed_attempts.length >= 6);
   assert.ok(result.feed_attempts.every((attempt) => attempt.ok));
+});
+
+test("starter evidence preserves an older management event and resolves its issuer original", async () => {
+  const recentItems = Array.from({ length: 90 }, (_, index) => [
+    "<item>",
+    `<title>Alpha Circuit operating update ${index + 1}</title>`,
+    `<link>https://press.example.com/alpha-circuit-update-${index + 1}</link>`,
+    `<pubDate>Tue, 04 Aug 2026 ${String(index % 24).padStart(2, "0")}:00:00 GMT</pubDate>`,
+    "</item>",
+  ].join("")).join("");
+  const managementItem = [
+    "<item>",
+    "<title>Alpha Circuit Appoints Jane Doe as Chief Procurement Officer - PR Newswire</title>",
+    "<link>https://news.google.com/rss/articles/management-lead</link>",
+    "<pubDate>Tue, 05 May 2026 07:00:00 GMT</pubDate>",
+    "</item>",
+  ].join("");
+  const targetPath = "/en-us/about/news-and-events/corporate-news/2026/alpha-circuit-appoints-jane-doe-as-chief-procurement-officer/";
+  const fetchImpl = async (url) => {
+    const parsed = new URL(url);
+    if (parsed.hostname === "www.alpha-circuit.example" && parsed.pathname === targetPath) {
+      const html = [
+        "<html><title>Alpha Circuit Appoints Jane Doe as Chief Procurement Officer</title>",
+        '<script type="application/ld+json">{"datePublished":"2026-05-05"}</script>',
+        "<body>Alpha Circuit appointed Jane Doe as chief procurement officer.</body></html>",
+      ].join("");
+      return {
+        ok: true,
+        status: 200,
+        url,
+        headers: { get: () => "text/html" },
+        text: async () => html,
+      };
+    }
+    const query = parsed.searchParams.get("q") || "";
+    const body = query.includes("appoints OR appointed")
+      ? `<?xml version="1.0"?><rss><channel>${managementItem}</channel></rss>`
+      : query.includes("earnings OR guidance")
+        ? `<?xml version="1.0"?><rss><channel>${recentItems}</channel></rss>`
+        : "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+    return {
+      ok: true,
+      status: 200,
+      url,
+      headers: { get: () => "application/rss+xml" },
+      text: async () => body,
+    };
+  };
+  const result = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-05",
+    profile: { name: "Alpha Circuit Corporation" },
+    issuerIndex: {
+      pages: ["https://www.alpha-circuit.example/en-us/about/news-and-events/corporate-news/2026/alpha-circuit-launches-product/"],
+      documents: [],
+    },
+  }, { fetchImpl, timeoutMs: 1_000 });
+  assert.equal(result.window_days, 120);
+  assert.ok(result.feed_attempts.some((attempt) => attempt.topic === "management_changes" && attempt.ok));
+  assert.ok(result.news.some((item) => item.topic === "management_changes" && /Jane Doe/u.test(item.title)));
+  assert.ok(result.issuer_documents.some((document) => (
+    document.url === `https://www.alpha-circuit.example${targetPath}`
+      && document.published_at === "2026-05-05"
+      && document.discovery_topic === "management_changes"
+  )));
+  assert.ok(result.official_lead_attempts.some((attempt) => attempt.url.endsWith(targetPath) && attempt.matched));
 });
 
 function exhaustiveUnavailable(route) {
@@ -467,6 +589,28 @@ function acquisitionFixture({ task, targetId, item, covered = true }) {
   return { packet, plan, route: routes[target], run, sourceId, target };
 }
 
+test("an unavailable field treats an opened cited page as not_disclosed rather than data success", () => {
+  const { packet, run, target, sourceId } = acquisitionFixture({
+    task: "earnings_deep_dive",
+    targetId: "financials.customer_supplier_concentration",
+    covered: false,
+    item: (route, citedSourceId) => {
+      const item = exhaustiveUnavailable(route);
+      item.attempts[0] = {
+        ...item.attempts[0],
+        result: "succeeded",
+        source_ids: [citedSourceId],
+        note: "The cited filing opened but did not disclose the requested scalar.",
+      };
+      return item;
+    },
+  });
+  canonicalizeCompanySourceAcquisitionPacket(packet, run);
+  assert.equal(packet.acquisition_ledger.items[target].attempts[0].result, "not_disclosed");
+  assert.equal(packet.acquisition_ledger.items[target].attempts[0].proposed_result, "succeeded");
+  assert.deepEqual(companySourceAcquisitionIssues(packet, run), []);
+});
+
 test("route-appropriate public and local observations can publish cited direct actuals", () => {
   const fixtures = [
     {
@@ -554,6 +698,40 @@ test("public market-data stage aliases normalize without posing as an official s
     assert.equal(row.outcome, "reported_actual");
     assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
   }
+});
+
+test("a public speaker-labelled transcript can cover only the earnings-call Q&A route", () => {
+  const fixture = acquisitionFixture({
+    task: "earnings_deep_dive",
+    targetId: "financials.earnings_call_qna",
+    item: (route, sourceId) => ({
+      coverage_id: route.coverage_id,
+      outcome: "reported_actual",
+      source_ids: [sourceId],
+      attempts: route.required_terminal_stages.map((stage) => ({
+        stage,
+        locator_type: stage === "public_market_data" ? "url" : "query",
+        locator: stage === "public_market_data"
+          ? "https://stockanalysis.com/stocks/acir/transcripts/123-q2-2026/"
+          : `${stage}:${route.coverage_id}`,
+        result: stage === "public_market_data" ? "succeeded" : "not_disclosed",
+        source_ids: stage === "public_market_data" ? [sourceId] : [],
+      })),
+      data: {
+        observations: [{
+          metric: "speaker_labelled_q_and_a",
+          value: true,
+          unit: "boolean",
+          period: "2026Q2",
+          scope: "secondary public transcript; not issuer-authored",
+        }],
+      },
+    }),
+  });
+  canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run);
+  const row = fixture.packet.acquisition_ledger.items[fixture.target];
+  assert.equal(row.outcome, "reported_actual");
+  assert.deepEqual(companySourceAcquisitionIssues(fixture.packet, fixture.run), []);
 });
 
 test("a public market page cannot bypass the frozen terminal ladder", () => {

@@ -65,8 +65,7 @@
     ],
     "hard_vetoes": [
       "master_graham.no_asset_floor",
-      "master_graham.margin_absent",
-      "master_graham.deteriorating_floor"
+      "master_graham.fixed_charge_coverage_failure"
     ],
     "native_output": "margin_of_safety_v1"
   },

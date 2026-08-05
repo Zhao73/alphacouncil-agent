@@ -61,7 +61,9 @@ const lineJson = (prefix) => {
 
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   role, task, verifier, master, round, coverageRetry, acquisitionRepair, transportRepair,
-  search: args.includes("--search"), pid: process.pid, at: Date.now(),
+  search: args.includes("--search"), outputSchema: args.includes("--output-schema"),
+  requiredUrlChecklist: prompt.includes("REQUIRED checked_urls BY CLAIM (binding work checklist)"),
+  pid: process.pid, at: Date.now(),
 }) + "\\n");
 
 if (verifier && ${JSON.stringify(failVerifiers)}) process.exit(17);
@@ -80,7 +82,7 @@ if (verifier) {
           note: "The cited fixture source directly supports this frozen material claim.",
           checked_urls: ${JSON.stringify(semanticFidelityRetry)} && !coverageRetry
             ? []
-            : [claim.cited_sources[0].url],
+            : claim.cited_sources.map((source) => source.url),
           queries: [],
           excerpt: "Fixture evidence directly supports the bounded material observation.",
           rederivation: "",
@@ -121,6 +123,13 @@ if (verifier) {
     id: "S1",
     title: task + " dated slow-all fixture source",
     url: "https://example.com/slow-all/" + task,
+    published_at: ${JSON.stringify(AS_OF)},
+    retrieved_at: ${JSON.stringify(AS_OF)},
+  };
+  const source2 = {
+    id: "S2",
+    title: task + " second dated slow-all fixture source",
+    url: "https://example.com/slow-all/" + task + "/second",
     published_at: ${JSON.stringify(AS_OF)},
     retrieved_at: ${JSON.stringify(AS_OF)},
   };
@@ -182,18 +191,18 @@ if (verifier) {
         claim_type: "event_or_observation",
         evidence: "The dated fixture source directly supports this bounded observation.",
         confidence: "medium",
-        source_ids: ["S1"],
+        source_ids: ["S1", "S2"],
       },
       {
         claim: task + " records a second material observation to exercise verifier chunking.",
         claim_type: "event_or_observation",
         evidence: "The same dated fixture source directly supports the second bounded observation.",
         confidence: "medium",
-        source_ids: ["S1"],
+        source_ids: ["S1", "S2"],
       },
     ],
     metrics: task === "market_data" ? { price: 101.25, currency: "USD" } : { fixture_value: 1 },
-    sources: [source],
+    sources: [source, source2],
     open_questions: [],
     coverage_items: coverageIds.map((id) => ({
       id, status: "covered", source_ids: ["S1"], note: "The packet-local source covers this fixture item.",
@@ -230,6 +239,7 @@ if (verifier) {
     || "out_of_scope";
   const ackTemplate = lineJson("Per-packet acknowledgement template: ");
   packet = {
+    transport: "segmented_method_voice_v1",
     master,
     acknowledged_stance: stance,
     voice_mode: "first_person_public_method_simulation_v1",
@@ -250,9 +260,11 @@ if (verifier) {
     source_ids: ["market_data:S1"],
     confidence: "medium",
     company_dossier_hash_ack: dossierHash,
-    evidence_packet_acks: ackTemplate.map((ack) => ack.task === "market_data"
-      ? { ...ack, status: "used", source_ids: ["market_data:S1"], note: "I used this packet's market evidence." }
-      : { ...ack, status: "reviewed_not_relevant", source_ids: [], note: "I reviewed this packet and did not use it in the frozen method result." }),
+    evidence_packet_acks: Object.fromEntries(Object.entries(ackTemplate).map(([task, ack]) => [task,
+      task === "market_data"
+        ? { ...ack, status: "used", source_ids: ["market_data:S1"], note: "I used this packet's market evidence." }
+        : { ...ack, status: "reviewed_not_relevant", source_ids: [], note: "I reviewed this packet and did not use it in the frozen method result." },
+    ])),
   };
 } else if (role === "portfolio_manager") {
   packet = {
@@ -280,6 +292,7 @@ if (verifier) {
       long_term: "Require durable economics and financing discipline.",
     },
     data_gaps: ["Proprietary customer acceptance, yield, allocation, borrow-fee and capacity data remain unavailable."],
+    verification_findings_ack: [],
     company_dossier_hash_ack: dossierHash,
   };
 } else if (role === "bull_researcher" || role === "bear_researcher") {
@@ -373,6 +386,7 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   const dir = join(dataDir, "runs", runId);
   const persisted = readJson(join(dir, "evidence.json"));
   const status = readJson(join(dir, "status.json"));
+  const dossier = readJson(join(dir, "company_dossier.json"));
   const launches = readJsonl(fake.log);
 
   assert.equal(selection.selected_count, CANONICAL_MASTER_IDS.length);
@@ -438,6 +452,9 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   assert.ok(REQUIRED_VERIFIER_IDS.every((id) => persisted.verifier_status[id]?.status === "completed"));
 
   assert.equal(persisted.master_opinions.length, CANONICAL_MASTER_IDS.length);
+  const frozenPacketHashes = new Map(dossier.packet_manifest.map((entry) => [
+    entry.task, entry.packet_hash,
+  ]));
   for (const opinion of persisted.master_opinions) {
     assert.equal(opinion.company_dossier_hash_ack, persisted.company_dossier.content_hash);
     assert.equal(opinion.evidence_packet_acks.length, 11);
@@ -446,6 +463,9 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
     assert.ok(opinion.evidence_packet_acks.every((ack) => [
       "used", "reviewed_not_relevant", "unavailable",
     ].includes(ack.status)));
+    assert.ok(opinion.evidence_packet_acks.every((ack) => (
+      ack.packet_hash === frozenPacketHashes.get(ack.task)
+    )), "the server must bind every worker disposition to the frozen packet hash");
   }
 
   const evidenceLaunches = launches.filter((entry) => ALL_ANALYST_TASKS.includes(entry.role));
@@ -457,17 +477,23 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   assert.equal(initialEvidenceLaunches.length, 11);
   assert.equal(transportRepairLaunches.length, 1);
   assert.equal(acquisitionRepairLaunches.length, 2);
-  assert.equal(verifierLaunches.filter((entry) => entry.role === "source_fidelity").length, 3,
-    "22 claims require three smaller fidelity chunks");
+  assert.equal(verifierLaunches.filter((entry) => entry.role === "source_fidelity").length, 4,
+    "22 claims with two cited URLs each require four URL-weighted fidelity chunks");
   assert.equal(verifierLaunches.filter((entry) => entry.role === "rederivation").length, 2);
   assert.equal(verifierLaunches.filter((entry) => entry.role === "refuter").length, 2);
-  assert.equal(verifierLaunches.length, 7);
+  assert.equal(verifierLaunches.length, 8);
   assert.equal(masterLaunches.length, CANONICAL_MASTER_IDS.length);
   assert.ok(initialEvidenceLaunches.every((entry) => entry.search));
+  assert.ok(initialEvidenceLaunches.every((entry) => entry.outputSchema));
   assert.ok(transportRepairLaunches.every((entry) => !entry.search));
+  assert.ok(transportRepairLaunches.every((entry) => entry.outputSchema));
   assert.ok(acquisitionRepairLaunches.every((entry) => !entry.search));
+  assert.ok(acquisitionRepairLaunches.every((entry) => !entry.outputSchema));
   assert.ok(verifierLaunches.every((entry) => entry.search));
+  assert.ok(verifierLaunches.filter((entry) => entry.role === "source_fidelity")
+    .every((entry) => entry.requiredUrlChecklist));
   assert.ok(masterLaunches.every((entry) => !entry.search));
+  assert.ok(masterLaunches.every((entry) => entry.outputSchema));
   assert.equal(result.run.status, "complete");
 });
 
@@ -496,7 +522,8 @@ test("a semantic fidelity miss gets one real-search verifier retry and then cros
   const fidelity = launches.filter((entry) => entry.role === "source_fidelity");
   assert.equal(result.run.status, "complete");
   assert.equal(status.verifier_verdict_count, status.verifier_expected_count);
-  assert.equal(fidelity.filter((entry) => !entry.coverageRetry).length, 3);
-  assert.equal(fidelity.filter((entry) => entry.coverageRetry).length, 3);
+  assert.equal(fidelity.filter((entry) => !entry.coverageRetry).length, 4);
+  assert.equal(fidelity.filter((entry) => entry.coverageRetry).length, 4);
+  assert.ok(fidelity.filter((entry) => !entry.coverageRetry).every((entry) => entry.requiredUrlChecklist));
   assert.ok(fidelity.filter((entry) => entry.coverageRetry).every((entry) => entry.search));
 });

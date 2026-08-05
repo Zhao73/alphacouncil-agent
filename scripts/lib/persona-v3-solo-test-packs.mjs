@@ -555,7 +555,10 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
     computation: { dsl_version: "1.1", pipeline: tools.map((tool) => tool.id) },
     decision: {
       eligibility: required,
-      hard_vetoes: seat.veto_families.map((veto) => veto.veto_id),
+      // The build spec's veto families are an acquisition queue. The physical runtime
+      // manifest must advertise the executable authored vetoes that decision_policy.json
+      // actually evaluates, or downstream readers can name a veto that did not run.
+      hard_vetoes: policy.hard_vetoes.map((veto) => veto.veto_id),
       native_output: seat.native_decision_contract.schema_id,
       common_projection: "common_stance_v1",
       abstention_policy: "fail_closed",

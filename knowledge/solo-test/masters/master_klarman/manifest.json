@@ -63,9 +63,8 @@
       "valuation.downside_asset_value"
     ],
     "hard_vetoes": [
-      "master_klarman.downside_unknown",
-      "master_klarman.capital_loss",
-      "master_klarman.catalyst_liquidity"
+      "master_klarman.no_reconstructable_downside",
+      "master_klarman.senior_claims_consume_the_assets"
     ],
     "native_output": "capital_preservation_v1"
   },

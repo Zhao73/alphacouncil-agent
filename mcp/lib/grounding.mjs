@@ -662,7 +662,9 @@ const countText = (value) => (Number.isFinite(value)
 
 export function groundingBlock(grounding, language = "English") {
   const chinese = /中文|chinese|zh/i.test(String(language));
-  if (!grounding || (!grounding.instrument && !grounding.filer && !grounding.quote && !grounding.screen && !grounding.options && !grounding.macro && !grounding.industry)) return "";
+  if (!grounding || (!grounding.instrument && !grounding.filer && !grounding.quote
+    && !grounding.screen && !grounding.options && !grounding.macro
+    && !grounding.industry && !grounding.market_history)) return "";
 
   const lines = [];
   const head = chinese
@@ -730,7 +732,7 @@ export function groundingBlock(grounding, language = "English") {
     if (issuerDocuments.length) {
       lines.push(chinese ? "  - 本次冻结 starter pack 的全部发行人官网正文摘要：" : "  - Complete issuer-site excerpt set in this frozen starter pack:");
       for (const doc of issuerDocuments) {
-        lines.push(`    - ${doc.title || "official issuer page"} | ${doc.url} | ${doc.content_hash || "hash unavailable"} | ${doc.excerpt}`);
+        lines.push(`    - ${doc.published_at || "date unknown"} | ${doc.title || "official issuer page"} | ${doc.url} | ${doc.content_hash || "hash unavailable"} | ${doc.excerpt}`);
       }
     }
   }
@@ -741,6 +743,50 @@ export function groundingBlock(grounding, language = "English") {
       ? `- 本地同口径公司数据历史：${history.observation_count} 条观测｜${revisionSeries} 组已可计算 90 日变化；其余继续积累，不把不同期间/单位混成修正序列。`
       : `- Local like-for-like company history: ${history.observation_count} observations | ${revisionSeries} series have a valid 90-day change; others keep building and never mix periods or units.`);
   }
+  if (grounding.market_history?.available) {
+    const history = grounding.market_history;
+    const formatReturn = (value) => Number.isFinite(value)
+      ? `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`
+      : "n/a";
+    const windows = [5, 21, 63, 126, 252];
+    const subjectReturns = windows.map((sessions) => (
+      `${sessions}d ${formatReturn(history.subject?.returns?.[`${sessions}d`])}`
+    )).join(" | ");
+    lines.push(chinese
+      ? `- 服务器复算日线历史（${history.source || "来源未知"}）：${history.symbol} ${history.subject?.first_date || "未知"}→${history.subject?.latest_date || "未知"}｜${history.subject?.session_count ?? 0} 个交易日｜复权收盘 ${history.subject?.latest_adjusted_close ?? "n/a"}｜收益 ${subjectReturns}`
+      : `- Server-recomputed daily history (${history.source || "unknown source"}): ${history.symbol} ${history.subject?.first_date || "unknown"}->${history.subject?.latest_date || "unknown"} | ${history.subject?.session_count ?? 0} sessions | adjusted close ${history.subject?.latest_adjusted_close ?? "n/a"} | returns ${subjectReturns}`);
+    const vol20 = history.subject?.realized_volatility?.["20d_annualized"];
+    const vol63 = history.subject?.realized_volatility?.["63d_annualized"];
+    const volume = history.subject?.volume;
+    lines.push(chinese
+      ? `  - 已实现波动率：20d ${formatReturn(vol20)}｜63d ${formatReturn(vol63)}；成交量：最新 ${countText(volume?.latest)}｜20d 均值 ${countText(volume?.averages?.["20d"])}｜最新/20d ${volume?.ratios?.latest_to_20d ?? "n/a"}`
+      : `  - Realised volatility: 20d ${formatReturn(vol20)} | 63d ${formatReturn(vol63)}; volume: latest ${countText(volume?.latest)} | 20d mean ${countText(volume?.averages?.["20d"])} | latest/20d ${volume?.ratios?.latest_to_20d ?? "n/a"}`);
+    const levels = history.subject?.technical_levels;
+    const moving = levels?.moving_averages || {};
+    const annual = levels?.ranges?.["252d"] || {};
+    lines.push(chinese
+      ? `  - 服务器复算技术位（复权日收盘）：20d 均线 ${moving["20d"] ?? "n/a"}｜50d 均线 ${moving["50d"] ?? "n/a"}｜200d 均线 ${moving["200d"] ?? "n/a"}｜252 日低/高 ${annual.low ?? "n/a"}/${annual.high ?? "n/a"}｜现价较 252 日高 ${formatReturn(levels?.latest_vs_252d_high)}｜较低 ${formatReturn(levels?.latest_vs_252d_low)}`
+      : `  - Server-recomputed technical levels (adjusted daily closes): 20d MA ${moving["20d"] ?? "n/a"} | 50d MA ${moving["50d"] ?? "n/a"} | 200d MA ${moving["200d"] ?? "n/a"} | 252-session low/high ${annual.low ?? "n/a"}/${annual.high ?? "n/a"} | latest vs 252d high ${formatReturn(levels?.latest_vs_252d_high)} | vs low ${formatReturn(levels?.latest_vs_252d_low)}`);
+    for (const benchmark of history.benchmark_plan?.symbols || []) {
+      const relative = history.relative_performance?.[benchmark];
+      if (!relative) continue;
+      const relativeRows = windows.map((sessions) => {
+        const row = relative.windows?.[`${sessions}d`];
+        return `${sessions}d ${formatReturn(row?.subject_return)} vs ${formatReturn(row?.benchmark_return)}, excess ${formatReturn(row?.excess_return)}`;
+      }).join(" | ");
+      lines.push(chinese
+        ? `  - 同步相对收益 ${history.symbol} vs ${benchmark}（${relative.aligned_session_count ?? 0} 个共同交易日，截止 ${relative.latest_aligned_date || "未知"}）：${relativeRows}`
+        : `  - Aligned relative performance ${history.symbol} vs ${benchmark} (${relative.aligned_session_count ?? 0} shared sessions through ${relative.latest_aligned_date || "unknown"}): ${relativeRows}`);
+    }
+    for (const source of history.source_records || []) {
+      lines.push(chinese
+        ? `  - 日线来源 ${source.id}｜观察 ${source.observed_at || source.retrieved_at || "未知"}｜${source.url}`
+        : `  - Daily-history source ${source.id} | observed ${source.observed_at || source.retrieved_at || "unknown"} | ${source.url}`);
+    }
+    lines.push(chinese
+      ? "  - 以上日线、技术位、成交量和相对收益已经由服务器按日期对齐复算；对应分析席必须直接使用，不得因另一网页受阻而报告为缺失。"
+      : "  - These daily prices, technical levels, volumes, and relative returns are already date-aligned and recomputed by the server; the responsible analyst must use them and cannot report them missing because another page was blocked.");
+  }
   if (grounding.quote) {
     const q = grounding.quote;
     const observedAt = q.quote_time || "unknown";
@@ -749,9 +795,15 @@ export function groundingBlock(grounding, language = "English") {
       ? (chinese ? `${q.stale_age_hours} 小时` : `${q.stale_age_hours}h`)
       : (chinese ? "未知" : "unknown");
     const status = quoteStatusLabel(q.quote_status, chinese);
+    const isClosingObservation = ["regular_close", "end_of_day_close"].includes(q.quote_status);
+    const basisWarning = isClosingObservation
+      ? ""
+      : (chinese
+        ? "｜这是报价快照，不是收盘价；报告不得称为‘收于’或‘收盘’"
+        : " | this is a quote snapshot, not a closing price; do not call it a close");
     lines.push(chinese
-      ? `- 行情（${status}，${q.source || "来源未知"}）：${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `，${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""}｜报价 ${observedAt} → 采集 ${gatheredAt}｜实际陈旧 ${age}`
-      : `- Quote (${status}, ${q.source || "unknown source"}): ${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `, ${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""} | observed ${observedAt} -> gathered ${gatheredAt} | measured age ${age}`);
+      ? `- 行情（${status}，${q.source || "来源未知"}）：${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `，${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""}｜报价 ${observedAt} → 采集 ${gatheredAt}｜实际陈旧 ${age}${basisWarning}`
+      : `- Quote (${status}, ${q.source || "unknown source"}): ${q.symbol} ${q.price}${q.currency ? " " + q.currency : ""}${q.change_pct != null ? `, ${q.change_pct > 0 ? "+" : ""}${q.change_pct}%` : ""} | observed ${observedAt} -> gathered ${gatheredAt} | measured age ${age}${basisWarning}`);
   }
   if (grounding.screen) {
     const s = grounding.screen;

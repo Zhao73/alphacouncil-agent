@@ -401,72 +401,75 @@ export const coreSeats = Object.freeze({
 
   master_damodaran: {
     provenance:
-      "Aswath Damodaran's monthly implied equity risk premium updates on damodaran.com and the annual paper \"Equity Risk Premiums: Determinants, Estimation and Implications\": the implied premium is the expected return embedded in current index prices less the risk-free rate, and the US implied premium has averaged roughly 4.2% since 1960, which is the historical anchor he judges the current reading against. This seat uses the index earnings yield less the ten-year Treasury as a tractable stand-in for his full cash-flow-implied expected return; it is a simplification of his method, not his method.",
+      "Aswath Damodaran's public valuation work maps a company story into growth, margins, reinvestment, risk and cash flow, then tests the value distribution and the story implied by the subject's own price. A broad-market implied equity-risk premium may inform the discount rate, but an S&P 500 earnings yield or P/E is not the operating company's own valuation and may never veto an individual company by itself. Until the company-specific DCF and reverse-valuation facts are frozen, this seat declines rather than substituting a market index proxy.",
     tools: [
       {
-        tool_id: "master_damodaran.implied_equity_risk_premium",
-        operation: "subtract",
-        inputs: [{ fact_id: "index.aggregate_earnings_yield" }, { fact_id: "macro.long_bond_yield" }],
-        output_id: "index.implied_equity_risk_premium",
-        value_kind: "ratio",
-        unit: "decimal",
+        tool_id: "master_damodaran.company_cash_flow",
+        operation: "identity",
+        inputs: [{ fact_id: "valuation.cash_flow" }],
+        output_id: "valuation.company_cash_flow",
+        value_kind: "monetary",
+        unit: "currency_units",
         purpose:
-          "What the market is currently paying for equity risk over the risk-free rate. Damodaran's argument is that this number, not a historical average, is what a valuation should discount at.",
+          "Carry the subject company's explicitly sourced cash-flow input into the frozen valuation record without replacing it with a broad-market earnings yield.",
       },
       {
-        tool_id: "master_damodaran.premium_versus_long_run_average",
-        operation: "subtract",
-        inputs: [{ output_id: "index.implied_equity_risk_premium" }, { literal: 0.042 }],
-        output_id: "index.implied_premium_gap",
+        tool_id: "master_damodaran.reverse_valuation_story",
+        operation: "identity",
+        inputs: [{ fact_id: "valuation.implied_story" }],
+        output_id: "valuation.reverse_valuation_story",
         value_kind: "ratio",
         unit: "decimal",
         purpose:
-          "The current implied premium against its own long-run average of about 4.2%, which is how he judges whether the market as a whole is cheap or rich.",
+          "Carry the subject price-implied story into the frozen record so the operating-company conclusion is bound to that company rather than to the S&P 500.",
       },
     ],
     eligibility: {
       all: [
-        // His valuation is a forecast, not an accounting summary. Without a forward earnings view
-        // there is nothing to discount and the seat has not valued anything.
+        // These are subject-company DCF and reverse-valuation inputs. Market-level index PE/yield
+        // facts remain useful context, but they can never satisfy this gate for an operating company.
         {
-          condition_id: "master_damodaran.forward_earnings_available",
-          condition: { op: "exists", value: { fact_id: "index.aggregate_pe_forward" } },
+          condition_id: "master_damodaran.company_valuation_inputs_available",
+          condition: {
+            op: "all",
+            conditions: [
+              { op: "exists", value: { fact_id: "valuation.revenue_growth" } },
+              { op: "exists", value: { fact_id: "valuation.target_margin" } },
+              { op: "exists", value: { fact_id: "valuation.reinvestment_rate" } },
+              { op: "exists", value: { fact_id: "valuation.cost_of_capital" } },
+              { op: "exists", value: { fact_id: "valuation.failure_probability" } },
+            ],
+          },
           on_false: { native_state: "unvalued", common_stance: "out_of_scope" },
           on_uncomputable: { native_state: "unvalued", common_stance: "out_of_scope" },
         },
       ],
     },
-    hard_vetoes: [
-      {
-        veto_id: "master_damodaran.no_premium_over_riskfree",
-        rationale:
-          "The implied premium is by construction the extra return investors demand for holding equities instead of the risk-free asset. A premium of zero or below means the market is asking investors to take equity risk for no compensation, which no growth story or terminal assumption repairs.",
-        condition: { op: "lte", left: { output_id: "index.implied_equity_risk_premium" }, right: { literal: 0 } },
-        on_trigger: { common_stance: "opposed", native_state: "overvalued" },
-      },
-    ],
+    // The current typed contract proves that a company valuation is reconstructable; it does
+    // not yet calibrate a directional buy/sell rule. No market-level hard veto is permitted.
+    hard_vetoes: [],
     scoring: [
       {
-        rule_id: "damodaran_premium_above_long_run_average",
+        rule_id: "damodaran_company_cash_flow_recomputable",
         points: 1,
         coverage_weight: 1,
         rationale:
-          "His own test for whether the market is cheap: an implied premium above the roughly 4.2% it has averaged since 1960 means investors are being paid more than usual for equity risk.",
-        condition: { op: "gt", left: { output_id: "index.implied_premium_gap" }, right: { literal: 0 } },
+          "The subject-company cash-flow input exists in the frozen typed pack and can be carried through without an index proxy.",
+        condition: { op: "exists", value: { output_id: "valuation.company_cash_flow" } },
       },
       {
-        rule_id: "damodaran_equity_out_yields_corporate_debt",
+        rule_id: "damodaran_reverse_valuation_recomputable",
         points: 1,
         coverage_weight: 1,
         rationale:
-          "The cross-check that the cost of equity must exceed the cost of debt for the same claim. An index earnings yield below the seasoned Aaa corporate yield inverts that ordering and makes the junior claim the worse deal.",
-        condition: { op: "gt", left: { fact_id: "index.aggregate_earnings_yield" }, right: { fact_id: "macro.aaa_corporate_yield" } },
+          "The story implied by the subject's own price exists in the frozen typed pack and can be compared with its operating assumptions.",
+        condition: { op: "exists", value: { output_id: "valuation.reverse_valuation_story" } },
       },
     ],
     bands: [
-      { min_ratio: 0, common_stance: "opposed", native_state: "overvalued" },
-      { min_ratio: 0.5, common_stance: "cautious", native_state: "fair_range" },
-      { min_ratio: 1, common_stance: "constructive", native_state: "undervalued" },
+      { min_ratio: 0, common_stance: "out_of_scope", native_state: "company_inputs_partial" },
+      { min_ratio: 0.5, common_stance: "cautious", native_state: "company_valuation_recomputable" },
+      { min_ratio: 1, common_stance: "cautious", native_state: "company_valuation_review_required" },
     ],
   },
 

@@ -67,9 +67,8 @@
       "valuation.revenue_growth"
     ],
     "hard_vetoes": [
-      "master_lynch.category_error",
-      "master_lynch.story_numbers_conflict",
-      "master_lynch.inventory_or_balance_sheet"
+      "master_lynch.story_without_earnings",
+      "master_lynch.balance_sheet_break"
     ],
     "native_output": "category_story_decision_v1"
   },

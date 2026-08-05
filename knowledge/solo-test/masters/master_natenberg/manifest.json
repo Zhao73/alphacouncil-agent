@@ -60,9 +60,7 @@
       "execution.bid_ask"
     ],
     "hard_vetoes": [
-      "master_natenberg.stale_chain",
-      "master_natenberg.untradeable_spread",
-      "master_natenberg.undefined_exposure"
+      "master_natenberg.untradeable_spread"
     ],
     "native_output": "options_relative_value_v1"
   },

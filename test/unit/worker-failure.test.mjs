@@ -215,6 +215,14 @@ test("debate failure kind orders timeout and exit ahead of parse", () => {
   assert.equal(timeout.failure_kind, "timeout");
   const exit = debateFromCodex({ ok: false, timedOut: false, code: 17, stderr: "exit" }, "bear_researcher", run, "");
   assert.equal(exit.failure_kind, "exit");
+  const exhausted = debateFromCodex({
+    ok: false,
+    timedOut: false,
+    code: 1,
+    stderr: "ERROR: You've hit your usage limit. Visit settings to purchase more credits.",
+  }, "bear_researcher", run, "");
+  assert.equal(exhausted.failure_kind, "usage_limit_exhausted");
+  assert.match(exhausted.summary, /usage limit/u);
   const parse = debateFromCodex({ ok: true, timedOut: false, code: 0, text: "{}{}" }, "bear_researcher", run, "");
   assert.equal(parse.failure_kind, "parse_failed");
 });
@@ -239,6 +247,7 @@ test("full headless structured PM accepts a compact decision while the visible/d
     ],
     horizon_views: { short_term: "wait", medium_term: "verify", long_term: "compound" },
     data_gaps: ["No critical data gaps were found in the completed fixture packets."],
+    verification_findings_ack: [],
   });
   const result = debateFromCodex({
     ok: true, timedOut: false, code: 0, text: JSON.stringify(withoutReport),

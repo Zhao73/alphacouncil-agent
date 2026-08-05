@@ -2,6 +2,32 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.2.3] — 2026-08-05
+
+### Fixed
+
+- Headless evidence and method workers now use bounded native structured-output envelopes.
+  Segmented evidence transport reconstructs one canonical packet, and schema-aware arbitration
+  accepts exactly one complete root while rejecting ambiguous or truncated alternatives.
+- Operating-company source discovery now follows bounded issuer newsroom indexes to dated
+  detail pages, preserves topic-balanced company news across a 120-day window, adds a dedicated
+  management-change search, and retains direct official articles instead of only feed redirects.
+- Dynamic market observations tolerate only a proven one-day local-calendar rollover against
+  the same UTC `as_of`; historical, stale and future dates still fail closed. Derived price and
+  source-acquisition fields retain their server-owned date, unit and provenance bindings.
+- Full slow-all portfolio managers now receive every claim-level `contradicted`, `disagree` and
+  `refuted` verdict as a hard override. They must acknowledge each finding exactly once as
+  `excluded` or `corrected`; omissions, duplicates and extras fail the run before publication.
+- The deterministic full report now includes a visible triple-verification correction table and
+  annotates original analyst claims that failed a hard verifier. Refuted values may remain in the
+  audit history but cannot silently survive in the final valuation, price bands or recommendation.
+- Structured PM data gaps are limited to company and investment evidence. Internal file paths,
+  filesystem visibility, tool permissions and execution-environment notes no longer belong in
+  the investor-facing report.
+- Regression coverage now exercises the dedicated headless PM schema, exact hard-finding
+  acknowledgements, per-claim correction rendering, official management-news retention,
+  timezone-bounded observations and the complete slow + all integration topology.
+
 ## [1.2.2] — 2026-08-05
 
 ### Fixed

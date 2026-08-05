@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
+import { workerExecutionFailureKind } from "./codex.mjs";
 // A worker returning a malformed packet is a client contract violation, not a server bug:
 // these three checks used to raise -32603 while the equivalent checks in the orchestrator
 // correctly raised -32602.
@@ -31,6 +32,7 @@ import {
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
 import { normalizeCompanySourceAcquisitionLedger } from "./company-source-acquisition.mjs";
+import { assertVerificationFindingsAck } from "./verification.mjs";
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -43,15 +45,63 @@ export function extractJson(text) {
   return parseJsonTransport(text).value;
 }
 
-function normalizeNullableCoverageTransport(kind, payload) {
+const SUPPLEMENTAL_ANALYST_TASKS = new Set(["macro_regime", "market_narrative", "social_pulse"]);
+
+function normalizeNullableCoverageTransport(kind, payload, { task = null } = {}) {
   if (!["evidence", "news_evidence"].includes(kind)
-    || !payload || typeof payload !== "object" || Array.isArray(payload)
-    || !Array.isArray(payload.coverage_items)) return payload;
-  return {
-    ...payload,
-    coverage_items: payload.coverage_items.map((item) => {
+    || !payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  // These three all-scope seats add context but own none of the operating-company dossier's
+  // 52 acquisition routes. Drop model-invented coverage summaries before schema validation;
+  // their sourced claims remain intact, while mandatory core coverage cannot use this path.
+  let result = SUPPLEMENTAL_ANALYST_TASKS.has(task)
+    ? Object.fromEntries(Object.entries(payload).filter(([key]) => !["coverage_items", "acquisition_ledger"].includes(key)))
+    : payload;
+  if (Array.isArray(result.coverage_items)) {
+    result = {
+      ...result,
+      coverage_items: result.coverage_items.map((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return item;
       const normalized = { ...item };
+      // The acquisition ledger and the coverage summary describe the same frozen route with
+      // deliberately different field names. Segmented workers can copy the ledger spelling
+      // (`coverage_id`/`outcome`) into coverage_items. Normalize only that exact, lossless alias;
+      // later dossier and acquisition gates still verify the ID, disposition and source set.
+      if ((normalized.id === undefined || normalized.id === null || normalized.id === "")
+        && typeof normalized.coverage_id === "string" && normalized.coverage_id.trim()) {
+        normalized.id = normalized.coverage_id.trim();
+      }
+      if ((normalized.status === undefined || normalized.status === null || normalized.status === "")
+        && typeof normalized.outcome === "string") {
+        normalized.status = ({
+          reported_actual: "covered",
+          recomputed_proxy: "covered",
+          modeled_estimate: "covered",
+          unavailable: "unavailable",
+          not_applicable: "not_applicable",
+        })[normalized.outcome] || normalized.status;
+      }
+      const copiedAttempts = Array.isArray(normalized.attempted)
+        ? normalized.attempted
+        : Array.isArray(normalized.attempts) ? normalized.attempts : [];
+      if (typeof normalized.attempted !== "string") {
+        normalized.attempted = copiedAttempts.flatMap((attempt) => {
+          if (typeof attempt === "string" && attempt.trim()) return [attempt.trim()];
+          if (attempt && typeof attempt === "object" && typeof attempt.note === "string" && attempt.note.trim()) {
+            return [attempt.note.trim()];
+          }
+          return [];
+        }).join("; ");
+      }
+      if (!Array.isArray(normalized.attempted_urls) || normalized.attempted_urls.length === 0) {
+        normalized.attempted_urls = copiedAttempts.flatMap((attempt) => (
+          attempt && typeof attempt === "object" && attempt.locator_type === "url"
+            && typeof attempt.locator === "string" ? [attempt.locator] : []
+        ));
+      }
+      if ((normalized.gap === undefined || normalized.gap === null || normalized.gap === "")
+        && typeof normalized.reason === "string" && normalized.reason.trim()) {
+        normalized.gap = normalized.reason.trim();
+      }
       // These fields are optional for `covered`, and models commonly serialize an unused
       // value as null. Turning only null/undefined into the schema's empty value is a lossless
       // transport normalization; it never fills a required unavailable-data gap or source.
@@ -61,13 +111,165 @@ function normalizeNullableCoverageTransport(kind, payload) {
       for (const field of ["source_ids", "attempted_urls"]) {
         if (normalized[field] == null) normalized[field] = [];
       }
+      if (Array.isArray(normalized.attempted_urls)) {
+        // `local:` and `derive:` are acquisition-ledger locators, never web retrieval URLs.
+        // Workers sometimes copy them into coverage_items.attempted_urls alongside real URLs.
+        // Drop only non-HTTP transport noise before the strict runtime schema. If an unavailable
+        // row is left without a real attempted URL, the later company-coverage gate still fails
+        // closed; this normalization cannot manufacture evidence or satisfy that requirement.
+        normalized.attempted_urls = [...new Set(normalized.attempted_urls.flatMap((candidate) => {
+          if (typeof candidate !== "string") return [];
+          const value = candidate.trim();
+          try {
+            const parsed = new URL(value);
+            return ["http:", "https:"].includes(parsed.protocol) ? [value] : [];
+          } catch {
+            return [];
+          }
+        }))];
+      }
       return normalized;
-    }),
+      }),
+    };
+    const questions = Array.isArray(result.open_questions) ? [...result.open_questions] : [];
+    for (const item of result.coverage_items) {
+      const gap = item?.status === "unavailable" && typeof item?.gap === "string"
+        ? item.gap.trim()
+        : "";
+      if (gap && !questions.includes(gap)) questions.push(gap);
+    }
+    if (questions.length !== (result.open_questions || []).length) {
+      // The company-dossier contract requires byte-identical mirroring. The gap already came
+      // from the worker's unavailable coverage row; copying it into open_questions adds no fact
+      // and prevents a purely representational omission from consuming another model call.
+      result = { ...result, open_questions: questions };
+    }
+    const coveredSourceIds = new Set(result.coverage_items
+      .filter((item) => item?.status === "covered")
+      .flatMap((item) => Array.isArray(item?.source_ids) ? item.source_ids : [])
+      .filter((id) => typeof id === "string" && id.trim()));
+    if (Array.isArray(result.sources) && coveredSourceIds.size) {
+      result = {
+        ...result,
+        sources: result.sources.map((source) => {
+          if (!source || typeof source !== "object" || Array.isArray(source)
+            || !coveredSourceIds.has(source.id)) return source;
+          const publishedAt = Date.parse(String(source.published_at || ""));
+          const observedAt = source.observed_at || source.retrieved_at;
+          if (Number.isFinite(publishedAt) || !Number.isFinite(Date.parse(String(observedAt || "")))) return source;
+          let dynamicSurface = false;
+          try {
+            const url = new URL(String(source.url || ""));
+            const path = url.pathname.replace(/\/+$/u, "") || "/";
+            dynamicSurface = path === "/"
+              || /\/(?:overview|quote|chart|statistics|market-data|stock-information|investor-relations|financials|filings|submissions)(?:\/|\.|$)/iu.test(path);
+          } catch {
+            return source;
+          }
+          if (!dynamicSurface) return source;
+          // A homepage, quote, market table or filing index is a live surface rather than an
+          // undated article. Bind its already-supplied retrieval timestamp as the observation
+          // timestamp; deep undated article URLs are deliberately left untouched and fail closed.
+          return {
+            ...source,
+            source_kind: "dynamic_snapshot",
+            observed_at: observedAt,
+          };
+        }),
+      };
+    }
+  }
+
+  const explicitGap = /\b(?:unavailable|unknown|not\s+(?:available|found|disclosed|obtainable)|could\s+not\s+(?:find|obtain|verify))\b|(?:不可得|不可用|无法(?:取得|获得|核验|确认|计算)|未(?:找到|取得|获得|披露|检得)|暂无|未知|缺少)/iu;
+  const claims = Array.isArray(result.claims) ? result.claims : null;
+  if (claims) {
+    const unsupportedGaps = claims.filter((claim) => (
+      claim && typeof claim === "object" && !Array.isArray(claim)
+      && Array.isArray(claim.source_ids) && claim.source_ids.length === 0
+      && explicitGap.test(`${claim.claim || ""}\n${claim.evidence || ""}`)
+    ));
+    if (unsupportedGaps.length) {
+      const questions = Array.isArray(result.open_questions) ? [...result.open_questions] : [];
+      for (const claim of unsupportedGaps) {
+        const gap = [claim.claim, claim.evidence].filter((value) => typeof value === "string" && value.trim()).join(" ");
+        if (gap && !questions.includes(gap)) questions.push(gap);
+      }
+      const unsupported = new Set(unsupportedGaps);
+      result = {
+        ...result,
+        // An explicitly unavailable statement with no citation is a gap, not evidence. Preserve
+        // its prose in open_questions and remove only the unsupported claim. Positive or
+        // ambiguous unsourced claims remain untouched and still fail the strict provenance gate.
+        claims: claims.filter((claim) => !unsupported.has(claim)),
+        open_questions: questions,
+      };
+    }
+  }
+  return result;
+}
+
+function validateStageWorkerCandidate(value, kind, context = {}) {
+  return assertRuntimeWorkerPayload(
+    kind,
+    normalizeNullableCoverageTransport(kind, value, context),
+  );
+}
+
+function decodeSegmentedEvidenceEnvelope(value) {
+  const segment = (name) => parseJsonTransport(value[name]).value;
+  const coverageItems = segment("coverage_items_json");
+  const acquisitionLedger = segment("acquisition_ledger_json");
+  const officialSourceCoverage = segment("official_source_coverage_json");
+  return {
+    summary: value.summary,
+    claims: segment("claims_json"),
+    metrics: segment("metrics_json"),
+    sources: segment("sources_json"),
+    open_questions: segment("open_questions_json"),
+    ...(coverageItems !== null ? { coverage_items: coverageItems } : {}),
+    ...(acquisitionLedger !== null ? { acquisition_ledger: acquisitionLedger } : {}),
+    ...(officialSourceCoverage !== null ? { official_source_coverage: officialSourceCoverage } : {}),
+    confidence: value.confidence,
+    information_richness: value.information_richness,
   };
 }
 
-export function extractWorkerJson(text, kind) {
-  return assertRuntimeWorkerPayload(kind, normalizeNullableCoverageTransport(kind, extractJson(text)));
+function validatedWorkerCandidate(value, kind, context = {}) {
+  if (["evidence", "news_evidence"].includes(kind)
+    && objectRecord(value)
+    && value.transport === "segmented_evidence_v1") {
+    return validateStageWorkerCandidate(decodeSegmentedEvidenceEnvelope(value), kind, context);
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)
+    || Object.keys(value).length !== 1
+    || typeof value.packet_json !== "string") {
+    return validateStageWorkerCandidate(value, kind, context);
+  }
+  // The API-enforced outer envelope guarantees one transport root while allowing the inner
+  // stage packet to retain dynamic metric and acquisition objects that strict Structured
+  // Outputs cannot describe with additionalProperties=false.
+  try {
+    return validateStageWorkerCandidate(parseJsonTransport(value.packet_json).value, kind, context);
+  } catch (error) {
+    if (error?.data?.reason !== "WORKER_JSON_MULTIPLE_VALUES") throw error;
+    const valid = [];
+    for (const candidate of parseJsonTransportCandidates(value.packet_json)) {
+      try {
+        valid.push(validateStageWorkerCandidate(candidate, kind, context));
+      } catch (candidateError) {
+        if (candidateError?.data?.reason !== "WORKER_OUTPUT_SCHEMA_MISMATCH") throw candidateError;
+      }
+    }
+    const distinct = new Map(valid.map((candidate) => [canonicalJson(candidate), candidate]));
+    if (distinct.size === 1) return distinct.values().next().value;
+    // Two materially different valid packets remain ambiguous and fail closed. One valid packet
+    // beside a diagnostic root, or byte-equivalent duplicate packets, is only envelope noise.
+    throw error;
+  }
+}
+
+export function extractWorkerJson(text, kind, context = {}) {
+  return validatedWorkerCandidate(extractJson(text), kind, context);
 }
 
 /**
@@ -76,9 +278,9 @@ export function extractWorkerJson(text, kind) {
  * contract-valid value; two different valid packets and any truncated extra root stay
  * ambiguous and fail closed. Initial workers never use this arbiter.
  */
-export function extractRepairedWorkerJson(text, kind) {
+export function extractRepairedWorkerJson(text, kind, context = {}) {
   try {
-    return extractWorkerJson(text, kind);
+    return extractWorkerJson(text, kind, context);
   } catch (error) {
     if (error?.data?.reason !== "WORKER_JSON_MULTIPLE_VALUES") throw error;
     let candidates;
@@ -94,7 +296,7 @@ export function extractRepairedWorkerJson(text, kind) {
         // ordinary single-root path. Otherwise one valid evidence packet with optional
         // coverage fields serialized as null is incorrectly discarded beside a diagnostic
         // root, and the repair fails even though exactly one contract-valid value exists.
-        valid.push(assertRuntimeWorkerPayload(kind, normalizeNullableCoverageTransport(kind, candidate)));
+        valid.push(validatedWorkerCandidate(candidate, kind, context));
       } catch (candidateError) {
         if (candidateError?.data?.reason !== "WORKER_OUTPUT_SCHEMA_MISMATCH") {
           throw candidateError;
@@ -176,12 +378,48 @@ function normalizeCoverageSurface(value, task, sourceIdMap) {
   };
 }
 
-function normalizeOfficialSourceCoverage(value, task, sourceIdMap) {
+function packetIssuerCoverageSurface(surface, sources, asOfDate) {
+  if (!objectRecord(surface)
+    || surface.status !== "complete"
+    || !normalizedHttpUrl(surface.entry_url)
+    || !exactIsoDay(asOfDate)) return surface;
+  const items = [];
+  const seen = new Set();
+  for (const source of sources || []) {
+    const sourceUrl = normalizedHttpUrl(source?.url);
+    const day = isoDay(source?.published_at);
+    if (!sourceUrl || !day || day > asOfDate || !commonSiteHost(surface.entry_url, sourceUrl)) continue;
+    const key = `${source.id}\u0000${sourceUrl}\u0000${day}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push({
+      title: source.title,
+      published_at: source.published_at,
+      url: source.url,
+      source_id: source.id,
+    });
+  }
+  if (items.length === 0) return surface;
+  const latest = [...items].sort((left, right) => (
+    parsedInstant(right.published_at) - parsedInstant(left.published_at)
+  ))[0];
+  return {
+    ...surface,
+    // Bind the worker's coverage declaration to the packet-local issuer inventory. This drops
+    // regulator/media URLs accidentally copied into the issuer list and selects the true latest
+    // dated issuer item without inventing a source, URL or publication date.
+    latest_dated_item: { ...latest },
+    dated_items_checked: items,
+  };
+}
+
+function normalizeOfficialSourceCoverage(value, task, sourceIdMap, sources, asOfDate) {
   if (!objectRecord(value)) return value;
+  const issuer = normalizeCoverageSurface(value.issuer, task, sourceIdMap);
   return {
     status: typeof value.status === "string" ? value.status.trim() : value.status,
     regulator: normalizeCoverageSurface(value.regulator, task, sourceIdMap),
-    issuer: normalizeCoverageSurface(value.issuer, task, sourceIdMap),
+    issuer: packetIssuerCoverageSurface(issuer, sources, asOfDate),
   };
 }
 
@@ -639,7 +877,34 @@ export function methodVoiceAllowedSourceIds(run, frozenOpinion) {
   return allowed;
 }
 
-export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
+function bindSameDayDynamicObservation(source, asOfDate, observationTime) {
+  if (!source || typeof source !== "object" || Array.isArray(source)
+    || String(source.source_kind || "").trim().toLowerCase() !== "dynamic_snapshot"
+    || Number.isFinite(Date.parse(String(source.published_at || "")))) return source;
+  const dayStart = Date.parse(`${asOfDate}T00:00:00.000Z`);
+  const dayEnd = Date.parse(`${asOfDate}T23:59:59.999Z`);
+  const trusted = Date.parse(String(observationTime || ""));
+  const supplied = Date.parse(String(source.observed_at || source.retrieved_at || ""));
+  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd) || !Number.isFinite(trusted)
+    || trusted < dayStart || trusted > dayEnd
+    || !Number.isFinite(supplied) || supplied <= dayEnd || supplied > dayEnd + 86_400_000) return source;
+  // A worker can format the host's next local calendar day even while the server observation is
+  // still inside the UTC as_of day (for example, Tokyo after 09:00 UTC). For a dynamic source
+  // with no publication date, the server-owned grounding timestamp is the stronger observation
+  // fact. Correct only this bounded one-day spill; historical/future leakage remains fail-closed.
+  return {
+    ...source,
+    observed_at: observationTime,
+    ...(Number.isFinite(Date.parse(String(source.retrieved_at || "")))
+      && Date.parse(String(source.retrieved_at)) > dayEnd
+      ? { retrieved_at: observationTime }
+      : {}),
+  };
+}
+
+export function normalizePacket(packet, task, symbol, asOfDate, raw = "", {
+  observationTime = null,
+} = {}) {
   const sourceIdMap = new Map();
   const suppliedSourceIds = new Set();
   const sources = Array.isArray(packet?.sources) ? packet.sources.map((source, index) => {
@@ -661,7 +926,10 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
     }
     suppliedSourceIds.add(id);
     sourceIdMap.set(original, id);
-    return { ...(source && typeof source === "object" ? source : {}), id };
+    return bindSameDayDynamicObservation({
+      ...(source && typeof source === "object" ? source : {}),
+      id,
+    }, asOfDate, observationTime);
   }) : [];
   const claims = Array.isArray(packet?.claims) ? packet.claims.map((claim) => {
     const normalized = {
@@ -675,7 +943,7 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "") {
       : normalized;
   }) : [];
   const officialSourceCoverage = task === NEWS_TASK && Object.hasOwn(packet || {}, "official_source_coverage")
-    ? normalizeOfficialSourceCoverage(packet.official_source_coverage, task, sourceIdMap)
+    ? normalizeOfficialSourceCoverage(packet.official_source_coverage, task, sourceIdMap, sources, asOfDate)
     : undefined;
   const coverageItems = normalizeCompanyCoverageItems(packet?.coverage_items, task, sourceIdMap);
   const acquisitionLedger = normalizeCompanySourceAcquisitionLedger(packet?.acquisition_ledger, task, sourceIdMap);
@@ -808,6 +1076,9 @@ export function normalizeDebate(packet, role, run, raw = "") {
       ? packet.horizon_views
       : {},
     data_gaps: Array.isArray(packet?.data_gaps) ? packet.data_gaps : [],
+    verification_findings_ack: Array.isArray(packet?.verification_findings_ack)
+      ? packet.verification_findings_ack
+      : undefined,
     company_dossier_hash_ack: typeof packet?.company_dossier_hash_ack === "string"
       ? packet.company_dossier_hash_ack
       : undefined,
@@ -821,7 +1092,7 @@ export function normalizeDebate(packet, role, run, raw = "") {
 }
 
 export function debateFailurePacket(role, run, failureKind) {
-  const kind = ["global_deadline", "timeout", "exit", "parse_failed", "reader_language_mismatch", "unexpected_error"]
+  const kind = ["global_deadline", "timeout", "exit", "usage_limit_exhausted", "parse_failed", "reader_language_mismatch", "unexpected_error"]
     .includes(failureKind)
     ? failureKind
     : "unexpected_error";
@@ -830,6 +1101,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role} did not complete before the council's global deadline.`,
       timeout: `${role} timed out and produced no usable debate statement.`,
       exit: `${role} exited unsuccessfully and produced no usable debate statement.`,
+      usage_limit_exhausted: `${role} could not start because the Codex usage limit was exhausted; no usable debate statement was produced.`,
       parse_failed: `${role} returned output that violated the debate JSON contract.`,
       reader_language_mismatch: `${role} returned reader-facing content in the wrong language.`,
       unexpected_error: `${role} failed unexpectedly and produced no usable debate statement.`,
@@ -838,6 +1110,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role} 未能在委员会全局截止时间前完成。`,
       timeout: `${role} 执行超时，未生成可用的辩论发言。`,
       exit: `${role} 异常退出，未生成可用的辩论发言。`,
+      usage_limit_exhausted: `${role} 因 Codex 使用额度已耗尽而无法启动，未生成可用的辩论发言。`,
       parse_failed: `${role} 的输出违反辩论 JSON 契约。`,
       reader_language_mismatch: `${role} 返回了错误语言的读者内容。`,
       unexpected_error: `${role} 意外失败，未生成可用的辩论发言。`,
@@ -846,6 +1119,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role} は委員会全体の期限までに完了しませんでした。`,
       timeout: `${role} はタイムアウトし、利用可能な討論発言を生成しませんでした。`,
       exit: `${role} は異常終了し、利用可能な討論発言を生成しませんでした。`,
+      usage_limit_exhausted: `${role} は Codex の使用上限に達したため開始できず、利用可能な討論発言を生成しませんでした。`,
       parse_failed: `${role} の出力は討論 JSON 契約に違反しています。`,
       reader_language_mismatch: `${role} は指定と異なる言語の読者向け内容を返しました。`,
       unexpected_error: `${role} は予期せず失敗し、利用可能な討論発言を生成しませんでした。`,
@@ -854,6 +1128,7 @@ export function debateFailurePacket(role, run, failureKind) {
       global_deadline: `${role}이 위원회 전체 마감 시간 전에 완료되지 않았습니다.`,
       timeout: `${role}이 시간 초과되어 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
       exit: `${role}이 비정상 종료되어 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
+      usage_limit_exhausted: `${role}은 Codex 사용 한도가 소진되어 시작하지 못했고, 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
       parse_failed: `${role}의 출력이 토론 JSON 계약을 위반했습니다.`,
       reader_language_mismatch: `${role}이 지정과 다른 언어의 독자용 내용을 반환했습니다.`,
       unexpected_error: `${role}이 예기치 않게 실패해 사용할 수 있는 토론 발언을 생성하지 못했습니다.`,
@@ -1107,10 +1382,11 @@ export function debateFromCodex(result, role, run, fallbackPrompt, {
   repairedTransport = false,
 } = {}) {
   if (!result.ok) {
-    const failureKind = result.deadline_exhausted
-      ? "global_deadline"
-      : result.timedOut
-        ? "timeout"
+    const classified = workerExecutionFailureKind(result);
+    const failureKind = classified === "global_deadline" || classified === "timeout"
+      ? classified
+      : classified === "usage_limit_exhausted"
+        ? classified
         : Number.isInteger(result.code)
           ? "exit"
           : "unexpected_error";
@@ -1128,7 +1404,14 @@ export function debateFromCodex(result, role, run, fallbackPrompt, {
       : extractWorkerJson(result.text, kind);
     assertCompanyDossierAck(parsed, run, role);
     const source_ids = assertSourceIdsResolve(run, parsed.source_ids, role);
-    return normalizeDebate({ ...parsed, source_ids }, role, run, result.text);
+    const verification_findings_ack = role === "portfolio_manager" && managerDecisionOnly
+      ? assertVerificationFindingsAck(parsed, run, role)
+      : undefined;
+    return normalizeDebate({
+      ...parsed,
+      source_ids,
+      ...(verification_findings_ack ? { verification_findings_ack } : {}),
+    }, role, run, result.text);
   } catch (error) {
     const failure = debateFailurePacket(role, run, "parse_failed");
     const schemaErrors = Array.isArray(error?.data?.errors) ? error.data.errors.slice(0, 12) : [];
@@ -1484,29 +1767,51 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
   const list = (value) => (Array.isArray(value)
     ? value.map(sanitizeStatementMarkdown).filter(Boolean)
     : []);
-  if (packet?.master !== masterId) throw invalidParams(`dedicated method worker returned the wrong master id for ${masterId}`);
+  if (packet?.master !== masterId) {
+    throw invalidParams(`dedicated method worker returned the wrong master id for ${masterId}`, {
+      reason: "METHOD_VOICE_MASTER_MISMATCH",
+      owner: masterId,
+    });
+  }
   if (packet?.acknowledged_stance !== frozenOpinion?.stance) {
-    throw invalidParams(`dedicated method worker attempted to change frozen stance for ${masterId}`);
+    throw invalidParams(`dedicated method worker attempted to change frozen stance for ${masterId}`, {
+      reason: "METHOD_VOICE_STANCE_MISMATCH",
+      owner: masterId,
+    });
   }
   if (packet?.voice_mode !== FIRST_PERSON_VOICE_MODE) {
-    throw invalidParams(`dedicated method worker did not use the required first-person voice mode for ${masterId}`);
+    throw invalidParams(`dedicated method worker did not use the required first-person voice mode for ${masterId}`, {
+      reason: "METHOD_VOICE_MODE_MISMATCH",
+      owner: masterId,
+    });
   }
   if (packet?.disclosure_ack !== FIRST_PERSON_DISCLOSURE_ACK) {
-    throw invalidParams(`dedicated method worker did not acknowledge the fixed identity disclosure for ${masterId}`);
+    throw invalidParams(`dedicated method worker did not acknowledge the fixed identity disclosure for ${masterId}`, {
+      reason: "METHOD_VOICE_DISCLOSURE_ACK_MISMATCH",
+      owner: masterId,
+    });
   }
   const voice = Object.fromEntries(VOICE_FIELDS
     .map((field) => [field, sanitizeStatementMarkdown(packet?.voice?.[field])])
     .filter(([, text]) => text));
   const missingVoiceFields = VOICE_FIELDS.filter((field) => !voice[field]);
   if (missingVoiceFields.length) {
-    throw invalidParams(`dedicated method worker omitted required first-person voice fields for ${masterId}: ${missingVoiceFields.join(", ")}`);
+    throw invalidParams(`dedicated method worker omitted required first-person voice fields for ${masterId}: ${missingVoiceFields.join(", ")}`, {
+      reason: "METHOD_VOICE_FIELDS_MISSING",
+      owner: masterId,
+      missing_fields: missingVoiceFields,
+    });
   }
   // Target-language validation runs immediately after normalization. This gate asks the
   // orthogonal question: did the worker use first person at all? Keeping the checks separate
   // means an English "I" in a Chinese run is reported as a language mismatch, not parse failure.
   const thirdPersonFields = VOICE_FIELDS.filter((field) => !hasAnyFirstPersonMarker(voice[field]));
   if (thirdPersonFields.length) {
-    throw invalidParams(`dedicated method worker returned non-first-person method prose for ${masterId}: ${thirdPersonFields.join(", ")}`);
+    throw invalidParams(`dedicated method worker returned non-first-person method prose for ${masterId}: ${thirdPersonFields.join(", ")}`, {
+      reason: "METHOD_VOICE_FIRST_PERSON_MISMATCH",
+      owner: masterId,
+      invalid_fields: thirdPersonFields,
+    });
   }
   const statement = composeVoiceStatement(voice, run.language);
 
@@ -1514,12 +1819,19 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
   // stance is, so a worker cannot turn `opposed` into `would_buy` by choosing a label.
   const requested = packet?.position_intent;
   if (requested === undefined) {
-    throw invalidParams(`dedicated method worker omitted position_intent for ${masterId}`);
+    throw invalidParams(`dedicated method worker omitted position_intent for ${masterId}`, {
+      reason: "METHOD_VOICE_POSITION_INTENT_MISSING",
+      owner: masterId,
+    });
   }
   if (!isIntentAllowed(requested, frozenOpinion.stance)) {
     throw invalidParams(
       `dedicated method worker returned an intent outside the frozen stance for ${masterId}: `
       + `${JSON.stringify(requested)} is not one of ${intentsForStance(frozenOpinion.stance).join(", ")}`,
+      {
+        reason: "METHOD_VOICE_POSITION_INTENT_MISMATCH",
+        owner: masterId,
+      },
     );
   }
 

@@ -5,6 +5,7 @@ import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import {
   OPERATING_COMPANY_COVERAGE,
   buildCompanyDossier,
+  companyCoverageInstruction,
   companyDossierCoverageStatus,
   expectedCoverageItems,
   requiresOperatingCompanyDossier,
@@ -344,6 +345,30 @@ test("critical unavailable data blocks the decision while non-critical unavailab
   assert.equal(nonCritical.decision_barrier_ready, true);
   assert.deepEqual(nonCritical.critical_unavailable, []);
   assert.deepEqual(nonCritical.critical_gaps, []);
+
+  const unannouncedDate = coverageForPacket(markUnavailable(
+    coveredPacket("forward_expectations"),
+    "expectations.next_reporting_date",
+  ));
+  assert.equal(unannouncedDate.status, "complete");
+  assert.equal(unannouncedDate.sufficiency, "limited");
+  assert.equal(unannouncedDate.decision_barrier_ready, true);
+  assert.deepEqual(unannouncedDate.critical_gaps, []);
+});
+
+test("coverage instructions preserve estimated dates and supplied market history without upgrading their source status", () => {
+  const run = companyRun();
+  run.language = "中文";
+  run.grounding.market_history = { available: true };
+  const market = companyCoverageInstruction("market_data", run);
+  assert.match(market, /必须直接使用其 subject、benchmarks、relative_performance/);
+  assert.match(market, /不得因为另一个网页打不开而把已提供的数据改写成 unavailable/);
+  const expectations = companyCoverageInstruction("forward_expectations", run);
+  assert.match(expectations, /第三方预计、非发行人确认/);
+  assert.match(expectations, /绝不能冒充公司公告/);
+  const earnings = companyCoverageInstruction("earnings_deep_dive", run);
+  assert.match(earnings, /二级转录来源/);
+  assert.match(earnings, /不得冒充官方逐字稿/);
 });
 
 test("the dossier hash is canonical, ignores raw transport text, and covers tail and deep evidence", () => {

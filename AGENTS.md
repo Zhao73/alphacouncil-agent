@@ -14,7 +14,7 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.2.2` is the current source release candidate; GitHub, Codex marketplace and npm's public
+Package/plugin version `1.2.3` is the current source release candidate; GitHub, Codex marketplace and npm's public
 `latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
 PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
 `method_model` seats. Human review of the authored formulas and the live four-host

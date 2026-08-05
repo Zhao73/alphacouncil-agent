@@ -64,9 +64,7 @@
       "macro.long_bond_yield"
     ],
     "hard_vetoes": [
-      "master_asness.undefined_factor",
-      "master_asness.factor_replication",
-      "master_asness.crowding_cost"
+      "master_asness.fed_model_illusion"
     ],
     "native_output": "factor_adjusted_alpha_v1"
   },

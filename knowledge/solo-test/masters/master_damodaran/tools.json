@@ -1,11 +1,11 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:500b290e0e13e80c02f1072f33f879ab79f9cfa81a749295634e763dda75b6f2",
-    "derivation_spec_hash": "sha256:b256595a8aed8861a196eb7335efbc72e3ed70bac462d8021abe47efde3597fe",
-    "derivation_spec_id": "master_damodaran.implied_equity_risk_premium.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:3a3fa3d73009c23a6e6e29e48dccc7ce325224dc3ee4fd38256ebf7ef4bfedfb",
+    "derivation_spec_hash": "sha256:76c0546c9f92f414d91a5b7368d9cc6ea55c31b9aa5fb43068483ddf38394db1",
+    "derivation_spec_id": "master_damodaran.company_cash_flow.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_damodaran.implied_equity_risk_premium",
+    "id": "master_damodaran.company_cash_flow",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -14,57 +14,44 @@
           "basis": "instant",
           "window": null
         },
-        "unit": "decimal",
-        "value_kind": "ratio"
-      },
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "instant",
-          "window": null
-        },
-        "unit": "decimal",
-        "value_kind": "ratio"
+        "unit": "currency_units",
+        "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:2ed1240f33f9ed42d241ff758e8d43c9ee68fed7edcaacede625db0c08ef5ba4",
+    "input_schema_hash": "sha256:49e91d211e613874f12d72382d85cf30af89c2ab0594a4bde7bf41f65876d619",
     "inputs": [
       {
-        "fact_id": "index.aggregate_earnings_yield"
-      },
-      {
-        "fact_id": "macro.long_bond_yield"
+        "fact_id": "valuation.cash_flow"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "subtract",
-    "output_id": "index.implied_equity_risk_premium.master_damodaran",
+    "operation": "identity",
+    "output_id": "valuation.company_cash_flow.master_damodaran",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c2fcd47a4aa4014f89d12390ec92f592067ef12d2f18982fcf201f4c8d713d4e",
+    "output_schema_hash": "sha256:00e6d02309e0f62c240e0dcae58d460b93a7766e6027428d75edc1643cfe5cd3",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:bcabfc2d756d028b0"
     ],
-    "unit": "decimal",
-    "value_kind": "ratio",
+    "unit": "currency_units",
+    "value_kind": "monetary",
     "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:5b557801dbdfeb202198eca16cfd22eaa009252ca9a39c3357e5000a1efabb90",
-    "derivation_spec_hash": "sha256:3743c713e5c27017406e6d6bc79ed177415f868a7abd3a00093f308f0e79f744",
-    "derivation_spec_id": "master_damodaran.premium_versus_long_run_average.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:d498c5ae5d8d4b7c33d9e4cfa53793abdb97d3cd8b56845206cf832be3e3612b",
+    "derivation_spec_hash": "sha256:202f19b814669c46b731d7ff578f678f2dce4105a39fcdd866e2042f1c77d3cc",
+    "derivation_spec_id": "master_damodaran.reverse_valuation_story.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_damodaran.premium_versus_long_run_average",
+    "id": "master_damodaran.reverse_valuation_story",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -75,38 +62,25 @@
         },
         "unit": "decimal",
         "value_kind": "ratio"
-      },
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "instant",
-          "window": null
-        },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
       }
     ],
-    "input_schema_hash": "sha256:5f30cc56513316e32142651b812911eef0fcbce86aea6a5c7f3cc005d507e012",
+    "input_schema_hash": "sha256:34753e5f4a218b7e6b78397fb0ad9069bdbfc039b03966a34baf2acfa122d9e7",
     "inputs": [
       {
-        "output_id": "index.implied_equity_risk_premium.master_damodaran"
-      },
-      {
-        "literal": 0.042
+        "fact_id": "valuation.implied_story"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "subtract",
-    "output_id": "index.implied_premium_gap.master_damodaran",
+    "operation": "identity",
+    "output_id": "valuation.reverse_valuation_story.master_damodaran",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:4b68698678a20f720d47bf9b66c5bb1e4839e72cd55fb4d8f978f7e4f82f418f",
+    "output_schema_hash": "sha256:369d881b956edd744a21b5af88d140c9c606913475d4ca601513eb3374c2412a",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

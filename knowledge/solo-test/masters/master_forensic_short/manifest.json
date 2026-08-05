@@ -60,9 +60,7 @@
       "financial.leverage"
     ],
     "hard_vetoes": [
-      "master_forensic_short.no_primary_evidence",
-      "master_forensic_short.borrow_unavailable",
-      "master_forensic_short.no_catalyst"
+      "master_forensic_short.no_allegation_to_make"
     ],
     "native_output": "forensic_shortability_v1"
   },

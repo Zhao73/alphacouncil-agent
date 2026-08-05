@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/headless-evidence-envelope-v1.schema.json",
+  "title": "AlphaCouncil strict segmented evidence transport envelope",
+  "type": "object",
+  "properties": {
+    "transport": { "type": "string", "const": "segmented_evidence_v1" },
+    "summary": { "type": "string", "minLength": 1 },
+    "claims_json": { "type": "string", "pattern": "^\\[[^\\r\\n]*\\]$" },
+    "metrics_json": { "type": "string", "pattern": "^\\{[^\\r\\n]*\\}$" },
+    "sources_json": { "type": "string", "pattern": "^\\[[^\\r\\n]*\\]$" },
+    "open_questions_json": { "type": "string", "pattern": "^\\[[^\\r\\n]*\\]$" },
+    "coverage_items_json": { "type": "string", "pattern": "^(?:null|\\[[^\\r\\n]*\\])$" },
+    "acquisition_ledger_json": { "type": "string", "pattern": "^(?:null|\\{[^\\r\\n]*\\})$" },
+    "official_source_coverage_json": { "type": "string", "pattern": "^(?:null|\\{[^\\r\\n]*\\})$" },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "information_richness": { "enum": ["A", "B", "C", "unrated"] }
+  },
+  "required": [
+    "transport",
+    "summary",
+    "claims_json",
+    "metrics_json",
+    "sources_json",
+    "open_questions_json",
+    "coverage_items_json",
+    "acquisition_ledger_json",
+    "official_source_coverage_json",
+    "confidence",
+    "information_richness"
+  ],
+  "additionalProperties": false
+}

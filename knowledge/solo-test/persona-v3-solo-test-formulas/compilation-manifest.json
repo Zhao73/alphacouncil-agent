@@ -550,55 +550,55 @@
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:500b290e0e13e80c02f1072f33f879ab79f9cfa81a749295634e763dda75b6f2",
-      "derivation_spec_hash": "sha256:b256595a8aed8861a196eb7335efbc72e3ed70bac462d8021abe47efde3597fe",
-      "derivation_spec_id": "master_damodaran.implied_equity_risk_premium.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:3a3fa3d73009c23a6e6e29e48dccc7ce325224dc3ee4fd38256ebf7ef4bfedfb",
+      "derivation_spec_hash": "sha256:76c0546c9f92f414d91a5b7368d9cc6ea55c31b9aa5fb43068483ddf38394db1",
+      "derivation_spec_id": "master_damodaran.company_cash_flow.prototype_v1.derived_proxy_v1",
       "persona_id": "master_damodaran",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_damodaran.implied_equity_risk_premium.prototype_v1"
+        "derived_proxy:master_damodaran.company_cash_flow.prototype_v1"
       ],
-      "tool_id": "master_damodaran.implied_equity_risk_premium"
+      "tool_id": "master_damodaran.company_cash_flow"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:5b557801dbdfeb202198eca16cfd22eaa009252ca9a39c3357e5000a1efabb90",
-      "derivation_spec_hash": "sha256:3743c713e5c27017406e6d6bc79ed177415f868a7abd3a00093f308f0e79f744",
-      "derivation_spec_id": "master_damodaran.premium_versus_long_run_average.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:d498c5ae5d8d4b7c33d9e4cfa53793abdb97d3cd8b56845206cf832be3e3612b",
+      "derivation_spec_hash": "sha256:202f19b814669c46b731d7ff578f678f2dce4105a39fcdd866e2042f1c77d3cc",
+      "derivation_spec_id": "master_damodaran.reverse_valuation_story.prototype_v1.derived_proxy_v1",
       "persona_id": "master_damodaran",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_damodaran.premium_versus_long_run_average.prototype_v1"
+        "derived_proxy:master_damodaran.reverse_valuation_story.prototype_v1"
       ],
-      "tool_id": "master_damodaran.premium_versus_long_run_average"
+      "tool_id": "master_damodaran.reverse_valuation_story"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:3289b24b65e14cbd73a54701c6b3227f25d0b813a8831666a0c6d9fb47246161",
-      "derivation_spec_hash": "sha256:5b78e79b939648a637fbf773b55890a54eadf081fe1c22c36935f296ce103744",
-      "derivation_spec_id": "master_taleb.debt_service_cushion.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:ffafd5153e0a377184d6207602804c1ef2f5d2057c52086afb476aadc87a6266",
+      "derivation_spec_hash": "sha256:8e104ec8a9463f8536247969b70aaf154fa6ee728a5c848d692770e15e4f02e2",
+      "derivation_spec_id": "master_taleb.maximum_loss.prototype_v1.derived_proxy_v1",
       "persona_id": "master_taleb",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_taleb.debt_service_cushion.prototype_v1"
+        "derived_proxy:master_taleb.maximum_loss.prototype_v1"
       ],
-      "tool_id": "master_taleb.debt_service_cushion"
+      "tool_id": "master_taleb.maximum_loss"
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:f6bcc23d1175c84de9fdb866499c869436b14f18c48391b5eac08e0a02862430",
-      "derivation_spec_hash": "sha256:88bc4482c18c31314609170fbc6d8ffe0168e5e2476a8f54a48596694958b0c7",
-      "derivation_spec_id": "master_taleb.normalised_skew.prototype_v1.derived_proxy_v1",
+      "derivation_evidence_hash": "sha256:ede70486c9abb48287ec1c5746e3ba78926cc7cbfcc5c35683bddce2c888d6ec",
+      "derivation_spec_hash": "sha256:0f107910314af70ba3ac93723662ecac818f03c0dc4ac001c135aa92d13c680e",
+      "derivation_spec_id": "master_taleb.payoff_convexity.prototype_v1.derived_proxy_v1",
       "persona_id": "master_taleb",
       "production_eligible": false,
       "review_status": "not_human_reviewed",
       "source_ids": [
-        "derived_proxy:master_taleb.normalised_skew.prototype_v1"
+        "derived_proxy:master_taleb.payoff_convexity.prototype_v1"
       ],
-      "tool_id": "master_taleb.normalised_skew"
+      "tool_id": "master_taleb.payoff_convexity"
     },
     {
       "assurance_class": "provisional_derived_proxy",
@@ -680,7 +680,7 @@
     }
   ],
   "canonical_seat_count": 26,
-  "compilation_hash": "sha256:3668c3a7c529984784a637dbaf08316c1b22cfb22d0cacf1be323796c94544b4",
+  "compilation_hash": "sha256:c3aa9db2a0eb92d51d4d4aa6a5a550d18fcade34788b8dee719320fb35f6e5b2",
   "compiled_tool_count": 52,
   "formula_approval_binding_count": 0,
   "human_reviewer_count": 0,

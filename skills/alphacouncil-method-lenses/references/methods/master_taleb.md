@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:fd8a762803f43931cdf8482b8da8e1ec533a63fc10857809b7e3cfa94b1cc584`
+- Pack snapshot hash: `sha256:f8aed6fa29946f9570bba08cf814c2d98e5857dedafbab12a56a251c8f251326`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -44,15 +44,13 @@ Known limits:
 
 Make the complete evidence pack available, then prioritize these declared fact types:
 
-- `financial.interest_coverage`
-- `options.skew_25d`
-- `options.implied_volatility`
-- `valuation.downside_floor`
-- `financial.leverage`
+- `payoff.max_loss`
+- `payoff.convexity`
 - `risk.ruin_possible`
 - `risk.hidden_leverage`
-- `payoff.convexity`
+- `options.implied_volatility`
 - `options.realized_volatility`
+- `options.skew_25d`
 - `execution.round_trip_cost`
 - `event.expiry_coverage`
 
@@ -109,7 +107,7 @@ These are project-derived, machine-reviewed hypotheses. They are not approved at
   {
     "assurance_class": "provisional_derived_proxy",
     "attribution_status": "provisional_not_human_reviewed",
-    "claim": "Distance from the absorbing barrier, in turns of operating earnings. Coverage of one is not a safety line but the failure itself, so what matters is how far the business stands from it; a coverage level on its own does not say that.",
+    "claim": "The specified exposure's finite maximum loss as a fraction of invested capital; this is the payoff bound, not an accounting liquidation floor.",
     "rule_id": "proxy_rule_2",
     "source_ids": [
       "proxy:678e17ab8610dd057"
@@ -118,7 +116,7 @@ These are project-derived, machine-reviewed hypotheses. They are not approved at
   {
     "assurance_class": "provisional_derived_proxy",
     "attribution_status": "provisional_not_human_reviewed",
-    "claim": "What the market currently charges for the downside tail, as a fraction of the volatility level it is charged against. Four volatility points of skew are a different price on a twelve-volatility name than on an eighty-volatility one, which is why the tail's price is the ratio and not the difference.",
+    "claim": "The explicitly modelled payoff convexity; an options skew snapshot is market context and cannot substitute for the position's payoff diagram.",
     "rule_id": "proxy_rule_3",
     "source_ids": [
       "proxy:678e17ab8610dd057"
@@ -207,22 +205,12 @@ Numeric thresholds or transformations below belong to the current project proxy 
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:3289b24b65e14cbd73a54701c6b3227f25d0b813a8831666a0c6d9fb47246161",
-    "derivation_spec_hash": "sha256:5b78e79b939648a637fbf773b55890a54eadf081fe1c22c36935f296ce103744",
-    "derivation_spec_id": "master_taleb.debt_service_cushion.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:ffafd5153e0a377184d6207602804c1ef2f5d2057c52086afb476aadc87a6266",
+    "derivation_spec_hash": "sha256:8e104ec8a9463f8536247969b70aaf154fa6ee728a5c848d692770e15e4f02e2",
+    "derivation_spec_id": "master_taleb.maximum_loss.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_taleb.debt_service_cushion",
+    "id": "master_taleb.maximum_loss",
     "input_contracts": [
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "duration",
-          "window": "ANY"
-        },
-        "unit": "multiple",
-        "value_kind": "ratio"
-      },
       {
         "on_missing": "fail",
         "period": {
@@ -230,47 +218,44 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "basis": "instant",
           "window": null
         },
-        "unit": "derived_proxy_scalar",
-        "value_kind": "scalar"
+        "unit": "decimal_of_invested_capital",
+        "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:d44ace009dce55e64366e358c09de5e650f0c5c6ccdfa4f4b846b40a63610097",
+    "input_schema_hash": "sha256:5338f9674f76672344aae6471018524e22e6340c10b6d64e8254d5dade9d006b",
     "inputs": [
       {
-        "fact_id": "financial.interest_coverage"
-      },
-      {
-        "literal": 1
+        "fact_id": "payoff.max_loss"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "subtract",
-    "output_id": "risk.debt_service_cushion.master_taleb",
+    "operation": "identity",
+    "output_id": "payoff.maximum_loss.master_taleb",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:675e87057b3cd9e59f2e66dae38cf5fc55ae74baff48d398c9e7ba4e6564d88e",
+    "output_schema_hash": "sha256:f771f394b44ac2fd9dde70ed941a21d270a593a9bb7f94b826a42afe7ba419e6",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
     "source_ids": [
       "proxy:678e17ab8610dd057"
     ],
-    "unit": "multiple",
+    "unit": "decimal_of_invested_capital",
     "value_kind": "ratio",
     "version": "0.2.0"
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:f6bcc23d1175c84de9fdb866499c869436b14f18c48391b5eac08e0a02862430",
-    "derivation_spec_hash": "sha256:88bc4482c18c31314609170fbc6d8ffe0168e5e2476a8f54a48596694958b0c7",
-    "derivation_spec_id": "master_taleb.normalised_skew.prototype_v1.derived_proxy_v1",
+    "derivation_evidence_hash": "sha256:ede70486c9abb48287ec1c5746e3ba78926cc7cbfcc5c35683bddce2c888d6ec",
+    "derivation_spec_hash": "sha256:0f107910314af70ba3ac93723662ecac818f03c0dc4ac001c135aa92d13c680e",
+    "derivation_spec_id": "master_taleb.payoff_convexity.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
-    "id": "master_taleb.normalised_skew",
+    "id": "master_taleb.payoff_convexity",
     "input_contracts": [
       {
         "on_missing": "fail",
@@ -279,40 +264,27 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "basis": "instant",
           "window": null
         },
-        "unit": "decimal_volatility_difference",
-        "value_kind": "ratio"
-      },
-      {
-        "on_missing": "fail",
-        "period": {
-          "alignment": "as_of",
-          "basis": "instant",
-          "window": null
-        },
-        "unit": "decimal_annualized_volatility",
+        "unit": "decimal",
         "value_kind": "ratio"
       }
     ],
-    "input_schema_hash": "sha256:9b2fb251c417eafcb6e2367d54d6dc0396ffbd007eb615ec1cfa9b5abf156f90",
+    "input_schema_hash": "sha256:e5c29779428d557aaa2aba3a751886c678d9c40488b35d5c962efd11f4eb7106",
     "inputs": [
       {
-        "fact_id": "options.skew_25d"
-      },
-      {
-        "fact_id": "options.implied_volatility"
+        "fact_id": "payoff.convexity"
       }
     ],
     "intended_use": "local_test_only",
     "kind": "recomputation",
     "on_missing": "fail",
-    "operation": "divide",
-    "output_id": "options.normalised_skew.master_taleb",
+    "operation": "identity",
+    "output_id": "payoff.convexity_score.master_taleb",
     "output_period": {
       "alignment": "as_of",
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:168906d4c10d311d53007a251d0b5239ac681c6c1d81921c7230b2f246c5443a",
+    "output_schema_hash": "sha256:897e1d1bc21cd49cdf9696224e3a70df96470b6eb89c9930a9094cefa95de9e8",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -340,19 +312,52 @@ Numeric thresholds or transformations below belong to the current project proxy 
             {
               "op": "exists",
               "value": {
-                "fact_id": "valuation.downside_floor"
+                "fact_id": "risk.ruin_possible"
               }
             },
             {
               "op": "exists",
               "value": {
-                "fact_id": "financial.leverage"
+                "fact_id": "risk.hidden_leverage"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "options.implied_volatility"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "options.realized_volatility"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "options.skew_25d"
+              }
+            },
+            {
+              "op": "exists",
+              "value": {
+                "fact_id": "execution.round_trip_cost"
+              }
+            },
+            {
+              "left": {
+                "fact_id": "event.expiry_coverage"
+              },
+              "op": "eq",
+              "right": {
+                "literal": true
               }
             }
           ],
           "op": "all"
         },
-        "condition_id": "master_taleb.downside_is_boundable",
+        "condition_id": "master_taleb.payoff_and_execution_are_bound",
         "on_false": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_trade"
@@ -377,11 +382,11 @@ Numeric thresholds or transformations below belong to the current project proxy 
     {
       "condition": {
         "left": {
-          "output_id": "risk.debt_service_cushion.master_taleb"
+          "fact_id": "risk.ruin_possible"
         },
-        "op": "lte",
+        "op": "eq",
         "right": {
-          "literal": 0
+          "literal": true
         }
       },
       "on_trigger": {
@@ -403,37 +408,11 @@ Numeric thresholds or transformations below belong to the current project proxy 
     {
       "condition": {
         "left": {
-          "fact_id": "valuation.downside_floor"
-        },
-        "op": "lte",
-        "right": {
-          "literal": 0
-        }
-      },
-      "on_trigger": {
-        "common_stance": "opposed",
-        "native_state": "provisional_no_trade"
-      },
-      "on_uncomputable": {
-        "action": "abstain",
-        "decision": {
-          "common_stance": "out_of_scope",
-          "native_state": "provisional_no_trade"
-        }
-      },
-      "source_ids": [
-        "proxy:678e17ab8610dd057"
-      ],
-      "veto_id": "master_taleb.unbounded_downside"
-    },
-    {
-      "condition": {
-        "left": {
-          "fact_id": "financial.leverage"
+          "fact_id": "risk.hidden_leverage"
         },
         "op": "gt",
         "right": {
-          "literal": 1
+          "literal": 0
         }
       },
       "on_trigger": {
@@ -459,14 +438,14 @@ Numeric thresholds or transformations below belong to the current project proxy 
       "field": "metric_1",
       "on_missing": "fail",
       "value": {
-        "output_id": "risk.debt_service_cushion.master_taleb"
+        "output_id": "payoff.maximum_loss.master_taleb"
       }
     },
     {
       "field": "metric_2",
       "on_missing": "fail",
       "value": {
-        "output_id": "options.normalised_skew.master_taleb"
+        "output_id": "payoff.convexity_score.master_taleb"
       }
     }
   ],
@@ -480,21 +459,28 @@ Numeric thresholds or transformations below belong to the current project proxy 
   "score_bands": [
     {
       "decision": {
-        "common_stance": "cautious",
-        "native_state": "provisional_hedge_only"
+        "common_stance": "opposed",
+        "native_state": "provisional_no_trade"
       },
       "min_ratio": 0
     },
     {
       "decision": {
         "common_stance": "cautious",
-        "native_state": "provisional_robust"
+        "native_state": "provisional_hedge_only"
       },
       "min_ratio": 0.5
     },
     {
       "decision": {
-        "common_stance": "constructive",
+        "common_stance": "cautious",
+        "native_state": "provisional_robust"
+      },
+      "min_ratio": 0.75
+    },
+    {
+      "decision": {
+        "common_stance": "cautious",
         "native_state": "provisional_convex_opportunity"
       },
       "min_ratio": 1
@@ -511,16 +497,16 @@ Numeric thresholds or transformations below belong to the current project proxy 
       {
         "condition": {
           "left": {
-            "output_id": "risk.debt_service_cushion.master_taleb"
+            "output_id": "payoff.maximum_loss.master_taleb"
           },
-          "op": "gte",
+          "op": "lte",
           "right": {
-            "literal": 2
+            "literal": 1
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "taleb_survives_its_own_fixed_charges",
+        "rule_id": "taleb_maximum_loss_is_bounded_to_capital",
         "source_ids": [
           "proxy:678e17ab8610dd057"
         ]
@@ -528,16 +514,16 @@ Numeric thresholds or transformations below belong to the current project proxy 
       {
         "condition": {
           "left": {
-            "output_id": "options.normalised_skew.master_taleb"
+            "output_id": "payoff.convexity_score.master_taleb"
           },
-          "op": "lte",
+          "op": "gt",
           "right": {
-            "literal": 0.05
+            "literal": 0
           }
         },
         "coverage_weight": 1,
         "points": 1,
-        "rule_id": "taleb_tail_not_already_bid",
+        "rule_id": "taleb_payoff_is_positively_convex",
         "source_ids": [
           "proxy:678e17ab8610dd057"
         ]
@@ -578,7 +564,7 @@ A listed finding blocks the affected comparison from being presented as an appro
         "status": "pending"
       },
       "author": "AlphaCouncil project build specification",
-      "content_hash": "sha256:9b5de8e8d33b9e9f95a73b8dce95c73d192607fdeb5f3e80b16aeb457502fd12",
+      "content_hash": "sha256:17f05d8c15cbd0e7b35c3ef2950e9d0bdc808b0c3815096a23f6fd9b3d99e846",
       "grade": "E",
       "known_at": "2026-07-27",
       "locator": {

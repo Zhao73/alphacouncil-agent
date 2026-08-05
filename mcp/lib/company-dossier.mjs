@@ -25,7 +25,6 @@ export const CRITICAL_COMPANY_COVERAGE_IDS = Object.freeze([
   "financials.cash_flow_capex",
   "financials.segments_geography",
   "expectations.consensus_revenue_eps",
-  "expectations.next_reporting_date",
   "valuation.trading_multiples",
   "valuation.bear_base_bull",
   "news.regulator_timeline",
@@ -444,11 +443,11 @@ function packetManifest(packet) {
   };
 }
 
-export function companyDossierPacketAckTemplate(run) {
+export function companyDossierPacketAckTemplate(run, { includePacketHash = true } = {}) {
   if (!requiresOperatingCompanyDossier(run)) return [];
   return (run.packets || []).map(packetManifest).map((manifest) => ({
     task: manifest.task,
-    packet_hash: manifest.packet_hash,
+    ...(includePacketHash ? { packet_hash: manifest.packet_hash } : {}),
     status: "reviewed_not_relevant",
     source_ids: [],
     note: "<replace with the method-specific reason, or mark used and cite packet-local source IDs>",
@@ -559,7 +558,37 @@ export function companyCoverageInstruction(task, run) {
     ja: "会社資料カバレッジ契約：以下の全 ID を coverage_items に一度ずつ記録してください。note、attempted、gap は単一文字列（配列不可）、source_ids と attempted_urls のみ配列です。covered は本 packet の出典 ID、unavailable は具体的な attempted、実際に試した HTTP(S) URL を1件以上含む attempted_urls、gap と完全一致する open_questions、not_applicable は具体的理由が必須です。欠落時は full run を停止します。",
     ko: "회사 자료 커버리지 계약: 아래 모든 ID를 coverage_items에 정확히 한 번 기록하십시오. note, attempted, gap은 단일 문자열이며 배열이 아니고, source_ids와 attempted_urls만 배열입니다. covered는 이 packet의 출처 ID, unavailable은 구체적인 attempted, 실제 시도한 HTTP(S) URL이 하나 이상인 attempted_urls, gap과 완전히 같은 open_questions, not_applicable은 구체적 사유가 필수입니다. 누락 시 full run을 중단합니다.",
   });
-  return `${instructions}\n\nRequired coverage IDs JSON: ${JSON.stringify(ids)}\nReader language: ${run.language}; task: ${task}; contract: ${COMPANY_DOSSIER_CONTRACT_ID}; chinese=${chinese}`;
+  const marketHistory = run?.grounding?.market_history;
+  const taskSpecific = task === "market_data" && marketHistory?.available
+    ? localized(run.language, {
+      zh: "- 本次服务器已给出带来源的同步日线 market_history。必须直接使用其 subject、benchmarks、relative_performance 与 source_records 覆盖 market.price_history_range、market.liquidity_volume 和 market.relative_performance；不得因为另一个网页打不开而把已提供的数据改写成 unavailable。把实际使用的 source_records 复制进本包 sources 并引用其 ID。",
+      en: "- The server supplied sourced, aligned daily market_history for this run. Use its subject, benchmarks, relative_performance, and source_records to cover market.price_history_range, market.liquidity_volume, and market.relative_performance. A different web page being blocked cannot turn supplied data into unavailable. Copy the source_records actually used into packet sources and cite their IDs.",
+      ja: "- サーバー提供の出典付き同期日次 market_history を使用し、価格履歴、流動性、相対パフォーマンスをカバーしてください。別サイトの取得失敗を理由に、提供済みデータを unavailable にしてはいけません。",
+      ko: "- 서버가 제공한 출처 포함 동기화 일별 market_history로 가격 이력, 유동성, 상대성과를 커버하십시오. 다른 웹페이지 접근 실패를 이유로 이미 제공된 데이터를 unavailable로 바꾸면 안 됩니다.",
+    })
+    : task === "forward_expectations"
+      ? localized(run.language, {
+        zh: "- expectations.next_reporting_date 同时区分两层：发行人确认日期与公开日历预计日期。若发行人尚未公告，但本席实际打开的公开日历给出带观察日期的预计值，则该领域是 covered；明确写成‘第三方预计、非发行人确认’，并将 reported_actual 仅解释为‘实际观察到该日历所发布的估计’，绝不能冒充公司公告。只有确认日期和带来源预计日期都取不到时才是 unavailable。",
+        en: "- For expectations.next_reporting_date, separate an issuer-confirmed date from a public-calendar estimate. If the issuer has not announced it but a calendar you actually opened provides a dated estimate, the domain is covered. Label it third-party estimated / not issuer-confirmed; reported_actual means the calendar estimate was actually observed, never that the issuer confirmed the event. Use unavailable only when neither a confirmed nor a sourced estimated date exists.",
+        ja: "- 次回決算日は、発行体確認日と公開カレンダー予想日を分けます。発行体未発表でも、実際に確認した公開カレンダーに観測日時付き予想があれば covered とし、第三者予想・未確認と明記します。",
+        ko: "- 다음 실적 발표일은 발행사 확정일과 공개 캘린더 예상일을 분리합니다. 발행사 미공개라도 실제 확인한 공개 캘린더에 관측 시점이 있는 예상일이 있으면 covered로 기록하고 제3자 예상·미확정임을 명시합니다.",
+      })
+      : task === "news_industry_management"
+        ? localized(run.language, {
+          zh: "- 对 starter pack 中 management_changes 的每条带日期线索，必须用标题在发行人官网域名内核对原文；若 issuer_documents 已给出标题匹配且带发布日期的官网正文，直接把该官网原文纳入 sources 并覆盖 news.management_board_changes。Google/Yahoo 等 feed 链接只负责发现，不得在已有官网原文时把该项降为 unavailable。",
+          en: "- For every dated management_changes lead in the starter pack, verify the exact title on an issuer-owned domain. When issuer_documents already supplies a title-matched, dated issuer page, add that original to sources and cover news.management_board_changes. Google/Yahoo feed links are discovery only; do not downgrade the row to unavailable when the dated issuer original is supplied.",
+          ja: "- management_changes の日付付き手掛かりは発行体公式ドメインの原文で確認し、issuer_documents に日付付き公式原文があれば sources に採用して management_board_changes を covered としてください。",
+          ko: "- management_changes의 날짜 있는 단서는 발행사 공식 도메인 원문으로 확인하고 issuer_documents에 날짜 있는 공식 원문이 제공되면 sources에 넣어 management_board_changes를 covered로 처리하십시오.",
+        })
+        : task === "earnings_deep_dive"
+          ? localized(run.language, {
+            zh: "- financials.earnings_call_qna 优先发行人逐字稿/回放。若发行人未发布，但实际打开的公开转录页含可核验的发言人标注与 Q&A 正文，可把‘电话会 Q&A 领域’标为 covered，同时注明二级转录来源、不得冒充官方逐字稿；若不能逐句核验，再按完整来源梯标 unavailable。",
+            en: "- For financials.earnings_call_qna, prefer an issuer transcript or replay. If none exists but a public transcript you actually opened has speaker-labelled, verifiable Q&A text, the Q&A domain may be covered while clearly labelling the secondary transcript and never presenting it as issuer-authored. If sentences cannot be verified, exhaust the ladder and mark unavailable.",
+            ja: "- 決算通話 Q&A は発行体の逐語録・録画を優先し、なければ話者付きで検証可能な公開転記を二次資料と明記して利用できます。検証不能なら unavailable とします。",
+            ko: "- 실적발표 Q&A는 발행사 녹취록·재생본을 우선하며, 없을 경우 화자 표시와 검증 가능한 본문이 있는 공개 전사본을 2차 자료로 명시해 사용할 수 있습니다. 검증할 수 없으면 unavailable로 기록합니다.",
+          })
+          : "";
+  return `${instructions}${taskSpecific ? `\n${taskSpecific}` : ""}\n\nRequired coverage IDs JSON: ${JSON.stringify(ids)}\nReader language: ${run.language}; task: ${task}; contract: ${COMPANY_DOSSIER_CONTRACT_ID}; chinese=${chinese}`;
 }
 
 export function companyDossierPromptBlock(run) {
@@ -567,7 +596,10 @@ export function companyDossierPromptBlock(run) {
   if (!requiresOperatingCompanyDossier(run) || !ref?.path || !ref?.content_hash) return "";
   verifyCompanyDossierArtifact(run);
   const manifests = run.packets.map(packetManifest);
-  const ackContract = JSON.stringify(companyDossierPacketAckTemplate(run));
+  const ackContract = JSON.stringify(Object.fromEntries(
+    companyDossierPacketAckTemplate(run, { includePacketHash: false })
+      .map(({ task, ...ack }) => [task, ack]),
+  ));
   return localized(run.language, {
     zh: [
       "## 统一公司资料包（强制读取）",
@@ -575,7 +607,7 @@ export function companyDossierPromptBlock(run) {
       `内容哈希：${ref.content_hash}`,
       "下面内嵌的 bounded evidence 只是索引，不是完整资料。回答前必须读取上述 JSON 全文；不得只依据被截断的索引。",
       `输出必须原样带回 \`company_dossier_hash_ack\`: \`${ref.content_hash}\`。哈希缺失或不一致会使该席位失败。`,
-      `每个方法席还必须逐包返回 \`evidence_packet_acks\`，本轮共 ${manifests.length} 包（其中核心包固定 8 个）。每个 task 与 packet_hash 必须恰好出现一次。`,
+      `每个方法席还必须逐包返回 \`evidence_packet_acks\`，本轮共 ${manifests.length} 包（其中核心包固定 8 个）。原生结构化输出以 task 为对象键，每个 task 必须恰好出现一次；不要手抄 packet_hash，服务器会在验证 status、source_ids 与 note 后绑定冻结清单中的精确哈希。`,
       "status 只能是 used / reviewed_not_relevant / unavailable：used 必须列出本包实际使用且同时出现在顶层 source_ids 的来源；reviewed_not_relevant 必须写明本方法为何未使用；unavailable 只能用于本包确实没有任何可用论断时，并写明原因。",
       `逐包回执模板：${ackContract}`,
     ].join("\n"),
@@ -585,12 +617,12 @@ export function companyDossierPromptBlock(run) {
       `Content hash: ${ref.content_hash}`,
       "The bounded evidence embedded below is an index, not the full dossier. Read the JSON file in full before answering; do not reason only from the truncated index.",
       `Return \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`; a missing or different hash fails this worker.`,
-      `Every method seat must also return \`evidence_packet_acks\` for all ${manifests.length} packets (exactly eight are core packets). Every task and packet_hash must occur exactly once.`,
+      `Every method seat must also return \`evidence_packet_acks\` for all ${manifests.length} packets (exactly eight are core packets). Native structured output keys this object by task, and every task must occur exactly once. Do not transcribe packet_hash; after validating status, source_ids, and note, the server binds the exact hash from the frozen manifest.`,
       "Status is only used / reviewed_not_relevant / unavailable. used requires packet-local source IDs that also appear in top-level source_ids; reviewed_not_relevant requires a method-specific reason; unavailable is allowed only when the packet contains no usable claim and requires a reason.",
       `Per-packet acknowledgement template: ${ackContract}`,
     ].join("\n"),
-    ja: `完全な会社資料 ${ref.path}（${ref.content_hash}）を回答前に全文読み、company_dossier_hash_ack に同じハッシュを返してください。さらに全${manifests.length}件の evidence_packet_acks を task/packet_hash ごとに一度だけ返し、status は used / reviewed_not_relevant / unavailable のいずれかにしてください。テンプレート: ${ackContract}`,
-    ko: `답변 전에 전체 회사 자료 ${ref.path} (${ref.content_hash})를 모두 읽고 company_dossier_hash_ack에 같은 해시를 반환하십시오. 또한 ${manifests.length}개 전체 evidence_packet_acks를 task/packet_hash별로 정확히 한 번 반환하고 status는 used / reviewed_not_relevant / unavailable 중 하나여야 합니다. 템플릿: ${ackContract}`,
+    ja: `完全な会社資料 ${ref.path}（${ref.content_hash}）を回答前に全文読み、company_dossier_hash_ack に同じハッシュを返してください。さらに全${manifests.length}件の evidence_packet_acks を task ごとに一度だけ返し、status は used / reviewed_not_relevant / unavailable のいずれかにしてください。packet_hash は書かず、サーバーが凍結済みハッシュを結合します。テンプレート: ${ackContract}`,
+    ko: `답변 전에 전체 회사 자료 ${ref.path} (${ref.content_hash})를 모두 읽고 company_dossier_hash_ack에 같은 해시를 반환하십시오. 또한 ${manifests.length}개 전체 evidence_packet_acks를 task별로 정확히 한 번 반환하고 status는 used / reviewed_not_relevant / unavailable 중 하나여야 합니다. packet_hash는 쓰지 말고 서버가 동결된 해시를 결합합니다. 템플릿: ${ackContract}`,
   });
 }
 
@@ -691,7 +723,10 @@ export function assertCompanyDossierPacketAcks(packet, run, label, { client = fa
       ? [...new Set(row.source_ids.filter((id) => typeof id === "string" && id.trim()))]
       : [];
     const note = typeof row.note === "string" ? row.note.trim() : "";
-    if (row.packet_hash !== manifest.packet_hash) {
+    // The worker owns the per-packet disposition, not a 64-character server hash copy. Older
+    // clients may still echo the hash and are checked strictly; new workers omit it and the
+    // normalized persisted acknowledgement is bound to the frozen manifest below.
+    if (row.packet_hash !== undefined && row.packet_hash !== manifest.packet_hash) {
       problems.push({
         task: manifest.task,
         reason: "packet_hash_mismatch",
@@ -740,6 +775,7 @@ export function assertCompanyDossierPacketAcks(packet, run, label, { client = fa
     contract_id: COMPANY_DOSSIER_CONTRACT_ID,
     label,
     expected_packet_count: (dossier.packet_manifest || []).length,
+    supplied_packet_count: rows.length,
     core_packet_count: Object.keys(OPERATING_COMPANY_COVERAGE).length,
     problems,
   };

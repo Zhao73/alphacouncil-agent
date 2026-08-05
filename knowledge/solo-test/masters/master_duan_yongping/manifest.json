@@ -67,9 +67,8 @@
       "financial.gross_margin_5y"
     ],
     "hard_vetoes": [
-      "master_duan_yongping.not_understood",
-      "master_duan_yongping.integrity_breach",
-      "master_duan_yongping.user_value_absent"
+      "master_duan_yongping.nothing_to_discount",
+      "master_duan_yongping.growth_without_user_value"
     ],
     "native_output": "user_value_owner_decision_v1"
   },
