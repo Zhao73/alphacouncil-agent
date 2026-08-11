@@ -356,13 +356,34 @@ test("critical unavailable data blocks the decision while non-critical unavailab
   assert.deepEqual(unannouncedDate.critical_gaps, []);
 });
 
-test("coverage instructions preserve estimated dates and supplied market history without upgrading their source status", () => {
+test("coverage instructions map supplied market-history provenance to packet-local aliases", () => {
   const run = companyRun();
   run.language = "中文";
-  run.grounding.market_history = { available: true };
+  run.grounding.market_history = {
+    available: true,
+    source_records: [{ id: "market_history:VRT:2026-08-05" }],
+  };
   const market = companyCoverageInstruction("market_data", run);
   assert.match(market, /必须直接使用其 subject、benchmarks、relative_performance/);
   assert.match(market, /不得因为另一个网页打不开而把已提供的数据改写成 unavailable/);
+  assert.match(market, /保留 title、url、published_at、retrieved_at、observed_at 与 source_kind/);
+  assert.match(market, /一一映射为本包内唯一、无冒号的本地别名（如 S1\/S2）/);
+  assert.match(market, /claims、coverage_items 与 acquisition_ledger（包括 attempts）里的所有 source_ids 只能引用这些别名/);
+  assert.match(market, /record_visible_packet 会在入库时加上 market_data: 作用域/);
+  assert.match(market, /绝不能把 market_history:\* 服务器 ID 原样放进 packet/);
+
+  run.language = "English";
+  const englishMarket = companyCoverageInstruction("market_data", run);
+  assert.match(englishMarket, /unique colon-free packet-local alias \(for example S1\/S2\)/);
+  assert.match(englishMarket, /claims, coverage_items, and acquisition_ledger \(including attempts\)/);
+  assert.match(englishMarket, /Never put a market_history:\* server ID verbatim in the packet/);
+
+  run.language = "日本語";
+  assert.match(companyCoverageInstruction("market_data", run), /コロンを含まないローカル別名（例 S1\/S2）/);
+  run.language = "한국어";
+  assert.match(companyCoverageInstruction("market_data", run), /콜론이 없는 로컬 별칭\(예: S1\/S2\)/);
+
+  run.language = "中文";
   const expectations = companyCoverageInstruction("forward_expectations", run);
   assert.match(expectations, /第三方预计、非发行人确认/);
   assert.match(expectations, /绝不能冒充公司公告/);

@@ -418,7 +418,7 @@ export function buildVerifierHeadlessOutputSchema(run, verifierId, expectedClaim
       note: { type: "string", minLength: 1, maxLength: 240 },
       checked_urls: {
         type: "array",
-        maxItems: 12,
+        maxItems: 64,
         items: { type: "string" },
       },
       queries: {
@@ -515,7 +515,7 @@ export function verifierBatchPrompt(run, verifierId, inputPath, {
     keyedResults
       ? "You MUST return exactly one result for EVERY supplied claim_id, using each exact claim_id once as a key inside the results object. Do not repeat claim_id inside the result value. Missing or unexpected keys fail the entire verification stage."
       : "You MUST return exactly one result for EVERY supplied claim_id, in the same order. Do not select a subset, merge claims, add claims, or stop after one. Missing, duplicate, or unexpected claim IDs fail the entire verification stage.",
-    "Keep transport compact: note is one sentence (<=240 characters), at most 12 checked_urls and 2 queries, excerpt <=600 characters, and rederivation <=360 characters. Do not add methodology preambles or repeat the claim.",
+    "Keep transport compact: note is one sentence (<=240 characters), at most 64 checked_urls and 2 queries, excerpt <=600 characters, and rederivation <=360 characters. The larger URL ceiling exists only so source_fidelity can preserve every URL in an atomic oversized claim. Do not add methodology preambles or repeat the claim.",
     ...sourceFidelityInstructions,
     verifierId === "rederivation"
         ? "The input deliberately omits the original URLs. Search independently for every claim. agree/disagree require at least one independently located URL and a non-empty rederivation; cannot_confirm requires the queries attempted. Independently landing on the same primary filing is allowed and will be transparently marked as source overlap by the server."

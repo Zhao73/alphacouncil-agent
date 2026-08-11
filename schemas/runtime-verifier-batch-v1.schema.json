@@ -33,7 +33,7 @@
           "note": { "type": "string", "pattern": "\\S", "maxLength": 240 },
           "checked_urls": {
             "type": "array",
-            "maxItems": 12,
+            "maxItems": 64,
             "uniqueItems": true,
             "items": { "type": "string", "format": "uri", "pattern": "^https?://" }
           },

@@ -242,6 +242,42 @@ test("one SEC record can ground multiple derived metrics without a source identi
   );
 });
 
+test("a short-history screen metric cannot masquerade as a ten-year typed fact", () => {
+  const grounding = liveGrounding();
+  const sourceId = "sec:companyfacts:0000000001:StockholdersEquity:0000000001-26-000001:2025-12-31";
+  grounding.screen = {
+    cik: "0000000001",
+    public_at: "2026-02-15",
+    metrics: [{
+      rule: "roe_10y",
+      value: 64.21,
+      unit: "%",
+      period_start: "2019-01-01",
+      period_end: "2025-12-31",
+      fiscal_year: 2025,
+      public_at: "2026-02-15",
+      source_ids: [sourceId],
+    }],
+  };
+
+  const adapted = adaptGroundingToTypedFacts(grounding, { asOf: AS_OF });
+  assert.equal(
+    adapted.fact_pack.facts.some((fact) => fact.fact_id === "financial.return_on_equity_10y"),
+    false,
+  );
+  assert.deepEqual(
+    adapted.diagnostics.find((entry) => entry.code === "screen_metric_window_mismatch"),
+    {
+      code: "screen_metric_window_mismatch",
+      source: "screen.roe_10y",
+      required_window: "P10Y",
+      observed_period_start: "2019-01-01",
+      observed_period_end: "2025-12-31",
+      action: "not_converted",
+    },
+  );
+});
+
 test("liquidity impulse becomes public no earlier than its latest cited FRED input", () => {
   const fred = (id, observationDate, publicAt) => ({
     id,
