@@ -8,6 +8,7 @@ import {
   QUICK_REPORT_SECTIONS,
   RECORDED_BENCH_MARKER_PREFIX,
   REPORT_SECTIONS,
+  SUPPLEMENTAL_ANALYST_TASKS,
 } from "./constants.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { denseLength, headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
@@ -210,10 +211,22 @@ export function completenessStatus(run) {
   const successfulEvidence = tasks.filter((task) => taskState(run, task).status === "completed");
   const degraded_evidence = tasks.filter((task) => taskState(run, task).status === "degraded");
   const quickMinimumMet = quick && successfulEvidence.length >= LIMITS.QUICK_MIN_SUCCESSFUL_TASKS;
+  // A lost supplemental seat used to abort the entire council: `analyzeSymbol` finalizes before
+  // debate on any missing evidence, so one timed-out context seat skipped all method seats, the
+  // debate and the PM, and the reader got a run with no rating at all. These three own none of
+  // the 52 dossier routes, so their absence is a disclosed breadth gap, not a foundation gap.
+  // The eight mandatory core roles stay strict -- that gate is what keeps a thin run from
+  // presenting itself as a decision.
+  const supplemental = new Set(SUPPLEMENTAL_ANALYST_TASKS);
   const missing_evidence = tasks.filter((task) => {
     const status = taskState(run, task).status;
-    return status !== "completed" && !(quickMinimumMet && status === "degraded");
+    if (status === "completed") return false;
+    if (quickMinimumMet && status === "degraded") return false;
+    return !(!quick && supplemental.has(task));
   });
+  const missing_supplemental_evidence = tasks.filter((task) => (
+    !quick && supplemental.has(task) && taskState(run, task).status !== "completed"
+  ));
   // All three debate roles, including portfolio_manager. SKILL.md and the
   // record_visible_decision tool description have always promised the PM is enforced;
   // the gate only ever checked the two researchers, so a run that skipped the PM
@@ -245,13 +258,19 @@ export function completenessStatus(run) {
     missing_masters,
     degraded_evidence,
     degraded_debate,
+    missing_supplemental_evidence,
     // Missing/failed mandatory evidence is not complete coverage. Quick keeps its explicit
     // degraded axis only when the minimum-coverage rule converted every affected seat into
     // an allowed degraded record; otherwise the missing gate wins and coverage is incomplete.
-    evidence_coverage: missing_evidence.length ? "incomplete" : degraded_evidence.length ? "degraded" : "complete",
+    // A lost supplemental seat no longer blocks the council, but it must never read as full
+    // coverage either -- it degrades the axis so the gap stays visible to the reader.
+    evidence_coverage: missing_evidence.length
+      ? "incomplete"
+      : (degraded_evidence.length || missing_supplemental_evidence.length) ? "degraded" : "complete",
     quick_minimum_successful_tasks: quick ? LIMITS.QUICK_MIN_SUCCESSFUL_TASKS : null,
     successful_evidence_count: successfulEvidence.length,
     missing_evidence_count: missing_evidence.length,
+    missing_supplemental_evidence_count: missing_supplemental_evidence.length,
     missing_debate_count: missing_debate.length,
     missing_masters_count: missing_masters.length,
     company_dossier,

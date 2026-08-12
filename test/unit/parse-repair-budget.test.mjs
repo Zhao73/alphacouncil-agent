@@ -17,8 +17,10 @@ function fullRun(pace, { totalMs = COUNCIL_PACES[pace].total_ms, deadlineMs = to
 
 test("parse repair budgets scale across every fast, normal and slow stage", () => {
   const expected = {
-    fast: { evidence_ms: 140_000, master_ms: 40_000, debate_ms: 60_000, pm_ms: 80_000 },
-    normal: { evidence_ms: 240_000, master_ms: 80_000, debate_ms: 100_000, pm_ms: 120_000 },
+    // Derived from each stage cap, so this table moves with the tiers. It was last recomputed
+    // when fast and normal were rebalanced onto their measured stage floors.
+    fast: { evidence_ms: 186_666, master_ms: 73_333, debate_ms: 30_000, pm_ms: 63_333 },
+    normal: { evidence_ms: 240_000, master_ms: 120_000, debate_ms: 120_000, pm_ms: 120_000 },
     slow: { evidence_ms: 240_000, master_ms: 170_000, debate_ms: 240_000, pm_ms: 240_000 },
   };
   for (const [pace, stages] of Object.entries(expected)) {

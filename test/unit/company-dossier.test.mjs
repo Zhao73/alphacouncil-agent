@@ -305,6 +305,25 @@ test("unavailable coverage requires a named attempt, valid attempted URLs, and a
   }
 });
 
+test("paywalled sell-side consensus is a declared gap, not a decision barrier", () => {
+  // Every other critical id is obtainable from a filing, an issuer page or a free market
+  // source. Consensus revenue/EPS is licensed (FactSet/Refinitiv/Bloomberg), so holding the
+  // barrier on it made `insufficient` the standing outcome for operating companies: the seat
+  // honestly reported `unavailable`, was retroactively demoted to `failed`, and that single
+  // demotion aborted the council before any method seat, the debate or the PM ran.
+  const coverage = coverageForPacket(
+    markUnavailable(coveredPacket("forward_expectations"), "expectations.consensus_revenue_eps"),
+  );
+  assert.equal(coverage.status, "complete");
+  assert.equal(coverage.sufficiency, "limited", "a licensed-data gap limits the dossier");
+  assert.equal(coverage.decision_barrier_ready, true, "it must not abort the council");
+  assert.deepEqual(coverage.critical_gaps, [], "consensus is not a critical gap");
+  // The route stays owned and required, so the seat must still attempt it and declare an outcome.
+  assert.ok(
+    OPERATING_COMPANY_COVERAGE.forward_expectations.includes("expectations.consensus_revenue_eps"),
+  );
+});
+
 test("critical unavailable data blocks the decision while non-critical unavailable data remains usable", () => {
   const criticalTask = "market_data";
   const criticalId = "market.quote_snapshot";

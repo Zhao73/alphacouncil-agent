@@ -103,6 +103,10 @@ export const ALL_ANALYST_TASKS = Object.freeze([
   ...OPTIONAL_ANALYST_TASKS,
 ]);
 export const ANALYST_SCOPES = Object.freeze(["core", "all"]);
+// The three `all`-scope seats that add context but own none of the operating-company dossier's
+// 52 acquisition routes. They are breadth, not foundation, so both the packet layer and the
+// completeness gate treat them differently from the eight mandatory core roles.
+export const SUPPLEMENTAL_ANALYST_TASKS = Object.freeze(["macro_regime", "market_narrative", "social_pulse"]);
 // A first-class bounded council for users who explicitly ask for a quick read. Keep this
 // list independent of DEFAULT_TASKS ordering: the previous `slice(0, 4)` silently omitted
 // company/industry news, which was the main thing many quick-read users asked for.
@@ -400,27 +404,40 @@ export const LIMITS = Object.freeze({
  * seconds, and twelve minutes per evidence seat instead of six.
  */
 export const COUNCIL_PACES = Object.freeze({
+  // Measured floor for a COMPLETE full_v2, from runs whose caps did not truncate the stage:
+  // evidence 262s (11 seats in parallel), method voice 106s worst of 26, debate 142s per round,
+  // PM 108s. With grounding and persistence that is ~1073s, so fifteen minutes cannot hold a
+  // complete three-round council no matter how the stages are cut. `fast` is therefore an
+  // explicit best-effort tier: it is sized so the stages that PRODUCE reader content -- evidence
+  // and the method bench -- clear their measured worst case, and the debate takes the shortfall.
+  // Use `normal` when the report has to be complete; its caps cover every measured stage.
   fast: Object.freeze({
     pace: "fast",
     total_ms: 15 * 60 * 1000,
     grounding_ms: 20 * 1000,
-    evidence_ms: 210 * 1000,
-    master_ms: 60 * 1000,
+    evidence_ms: 280 * 1000,
+    master_ms: 110 * 1000,
     master_waves: 2,
     verifier_ms: 0,
-    debate_ms: 90 * 1000,
-    pm_ms: 120 * 1000,
+    debate_ms: 45 * 1000,
+    pm_ms: 95 * 1000,
     finalize_reserve_ms: 45 * 1000,
   }),
+  // `normal` is the tier to reach for when the report has to be complete. Its caps were leaving
+  // 495s of the 1800s budget unspendable while two stages sat right on their wall: a method
+  // voice worker timed out at exactly 120007ms, and 150s of debate covered a measured 142s
+  // round by 5%. Idle budget is not depth, so the headroom now goes to the two stages that were
+  // actually truncating. `debate_ms` stops at 180s because `slow` must stay at least twice
+  // `normal`, which pins the ceiling for this tier.
   normal: Object.freeze({
     pace: "normal",
     total_ms: 30 * 60 * 1000,
     grounding_ms: 30 * 1000,
     evidence_ms: 6 * 60 * 1000,
-    master_ms: 2 * 60 * 1000,
+    master_ms: 3 * 60 * 1000,
     master_waves: 2,
     verifier_ms: 0,
-    debate_ms: 150 * 1000,
+    debate_ms: 180 * 1000,
     pm_ms: 180 * 1000,
     finalize_reserve_ms: 45 * 1000,
   }),

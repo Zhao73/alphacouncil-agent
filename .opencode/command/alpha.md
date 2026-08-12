@@ -134,6 +134,12 @@ master-selection contract.
    Tell the user which pace ran and what it bought: the tier raises every per-stage cap, so
    `slow` gives each evidence seat 12 minutes instead of 6 and each debate round 6 minutes per
    side instead of 150 seconds. All three paces are the same `full_v2` contract.
+   `normal` is the pace to default to and the one to recommend when the user asks for a
+   complete, presentable report. Measured stage floors for a complete council are ~262s of
+   evidence, ~106s for the slowest method voice, ~142s per debate round and ~108s for the PM,
+   which lands a clean run around eighteen minutes -- inside `normal` and outside `fast`.
+   Say so plainly if the user asks for fifteen minutes: `fast` cannot hold a complete
+   three-round council, and it spends its shorter clock on evidence and the bench.
 8. `plan_visible_run` is owned by the external host. The plugin cannot force-stop its Task
    agents, so visible-host full must not be advertised as meeting the 30-minute deadline.
 9. The terminal full handoff must include the system price snapshot (or explicit unavailable

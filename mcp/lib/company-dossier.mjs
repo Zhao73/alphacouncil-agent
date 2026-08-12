@@ -24,7 +24,16 @@ export const CRITICAL_COMPANY_COVERAGE_IDS = Object.freeze([
   "financials.balance_sheet_liquidity",
   "financials.cash_flow_capex",
   "financials.segments_geography",
-  "expectations.consensus_revenue_eps",
+  // `expectations.consensus_revenue_eps` is deliberately NOT critical. Every other id here is
+  // obtainable from a filing, an issuer page or a free market source, so a gap in one is a
+  // research failure worth blocking on. Sell-side consensus is not: it lives behind FactSet /
+  // Refinitiv / Bloomberg licensing, so a keyless council can almost never source it. Holding
+  // the decision barrier on it made `insufficient` the standing outcome for operating
+  // companies -- the seat honestly reported `unavailable`, was retroactively demoted to
+  // `failed`, and that one demotion aborted the whole council before any method seat, the
+  // debate or the PM ran. It stays a required, owned route, so the seat must still attempt it
+  // and declare the outcome; an explicit unavailable now lands in `limited` and is published in
+  // the report's data-gap section instead of silently costing the reader the entire run.
   "valuation.trading_multiples",
   "valuation.bear_base_bull",
   "news.regulator_timeline",

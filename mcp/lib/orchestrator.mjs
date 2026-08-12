@@ -3933,7 +3933,22 @@ export async function runHeadlessMasters(run, args = {}) {
     };
 
     const workerStartedAt = Date.now();
-    let result = await execute(prompt, timeoutMs, 1);
+    let workerAttempt = 1;
+    let result = await execute(prompt, timeoutMs, workerAttempt);
+    // A voice worker that produced nothing before its cap is almost always a stalled spawn,
+    // not a seat that needed longer. Measured worker time is ~106s for the slowest of 26, yet
+    // the failures land at EXACTLY the cap, on a different seat each run, at both 120s and
+    // 180s. Raising the cap chases that and pays the full cap for every stall; one fresh
+    // attempt does not, and a healthy retry finishes in the usual ~106s. A silence watchdog
+    // was measured and rejected: codex is legitimately silent for 15s+ on a trivial prompt
+    // and emits its answer in one final chunk, so silence cannot separate stalled from busy.
+    // Only a timeout earns the retry -- parse and policy failures have their own repair paths
+    // below -- and only when the run can still afford the attempt.
+    if (!result.ok && result.timedOut && remainingCouncilBudget(run, timeoutMs) > 0) {
+      workerAttempt = 2;
+      appendEvent(run, "master_retry", { master: id, reason: "worker_timeout", attempt: workerAttempt });
+      result = await execute(prompt, timeoutMs, workerAttempt);
+    }
     if (!result.ok) {
       const failureKind = workerExecutionFailureKind(result);
       return {
@@ -3941,11 +3956,11 @@ export async function runHeadlessMasters(run, args = {}) {
         engine,
         error: failureKind,
         raw: cleanLog(result.stderr || result.stdout || "method worker failed"),
-        attempts: 1,
+        attempts: workerAttempt,
         failure_stage: "worker_execution",
         diagnostic: masterAttemptFailureDiagnostic({
           master: id,
-          attempt: 1,
+          attempt: workerAttempt,
           failureKind,
           error: new Error(failureKind),
           result,
@@ -4467,6 +4482,33 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   return { bull, bear, manager, ...finalArtifacts };
 }
 
+/**
+ * Whether the recorded method bench is substantial enough to debate on.
+ *
+ * The bench gate used to be all-or-nothing, so one voice worker that hung took the debate and
+ * the PM with it and the reader got a run with no rating at all -- twice in a row on a 26-seat
+ * bench, each time a different seat pinned at exactly its cap with no retry. The risk that gate
+ * exists for is a bench nobody consulted, presented as if the verdict had survived every lens;
+ * twenty-five of twenty-six consulted is not that. So a near-complete bench proceeds, while a
+ * materially unconsulted one still stops before the expensive downstream stages.
+ *
+ * This does NOT make the run complete: the missing seats stay in `missing_masters`, the run
+ * still terminates `incomplete`, and the report still names every seat that never reported.
+ * It only decides whether a decision gets written at all.
+ */
+const METHOD_BENCH_MAX_ABSENT = 2;
+const METHOD_BENCH_MIN_RECORDED = 8;
+
+export function methodBenchQuorumMet(run, gate = completenessStatus(run)) {
+  const missing = gate.missing_masters.length;
+  if (missing === 0) return true;
+  const selected = Array.isArray(run.masters) ? run.masters.length : 0;
+  const recorded = selected - missing;
+  // A small hand-picked bench is a different instrument from `all`: every seat there was chosen
+  // deliberately, so losing one is proportionally much larger and still stops the run.
+  return missing <= METHOD_BENCH_MAX_ABSENT && recorded >= METHOD_BENCH_MIN_RECORDED;
+}
+
 function finalizeBeforeDebate(run, args, reason) {
   const dir = runPath(run.run_id);
   for (const role of DEBATE_ROLES) {
@@ -4821,7 +4863,7 @@ export async function analyzeSymbol(args) {
   }
   await runHeadlessMasters(run, args);
   gate = completenessStatus(run);
-  if (gate.missing_masters.length > 0 || remainingCouncilBudget(run, 1) <= 0) {
+  if (!methodBenchQuorumMet(run, gate) || remainingCouncilBudget(run, 1) <= 0) {
     const debate = finalizeBeforeDebate(run, args,
       gate.missing_masters.length ? "master_gate_failed" : "global_deadline_before_debate");
     return {
