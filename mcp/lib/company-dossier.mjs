@@ -24,7 +24,16 @@ export const CRITICAL_COMPANY_COVERAGE_IDS = Object.freeze([
   "financials.balance_sheet_liquidity",
   "financials.cash_flow_capex",
   "financials.segments_geography",
-  "expectations.consensus_revenue_eps",
+  // `expectations.consensus_revenue_eps` is deliberately NOT critical. Every other id here is
+  // obtainable from a filing, an issuer page or a free market source, so a gap in one is a
+  // research failure worth blocking on. Sell-side consensus is not: it lives behind FactSet /
+  // Refinitiv / Bloomberg licensing, so a keyless council can almost never source it. Holding
+  // the decision barrier on it made `insufficient` the standing outcome for operating
+  // companies -- the seat honestly reported `unavailable`, was retroactively demoted to
+  // `failed`, and that one demotion aborted the whole council before any method seat, the
+  // debate or the PM ran. It stays a required, owned route, so the seat must still attempt it
+  // and declare the outcome; an explicit unavailable now lands in `limited` and is published in
+  // the report's data-gap section instead of silently costing the reader the entire run.
   "valuation.trading_multiples",
   "valuation.bear_base_bull",
   "news.regulator_timeline",
@@ -561,10 +570,10 @@ export function companyCoverageInstruction(task, run) {
   const marketHistory = run?.grounding?.market_history;
   const taskSpecific = task === "market_data" && marketHistory?.available
     ? localized(run.language, {
-      zh: "- 本次服务器已给出带来源的同步日线 market_history。必须直接使用其 subject、benchmarks、relative_performance 与 source_records 覆盖 market.price_history_range、market.liquidity_volume 和 market.relative_performance；不得因为另一个网页打不开而把已提供的数据改写成 unavailable。把实际使用的 source_records 复制进本包 sources 并引用其 ID。",
-      en: "- The server supplied sourced, aligned daily market_history for this run. Use its subject, benchmarks, relative_performance, and source_records to cover market.price_history_range, market.liquidity_volume, and market.relative_performance. A different web page being blocked cannot turn supplied data into unavailable. Copy the source_records actually used into packet sources and cite their IDs.",
-      ja: "- サーバー提供の出典付き同期日次 market_history を使用し、価格履歴、流動性、相対パフォーマンスをカバーしてください。別サイトの取得失敗を理由に、提供済みデータを unavailable にしてはいけません。",
-      ko: "- 서버가 제공한 출처 포함 동기화 일별 market_history로 가격 이력, 유동성, 상대성과를 커버하십시오. 다른 웹페이지 접근 실패를 이유로 이미 제공된 데이터를 unavailable로 바꾸면 안 됩니다.",
+      zh: "- 本次服务器已给出带来源的同步日线 market_history。必须直接使用其 subject、benchmarks、relative_performance 与 source_records 覆盖 market.price_history_range、market.liquidity_volume 和 market.relative_performance；不得因为另一个网页打不开而把已提供的数据改写成 unavailable。复制实际使用的 source_records 时，保留 title、url、published_at、retrieved_at、observed_at 与 source_kind，但不要复制服务器 id；把每个服务器 id 一一映射为本包内唯一、无冒号的本地别名（如 S1/S2），写入 sources[].id。claims、coverage_items 与 acquisition_ledger（包括 attempts）里的所有 source_ids 只能引用这些别名；record_visible_packet 会在入库时加上 market_data: 作用域。绝不能把 market_history:* 服务器 ID 原样放进 packet。",
+      en: "- The server supplied sourced, aligned daily market_history for this run. Use its subject, benchmarks, relative_performance, and source_records to cover market.price_history_range, market.liquidity_volume, and market.relative_performance. A different web page being blocked cannot turn supplied data into unavailable. Copy each source_record actually used into packet sources, preserving title, url, published_at, retrieved_at, observed_at, and source_kind, but do not copy its server id. Map every server id one-to-one to a unique colon-free packet-local alias (for example S1/S2) and use that alias as sources[].id. Every source_ids entry in claims, coverage_items, and acquisition_ledger (including attempts) must cite those aliases; record_visible_packet applies the market_data: scope at ingestion. Never put a market_history:* server ID verbatim in the packet.",
+      ja: "- サーバー提供の出典付き同期日次 market_history を使用し、価格履歴、流動性、相対パフォーマンスをカバーしてください。別サイトの取得失敗を理由に、提供済みデータを unavailable にしてはいけません。実際に使用する source_records は title、url、published_at、retrieved_at、observed_at、source_kind を保持して packet の sources にコピーしますが、サーバー id はコピーしません。各サーバー id を、本 packet 内で一意かつコロンを含まないローカル別名（例 S1/S2）へ 1 対 1 で対応させ、sources[].id に設定してください。claims、coverage_items、acquisition_ledger（attempts を含む）の全 source_ids はその別名だけを参照します。record_visible_packet が保存時に market_data: スコープを付けるため、market_history:* のサーバー ID を packet にそのまま入れてはいけません。",
+      ko: "- 서버가 제공한 출처 포함 동기화 일별 market_history로 가격 이력, 유동성, 상대성과를 커버하십시오. 다른 웹페이지 접근 실패를 이유로 이미 제공된 데이터를 unavailable로 바꾸면 안 됩니다. 실제로 사용하는 source_records는 title, url, published_at, retrieved_at, observed_at, source_kind를 보존해 packet sources에 복사하되 서버 id는 복사하지 마십시오. 각 서버 id를 packet 안에서 고유하고 콜론이 없는 로컬 별칭(예: S1/S2)에 일대일로 매핑하고 sources[].id에 사용하십시오. claims, coverage_items, acquisition_ledger(attempts 포함)의 모든 source_ids는 그 별칭만 참조해야 합니다. record_visible_packet이 저장할 때 market_data: 범위를 붙이므로 market_history:* 서버 ID를 packet에 그대로 넣지 마십시오.",
     })
     : task === "forward_expectations"
       ? localized(run.language, {

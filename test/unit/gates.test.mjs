@@ -4,6 +4,7 @@ import { __test__ } from "../../mcp/server.mjs";
 import { completeReport, completeRun, scopedPacket } from "../helpers/fixtures.mjs";
 import { DEBATE_ROLES } from "../../mcp/lib/constants.mjs";
 import { masterSeatIncomplete } from "../../mcp/lib/gates.mjs";
+import { methodBenchQuorumMet } from "../../mcp/lib/orchestrator.mjs";
 
 const {
   verificationStatus,
@@ -99,6 +100,59 @@ test("completenessStatus never labels failed mandatory evidence as complete cove
   assert.equal(gate.completeness, "incomplete");
   assert.equal(gate.evidence_coverage, "incomplete");
   assert.deepEqual(gate.missing_evidence, ["market_data"]);
+});
+
+test("a near-complete method bench still gets to debate, a gutted one does not", () => {
+  // One hung voice worker used to take the debate and the PM with it, so the reader got a run
+  // with no rating because 25 of 26 lenses reported instead of 26. The gate's real risk is a
+  // bench nobody consulted; this keeps that stop while letting a near-complete bench decide.
+  const bench = (selected, missing) => ({
+    run: { masters: Array.from({ length: selected }, (_, i) => `master_${i}`) },
+    gate: { missing_masters: Array.from({ length: missing }, (_, i) => `master_${i}`) },
+  });
+  const met = ({ run, gate }) => methodBenchQuorumMet(run, gate);
+
+  assert.equal(met(bench(26, 0)), true);
+  assert.equal(met(bench(26, 2)), true, "two absent seats out of 26 still debate");
+  assert.equal(met(bench(26, 3)), false, "three is where the bench stops being consulted");
+  // A small hand-picked bench is a different instrument: every seat was chosen deliberately.
+  assert.equal(met(bench(9, 2)), false);
+  assert.equal(met(bench(3, 1)), false);
+});
+
+test("a lost supplemental seat no longer aborts the whole council", () => {
+  // analyzeSymbol finalizes before debate on ANY missing evidence, so a timed-out context seat
+  // used to skip every method seat, the debate and the PM -- the reader got a run with no
+  // rating because one of three optional breadth seats missed. These three own none of the 52
+  // dossier routes, so their absence is a disclosed gap, not a foundation gap.
+  const gate = completenessStatus({
+    ...completeRun(),
+    tasks: ["market_data", "market_narrative"],
+    task_status: {
+      market_data: { task: "market_data", status: "completed" },
+      market_narrative: { task: "market_narrative", status: "timed_out", error: "timeout" },
+    },
+  });
+  assert.deepEqual(gate.missing_evidence, [], "the council must still be allowed to run");
+  assert.deepEqual(gate.missing_supplemental_evidence, ["market_narrative"]);
+  // Not blocking is not the same as pretending the seat reported. The gap stays visible.
+  assert.equal(gate.evidence_coverage, "degraded");
+});
+
+test("a lost mandatory seat still closes the evidence barrier", () => {
+  // The eight core roles keep the strict gate: it is what stops a thin run from presenting
+  // itself as a decision.
+  const gate = completenessStatus({
+    ...completeRun(),
+    tasks: ["market_data", "market_narrative"],
+    task_status: {
+      market_data: { task: "market_data", status: "timed_out", error: "timeout" },
+      market_narrative: { task: "market_narrative", status: "completed" },
+    },
+  });
+  assert.deepEqual(gate.missing_evidence, ["market_data"]);
+  assert.equal(gate.evidence_coverage, "incomplete");
+  assert.equal(gate.completeness, "incomplete");
 });
 
 test("completenessStatus flags a missing debate researcher", () => {

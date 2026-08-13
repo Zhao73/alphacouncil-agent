@@ -105,7 +105,10 @@ test("the gate offers every tier with both its estimate and its ceiling", async 
     assert.ok(option.buys.en.includes("evidence seat"), option.pace);
     assert.equal(option.debate_seconds_per_round, Math.round(profile.debate_ms / 1000));
   }
-  assert.deepEqual(opened.pace_options.map((option) => option.expected_minutes), [13, 22, 58]);
+  // normal moved 22 -> 25 when its method-voice and debate caps were raised to cover the
+  // measured stage floors; it was leaving 495s of its budget unspendable while a voice worker
+  // timed out at exactly 120007ms and a 150s debate cap covered a measured 142s round by 5%.
+  assert.deepEqual(opened.pace_options.map((option) => option.expected_minutes), [13, 25, 58]);
   assert.deepEqual(opened.pace_options.map((option) => option.hard_ceiling_minutes), [15, 30, 60]);
   assert.deepEqual(opened.pace_options.filter((option) => option.is_default).map((o) => o.pace), ["normal"]);
 });

@@ -133,6 +133,105 @@ function methodVoicePacket(stance, companyDossierHash, dossier = null) {
   };
 }
 
+test("market-history grounding aliases server provenance before visible packet ingress", async (t) => {
+  const dataDir = makeDataDir();
+  const server = startServer({ dataDir });
+  t.after(async () => {
+    await server.close();
+    removeDataDir(dataDir);
+  });
+  await server.request("initialize", {});
+
+  const asOf = "2026-08-05";
+  const symbol = "VRT";
+  const runId = `MARKET-HISTORY-ALIAS-${process.pid}`;
+  const serverSource = {
+    id: "market_history:VRT:2026-08-05",
+    title: "VRT one-year daily price and volume history",
+    url: "https://query1.finance.yahoo.com/v8/finance/chart/VRT?range=1y&interval=1d&events=history",
+    published_at: "unknown",
+    retrieved_at: `${asOf}T14:44:02.871Z`,
+    observed_at: `${asOf}T14:44:02.871Z`,
+    source_kind: "dynamic_snapshot",
+  };
+  const selection = await confirmMasterSelection(server, {
+    symbol,
+    language: "English",
+    selected_master_ids: [SELECTED_MASTER],
+  });
+  const planned = structured(await server.callTool("plan_visible_run", {
+    symbol,
+    as_of: asOf,
+    language: "English",
+    run_id: runId,
+    grounding: {
+      gathered_at: `${asOf}T14:44:02.871Z`,
+      instrument: {
+        symbol,
+        name: "Vertiv Holdings Co",
+        instrument_type: "equity",
+        research_model: "operating_company",
+        exchange: "NYSE",
+        currency: "USD",
+      },
+      market_history: {
+        available: true,
+        symbol,
+        as_of: asOf,
+        source: "Yahoo Finance chart endpoint, keyless delayed daily history",
+        subject: {
+          first_date: "2025-08-05",
+          latest_date: asOf,
+          session_count: 252,
+          latest_adjusted_close: 277.85,
+          returns: { "5d": 0.245741 },
+        },
+        benchmark_plan: { broad: "SPY", sector: null, symbols: ["SPY"] },
+        benchmarks: {},
+        relative_performance: {},
+        source_records: [serverSource],
+      },
+    },
+    selection_receipt: selection.selection_receipt,
+  }));
+
+  const marketAgent = planned.evidence_agents.find((agent) => agent.role === "market_data");
+  assert.ok(marketAgent?.prompt_file, "market_data must have a persisted prompt");
+  const prompt = readFileSync(marketAgent.prompt_file, "utf8");
+  assert.match(prompt, /market_history:VRT:2026-08-05/);
+  assert.match(prompt, /unique colon-free packet-local alias \(for example S1\/S2\)/);
+  assert.match(prompt, /claims, coverage_items, and acquisition_ledger \(including attempts\)/);
+  assert.match(prompt, /record_visible_packet applies the market_data: scope at ingestion/);
+
+  const evidencePath = join(dataDir, "runs", runId, "evidence.json");
+  const before = readFileSync(evidencePath, "utf8");
+  const serverScopedPacket = evidencePacket("market_data");
+  serverScopedPacket.sources = [serverSource];
+  const rejected = await server.callTool("record_visible_packet", {
+    run_id: runId,
+    task: "market_data",
+    packet: serverScopedPacket,
+  });
+  assert.equal(rejected.error?.data?.reason, "PACKET_SOURCE_SCOPE_MISMATCH");
+  assert.equal(rejected.error?.data?.source_id, serverSource.id);
+  assert.equal(readFileSync(evidencePath, "utf8"), before, "scope rejection must not mutate the visible run");
+
+  const aliasedPacket = structuredClone(serverScopedPacket);
+  aliasedPacket.sources[0].id = "S1";
+  structured(await server.callTool("record_visible_packet", {
+    run_id: runId,
+    task: "market_data",
+    packet: aliasedPacket,
+  }));
+  const persisted = JSON.parse(readFileSync(evidencePath, "utf8"));
+  const packet = persisted.packets.find((candidate) => candidate.task === "market_data");
+  assert.equal(packet.sources[0].id, "market_data:S1");
+  assert.deepEqual(packet.claims[0].source_ids, ["market_data:S1"]);
+  assert.ok(packet.coverage_items.every((item) => (
+    item.source_ids.length === 0 || item.source_ids.every((id) => id === "market_data:S1")
+  )));
+});
+
 test("operating-company dossier materializes only after the eight-packet barrier and hash-binds downstream", async (t) => {
   const dataDir = makeDataDir();
   const server = startServer({ dataDir });

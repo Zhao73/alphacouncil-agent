@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.2.3`; verify npm/GitHub/installed-host state separately
+The declared package/plugin version is `1.4.0`; verify npm/GitHub/installed-host state separately
 before claiming which build is the current published default.
 The packaged tree contains 26 physical v3 packs and 52 executable method tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
@@ -72,7 +72,7 @@ No research, run directory or worker may start before that receipt exists. Data-
   rejected and names the tier that would allow it.
 - A tier sets the total AND every per-stage cap together, because the per-stage caps are what
   bound each worker. `slow` gives each evidence seat 12 minutes instead of 6 and each debate
-  round 6 minutes per side instead of 150 seconds; `fast` gives 3.5 minutes and 90 seconds. That
+  round 6 minutes per side instead of 150 seconds; `fast` gives 4.7 minutes and 45 seconds. That
   is where the depth difference lives — raising `total_timeout_ms` alone buys idle time, and
   lowering it alone starves the later stages into `incomplete`. Every tier's stages are proven
   to fit inside its own budget with headroom.
@@ -105,6 +105,12 @@ No research, run directory or worker may start before that receipt exists. Data-
 - Run Bull and Bear in parallel within Round 1, wait for both, then repeat for Round 2 and
   Round 3. Preserve the exact Round-2-question to Round-3-answer binding. Start the PM only
   after both Round-3 sides pass.
+- Every selected method seat must report for the run to be COMPLETE, and a seat that never
+  reported is always named in `missing_masters` and in the report. Whether the debate and PM
+  run at all is a separate, weaker question: a near-complete bench (at most two absent and at
+  least eight recorded) still proceeds to a decision, because one hung voice worker taking the
+  rating with it serves no reader. A materially unconsulted bench still stops before those
+  stages. Proceeding never upgrades the run: it terminates `incomplete` with the gap published.
 - On global expiry, stop new downstream work and persist a terminal fail-closed `incomplete`
   run naming every timed-out, failed and skipped role. The ceiling guarantees a terminal
   artifact, not that external search/model/data services will let all seats succeed.

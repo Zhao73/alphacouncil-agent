@@ -6,6 +6,7 @@
 
 import { buildFactPack } from "./typed-facts.mjs";
 import { canonicalValue, sha256 } from "./canonical.mjs";
+import { periodWindowMatches } from "../periods.mjs";
 import { inclusiveCutoffTime } from "./source-anchor.mjs";
 
 const ADAPTER_ID = "grounding_to_typed_facts";
@@ -143,13 +144,13 @@ function baseFact({
 }
 
 const SCREEN_FACTS = Object.freeze({
-  roe_10y: { fact_id: "financial.return_on_equity_10y", kind: "percent", denominator: "average_positive_book_equity" },
-  fcf_5y: { fact_id: "financial.free_cash_flow_5y", kind: "usd" },
+  roe_10y: { fact_id: "financial.return_on_equity_10y", kind: "percent", denominator: "average_positive_book_equity", window: "P10Y" },
+  fcf_5y: { fact_id: "financial.free_cash_flow_5y", kind: "usd", window: "P5Y" },
   interest_cover: { fact_id: "financial.interest_coverage", kind: "multiple", denominator: "interest_expense" },
-  gross_margin: { fact_id: "financial.gross_margin_5y", kind: "percent", denominator: "revenue" },
+  gross_margin: { fact_id: "financial.gross_margin_5y", kind: "percent", denominator: "revenue", window: "P5Y" },
   ocf_over_ni: { fact_id: "accounting.cash_conversion", kind: "multiple", denominator: "net_income" },
-  net_margin: { fact_id: "financial.net_margin_5y", kind: "percent", denominator: "revenue" },
-  dilution: { fact_id: "capital_allocation.share_count_change_5y", kind: "percent", denominator: "starting_share_count" },
+  net_margin: { fact_id: "financial.net_margin_5y", kind: "percent", denominator: "revenue", window: "P5Y" },
+  dilution: { fact_id: "capital_allocation.share_count_change_5y", kind: "percent", denominator: "starting_share_count", window: "P5Y" },
 });
 
 function screenFacts(grounding, context) {
@@ -164,6 +165,20 @@ function screenFacts(grounding, context) {
       : [];
     if (!publicAt || !sources.length) {
       context.diagnostics.push({ code: "missing_source_lineage", source: `screen.${metric.rule}`, action: "not_converted" });
+      continue;
+    }
+    if (mapping.window && !periodWindowMatches({
+      period_start: metric.period_start || null,
+      period_end: metric.period_end || null,
+    }, mapping.window)) {
+      context.diagnostics.push({
+        code: "screen_metric_window_mismatch",
+        source: `screen.${metric.rule}`,
+        required_window: mapping.window,
+        observed_period_start: metric.period_start || null,
+        observed_period_end: metric.period_end || null,
+        action: "not_converted",
+      });
       continue;
     }
     const cik = grounding.screen?.cik;

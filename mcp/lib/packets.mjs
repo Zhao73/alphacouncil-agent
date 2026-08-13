@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { LIMITS, MASTER_STANCES, RATINGS } from "./constants.mjs";
+import { LIMITS, MASTER_STANCES, RATINGS, SUPPLEMENTAL_ANALYST_TASKS as SUPPLEMENTAL_ANALYST_TASK_IDS } from "./constants.mjs";
 import { workerExecutionFailureKind } from "./codex.mjs";
 // A worker returning a malformed packet is a client contract violation, not a server bug:
 // these three checks used to raise -32603 while the equivalent checks in the orchestrator
@@ -45,7 +45,7 @@ export function extractJson(text) {
   return parseJsonTransport(text).value;
 }
 
-const SUPPLEMENTAL_ANALYST_TASKS = new Set(["macro_regime", "market_narrative", "social_pulse"]);
+const SUPPLEMENTAL_ANALYST_TASKS = new Set(SUPPLEMENTAL_ANALYST_TASK_IDS);
 
 function normalizeNullableCoverageTransport(kind, payload, { task = null } = {}) {
   if (!["evidence", "news_evidence"].includes(kind)

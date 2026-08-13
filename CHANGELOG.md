@@ -2,6 +2,104 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.4.1] — 2026-08-13
+
+### Fixed
+
+- A method seat whose voice worker died is no longer deleted from the report. It used to leave
+  the reader nothing at all — no statement, no stance, no reason — even though the seat's
+  decision was frozen deterministically before the worker was ever spawned, and one such seat
+  could take the debate and the PM with it. The same renderer that gives an abstaining seat its
+  five first-person fields needs no model, so the seat now publishes that reading, labelled
+  `deterministic_worker_failure` with the worker's failure kind, its public reason and its
+  diagnostic path attached. What a dead worker costs is the model-written prose, not the seat.
+- The fallback is deliberately narrow. It covers failures that left the seat MUTE — a stall, a
+  killed process, exhausted provider quota, a rejected output schema. It does not cover a worker
+  that spoke WRONGLY: forged source provenance, a contract breach or a reader-language violation
+  still fails loudly and visibly, because quietly replacing a wrong answer with a clean one is
+  the silent failure these gates exist to catch.
+
+## [1.4.0] — 2026-08-13
+
+A method seat that withheld its vote was answering the reader with a declination. Two of the
+twenty-six did it on every symbol, and one of them was the valuation lens — so on a name whose
+whole argument is valuation, the reader lost exactly the seat they most wanted to hear from.
+A withheld vote is now a withheld vote, never a withheld view.
+
+### Changed
+
+- The out_of_scope voice instruction was written only for baskets — "classification,
+  concentration, top holdings and weights … a basket it cannot fully underwrite" — so on an
+  operating company the worker had no frame to fill and fell back to leading with what it could
+  not do. It now demands the company itself, read through the method's own priorities, in every
+  one of the five fields, with the same figures and source IDs a voting seat carries. Opening a
+  field with the declination is explicitly forbidden; exactly one sentence in `would_i_act`
+  states that no scored vote is cast and why. The stance itself stays frozen: a seat still
+  cannot talk itself into a scored position its inputs do not support.
+- `position_intent` distinguishes a method that ruled itself out from one whose inputs never
+  arrived. `not_in_my_circle` is a judgment that stays true however much data arrives — an index
+  lens looking at a single operating company. `inputs_unavailable` is the opposite: the method
+  fits the company squarely, but a fact it requires is produced by no tool yet, so the vote
+  waits on the pipeline. Reporting the second as the first told readers a valuation lens found a
+  semiconductor company outside its circle, which is simply untrue.
+
+### Fixed
+
+- A timed-out evidence worker is retried once, within the run's remaining budget — the same
+  stall already handled on the method bench, and more expensive here because a core evidence
+  seat closes the evidence barrier and takes the whole council with it. Two consecutive runs
+  died this way, once on `market_data` and once on `quant_factor`, while every other seat
+  finished comfortably inside the cap (median 136s against 360s). The retry recovered
+  `quant_factor` on the next run, so the cap was never the thing to raise.
+
+## [1.3.0] — 2026-08-12
+
+A full council could reach the end of its evidence phase in good shape and still hand the
+reader a run with no rating. Three separate gates were all-or-nothing, and every one of them
+could be tripped by a single seat, so the cost of one lost worker was the entire decision.
+This release makes each of those gates proportional to what was actually lost, and re-cuts the
+pace tiers against measured stage times instead of estimates.
+
+### Fixed
+
+- Sell-side consensus (`expectations.consensus_revenue_eps`) is no longer a critical coverage
+  route. Every other critical id is obtainable from a filing, an issuer page or a free market
+  source; consensus is licensed, so holding the decision barrier on it made `insufficient` the
+  standing outcome for operating companies. The seat honestly reported `unavailable`, was
+  retroactively demoted to `failed`, and that demotion aborted the council before any method
+  seat, the debate or the PM ran. The route stays required and owned — the seat must still
+  attempt it and declare an outcome — but an explicit unavailable now lands in `limited` and is
+  published in the report's data-gap section.
+- A failed supplemental analyst seat (`macro_regime`, `market_narrative`, `social_pulse`) no
+  longer closes the evidence barrier. Those three own none of the 52 operating-company dossier
+  routes, so their absence is a disclosed breadth gap rather than a foundation gap. The eight
+  mandatory core roles keep the strict gate. Coverage degrades rather than reading as complete.
+- A near-complete method bench now proceeds to the debate and the PM. One hung voice worker
+  used to take the rating with it, on a bench where 25 of 26 seats had reported. At most two
+  absent seats with at least eight recorded still debate; a materially unconsulted bench still
+  stops. This never upgrades the run — the absent seats stay in `missing_masters`, the run still
+  terminates `incomplete`, and the report still names every seat that never reported.
+- A method voice worker that times out is retried once, within the run's remaining budget.
+  Measured worker time is ~106s for the slowest of 26, yet failures landed at exactly the cap,
+  on a different seat each run, at both 120s and 180s — a stalled spawn, not a seat that needed
+  longer. A silence watchdog was measured and rejected: `codex` is legitimately silent for 15s+
+  on a trivial prompt and emits its answer in one final chunk, so silence cannot separate
+  stalled from busy.
+
+### Changed
+
+- `fast` and `normal` stage caps are re-cut against measured stage times. Evidence seats were
+  finishing at 138–262s against a 210s `fast` cap, so roughly half the cohort was truncated;
+  `normal` was leaving 495s of its 1800s budget unspendable while a voice worker timed out at
+  exactly 120007ms and a 150s debate cap covered a measured 142s round by 5%. `fast` is now
+  280s evidence / 110s method / 45s debate / 95s PM, `normal` 360s / 180s / 180s / 180s. The
+  `normal` gate estimate moves from 22 to 25 minutes.
+- `fast` is documented as an explicit best-effort tier. The measured floor for a COMPLETE
+  three-round `full_v2` is ~1073s (262s evidence + 106s method + 3×142s debate + 108s PM plus
+  grounding and persistence), so fifteen minutes cannot hold one however the stages are cut.
+  `fast` spends its shorter clock on the stages that produce reader content and lets the debate
+  take the shortfall; `normal` is the tier to reach for when the report must be complete.
+
 ## [1.2.3] — 2026-08-05
 
 ### Fixed

@@ -305,6 +305,25 @@ test("unavailable coverage requires a named attempt, valid attempted URLs, and a
   }
 });
 
+test("paywalled sell-side consensus is a declared gap, not a decision barrier", () => {
+  // Every other critical id is obtainable from a filing, an issuer page or a free market
+  // source. Consensus revenue/EPS is licensed (FactSet/Refinitiv/Bloomberg), so holding the
+  // barrier on it made `insufficient` the standing outcome for operating companies: the seat
+  // honestly reported `unavailable`, was retroactively demoted to `failed`, and that single
+  // demotion aborted the council before any method seat, the debate or the PM ran.
+  const coverage = coverageForPacket(
+    markUnavailable(coveredPacket("forward_expectations"), "expectations.consensus_revenue_eps"),
+  );
+  assert.equal(coverage.status, "complete");
+  assert.equal(coverage.sufficiency, "limited", "a licensed-data gap limits the dossier");
+  assert.equal(coverage.decision_barrier_ready, true, "it must not abort the council");
+  assert.deepEqual(coverage.critical_gaps, [], "consensus is not a critical gap");
+  // The route stays owned and required, so the seat must still attempt it and declare an outcome.
+  assert.ok(
+    OPERATING_COMPANY_COVERAGE.forward_expectations.includes("expectations.consensus_revenue_eps"),
+  );
+});
+
 test("critical unavailable data blocks the decision while non-critical unavailable data remains usable", () => {
   const criticalTask = "market_data";
   const criticalId = "market.quote_snapshot";
@@ -356,13 +375,34 @@ test("critical unavailable data blocks the decision while non-critical unavailab
   assert.deepEqual(unannouncedDate.critical_gaps, []);
 });
 
-test("coverage instructions preserve estimated dates and supplied market history without upgrading their source status", () => {
+test("coverage instructions map supplied market-history provenance to packet-local aliases", () => {
   const run = companyRun();
   run.language = "中文";
-  run.grounding.market_history = { available: true };
+  run.grounding.market_history = {
+    available: true,
+    source_records: [{ id: "market_history:VRT:2026-08-05" }],
+  };
   const market = companyCoverageInstruction("market_data", run);
   assert.match(market, /必须直接使用其 subject、benchmarks、relative_performance/);
   assert.match(market, /不得因为另一个网页打不开而把已提供的数据改写成 unavailable/);
+  assert.match(market, /保留 title、url、published_at、retrieved_at、observed_at 与 source_kind/);
+  assert.match(market, /一一映射为本包内唯一、无冒号的本地别名（如 S1\/S2）/);
+  assert.match(market, /claims、coverage_items 与 acquisition_ledger（包括 attempts）里的所有 source_ids 只能引用这些别名/);
+  assert.match(market, /record_visible_packet 会在入库时加上 market_data: 作用域/);
+  assert.match(market, /绝不能把 market_history:\* 服务器 ID 原样放进 packet/);
+
+  run.language = "English";
+  const englishMarket = companyCoverageInstruction("market_data", run);
+  assert.match(englishMarket, /unique colon-free packet-local alias \(for example S1\/S2\)/);
+  assert.match(englishMarket, /claims, coverage_items, and acquisition_ledger \(including attempts\)/);
+  assert.match(englishMarket, /Never put a market_history:\* server ID verbatim in the packet/);
+
+  run.language = "日本語";
+  assert.match(companyCoverageInstruction("market_data", run), /コロンを含まないローカル別名（例 S1\/S2）/);
+  run.language = "한국어";
+  assert.match(companyCoverageInstruction("market_data", run), /콜론이 없는 로컬 별칭\(예: S1\/S2\)/);
+
+  run.language = "中文";
   const expectations = companyCoverageInstruction("forward_expectations", run);
   assert.match(expectations, /第三方预计、非发行人确认/);
   assert.match(expectations, /绝不能冒充公司公告/);

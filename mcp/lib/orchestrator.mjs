@@ -486,6 +486,19 @@ export function runPace(run) {
  * a confirmed pace. A caller may explicitly lower a stage, but omitting the legacy field means
  * "use the pace profile" -- especially slow evidence at twelve minutes.
  */
+/**
+ * Whether a stalled worker at this stage has earned a second attempt.
+ *
+ * The retry exists for a worker that never got going against its PACE cap, where the measured
+ * cohort finishes comfortably inside and one outlier sits at exactly the wall. A caller who
+ * lowered the cap below the pace is asking for a fast fail, not for resilience: every worker
+ * times out by construction, so retrying only doubles the process spawns before the same
+ * fail-closed answer. That cost is invisible on a fast machine and blew a 15s Windows CI wait.
+ */
+export function stageRetryAllowed(args = {}, field = "timeout_ms") {
+  return !Number.isFinite(args?.[field]);
+}
+
 export function evidenceStageTimeout(args = {}, timing = {}) {
   const cap = timing.council_mode === "quick"
     ? LIMITS.QUICK_EVIDENCE_MS
@@ -2997,9 +3010,28 @@ export async function collectEvidence(args) {
       return failure.packet;
     };
 
-    let result = await runAttempt(prompt, timeoutMs, 1);
+    let executionAttempt = 1;
+    let result = await runAttempt(prompt, timeoutMs, executionAttempt);
+    // Same stall as the method bench, and here it is more expensive: a core evidence seat that
+    // produced nothing before its cap closes the evidence barrier and takes the whole council
+    // with it. Two consecutive MU runs died this way -- once on `market_data`, once on
+    // `quant_factor` -- while every other seat finished comfortably inside the cap (median 136s
+    // against 360s). That is a worker that never got going, not a seat that needed longer, so
+    // the cap is not the thing to raise. Only a timeout earns the retry; a parse or coverage
+    // failure has its own bounded repair path below, and `remainingCouncilBudget` refuses the
+    // attempt when the run can no longer afford it.
+    if (!result.ok && result.timedOut
+      && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
+      executionAttempt = 2;
+      appendEvent(run, "task_retry", { task, reason: "worker_timeout", attempt: executionAttempt });
+      result = await runAttempt(prompt, timeoutMs, executionAttempt);
+    }
     if (!result.ok) {
-      return commitFailure({ failedResult: result, budgetMs: result.budget_ms ?? timeoutMs, attempts: 1 });
+      return commitFailure({
+        failedResult: result,
+        budgetMs: result.budget_ms ?? timeoutMs,
+        attempts: executionAttempt,
+      });
     }
     let packet;
     try {
@@ -3016,7 +3048,11 @@ export async function collectEvidence(args) {
       assertCompanySourceAcquisition(packet, run);
       assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task}`);
       commitPacket(packet);
-      persistTerminalTask(task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
+      persistTerminalTask(task, "completed", {
+        completed_at: new Date().toISOString(),
+        output: join(dir, `${task}.json`),
+        attempts: executionAttempt,
+      });
       return packet;
     } catch (firstParseError) {
       const firstFailureKind = evidenceOutputFailureKind(firstParseError);
@@ -3040,7 +3076,7 @@ export async function collectEvidence(args) {
         return commitFailure({
           failedResult: result,
           budgetMs: result.budget_ms ?? timeoutMs,
-          attempts: 1,
+          attempts: executionAttempt,
           failureKind: firstFailureKind,
           parseError: firstParseError,
           retryDiagnostic,
@@ -3616,6 +3652,25 @@ function updateMasterStatus(run, master, status, patch = {}) {
   appendEvent(run, `master_${status}`, { master, ...patch });
 }
 
+/**
+ * Worker failures that left the seat mute rather than misbehaving.
+ *
+ * These are process-level outcomes: the worker stalled, was killed, ran out of provider quota
+ * or died before writing a packet. None of them says anything about the seat's decision, which
+ * was frozen deterministically before the worker was ever spawned -- so the decision can still
+ * be published. Everything NOT in this set (forged source provenance, contract violations,
+ * reader-language breaches, unparseable output) means the worker produced something wrong, and
+ * a wrong answer must not be quietly replaced with a clean one.
+ */
+const MUTE_WORKER_FAILURES = new Set([
+  "timeout",
+  "global_deadline",
+  "usage_limit_exhausted",
+  "context_length_exceeded",
+  "output_schema_rejected",
+  "unexpected_error",
+]);
+
 function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
   const completedAt = new Date().toISOString();
   if (!outcome.opinion) {
@@ -3650,6 +3705,49 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
       stage: outcome.failure_stage || "worker_execution",
     });
     writeJson(diagnosticPath, { ...diagnostic, public_summary: publicSummary }, { mode: 0o600 });
+    // A dead voice worker used to delete the seat from the report entirely: no statement, no
+    // stance, no reason -- the reader simply never learned that this method had reached a
+    // verdict, and one such seat could take the debate and the PM with it. But the verdict is
+    // deterministic and already frozen, and the same renderer that gives an abstaining seat its
+    // five first-person fields works here with no model at all. So publish that, labelled for
+    // what it is: the method's own reading, rendered deterministically, with the worker failure
+    // and its reason attached. What the failure costs is the model-written prose, not the seat.
+    // Scope matters: a worker that could not SPEAK and a worker that spoke WRONGLY are
+    // different events. A stall, a killed process or an exhausted provider leaves the seat
+    // mute, and the frozen decision can speak for it. A forged source ID, a contract breach or
+    // reader-language violation is the worker actively misbehaving -- laundering that into a
+    // published seat is exactly the silent failure these gates exist to catch, so it still
+    // fails loudly and visibly.
+    if (outcome.frozenOpinion && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error")) {
+      const fallback = {
+        ...outcome.frozenOpinion,
+        deterministic_summary: outcome.frozenOpinion.summary,
+        voice_statement: outcome.frozenOpinion.voice_statement || outcome.frozenOpinion.summary,
+        voice_status: "deterministic_worker_failure",
+        voice_language: run.language,
+        statement_origin: "deterministic_worker_failure_fallback",
+        dedicated_worker: {
+          status: "failed",
+          failure_kind: outcome.error || "unexpected_error",
+          failure_stage: outcome.failure_stage || "worker_execution",
+          diagnostic: diagnosticPath,
+          public_summary: publicSummary,
+          language: run.language,
+          execution_mode: "deterministic_only",
+          ...(Number.isInteger(outcome.attempts) ? { attempts: outcome.attempts } : {}),
+        },
+      };
+      appendEvent(run, "master_deterministic_fallback", {
+        master: outcome.id,
+        reason: outcome.error || "unexpected_error",
+        stage: outcome.failure_stage || "worker_execution",
+      });
+      return commitHeadlessMasterOutcome(run, {
+        ...outcome,
+        opinion: fallback,
+        frozenOpinion: undefined,
+      }, { dir, byId, selected });
+    }
     updateMasterStatus(run, outcome.id, "failed", {
       ...(outcome.engine ? { engine: outcome.engine } : {}),
       error: outcome.error || "unexpected_error",
@@ -3933,7 +4031,23 @@ export async function runHeadlessMasters(run, args = {}) {
     };
 
     const workerStartedAt = Date.now();
-    let result = await execute(prompt, timeoutMs, 1);
+    let workerAttempt = 1;
+    let result = await execute(prompt, timeoutMs, workerAttempt);
+    // A voice worker that produced nothing before its cap is almost always a stalled spawn,
+    // not a seat that needed longer. Measured worker time is ~106s for the slowest of 26, yet
+    // the failures land at EXACTLY the cap, on a different seat each run, at both 120s and
+    // 180s. Raising the cap chases that and pays the full cap for every stall; one fresh
+    // attempt does not, and a healthy retry finishes in the usual ~106s. A silence watchdog
+    // was measured and rejected: codex is legitimately silent for 15s+ on a trivial prompt
+    // and emits its answer in one final chunk, so silence cannot separate stalled from busy.
+    // Only a timeout earns the retry -- parse and policy failures have their own repair paths
+    // below -- and only when the run can still afford the attempt.
+    if (!result.ok && result.timedOut
+      && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
+      workerAttempt = 2;
+      appendEvent(run, "master_retry", { master: id, reason: "worker_timeout", attempt: workerAttempt });
+      result = await execute(prompt, timeoutMs, workerAttempt);
+    }
     if (!result.ok) {
       const failureKind = workerExecutionFailureKind(result);
       return {
@@ -3941,11 +4055,11 @@ export async function runHeadlessMasters(run, args = {}) {
         engine,
         error: failureKind,
         raw: cleanLog(result.stderr || result.stdout || "method worker failed"),
-        attempts: 1,
+        attempts: workerAttempt,
         failure_stage: "worker_execution",
         diagnostic: masterAttemptFailureDiagnostic({
           master: id,
-          attempt: 1,
+          attempt: workerAttempt,
           failureKind,
           error: new Error(failureKind),
           result,
@@ -4094,7 +4208,9 @@ export async function runHeadlessMasters(run, args = {}) {
       }
     }
     })();
-    return commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected });
+    // Carry the frozen decision into the commit so a dead voice worker costs the reader the
+    // PROSE, not the seat. The deterministic renderer needs no model.
+    return commitHeadlessMasterOutcome(run, { ...outcome, frozenOpinion }, { dir, byId, selected });
   }, (error, { id, engine }) => commitHeadlessMasterOutcome(run, {
     id,
     engine,
@@ -4266,8 +4382,30 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     return path;
   };
 
+  // The bounded repair below is gated on `result.ok`, so a worker that produced nothing before
+  // its cap never reached any second chance -- the same stall already handled on the evidence
+  // wave and the method bench, and the most expensive of the three: a timed-out PM ends a run
+  // that had already frozen 11 evidence seats, 26 method seats and both debate sides, with
+  // `report_quality` passing and zero missing report sections. Only a timeout earns this;
+  // a malformed packet still goes to the parse repair, which is a different and cheaper fix.
+  // `retryOnTimeout` is opt-in from the caller that owns `args`: a caller-lowered synthesis
+  // budget means every side times out by construction, and a retry there only doubles the
+  // process spawns before the same fail-closed answer.
+  if (!result.ok && result.timedOut
+    && context.retryOnTimeout === true && remainingCouncilBudget(run, timeoutMs) > 0) {
+    attemptCount = 2;
+    appendEvent(run, "agent_retry", { role, round: context.round, reason: "worker_timeout", attempt: attemptCount });
+    updateAgent(run, role, "running", { round: context.round, attempts: attemptCount });
+    result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+      updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
+    }, ({ pid, output, elapsed_ms }) => {
+      updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
+      appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
+    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+  }
+
   let packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, prompt)));
-  persistTransportAttemptDiagnostic(1, result);
+  persistTransportAttemptDiagnostic(attemptCount, result);
   if (result.ok && ["parse_failed", "reader_language_mismatch"].includes(packet.failure_kind)) {
     persistManagerAttemptDiagnostic(1, packet, result);
     const repairBudget = parseRepairBudget(run, {
@@ -4305,9 +4443,9 @@ export async function runDebateRole(run, role, context, timeoutMs) {
           ? Math.min(LIMITS.PARSE_REPAIR_INPUT_CHARS, 32_000)
           : LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
-      attemptCount = 2;
+      attemptCount += 1;
       result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
-        updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
+        updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
       persistTransportAttemptDiagnostic(2, result);
       packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, repairPrompt, { repairedTransport: true })));
@@ -4371,11 +4509,12 @@ function debateFailure(step) {
 
 async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   const dir = runPath(run.run_id);
+  const retryOnTimeout = stageRetryAllowed(args, "synthesis_timeout_ms");
   appendEvent(run, "debate_round", { round: 1, format: "single_round_parallel" });
   const sideBudget = remainingCouncilBudget(run, timeoutMs);
   const [bullOutcome, bearOutcome] = await Promise.allSettled([
-    runDebateRole(run, "bull_researcher", { round: 1, brief: "quick long case" }, sideBudget),
-    runDebateRole(run, "bear_researcher", { round: 1, brief: "quick short case" }, sideBudget),
+    runDebateRole(run, "bull_researcher", { round: 1, brief: "quick long case", retryOnTimeout }, sideBudget),
+    runDebateRole(run, "bear_researcher", { round: 1, brief: "quick short case", retryOnTimeout }, sideBudget),
   ]);
   const settledStep = (outcome, role) => {
     if (outcome.status === "fulfilled") return outcome.value;
@@ -4417,7 +4556,7 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   writeAllAgentsMarkdown(run, { bull, bear });
 
   const managerBudget = remainingCouncilBudget(run, timeoutMs);
-  const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode }, managerBudget);
+  const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode, retryOnTimeout }, managerBudget);
   const managerError = debateFailure(managerStep);
   const managerOk = !managerError;
   const manager = bindDecisionDebateRounds(
@@ -4465,6 +4604,33 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   }
   const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager });
   return { bull, bear, manager, ...finalArtifacts };
+}
+
+/**
+ * Whether the recorded method bench is substantial enough to debate on.
+ *
+ * The bench gate used to be all-or-nothing, so one voice worker that hung took the debate and
+ * the PM with it and the reader got a run with no rating at all -- twice in a row on a 26-seat
+ * bench, each time a different seat pinned at exactly its cap with no retry. The risk that gate
+ * exists for is a bench nobody consulted, presented as if the verdict had survived every lens;
+ * twenty-five of twenty-six consulted is not that. So a near-complete bench proceeds, while a
+ * materially unconsulted one still stops before the expensive downstream stages.
+ *
+ * This does NOT make the run complete: the missing seats stay in `missing_masters`, the run
+ * still terminates `incomplete`, and the report still names every seat that never reported.
+ * It only decides whether a decision gets written at all.
+ */
+const METHOD_BENCH_MAX_ABSENT = 2;
+const METHOD_BENCH_MIN_RECORDED = 8;
+
+export function methodBenchQuorumMet(run, gate = completenessStatus(run)) {
+  const missing = gate.missing_masters.length;
+  if (missing === 0) return true;
+  const selected = Array.isArray(run.masters) ? run.masters.length : 0;
+  const recorded = selected - missing;
+  // A small hand-picked bench is a different instrument from `all`: every seat there was chosen
+  // deliberately, so losing one is proportionally much larger and still stops the run.
+  return missing <= METHOD_BENCH_MAX_ABSENT && recorded >= METHOD_BENCH_MIN_RECORDED;
 }
 
 function finalizeBeforeDebate(run, args, reason) {
@@ -4571,6 +4737,7 @@ export async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
   const timeoutMs = debateStageTimeout(args, run);
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
+  const retryOnTimeout = stageRetryAllowed(args, "synthesis_timeout_ms");
   run.phase = "debate";
   run.status = "running";
   run.completed_at = null;
@@ -4632,8 +4799,8 @@ export async function synthesizeDecision(run, args) {
     const budget = remainingCouncilBudget(run, timeoutMs);
     appendEvent(run, "debate_round", { round, format: "parallel_per_round", budget_ms: budget });
     const [bullOutcome, bearOutcome] = await Promise.allSettled([
-      runDebateRole(run, "bull_researcher", { round, ...bullContext }, budget),
-      runDebateRole(run, "bear_researcher", { round, ...bearContext }, budget),
+      runDebateRole(run, "bull_researcher", { round, ...bullContext, retryOnTimeout }, budget),
+      runDebateRole(run, "bear_researcher", { round, ...bearContext, retryOnTimeout }, budget),
     ]);
     return {
       bull: bullOutcome.status === "fulfilled" ? bullOutcome.value : rejectedStep(bullOutcome.reason, "bull_researcher"),
@@ -4821,7 +4988,7 @@ export async function analyzeSymbol(args) {
   }
   await runHeadlessMasters(run, args);
   gate = completenessStatus(run);
-  if (gate.missing_masters.length > 0 || remainingCouncilBudget(run, 1) <= 0) {
+  if (!methodBenchQuorumMet(run, gate) || remainingCouncilBudget(run, 1) <= 0) {
     const debate = finalizeBeforeDebate(run, args,
       gate.missing_masters.length ? "master_gate_failed" : "global_deadline_before_debate");
     return {
