@@ -36,7 +36,14 @@ const INTENTS_BY_STANCE = Object.freeze({
   constructive: Object.freeze(["would_buy", "would_add"]),
   cautious: Object.freeze(["would_hold", "would_watch"]),
   opposed: Object.freeze(["would_pass", "would_avoid"]),
-  out_of_scope: Object.freeze(["not_in_my_circle"]),
+  // A withheld vote has two different causes and a reader needs to tell them apart.
+  // `not_in_my_circle` is a judgment the method itself makes -- an index lens looking at one
+  // operating company, a country lens looking outside its geography -- and it stays true no
+  // matter how much more data arrives. `inputs_unavailable` is the opposite: the method applies
+  // squarely to this company, but a fact it requires was never produced, so the vote waits on
+  // the pipeline rather than on the company. Reporting the second as the first told readers a
+  // valuation lens found a semiconductor company outside its circle, which is simply untrue.
+  out_of_scope: Object.freeze(["not_in_my_circle", "inputs_unavailable"]),
 });
 
 export function intentsForStance(stance) {
@@ -45,6 +52,22 @@ export function intentsForStance(stance) {
 
 export function defaultIntentForStance(stance) {
   return intentsForStance(stance)[0];
+}
+
+/** Eligibility-gate reasons: the method fits, but a fact it requires was never produced. */
+const INPUT_GAP_REASONS = new Set(["no_required_fact_types_present", "missing_required_fact_types"]);
+
+/**
+ * The intent a withheld vote should carry, given WHY it was withheld.
+ *
+ * An eligibility gate that never opened is a pipeline gap, not a verdict about the company.
+ * Defaulting those to `not_in_my_circle` published a valuation lens declaring a semiconductor
+ * company outside its circle, when the truth was that two company-level DCF facts are not
+ * produced by any tool yet. A score band or an explicit method judgment keeps the circle
+ * language, because there the method really did look and rule itself out.
+ */
+export function withheldVoteIntent(reason) {
+  return INPUT_GAP_REASONS.has(String(reason || "")) ? "inputs_unavailable" : "not_in_my_circle";
 }
 
 export function isIntentAllowed(intent, stance) {

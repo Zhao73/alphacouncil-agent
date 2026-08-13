@@ -71,6 +71,26 @@ test(`all ${CANONICAL_MASTER_IDS.length} method voice prompts retain the frozen-
   }
 });
 
+test("a withheld vote is instructed to deliver the company view, not a declination", () => {
+  // The out_of_scope instruction used to be written only for baskets -- "classification,
+  // concentration, top holdings and weights ... a basket it cannot fully underwrite" -- so on an
+  // operating company the worker had no frame to fill and fell back to leading with what it
+  // could not do. A reader who selected this seat wants the company seen through this method.
+  const prompt = masterVoicePrompt("master_damodaran", methodRun, {
+    stance: "out_of_scope",
+    verdict: "contract fixture",
+    summary: "contract fixture",
+    source_ids: ["market_data:S1"],
+    evidence_source_ids: ["market_data:S1"],
+    what_would_change_my_mind: [],
+  });
+  assert.match(prompt, /withholds the VOTE\. It never withholds the VIEW/u);
+  assert.match(prompt, /Do not open any field with what you cannot do/u);
+  assert.match(prompt, /for an operating company read the business, margins, cash generation/u);
+  // The vote itself stays frozen: the seat may not talk itself into a scored position.
+  assert.match(prompt, /no scored vote is cast this round/u);
+});
+
 test("negative controls prove that each required contract fragment is load-bearing", () => {
   const samples = {
     evidence: taskPrompt("market_data", "TEST", "2026-08-03", "Assess TEST", "en-US"),

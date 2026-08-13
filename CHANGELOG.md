@@ -2,6 +2,39 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.4.0] — 2026-08-13
+
+A method seat that withheld its vote was answering the reader with a declination. Two of the
+twenty-six did it on every symbol, and one of them was the valuation lens — so on a name whose
+whole argument is valuation, the reader lost exactly the seat they most wanted to hear from.
+A withheld vote is now a withheld vote, never a withheld view.
+
+### Changed
+
+- The out_of_scope voice instruction was written only for baskets — "classification,
+  concentration, top holdings and weights … a basket it cannot fully underwrite" — so on an
+  operating company the worker had no frame to fill and fell back to leading with what it could
+  not do. It now demands the company itself, read through the method's own priorities, in every
+  one of the five fields, with the same figures and source IDs a voting seat carries. Opening a
+  field with the declination is explicitly forbidden; exactly one sentence in `would_i_act`
+  states that no scored vote is cast and why. The stance itself stays frozen: a seat still
+  cannot talk itself into a scored position its inputs do not support.
+- `position_intent` distinguishes a method that ruled itself out from one whose inputs never
+  arrived. `not_in_my_circle` is a judgment that stays true however much data arrives — an index
+  lens looking at a single operating company. `inputs_unavailable` is the opposite: the method
+  fits the company squarely, but a fact it requires is produced by no tool yet, so the vote
+  waits on the pipeline. Reporting the second as the first told readers a valuation lens found a
+  semiconductor company outside its circle, which is simply untrue.
+
+### Fixed
+
+- A timed-out evidence worker is retried once, within the run's remaining budget — the same
+  stall already handled on the method bench, and more expensive here because a core evidence
+  seat closes the evidence barrier and takes the whole council with it. Two consecutive runs
+  died this way, once on `market_data` and once on `quant_factor`, while every other seat
+  finished comfortably inside the cap (median 136s against 360s). The retry recovered
+  `quant_factor` on the next run, so the cap was never the thing to raise.
+
 ## [1.3.0] — 2026-08-12
 
 A full council could reach the end of its evidence phase in good shape and still hand the

@@ -2997,9 +2997,27 @@ export async function collectEvidence(args) {
       return failure.packet;
     };
 
-    let result = await runAttempt(prompt, timeoutMs, 1);
+    let executionAttempt = 1;
+    let result = await runAttempt(prompt, timeoutMs, executionAttempt);
+    // Same stall as the method bench, and here it is more expensive: a core evidence seat that
+    // produced nothing before its cap closes the evidence barrier and takes the whole council
+    // with it. Two consecutive MU runs died this way -- once on `market_data`, once on
+    // `quant_factor` -- while every other seat finished comfortably inside the cap (median 136s
+    // against 360s). That is a worker that never got going, not a seat that needed longer, so
+    // the cap is not the thing to raise. Only a timeout earns the retry; a parse or coverage
+    // failure has its own bounded repair path below, and `remainingCouncilBudget` refuses the
+    // attempt when the run can no longer afford it.
+    if (!result.ok && result.timedOut && remainingCouncilBudget(run, timeoutMs) > 0) {
+      executionAttempt = 2;
+      appendEvent(run, "task_retry", { task, reason: "worker_timeout", attempt: executionAttempt });
+      result = await runAttempt(prompt, timeoutMs, executionAttempt);
+    }
     if (!result.ok) {
-      return commitFailure({ failedResult: result, budgetMs: result.budget_ms ?? timeoutMs, attempts: 1 });
+      return commitFailure({
+        failedResult: result,
+        budgetMs: result.budget_ms ?? timeoutMs,
+        attempts: executionAttempt,
+      });
     }
     let packet;
     try {
@@ -3016,7 +3034,11 @@ export async function collectEvidence(args) {
       assertCompanySourceAcquisition(packet, run);
       assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task}`);
       commitPacket(packet);
-      persistTerminalTask(task, "completed", { completed_at: new Date().toISOString(), output: join(dir, `${task}.json`), attempts: 1 });
+      persistTerminalTask(task, "completed", {
+        completed_at: new Date().toISOString(),
+        output: join(dir, `${task}.json`),
+        attempts: executionAttempt,
+      });
       return packet;
     } catch (firstParseError) {
       const firstFailureKind = evidenceOutputFailureKind(firstParseError);
@@ -3040,7 +3062,7 @@ export async function collectEvidence(args) {
         return commitFailure({
           failedResult: result,
           budgetMs: result.budget_ms ?? timeoutMs,
-          attempts: 1,
+          attempts: executionAttempt,
           failureKind: firstFailureKind,
           parseError: firstParseError,
           retryDiagnostic,
@@ -4281,8 +4303,26 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     return path;
   };
 
+  // The bounded repair below is gated on `result.ok`, so a worker that produced nothing before
+  // its cap never reached any second chance -- the same stall already handled on the evidence
+  // wave and the method bench, and the most expensive of the three: a timed-out PM ends a run
+  // that had already frozen 11 evidence seats, 26 method seats and both debate sides, with
+  // `report_quality` passing and zero missing report sections. Only a timeout earns this;
+  // a malformed packet still goes to the parse repair, which is a different and cheaper fix.
+  if (!result.ok && result.timedOut && remainingCouncilBudget(run, timeoutMs) > 0) {
+    attemptCount = 2;
+    appendEvent(run, "agent_retry", { role, round: context.round, reason: "worker_timeout", attempt: attemptCount });
+    updateAgent(run, role, "running", { round: context.round, attempts: attemptCount });
+    result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+      updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
+    }, ({ pid, output, elapsed_ms }) => {
+      updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
+      appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
+    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+  }
+
   let packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, prompt)));
-  persistTransportAttemptDiagnostic(1, result);
+  persistTransportAttemptDiagnostic(attemptCount, result);
   if (result.ok && ["parse_failed", "reader_language_mismatch"].includes(packet.failure_kind)) {
     persistManagerAttemptDiagnostic(1, packet, result);
     const repairBudget = parseRepairBudget(run, {
@@ -4320,9 +4360,9 @@ export async function runDebateRole(run, role, context, timeoutMs) {
           ? Math.min(LIMITS.PARSE_REPAIR_INPUT_CHARS, 32_000)
           : LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
-      attemptCount = 2;
+      attemptCount += 1;
       result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
-        updateAgent(run, role, "running", { pid, output, round: context.round, attempts: 2 });
+        updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
       persistTransportAttemptDiagnostic(2, result);
       packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, repairPrompt, { repairedTransport: true })));

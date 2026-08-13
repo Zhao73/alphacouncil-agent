@@ -775,7 +775,7 @@ export function tools() {
             acknowledged_stance: { type: "string", enum: MASTER_STANCES },
             voice_mode: { type: "string", const: "first_person_public_method_simulation_v1" },
             disclosure_ack: { type: "string", const: "alphacouncil.first_person_public_method_simulation.v1" },
-            position_intent: { type: "string", enum: ["would_buy", "would_add", "would_hold", "would_watch", "would_pass", "would_avoid", "not_in_my_circle"] },
+            position_intent: { type: "string", enum: ["would_buy", "would_add", "would_hold", "would_watch", "would_pass", "would_avoid", "not_in_my_circle", "inputs_unavailable"] },
             voice: {
               type: "object",
               properties: {

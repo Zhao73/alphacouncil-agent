@@ -79,6 +79,33 @@ test("an abstention is readable: what was there, what was needed, why no substit
   for (const text of Object.values(voice)) assert.ok(text.length > 20);
 });
 
+test("a withheld vote says whether the method ruled itself out or its inputs never arrived", () => {
+  // Reporting an eligibility gap as `not_in_my_circle` published a valuation lens declaring a
+  // semiconductor company outside its circle. The truth was that two company-level DCF facts
+  // are produced by no tool yet, so the vote waits on the pipeline, not on the company.
+  const gap = voiceFromDecline({
+    eligibility: {
+      reason: "no_required_fact_types_present",
+      present_required_fact_types: ["market.price"],
+      missing_required_fact_types: ["valuation.cash_flow", "valuation.implied_story"],
+    },
+    language: "English",
+  });
+  assert.match(gap.would_i_act, /inputs_unavailable/u);
+  assert.doesNotMatch(gap.would_i_act, /not_in_my_circle/u);
+
+  // A method that looked and ruled itself out keeps the circle language.
+  const judged = voiceFromDecline({
+    eligibility: {
+      reason: "scored_out_of_band",
+      present_required_fact_types: ["market.price"],
+      missing_required_fact_types: [],
+    },
+    language: "English",
+  });
+  assert.match(judged.would_i_act, /not_in_my_circle/u);
+});
+
 test("every locale composes real sentences rather than falling back to English", () => {
   const args = {
     result: {
