@@ -486,6 +486,19 @@ export function runPace(run) {
  * a confirmed pace. A caller may explicitly lower a stage, but omitting the legacy field means
  * "use the pace profile" -- especially slow evidence at twelve minutes.
  */
+/**
+ * Whether a stalled worker at this stage has earned a second attempt.
+ *
+ * The retry exists for a worker that never got going against its PACE cap, where the measured
+ * cohort finishes comfortably inside and one outlier sits at exactly the wall. A caller who
+ * lowered the cap below the pace is asking for a fast fail, not for resilience: every worker
+ * times out by construction, so retrying only doubles the process spawns before the same
+ * fail-closed answer. That cost is invisible on a fast machine and blew a 15s Windows CI wait.
+ */
+export function stageRetryAllowed(args = {}, field = "timeout_ms") {
+  return !Number.isFinite(args?.[field]);
+}
+
 export function evidenceStageTimeout(args = {}, timing = {}) {
   const cap = timing.council_mode === "quick"
     ? LIMITS.QUICK_EVIDENCE_MS
@@ -3007,7 +3020,8 @@ export async function collectEvidence(args) {
     // the cap is not the thing to raise. Only a timeout earns the retry; a parse or coverage
     // failure has its own bounded repair path below, and `remainingCouncilBudget` refuses the
     // attempt when the run can no longer afford it.
-    if (!result.ok && result.timedOut && remainingCouncilBudget(run, timeoutMs) > 0) {
+    if (!result.ok && result.timedOut
+      && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
       executionAttempt = 2;
       appendEvent(run, "task_retry", { task, reason: "worker_timeout", attempt: executionAttempt });
       result = await runAttempt(prompt, timeoutMs, executionAttempt);
@@ -4028,7 +4042,8 @@ export async function runHeadlessMasters(run, args = {}) {
     // and emits its answer in one final chunk, so silence cannot separate stalled from busy.
     // Only a timeout earns the retry -- parse and policy failures have their own repair paths
     // below -- and only when the run can still afford the attempt.
-    if (!result.ok && result.timedOut && remainingCouncilBudget(run, timeoutMs) > 0) {
+    if (!result.ok && result.timedOut
+      && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
       workerAttempt = 2;
       appendEvent(run, "master_retry", { master: id, reason: "worker_timeout", attempt: workerAttempt });
       result = await execute(prompt, timeoutMs, workerAttempt);
@@ -4373,7 +4388,11 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   // that had already frozen 11 evidence seats, 26 method seats and both debate sides, with
   // `report_quality` passing and zero missing report sections. Only a timeout earns this;
   // a malformed packet still goes to the parse repair, which is a different and cheaper fix.
-  if (!result.ok && result.timedOut && remainingCouncilBudget(run, timeoutMs) > 0) {
+  // `retryOnTimeout` is opt-in from the caller that owns `args`: a caller-lowered synthesis
+  // budget means every side times out by construction, and a retry there only doubles the
+  // process spawns before the same fail-closed answer.
+  if (!result.ok && result.timedOut
+    && context.retryOnTimeout === true && remainingCouncilBudget(run, timeoutMs) > 0) {
     attemptCount = 2;
     appendEvent(run, "agent_retry", { role, round: context.round, reason: "worker_timeout", attempt: attemptCount });
     updateAgent(run, role, "running", { round: context.round, attempts: attemptCount });
@@ -4490,11 +4509,12 @@ function debateFailure(step) {
 
 async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   const dir = runPath(run.run_id);
+  const retryOnTimeout = stageRetryAllowed(args, "synthesis_timeout_ms");
   appendEvent(run, "debate_round", { round: 1, format: "single_round_parallel" });
   const sideBudget = remainingCouncilBudget(run, timeoutMs);
   const [bullOutcome, bearOutcome] = await Promise.allSettled([
-    runDebateRole(run, "bull_researcher", { round: 1, brief: "quick long case" }, sideBudget),
-    runDebateRole(run, "bear_researcher", { round: 1, brief: "quick short case" }, sideBudget),
+    runDebateRole(run, "bull_researcher", { round: 1, brief: "quick long case", retryOnTimeout }, sideBudget),
+    runDebateRole(run, "bear_researcher", { round: 1, brief: "quick short case", retryOnTimeout }, sideBudget),
   ]);
   const settledStep = (outcome, role) => {
     if (outcome.status === "fulfilled") return outcome.value;
@@ -4536,7 +4556,7 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   writeAllAgentsMarkdown(run, { bull, bear });
 
   const managerBudget = remainingCouncilBudget(run, timeoutMs);
-  const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode }, managerBudget);
+  const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode, retryOnTimeout }, managerBudget);
   const managerError = debateFailure(managerStep);
   const managerOk = !managerError;
   const manager = bindDecisionDebateRounds(
@@ -4717,6 +4737,7 @@ export async function synthesizeDecision(run, args) {
   const dir = runPath(run.run_id);
   const timeoutMs = debateStageTimeout(args, run);
   const outputMode = OUTPUT_MODES.includes(args.output_mode) ? args.output_mode : "public_equity";
+  const retryOnTimeout = stageRetryAllowed(args, "synthesis_timeout_ms");
   run.phase = "debate";
   run.status = "running";
   run.completed_at = null;
@@ -4778,8 +4799,8 @@ export async function synthesizeDecision(run, args) {
     const budget = remainingCouncilBudget(run, timeoutMs);
     appendEvent(run, "debate_round", { round, format: "parallel_per_round", budget_ms: budget });
     const [bullOutcome, bearOutcome] = await Promise.allSettled([
-      runDebateRole(run, "bull_researcher", { round, ...bullContext }, budget),
-      runDebateRole(run, "bear_researcher", { round, ...bearContext }, budget),
+      runDebateRole(run, "bull_researcher", { round, ...bullContext, retryOnTimeout }, budget),
+      runDebateRole(run, "bear_researcher", { round, ...bearContext, retryOnTimeout }, budget),
     ]);
     return {
       bull: bullOutcome.status === "fulfilled" ? bullOutcome.value : rejectedStep(bullOutcome.reason, "bull_researcher"),
