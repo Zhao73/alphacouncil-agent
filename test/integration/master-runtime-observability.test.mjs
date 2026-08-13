@@ -154,6 +154,51 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
   }
 });
 
+test("a stalled voice worker costs the reader the prose, not the seat", async () => {
+  // A dead worker used to delete the seat from the report entirely -- no statement, no stance,
+  // no reason -- even though the decision was frozen deterministically before the worker was
+  // ever spawned. One such seat could take the debate and the PM with it.
+  const dataDir = makeDataDir();
+  const fake = observabilityCodex(dataDir, { delays: { master_buffett: 3_000 } });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "QQQ", selected_master_ids: ["master_buffett"],
+    });
+    const runId = `MASTER-MUTE-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-08-03",
+      tasks: ["market_data"], wait_for_completion: true,
+      grounding: {
+        instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
+        facts_unavailable: true, unavailable: ["fixture"],
+      },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 2_000, total_timeout_ms: 20_000,
+    }, { timeoutMs: 30_000 }));
+
+    const seat = result.run.master_status.master_buffett;
+    assert.equal(seat.status, "completed", "the frozen decision still speaks for the seat");
+    const opinion = JSON.parse(readFileSync(join(dataDir, "runs", runId, "master_buffett.json"), "utf8"));
+    // The reader gets the method's own reading, and is told exactly why it is machine-rendered.
+    assert.equal(opinion.voice_status, "deterministic_worker_failure");
+    assert.equal(opinion.statement_origin, "deterministic_worker_failure_fallback");
+    assert.equal(opinion.dedicated_worker.status, "failed");
+    assert.equal(opinion.dedicated_worker.failure_kind, "timeout");
+    assert.ok(opinion.dedicated_worker.public_summary.length > 10, "the failure states its reason");
+    assert.ok(opinion.stance, "the frozen stance survives");
+    for (const field of ["would_i_act", "what_i_see", "how_my_method_reads_it"]) {
+      assert.ok(String(opinion.voice?.[field] || "").length > 10, `${field} is readable`);
+    }
+    // The diagnostic is still written: a fallback is not a way to lose the failure record.
+    assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.failure.json")), true);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
 test("each terminal master is canonical before the barrier and survives interrupted-run recovery", async () => {
   const dataDir = makeDataDir();
   const fake = observabilityCodex(dataDir, {

@@ -2,6 +2,23 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.4.1] — 2026-08-13
+
+### Fixed
+
+- A method seat whose voice worker died is no longer deleted from the report. It used to leave
+  the reader nothing at all — no statement, no stance, no reason — even though the seat's
+  decision was frozen deterministically before the worker was ever spawned, and one such seat
+  could take the debate and the PM with it. The same renderer that gives an abstaining seat its
+  five first-person fields needs no model, so the seat now publishes that reading, labelled
+  `deterministic_worker_failure` with the worker's failure kind, its public reason and its
+  diagnostic path attached. What a dead worker costs is the model-written prose, not the seat.
+- The fallback is deliberately narrow. It covers failures that left the seat MUTE — a stall, a
+  killed process, exhausted provider quota, a rejected output schema. It does not cover a worker
+  that spoke WRONGLY: forged source provenance, a contract breach or a reader-language violation
+  still fails loudly and visibly, because quietly replacing a wrong answer with a clean one is
+  the silent failure these gates exist to catch.
+
 ## [1.4.0] — 2026-08-13
 
 A method seat that withheld its vote was answering the reader with a declination. Two of the

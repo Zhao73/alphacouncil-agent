@@ -6,12 +6,12 @@
     "url": "https://github.com/Zhao73/alphacouncil-agent",
     "source": "github"
   },
-  "version": "1.4.0",
+  "version": "1.4.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "alphacouncil-agent",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "transport": {
         "type": "stdio"
       }

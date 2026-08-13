@@ -3638,6 +3638,25 @@ function updateMasterStatus(run, master, status, patch = {}) {
   appendEvent(run, `master_${status}`, { master, ...patch });
 }
 
+/**
+ * Worker failures that left the seat mute rather than misbehaving.
+ *
+ * These are process-level outcomes: the worker stalled, was killed, ran out of provider quota
+ * or died before writing a packet. None of them says anything about the seat's decision, which
+ * was frozen deterministically before the worker was ever spawned -- so the decision can still
+ * be published. Everything NOT in this set (forged source provenance, contract violations,
+ * reader-language breaches, unparseable output) means the worker produced something wrong, and
+ * a wrong answer must not be quietly replaced with a clean one.
+ */
+const MUTE_WORKER_FAILURES = new Set([
+  "timeout",
+  "global_deadline",
+  "usage_limit_exhausted",
+  "context_length_exceeded",
+  "output_schema_rejected",
+  "unexpected_error",
+]);
+
 function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
   const completedAt = new Date().toISOString();
   if (!outcome.opinion) {
@@ -3672,6 +3691,49 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
       stage: outcome.failure_stage || "worker_execution",
     });
     writeJson(diagnosticPath, { ...diagnostic, public_summary: publicSummary }, { mode: 0o600 });
+    // A dead voice worker used to delete the seat from the report entirely: no statement, no
+    // stance, no reason -- the reader simply never learned that this method had reached a
+    // verdict, and one such seat could take the debate and the PM with it. But the verdict is
+    // deterministic and already frozen, and the same renderer that gives an abstaining seat its
+    // five first-person fields works here with no model at all. So publish that, labelled for
+    // what it is: the method's own reading, rendered deterministically, with the worker failure
+    // and its reason attached. What the failure costs is the model-written prose, not the seat.
+    // Scope matters: a worker that could not SPEAK and a worker that spoke WRONGLY are
+    // different events. A stall, a killed process or an exhausted provider leaves the seat
+    // mute, and the frozen decision can speak for it. A forged source ID, a contract breach or
+    // reader-language violation is the worker actively misbehaving -- laundering that into a
+    // published seat is exactly the silent failure these gates exist to catch, so it still
+    // fails loudly and visibly.
+    if (outcome.frozenOpinion && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error")) {
+      const fallback = {
+        ...outcome.frozenOpinion,
+        deterministic_summary: outcome.frozenOpinion.summary,
+        voice_statement: outcome.frozenOpinion.voice_statement || outcome.frozenOpinion.summary,
+        voice_status: "deterministic_worker_failure",
+        voice_language: run.language,
+        statement_origin: "deterministic_worker_failure_fallback",
+        dedicated_worker: {
+          status: "failed",
+          failure_kind: outcome.error || "unexpected_error",
+          failure_stage: outcome.failure_stage || "worker_execution",
+          diagnostic: diagnosticPath,
+          public_summary: publicSummary,
+          language: run.language,
+          execution_mode: "deterministic_only",
+          ...(Number.isInteger(outcome.attempts) ? { attempts: outcome.attempts } : {}),
+        },
+      };
+      appendEvent(run, "master_deterministic_fallback", {
+        master: outcome.id,
+        reason: outcome.error || "unexpected_error",
+        stage: outcome.failure_stage || "worker_execution",
+      });
+      return commitHeadlessMasterOutcome(run, {
+        ...outcome,
+        opinion: fallback,
+        frozenOpinion: undefined,
+      }, { dir, byId, selected });
+    }
     updateMasterStatus(run, outcome.id, "failed", {
       ...(outcome.engine ? { engine: outcome.engine } : {}),
       error: outcome.error || "unexpected_error",
@@ -4131,7 +4193,9 @@ export async function runHeadlessMasters(run, args = {}) {
       }
     }
     })();
-    return commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected });
+    // Carry the frozen decision into the commit so a dead voice worker costs the reader the
+    // PROSE, not the seat. The deterministic renderer needs no model.
+    return commitHeadlessMasterOutcome(run, { ...outcome, frozenOpinion }, { dir, byId, selected });
   }, (error, { id, engine }) => commitHeadlessMasterOutcome(run, {
     id,
     engine,
