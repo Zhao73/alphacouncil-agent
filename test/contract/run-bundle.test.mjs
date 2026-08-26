@@ -19,6 +19,7 @@ import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
 import { jsonlEntryHash } from "../../mcp/lib/fsutil.mjs";
 import { canonicalJson } from "../../mcp/lib/personas-v3/canonical.mjs";
 import { CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
+import { rehashTimingEvents, timingIso } from "../helpers/timing-fixtures.mjs";
 import {
   EVIDENCE_STANDARD_ID,
   analyzeSeatContent,
@@ -199,6 +200,18 @@ function refreshPublicationDigests(runDir) {
   writeJson(path, publication);
 }
 
+function refreshBundleManifestDigest(bundleDir, relativePath) {
+  const manifestPath = join(bundleDir, "bundle-manifest.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const record = manifest.files.find((item) => item.path === relativePath);
+  assert.ok(record, `${relativePath} must be listed before its digest can be refreshed`);
+  const bytes = readFileSync(join(bundleDir, relativePath));
+  record.byte_length = bytes.length;
+  record.sha256 = createHash("sha256").update(bytes).digest("hex");
+  manifest.total_payload_bytes = manifest.files.reduce((sum, item) => sum + item.byte_length, 0);
+  writeJson(manifestPath, manifest);
+}
+
 test("run bundle exports atomically and verifies structure separately from claim readiness", () => {
   const { root, runDir } = fixture();
   try {
@@ -316,6 +329,93 @@ test("a hash-valid event ledger still fails structure when wall time moves backw
     const verified = verifyRunBundle({ bundleDir });
     assert.equal(verified.structure.status, "FAIL");
     assert.ok(verified.structure.errors.some((item) => item.code === "event_timestamp_not_monotonic"));
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("bundle verification re-derives timing and catches a tampered ledger after manifest rehash", () => {
+  const { root, runDir } = fixture();
+  try {
+    const bundleDir = join(root, "bundle");
+    exportRunBundle({ runDir, outputDir: bundleDir });
+    const ledgerPath = join(bundleDir, "payload", "timing-ledger.json");
+    const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+    ledger.total.elapsed_ms += 1;
+    writeJson(ledgerPath, ledger);
+    refreshBundleManifestDigest(bundleDir, "payload/timing-ledger.json");
+    const verified = verifyRunBundle({ bundleDir });
+    assert.equal(verified.structure.status, "FAIL");
+    assert.ok(
+      verified.structure.errors.some((item) => item.code === "timing_ledger_mismatch"),
+      "payload digests alone cannot bless a timing ledger that disagrees with status/evidence/events",
+    );
+    assert.equal(
+      verified.structure.errors.some((item) => item.code === "payload_digest_mismatch"),
+      false,
+      "the adversary already refreshed the ordinary manifest digest",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("observed worker timing events without a bundled ledger are an explicit claim blocker", () => {
+  const { root, runDir } = fixture();
+  try {
+    const eventsPath = join(runDir, "events.jsonl");
+    const events = readFileSync(eventsPath, "utf8").trim().split("\n").map(JSON.parse);
+    events.splice(1, 0,
+      {
+        schema_version: 1,
+        at: timingIso(100),
+        type: "worker_attempt_started",
+        invocation_key: "evidence:market_data:1",
+        stage: "evidence",
+        attempt: 1,
+        attempt_kind: "primary",
+        budget_ms: 1_000,
+        search_enabled: true,
+        started_at: timingIso(100),
+        pid: 12_345,
+      },
+      {
+        schema_version: 1,
+        at: timingIso(500),
+        type: "worker_attempt_finished",
+        invocation_key: "evidence:market_data:1",
+        stage: "evidence",
+        attempt: 1,
+        attempt_kind: "primary",
+        budget_ms: 1_000,
+        search_enabled: true,
+        started_at: timingIso(100),
+        finished_at: timingIso(500),
+        elapsed_ms: 400,
+        outcome: "completed",
+        timed_out: false,
+        forced_settle: false,
+        pid: 12_345,
+      },
+    );
+    const rebuilt = rehashTimingEvents(events);
+    writeFileSync(eventsPath, `${rebuilt.map((event) => JSON.stringify(event)).join("\n")}\n`);
+
+    const bundleDir = join(root, "bundle");
+    exportRunBundle({ runDir, outputDir: bundleDir });
+    rmSync(join(bundleDir, "payload", "timing-ledger.json"));
+    const manifestPath = join(bundleDir, "bundle-manifest.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.files = manifest.files.filter((item) => item.path !== "payload/timing-ledger.json");
+    manifest.total_payload_bytes = manifest.files.reduce((sum, item) => sum + item.byte_length, 0);
+    writeJson(manifestPath, manifest);
+
+    const verified = verifyRunBundle({ bundleDir });
+    assert.equal(verified.structure.status, "PASS");
+    assert.equal(verified.claim_readiness.status, "BLOCKED");
+    assert.ok(
+      verified.claim_readiness.blockers.some((item) => item.code === "timing_ledger_missing_for_observed_run"),
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

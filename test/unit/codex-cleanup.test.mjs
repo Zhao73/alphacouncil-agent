@@ -86,8 +86,98 @@ test("runCodex force-settles after kill grace even if a broken child never close
   assert.equal(result.ok, false);
   assert.equal(result.timedOut, true);
   assert.equal(result.forced_settle, true);
+  assert.equal(result.timing.outcome, "timed_out");
+  assert.equal(result.timing.timed_out, true);
+  assert.equal(result.timing.forced_settle, true);
+  assert.equal(result.timing.pid, 424242);
+  assert.equal(
+    Date.parse(result.timing.finished_at) - Date.parse(result.timing.started_at),
+    result.timing.elapsed_ms,
+  );
   assert.deepEqual(stops, ["TERM", "KILL"]);
   assert.ok(Date.now() - started < 250, "forced settlement must not wait for a close event");
+});
+
+test("runCodex exposes one process-boundary clock shared byte-for-byte with onStart", async () => {
+  const dir = makeDataDir();
+  class ClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 424243;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  let startPayload;
+  let outFile;
+  try {
+    const result = await runCodex("fixture", 1000, (payload) => {
+      startPayload = payload;
+      outFile = payload.output;
+    }, () => {}, {
+      dataDir: dir,
+      spawn: () => {
+        const child = new ClosingChild();
+        setTimeout(() => {
+          writeFileSync(outFile, JSON.stringify({ ok: true }));
+          child.emit("close", 0);
+        }, 15);
+        return child;
+      },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.timing.outcome, "completed");
+    assert.equal(result.timing.pid, 424243);
+    assert.equal(result.timing.started_at, startPayload.started_at);
+    assert.equal(result.timing.timed_out, false);
+    assert.equal(result.timing.forced_settle, false);
+    assert.equal(
+      Date.parse(result.timing.finished_at) - Date.parse(result.timing.started_at),
+      result.timing.elapsed_ms,
+    );
+    assert.ok(result.timing.elapsed_ms >= 5, "the 15 ms fixture must retain a non-zero interval");
+    assert.ok(result.timing.elapsed_ms < 500, "the real-clock assertion keeps over 3x headroom");
+    assert.equal(result.timing.duration_scope, "local_child_spawn_to_settlement_wall_time");
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("an asynchronous child error after spawn is spawn_failed and retains its real interval", async () => {
+  const dir = makeDataDir();
+  class ErroringChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = undefined;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  const starts = [];
+  try {
+    const result = await runCodex("fixture", 1000, (payload) => starts.push(payload), () => {}, {
+      dataDir: dir,
+      spawn: () => {
+        const child = new ErroringChild();
+        setTimeout(() => {
+          child.emit("error", Object.assign(new Error("spawn codex ENOENT"), { code: "ENOENT" }));
+          child.emit("close", -2);
+        }, 15);
+        return child;
+      },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.timing.outcome, "spawn_failed");
+    assert.equal(result.timing.pid, null);
+    assert.equal(starts.length, 1);
+    assert.equal(result.timing.started_at, starts[0].started_at);
+    assert.ok(result.timing.elapsed_ms >= 5, "an async ENOENT is observed after process timing starts");
+    assert.ok(result.timing.elapsed_ms < 500, "the real-clock assertion keeps over 3x headroom");
+  } finally {
+    removeDataDir(dir);
+  }
 });
 
 test("runCodex rejects and removes an output beyond the UTF-8-safe character envelope", async () => {
@@ -198,17 +288,22 @@ test("leaf workers isolate nested plugin data from the parent run and remove the
   }
 });
 
-test("a synchronous worker spawn failure does not leak the isolated plugin directory", async () => {
+test("a synchronous worker spawn throw is not_started, emits no start, and leaks no leaf directory", async () => {
   const dir = makeDataDir();
+  const starts = [];
   try {
-    await assert.rejects(
-      runCodex("fixture", 1000, () => {}, () => {}, {
-        dataDir: dir,
-        leafRuntimeRoot: dir,
-        spawn: () => { throw new Error("spawn fixture failed"); },
-      }),
-      /spawn fixture failed/u,
-    );
+    const result = await runCodex("fixture", 1000, (payload) => starts.push(payload), () => {}, {
+      dataDir: dir,
+      leafRuntimeRoot: dir,
+      spawn: () => { throw new Error("spawn fixture failed"); },
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.timing.outcome, "not_started");
+    assert.equal(result.timing.started_at, null);
+    assert.equal(result.timing.finished_at, null);
+    assert.equal(result.timing.elapsed_ms, 0);
+    assert.equal(result.timing.pid, null);
+    assert.equal(starts.length, 0, "a synchronous throw must not create a worker event pair");
     assert.deepEqual(
       readdirSync(dir).filter((name) => name.startsWith("alphacouncil-leaf-")),
       [],
