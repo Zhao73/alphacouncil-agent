@@ -77,6 +77,15 @@ test("the recommendation is a displayed prefill only and excluded methods remain
 
 test("a stale recommendation hash is rejected and select_all still means the physical 26-seat catalog", async () => {
   const stale = await open("MSFT");
+  const missing = await server.callTool("confirm_master_selection", {
+    selection_id: stale.selection_id,
+    catalog_hash: stale.catalog_hash,
+    display_ack: true,
+    selected_master_ids: [stale.masters[0].id],
+    analyst_scope: "core",
+  });
+  assert.equal(missing.error?.data?.reason, "METHOD_PANEL_RECOMMENDATION_REQUIRED");
+
   const rejected = await confirm(stale, { selected_master_ids: [stale.masters[0].id] }, {
     recommendation_hash: `sha256:${"0".repeat(64)}`,
   });
@@ -117,5 +126,15 @@ test("without a classification the gate remains open but produces no guessed rec
   assert.deepEqual(opened.method_panel_recommendation.included_master_ids, []);
   assert.equal(opened.method_panel_recommendation.recommendation_hash, null);
   assert.equal(opened.method_panel_recommendation.decisions.length, 26);
-});
 
+  const confirmed = structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    display_ack: true,
+    selected_master_ids: [opened.masters[0].id],
+    analyst_scope: "core",
+  }));
+  assert.equal(confirmed.status, "confirmed");
+  assert.equal(confirmed.selection_hash_version, 3);
+  assert.equal(confirmed.recommendation_hash, null);
+});
