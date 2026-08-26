@@ -247,7 +247,7 @@ export function fullTimingFixture() {
 }
 
 export function legacyTimingFixture({ visible = false } = {}) {
-  const executionMode = visible ? "visible_host_orchestration" : "background_codex_exec";
+  const executionMode = visible ? "visible_host_threads" : "background_codex_exec";
   const { status, evidence } = baseArtifacts({ execution_mode: executionMode });
   evidence.execution_mode = executionMode;
   const events = [];

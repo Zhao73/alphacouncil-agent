@@ -181,7 +181,6 @@ test("an explicit early terminal run has a valid truncated ledger and a named fr
     "debate_round_2",
     "debate_round_3",
     "portfolio_manager",
-    "terminal_persistence",
   ]);
   assert.equal(issueCodes(ledger).includes("worker_attempt_missing_finish"), false);
   assert.equal(ledger.marketing_eligible, false);
