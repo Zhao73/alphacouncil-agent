@@ -62,9 +62,10 @@ Watch it happen live: the bundled [terminal client](#terminal-client-tui) plays 
 council as a meeting transcript — each master speaking under a stance-colored name,
 statements typing out character by character.
 
-AlphaCouncil is a Codex and Claude Code plugin. Full council is the default; an explicitly
-requested `quick` run uses a smaller, plugin-managed headless contract. Both gather sourced
-evidence, run selected method seats and produce an auditable portfolio-manager report.
+AlphaCouncil integrates with Codex, Claude Code, OpenCode, and Grok Build. Full council is
+the default; an explicitly requested `quick` run uses a smaller, plugin-managed headless
+contract. Both gather sourced evidence, run selected method seats and produce an auditable
+portfolio-manager report.
 
 ### ✨ Why AlphaCouncil
 
@@ -123,7 +124,8 @@ investment decision. The authors accept no liability for any loss.
 
 ## Install
 
-See **[docs/INSTALL.md](docs/INSTALL.md)** for full Codex and Claude Code setup. **Windows users:** see the [Windows section](docs/INSTALL.md#windows).
+See **[docs/INSTALL.md](docs/INSTALL.md)** for Codex, Claude Code, OpenCode, and Grok Build
+setup. **Windows users:** see the [Windows section](docs/INSTALL.md#windows).
 
 **Prerequisites:** Node.js >= 18. The headless research path also needs an
 installed, authenticated **Codex CLI** (each analyst worker runs as `codex
@@ -133,7 +135,7 @@ over stdin so native `codex.cmd` installs work without WSL in the normal case.
 ```text
 # Codex
 codex plugin marketplace add Zhao73/alphacouncil-agent
-# then run `codex`, open /plugins, install, and /reload-plugins
+codex plugin add alphacouncil-agent@alphacouncil
 
 # Claude Code
 /plugin marketplace add Zhao73/alphacouncil-agent
@@ -145,11 +147,16 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 verify the data layer works:
 
 ```text
+# Codex
+@alphacouncil-agent AAPL news
+
+# Claude Code, OpenCode, or Grok Build
 /alpha AAPL news
 ```
 
 That calls only keyless data tools and spawns no subagents. When it returns dated
-headlines and filings, the install is good; then try a full council with `/alpha AAPL`.
+headlines and filings, the install is good. In Codex, try a full council with
+`@alphacouncil-agent analyze AAPL`; on the three slash-command hosts, use `/alpha AAPL`.
 Note the headless full/quick paths additionally need an authenticated **Codex CLI**
 (each analyst worker runs as `codex exec`) — Claude Code without Codex uses the
 visible host-subagent path instead, see [docs/INSTALL.md](docs/INSTALL.md).
@@ -196,7 +203,7 @@ the 8 core packets plus any 3 all-scope packets, the fixed 52-item core coverage
 typed facts and one canonical hash. Compact prompt evidence is only an index; downstream seats
 must read and acknowledge this same complete artifact before their output is accepted.
 
-### Slash commands
+### Slash commands (Claude Code, OpenCode, and Grok Build)
 
 **One command, `/alpha`.** Modes are arguments, so there is one name to remember
 rather than four in a menu of a hundred.
@@ -295,8 +302,9 @@ does not make the run complete or equivalent to `full_v2`. A method-seat result 
 recorded provisional lens output, never a quotation from the named person.
 
 
-Available in Claude Code, OpenCode and Grok Build as soon as the plugin is installed. Codex keeps
-its prompts user-scoped, so copy it once: `mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
+Codex uses the bundled Skill instead of this slash-command surface:
+`@alphacouncil-agent AAPL`, `@alphacouncil-agent AAPL quick`, or
+`@alphacouncil-agent AAPL news`. No user-scoped prompt copy is required.
 
 ## What It Does
 

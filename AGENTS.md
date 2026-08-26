@@ -103,74 +103,33 @@ symbol, prompt, language and mode, may authorize the applicable execution tool. 
 receipt cannot launch quick and a quick receipt cannot launch full. A host-native
 multi-select is optional UI sugar; the numbered text fallback is mandatory on Claude Code,
 Codex, OpenCode and Grok Build. Data-only `screen`, `options`, `news` and `market` modes are
-the only `/alpha` routes that skip this gate.
+the only routes that skip this gate; the three slash-command hosts expose them under `/alpha`.
 
 | Host | Config | Agents | Skills |
 |---|---|---|---|
 | Claude Code | `.claude-plugin/plugin.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
 | Codex | `.codex-plugin/plugin.json`, `codex.mcp.json` | — | `skills/` via the plugin manifest |
-| OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | see the caveat below |
+| OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | workflow files listed by `instructions` |
 | Grok Build | `.grok/config.toml` | `.grok/agents/alphacouncil-*.md` | `AGENTS.md` (this file) |
 
-### OpenCode
+Host setup and compatibility details belong in [`docs/INSTALL.md`](docs/INSTALL.md), including
+the verified OpenCode 1.18.4 and Grok Build 0.2.101 configuration shapes. Keep this file focused
+on the runtime protocol shared after a host has loaded the integration.
 
-Verified against a real opencode 1.18.4 install rather than from documentation:
+## Host invocation
 
-- `opencode mcp list` shows `alphacouncil-agent connected`. The MCP entry must use
-  OpenCode's shape — `{"type":"local","command":["node","./mcp/server.mjs"]}` — a single
-  argv array. Copying Claude Code's `{command, args}` produces a server that never starts,
-  and the env key is `environment`, not `env`.
-- `opencode debug agent alphacouncil-<role>` parses the generated agent files, resolves
-  `anthropic/claude-…` into a provider and model, and applies their permissions.
-  OpenCode does **not** natively read `.claude/agents/` or `.claude/settings.json`. Some
-  compatibility plugins auto-import a root `.mcp.json`, so this repository deliberately
-  keeps Codex wiring in `codex.mcp.json` to avoid a duplicate, cwd-sensitive server.
-- `opencode.json` deliberately declares **no** global `permission` block. A global block is
-  merged into every agent and overrides the per-agent one, which silently hands the debate
-  roles the network access they are specifically denied. Verified both ways: with the block,
-  `bull_researcher` resolved to `websearch: allow`; without it, `deny`.
-- Per-agent permissions come from each persona's `tools_hint`, so only the roles that
-  actually gather evidence get the network, and no role can edit files or run shell commands.
+Codex is Skill-first: invoke `@alphacouncil-agent <request>`, including explicit modes such
+as `@alphacouncil-agent AAPL quick` and `@alphacouncil-agent AAPL news`. The installed plugin
+contributes its Skills and MCP declaration; Codex does not require a user prompt copy.
 
-**Skills:** opencode 1.18.4 serves `debug skill` from a static catalogue -- a skill added
-at runtime never appears, in any location, including `~/.claude/skills` and with a clean
-`OPENCODE_CONFIG_DIR`. Tested both with and without third-party plugins. So the workflow
-does not ship as skills on OpenCode; it ships through `instructions`, which IS resolved:
-`opencode debug config` shows all four workflow files loaded alongside `AGENTS.md`. The
-MCP tools and `.opencode/agent/*.md` carry the rest.
-
-`websearch` is gated in OpenCode — it needs the OpenCode provider or `OPENCODE_ENABLE_EXA=1`.
-Run `preflight_permissions` before a fan-out; it reads OpenCode's permission syntax too.
-
-### Grok Build
-
-Verified against a real install (grok 0.2.101) rather than from documentation:
-
-- MCP lives in `.grok/config.toml` as TOML, not JSON:
-  `[mcp_servers.alphacouncil-agent]` with `command`, `args` and `enabled`. Generate it with
-  `grok mcp add alphacouncil-agent -s project -t stdio node -- ./mcp/server.mjs` rather than
-  hand-writing it. AlphaCouncil does not ship a root `.mcp.json`; this prevents third-party
-  compatibility loaders from importing a second cwd-sensitive server.
-- **A repo-local server will not start until the folder is trusted.** `grok mcp doctor`
-  reports `folder untrusted (repo-local (project-scoped) server not started)`. That is a
-  security prompt, not a misconfiguration: trust the folder on first launch.
-- `AGENTS.md` is the project system prompt, which is why the generated agents set
-  `agents_md: true` and inherit it.
-- Agent definitions are `.md` with `name` / `description` frontmatter in `.grok/agents/`.
-  Every generated seat uses `permission_mode: plan`, matching the bundled read-only
-  `explore` agent: the council gathers and reasons, it never edits the repo.
-- Skills resolve from `.grok/skills/` and `.claude/skills/`. This repo ships neither, so on
-  Grok Build the workflow arrives through `AGENTS.md` plus the MCP tools, the same shape
-  that works on OpenCode.
-
-## Slash commands
+### Slash commands (Claude Code, OpenCode, and Grok Build only)
 
 **One command, `/alpha`.** Modes are arguments, so there is one name to remember
 rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Shows every master, confirms `1..N`/ranges/`all`, then runs full; plugin-managed headless is ≤30m | deterministic stance + one isolated voice worker per selected v3 seat |
+| `/alpha <ticker>` | Asks for the depth tier, shows every master, confirms `1..N`/ranges/`all`, then runs full; plugin-managed headless is bounded at 15/30/60m | deterministic stance + one isolated voice worker per selected v3 seat |
 | `/alpha <ticker> quick` | Shows the complete returned catalog, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
@@ -189,7 +148,6 @@ visible agents or create a replacement run when it is slow.
 | Claude Code | `commands/` via `.claude-plugin/plugin.json`, plus `.claude/commands/` for a checkout |
 | OpenCode | `.opencode/command/` |
 | Grok Build | `.grok/commands/`, and `.claude/commands/` as a high-priority compatibility source |
-| Codex | `~/.codex/prompts/` is **user-scoped**: `mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/` |
 
 ## Market data coverage
 

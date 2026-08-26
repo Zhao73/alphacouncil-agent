@@ -1,7 +1,7 @@
 {
   "name": "alphacouncil-agent",
   "version": "1.4.1",
-  "description": "Multi-agent company, ETF and market-index research workflow for Codex & Claude Code: sourced evidence, method seats, bull/bear debate and portfolio-manager synthesis.",
+  "description": "Multi-agent company, ETF and market-index research for Codex, Claude Code, OpenCode and Grok Build: sourced evidence, method seats, debate and PM synthesis.",
   "type": "module",
   "license": "MIT",
   "author": "Zhao73",
@@ -40,6 +40,7 @@
     "test:package": "node scripts/check-packaged-host-parity.mjs --check",
     "package:inventory": "node scripts/report-package-inventory.mjs --json",
     "package:inventory:check": "node scripts/report-package-inventory.mjs --check",
+    "docs:install:check": "node scripts/check-install-docs.mjs",
     "sync": "node scripts/sync-personas.mjs",
     "persona:corpus": "node scripts/report-persona-corpus-gaps.mjs",
     "persona:build-specs": "node scripts/report-persona-v3-build-specs.mjs",

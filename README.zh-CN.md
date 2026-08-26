@@ -41,7 +41,7 @@
 
 </div>
 
-AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 插件。完整议会是默认模式；只有用户明确要求 `quick` 时，才进入更小的插件托管 headless 合同。两种模式都会收集带来源的证据、运行所选方法席，并产出可审计的 PM 报告。
+AlphaCouncil Agent 面向 **Codex、Claude Code、OpenCode、Grok Build** 四个宿主，提供上市股票研究议会。完整议会是默认模式；只有用户明确要求 `quick` 时，才进入更小的插件托管 headless 合同。两种模式都会收集带来源的证据、运行所选方法席，并产出可审计的 PM 报告。
 
 ### ✨ 为什么用 AlphaCouncil
 
@@ -85,14 +85,15 @@ AlphaCouncil Agent 是一个面向**上市股票研究**的 Codex / Claude Code 
 
 ## 安装
 
-完整的 Codex 与 Claude Code 安装说明见 **[docs/INSTALL.md](docs/INSTALL.md)**。**Windows 用户**见 [Windows 小节](docs/INSTALL.md#windows)。
+Codex、Claude Code、OpenCode、Grok Build 四个宿主的完整安装说明见
+**[docs/INSTALL.md](docs/INSTALL.md)**。**Windows 用户**见 [Windows 小节](docs/INSTALL.md#windows)。
 
 **前置条件:** Node.js ≥ 18。headless 真跑研究还需要**已安装并登录的 Codex CLI**(每个分析师 worker 都以 `codex exec` 运行);没有 codex 时,改用安装文档里的 visible 工作流。
 
 ```text
 # Codex
 codex plugin marketplace add Zhao73/alphacouncil-agent
-# 再 codex → /plugins 安装 → /reload-plugins
+codex plugin add alphacouncil-agent@alphacouncil
 
 # Claude Code
 /plugin marketplace add Zhao73/alphacouncil-agent
@@ -103,11 +104,16 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 **装完先花 30 秒零成本验证** —— 在跑完整委员会之前,先确认数据层通了:
 
 ```text
+# Codex
+@alphacouncil-agent AAPL news
+
+# Claude Code、OpenCode、Grok Build
 /alpha AAPL news
 ```
 
 这条只调用免密钥数据工具、不派生任何子代理,返回带日期的新闻和公告即说明安装成功;
-然后再跑 `/alpha AAPL` 完整委员会。注意 headless 全量/快速路径还需要已登录的
+Codex 再用 `@alphacouncil-agent 分析 AAPL` 跑完整委员会；其他三个宿主用 `/alpha AAPL`。
+注意 headless 全量/快速路径还需要已登录的
 **Codex CLI**(每个分析师 worker 都是 `codex exec`);只有 Claude Code 时走可见
 子代理路径,见 [docs/INSTALL.md](docs/INSTALL.md)。
 
@@ -150,7 +156,7 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 全部所选方法席、三轮多空和 PM 必须读取并确认同一份完整档案；关键资料缺失时停止决策，
 不会让被截断的提示摘要冒充“全部信息”。
 
-### 斜杠命令
+### 斜杠命令（Claude Code、OpenCode、Grok Build）
 
 **一个命令，`/alpha`。** 模式当参数 —— 只用记一个名字，而不是在上百条命令的菜单里找四个。
 
@@ -232,8 +238,8 @@ complete，也不代表等价于 `full_v2`。方法席输出是本次运行记�
 **不是对应真人说过的话或引语**。
 
 
-Claude Code、OpenCode、Grok Build 装完即可用。Codex 的 prompts 是用户级的，拷贝一次：
-`mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
+Codex 使用插件自带的 Skill，不使用这套斜杠命令：`@alphacouncil-agent AAPL`、
+`@alphacouncil-agent AAPL quick`、`@alphacouncil-agent AAPL news`。无需复制用户级 prompt。
 
 ## 它能做什么
 

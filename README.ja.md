@@ -41,7 +41,7 @@
 
 </div>
 
-AlphaCouncil Agent は、**上場株式のリサーチ委員会**向けの Codex / Claude Code プラグインです。既定はフル委員会で、ユーザーが明示的に `quick` を指定した場合だけ、より小さいプラグイン管理の headless 契約を使います。どちらも出典付きの根拠を集め、選択したメソッド席を実行し、監査可能な PM レポートを生成します。
+AlphaCouncil Agent は、**Codex、Claude Code、OpenCode、Grok Build** の 4 ホストに対応する上場株式リサーチ委員会です。既定はフル委員会で、ユーザーが明示的に `quick` を指定した場合だけ、より小さいプラグイン管理の headless 契約を使います。どちらも出典付きの根拠を集め、選択したメソッド席を実行し、監査可能な PM レポートを生成します。
 
 ### ✨ AlphaCouncil を使う理由
 
@@ -82,14 +82,15 @@ ETF・指数および full/quick の正確な境界は [v1.0.0 リリース契�
 
 ## インストール
 
-Codex と Claude Code の完全なセットアップ手順は **[docs/INSTALL.md](docs/INSTALL.md)** を参照してください。**Windows ユーザー**は [Windows セクション](docs/INSTALL.md#windows) を参照。
+Codex、Claude Code、OpenCode、Grok Build の完全なセットアップ手順は
+**[docs/INSTALL.md](docs/INSTALL.md)** を参照してください。**Windows ユーザー**は [Windows セクション](docs/INSTALL.md#windows) を参照。
 
 **前提条件:** Node.js ≥ 18。headless でリサーチを実走させるには、**インストール済みかつ認証済みの Codex CLI** も必要です(各アナリスト worker は `codex exec` として起動します)。Codex が無い場合は、インストールガイドの **visible ワークフロー**を使ってください。
 
 ```text
 # Codex
 codex plugin marketplace add Zhao73/alphacouncil-agent
-# その後 codex → /plugins でインストール → /reload-plugins
+codex plugin add alphacouncil-agent@alphacouncil
 
 # Claude Code
 /plugin marketplace add Zhao73/alphacouncil-agent
@@ -100,11 +101,16 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 **まず 30 秒・コストゼロで動作確認** —— フル評議会を回す前に、データ層の疎通を確認します:
 
 ```text
+# Codex
+@alphacouncil-agent AAPL news
+
+# Claude Code、OpenCode、Grok Build
 /alpha AAPL news
 ```
 
 これはキー不要のデータツールのみを呼び、サブエージェントを一切起動しません。日付付きの
-ニュースと開示が返ればインストール成功です。その後 `/alpha AAPL` でフル評議会をどうぞ。
+ニュースと開示が返ればインストール成功です。Codex では
+`@alphacouncil-agent AAPL を分析`、ほかの 3 ホストでは `/alpha AAPL` でフル評議会を実行します。
 なお headless のフル/クイック経路には認証済みの **Codex CLI** が別途必要です
 (各アナリストワーカーは `codex exec` として動作)。Claude Code のみの場合は可視
 サブエージェント経路になります。詳細は [docs/INSTALL.md](docs/INSTALL.md)。
@@ -142,13 +148,13 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 固定 52 項目を一つずつ説明し、all ではさらに 3 packet を追加します。同じ SHA-256 で全メソッド席、3 ラウンドの Bull/Bear、PM に
 渡されます。重大な欠落があれば判断を停止し、短縮された prompt の索引を完全資料とは扱いません。
 
-### スラッシュコマンド
+### スラッシュコマンド（Claude Code、OpenCode、Grok Build）
 
 **コマンドは `/alpha` ひとつ。** モードは引数です —— 100 を超えるコマンド一覧の中から 4 つを探すのではなく、覚える名前はひとつだけです。
 
 | 入力 | 実行内容 | モデル消費 |
 |---|---|---|
-| `/alpha <ticker>` | 全マスターを個別表示して full を実行；プラグイン管理 headless は ≤30分 | 選択した v3 席ごとに決定論的 stance + 独立 voice worker 1つ |
+| `/alpha <ticker>` | 深度を選び、全マスターを個別表示して full を実行；プラグイン管理 headless の上限は 15/30/60 分 | 選択した v3 席ごとに決定論的 stance + 独立 voice worker 1つ |
 | `/alpha <ticker> quick` | 全 26 席を表示し、1-4 席を確認（`all` 禁止）後、プラグイン管理の `quick_v1`（≤10分）を実行 | 選択数により変動 |
 | `/alpha <ticker> screen` | 機械的スクリーニングのみ | **なし** |
 | `/alpha <ticker> options` | IV ターム構造、スキュー、建玉分布 | **なし** |
@@ -209,8 +215,9 @@ Quick には第 2 ラウンドの反論、第 3 ラウンドの exact Q&A、
 ありません。メソッド席の結果は今回記録された provisional lens の出力であり、**本人の発言や引用ではありません**。
 
 
-Claude Code、OpenCode、Grok Build ではインストール後すぐ使えます。Codex の prompts はユーザースコープなので一度コピーしてください：
-`mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/`
+Codex は同梱 Skill を使い、スラッシュコマンド面は使いません：
+`@alphacouncil-agent AAPL`、`@alphacouncil-agent AAPL quick`、
+`@alphacouncil-agent AAPL news`。ユーザースコープの prompt コピーは不要です。
 
 ## 何ができるか
 
@@ -335,7 +342,7 @@ flowchart TD
 
 | | Codex 版 | Claude Code 版 |
 |---|---|---|
-| 委員会の実行 | プラグイン管理 `codex exec` worker；full headless ≤30分 | ホスト管理 `Task` サブエージェント；プラグインの強制期限なし |
+| 委員会の実行 | プラグイン管理 `codex exec` worker；full headless は選択した 15/30/60 分の上限 | ホスト管理 `Task` サブエージェント；プラグインの強制期限なし |
 | アナリストごとの文脈 | 別プロセス | 別サブエージェント、それぞれ独立した完全な文脈ウィンドウ |
 | 取証 | `codex exec --search` | 各アナリスト自身の文脈で `WebSearch` + `WebFetch` |
 | 根拠 → ディベート | 8 席を同時開始し、その後ハードバリア | 実行フェーズマシンによるハードバリア |

@@ -1,7 +1,9 @@
 # Install AlphaCouncil Agent
 
-AlphaCouncil Agent runs in **OpenAI Codex** and **Claude Code**. It also loads as a
-plain MCP server in the Claude desktop app.
+AlphaCouncil Agent supports four host integrations: **OpenAI Codex**, **Claude Code**,
+**OpenCode**, and **Grok Build**. Codex loads the bundled Skills and MCP declaration from
+the plugin. Claude Code, OpenCode, and Grok Build also ship a host-native `/alpha` command.
+The same server can additionally load as an MCP-only connector in the Claude desktop app.
 
 > ⚠️ **Disclaimer.** Educational/research use only. **Not investment advice.**
 > AI analysis can be incomplete, outdated, or wrong. Do your own research and
@@ -16,7 +18,12 @@ plain MCP server in the Claude desktop app.
 npm install -g alphacouncil-agent
 ```
 
-That installs the current release. To pin a version or install straight from a tag:
+That installs the current release and places the `alphacouncil-agent` MCP executable on
+your `PATH`. A global npm install is useful when a host needs a standalone MCP command; it
+does **not** by itself register the bundled Codex Skill or the other hosts' command/agent
+files. Use the matching host section below for the complete integration.
+
+To pin a version or install straight from a tag:
 
 ```bash
 npm install -g alphacouncil-agent@latest
@@ -61,10 +68,26 @@ persona set loads, and what the data directory holds.
 
 ## How to invoke it once installed
 
-One command, `/alpha`. Modes are arguments.
+### Codex: Skill-first
+
+Invoke the installed plugin by its Skill mention. Modes remain plain-language arguments,
+including the explicit quick path:
 
 ```text
-/alpha <ticker>              full council — displays all methods; headless run is bounded <=30m
+@alphacouncil-agent AAPL news
+@alphacouncil-agent analyze AAPL
+@alphacouncil-agent AAPL quick
+```
+
+The Codex plugin already contributes its Skills and MCP server. There is no prompt file to
+copy into your home directory, and `/alpha` is not the Codex invocation surface.
+
+### Claude Code, OpenCode, and Grok Build: `/alpha`
+
+On these three hosts, one command, `/alpha`, carries the mode as an argument.
+
+```text
+/alpha <ticker>              full council — asks for the 15/30/60m depth tier, then displays all methods
 /alpha <ticker> quick        quick_v1 — 4 analysts incl. news + 1-4 methods + one parallel debate round (<=10m)
 /alpha <ticker> screen       mechanical filings screen only        (no model spend)
 /alpha <ticker> options      IV term structure, skew, positioning  (no model spend)
@@ -99,9 +122,9 @@ eight-seat core or eleven-seat all-analyst roster and the three-round `full_v2` 
 
 Callers and `ALPHACOUNCIL_FULL_TOTAL_MS` may lower the deadline, never raise it. At expiry
 the server saves a terminal `incomplete` run naming failed/timed-out/skipped seats. The
-30-minute bound guarantees terminal persistence, not complete results when search, model
-transport or data providers are unavailable. `plan_visible_run` has no such enforceable
-deadline because the external host owns and schedules its subagents.
+selected tier's 15-, 30-, or 60-minute bound guarantees terminal persistence, not complete
+results when search, model transport or data providers are unavailable. `plan_visible_run`
+has no such enforceable deadline because the external host owns and schedules its subagents.
 
 A full `user_response.md` lists all eight or eleven receipt-bound analyst statuses and summaries, every selected
 stable master ID with its stance and isolated-worker output/status, and a system-owned price
@@ -150,13 +173,8 @@ handoff retain a system-owned ledger naming every degraded task or debate side a
 `report_quality=passed` only means the mode-appropriate report structure passed; it does not
 upgrade a degraded run or make quick equivalent to full.
 
-Codex keeps prompts user-scoped rather than in the plugin, so copy it once:
-
-```bash
-mkdir -p ~/.codex/prompts && cp commands/alpha.md ~/.codex/prompts/
-```
-
-`@alphacouncil-agent <question>` still works everywhere and does the same thing.
+Codex users express the same modes after the Skill mention, for example
+`@alphacouncil-agent AAPL quick` or `@alphacouncil-agent AAPL news`.
 
 ## Prerequisites
 
@@ -181,36 +199,39 @@ npm run check       # runs the self-check (no Codex auth required)
 
 This repo already ships the manifests Codex expects, at the official paths:
 `.agents/plugins/marketplace.json` (repo marketplace), `.codex-plugin/plugin.json`
-(plugin manifest), and `codex.mcp.json` (Codex-only MCP server wiring) — so the one-command install below
-works out of the box. (`.claude-plugin/marketplace.json` is kept for legacy compat.)
+(plugin manifest), and `codex.mcp.json` (Codex-only MCP server wiring) — so the two CLI
+commands below work out of the box. (`.claude-plugin/marketplace.json` is kept for legacy compat.)
 
-### A. One command — recommended ✅
+### A. GitHub marketplace — recommended ✅
 
 ```text
 codex plugin marketplace add Zhao73/alphacouncil-agent
+codex plugin add alphacouncil-agent@alphacouncil
 ```
 
 Then **fully quit and restart the Codex desktop app** (plugins load at session
 start — see [Troubleshooting](#troubleshooting-the-plugin-doesnt-show-up--alphacouncil-agent-isnt-found)),
-open a new session, and:
+open a new session, and invoke the Skill:
 
 ```text
-/plugins            # switch to the "AlphaCouncil" marketplace → Install alphacouncil-agent
-/reload-plugins
+@alphacouncil-agent AAPL news
 ```
+
+`codex plugin list --json` should show `alphacouncil-agent@alphacouncil` with
+`installed: true` and `enabled: true`.
 
 ### B. Local clone — advanced / offline only
 
 ```bash
 git clone https://github.com/Zhao73/alphacouncil-agent.git \
   ~/.codex/plugins/alphacouncil-agent
+codex plugin marketplace add ~/.codex/plugins/alphacouncil-agent
+codex plugin add alphacouncil-agent@alphacouncil
 ```
 
-Then add an entry to `~/.agents/plugins/marketplace.json` whose `source.path` is the
-**absolute** path to that clone (copy the shape from `.agents/plugins/marketplace.json`
-in this repo; on Windows use `C:\\Users\\you\\.codex\\plugins\\alphacouncil-agent`, not
-`./`), restart Codex, and install from `/plugins`. **Prefer A** unless you're doing
-offline/local development — it avoids hand-editing paths.
+The CLI records the clone's absolute path in the isolated marketplace configuration.
+Restart Codex after installation. **Prefer A** unless you're doing offline/local
+development; it keeps the user's installation tied to the GitHub marketplace source.
 
 **Use it:**
 
@@ -259,6 +280,70 @@ headless path still needs Codex CLI as above.
 
 ---
 
+## Install in OpenCode
+
+The repository checkout is the complete OpenCode integration: `opencode.json` wires the
+local MCP server, `AGENTS.md` plus the listed instruction files carry the workflow, and
+`.opencode/agent/` plus `.opencode/command/alpha.md` provide the host-native agents and
+`/alpha` command.
+
+```bash
+git clone https://github.com/Zhao73/alphacouncil-agent.git
+cd alphacouncil-agent
+opencode mcp list
+```
+
+Verified against OpenCode 1.18.4:
+
+- the MCP shape is `{"type":"local","command":["node","./mcp/server.mjs"]}`; `command`
+  is one argv array and the environment key is `environment`, not `env`;
+- OpenCode does not import `.claude/agents/` or `.claude/settings.json`; the generated
+  `.opencode/agent/*.md` files carry per-role permissions, and
+  `opencode debug agent alphacouncil-<role>` exposes the resolved provider/model and rules;
+- `opencode.json` intentionally has no global `permission` block, because a global block
+  overrides the safer per-agent network rules. Only evidence gatherers receive network
+  access, and no generated role may edit files or run shell commands;
+- no root `.mcp.json` is shipped. This prevents compatibility plugins from auto-importing
+  a second cwd-sensitive server beside the explicit OpenCode and Codex wiring;
+- runtime-added Skills do not appear in OpenCode 1.18.4's static Skill catalogue. The
+  workflow therefore loads through `instructions`, the MCP tools, and the generated agents.
+
+`websearch` needs the OpenCode provider or `OPENCODE_ENABLE_EXA=1`. Run
+`preflight_permissions` before a fan-out. A global npm install can provide an MCP-only
+`alphacouncil-agent` command, but it does not install these repo-local instructions,
+agents, or `/alpha` command.
+
+---
+
+## Install in Grok Build
+
+Use a repository checkout so Grok Build can read `AGENTS.md`, `.grok/agents/`,
+`.grok/commands/alpha.md`, and the project-scoped MCP configuration:
+
+```bash
+git clone https://github.com/Zhao73/alphacouncil-agent.git
+cd alphacouncil-agent
+grok mcp doctor
+```
+
+Verified against Grok Build 0.2.101:
+
+- MCP configuration is TOML under `.grok/config.toml`. To regenerate it, run
+  `grok mcp add alphacouncil-agent -s project -t stdio node -- ./mcp/server.mjs`. No root
+  `.mcp.json` is shipped, so compatibility loaders cannot start a duplicate server;
+- a repo-local server stays stopped until the folder is trusted. The corresponding
+  `folder untrusted` doctor result is a security prompt, not a broken command;
+- `AGENTS.md` is the project system prompt, and generated `.grok/agents/*.md` seats use
+  read-only `permission_mode: plan`. Those agents are Markdown files with `name` and
+  `description` frontmatter and inherit `AGENTS.md`;
+- this repository does not duplicate the workflow under `.grok/skills/` or
+  `.claude/skills/`; Grok receives it through `AGENTS.md` plus MCP tools.
+
+A global npm install again provides only the standalone MCP executable. The checkout is
+what supplies Grok's agents and `/alpha` command.
+
+---
+
 ## Troubleshooting: the plugin doesn't show up / `@alphacouncil-agent` isn't found
 
 Codex loads its tool list **at session start**. Installing or enabling a plugin
@@ -268,23 +353,21 @@ are installed, `config.toml` marks it enabled, and the self-check passes.
 Do this in order:
 
 1. **Fully quit and restart the Codex desktop app** (not just a new tab) and open a **new session**.
-2. Type `/plugins` and confirm **AlphaCouncil** is listed; enable `alphacouncil-agent`.
-3. Type `/reload-plugins`.
-4. Trigger it with the **exact lowercase id**: `@alphacouncil-agent ...`. The display
+2. In a terminal, run `codex plugin list --json` and confirm
+   `alphacouncil-agent@alphacouncil` is installed and enabled.
+3. Trigger it with the **exact lowercase id**: `@alphacouncil-agent ...`. The display
    name `@AlphaCouncil Agent` (spaces + capitals) may not trigger — prefer the id.
 
-If `/plugins` **still** doesn't list it after a full restart, your Codex build didn't
-pick up the local marketplace. Use the official GitHub marketplace command instead (run
-in a normal terminal), then restart Codex:
+If the plugin is absent, add both the marketplace and plugin in a normal terminal, then
+restart Codex:
 
 ```text
 codex plugin marketplace add Zhao73/alphacouncil-agent
+codex plugin add alphacouncil-agent@alphacouncil
 ```
 
-> Local-clone install (Option B): the `source.path` in your
-> `~/.agents/plugins/marketplace.json` must be the **absolute** path to the clone
-> (e.g. `C:\\Users\\you\\.codex\\plugins\\alphacouncil-agent`), **not** `./`. When in
-> doubt, use the GitHub marketplace command above — it avoids hand-editing paths.
+When using a local clone, pass its absolute path to `codex plugin marketplace add`; do
+not hand-edit a relative `source.path`.
 
 ## Windows
 
@@ -298,29 +381,22 @@ codex plugin marketplace add Zhao73/alphacouncil-agent
 
 ### Install in Codex desktop (Windows)
 
-The in-app commands are identical to macOS/Linux — they run **inside Codex**, not in your
-shell, so the OS does not matter:
+Run the same plugin CLI commands in PowerShell or CMD, then restart Codex Desktop:
 
 ```text
 codex plugin marketplace add Zhao73/alphacouncil-agent
-# then open Codex → /plugins → switch to the "AlphaCouncil" marketplace → Install → /reload-plugins
+codex plugin add alphacouncil-agent@alphacouncil
 ```
 
 Local / personal marketplace (Windows paths). In PowerShell:
 
 ```powershell
 git clone https://github.com/Zhao73/alphacouncil-agent.git "$env:USERPROFILE\.codex\plugins\alphacouncil-agent"
+codex plugin marketplace add "$env:USERPROFILE\.codex\plugins\alphacouncil-agent"
+codex plugin add alphacouncil-agent@alphacouncil
 ```
 
-Then add an entry to `%USERPROFILE%\.agents\plugins\marketplace.json` whose `source.path`
-points at that folder (copy the shape from `.agents/plugins/marketplace.json` in this repo).
-In JSON, escape Windows backslashes, e.g.:
-
-```json
-{ "source": { "path": "C:\\Users\\you\\.codex\\plugins\\alphacouncil-agent" } }
-```
-
-Restart Codex and install from `/plugins`.
+Restart Codex, open a new session, and use `@alphacouncil-agent ...`.
 
 ### Install in Claude Code (Windows)
 
@@ -365,8 +441,10 @@ Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil
 ## 中文速览
 
 - 前置:Node ≥ 18;headless 真跑研究需要已登录的 Codex CLI(worker 是 `codex exec`)。Windows v0.3.0+ 原生支持 `codex.cmd`;WSL 只是 fallback。
-- Codex 安装:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `/plugins` 安装 → `/reload-plugins`;或 clone 到 `~/.codex/plugins/` 走本地 marketplace。
+- 四个宿主:Codex、Claude Code、OpenCode、Grok Build;完整 full 的三档硬上限分别为 15/30/60 分钟。
+- Codex 安装:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `codex plugin add alphacouncil-agent@alphacouncil` → 重启;用 `@alphacouncil-agent AAPL news`，quick 用 `@alphacouncil-agent AAPL quick`。
 - Claude Code 安装:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
+- OpenCode/Grok Build:使用仓库 checkout 里的各自配置、agents 与 `/alpha` 命令;见上方对应小节。npm 全局安装只提供 MCP 可执行文件。
 - 没有 Codex CLI 时:用 visible 工作流,让 Claude 子代理产出证据并用 `record_visible_*` 录入,无需 codex。
 
 ---
@@ -374,6 +452,8 @@ Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil
 ## 日本語クイックガイド
 
 - 前提:Node ≥ 18。headless でリサーチを実走させるには、認証済みの Codex CLI が必要(worker は `codex exec`)。Windows は v0.3.0+ で `codex.cmd` をネイティブに起動可能。WSL は fallback。
-- Codex でのインストール:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `/plugins` でインストール → `/reload-plugins`。または `~/.codex/plugins/` に clone してローカル marketplace 経由でも可。
+- 4 ホスト:Codex、Claude Code、OpenCode、Grok Build。full の深度別ハード上限は 15/30/60 分です。
+- Codex:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `codex plugin add alphacouncil-agent@alphacouncil` → 再起動。`@alphacouncil-agent AAPL news` で使用し、quick は `@alphacouncil-agent AAPL quick`。
 - Claude Code でのインストール:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
+- OpenCode/Grok Build:リポジトリ checkout 内の専用設定、agents、`/alpha` コマンドを使用します。npm のグローバルインストールだけでは MCP 実行ファイルのみです。
 - Codex CLI が無い場合:visible ワークフローを使用。Claude のサブエージェントに根拠を生成させ、`record_visible_*` で記録する(codex 不要)。
