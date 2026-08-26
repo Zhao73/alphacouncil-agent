@@ -31,6 +31,10 @@ import {
   HOST_SELECTION_INSTRUCTION_PATHS,
   inspectHostSelectionInstruction,
 } from "./host-selection-instruction-contract.mjs";
+import {
+  assertPackageInventory,
+  buildPackageInventoryReport,
+} from "./package-inventory.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const PACKAGED_PARITY_REPO_ROOT = resolve(HERE, "../..");
@@ -284,6 +288,7 @@ function packAndInstall({ repoRoot, tempRoot }) {
     fail("installed package identity differs from the packed repository package");
   }
   return {
+    repoRoot,
     installedRoot,
     metadata,
     tarballHash: sha256(readFileSync(tarball)),
@@ -319,6 +324,10 @@ function countInstalledPackVersions(installedRoot, installedFiles) {
 
 function validatePackagedSurfaces(pack) {
   const packageFiles = new Set(pack.tarFiles);
+  const packageInventory = assertPackageInventory(buildPackageInventoryReport(
+    pack.repoRoot,
+    pack.metadata,
+  ));
   const installedEntries = walkFiles(pack.installedRoot);
   const installedFiles = new Set(installedEntries.map((entry) => entry.path));
   if (pack.tarFiles.some((path) => path === "fuzz" || path.startsWith("fuzz/"))) {
@@ -334,7 +343,7 @@ function validatePackagedSurfaces(pack) {
   // The capsule is complete when the package carries every review the repository holds. Pinning
   // a number instead would only restate the roster size, and would have to be edited on the
   // day a seat is added -- which is exactly when the check should still be meaningful.
-  const repoReviews = walkFiles(resolve(PACKAGED_PARITY_REPO_ROOT, reviewPrefix))
+  const repoReviews = walkFiles(resolve(pack.repoRoot, reviewPrefix))
     .filter((entry) => entry.path.endsWith(".json"));
   if (packagedReviews.length !== repoReviews.length) {
     fail(`installed AI-assisted review capsule must contain every one of the ${repoReviews.length} repository review files; got ${packagedReviews.length}`);
@@ -467,6 +476,13 @@ function validatePackagedSurfaces(pack) {
       local_test_status: aiAssistedStatus.local_test_status,
       human_review_satisfied: aiAssistedStatus.human_review_satisfied,
       formal_ga_effect: aiAssistedStatus.formal_ga_effect,
+    },
+    package_inventory: {
+      status: "passed",
+      runtime_closure_file_count: packageInventory.runtime_closure.file_count,
+      classifications: packageInventory.classification_summary,
+      forbidden_paths: packageInventory.forbidden_paths,
+      required_trees: packageInventory.required_trees,
     },
     production_pack_inventory: productionPacks,
   };
@@ -915,6 +931,7 @@ export async function runPackagedHostParity({ repoRoot = PACKAGED_PARITY_REPO_RO
         deterministic_policy: surfaces.deterministic_policy,
         exclusions: surfaces.exclusions,
         ai_assisted_review_capsule: surfaces.ai_assisted_review_capsule,
+        package_inventory: surfaces.package_inventory,
       },
       packaged_adapter_e2e: packagedAdapterE2e,
       external_cli_live_e2e: {
@@ -965,6 +982,13 @@ export function renderPackagedHostParityMarkdown(report) {
     `- knowledge/staging: ${report.package_surfaces.exclusions.knowledge_staging}`,
     `- acquisitions: ${report.package_surfaces.exclusions.acquisitions}`,
     `- source.bin: ${report.package_surfaces.exclusions.source_bin}`,
+    "",
+    "Package inventory:",
+    "",
+    `- status: ${report.package_surfaces.package_inventory.status}`,
+    `- runtime static closure: ${report.package_surfaces.package_inventory.runtime_closure_file_count} files`,
+    ...Object.entries(report.package_surfaces.package_inventory.classifications)
+      .map(([category, value]) => `- ${category}: ${value.files} files; ${value.bytes} bytes`),
     "",
   );
   return lines.join("\n");

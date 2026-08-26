@@ -75,6 +75,8 @@ test("prepublishOnly proves the package works, not that the corpus is GA-ready",
   assert.match(pkg.scripts.prepublishOnly, /npm run test:package/);
   assert.doesNotMatch(pkg.scripts.prepublishOnly, /npm run check/);
   assert.match(pkg.scripts["test:package"], /check-packaged-host-parity\.mjs/);
+  assert.match(pkg.scripts["package:inventory"], /report-package-inventory\.mjs --json/);
+  assert.match(pkg.scripts["package:inventory:check"], /report-package-inventory\.mjs --check/);
   // The GA gate still exists and still runs the reports that fail closed.
   assert.match(pkg.scripts["release:check"], /npm run check/);
   assert.match(pkg.scripts["release:check"], /--require-release-evidence/);

@@ -12,7 +12,7 @@
  * so a difference in outcome can only come from the module that was swapped.
  */
 
-import { decide } from "./policy.mjs";
+import { decide } from "../../mcp/lib/personas-v2/policy.mjs";
 
 /** Fields a decision may legitimately carry that are identity rather than judgment. */
 const IDENTITY_FIELDS = new Set(["persona_id"]);

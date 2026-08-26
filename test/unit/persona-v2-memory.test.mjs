@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { LeakError, assertWritable, canWritePostmortem, currentBeliefs, episode, isVisible, postmortem, recallFor, visibleMemory } from "../../mcp/lib/personas-v2/memory.mjs";
+import { LeakError, assertWritable, canWritePostmortem, currentBeliefs, episode, isVisible, postmortem, recallFor, visibleMemory } from "../helpers/persona-v2-memory.mjs";
 import { loadPacks } from "../../mcp/lib/personas-v2/loader.mjs";
 
 const buffett = loadPacks().get("master_buffett");

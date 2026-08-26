@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { loadPacks } from "../../mcp/lib/personas-v2/loader.mjs";
 import { decide } from "../../mcp/lib/personas-v2/policy.mjs";
-import { differentiation, judgmentOf, nameSwap, pairwiseAgreement, policySwap, runNameSwap, runPolicySwap, selfConsistency } from "../../mcp/lib/personas-v2/ablation.mjs";
+import { differentiation, judgmentOf, nameSwap, pairwiseAgreement, policySwap, runNameSwap, runPolicySwap, selfConsistency } from "../helpers/persona-v2-ablation.mjs";
 
 const reg = loadPacks();
 const buffett = reg.get("master_buffett");

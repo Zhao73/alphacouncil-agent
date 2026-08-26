@@ -10,6 +10,11 @@ import {
 } from "../../scripts/lib/packaged-host-parity.mjs";
 import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
 import { HOST_SELECTION_INSTRUCTION_PATHS } from "../../scripts/lib/host-selection-instruction-contract.mjs";
+import {
+  PACKAGE_INVENTORY_CATEGORIES,
+  WP2_FORBIDDEN_PACKAGE_PATHS,
+  WP2_REQUIRED_PACKAGE_TREES,
+} from "../../scripts/lib/package-inventory.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 
 /**
@@ -140,6 +145,16 @@ test("npm tarball install exposes identical four-host MCP adapter behavior witho
     human_review_satisfied: false,
     formal_ga_effect: "none",
   });
+  const inventory = report.package_surfaces.package_inventory;
+  assert.equal(inventory.status, "passed");
+  assert.ok(inventory.runtime_closure_file_count >= 100);
+  assert.deepEqual(Object.keys(inventory.classifications), [...PACKAGE_INVENTORY_CATEGORIES]);
+  assert.equal(
+    Object.values(inventory.classifications).reduce((sum, value) => sum + value.files, 0),
+    report.package.tarball_file_count,
+  );
+  assert.deepEqual(inventory.forbidden_paths, [...WP2_FORBIDDEN_PACKAGE_PATHS]);
+  assert.deepEqual(inventory.required_trees, [...WP2_REQUIRED_PACKAGE_TREES]);
   assert.equal(report.external_cli_live_e2e.status, "not_run");
   assert.ok(Object.values(report.external_cli_live_e2e.hosts).every((status) => status === "not_run"));
   assert.deepEqual(report.physical_v3_decision_parity, {
