@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import Ajv2020 from "ajv/dist/2020.js";
 
 import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
 import { jsonlEntryHash } from "../../mcp/lib/fsutil.mjs";
@@ -29,6 +30,7 @@ import {
 const DOSSIER_HASH = `sha256:${"d".repeat(64)}`;
 const PACKET_HASH = `sha256:${"e".repeat(64)}`;
 const VERIFY_CLI = fileURLToPath(new URL("../../scripts/verify-run-bundle.mjs", import.meta.url));
+const RUN_BUNDLE_SCHEMA_PATH = fileURLToPath(new URL("../../schemas/run-bundle-v1.schema.json", import.meta.url));
 
 function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
@@ -212,6 +214,30 @@ test("run bundle exports atomically and verifies structure separately from claim
     assert.match(summary, /^structure: PASS$/mu);
     assert.match(summary, /^claim_readiness: BLOCKED/mu);
     assert.doesNotMatch(summary, /^PASS$/mu);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the shipped schema accepts a real manifest and rejects every dot-segment traversal shape", () => {
+  const { root, runDir } = fixture();
+  try {
+    const bundleDir = join(root, "bundle");
+    const exported = exportRunBundle({ runDir, outputDir: bundleDir });
+    const schema = JSON.parse(readFileSync(RUN_BUNDLE_SCHEMA_PATH, "utf8"));
+    const validate = new Ajv2020({ strict: true, validateFormats: false }).compile(schema);
+    assert.equal(validate(exported.manifest), true, JSON.stringify(validate.errors));
+    assert.equal(schema.properties.files.maxItems, 4_096);
+
+    for (const path of ["payload/../escape.json", "payload/..", "payload/./escape.json", "payload/x/../escape.json"]) {
+      const candidate = structuredClone(exported.manifest);
+      candidate.files[0].path = path;
+      assert.equal(validate(candidate), false, `${path} must be rejected by the published schema`);
+    }
+
+    const nested = structuredClone(exported.manifest);
+    nested.files[0].path = "payload/nested/review.json";
+    assert.equal(validate(nested), true, JSON.stringify(validate.errors));
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
