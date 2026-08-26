@@ -7,16 +7,18 @@ export function timingIso(offsetMs) {
 }
 
 export function rehashTimingEvents(events) {
-  return events.map((source, index, rebuilt) => {
+  const rebuilt = [];
+  for (const source of events) {
     const event = {
       ...source,
-      seq: index + 1,
-      prev_hash: rebuilt[index - 1]?.event_hash || null,
+      seq: rebuilt.length + 1,
+      prev_hash: rebuilt.at(-1)?.event_hash || null,
     };
     delete event.event_hash;
     event.event_hash = jsonlEntryHash(event);
-    return event;
-  });
+    rebuilt.push(event);
+  }
+  return rebuilt;
 }
 
 function append(events, offsetMs, type, fields = {}) {

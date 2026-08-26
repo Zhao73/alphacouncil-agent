@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
+import { jsonlEntryHash } from "../../mcp/lib/fsutil.mjs";
+
 import {
   fullTimingFixture,
   legacyTimingFixture,
@@ -19,6 +21,22 @@ async function timingApi() {
 function issueCodes(result) {
   return (result.issues || []).map((issue) => typeof issue === "string" ? issue : issue.code);
 }
+
+test("timing fixture rehash is identity-stable and rebuilds a valid chain after splice", () => {
+  const original = fullTimingFixture().events;
+  assert.equal(JSON.stringify(rehashTimingEvents(structuredClone(original))), JSON.stringify(original));
+
+  const spliced = structuredClone(original);
+  spliced.splice(2, 1);
+  const rebuilt = rehashTimingEvents(spliced);
+  for (const [index, event] of rebuilt.entries()) {
+    const hashInput = { ...event };
+    delete hashInput.event_hash;
+    assert.equal(event.seq, index + 1);
+    assert.equal(event.prev_hash, rebuilt[index - 1]?.event_hash || null);
+    assert.equal(event.event_hash, jsonlEntryHash(hashInput));
+  }
+});
 
 function replayProfile(overrides = {}) {
   return {
