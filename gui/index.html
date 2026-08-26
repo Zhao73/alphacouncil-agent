@@ -65,12 +65,36 @@ let current = null, timer = null;
 
 // ponytail: ~70-line markdown renderer covers the report contract's markdown
 // (headings/tables/lists/quotes/fences/bold); swap for a real parser if it falls short.
-const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s) => String(s)
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#39;");
+const safeHref = (value) => {
+  if (typeof value !== "string" || /[\u0000-\u0020\u007f"'<>`\\]/u.test(value)) return null;
+  try {
+    const parsed = new URL(value);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+    if (parsed.username || parsed.password) return null;
+    return parsed.href;
+  } catch {
+    return null;
+  }
+};
+const decorate = (value) => value
+  .replace(/`([^`]+)`/g, "<code>$1</code>")
+  .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
 function inline(s) {
-  return esc(s)
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  const links = [];
+  const tokenized = String(s).replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label, href) => {
+    const safe = safeHref(href);
+    if (!safe) return whole;
+    const token = `\u0000AC_LINK_${links.length}\u0000`;
+    links.push(`<a href="${esc(safe)}" target="_blank" rel="noopener noreferrer">${decorate(esc(label))}</a>`);
+    return token;
+  });
+  return decorate(esc(tokenized)).replace(/\u0000AC_LINK_(\d+)\u0000/g, (_, index) => links[Number(index)] || "");
 }
 function renderMd(src) {
   const lines = src.replace(/\r\n?/g, "\n").split("\n");

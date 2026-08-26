@@ -3,6 +3,12 @@ import { internalError, invalidParams } from "./errors.mjs";
 import { OPERATING_COMPANY_COVERAGE, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
 import { applyRecencyGate, filingsFeed, parseFeed, queryNewsFeed, tickerNewsFeed } from "./feeds.mjs";
 import { marketFor } from "./markets.mjs";
+import {
+  PublicHttpError,
+  isReservedHttpHostname,
+  normalizePublicHttpUrl,
+  retrievePublicHttpText,
+} from "./public-http.mjs";
 import { fetchQuote } from "./quotes.mjs";
 import {
   fetchFilingDocument,
@@ -228,21 +234,64 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function safeUrl(value) {
+export function safeUrl(value) {
   if (typeof value !== "string" || !value.trim()) return null;
   try {
-    const parsed = new URL(value);
-    if (!["http:", "https:"].includes(parsed.protocol)) return null;
-    if (parsed.username || parsed.password) return null;
-    const host = parsed.hostname.toLowerCase();
-    if (!host || host === "localhost" || host.endsWith(".localhost") || /^127\./u.test(host)
-      || host === "::1" || /^10\./u.test(host) || /^192\.168\./u.test(host)
-      || /^169\.254\./u.test(host) || /^172\.(?:1[6-9]|2\d|3[01])\./u.test(host)) return null;
-    parsed.hash = "";
-    return parsed.href;
+    const normalized = normalizePublicHttpUrl(value);
+    if (isReservedHttpHostname(new URL(normalized).hostname)) return null;
+    return normalized;
   } catch {
     return null;
   }
+}
+
+function pinnedResponse(result) {
+  return {
+    ok: result.status >= 200 && result.status <= 299,
+    status: result.status,
+    url: result.final_url,
+    headers: {
+      get(name) {
+        const value = result.headers?.[String(name).toLowerCase()];
+        if (Array.isArray(value)) return value.length ? String(value[0]) : null;
+        return value === undefined ? null : String(value);
+      },
+    },
+    text: async () => result.text,
+  };
+}
+
+async function requestPublicText(url, {
+  fetchImpl,
+  headers,
+  lookupImpl,
+  maxRedirects = 5,
+  redirectPolicy,
+  requestImpl,
+  signal,
+  timeoutMs,
+}) {
+  // Existing unit and integration fixtures inject a Response-shaped fetch function. The
+  // production path deliberately does not default to global fetch: it uses the pinned
+  // node:http/node:https transport below. Injected fetches receive manual redirects so
+  // tests cannot accidentally assert the insecure production behavior.
+  if (fetchImpl) {
+    return fetchImpl(url, {
+      signal,
+      headers,
+      redirect: "manual",
+    });
+  }
+  return pinnedResponse(await retrievePublicHttpText(url, {
+    headers,
+    lookupImpl,
+    maxBytes: MAX_SOURCE_BODY_BYTES,
+    maxRedirects,
+    redirectPolicy,
+    requestImpl,
+    signal,
+    timeoutMs,
+  }));
 }
 
 function baseSite(host) {
@@ -521,22 +570,33 @@ function extractFeedLinks(html, pageUrl, rootUrls) {
   return unique(found).slice(0, 16);
 }
 
-async function fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs }) {
+async function fetchOfficialRoot(url, {
+  signal,
+  fetchImpl,
+  lookupImpl,
+  requestImpl,
+  timeoutMs,
+}) {
   const safe = safeUrl(url);
   if (!safe) return { url, status: "blocked", reason: "unsafe_or_non_http_url", links: [] };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const relayAbort = () => controller.abort();
-  signal?.addEventListener?.("abort", relayAbort, { once: true });
+  const relayAbort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) relayAbort();
+  else signal?.addEventListener?.("abort", relayAbort, { once: true });
   try {
-    const response = await fetchImpl(safe, {
+    const response = await requestPublicText(safe, {
+      fetchImpl,
+      lookupImpl,
+      requestImpl,
       signal: controller.signal,
       headers: {
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.5",
         "Accept-Language": "en-US,en;q=0.9",
         "User-Agent": "AlphaCouncilAgent/1.0 public-equity research contact: github.com/Zhao73/alphacouncil-agent",
       },
-      redirect: "follow",
+      redirectPolicy: ({ to }) => sameOfficialSite(safe, to),
+      timeoutMs,
     });
     const finalUrl = safeUrl(response.url || safe);
     if (!response.ok) return { url: safe, final_url: finalUrl, status: "unreachable", reason: `HTTP ${response.status}`, links: [] };
@@ -560,9 +620,11 @@ async function fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs }) {
       feeds: extractFeedLinks(body, finalUrl, [safe, finalUrl]),
     };
   } catch (error) {
+    const blocked = error instanceof PublicHttpError
+      && ["REDIRECT_BLOCKED", "UNSAFE_DESTINATION"].includes(error.code);
     return {
       url: safe,
-      status: "unreachable",
+      status: blocked ? "blocked" : "unreachable",
       reason: error?.name === "AbortError" ? "timed_out" : String(error?.message || error),
       links: [],
     };
@@ -575,7 +637,9 @@ async function fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs }) {
 export async function discoverIssuerOfficialSources(profile = {}, {
   asOf,
   signal,
-  fetchImpl = fetch,
+  fetchImpl,
+  lookupImpl,
+  requestImpl,
   timeoutMs = 12_000,
   filingIndexImpl = fetchFilingIndex,
   filingDocumentImpl = fetchFilingDocument,
@@ -598,7 +662,8 @@ export async function discoverIssuerOfficialSources(profile = {}, {
       reason: "SEC profile and inspected periodic/current reports supplied no verifiable issuer website",
     };
   }
-  const rootAttempts = await Promise.all(roots.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
+  const requestOptions = { signal, fetchImpl, lookupImpl, requestImpl, timeoutMs };
+  const rootAttempts = await Promise.all(roots.map((url) => fetchOfficialRoot(url, requestOptions)));
   const discoveredPages = unique(rootAttempts.flatMap((attempt) => attempt.links || []));
   // Reserve part of the fixed ten-page budget for one bounded second hop. Many issuer sites
   // expose current announcement URLs only from a newsroom index discovered on the home page.
@@ -607,7 +672,7 @@ export async function discoverIssuerOfficialSources(profile = {}, {
   const detailUrls = prioritizeOfficialDetailUrls(discoveredPages, asOf)
     .filter((url) => !roots.includes(url))
     .slice(0, firstHopLimit);
-  const firstHopAttempts = await Promise.all(detailUrls.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
+  const firstHopAttempts = await Promise.all(detailUrls.map((url) => fetchOfficialRoot(url, requestOptions)));
   const attempted = new Set([...roots, ...detailUrls]);
   const remaining = Math.max(0, MAX_OFFICIAL_DETAIL_PAGES - detailUrls.length);
   const secondHopUrls = prioritizeOfficialDetailUrls(
@@ -616,7 +681,7 @@ export async function discoverIssuerOfficialSources(profile = {}, {
   )
     .filter((url) => !attempted.has(url))
     .slice(0, remaining);
-  const secondHopAttempts = await Promise.all(secondHopUrls.map((url) => fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs })));
+  const secondHopAttempts = await Promise.all(secondHopUrls.map((url) => fetchOfficialRoot(url, requestOptions)));
   const detailAttempts = [...firstHopAttempts, ...secondHopAttempts];
   const attempts = [...rootAttempts, ...detailAttempts];
   const pages = unique([
@@ -790,10 +855,18 @@ function officialLeadMatches(attempt, lead) {
   return target.size > 0 && overlap >= Math.min(3, target.size) && dateMatches;
 }
 
-async function resolveOfficialNewsLeads(news, issuerIndex, { signal, fetchImpl, timeoutMs }) {
+async function resolveOfficialNewsLeads(news, issuerIndex, {
+  signal,
+  fetchImpl,
+  lookupImpl,
+  requestImpl,
+  timeoutMs,
+}) {
   const candidates = officialLeadCandidates(news, issuerIndex);
   const attempts = await Promise.all(candidates.map(async ({ lead, url }) => {
-    const attempt = await fetchOfficialRoot(url, { signal, fetchImpl, timeoutMs });
+    const attempt = await fetchOfficialRoot(url, {
+      signal, fetchImpl, lookupImpl, requestImpl, timeoutMs,
+    });
     return { ...attempt, lead_title: lead.title, lead_published_at: lead.published_at, topic: lead.topic };
   }));
   const matched = attempts.filter((attempt) => officialLeadMatches(attempt, {
@@ -847,7 +920,13 @@ export function companyStarterFeedSpecs({ symbol, profile = {}, issuerIndex = nu
   return unique(specs.map((spec) => JSON.stringify(spec))).map((spec) => JSON.parse(spec));
 }
 
-async function fetchStarterFeed(spec, { signal, fetchImpl, timeoutMs }) {
+async function fetchStarterFeed(spec, {
+  signal,
+  fetchImpl,
+  lookupImpl,
+  requestImpl,
+  timeoutMs,
+}) {
   const url = safeUrl(spec.url);
   if (!url) return { ...spec, url: spec.url, ok: false, reason: "unsafe_or_non_http_url", items: [] };
   const controller = new AbortController();
@@ -856,14 +935,17 @@ async function fetchStarterFeed(spec, { signal, fetchImpl, timeoutMs }) {
   if (signal?.aborted) relayAbort();
   else signal?.addEventListener?.("abort", relayAbort, { once: true });
   try {
-    const response = await fetchImpl(url, {
+    const response = await requestPublicText(url, {
+      fetchImpl,
+      lookupImpl,
+      requestImpl,
       signal: controller.signal,
       headers: {
         Accept: "application/rss+xml,application/atom+xml,application/xml,text/xml,*/*",
         "Accept-Language": "en-US,en;q=0.9",
         "User-Agent": secUserAgent(),
       },
-      redirect: "follow",
+      timeoutMs,
     });
     if (!response.ok) return { ...spec, url, ok: false, reason: `HTTP ${response.status}`, items: [] };
     const body = (await response.text()).slice(0, MAX_SOURCE_BODY_BYTES);
@@ -889,13 +971,15 @@ export async function acquireCompanyStarterEvidence({
   issuerIndex = null,
 } = {}, {
   signal,
-  fetchImpl = fetch,
+  fetchImpl,
+  lookupImpl,
+  requestImpl,
   timeoutMs = 12_000,
   days = 120,
 } = {}) {
   const specs = companyStarterFeedSpecs({ symbol, profile, issuerIndex });
   const attempts = await Promise.all(specs.map((spec) => fetchStarterFeed(spec, {
-    signal, fetchImpl, timeoutMs,
+    signal, fetchImpl, lookupImpl, requestImpl, timeoutMs,
   })));
   const allItems = attempts.flatMap((attempt) => attempt.items.map((item, index) => ({
     ...item,
@@ -918,7 +1002,7 @@ export async function acquireCompanyStarterEvidence({
   const recency = applyRecencyGate(relevantItems, { days, asOf });
   const news = selectBalancedStarterNews(recency.included);
   const officialLeadResolution = await resolveOfficialNewsLeads(news, issuerIndex, {
-    signal, fetchImpl, timeoutMs,
+    signal, fetchImpl, lookupImpl, requestImpl, timeoutMs,
   });
   const issuerDocuments = [];
   const seenDocuments = new Set();

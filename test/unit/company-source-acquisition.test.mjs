@@ -1,5 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 
 import {
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
@@ -126,6 +128,38 @@ test("issuer discovery keeps same-site official links and rejects unrelated link
   assert.ok(result.pages.every((url) => !/unrelated\.example\.net/u.test(url)));
   assert.ok(result.pages.every((url) => !/\/careers$/u.test(url)));
   assert.ok(result.documents.every((document) => document.excerpt));
+});
+
+test("issuer discovery pins public DNS and blocks a cross-site redirect before the second request", async () => {
+  const calls = [];
+  const requestImpl = (url, options, onResponse) => {
+    calls.push(url);
+    const request = new EventEmitter();
+    request.end = () => {
+      options.lookup("issuer.example", {}, (error, address, family) => {
+        if (error) return request.emit("error", error);
+        assert.equal(address, "93.184.216.34");
+        assert.equal(family, 4);
+        const response = new PassThrough();
+        response.statusCode = 302;
+        response.headers = { location: "https://outside.example/redirected" };
+        onResponse(response);
+        queueMicrotask(() => response.end());
+      });
+    };
+    request.destroy = (error) => queueMicrotask(() => request.emit("error", error));
+    return request;
+  };
+  const result = await discoverIssuerOfficialSources({
+    website: "https://issuer.example/",
+  }, {
+    lookupImpl: async () => [{ address: "93.184.216.34", family: 4 }],
+    requestImpl,
+    timeoutMs: 1_000,
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(result.attempts[0].status, "blocked");
+  assert.match(result.attempts[0].reason, /redirect rejected/iu);
 });
 
 test("issuer discovery prioritizes current earnings detail pages over early navigation links", async () => {
