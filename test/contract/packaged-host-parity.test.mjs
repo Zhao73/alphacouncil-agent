@@ -34,10 +34,20 @@ function resultOutput(result) {
   return [result.error?.stack || result.error?.message, result.stdout, result.stderr].filter(Boolean).join("\n");
 }
 
-function runPackagedParity(env) {
+function isTransientWindowsParityTimeout(result, platform = process.platform) {
+  return platform === "win32" && (
+    result.error?.code === "ETIMEDOUT"
+    || /offline npm install from tarball.*ETIMEDOUT/su.test(resultOutput(result))
+  );
+}
+
+function runPackagedParity(env, {
+  platform = process.platform,
+  spawn = spawnSync,
+} = {}) {
   const attempts = [];
   while (attempts.length < 2) {
-    const result = spawnSync(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
+    const result = spawn(process.execPath, ["scripts/check-packaged-host-parity.mjs", "--json"], {
       cwd: PACKAGED_PARITY_REPO_ROOT,
       encoding: "utf8",
       env,
@@ -45,9 +55,7 @@ function runPackagedParity(env) {
       timeout: PACKAGED_PARITY_PROCESS_TIMEOUT_MS,
     });
     attempts.push(result);
-    const transientWindowsInstallTimeout = process.platform === "win32"
-      && /offline npm install from tarball.*ETIMEDOUT/su.test(resultOutput(result));
-    if (!transientWindowsInstallTimeout) break;
+    if (!isTransientWindowsParityTimeout(result, platform)) break;
   }
   return {
     result: attempts.at(-1),
@@ -79,6 +87,30 @@ test("npm execution never spawns a cmd shim directly on Windows", () => {
     command: "C:\\Windows\\System32\\cmd.exe",
     args: ["/d", "/s", "/c", "npm.cmd", "pack"],
   });
+});
+
+test("a top-level Windows parity timeout receives the existing single bounded retry", () => {
+  const timeout = { error: { code: "ETIMEDOUT", message: "spawnSync node.exe ETIMEDOUT" }, status: null };
+  const success = { status: 0, stdout: "{}", stderr: "" };
+  let windowsCalls = 0;
+  const windows = runPackagedParity({}, {
+    platform: "win32",
+    spawn: () => (++windowsCalls === 1 ? timeout : success),
+  });
+  assert.equal(windowsCalls, 2);
+  assert.equal(windows.result, success);
+
+  let nonWindowsCalls = 0;
+  const nonWindows = runPackagedParity({}, {
+    platform: "darwin",
+    spawn: () => {
+      nonWindowsCalls += 1;
+      return timeout;
+    },
+  });
+  assert.equal(nonWindowsCalls, 1);
+  assert.equal(nonWindows.result, timeout);
+  assert.equal(isTransientWindowsParityTimeout({ error: { code: "ENOENT" } }, "win32"), false);
 });
 
 test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: PACKAGED_PARITY_TEST_TIMEOUT_MS }, () => {
