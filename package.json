@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Multi-agent company, ETF and market-index research for Codex, Claude Code, OpenCode and Grok Build: sourced evidence, method seats, debate and PM synthesis.",
   "type": "module",
   "license": "MIT",

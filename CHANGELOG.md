@@ -2,6 +2,30 @@
 
 Notable changes per release. Dates are UTC.
 
+## [1.5.0] — 2026-08-26
+
+### Security
+
+- Hardened the local GUI against script-context payload injection, unsafe outbound links,
+  non-loopback Host headers and platform-specific file URL errors.
+- Company-source retrieval now rejects private and ambiguous destinations, pins the vetted
+  DNS answer for the connection and revalidates every bounded redirect hop.
+
+### Changed
+
+- Codex installation is Skill-first and the four supported hosts now share explicit 15, 30
+  and 60 minute council tiers without advertising unverified live-host results.
+- The English, Chinese and Japanese entry READMEs now lead with an executable first run,
+  product benefits and honest limits; the detailed material remains under `docs/reference/`.
+- Package inventory is evidence-derived, with the runtime closure and retained audit surfaces
+  checked before publication. Contributor guidance now names four small offline starting points.
+
+### Release
+
+- Added a tag-guarded, two-job GitHub Actions release path for npm Trusted Publishing with
+  OIDC, followed by idempotent GitHub release creation. Publishing still requires the owner
+  to configure the exact trusted publisher and push the intended tag.
+
 ## [1.4.1] — 2026-08-13
 
 ### Fixed

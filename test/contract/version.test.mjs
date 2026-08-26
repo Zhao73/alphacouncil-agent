@@ -7,6 +7,7 @@ import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(repoFile(rel), "utf8"));
+const readText = (rel) => readFileSync(repoFile(rel), "utf8");
 
 test("every manifest and the served VERSION agree with package.json", () => {
   const expected = readJson("package.json").version;
@@ -28,6 +29,14 @@ test("every manifest and the served VERSION agree with package.json", () => {
   for (const [where, version] of Object.entries(declared)) {
     assert.equal(version, expected, `${where} drifted from package.json`);
   }
+  assert.ok(
+    readText("CLAUDE.md").includes(`declared package/plugin version is \`${expected}\``),
+    "CLAUDE.md current build profile drifted from package.json",
+  );
+  assert.ok(
+    readText("AGENTS.md").includes(`Package/plugin version \`${expected}\` is the current source release candidate`),
+    "AGENTS.md current release boundary drifted from package.json",
+  );
 });
 
 test("runtime build identity binds the version to the critical executable source bytes", () => {
@@ -41,12 +50,12 @@ test("runtime build identity binds the version to the critical executable source
   assert.ok([true, false, null].includes(RUNTIME_BUILD_IDENTITY.git_tracked_tree_dirty));
 });
 
-test("the 1.4.1 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
+test("the current runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its admission level", () => {
   const expected = readJson("package.json").version;
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "1.4.1");
+  assert.equal(expected, "1.5.0");
   assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "latest");
   assert.equal(profile.channel, "solo_test");
@@ -67,4 +76,11 @@ test("the 1.4.1 runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its ad
       `${personaId} pack version drifted from package.json`,
     );
   }
+});
+
+test("current reference prose does not embed a package version in the solo-test catalog claim", () => {
+  assert.doesNotMatch(
+    readText("docs/reference/README.ja.md"),
+    /\b\d+\.\d+\.\d+\s+`solo_test`\s+カタログ/u,
+  );
 });

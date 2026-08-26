@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v7
+      - name: Set up Node for npm Trusted Publishing
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+      - name: Verify tag and npm version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          npm --version
+          node scripts/check-release-workflow.mjs --assert-tag "$RELEASE_TAG"
+          node scripts/check-release-workflow.mjs --assert-npm-version "$(npm --version)"
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Run source checks
+        run: npm run check
+      - name: Run packaged-host checks
+        run: npm run test:package
+      - name: Publish package through OIDC
+        run: npm publish --access public
+
+  github-release:
+    name: Create or refresh GitHub release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Create or refresh release
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --latest
+          fi
