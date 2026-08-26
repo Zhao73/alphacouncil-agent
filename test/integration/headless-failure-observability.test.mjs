@@ -239,7 +239,10 @@ test("a safe local syntax repair avoids a second Codex worker", async () => {
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000,
+      // Keep the worker ceiling comfortably above process-start latency on a loaded
+      // Windows runner. The assertion below still proves that the local repair uses
+      // exactly one worker; this budget must not turn scheduler delay into partial evidence.
+      timeout_ms: 20_000,
     }));
     assert.equal(readFileSync(fake.counter, "utf8"), "1", "local syntax repair must not spend a model retry");
     assert.equal(run.status, "evidence_complete");

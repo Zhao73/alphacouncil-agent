@@ -159,7 +159,10 @@ test("a stalled voice worker costs the reader the prose, not the seat", async ()
   // no reason -- even though the decision was frozen deterministically before the worker was
   // ever spawned. One such seat could take the debate and the PM with it.
   const dataDir = makeDataDir();
-  const fake = observabilityCodex(dataDir, { delays: { master_buffett: 3_000 } });
+  // Preserve the semantic ordering under slow CI scheduling: the fake worker must
+  // outlive its worker timeout, while the full run still has ample time to persist
+  // the deterministic fallback seat before its global deadline.
+  const fake = observabilityCodex(dataDir, { delays: { master_buffett: 12_000 } });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
   try {
     await server.request("initialize", {});
@@ -175,8 +178,8 @@ test("a stalled voice worker costs the reader the prose, not the seat", async ()
         facts_unavailable: true, unavailable: ["fixture"],
       },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 2_000, total_timeout_ms: 20_000,
-    }, { timeoutMs: 30_000 }));
+      timeout_ms: 8_000, total_timeout_ms: 80_000,
+    }, { timeoutMs: 90_000 }));
 
     const seat = result.run.master_status.master_buffett;
     assert.equal(seat.status, "completed", "the frozen decision still speaks for the seat");
