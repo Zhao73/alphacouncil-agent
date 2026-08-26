@@ -18,6 +18,18 @@ validators and bounded local parser run without `node_modules`, including direct
 marketplace installs. Please keep the runtime dependency-free unless there is no simple
 standard-library path.
 
+## Where to start
+
+Pick one small, offline change. Add the failing test first, make the smallest fix, and
+avoid unrelated runtime changes.
+
+| Area | Start here | Bounded first change |
+|---|---|---|
+| Feed parsing and recency | `mcp/lib/feeds.mjs`: `parseFeed`, `applyRecencyGate`; `test/unit/feeds.test.mjs` | Add one RSS/Atom or date-boundary fixture; do not add a network call. |
+| Quote parsing | `mcp/lib/quotes.mjs`: `parseYahooChart`, `parseStooqCsv`; `test/unit/quotes.test.mjs` | Add one provider-response edge fixture; do not add a live fetch. |
+| Reader-language checks | `mcp/lib/lang.mjs`: `readerLanguageStatus`; `test/unit/lang.test.mjs` | Add one Unicode or mixed-finance-terms fixture; do not weaken the threshold. |
+| Markdown tables | `mcp/lib/tables.mjs`: `table`, `metricValue`; `test/unit/markets.test.mjs` | Add one Markdown-escaping or numeric-format fixture; do not change report contracts. |
+
 ## Before opening a pull request
 
 - Run `npm run check` and make sure it passes.
@@ -49,21 +61,20 @@ By contributing, you agree that your contributions are licensed under the
 
 ## Commit messages
 
-Write them from a file or a quoted heredoc, never inline in a shell string:
+Prefer writing the message to a file and passing it to Git:
 
 ```bash
-git commit -F /tmp/msg.txt
-# or
+git commit -F /path/to/message.txt
+```
+
+If a heredoc is more convenient, quote its delimiter. Never interpolate a message
+containing backticks or variables into a shell command string.
+
+```bash
 git commit -F - <<'MSG'
 ...
 MSG
 ```
 
-Backticks in a commit message are command substitution to the shell, which silently deletes
-the text between them before git ever sees it. It happened once here, to a sentence naming
-a CLI subcommand; the words were simply gone from the published history. Quoting the
-heredoc delimiter (`<<'MSG'`, not `<<MSG`) disables expansion.
-
-If a message does go out wrong, prefer `git notes add` over `git commit --amend` once the
-commit is an ancestor of a published tag. Rewriting it leaves the release pointing at an
-object that no longer exists, which is a worse outcome than an imperfect message.
+Before pushing, inspect the stored message with `git show -s --format=%B HEAD`. Do not
+amend a published or tagged commit; use `git notes add` or a follow-up commit instead.
