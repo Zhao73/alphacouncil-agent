@@ -421,6 +421,30 @@ test("observed worker timing events without a bundled ledger are an explicit cla
   }
 });
 
+test("a legacy bundle without attempt events remains structurally valid when timing ledger is absent", () => {
+  const { root, runDir } = fixture();
+  try {
+    const bundleDir = join(root, "bundle");
+    exportRunBundle({ runDir, outputDir: bundleDir });
+    rmSync(join(bundleDir, "payload", "timing-ledger.json"));
+    const manifestPath = join(bundleDir, "bundle-manifest.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.files = manifest.files.filter((item) => item.path !== "payload/timing-ledger.json");
+    manifest.total_payload_bytes = manifest.files.reduce((sum, item) => sum + item.byte_length, 0);
+    writeJson(manifestPath, manifest);
+
+    const verified = verifyRunBundle({ bundleDir });
+    assert.equal(verified.structure.status, "PASS");
+    assert.equal(
+      verified.claim_readiness.blockers.some((item) => item.code === "timing_ledger_missing_for_observed_run"),
+      false,
+      "P1a-era bundles without worker attempt events must not be upgraded into a timing claim failure",
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("CLI exit codes keep structural verification separate from strict claim readiness", () => {
   const { root, runDir } = fixture();
   try {

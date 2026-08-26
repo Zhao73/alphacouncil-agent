@@ -213,6 +213,78 @@ test("offline replay is byte-deterministic and performs no fetch or filesystem w
   }
 });
 
+test("identity replay preserves every observed worker duration without a hidden speed multiplier", async () => {
+  const { deriveTimingLedger, replayTimingLedger } = await timingApi();
+  const ledger = deriveTimingLedger(fullTimingFixture());
+  const replay = replayTimingLedger({ ledger, profile: replayProfile() });
+  const replayAttempts = new Map(replay.attempts.map((attempt) => [attempt.invocation_key, attempt]));
+  for (const observed of ledger.attempts) {
+    const projected = replayAttempts.get(observed.invocation_key);
+    assert.ok(projected, observed.invocation_key);
+    assert.equal(projected.observed_elapsed_ms, observed.elapsed_ms, observed.invocation_key);
+    assert.equal(projected.projected_elapsed_ms, observed.elapsed_ms, observed.invocation_key);
+  }
+  const replayStages = new Map(replay.stages.map((stage) => [stage.stage, stage]));
+  for (const observed of ledger.stages.filter((stage) => stage.worker_attempt_count > 0)) {
+    const projected = replayStages.get(observed.stage);
+    assert.ok(projected, observed.stage);
+    assert.equal(projected.observed_worker_elapsed_ms, observed.worker_critical_elapsed_ms, observed.stage);
+    assert.equal(projected.projected_elapsed_ms, observed.worker_critical_elapsed_ms, observed.stage);
+  }
+  assert.equal(replayStages.get("evidence").projected_elapsed_ms, 4_900);
+  assert.doesNotMatch(JSON.stringify(replay), /(?:speedup|speed_up|scale_factor|duration_multiplier|acceleration)/iu);
+  assert.equal(replay.counterfactual_estimate, true);
+  assert.equal(replay.marketing_eligible, false);
+});
+
+test("replay list-schedules evidence workers serially when concurrency falls from two to one", async () => {
+  const { deriveTimingLedger, replayTimingLedger } = await timingApi();
+  const ledger = deriveTimingLedger(fullTimingFixture());
+  const profile = replayProfile({
+    max_concurrency_by_stage: {
+      ...replayProfile().max_concurrency_by_stage,
+      evidence: 1,
+    },
+  });
+  const first = replayTimingLedger({ ledger, profile });
+  const second = replayTimingLedger({ ledger, profile });
+  const observed = ledger.stages.find((stage) => stage.stage === "evidence");
+  const projected = first.stages.find((stage) => stage.stage === "evidence");
+  assert.equal(projected.projected_elapsed_ms, 9_790);
+  assert.ok(projected.projected_elapsed_ms > observed.elapsed_ms);
+  assert.equal(projected.max_concurrency, 1);
+  assert.equal(JSON.stringify(first), JSON.stringify(second));
+  assert.equal(first.counterfactual_estimate, true);
+  assert.equal(first.marketing_eligible, false);
+});
+
+test("a round-two worker starting before the round-one barrier is structural_invalid", async () => {
+  const { deriveTimingLedger } = await timingApi();
+  const input = fullTimingFixture();
+  input.events = rehashTimingEvents(input.events.map((event) => {
+    if (event.invocation_key !== "debate_round_2:bear:1") return event;
+    if (event.type === "worker_attempt_started") {
+      return { ...event, at: timingIso(10_000), started_at: timingIso(10_000) };
+    }
+    return {
+      ...event,
+      at: timingIso(10_700),
+      started_at: timingIso(10_000),
+      finished_at: timingIso(10_700),
+      elapsed_ms: 700,
+    };
+  }).sort((left, right) => Date.parse(left.at) - Date.parse(right.at)
+    || left.type.localeCompare(right.type)
+    || String(left.invocation_key || "").localeCompare(String(right.invocation_key || ""))));
+  const ledger = deriveTimingLedger(input);
+  assert.equal(ledger.coverage.status, "structural_invalid");
+  assert.ok(
+    (ledger.issues || []).some((issue) => /topology|stage order|barrier/iu.test(`${issue.code || ""} ${issue.message || ""}`)),
+    "a topology issue must explain the R2-before-R1 barrier violation",
+  );
+  assert.equal(ledger.marketing_eligible, false);
+});
+
 test("a replay cap below an observed completed duration projects timeout and incomplete", async () => {
   const { deriveTimingLedger, replayTimingLedger } = await timingApi();
   const ledger = deriveTimingLedger(fullTimingFixture());
