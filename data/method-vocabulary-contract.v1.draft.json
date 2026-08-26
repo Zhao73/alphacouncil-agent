@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "artifact_kind": "method_vocabulary_contract",
+  "vocabulary_version": "1.0.0-draft.1",
+  "catalog_hash": "3342d2b2456604cc2cc30c5e396cf2a709be90aeb912793e9fcbde46a032ff36",
+  "authored_at": "2026-08-26T00:00:00.000Z",
+  "seats": [
+    {
+      "master_id": "master_buffett",
+      "positive_markers": ["operating businesses", "business quality", "capital allocation", "intrinsic value", "owner earnings", "durable competitive advantage", "circle of competence", "conservative business value"]
+    },
+    {
+      "master_id": "master_graham",
+      "positive_markers": ["deep value", "asset backed securities", "normalized earnings", "distressed equity", "margin of safety", "asset floor", "earnings floor", "net current asset value"]
+    },
+    {
+      "master_id": "master_simons",
+      "positive_markers": ["systematic signals", "statistical arbitrage", "portfolio research", "execution costs", "out of sample", "multiple testing", "turnover", "leakage controls"]
+    },
+    {
+      "master_id": "master_soros",
+      "positive_markers": ["global macro", "reflexivity", "boom bust", "crowded trades", "feedback loop", "financing", "participant beliefs", "break condition"]
+    },
+    {
+      "master_id": "master_cathie_wood",
+      "positive_markers": ["disruptive innovation", "technology adoption", "platform convergence", "growth valuation", "cost curve", "addressable market", "unit economics", "five year distribution"]
+    },
+    {
+      "master_id": "master_druckenmiller",
+      "positive_markers": ["global macro", "liquidity", "earnings inflections", "concentrated positioning", "price confirmation", "asymmetric risk", "term structure", "liquidity impulse"]
+    },
+    {
+      "master_id": "master_fisher",
+      "positive_markers": ["growth quality", "scuttlebutt", "research productivity", "management depth", "sales capability", "reinvestment runway", "incremental return on capital", "gross margin"]
+    },
+    {
+      "master_id": "master_munger",
+      "positive_markers": ["business quality", "incentives", "failure analysis", "capital allocation", "invert the thesis", "permanent loss", "coupled risks", "cross disciplinary"]
+    },
+    {
+      "master_id": "master_thorp",
+      "positive_markers": ["probabilistic edge", "position sizing", "arbitrage", "risk of ruin", "kelly", "estimation error", "liquidity", "odds"]
+    },
+    {
+      "master_id": "master_asness",
+      "positive_markers": ["factor investing", "portfolio attribution", "style cycles", "crowding", "value factor", "momentum factor", "quality factor", "residual alpha"]
+    },
+    {
+      "master_id": "master_dalio",
+      "positive_markers": ["macro regimes", "debt cycles", "cross asset risk", "portfolio balance", "growth", "inflation", "policy response", "refinancing exposure"]
+    },
+    {
+      "master_id": "master_duan_yongping",
+      "positive_markers": ["consumer businesses", "product value", "corporate culture", "opportunity cost", "user value", "management integrity", "simple business model", "long run economics"]
+    },
+    {
+      "master_id": "master_jhunjhunwala",
+      "positive_markers": ["india equities", "structural penetration", "promoter governance", "concentrated growth", "cash quality", "scaling economics", "addressable penetration", "liquidity"]
+    },
+    {
+      "master_id": "master_lynch",
+      "positive_markers": ["consumer observation", "growth categories", "cyclicals", "turnarounds", "asset plays", "company type", "two minute story", "balance sheet"]
+    },
+    {
+      "master_id": "master_forensic_short",
+      "positive_markers": ["forensic accounting", "governance red flags", "shortability", "catalyst analysis", "cash conversion", "borrow economics", "accounting reconstruction", "verifiable catalyst"]
+    },
+    {
+      "master_id": "master_li_lu",
+      "positive_markers": ["long duration quality", "management integrity", "structural growth", "capital preservation", "ten year certainty", "structural social value", "permanent loss", "price implied return"]
+    },
+    {
+      "master_id": "master_marks",
+      "positive_markers": ["credit cycles", "distressed value", "market psychology", "risk posture", "cycle temperature", "price implied expectations", "credit spread", "permanent loss"]
+    },
+    {
+      "master_id": "master_burry",
+      "positive_markers": ["primary document research", "capital structure", "accounting forensics", "structural mispricing", "mechanically verifiable", "survive being early", "net current asset value", "share count"]
+    },
+    {
+      "master_id": "master_klarman",
+      "positive_markers": ["capital preservation", "distressed value", "complex securities", "catalyst value", "downside asset value", "cash optionality", "recovery analysis", "absolute return"]
+    },
+    {
+      "master_id": "master_pabrai",
+      "positive_markers": ["dhandho value", "special situations", "downside protection", "concentrated odds", "downside floor", "permanent loss", "asymmetric outcomes", "independent reconstruction"]
+    },
+    {
+      "master_id": "master_ackman",
+      "positive_markers": ["activism", "governance", "capital allocation", "corporate change", "standalone value", "improvement value", "legal power", "implementation path"]
+    },
+    {
+      "master_id": "master_damodaran",
+      "positive_markers": ["intrinsic valuation", "story to numbers", "young companies", "reverse valuation", "cash flow", "implied story", "reinvestment", "value distribution"]
+    },
+    {
+      "master_id": "master_taleb",
+      "positive_markers": ["tail risk", "convexity", "options", "fragility", "risk of ruin", "hidden concavity", "payoff", "liquidity"]
+    },
+    {
+      "master_id": "master_natenberg",
+      "positive_markers": ["options pricing", "volatility surface", "greeks", "relative value", "implied volatility", "skew", "term structure", "bid ask"]
+    },
+    {
+      "master_id": "master_sinclair",
+      "positive_markers": ["volatility forecasting", "options execution", "edge measurement", "position sizing", "realized volatility", "implied volatility", "spreads", "slippage"]
+    },
+    {
+      "master_id": "master_bogle",
+      "positive_markers": ["index funds", "exchange traded funds", "market expected return", "cost of ownership", "dividend yield", "earnings growth", "valuation change", "long bond"]
+    }
+  ],
+  "confusable_pairs": [
+    {
+      "a": "master_klarman",
+      "b": "master_pabrai",
+      "neighbor_conflict_markers": ["catalyst value", "dhandho value", "complex securities", "concentrated odds"]
+    },
+    {
+      "a": "master_damodaran",
+      "b": "master_klarman",
+      "neighbor_conflict_markers": ["story to numbers", "reverse valuation", "capital preservation", "downside asset value"]
+    },
+    {
+      "a": "master_klarman",
+      "b": "master_munger",
+      "neighbor_conflict_markers": ["distressed value", "complex securities", "incentives", "failure analysis"]
+    },
+    {
+      "a": "master_pabrai",
+      "b": "master_taleb",
+      "neighbor_conflict_markers": ["downside floor", "concentrated odds", "payoff convexity", "tail fragility"]
+    },
+    {
+      "a": "master_burry",
+      "b": "master_forensic_short",
+      "neighbor_conflict_markers": ["primary document research", "structural mispricing", "shortability", "borrow economics"]
+    },
+    {
+      "a": "master_burry",
+      "b": "master_jhunjhunwala",
+      "neighbor_conflict_markers": ["capital structure", "accounting forensics", "structural penetration", "promoter governance"]
+    }
+  ],
+  "review": {
+    "status": "pending",
+    "reviewer_id": null,
+    "signer_key_id": null,
+    "reviewed_at": null,
+    "signature": null
+  }
+}

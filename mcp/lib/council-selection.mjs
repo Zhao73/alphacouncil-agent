@@ -19,13 +19,21 @@ import { resolveLanguage } from "./lang.mjs";
 import { safeSymbol } from "./run-store.mjs";
 import { cleanupSelectionStore } from "./selection-cleanup.mjs";
 import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.mjs";
+import { recommendMethodPanel } from "./method-panel-recommendation.mjs";
 
 const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
 const QUICK_MASTER_MAX = 4;
 const LEGACY_SELECTION_HASH_VERSION = 1;
 const PACE_SELECTION_HASH_VERSION = 2;
-const CURRENT_SELECTION_HASH_VERSION = 3;
+const ANALYST_SELECTION_HASH_VERSION = 3;
+const RECOMMENDATION_SELECTION_HASH_VERSION = 4;
+const SUPPORTED_SELECTION_HASH_VERSIONS = Object.freeze([
+  LEGACY_SELECTION_HASH_VERSION,
+  PACE_SELECTION_HASH_VERSION,
+  ANALYST_SELECTION_HASH_VERSION,
+  RECOMMENDATION_SELECTION_HASH_VERSION,
+]);
 const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(["中文", "English", "日本語", "한국어"]);
 
 function digest(value) {
@@ -40,18 +48,46 @@ function selectionHashVersion(record) {
   const version = Object.hasOwn(record, "selection_hash_version")
     ? record.selection_hash_version
     : LEGACY_SELECTION_HASH_VERSION;
-  if (![LEGACY_SELECTION_HASH_VERSION, PACE_SELECTION_HASH_VERSION, CURRENT_SELECTION_HASH_VERSION].includes(version)) {
+  if (!SUPPORTED_SELECTION_HASH_VERSIONS.includes(version)) {
     throw invalidParams(`Unsupported selection hash version: ${version}`, {
       reason: "MASTER_SELECTION_HASH_VERSION_UNSUPPORTED",
       selection_hash_version: version,
-      supported_selection_hash_versions: [
-        LEGACY_SELECTION_HASH_VERSION,
-        PACE_SELECTION_HASH_VERSION,
-        CURRENT_SELECTION_HASH_VERSION,
-      ],
+      supported_selection_hash_versions: [...SUPPORTED_SELECTION_HASH_VERSIONS],
     });
   }
   return version;
+}
+
+/**
+ * Rebuild a v4 recommendation from its three declared inputs before trusting the stored decision
+ * vector. The user-supplied hash detects a changed recommendation at confirmation; this check also
+ * detects an on-disk mutation that leaves the displayed hash untouched, both before confirmation
+ * and again before the one-use receipt is consumed.
+ */
+function assertMethodPanelRecommendationIntegrity(record) {
+  if (selectionHashVersion(record) < RECOMMENDATION_SELECTION_HASH_VERSION) return;
+  const stored = record.method_panel_recommendation;
+  const mismatched = [];
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    mismatched.push("method_panel_recommendation");
+  } else {
+    const recomputed = recommendMethodPanel({
+      catalog_hash: record.catalog_hash,
+      instrument_classification: stored.instrument_classification,
+      typed_fact_coverage: stored.typed_fact_coverage,
+    });
+    if (!sameJson(stored, recomputed)) mismatched.push("method_panel_recommendation");
+    if (!recomputed.recommendation_hash
+      || record.recommendation_hash !== recomputed.recommendation_hash) {
+      mismatched.push("recommendation_hash");
+    }
+  }
+  if (mismatched.length) {
+    throw invalidParams("The stored advisory method-panel recommendation failed deterministic verification.", {
+      reason: "METHOD_PANEL_RECOMMENDATION_RECORD_MISMATCH",
+      mismatched_fields: [...new Set(mismatched)],
+    });
+  }
 }
 
 function receiptSelectionHash(receipt) {
@@ -78,11 +114,13 @@ function receiptSelectionHash(receipt) {
     council_pace: receipt.council_pace,
   };
   if (version === PACE_SELECTION_HASH_VERSION) return digest(pacePayload);
-  return digest({
+  const analystPayload = {
     ...pacePayload,
     analyst_scope: receipt.analyst_scope,
     selected_analyst_ids: receipt.selected_analyst_ids,
-  });
+  };
+  if (version === ANALYST_SELECTION_HASH_VERSION) return digest(analystPayload);
+  return digest({ ...analystPayload, recommendation_hash: receipt.recommendation_hash });
 }
 
 function selectedMasterPackHashes(record, ids = record.selected_master_ids) {
@@ -99,9 +137,10 @@ function selectedMasterPackHashes(record, ids = record.selected_master_ids) {
  * make an identical retry mint a second one-use capability.
  */
 function stableReceiptId(record, resolved, councilPace, analystSelection) {
+  const hashVersion = selectionHashVersion(record);
   const raw = digest({
     schema_version: 1,
-    selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
+    selection_hash_version: hashVersion,
     selection_id: record.selection_id,
     catalog_hash: record.catalog_hash,
     intent_hash: record.intent_hash,
@@ -110,6 +149,8 @@ function stableReceiptId(record, resolved, councilPace, analystSelection) {
     council_pace: councilPace,
     analyst_scope: analystSelection.scope,
     selected_analyst_ids: analystSelection.ids,
+    ...(hashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION
+      ? { recommendation_hash: record.recommendation_hash } : {}),
   }).slice(0, 32);
   // Preserve the UUID grammar required by the lock layer: deterministic v5 nibble and RFC 4122
   // variant, while the remaining 122 bits still come from the confirmation digest.
@@ -134,9 +175,12 @@ function confirmedReceiptRecord(record) {
     selected_master_ids: record.selected_master_ids,
     selected_master_pack_hashes: selectedMasterPackHashes(record),
     selection_mode: record.selection_mode,
-    ...(hashVersion >= CURRENT_SELECTION_HASH_VERSION ? {
+    ...(hashVersion >= ANALYST_SELECTION_HASH_VERSION ? {
       analyst_scope: record.analyst_scope,
       selected_analyst_ids: record.selected_analyst_ids,
+    } : {}),
+    ...(hashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION ? {
+      recommendation_hash: record.recommendation_hash,
     } : {}),
     created_at: record.confirmed_at,
     expires_at: record.expires_at,
@@ -391,6 +435,14 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const language = selectionLanguage({ language: args.language, prompt });
   const mode = councilMode(args.council_mode);
   const catalog = catalogSnapshot(language);
+  const methodPanelRecommendation = recommendMethodPanel({
+    catalog_hash: catalog.catalog_hash,
+    instrument_classification: args.instrument_classification,
+    typed_fact_coverage: args.typed_fact_coverage,
+  });
+  const recommendationHash = methodPanelRecommendation.recommendation_hash;
+  const hashVersion = recommendationHash
+    ? RECOMMENDATION_SELECTION_HASH_VERSION : ANALYST_SELECTION_HASH_VERSION;
   const preselected = args.preselected_master_ids === undefined
     ? []
     : normalizeExplicit(args.preselected_master_ids, catalog.all_master_ids);
@@ -402,7 +454,7 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const expiresAt = new Date(now + LIMITS.SELECTION_TTL_MS).toISOString();
   const record = {
     schema_version: 1,
-    selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
+    selection_hash_version: hashVersion,
     selection_id: selectionId,
     status: "awaiting_user_selection",
     symbol,
@@ -414,6 +466,8 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     intent_hash: digest({ symbol, language, prompt, council_mode: mode }),
     catalog_hash: catalog.catalog_hash,
     catalog,
+    method_panel_recommendation: methodPanelRecommendation,
+    recommendation_hash: recommendationHash,
     selected_master_ids: [],
     preselected_master_ids: preselected,
     selection_mode: null,
@@ -441,6 +495,8 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     council_mode: mode,
     catalog_hash: catalog.catalog_hash,
     intent_hash: record.intent_hash,
+    method_panel_recommendation: methodPanelRecommendation,
+    recommendation_hash: recommendationHash,
     expires_at: expiresAt,
     minimum: 1,
     maximum: mode === "quick" ? QUICK_MASTER_MAX : catalog.count,
@@ -637,9 +693,29 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
       current_catalog_hash: currentCatalogHash,
     });
   }
+  assertMethodPanelRecommendationIntegrity(record);
   if (args.display_ack !== true) {
     throw invalidParams("display_ack=true is required after the catalog has been shown to the user.", {
       reason: "MASTER_CATALOG_NOT_ACKNOWLEDGED",
+    });
+  }
+  if (record.recommendation_hash) {
+    if (args.recommendation_hash === undefined || args.recommendation_hash === null) {
+      throw invalidParams("recommendation_hash is required after an advisory method panel was displayed.", {
+        reason: "METHOD_PANEL_RECOMMENDATION_REQUIRED",
+        expected_recommendation_hash: record.recommendation_hash,
+      });
+    }
+    if (args.recommendation_hash !== record.recommendation_hash) {
+      throw invalidParams("The advisory method-panel recommendation changed or was not the one displayed.", {
+        reason: "METHOD_PANEL_RECOMMENDATION_MISMATCH",
+        expected_recommendation_hash: record.recommendation_hash,
+      });
+    }
+  } else if (args.recommendation_hash !== undefined && args.recommendation_hash !== null) {
+    throw invalidParams("No evaluable method-panel recommendation exists for this selection.", {
+      reason: "METHOD_PANEL_RECOMMENDATION_MISMATCH",
+      expected_recommendation_hash: null,
     });
   }
   // The pace is the second decision taken at this gate. Quick has no pace to take, and an
@@ -699,7 +775,7 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
   const confirmedAt = new Date(now).toISOString();
   Object.assign(record, {
     status: "confirmed",
-    selection_hash_version: CURRENT_SELECTION_HASH_VERSION,
+    selection_hash_version: selectionHashVersion(record),
     selection_mode: resolved.mode,
     selected_master_ids: resolved.ids,
     analyst_scope: analystSelection.scope,
@@ -745,6 +821,7 @@ function confirmationResult(record) {
     selection_hash_version: selectionHashVersion(record),
     catalog_hash: record.catalog_hash,
     intent_hash: record.intent_hash,
+    recommendation_hash: record.recommendation_hash || null,
     selection_mode: record.selection_mode,
     selected_master_ids: record.selected_master_ids,
     selected_master_pack_hashes: selectedMasterPackHashes(record),
@@ -871,6 +948,7 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
     });
   }
   const selectionRecordHashVersion = selectionHashVersion(selection);
+  assertMethodPanelRecommendationIntegrity(selection);
   const expectedPackHashes = selectedMasterPackHashes(selection);
   const recordBindings = [
     ["schema_version", receipt.schema_version, selection.schema_version],
@@ -893,12 +971,16 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
     ["created_at", receipt.created_at, selection.confirmed_at],
     ["expires_at", receipt.expires_at, selection.expires_at],
   ];
-  if (receiptHashVersion >= CURRENT_SELECTION_HASH_VERSION
-    && selectionRecordHashVersion >= CURRENT_SELECTION_HASH_VERSION) {
+  if (receiptHashVersion >= ANALYST_SELECTION_HASH_VERSION
+    && selectionRecordHashVersion >= ANALYST_SELECTION_HASH_VERSION) {
     recordBindings.push(
       ["analyst_scope", receipt.analyst_scope, selection.analyst_scope],
       ["selected_analyst_ids", receipt.selected_analyst_ids, selection.selected_analyst_ids],
     );
+  }
+  if (receiptHashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION
+    && selectionRecordHashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION) {
+    recordBindings.push(["recommendation_hash", receipt.recommendation_hash, selection.recommendation_hash]);
   }
   const mismatchedBindings = recordBindings
     .filter(([, receiptValue, selectionValue, present = true]) => !present || !sameJson(receiptValue, selectionValue))
@@ -957,10 +1039,10 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
       mismatched_master_ids: mismatchedPackHashes,
     });
   }
-  const effectiveAnalystScope = receiptHashVersion >= CURRENT_SELECTION_HASH_VERSION
+  const effectiveAnalystScope = receiptHashVersion >= ANALYST_SELECTION_HASH_VERSION
     ? receipt.analyst_scope
     : ((receipt.council_mode || "full") === "quick" ? "quick" : "core");
-  const effectiveAnalystIds = receiptHashVersion >= CURRENT_SELECTION_HASH_VERSION
+  const effectiveAnalystIds = receiptHashVersion >= ANALYST_SELECTION_HASH_VERSION
     ? receipt.selected_analyst_ids
     : (effectiveAnalystScope === "quick" ? QUICK_TASKS : currentCatalog.core_analyst_ids);
   const expectedAnalystIds = effectiveAnalystScope === "all"
@@ -1073,10 +1155,10 @@ export function consumeCouncilSelection(args = {}, options = {}) {
 function consumedResult(selection, receipt) {
   const hashVersion = selectionHashVersion(receipt);
   const mode = selection.council_mode || "full";
-  const analystScope = hashVersion >= CURRENT_SELECTION_HASH_VERSION
+  const analystScope = hashVersion >= ANALYST_SELECTION_HASH_VERSION
     ? selection.analyst_scope
     : (mode === "quick" ? "quick" : "core");
-  const selectedAnalystIds = hashVersion >= CURRENT_SELECTION_HASH_VERSION
+  const selectedAnalystIds = hashVersion >= ANALYST_SELECTION_HASH_VERSION
     ? selection.selected_analyst_ids
     : (analystScope === "quick" ? QUICK_TASKS : selection.catalog.core_analyst_ids);
   return {
@@ -1086,6 +1168,8 @@ function consumedResult(selection, receipt) {
     selection_hash_version: selectionHashVersion(receipt),
     catalog_hash: selection.catalog_hash,
     intent_hash: selection.intent_hash,
+    recommendation_hash: hashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION
+      ? selection.recommendation_hash : null,
     selection_mode: selection.selection_mode,
     council_mode: selection.council_mode || "full",
     // The pace approved at the gate must survive consumption, or the run silently falls back to

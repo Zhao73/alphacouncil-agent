@@ -80,12 +80,13 @@ export function recordAck(run, extra = {}) {
 function renderSelectionCatalog(data) {
   const copy = (messages) => localized(data.language, messages);
   const labels = copy({
-    en: { identity: "Identity", method: "Method", bestFor: "Best for", maturity: "Maturity", pack: "Pack format", preselected: "preselected" },
-    zh: { identity: "身份", method: "方法", bestFor: "适合", maturity: "成熟度", pack: "物理格式", preselected: "已预选" },
-    ja: { identity: "人物像", method: "手法", bestFor: "適した対象", maturity: "成熟度", pack: "パック形式", preselected: "事前選択済み" },
-    ko: { identity: "정체성", method: "방법", bestFor: "적합 대상", maturity: "성숙도", pack: "팩 형식", preselected: "사전 선택" },
+    en: { identity: "Identity", method: "Method", bestFor: "Best for", maturity: "Maturity", pack: "Pack format", preselected: "preselected", recommended: "advisory method match" },
+    zh: { identity: "身份", method: "方法", bestFor: "适合", maturity: "成熟度", pack: "物理格式", preselected: "已预选", recommended: "方法模拟建议" },
+    ja: { identity: "人物像", method: "手法", bestFor: "適した対象", maturity: "成熟度", pack: "パック形式", preselected: "事前選択済み", recommended: "参考メソッド候補" },
+    ko: { identity: "정체성", method: "방법", bestFor: "적합 대상", maturity: "성숙도", pack: "팩 형식", preselected: "사전 선택", recommended: "참고 방법 후보" },
   });
   const preselected = new Set(data.preselected_master_ids || []);
+  const recommended = new Set(data.method_panel_recommendation?.included_master_ids || []);
   // Some MCP hosts expose only text content even when the server also returns
   // structuredContent. Keep the selection handshake usable on those hosts by
   // mirroring the exact, non-secret session identifiers in a stable text block.
@@ -98,15 +99,29 @@ function renderSelectionCatalog(data) {
     expires_at: data.expires_at,
     council_mode: data.council_mode,
     analyst_options: data.analyst_options?.map((option) => ({ scope: option.scope, count: option.count })),
+    ...(data.recommendation_hash ? { recommendation_hash: data.recommendation_hash } : {}),
   })}`;
   const cards = data.masters.map((master) => [
-    `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? ` [${labels.preselected}]` : ""}`,
+    `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? ` [${labels.preselected}]` : ""}${recommended.has(master.id) ? ` [${labels.recommended}]` : ""}`,
     `${labels.identity}: ${master.identity}`,
     `${labels.method}: ${master.method}`,
     `${labels.bestFor}: ${master.best_for}`,
     `${labels.maturity}: ${master.maturity_label} (${master.maturity})`,
     `${labels.pack}: ${master.pack_format} (${master.admission_level})`,
   ].join("\n   ")).join("\n\n");
+  const recommendationNotice = data.method_panel_recommendation?.status === "recommended"
+    ? copy({
+      en: `Advisory method-simulation panel: ${data.method_panel_recommendation.included_master_ids.join(", ")}. This is selection help only: the full catalog remains available, it does not represent human experts, and no research starts without your explicit submission. Return recommendation_hash with confirmation.`,
+      zh: `方法模拟建议面板：${data.method_panel_recommendation.included_master_ids.join("、")}。这只帮助选择：完整目录仍可选，不代表真人专家；未经你明确提交不会开始研究。确认时请原样回传 recommendation_hash。`,
+      ja: `参考メソッド候補：${data.method_panel_recommendation.included_master_ids.join(", ")}。選択補助に限られ、全カタログは引き続き選択可能です。実在の専門家を表すものではなく、明示的な送信なしに調査は開始しません。確認時に recommendation_hash をそのまま返してください。`,
+      ko: `참고 방법 후보: ${data.method_panel_recommendation.included_master_ids.join(", ")}. 선택 보조일 뿐이며 전체 카탈로그는 계속 선택할 수 있습니다. 실제 전문가를 뜻하지 않고 명시적으로 제출하기 전에는 조사가 시작되지 않습니다. 확인 시 recommendation_hash를 그대로 보내십시오.`,
+    })
+    : copy({
+      en: "No advisory panel was generated because the instrument classification is missing. Choose explicitly from the full catalog; no default eight was guessed.",
+      zh: "由于缺少资产分类，本次未生成方法建议面板。请从完整目录明确选择；系统没有猜测默认 8 席。",
+      ja: "銘柄分類がないため参考パネルは生成されませんでした。全カタログから明示的に選択してください。既定の8席は推測していません。",
+      ko: "종목 분류가 없어 참고 패널을 만들지 않았습니다. 전체 카탈로그에서 명시적으로 선택하십시오. 기본 8개 좌석을 추측하지 않았습니다.",
+    });
   const quick = data.council_mode === "quick";
   const analystChoice = quick
     ? copy({
@@ -142,6 +157,8 @@ function renderSelectionCatalog(data) {
       ko: `마스터 선택(전체 ${data.masters.length}개 좌석, 최대 ${data.maximum}개 선택)`,
     }),
     fallbackContext,
+    "",
+    recommendationNotice,
     "",
     cards,
     "",
@@ -613,6 +630,22 @@ export function tools() {
           enum: ANALYST_SCOPES,
           description: "Prefill only. core means the eight mandatory evidence seats; all means all eleven analyst seats. The user still submits the scope at confirmation.",
         },
+        instrument_classification: {
+          type: "object",
+          properties: {
+            asset_type: { type: "string", minLength: 1 },
+            research_model: { type: "string", minLength: 1 },
+            classification_source: { type: "string" },
+          },
+          required: ["asset_type", "research_model"],
+          description: "Optional already-known classification used only for a deterministic advisory method panel. Missing classification fails closed and never guesses a default eight.",
+        },
+        typed_fact_coverage: {
+          type: "array",
+          uniqueItems: true,
+          items: { type: "string", minLength: 1 },
+          description: "Optional stable typed-fact IDs already known to be available. Used only with instrument_classification to rank manifest-declared capabilities.",
+        },
       },
       required: ["symbol"],
     }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
@@ -622,6 +655,11 @@ export function tools() {
         selection_id: { type: "string" },
         catalog_hash: { type: "string", description: "The catalog_hash returned by begin_council_selection." },
         display_ack: { type: "boolean", description: "Must be true after the host displayed the catalog to the user." },
+        recommendation_hash: {
+          type: "string",
+          pattern: "^sha256:[a-f0-9]{64}$",
+          description: "Required only when begin_council_selection returned a non-null advisory recommendation_hash. It acknowledges the exact 26-decision recommendation displayed; it does not select seats.",
+        },
         selected_master_ids: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: masterIds } },
         select_all: { type: "boolean", const: true },
         selection: { type: "string", minLength: 1, description: "Text fallback: stable numbers/ranges/IDs, or all." },
@@ -1006,6 +1044,7 @@ export async function handleToolCall(id, params) {
       council_mode: data.council_mode,
       analyst_scope: data.analyst_scope,
       selected_analyst_count: data.selected_analyst_count,
+      ...(data.recommendation_hash ? { recommendation_hash: data.recommendation_hash } : {}),
     })}`;
     const confirmation = localized(data.language, {
       en: `Confirmed ${data.selected_count} method seat(s) and ${data.selected_analyst_count} analyst seat(s) (${data.analyst_scope}) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,

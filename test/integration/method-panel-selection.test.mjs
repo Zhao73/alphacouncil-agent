@@ -99,7 +99,7 @@ test("a stale recommendation hash is rejected and select_all still means the phy
 });
 
 test("quick keeps the full catalog and permits one through four explicit seats, including exclusions", async () => {
-  const opened = await open("NVDA", "quick");
+  const opened = await open("PANELQ", "quick");
   assert.equal(opened.masters.length, 26);
   assert.equal(opened.maximum, 4);
   assert.deepEqual(opened.preselected_master_ids, []);

@@ -48,6 +48,11 @@ test("runtime build identity binds the version to the critical executable source
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/timing-ledger.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/timing-replay.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/company-source-acquisition.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/council-selection.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/method-panel-recommendation.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/method-seat-evidence.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/method-vocabulary-contract.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/rpc.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("schemas/runtime-headless-portfolio-manager-decision-v1.schema.json"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("scripts/lib/run-bundle.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("schemas/run-bundle-v1.schema.json"));

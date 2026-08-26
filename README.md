@@ -95,6 +95,13 @@ AlphaCouncil shows the work plan first. Full research asks separately for method
 | Full — normal | Same confirmed roster, frozen-stance sequence, 3 debate rounds, and PM, with a larger depth envelope | 30 minutes |
 | Full — slow | Same confirmed roster and stages with the largest depth envelope | 60 minutes |
 
+When an instrument classification and typed-fact coverage are already available, the selector also
+shows an eight-family **advisory method match** derived from all 26 physical pack manifests. It is
+only a prefill: every pack remains selectable, no run starts without explicit confirmation, and a
+missing classification produces no guessed default. The output represents AI-generated method
+simulations—not human experts, independent models, or a promise of profit. See
+[method-panel recommendation and seat evidence](docs/reference/method-panel-evidence.md).
+
 Only the slow run with all methods and all evidence workers enables the additional verification path; the other full tiers do not claim that extra check.
 
 <!-- readme-section:benefits -->
