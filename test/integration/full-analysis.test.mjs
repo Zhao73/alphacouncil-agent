@@ -873,6 +873,9 @@ test("every abstaining seat receives and publishes its strong first-person metho
       assert.equal(opinion.dedicated_worker.status, "completed");
       assert.equal(opinion.voice_mode, "first_person_public_method_simulation_v1");
       assert.equal(opinion.disclosure_ack, "alphacouncil.first_person_public_method_simulation.v1");
+      const persistedOpinion = readJson(join(dir, `${id}.json`));
+      assert.equal(persistedOpinion.acknowledged_stance, opinion.stance, `${id} persisted stance ack`);
+      assert.equal(persistedOpinion.acknowledged_stance, opinion.deterministic_stance, `${id} deterministic stance ack`);
       assert.ok(Object.values(opinion.voice).every((text) => /\bI\b/u.test(text)), id);
       assert.ok(opinion.voice_statement.replace(/\s/g, "").length >= 20, `${id} statement too thin`);
       assert.match(opinion.voice_statement, /I would/u);

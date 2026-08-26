@@ -46,6 +46,8 @@ test("runtime build identity binds the version to the critical executable source
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/orchestrator.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/company-source-acquisition.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("schemas/runtime-headless-portfolio-manager-decision-v1.schema.json"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("scripts/lib/run-bundle.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("schemas/run-bundle-v1.schema.json"));
   assert.ok(RUNTIME_BUILD_IDENTITY.git_commit === null || /^[0-9a-f]{40}$/u.test(RUNTIME_BUILD_IDENTITY.git_commit));
   assert.ok([true, false, null].includes(RUNTIME_BUILD_IDENTITY.git_tracked_tree_dirty));
 });

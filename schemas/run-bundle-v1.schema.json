@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/run-bundle-v1.schema.json",
+  "title": "AlphaCouncil review run bundle manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "created_at",
+    "verification_contract",
+    "source_run",
+    "integrity_notice",
+    "files",
+    "total_payload_bytes"
+  ],
+  "properties": {
+    "schema": { "const": "alphacouncil_run_bundle_v1" },
+    "schema_version": { "const": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "verification_contract": {
+      "type": "object",
+      "required": ["standard_id", "standard_version", "exporter", "verifier"],
+      "properties": {
+        "standard_id": { "const": "alphacouncil_evidence_standard_v1" },
+        "standard_version": { "const": 1 },
+        "exporter": { "$ref": "#/$defs/tool" },
+        "verifier": { "$ref": "#/$defs/tool" }
+      },
+      "additionalProperties": false
+    },
+    "source_run": {
+      "type": "object",
+      "required": ["run_id", "status", "runtime_provenance", "publication_manifest_sha256"],
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "symbol": { "type": ["string", "null"] },
+        "status": { "type": ["string", "null"] },
+        "started_at": { "type": ["string", "null"] },
+        "completed_at": { "type": ["string", "null"] },
+        "runtime_provenance": { "type": ["object", "null"] },
+        "publication_manifest_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      },
+      "additionalProperties": false
+    },
+    "integrity_notice": { "type": "string", "minLength": 1 },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "byte_length", "sha256"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^payload/(?!.*(?:^|/)\\.\\.(?:/|$))[^\\\\\\u0000]+$" },
+          "byte_length": { "type": "integer", "minimum": 0, "maximum": 33554432 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "total_payload_bytes": { "type": "integer", "minimum": 1, "maximum": 134217728 }
+  },
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "required": ["name", "runtime_build_identity"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "runtime_build_identity": {
+          "type": "object",
+          "required": ["contract_id", "package_version", "critical_source_sha256", "critical_source_files"],
+          "properties": {
+            "contract_id": { "const": "alphacouncil_runtime_build_v1" },
+            "package_version": { "type": "string", "minLength": 1 },
+            "critical_source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+            "critical_source_files": { "type": "array", "items": { "type": "string" } },
+            "git_commit": { "type": ["string", "null"] },
+            "git_tracked_tree_dirty": { "type": ["boolean", "null"] }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

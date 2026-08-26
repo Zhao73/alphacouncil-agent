@@ -92,6 +92,8 @@
     "evaluation:artifacts:check": "node scripts/council-experiment-artifacts.mjs --check",
     "host:e2e:artifacts": "node scripts/host-e2e-artifacts.mjs --plan",
     "host:e2e:artifacts:check": "node scripts/host-e2e-artifacts.mjs --check",
+    "run:bundle:export": "node scripts/export-run-bundle.mjs",
+    "run:bundle:verify": "node scripts/verify-run-bundle.mjs",
     "prepublishOnly": "npm test && npm run test:package",
     "tui": "node tui/tui.mjs"
   },

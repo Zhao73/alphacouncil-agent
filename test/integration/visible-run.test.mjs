@@ -644,6 +644,12 @@ test("a declined out-of-scope v3 seat still returns an independent first-person 
 
   const opinion = recorded.master.opinion;
   assert.equal(opinion.stance, "out_of_scope");
+  const persistedOpinion = JSON.parse(readFileSync(
+    join(dataDir, "runs", completeRunId, `${selectedMaster}.json`),
+    "utf8",
+  ));
+  assert.equal(persistedOpinion.acknowledged_stance, opinion.stance);
+  assert.equal(persistedOpinion.acknowledged_stance, opinion.deterministic_stance);
   assert.equal(opinion.voice_status, "completed");
   assert.equal(opinion.statement_origin, "visible_method_voice_worker");
   assert.equal(opinion.dedicated_worker.execution_mode, "visible_host_thread");
