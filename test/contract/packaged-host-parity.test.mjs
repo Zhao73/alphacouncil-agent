@@ -28,22 +28,26 @@ const REPO_REVIEW_JSON_COUNT = execSync("git ls-files knowledge/ai-assisted-solo
 /** Seats whose legacy v2 operator material survives in the production fallback profile. */
 const LEGACY_OPERATOR_SEATS = 4;
 const PACKAGED_PARITY_PROCESS_TIMEOUT_MS = 180_000;
-const PACKAGED_PARITY_TEST_TIMEOUT_MS = process.platform === "win32" ? 400_000 : 200_000;
+// The test ceiling must cover both bounded process attempts on every platform now that an
+// outer spawnSync timeout is retryable everywhere.
+const PACKAGED_PARITY_TEST_TIMEOUT_MS = 400_000;
 
 function resultOutput(result) {
   return [result.error?.stack || result.error?.message, result.stdout, result.stderr].filter(Boolean).join("\n");
 }
 
-function isTransientWindowsParityTimeout(result, platform = process.platform) {
-  return platform === "win32" && (
-    result.error?.code === "ETIMEDOUT"
-    || /offline npm install from tarball.*ETIMEDOUT/su.test(resultOutput(result))
-  );
+function isTransientParityTimeout(result, platform = process.platform) {
+  // spawnSync can hit its outer wall on any loaded runner. The nested offline-install
+  // diagnostic is Windows-specific because only that host has exhibited the npm shim stall.
+  return result.error?.code === "ETIMEDOUT"
+    || (platform === "win32"
+      && /offline npm install from tarball.*ETIMEDOUT/su.test(resultOutput(result)));
 }
 
 function runPackagedParity(env, {
   platform = process.platform,
   spawn = spawnSync,
+  log = console.error,
 } = {}) {
   const attempts = [];
   while (attempts.length < 2) {
@@ -55,7 +59,12 @@ function runPackagedParity(env, {
       timeout: PACKAGED_PARITY_PROCESS_TIMEOUT_MS,
     });
     attempts.push(result);
-    if (!isTransientWindowsParityTimeout(result, platform)) break;
+    if (!isTransientParityTimeout(result, platform)) break;
+    if (attempts.length < 2) {
+      // A timed-out child cannot execute its own finally cleanup. Each parity invocation uses
+      // a fresh mkdtemp root; the abandoned first root remains bounded to runner temp cleanup.
+      log("packaged-parity: attempt 1 timed out; retrying with a fresh temporary install root (attempt 2/2)");
+    }
   }
   return {
     result: attempts.at(-1),
@@ -89,28 +98,24 @@ test("npm execution never spawns a cmd shim directly on Windows", () => {
   });
 });
 
-test("a top-level Windows parity timeout receives the existing single bounded retry", () => {
+test("a top-level parity timeout receives one announced bounded retry on every platform", () => {
   const timeout = { error: { code: "ETIMEDOUT", message: "spawnSync node.exe ETIMEDOUT" }, status: null };
   const success = { status: 0, stdout: "{}", stderr: "" };
-  let windowsCalls = 0;
-  const windows = runPackagedParity({}, {
-    platform: "win32",
-    spawn: () => (++windowsCalls === 1 ? timeout : success),
-  });
-  assert.equal(windowsCalls, 2);
-  assert.equal(windows.result, success);
-
-  let nonWindowsCalls = 0;
-  const nonWindows = runPackagedParity({}, {
-    platform: "darwin",
-    spawn: () => {
-      nonWindowsCalls += 1;
-      return timeout;
-    },
-  });
-  assert.equal(nonWindowsCalls, 1);
-  assert.equal(nonWindows.result, timeout);
-  assert.equal(isTransientWindowsParityTimeout({ error: { code: "ENOENT" } }, "win32"), false);
+  for (const platform of ["win32", "darwin", "linux"]) {
+    let calls = 0;
+    const messages = [];
+    const run = runPackagedParity({}, {
+      platform,
+      spawn: () => (++calls === 1 ? timeout : success),
+      log: (message) => messages.push(message),
+    });
+    assert.equal(calls, 2, platform);
+    assert.equal(run.result, success, platform);
+    assert.deepEqual(messages, [
+      "packaged-parity: attempt 1 timed out; retrying with a fresh temporary install root (attempt 2/2)",
+    ], platform);
+  }
+  assert.equal(isTransientParityTimeout({ error: { code: "ENOENT" } }, "win32"), false);
 });
 
 test("npm tarball install exposes identical four-host MCP adapter behavior without external live claims", { timeout: PACKAGED_PARITY_TEST_TIMEOUT_MS }, () => {

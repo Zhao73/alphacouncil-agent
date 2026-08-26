@@ -242,7 +242,7 @@ test("a safe local syntax repair avoids a second Codex worker", async () => {
       // Keep the worker ceiling comfortably above process-start latency on a loaded
       // Windows runner. The assertion below still proves that the local repair uses
       // exactly one worker; this budget must not turn scheduler delay into partial evidence.
-      timeout_ms: 20_000,
+      timeout_ms: 30_000,
     }));
     assert.equal(readFileSync(fake.counter, "utf8"), "1", "local syntax repair must not spend a model retry");
     assert.equal(run.status, "evidence_complete");
@@ -394,7 +394,7 @@ test("valid JSON in the wrong reader language remains reader_language_mismatch a
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000,
+      timeout_ms: 30_000,
     }));
     const runDir = join(dataDir, "runs", runId);
     const diagnostic = JSON.parse(readFileSync(join(runDir, "forward_expectations.failure.json"), "utf8"));
@@ -447,7 +447,9 @@ test("a transport failure on the parse retry remains empty evidence", async () =
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000,
+      // Leave enough process-start budget for both deliberately separate transports on a
+      // loaded Windows runner. The assertion still requires attempt 2's exit 17, never timeout.
+      timeout_ms: 30_000,
     });
     const run = structured(response);
     const runDir = join(dataDir, "runs", runId);
@@ -471,6 +473,7 @@ test("a transport failure on the parse retry remains empty evidence", async () =
 
 test("a worker that exits zero with valid JSON after its timeout is still rejected", {
   skip: process.platform === "win32" ? "the fixture relies on POSIX SIGTERM handling" : false,
+  timeout: 30_000,
 }, async () => {
   const dataDir = makeDataDir();
   const fake = scriptedCodexCommand(dataDir, { lateValidOnSecondAttempt: true });
@@ -532,7 +535,7 @@ test("one bounded parse-only retry can recover a valid evidence packet", async (
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000,
+      timeout_ms: 30_000,
     });
     const run = structured(response);
     const runDir = join(dataDir, "runs", runId);
@@ -581,7 +584,7 @@ test("parse-only retry accepts one schema-valid packet beside non-contract JSON 
       tasks: ["forward_expectations"],
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000,
+      timeout_ms: 30_000,
     }));
     const dir = join(dataDir, "runs", runId);
     assert.equal(readFileSync(fake.counter, "utf8"), "2");

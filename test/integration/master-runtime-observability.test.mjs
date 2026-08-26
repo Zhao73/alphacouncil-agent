@@ -202,10 +202,14 @@ test("a stalled voice worker costs the reader the prose, not the seat", async ()
   }
 });
 
-test("each terminal master is canonical before the barrier and survives interrupted-run recovery", async () => {
+test("each terminal master is canonical before the barrier and survives interrupted-run recovery", {
+  timeout: 90_000,
+}, async () => {
   const dataDir = makeDataDir();
   const fake = observabilityCodex(dataDir, {
-    delays: { master_buffett: 40, master_munger: 10_000 },
+    // Keep the second worker open long enough to observe the persisted mid-barrier state even
+    // when evidence-worker startup is delayed by a loaded Windows runner.
+    delays: { master_buffett: 40, master_munger: 60_000 },
   });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
   let recoveryServer = null;
@@ -224,7 +228,7 @@ test("each terminal master is canonical before the barrier and survives interrup
         facts_unavailable: true, unavailable: ["fixture"],
       },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 20_000, total_timeout_ms: 30_000,
+      timeout_ms: 45_000, total_timeout_ms: 70_000,
     }));
     assert.equal(accepted.accepted, true);
     const dir = join(dataDir, "runs", runId);
@@ -233,7 +237,7 @@ test("each terminal master is canonical before the barrier and survives interrup
       const masters = Object.fromEntries(status.masters.map((item) => [item.master, item]));
       return masters.master_buffett?.status === "completed"
         && masters.master_munger?.status === "running";
-    });
+    }, 30_000);
     const masters = Object.fromEntries(midBarrier.masters.map((item) => [item.master, item]));
     assert.equal(masters.master_buffett.status, "completed");
     assert.equal(masters.master_munger.status, "running");

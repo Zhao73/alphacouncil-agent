@@ -143,20 +143,20 @@ test("a stalled DNS lookup is bounded by the retrieval deadline and never starts
   assert.equal(harness.state.calls.length, 0);
 });
 
-test("DNS time is deducted from the transport window", { timeout: 2_000 }, async () => {
+test("DNS time is deducted from the transport window", { timeout: 5_000 }, async () => {
   const harness = requestHarness([{
     status: 200,
     body: "outside the shared deadline",
-    responseDelayMs: 150,
+    responseDelayMs: 750,
   }]);
   await assert.rejects(
     retrievePublicHttpText("https://slow-dns.example/source", {
       lookupImpl: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        await new Promise((resolve) => setTimeout(resolve, 400));
         return [{ address: "93.184.216.34", family: 4 }];
       },
       requestImpl: harness.requestImpl,
-      timeoutMs: 200,
+      timeoutMs: 1_000,
     }),
     (error) => error instanceof PublicHttpError && error.code === "TIMED_OUT",
   );
