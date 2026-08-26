@@ -16,6 +16,7 @@ function requestHarness(steps) {
     const step = steps[state.calls.length];
     state.calls.push({ url, options });
     const request = new EventEmitter();
+    let responseTimer;
     request.end = () => {
       options.lookup(new URL(url).hostname, {}, (error, address, family) => {
         if (error) {
@@ -26,11 +27,18 @@ function requestHarness(steps) {
         const response = new PassThrough();
         response.statusCode = step?.status ?? 200;
         response.headers = step?.headers || {};
-        onResponse(response);
-        queueMicrotask(() => response.end(step?.body || ""));
+        const emitResponse = () => {
+          onResponse(response);
+          queueMicrotask(() => response.end(step?.body || ""));
+        };
+        if (step?.responseDelayMs) responseTimer = setTimeout(emitResponse, step.responseDelayMs);
+        else emitResponse();
       });
     };
-    request.destroy = (error) => queueMicrotask(() => request.emit("error", error));
+    request.destroy = (error) => {
+      clearTimeout(responseTimer);
+      queueMicrotask(() => request.emit("error", error));
+    };
     return request;
   };
   return { requestImpl, state };
@@ -118,6 +126,58 @@ test("HTTP connection uses the vetted address even if a later DNS answer changes
     address: "93.184.216.34",
     family: 4,
   }]);
+});
+
+test("a stalled DNS lookup is bounded by the retrieval deadline and never starts transport", {
+  timeout: 1_000,
+}, async () => {
+  const harness = requestHarness([{ status: 200, body: "too late" }]);
+  await assert.rejects(
+    retrievePublicHttpText("https://stalled.example/source", {
+      lookupImpl: () => new Promise(() => {}),
+      requestImpl: harness.requestImpl,
+      timeoutMs: 25,
+    }),
+    (error) => error instanceof PublicHttpError && error.code === "TIMED_OUT",
+  );
+  assert.equal(harness.state.calls.length, 0);
+});
+
+test("DNS time is deducted from the transport window", { timeout: 2_000 }, async () => {
+  const harness = requestHarness([{
+    status: 200,
+    body: "outside the shared deadline",
+    responseDelayMs: 150,
+  }]);
+  await assert.rejects(
+    retrievePublicHttpText("https://slow-dns.example/source", {
+      lookupImpl: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 80));
+        return [{ address: "93.184.216.34", family: 4 }];
+      },
+      requestImpl: harness.requestImpl,
+      timeoutMs: 200,
+    }),
+    (error) => error instanceof PublicHttpError && error.code === "TIMED_OUT",
+  );
+  assert.equal(harness.state.calls.length, 1);
+});
+
+test("caller abort also releases a pending DNS lookup before transport", async () => {
+  const harness = requestHarness([{ status: 200, body: "too late" }]);
+  const controller = new AbortController();
+  const pending = retrievePublicHttpText("https://aborted.example/source", {
+    lookupImpl: () => new Promise(() => {}),
+    requestImpl: harness.requestImpl,
+    signal: controller.signal,
+    timeoutMs: 1_000,
+  });
+  controller.abort(new PublicHttpError("caller stopped retrieval", "ABORTED"));
+  await assert.rejects(
+    pending,
+    (error) => error instanceof PublicHttpError && error.code === "ABORTED",
+  );
+  assert.equal(harness.state.calls.length, 0);
 });
 
 test("every redirect hop is revalidated and unsafe destinations are never requested", async () => {

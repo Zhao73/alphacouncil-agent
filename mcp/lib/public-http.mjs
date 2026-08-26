@@ -150,6 +150,53 @@ export async function resolvePublicHttpDestination(url, { lookupImpl = dnsLookup
   });
 }
 
+function retrievalAbortError(signal) {
+  return signal?.reason instanceof Error
+    ? signal.reason
+    : new PublicHttpError("HTTP retrieval was aborted", "ABORTED");
+}
+
+function resolveDestinationWithinDeadline(url, {
+  lookupImpl,
+  signal,
+  timeoutMs,
+}) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    let settled = false;
+    let timer;
+    const cleanup = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener?.("abort", relayAbort);
+    };
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      fn(value);
+    };
+    const relayAbort = () => settle(rejectPromise, retrievalAbortError(signal));
+
+    if (signal?.aborted) {
+      relayAbort();
+      return;
+    }
+    signal?.addEventListener?.("abort", relayAbort, { once: true });
+    timer = setTimeout(() => {
+      settle(
+        rejectPromise,
+        new PublicHttpError("HTTP retrieval timed out during DNS lookup", "TIMED_OUT"),
+      );
+    }, timeoutMs);
+
+    // dns.promises.lookup cannot be cancelled. Racing it still bounds the caller; a
+    // late resolver settlement is consumed by this handler and cannot start transport.
+    resolvePublicHttpDestination(url, { lookupImpl }).then(
+      (destination) => settle(resolvePromise, destination),
+      (error) => settle(rejectPromise, error),
+    );
+  });
+}
+
 function requestOnce(url, {
   destination,
   headers,
@@ -177,9 +224,7 @@ function requestOnce(url, {
       error instanceof Error ? error : new PublicHttpError(String(error)),
     );
     const relayAbort = () => {
-      const error = signal?.reason instanceof Error
-        ? signal.reason
-        : new PublicHttpError("HTTP retrieval was aborted", "ABORTED");
+      const error = retrievalAbortError(signal);
       request?.destroy?.(error);
       reject(error);
     };
@@ -302,9 +347,15 @@ export async function retrievePublicHttpText(url, {
   let current = requestedUrl;
 
   for (;;) {
+    const lookupBudget = deadline - clock();
+    if (lookupBudget < 1) fail("HTTP retrieval timed out", "TIMED_OUT");
+    const destination = await resolveDestinationWithinDeadline(current, {
+      lookupImpl,
+      signal,
+      timeoutMs: lookupBudget,
+    });
     const remaining = deadline - clock();
     if (remaining < 1) fail("HTTP retrieval timed out", "TIMED_OUT");
-    const destination = await resolvePublicHttpDestination(current, { lookupImpl });
     networkTrace.push(destination);
     const response = await requestOnce(current, {
       destination,
