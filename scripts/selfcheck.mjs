@@ -19,6 +19,7 @@ const PORTABLE_STEPS = Object.freeze([
   Object.freeze(["scripts/check-persona-v3-ai-assisted-solo.mjs", "--check"]),
   Object.freeze(["scripts/report-host-capabilities.mjs", "--check"]),
   Object.freeze(["scripts/check-install-docs.mjs"]),
+  Object.freeze(["scripts/check-readme-conversion.mjs"]),
   Object.freeze(["scripts/report-package-inventory.mjs", "--check"]),
   Object.freeze(["scripts/check-packaged-host-parity.mjs", "--check"]),
   Object.freeze(["scripts/report-council-evaluation-protocol.mjs", "--check"]),
