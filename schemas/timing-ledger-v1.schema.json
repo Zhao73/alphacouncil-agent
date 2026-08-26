@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/timing-ledger-v1.schema.json",
+  "title": "AlphaCouncil derived process-boundary timing ledger",
+  "type": "object",
+  "required": [
+    "schema",
+    "schema_version",
+    "run_id",
+    "duration_scope",
+    "marketing_eligible",
+    "coverage",
+    "topology",
+    "total",
+    "classified_interval_union_ms",
+    "unattributed_ms",
+    "critical_path",
+    "attempts",
+    "stages",
+    "issues",
+    "anchors"
+  ],
+  "properties": {
+    "schema": { "const": "alphacouncil_timing_ledger_v1" },
+    "schema_version": { "const": 1 },
+    "run_id": {
+      "anyOf": [
+        { "$ref": "#/$defs/nonempty" },
+        { "type": "null" }
+      ]
+    },
+    "duration_scope": { "const": "local_child_spawn_to_settlement_wall_time" },
+    "marketing_eligible": { "const": false },
+    "coverage": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": {
+          "enum": [
+            "observed_process_boundary",
+            "truncated",
+            "legacy_stage_only",
+            "not_evaluable",
+            "structural_invalid"
+          ]
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "topology": {
+      "type": "object",
+      "required": ["status", "stage_order", "verification_required"],
+      "properties": {
+        "status": { "enum": ["valid", "valid_truncated", "invalid"] },
+        "stage_order": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/stage_name" }
+        },
+        "verification_required": { "type": "boolean" },
+        "frontier": { "$ref": "#/$defs/stage_name" },
+        "missing_stages": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/stage_name" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "total": {
+      "type": "object",
+      "required": ["started_at", "finished_at", "elapsed_ms"],
+      "properties": {
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" },
+        "elapsed_ms": { "$ref": "#/$defs/duration" }
+      },
+      "additionalProperties": false
+    },
+    "classified_interval_union_ms": { "$ref": "#/$defs/duration" },
+    "unattributed_ms": { "$ref": "#/$defs/duration" },
+    "critical_path": {
+      "type": "object",
+      "required": ["elapsed_ms", "invocation_keys"],
+      "properties": {
+        "elapsed_ms": { "$ref": "#/$defs/duration" },
+        "invocation_keys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/nonempty" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "attempts": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/attempt" }
+    },
+    "stages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/stage" }
+    },
+    "issues": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/issue" }
+    },
+    "anchors": {
+      "type": "object",
+      "required": ["event_tail_hash", "status_sha256", "evidence_sha256"],
+      "properties": {
+        "event_tail_hash": {
+          "anyOf": [
+            { "$ref": "#/$defs/digest" },
+            { "type": "null" }
+          ]
+        },
+        "status_sha256": { "$ref": "#/$defs/digest" },
+        "evidence_sha256": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "duration": { "type": "integer", "minimum": 0 },
+    "nonempty": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "stage_name": {
+      "enum": [
+        "queue_and_grounding",
+        "evidence",
+        "verification",
+        "methods",
+        "debate_round_1",
+        "debate_round_2",
+        "debate_round_3",
+        "portfolio_manager",
+        "terminal_persistence"
+      ]
+    },
+    "worker_stage_name": {
+      "enum": [
+        "evidence",
+        "verification",
+        "methods",
+        "debate_round_1",
+        "debate_round_2",
+        "debate_round_3",
+        "portfolio_manager"
+      ]
+    },
+    "attempt": {
+      "type": "object",
+      "required": [
+        "invocation_key",
+        "stage",
+        "attempt",
+        "attempt_kind",
+        "budget_ms",
+        "search_enabled",
+        "pid",
+        "started_at",
+        "finished_at",
+        "elapsed_ms",
+        "outcome",
+        "timed_out",
+        "forced_settle",
+        "duration_scope"
+      ],
+      "properties": {
+        "invocation_key": { "$ref": "#/$defs/nonempty" },
+        "stage": { "$ref": "#/$defs/worker_stage_name" },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "attempt_kind": { "enum": ["primary", "timeout_retry", "parse_repair"] },
+        "budget_ms": {
+          "anyOf": [
+            { "$ref": "#/$defs/duration" },
+            { "type": "null" }
+          ]
+        },
+        "search_enabled": { "type": "boolean" },
+        "pid": {
+          "anyOf": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "null" }
+          ]
+        },
+        "started_at": { "type": "string", "format": "date-time" },
+        "finished_at": { "type": "string", "format": "date-time" },
+        "elapsed_ms": {
+          "anyOf": [
+            { "$ref": "#/$defs/duration" },
+            { "type": "null" }
+          ]
+        },
+        "outcome": { "enum": ["completed", "timed_out", "spawn_failed", "failed", "unknown"] },
+        "timed_out": { "type": "boolean" },
+        "forced_settle": { "type": "boolean" },
+        "duration_scope": { "const": "local_child_spawn_to_settlement_wall_time" }
+      },
+      "additionalProperties": false
+    },
+    "stage": {
+      "type": "object",
+      "required": [
+        "stage",
+        "started_at",
+        "barrier_completed_at",
+        "elapsed_ms",
+        "worker_attempt_count",
+        "worker_elapsed_ms_sum",
+        "worker_critical_elapsed_ms",
+        "critical_invocation_key"
+      ],
+      "properties": {
+        "stage": { "$ref": "#/$defs/stage_name" },
+        "started_at": { "type": "string", "format": "date-time" },
+        "barrier_completed_at": {
+          "anyOf": [
+            { "type": "string", "format": "date-time" },
+            { "type": "null" }
+          ]
+        },
+        "elapsed_ms": { "$ref": "#/$defs/duration" },
+        "worker_attempt_count": { "type": "integer", "minimum": 0 },
+        "worker_elapsed_ms_sum": { "$ref": "#/$defs/duration" },
+        "worker_critical_elapsed_ms": { "$ref": "#/$defs/duration" },
+        "critical_invocation_key": {
+          "anyOf": [
+            { "$ref": "#/$defs/nonempty" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "issue": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "message": { "$ref": "#/$defs/nonempty" },
+        "details": {}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

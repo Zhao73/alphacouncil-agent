@@ -22,6 +22,7 @@ import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
 import { jsonlEntryHash } from "../../mcp/lib/fsutil.mjs";
 import { canonicalJson } from "../../mcp/lib/personas-v3/canonical.mjs";
 import { CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
+import { deriveTimingLedger, stableTimingJson } from "../../mcp/lib/timing-ledger.mjs";
 
 export const EVIDENCE_STANDARD_ID = "alphacouncil_evidence_standard_v1";
 export const EVIDENCE_STANDARD_VERSION = 1;
@@ -527,6 +528,11 @@ export function exportRunBundle({
   const missingTasks = tasks.filter((task) => !existsSync(join(sourceRoot, `${task}.json`)));
   const diagnostics = diagnosticsFor(evidence, opinions, missingMasters, missingTasks, { packageRoot, generatedAt });
   const portablePublication = portablePublicationManifest(publication, sourceRoot);
+  const timingLedger = deriveTimingLedger({
+    status,
+    evidence,
+    events: readJsonl(join(sourceRoot, "events.jsonl"), "events.jsonl"),
+  });
 
   const parent = dirname(destination);
   mkdirSync(parent, { recursive: true, mode: 0o700 });
@@ -543,6 +549,7 @@ export function exportRunBundle({
     const generated = [
       ["payload/council_diagnostics.json", diagnostics],
       ["payload/publication_manifest.portable.json", portablePublication],
+      ["payload/timing-ledger.json", timingLedger],
     ];
     for (const [relativePath, value] of generated) {
       const path = bundlePath(tempDir, relativePath);
@@ -590,6 +597,17 @@ export function exportRunBundle({
 
 function issue(code, message, details) {
   return { code, message, ...(details === undefined ? {} : { details }) };
+}
+
+export function timingLedgerStructureErrors(ledger) {
+  if (ledger?.coverage?.status !== "structural_invalid") return [];
+  return [issue(
+    "timing_ledger_structural_invalid",
+    "derived worker timing ledger is structurally invalid",
+    {
+      issue_codes: [...new Set((ledger.issues || []).map((entry) => entry?.code).filter(Boolean))].sort(),
+    },
+  )];
 }
 
 function pushUnique(list, value) {
@@ -814,6 +832,7 @@ export function verifyRunBundle({ bundleDir, packageRoot = PACKAGE_ROOT } = {}) 
   const blockers = [];
   const notEvaluable = [];
   let manifest = null;
+  let timingLedgerListed = false;
   if (!bundleDir || !existsSync(root)) {
     pushUnique(errors, issue("bundle_missing", `bundle directory does not exist: ${root}`));
   } else {
@@ -847,6 +866,7 @@ export function verifyRunBundle({ bundleDir, packageRoot = PACKAGE_ROOT } = {}) 
     const seen = new Set();
     let total = 0;
     const inventory = Array.isArray(manifest.files) ? manifest.files : [];
+    timingLedgerListed = inventory.some((record) => record?.path === "payload/timing-ledger.json");
     if (inventory.length > MAX_BUNDLE_ENTRIES) pushUnique(errors, issue("payload_inventory_too_large", `bundle manifest exceeds ${MAX_BUNDLE_ENTRIES} entries`));
     for (const record of inventory.slice(0, MAX_BUNDLE_ENTRIES)) {
       try {
@@ -898,6 +918,9 @@ export function verifyRunBundle({ bundleDir, packageRoot = PACKAGE_ROOT } = {}) 
   const publication = errors.length ? null : safeJsonFromBundle(root, "payload/publication_manifest.json", errors);
   const portable = errors.length ? null : safeJsonFromBundle(root, "payload/publication_manifest.portable.json", errors);
   const diagnostics = errors.length ? null : safeJsonFromBundle(root, "payload/council_diagnostics.json", errors);
+  const timingLedger = !errors.length && timingLedgerListed
+    ? safeJsonFromBundle(root, "payload/timing-ledger.json", errors)
+    : null;
   let events = [];
   if (!errors.length) {
     try {
@@ -950,11 +973,33 @@ export function verifyRunBundle({ bundleDir, packageRoot = PACKAGE_ROOT } = {}) 
     } catch (error) {
       pushUnique(errors, issue("council_diagnostics_invalid", error.message));
     }
+    if (timingLedger) {
+      const recomputedTiming = deriveTimingLedger({ status, evidence, events });
+      const attachedBytes = readFileSync(bundlePath(root, "payload/timing-ledger.json"));
+      if (!attachedBytes.equals(Buffer.from(stableTimingJson(recomputedTiming), "utf8"))) {
+        pushUnique(errors, issue(
+          "timing_ledger_mismatch",
+          "attached timing ledger does not byte-match status/evidence/events recomputation",
+        ));
+      }
+      for (const timingError of timingLedgerStructureErrors(recomputedTiming)) {
+        pushUnique(errors, timingError);
+      }
+    }
   }
 
   if (errors.length) {
     blockers.push(issue("structure_failed", "claim readiness cannot be evaluated because structure failed"));
   } else {
+    if (!timingLedgerListed && events.some((event) => [
+      "worker_attempt_started",
+      "worker_attempt_finished",
+    ].includes(event.type))) {
+      blockers.push(issue(
+        "timing_ledger_missing_for_observed_run",
+        "worker timing events are present but timing-ledger.json is absent",
+      ));
+    }
     const masters = selectedMasters(status, evidence);
     const tasks = selectedTasks(status, evidence);
     const sourceIds = sourceIdsFromManifest(sourceManifest);

@@ -206,26 +206,49 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         ...invocation.options,
       });
     } catch (error) {
-      // Promise executors turn the rethrow into a rejection. Clean the directory first:
-      // a synchronous ENOENT/EACCES must not leak one private plugin runtime per attempt.
+      // A synchronous ENOENT/EACCES never crossed a process boundary. Resolve it as a
+      // not_started attempt after cleanup so every caller receives the same result envelope.
       try { unlinkSync(outFile); } catch {}
       if (ownsLeafRuntimeDir) {
         try { rmSync(leafRuntimeDir, { recursive: true, force: true }); } catch {}
       }
-      throw error;
+      resolvePromise({
+        ok: false,
+        code: null,
+        text: "",
+        stderr: String(error.message || error),
+        stdout: "",
+        outFile,
+        timedOut: false,
+        spawn_error: true,
+        timing: {
+          started_at: null,
+          finished_at: null,
+          elapsed_ms: 0,
+          timed_out: false,
+          forced_settle: false,
+          pid: null,
+          outcome: "not_started",
+          duration_scope: "local_child_spawn_to_settlement_wall_time",
+        },
+      });
+      return;
     }
+    const startedAt = new Date().toISOString();
+    const startedAtMs = Date.parse(startedAt);
+    const timingPid = Number.isInteger(child.pid) && child.pid > 0 ? child.pid : null;
     child.stdin.on("error", () => {});
     child.stdin.end(prompt, "utf8");
-    onStart({ pid: child.pid, output: outFile });
-    const startedAt = Date.now();
+    onStart({ pid: child.pid, output: outFile, started_at: startedAt });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     let settled = false;
     let killTimer = null;
-    const finish = (value) => {
+    const finish = (value, outcome = "failed") => {
       if (settled) return;
       settled = true;
+      const finishedAt = new Date().toISOString();
       clearTimeout(timer);
       clearInterval(heartbeat);
       if (killTimer) clearTimeout(killTimer);
@@ -239,10 +262,22 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       if (ownsLeafRuntimeDir) {
         try { rmSync(leafRuntimeDir, { recursive: true, force: true }); } catch {}
       }
-      resolvePromise(value);
+      resolvePromise({
+        ...value,
+        timing: {
+          started_at: startedAt,
+          finished_at: finishedAt,
+          elapsed_ms: Math.max(0, Date.parse(finishedAt) - startedAtMs),
+          timed_out: value.timedOut === true,
+          forced_settle: value.forced_settle === true,
+          pid: timingPid,
+          outcome,
+          duration_scope: "local_child_spawn_to_settlement_wall_time",
+        },
+      });
     };
     const heartbeat = setInterval(() => {
-      onHeartbeat({ pid: child.pid, output: outFile, elapsed_ms: Date.now() - startedAt });
+      onHeartbeat({ pid: child.pid, output: outFile, elapsed_ms: Date.now() - startedAtMs });
     }, LIMITS.HEARTBEAT_MS);
     const timer = setTimeout(() => {
       timedOut = true;
@@ -261,14 +296,14 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
           outFile,
           timedOut: true,
           forced_settle: true,
-        });
+        }, "timed_out");
       }, killGraceMs);
     }, timeoutMs);
     // Drain both pipes; switch to streaming logs if a progress UI needs live CLI output.
     child.stdout.on("data", (chunk) => { stdout = appendLimited(stdout, chunk.toString()); });
     child.stderr.on("data", (chunk) => { stderr = appendLimited(stderr, chunk.toString()); });
     child.on("error", (error) => {
-      finish({ ok: false, code: null, text: "", stderr: String(error.message || error), stdout, outFile, timedOut });
+      finish({ ok: false, code: null, text: "", stderr: String(error.message || error), stdout, outFile, timedOut }, "spawn_failed");
     });
     child.on("close", (code) => {
       if (settled) {
@@ -288,7 +323,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
           stdout,
           outFile,
           timedOut,
-        });
+        }, timedOut ? "timed_out" : "failed");
         return;
       }
       if (output.output_too_large) {
@@ -300,15 +335,16 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       // A cooperative child may flush a valid-looking output and exit zero after it has
       // received our timeout signal. The deadline still won: post-timeout output must never
       // be promoted into evidence merely because shutdown happened cleanly.
+      const ok = !timedOut && code === 0 && !output.output_too_large && output.text.trim().length > 0;
       finish({
-        ok: !timedOut && code === 0 && !output.output_too_large && output.text.trim().length > 0,
+        ok,
         code,
         ...output,
         stderr,
         stdout,
         outFile,
         timedOut,
-      });
+      }, timedOut ? "timed_out" : ok ? "completed" : "failed");
     });
   });
 }

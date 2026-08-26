@@ -52,6 +52,7 @@ const RUNTIME_DATA_FILES = new Set([
   "data/industry-map.json",
   "data/social-handles.json",
   "schemas/headless-evidence-envelope-v1.schema.json",
+  "schemas/timing-ledger-v1.schema.json",
   "schemas/runtime-evidence-packet-v1.schema.json",
   "schemas/runtime-headless-portfolio-manager-decision-v1.schema.json",
   "schemas/runtime-method-voice-v1.schema.json",

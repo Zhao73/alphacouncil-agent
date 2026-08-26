@@ -57,6 +57,66 @@ const HEADLESS_EVIDENCE_ENVELOPE_SCHEMA_PATH = fileURLToPath(
 const EVIDENCE_OUTPUT_SCHEMA_PATH = HEADLESS_EVIDENCE_ENVELOPE_SCHEMA_PATH;
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/u;
+const WORKER_ATTEMPT_KIND = Object.freeze({
+  primary: Object.freeze({ attempt_kind: "primary" }),
+  timeout_retry: Object.freeze({ attempt_kind: "timeout_retry" }),
+  parse_repair: Object.freeze({ attempt_kind: "parse_repair" }),
+});
+
+function recordWorkerAttempt(run, invocationKey, meta, timing) {
+  if (!timing?.started_at) return;
+  const common = {
+    invocation_key: invocationKey,
+    stage: meta.stage,
+    attempt: meta.attempt,
+    attempt_kind: meta.attempt_kind,
+    budget_ms: Math.max(0, Math.floor(meta.budget_ms || 0)),
+    search_enabled: meta.search_enabled === true,
+    started_at: timing.started_at,
+    pid: Number.isInteger(timing.pid) && timing.pid > 0 ? timing.pid : null,
+  };
+  if (!timing.finished_at) {
+    appendEvent(run, "worker_attempt_started", common);
+    return;
+  }
+  appendEvent(run, "worker_attempt_finished", {
+    ...common,
+    finished_at: timing.finished_at,
+    elapsed_ms: timing.elapsed_ms,
+    outcome: timing.outcome,
+    timed_out: timing.timed_out === true,
+    forced_settle: timing.forced_settle === true,
+    duration_scope: timing.duration_scope,
+  });
+}
+
+async function runRecordedCodexAttempt(
+  run,
+  invocationKey,
+  meta,
+  prompt,
+  timeoutMs,
+  onStart = () => {},
+  onHeartbeat = () => {},
+  runtime = {},
+) {
+  const result = await runCodex(prompt, timeoutMs, (payload) => {
+    recordWorkerAttempt(run, invocationKey, meta, {
+      started_at: payload.started_at,
+      pid: payload.pid,
+    });
+    onStart(payload);
+  }, onHeartbeat, runtime);
+  if (result.timing?.started_at) recordWorkerAttempt(run, invocationKey, meta, result.timing);
+  return result;
+}
+
+function debateWorkerStage(role, round) {
+  if (role === "portfolio_manager") return "portfolio_manager";
+  return Number.isInteger(round) && round >= 1 && round <= 3
+    ? `debate_round_${round}`
+    : "debate_round_1";
+}
 
 function headlessMethodVoiceInstruction(kind, run) {
   const packetAckInstruction = requiresOperatingCompanyDossier(run)
@@ -2969,10 +3029,17 @@ export async function collectEvidence(args) {
     const runAttempt = async (workerPrompt, budgetMs, attempt, {
       search = true,
       outputSchema = EVIDENCE_OUTPUT_SCHEMA_PATH,
+      attemptKind = WORKER_ATTEMPT_KIND.primary.attempt_kind,
     } = {}) => {
       const allowedMs = remainingCouncilBudget(run, budgetMs);
       if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
-      const result = await runCodex(workerPrompt, allowedMs, ({ pid, output }) => {
+      const result = await runRecordedCodexAttempt(run, `evidence:${task}:${attemptKind}:${attempt}`, {
+        stage: "evidence",
+        attempt,
+        attempt_kind: attemptKind,
+        budget_ms: allowedMs,
+        search_enabled: search,
+      }, workerPrompt, allowedMs, ({ pid, output }) => {
         updateTask(run, task, "running", { pid, output, attempts: attempt });
       }, ({ pid, output, elapsed_ms }) => {
         updateTask(run, task, "running", { pid, output, attempts: attempt });
@@ -3025,7 +3092,9 @@ export async function collectEvidence(args) {
       && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
       executionAttempt = 2;
       appendEvent(run, "task_retry", { task, reason: "worker_timeout", attempt: executionAttempt });
-      result = await runAttempt(prompt, timeoutMs, executionAttempt);
+      result = await runAttempt(prompt, timeoutMs, executionAttempt, {
+        attemptKind: WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
+      });
     }
     if (!result.ok) {
       return commitFailure({
@@ -3129,6 +3198,7 @@ export async function collectEvidence(args) {
         ].join("\n\n");
       result = await runAttempt(retryPrompt, retryTimeoutMs, 2, {
         search: false,
+        attemptKind: WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
         // A ledger-only repair returns { acquisition_ledger }, not a complete evidence packet.
         // General transport repair still uses the native evidence schema so it cannot emit a
         // second JSON root or another invalid attempted URL.
@@ -3239,7 +3309,11 @@ export async function collectEvidence(args) {
             asOfDate,
             language,
             error: secondParseError,
-          }), acquisitionRetryTimeoutMs, 3, { search: false, outputSchema: null });
+          }), acquisitionRetryTimeoutMs, 3, {
+            search: false,
+            outputSchema: null,
+            attemptKind: WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
+          });
           if (!acquisitionResult.ok) {
             return commitFailure({
               failedResult: acquisitionResult,
@@ -3431,10 +3505,25 @@ export async function runHeadlessVerification(run, args = {}) {
     });
     let pid = null;
     const remainingVerifierBudget = () => Math.max(0, timeoutMs - (Date.now() - startedAtMs));
-    const execute = async (workerPrompt, budgetMs, attempt, search, outputSchema = null) => {
+    const execute = async (
+      workerPrompt,
+      budgetMs,
+      attempt,
+      search,
+      outputSchema = null,
+      invocationScope = "batch",
+      attemptKind = WORKER_ATTEMPT_KIND.primary.attempt_kind,
+    ) => {
       const allowedMs = remainingCouncilBudget(run, Math.min(budgetMs, remainingVerifierBudget()));
       if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
-      const result = await runCodex(workerPrompt, allowedMs, ({ pid: workerPid, output }) => {
+      const invocationKey = `verification:${verifier}:${invocationScope}:${attemptKind}:${attempt}`;
+      const result = await runRecordedCodexAttempt(run, invocationKey, {
+        stage: "verification",
+        attempt,
+        attempt_kind: attemptKind,
+        budget_ms: allowedMs,
+        search_enabled: search,
+      }, workerPrompt, allowedMs, ({ pid: workerPid, output }) => {
         pid = workerPid;
         updateVerifierStatus(run, verifier, "running", { pid: workerPid, output, attempts: attempt });
       }, ({ pid: workerPid, output, elapsed_ms }) => {
@@ -3480,7 +3569,14 @@ export async function runHeadlessVerification(run, args = {}) {
         { expectedClaimIds },
       );
 
-      let result = await execute(prompt, remainingVerifierBudget(), 1, true, outputSchemaPath);
+      let result = await execute(
+        prompt,
+        remainingVerifierBudget(),
+        1,
+        true,
+        outputSchemaPath,
+        `chunk-${chunkNumber}`,
+      );
       let normalizedChunk = null;
       let diagnostic = null;
       if (result.ok) {
@@ -3531,7 +3627,15 @@ export async function runHeadlessVerification(run, args = {}) {
             `Allowed verdicts: ${registry().get(verifier).verdict_values.join(" | ")}. Preserve note, checked_urls, queries, excerpt and rederivation from the supplied output.`,
             `Malformed output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
           ].join("\n\n");
-          result = await execute(repairPrompt, retryBudget, 2, semanticRetry, outputSchemaPath);
+          result = await execute(
+            repairPrompt,
+            retryBudget,
+            2,
+            semanticRetry,
+            outputSchemaPath,
+            `chunk-${chunkNumber}`,
+            WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
+          );
           if (result.ok) {
             try {
               normalizedChunk = parse(result);
@@ -3963,10 +4067,21 @@ export async function runHeadlessMasters(run, args = {}) {
     }
 
     let pid = null;
-    const execute = async (workerPrompt, budgetMs, attempt) => {
+    const execute = async (
+      workerPrompt,
+      budgetMs,
+      attempt,
+      attemptKind = WORKER_ATTEMPT_KIND.primary.attempt_kind,
+    ) => {
       const allowedMs = remainingCouncilBudget(run, budgetMs);
       if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
-      const result = await runCodex(workerPrompt, allowedMs, ({ pid: workerPid, output }) => {
+      const result = await runRecordedCodexAttempt(run, `methods:${id}:${attemptKind}:${attempt}`, {
+        stage: "methods",
+        attempt,
+        attempt_kind: attemptKind,
+        budget_ms: allowedMs,
+        search_enabled: false,
+      }, workerPrompt, allowedMs, ({ pid: workerPid, output }) => {
         pid = workerPid;
         updateMasterStatus(run, id, "running", { pid: workerPid, output, attempts: attempt });
       }, ({ pid: workerPid, output, elapsed_ms }) => {
@@ -4048,7 +4163,12 @@ export async function runHeadlessMasters(run, args = {}) {
       && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
       workerAttempt = 2;
       appendEvent(run, "master_retry", { master: id, reason: "worker_timeout", attempt: workerAttempt });
-      result = await execute(prompt, timeoutMs, workerAttempt);
+      result = await execute(
+        prompt,
+        timeoutMs,
+        workerAttempt,
+        WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
+      );
     }
     if (!result.ok) {
       const failureKind = workerExecutionFailureKind(result);
@@ -4132,7 +4252,12 @@ export async function runHeadlessMasters(run, args = {}) {
           headlessMethodVoiceInstruction(`${id} repaired method voice packet`, run),
         ] : []),
       ].join("\n\n");
-      result = await execute(repairPrompt, repairBudget, 2);
+      result = await execute(
+        repairPrompt,
+        repairBudget,
+        2,
+        WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
+      );
       if (!result.ok) {
         return {
           id,
@@ -4181,7 +4306,12 @@ export async function runHeadlessMasters(run, args = {}) {
               headlessMethodLanguageInstruction(run.language),
               headlessMethodVoiceInstruction(`${id} translated method voice packet`, run),
             ].join("\n\n");
-            result = await execute(languagePrompt, languageBudget, 3);
+            result = await execute(
+              languagePrompt,
+              languageBudget,
+              3,
+              WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
+            );
             if (result.ok) {
               try {
                 return { id, opinion: parse(result, { repairedTransport: true }), engine };
@@ -4242,7 +4372,19 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   const attemptDiagnostics = [];
   let result = timeoutMs <= 0
     ? deadlineResult(run)
-    : await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+    : await runRecordedCodexAttempt(
+      run,
+      `debate:${role}:round-${context.round || "final"}:primary:1`,
+      {
+        stage: debateWorkerStage(role, context.round),
+        attempt: 1,
+        attempt_kind: WORKER_ATTEMPT_KIND.primary.attempt_kind,
+        budget_ms: timeoutMs,
+        search_enabled: false,
+      },
+      prompt,
+      timeoutMs,
+      ({ pid, output }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round });
     }, ({ pid, output, elapsed_ms }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round });
@@ -4398,7 +4540,19 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     attemptCount = 2;
     appendEvent(run, "agent_retry", { role, round: context.round, reason: "worker_timeout", attempt: attemptCount });
     updateAgent(run, role, "running", { round: context.round, attempts: attemptCount });
-    result = await runCodex(prompt, timeoutMs, ({ pid, output }) => {
+    result = await runRecordedCodexAttempt(
+      run,
+      `debate:${role}:round-${context.round || "final"}:timeout_retry:${attemptCount}`,
+      {
+        stage: debateWorkerStage(role, context.round),
+        attempt: attemptCount,
+        attempt_kind: WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
+        budget_ms: timeoutMs,
+        search_enabled: false,
+      },
+      prompt,
+      timeoutMs,
+      ({ pid, output }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
     }, ({ pid, output, elapsed_ms }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
@@ -4446,7 +4600,19 @@ export async function runDebateRole(run, role, context, timeoutMs) {
           : LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,
       ].join("\n\n");
       attemptCount += 1;
-      result = await runCodex(repairPrompt, repairBudget, ({ pid, output }) => {
+      result = await runRecordedCodexAttempt(
+        run,
+        `debate:${role}:round-${context.round || "final"}:parse_repair:${attemptCount}`,
+        {
+          stage: debateWorkerStage(role, context.round),
+          attempt: attemptCount,
+          attempt_kind: WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
+          budget_ms: repairBudget,
+          search_enabled: false,
+        },
+        repairPrompt,
+        repairBudget,
+        ({ pid, output }) => {
         updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
       }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
       persistTransportAttemptDiagnostic(2, result);

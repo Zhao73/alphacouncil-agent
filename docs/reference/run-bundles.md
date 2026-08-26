@@ -24,7 +24,7 @@ Default verification exits nonzero only when structure fails. `--require-claim-r
 
 ## What is bound
 
-The manifest records relative payload paths, byte lengths and SHA-256 digests, the five-item evidence-standard version, and the exporter/verifier runtime build identity. The payload includes the persisted status, evidence, source manifest, company dossier, event ledger, selected analyst/method JSON, published artifacts, a portable publication projection and generated council diagnostics.
+The manifest records relative payload paths, byte lengths and SHA-256 digests, the five-item evidence-standard version, and the exporter/verifier runtime build identity. The payload includes the persisted status, evidence, source manifest, company dossier, event ledger, selected analyst/method JSON, published artifacts, a portable publication projection, generated council diagnostics and a timing ledger derived from the persisted run bytes.
 
 These hashes detect modification inside the bundle. They are not a signature and do not prove author identity, source authenticity, investment accuracy or future profitability.
 
@@ -43,6 +43,14 @@ The strict layer currently checks:
 The tool also reports `derived_marker_hits` using a fixed TF-IDF-like rule over pack-declared text. It is advisory only. It is not a reviewed method vocabulary and is not evidence that a seat is genuine.
 
 Until P1c preregisters reviewed per-seat vocabulary markers and thresholds, claim readiness intentionally remains `BLOCKED` with `reviewed_vocabulary_contract_pending`. This is an explicit evidence boundary, not a failed export.
+
+## Timing payload compatibility
+
+For a current headless run, the exporter derives `payload/timing-ledger.json` from `status.json`, `evidence.json` and `events.jsonl`. The verifier derives it again and requires a byte-for-byte match; changing the ledger and refreshing only the ordinary manifest digest therefore fails structure. A byte-matching ledger whose worker pairs, topology or declared terminal evidence are structurally invalid also fails bundle structure.
+
+A consistently inventoried legacy bundle without worker-attempt events may omit the timing ledger and remain structurally valid. If worker-attempt events are present but the ledger is removed, structure can still pass when the inventory is internally consistent, but claim readiness is explicitly `BLOCKED` with `timing_ledger_missing_for_observed_run`. This compatibility rule never upgrades old stage markers into process-boundary observations. `visible_host_threads` runs also remain `not_evaluable` because the external host owns worker scheduling.
+
+The ledger schema is published as `schemas/timing-ledger-v1.schema.json`. Its `marketing_eligible` field is fixed to `false`. See [Timing evidence and offline replay](timing-evidence.md) before interpreting any duration or projection.
 
 ## Interpreting the 26 seats
 
