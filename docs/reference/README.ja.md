@@ -403,7 +403,7 @@ API キー、証券口座の認証情報、非公開書類、生成された実�
 <br/><br/>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
+  <source media="(prefers-color-scheme: dark)" srcset="../../assets/logo-dark.png" />
   <img src="../../assets/logo.png" alt="AlphaCouncil" width="120" />
 </picture>
 

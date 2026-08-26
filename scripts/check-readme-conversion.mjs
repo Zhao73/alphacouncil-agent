@@ -158,6 +158,12 @@ function localTargets(text) {
   const targets = [];
   for (const match of text.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/gu)) targets.push(match[1].trim());
   for (const match of text.matchAll(/(?:href|src)="([^"]+)"/gu)) targets.push(match[1].trim());
+  for (const match of text.matchAll(/srcset="([^"]+)"/gu)) {
+    for (const candidate of match[1].split(",")) {
+      const [target] = candidate.trim().split(/\s+/u);
+      if (target) targets.push(target);
+    }
+  }
   return [...new Set(targets)];
 }
 

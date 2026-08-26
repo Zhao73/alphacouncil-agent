@@ -52,11 +52,16 @@ AlphaCouncil 把证券问题变成可检查的研究流程：并行证据席从�
 <!-- readme-section:install -->
 ## 在 Codex 中安装
 
-前提：Node.js 18 或更高版本。粘贴下面三行：
+前提：Node.js 18 或更高版本。先在终端运行下面两条命令：
 
-```text
+```bash
 codex plugin marketplace add Zhao73/alphacouncil-agent
 codex plugin add alphacouncil-agent@alphacouncil
+```
+
+插件会在 Codex 启动时加载。请完全退出并重启 Codex，新开一个会话，然后在 Codex 输入框中输入：
+
+```text
 @alphacouncil-agent analyze AAPL
 ```
 

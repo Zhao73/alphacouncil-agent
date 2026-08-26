@@ -7,7 +7,9 @@ import {
   aboveReferenceFold,
   checkReadmeConversion,
   countEnglishWords,
+  localLinkErrors,
   readReadmeDocuments,
+  repoRoot,
   validateReadmeDocuments,
 } from "../../scripts/check-readme-conversion.mjs";
 
@@ -70,4 +72,15 @@ test("README conversion gate rejects unsupported numeric cost copy", () => {
     text.replace("<!-- readme-section:reference-fold -->", "$2 per run\n<!-- readme-section:reference-fold -->")
   ));
   assert.ok(validateReadmeDocuments(mutated).some((error) => error.includes("token or currency")));
+});
+
+test("README local-link gate checks every srcset candidate", () => {
+  const errors = localLinkErrors(
+    repoRoot,
+    "docs/reference/synthetic.md",
+    '<source srcset="../../assets/logo-dark.png 1x, ../../assets/not-a-real-logo.png 2x" />',
+  );
+  assert.deepEqual(errors, [
+    "docs/reference/synthetic.md: missing local link target ../../assets/not-a-real-logo.png",
+  ]);
 });

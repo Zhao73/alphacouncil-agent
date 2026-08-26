@@ -434,7 +434,7 @@ npm run check
 <br/><br/>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
+  <source media="(prefers-color-scheme: dark)" srcset="../../assets/logo-dark.png" />
   <img src="../../assets/logo.png" alt="AlphaCouncil" width="120" />
 </picture>
 
@@ -443,7 +443,3 @@ npm run check
 <a href="#readme-top">↑ 回到顶部</a>
 
 </div>
-| 🧺 **一篮子不是一家公司,而且这套系统知道** | ETF 和指数走穿透定价:持有某公司 1% 的基金,对它 1% 的所有者收益有真实索取权 —— 所以公司方法**不改一个字**就能读一篮子。比率按权重聚合,绝对量变成基金自己的美元索取权,股本被拒绝因为它在组合层面没有意义。 |
-| 📰 **一篮子有自己的行业新闻** | `SOX` 没有新闻发言人。它的行业由持仓的加权 SIC 组推出,所以 SOXX 自动解析成半导体,而且指数调仓后依然成立。没有单一行业占优时,按它**实际横跨的几个行业**分别查。 |
-| 🌏 **你到底在赌什么** | 对大盘、对 KOSPI、对 KOSDAQ、对费城半导体的相关性,以及 11 个板块 SPDR 的离散度。交易日**按日期配对** —— 韩美假期不同,按数组位置压缩会拿周二比周三。 |
-| 💵 **不允许被做假的资金流** | 申购减赎回、按 NAV 计价。只有申报份额或发行商自己的 AUM÷NAV 恒等式可以参与计算;由持仓反推的份额被拒绝,因为相减会把数字消掉、把误差留下。 |

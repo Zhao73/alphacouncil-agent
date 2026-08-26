@@ -52,11 +52,16 @@ The same repository supports **Codex, Claude Code, OpenCode, and Grok Build**. I
 <!-- readme-section:install -->
 ## Install in Codex
 
-Prerequisite: Node.js 18 or newer. Paste these three lines:
+Prerequisite: Node.js 18 or newer. Install with these two shell commands:
 
-```text
+```bash
 codex plugin marketplace add Zhao73/alphacouncil-agent
 codex plugin add alphacouncil-agent@alphacouncil
+```
+
+Plugins load when Codex starts. Fully quit and restart Codex, open a new session, then enter this in the Codex composer:
+
+```text
 @alphacouncil-agent analyze AAPL
 ```
 

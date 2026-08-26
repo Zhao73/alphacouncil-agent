@@ -52,11 +52,16 @@ AlphaCouncil は銘柄の質問を検証可能な調査工程へ変えます。�
 <!-- readme-section:install -->
 ## Codex にインストール
 
-前提条件は Node.js 18 以降です。次の 3 行を貼り付けます。
+前提条件は Node.js 18 以降です。まずターミナルで次の 2 コマンドを実行します。
 
-```text
+```bash
 codex plugin marketplace add Zhao73/alphacouncil-agent
 codex plugin add alphacouncil-agent@alphacouncil
+```
+
+プラグインは Codex の起動時に読み込まれます。Codex を完全に終了して再起動し、新しいセッションを開いてから Codex の入力欄に次を入力します。
+
+```text
 @alphacouncil-agent analyze AAPL
 ```
 

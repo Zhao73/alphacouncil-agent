@@ -608,7 +608,7 @@ No API keys, brokerage credentials, private filings or generated run artifacts s
 <br/><br/>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.png" />
+  <source media="(prefers-color-scheme: dark)" srcset="../../assets/logo-dark.png" />
   <img src="../../assets/logo.png" alt="AlphaCouncil" width="120" />
 </picture>
 
