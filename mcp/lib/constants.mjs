@@ -13,6 +13,7 @@ export const SERVER_NAME = "alphacouncil-agent";
 // because hosts launch this server from arbitrary working directories.
 const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 export const VERSION = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")).version;
+export const CLAIM_READY_METHOD_VOICE_STATUS = "model_voice";
 
 const RUNTIME_FINGERPRINT_FILES = Object.freeze([
   "package.json",
@@ -423,17 +424,13 @@ export const LIMITS = Object.freeze({
  *
  * Bull and bear run together inside a round, so three rounds cost `3 * debate_ms`, not six.
  *
- * `slow` is where depth actually comes from: six minutes per side per round instead of 150
- * seconds, and twelve minutes per evidence seat instead of six.
+ * `slow` is where additional configured depth comes from: six minutes per side per round
+ * instead of three, and twelve minutes per evidence seat instead of six.
  */
 export const COUNCIL_PACES = Object.freeze({
-  // Measured floor for a COMPLETE full_v2, from runs whose caps did not truncate the stage:
-  // evidence 262s (11 seats in parallel), method voice 106s worst of 26, debate 142s per round,
-  // PM 108s. With grounding and persistence that is ~1073s, so fifteen minutes cannot hold a
-  // complete three-round council no matter how the stages are cut. `fast` is therefore an
-  // explicit best-effort tier: it is sized so the stages that PRODUCE reader content -- evidence
-  // and the method bench -- clear their measured worst case, and the debate takes the shortfall.
-  // Use `normal` when the report has to be complete; its caps cover every measured stage.
+  // `fast` is a configured fifteen-minute ceiling with a thirteen-minute stage allocation.
+  // It is not a measured completion claim: observed completion remains unvalidated until a
+  // representative host run produces a timing ledger that passes the terminal contract.
   fast: Object.freeze({
     pace: "fast",
     total_ms: 15 * 60 * 1000,
@@ -446,12 +443,8 @@ export const COUNCIL_PACES = Object.freeze({
     pm_ms: 95 * 1000,
     finalize_reserve_ms: 45 * 1000,
   }),
-  // `normal` is the tier to reach for when the report has to be complete. Its caps were leaving
-  // 495s of the 1800s budget unspendable while two stages sat right on their wall: a method
-  // voice worker timed out at exactly 120007ms, and 150s of debate covered a measured 142s
-  // round by 5%. Idle budget is not depth, so the headroom now goes to the two stages that were
-  // actually truncating. `debate_ms` stops at 180s because `slow` must stay at least twice
-  // `normal`, which pins the ceiling for this tier.
+  // `normal` is a thirty-minute ceiling with a twenty-five-minute configured stage allocation.
+  // The three-minute debate cap leaves `slow` at twice the per-round allowance.
   normal: Object.freeze({
     pace: "normal",
     total_ms: 30 * 60 * 1000,

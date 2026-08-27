@@ -15,15 +15,17 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
 function usage() {
   return [
-    "Usage: node scripts/audit-public-release.mjs [--candidate-ref REF] [--repository OWNER/REPO] [--json] [--check]",
+    "Usage: node scripts/audit-public-release.mjs [--candidate-ref REF] [--repository OWNER/REPO] [--phase report|candidate|publication] [--json] [--check]",
     "",
     "Read-only audit of source, candidate PR, GitHub About/Release and npm latest.",
-    "Default report mode exits 0 when drift is observed; --check exits 2 on drift.",
+    "Default report mode exits 0 when drift is observed.",
+    "--check exits 2 when the selected phase gate is blocked.",
+    "candidate checks the open PR; publication checks main/Release/npm after merge.",
   ].join("\n");
 }
 
 function parseArgs(argv) {
-  const options = { repository: "Zhao73/alphacouncil-agent", candidateRef: null, json: false, check: false, help: false };
+  const options = { repository: "Zhao73/alphacouncil-agent", candidateRef: null, phase: "report", json: false, check: false, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--help" || arg === "-h") options.help = true;
@@ -31,6 +33,7 @@ function parseArgs(argv) {
     else if (arg === "--check") options.check = true;
     else if (arg === "--candidate-ref") options.candidateRef = argv[++index];
     else if (arg === "--repository") options.repository = argv[++index];
+    else if (arg === "--phase") options.phase = argv[++index];
     else throw new Error(`unknown argument: ${arg}\n${usage()}`);
   }
   return options;
@@ -65,9 +68,10 @@ try {
         pack_count: counts.packCount,
         tool_count: counts.toolCount,
       },
+      phase: options.phase,
     });
     process.stdout.write(options.json ? `${JSON.stringify(result, null, 2)}\n` : `${formatPublicReleaseAudit(result)}\n`);
-    if (options.check && result.status !== "aligned") process.exitCode = 2;
+    if (options.check && result.gate.status !== "passed") process.exitCode = 2;
   }
 } catch (error) {
   process.stderr.write(`public release audit failed [${error.code || "PUBLIC_RELEASE_AUDIT_ERROR"}]: ${error.message}\n`);

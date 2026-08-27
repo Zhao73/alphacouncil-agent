@@ -489,6 +489,16 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   assert.equal(verifierLaunches.filter((entry) => entry.role === "refuter").length, 2);
   assert.equal(verifierLaunches.length, 8);
   assert.equal(masterLaunches.length, CANONICAL_MASTER_IDS.length);
+  assert.deepEqual(
+    masterLaunches.map((entry) => entry.role).sort(),
+    [...CANONICAL_MASTER_IDS].sort(),
+    "the integration must launch every canonical method seat exactly once",
+  );
+  assert.equal(
+    new Set(masterLaunches.map((entry) => entry.pid)).size,
+    CANONICAL_MASTER_IDS.length,
+    "each canonical method seat must run in its own worker process",
+  );
   assert.ok(initialEvidenceLaunches.every((entry) => entry.search));
   assert.ok(initialEvidenceLaunches.every((entry) => entry.outputSchema));
   assert.ok(transportRepairLaunches.every((entry) => !entry.search));

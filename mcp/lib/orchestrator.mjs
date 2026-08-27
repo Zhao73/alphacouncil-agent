@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ALL_ANALYST_TASKS,
+  CLAIM_READY_METHOD_VOICE_STATUS,
   COUNCIL_MODES,
   DEBATE_ROLES,
   DEFAULT_TASKS,
@@ -501,6 +502,13 @@ export function terminalContractState(run = {}, { manager = null, finalizeStatus
   const missing = [];
   const notes = substituteExecutionNotes(run);
   const packets = new Map((run.packets || []).map((packet) => [packet?.task, packet]));
+
+  // Full is the strict contract: a cached, compressed, deterministic or otherwise substituted
+  // stage is missing rather than successful. Quick keeps the explicitly disclosed degraded path.
+  if (run.council_mode === "full") {
+    missing.push(...notes);
+    notes.length = 0;
+  }
 
   for (const task of run.tasks || []) {
     const state = taskState(run, task);
@@ -1454,7 +1462,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       // that method's own first-person reasoning why the available facts do not open its gate.
       const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id), { run });
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
-        && ["model_voice", "completed"].includes(byId.get(item.id)?.voice_status);
+        && byId.get(item.id)?.voice_status === CLAIM_READY_METHOD_VOICE_STATUS;
       const completed = alreadyVoiced || !requiresVisibleVoice;
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
@@ -1493,7 +1501,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       // not a bearish vote. Only seats that reached a stance have a reading to explain.
       const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id), { run });
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
-        && ["model_voice", "completed"].includes(byId.get(item.id)?.voice_status);
+        && byId.get(item.id)?.voice_status === CLAIM_READY_METHOD_VOICE_STATUS;
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
         ...masterLabelStatus(byId.get(item.id)),
@@ -4314,7 +4322,9 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
     // reader-language violation is the worker actively misbehaving -- laundering that into a
     // published seat is exactly the silent failure these gates exist to catch, so it still
     // fails loudly and visibly.
-    if (outcome.frozenOpinion && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error")) {
+    if (run.council_mode === "quick"
+      && outcome.frozenOpinion
+      && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error")) {
       const fallback = {
         ...outcome.frozenOpinion,
         deterministic_summary: outcome.frozenOpinion.summary,
@@ -4454,9 +4464,8 @@ export async function runHeadlessMasters(run, args = {}) {
     })),
     ...plan.to_run,
   ];
-  // A frozen abstention has no reading for a worker to explain, and its deterministic statement
-  // already carries what the contract asks of an out_of_scope seat. Publish it directly instead
-  // of spending one model turn per seat to restate it.
+  // Compatibility branch for policies that explicitly waive a voice worker. Current v3 seats
+  // require a dedicated voice even when the frozen stance is out_of_scope.
   const abstainedWithoutWorker = [];
   const votingWorkerItems = workerItems.filter((item) => {
     if (!item.frozenOpinion || needsMethodVoiceWorker(item.frozenOpinion, { run })) return true;
@@ -4620,7 +4629,7 @@ export async function runHeadlessMasters(run, args = {}) {
           voice_mode: voice.voice_mode,
           disclosure_ack: voice.disclosure_ack,
           disclosure: voice.disclosure,
-          voice_status: "model_voice",
+          voice_status: CLAIM_READY_METHOD_VOICE_STATUS,
           voice_language: run.language,
           statement_origin: "dedicated_method_voice_worker",
           key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
@@ -4649,7 +4658,7 @@ export async function runHeadlessMasters(run, args = {}) {
       return attachMasterRuntimeProvenance(run, id, {
         ...reconciled.opinion,
         voice_statement: reconciled.opinion.summary || reconciled.opinion.verdict,
-        voice_status: "model_voice",
+        voice_status: CLAIM_READY_METHOD_VOICE_STATUS,
         voice_language: run.language,
         dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
       }, resolvedEngine);
@@ -5223,6 +5232,12 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   const bear = mergeDebateRounds([bearStep.packet]);
   const bullError = debateFailure(bullStep);
   const bearError = debateFailure(bearStep);
+  appendEvent(run, "debate_round_completed", {
+    round: 1,
+    format: "single_round_parallel",
+    bull_outcome: bullError || "completed",
+    bear_outcome: bearError || "completed",
+  });
 
   writeJson(join(dir, "bull_researcher.json"), bull);
   updateAgent(run, "bull_researcher", bullError ? "degraded" : "completed", {
@@ -5319,6 +5334,7 @@ const METHOD_BENCH_MIN_RECORDED = 8;
 export function methodBenchQuorumMet(run, gate = completenessStatus(run)) {
   const missing = gate.missing_masters.length;
   if (missing === 0) return true;
+  if (run.council_mode === "full") return false;
   const selected = Array.isArray(run.masters) ? run.masters.length : 0;
   const recorded = selected - missing;
   // A small hand-picked bench is a different instrument from `all`: every seat there was chosen
@@ -5598,10 +5614,17 @@ export async function synthesizeDecision(run, args) {
       runDebateRole(run, "bull_researcher", { round, ...bullContext, retryOnTimeout }, budget),
       runDebateRole(run, "bear_researcher", { round, ...bearContext, retryOnTimeout }, budget),
     ]);
-    return {
+    const settled = {
       bull: bullOutcome.status === "fulfilled" ? bullOutcome.value : rejectedStep(bullOutcome.reason, "bull_researcher"),
       bear: bearOutcome.status === "fulfilled" ? bearOutcome.value : rejectedStep(bearOutcome.reason, "bear_researcher"),
     };
+    appendEvent(run, "debate_round_completed", {
+      round,
+      format: "parallel_per_round",
+      bull_outcome: debateFailure(settled.bull) || "completed",
+      bear_outcome: debateFailure(settled.bear) || "completed",
+    });
+    return settled;
   };
   const failedRound = (round) => [debateFailure(round.bull), debateFailure(round.bear)].filter(Boolean);
 

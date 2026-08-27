@@ -72,10 +72,10 @@ No research, run directory or worker may start before that receipt exists. Data-
   rejected and names the tier that would allow it.
 - A tier sets the total AND every per-stage cap together, because the per-stage caps are what
   bound each worker. `slow` gives each evidence seat 12 minutes instead of 6 and each debate
-  round 6 minutes per side instead of 150 seconds; `fast` gives 4.7 minutes and 45 seconds. That
+  round 6 minutes per side instead of 3 minutes; `fast` gives 4.7 minutes and 45 seconds. That
   is where the depth difference lives — raising `total_timeout_ms` alone buys idle time, and
-  lowering it alone starves the later stages into `incomplete`. Every tier's stages are proven
-  to fit inside its own budget with headroom.
+  lowering it alone starves the later stages into `incomplete`. Every tier's configured stages
+  fit inside its ceiling; that arithmetic is not a measured completion claim.
 - A tier also shapes the worker's OUTPUT, because a cap alone is a timeout and a timeout is not
   a plan: the same prompt with a shorter fuse buys a packet the worker could not finish, not a
   faster good one. For an LLM call the wall clock is dominated by generated tokens, so `fast`

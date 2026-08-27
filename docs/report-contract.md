@@ -491,19 +491,18 @@ downstream roles named. A partial PM opinion never converts that run to complete
 ## Full Runtime Budget
 
 Plugin-managed headless `analyze_symbol(council_mode="full")` runs at one of three depth tiers
-chosen with `council_pace`, measured from durable queueing through terminal artifact
+chosen with `council_pace`. Its ceiling covers durable queueing through terminal artifact
 persistence. A caller or environment may lower the selected tier's budget, never raise it.
 
-| `council_pace` | total | evidence / seat | method / seat | debate / round | PM |
-| --- | --- | --- | --- | --- | --- |
-| `fast` | 15 min | 3.5 min | 1 min | 90 s | 2 min |
-| `normal` (default) | 30 min | 6 min | 2 min | 150 s | 3 min |
-| `slow` | 60 min | 12 min | 4 min | 6 min | 8 min |
+| `council_pace` | ceiling | configured stage total (rounded) | observed completion | evidence / seat | method / seat | debate / round | PM |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `fast` | 15 min | 13 min | not validated | 4.7 min | 1.8 min | 45 s | 1.6 min |
+| `normal` (default) | 30 min | 25 min | not validated | 6 min | 3 min | 3 min | 3 min |
+| `slow` | 60 min | 58 min | not validated | 12 min | 4.25 min | 6 min | 8 min |
 
 The tier moves every per-stage cap together with the total, because the per-stage caps are what
-bound each worker: a 60-minute total with 150-second debate rounds would finish in twenty
-minutes with forty idle, and a 15-minute total with 6-minute evidence caps would starve the
-debate into `incomplete`.
+bound each worker. The configured stage allocation fits inside its ceiling, but that arithmetic
+does not establish successful completion or a measured end-to-end duration.
 
 The tier also shapes what each worker is asked to produce. A cap on its own is a timeout, and a
 timeout is not a plan: the identical prompt with a shorter fuse buys a packet the worker could
@@ -512,8 +511,8 @@ tokens it generates, `fast` asks for the same information in less prose. What it
 claims, figures, scoped source IDs, the required report sections or the decision; what it cuts is
 restatement — re-quoting evidence that could be cited by ID, recapping an opponent before
 answering, methodology preambles. `slow` buys room to write a derivation out step by step.
-`normal` adds no shaping at all, so its prompts remain byte-identical to the reviewed golden. Each tier's stages are proven to fit inside its own budget with
-headroom for queueing, retries and the bounded parse repair. All three tiers are `full_v2`: a
+`normal` adds no shaping at all, so its prompts remain byte-identical to the reviewed golden. Each tier's configured stages fit inside its own ceiling with
+reserved headroom; this is not live timing evidence. All three tiers are `full_v2`: a
 tier changes how long each seat may think, never which seats run. Quick rejects the field.
 
 The execution topology is:

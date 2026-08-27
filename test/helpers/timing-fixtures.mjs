@@ -184,6 +184,7 @@ export function fullTimingFixture() {
   }]);
   append(events, 9_200, "masters_complete", { completed: 2, total: 2, missing: [] });
   append(events, 9_250, "debate_started", { rounds: 3 });
+  append(events, 9_275, "debate_round", { round: 1, format: "parallel_per_round" });
   appendParallelAttempts(events, [{
     invocationKey: "debate_round_1:bear:1",
     stage: "debate_round_1",
@@ -200,7 +201,8 @@ export function fullTimingFixture() {
     pid: 10_302,
     searchEnabled: false,
   }]);
-  append(events, 11_200, "debate_round", { round: 1, format: "parallel_per_round" });
+  append(events, 11_200, "debate_round_completed", { round: 1, format: "parallel_per_round" });
+  append(events, 11_250, "debate_round", { round: 2, format: "parallel_per_round" });
   appendParallelAttempts(events, [{
     invocationKey: "debate_round_2:bear:1",
     stage: "debate_round_2",
@@ -217,7 +219,8 @@ export function fullTimingFixture() {
     pid: 10_402,
     searchEnabled: false,
   }]);
-  append(events, 13_200, "debate_round", { round: 2, format: "parallel_per_round" });
+  append(events, 13_200, "debate_round_completed", { round: 2, format: "parallel_per_round" });
+  append(events, 13_250, "debate_round", { round: 3, format: "parallel_per_round" });
   appendParallelAttempts(events, [{
     invocationKey: "debate_round_3:bear:1",
     stage: "debate_round_3",
@@ -234,7 +237,7 @@ export function fullTimingFixture() {
     pid: 10_502,
     searchEnabled: false,
   }]);
-  append(events, 15_200, "debate_round", { round: 3, format: "parallel_per_round" });
+  append(events, 15_200, "debate_round_completed", { round: 3, format: "parallel_per_round" });
   appendAttempt(events, {
     invocationKey: "portfolio_manager:portfolio_manager:1",
     stage: "portfolio_manager",

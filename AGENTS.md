@@ -40,6 +40,10 @@ a terminal fail-closed `incomplete` run and name every missing/skipped seat. The
 guarantees terminal persistence, not successful completion when data providers, search or
 model transport deteriorates.
 
+Full requires a real `model_voice` result for every selected method. A timeout, transport
+failure, dry-run voice or deterministic substitute is an incomplete method stage and stops
+before Bull/Bear and PM. Only quick may retain an explicitly disclosed degraded substitute.
+
 This 30-minute enforcement belongs only to plugin-managed headless `analyze_symbol`. A
 visible-host full run is scheduled by the external host, so the plugin cannot force-stop its
 subagents or promise the same deadline. It still returns one post-evidence explanation

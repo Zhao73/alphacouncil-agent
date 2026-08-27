@@ -102,22 +102,20 @@ test("completenessStatus never labels failed mandatory evidence as complete cove
   assert.deepEqual(gate.missing_evidence, ["market_data"]);
 });
 
-test("a near-complete method bench still gets to debate, a gutted one does not", () => {
-  // One hung voice worker used to take the debate and the PM with it, so the reader got a run
-  // with no rating because 25 of 26 lenses reported instead of 26. The gate's real risk is a
-  // bench nobody consulted; this keeps that stop while letting a near-complete bench decide.
-  const bench = (selected, missing) => ({
-    run: { masters: Array.from({ length: selected }, (_, i) => `master_${i}`) },
+test("full requires every selected method voice; quick may disclose a near-complete bench", () => {
+  const bench = (selected, missing, councilMode = "full") => ({
+    run: { council_mode: councilMode, masters: Array.from({ length: selected }, (_, i) => `master_${i}`) },
     gate: { missing_masters: Array.from({ length: missing }, (_, i) => `master_${i}`) },
   });
   const met = ({ run, gate }) => methodBenchQuorumMet(run, gate);
 
   assert.equal(met(bench(26, 0)), true);
-  assert.equal(met(bench(26, 2)), true, "two absent seats out of 26 still debate");
-  assert.equal(met(bench(26, 3)), false, "three is where the bench stops being consulted");
+  assert.equal(met(bench(26, 1)), false, "full stops before debate when any selected voice is absent");
+  assert.equal(met(bench(26, 2, "quick")), true, "quick may disclose two absent seats and continue");
+  assert.equal(met(bench(26, 3, "quick")), false, "quick still rejects a materially incomplete bench");
   // A small hand-picked bench is a different instrument: every seat was chosen deliberately.
-  assert.equal(met(bench(9, 2)), false);
-  assert.equal(met(bench(3, 1)), false);
+  assert.equal(met(bench(9, 2, "quick")), false);
+  assert.equal(met(bench(3, 1, "quick")), false);
 });
 
 test("a lost supplemental seat no longer aborts the whole council", () => {

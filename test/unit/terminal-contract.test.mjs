@@ -174,8 +174,8 @@ test("every structural gap is incomplete and carries a concrete missing entry", 
   }
 });
 
-test("substitute execution is degraded only when no structural gap exists", () => {
-  const run = completeRun({
+test("full rejects substitute execution while quick reports it as degraded", () => {
+  const fullRun = completeRun({
     master_status: {
       master_buffett: { master: "master_buffett", status: "completed", voice_status: "deterministic_fallback" },
     },
@@ -186,14 +186,26 @@ test("substitute execution is degraded only when no structural gap exists", () =
       voice_statement: "Deterministic fallback statement.",
     }],
   });
-  const degraded = terminalContractState(run, { manager: completeManager() });
+  const full = terminalContractState(fullRun, { manager: completeManager() });
+  assert.equal(full.terminal, "incomplete");
+  assert.ok(full.missing.some((item) => item.stage === "methods"
+    && item.reason === "deterministic_fallback"));
+  assert.deepEqual(full.notes, []);
+
+  const quickRun = {
+    ...fullRun,
+    council_mode: "quick",
+    debate_format: "single_round_parallel",
+    debate_rounds_completed: 1,
+  };
+  const degraded = terminalContractState(quickRun, { manager: completeManager(1) });
   assert.equal(degraded.terminal, "degraded");
   assert.deepEqual(degraded.missing, []);
   assert.ok(degraded.notes.some((note) => note.reason === "deterministic_fallback"));
 
-  run.task_status.market_data = { task: "market_data", status: "failed", error: "timeout" };
-  run.packets = [];
-  const incomplete = terminalContractState(run, { manager: completeManager() });
+  quickRun.task_status.market_data = { task: "market_data", status: "failed", error: "timeout" };
+  quickRun.packets = [];
+  const incomplete = terminalContractState(quickRun, { manager: completeManager(1) });
   assert.equal(incomplete.terminal, "incomplete");
   assert.ok(incomplete.missing.length > 0);
 });

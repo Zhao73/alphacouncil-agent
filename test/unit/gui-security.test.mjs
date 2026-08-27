@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { request } from "node:http";
+import { createConnection } from "node:net";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
@@ -26,21 +26,39 @@ function renderer() {
 function guiRequest(server, host) {
   const address = server.address();
   return new Promise((resolvePromise, rejectPromise) => {
-    const req = request({
-      host: "127.0.0.1",
-      port: address.port,
-      path: "/",
-      headers: { Host: host },
-    }, (response) => {
-      const chunks = [];
-      response.on("data", (chunk) => chunks.push(chunk));
-      response.on("end", () => resolvePromise({
-        status: response.statusCode,
-        body: Buffer.concat(chunks).toString("utf8"),
-      }));
+    const socket = createConnection({ host: "127.0.0.1", port: address.port });
+    let raw = "";
+    socket.setEncoding("utf8");
+    socket.on("connect", () => {
+      // Use a raw TCP request so Node's client-side Host validation, proxy settings and
+      // version-specific parser behavior cannot reject the forged Host before our server sees it.
+      socket.end(`GET / HTTP/1.1\r\nHost: ${host}\r\nConnection: close\r\n\r\n`);
     });
-    req.on("error", rejectPromise);
-    req.end();
+    socket.on("data", (chunk) => { raw += chunk; });
+    socket.on("error", rejectPromise);
+    socket.on("end", () => {
+      const boundary = raw.indexOf("\r\n\r\n");
+      if (boundary < 0) return rejectPromise(new Error("raw HTTP response is missing a header boundary"));
+      const headers = raw.slice(0, boundary);
+      const status = Number(headers.match(/^HTTP\/1\.\d\s+(\d{3})/u)?.[1]);
+      let body = raw.slice(boundary + 4);
+      if (/^transfer-encoding:\s*chunked\s*$/imu.test(headers)) {
+        let cursor = 0;
+        let decoded = "";
+        while (cursor < body.length) {
+          const sizeEnd = body.indexOf("\r\n", cursor);
+          if (sizeEnd < 0) return rejectPromise(new Error("invalid chunked response size"));
+          const size = Number.parseInt(body.slice(cursor, sizeEnd).split(";", 1)[0], 16);
+          if (!Number.isSafeInteger(size) || size < 0) return rejectPromise(new Error("invalid chunk size"));
+          cursor = sizeEnd + 2;
+          if (size === 0) break;
+          decoded += body.slice(cursor, cursor + size);
+          cursor += size + 2;
+        }
+        body = decoded;
+      }
+      return resolvePromise({ status, body });
+    });
   });
 }
 

@@ -91,9 +91,9 @@ function barrierEvents(events) {
     evidence: first((event) => ["evidence_complete", "evidence_degraded", "evidence_partial"].includes(event.type)),
     verification: first((event) => ["verification_complete", "needs_verification"].includes(event.type)),
     methods: first((event) => event.type === "masters_complete"),
-    debate_round_1: first((event) => event.type === "debate_round" && event.round === 1),
-    debate_round_2: first((event) => event.type === "debate_round" && event.round === 2),
-    debate_round_3: first((event) => event.type === "debate_round" && event.round === 3),
+    debate_round_1: first((event) => event.type === "debate_round_completed" && event.round === 1),
+    debate_round_2: first((event) => event.type === "debate_round_completed" && event.round === 2),
+    debate_round_3: first((event) => event.type === "debate_round_completed" && event.round === 3),
     portfolio_manager: first((event) => event.type === "agent_role_completed" && event.role === "portfolio_manager"),
   };
 }

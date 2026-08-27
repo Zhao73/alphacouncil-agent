@@ -68,7 +68,7 @@ function voice(master, stance, unique, {
       what_changes_my_mind: `${unique} invalidation condition`,
       where_i_disagree: `${unique} minority objection`,
     },
-    voice_status: "completed",
+    voice_status: "model_voice",
     statement_origin: "dedicated_method_voice_worker",
     voice_mode: "first_person_public_method_simulation_v1",
     disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",

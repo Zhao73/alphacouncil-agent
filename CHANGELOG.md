@@ -6,6 +6,15 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Full-council method execution now fails closed when any selected dedicated voice worker is
+  missing or substituted. Only quick may continue with an explicitly disclosed deterministic
+  fallback; full stops before Bull/Bear and the portfolio manager and records the missing seat.
+- Debate timing now uses an explicit post-settlement barrier for each parallel Bull/Bear round.
+  The start event remains a start marker, and real integration events—not reordered fixtures—
+  prove that later rounds and the PM cannot begin before both sides settle.
+- Run-bundle claim readiness now uses the runtime's canonical `model_voice` status, the PR matrix
+  includes the release workflow's Node 24 runtime, and the forged-Host security regression uses
+  raw TCP so client-side proxy/parser behavior cannot hide the server check.
 - Pace selection no longer presents configured stage-budget arithmetic as a measured completion
   estimate. Each tier now exposes its persistence ceiling, configured stage budget and an
   explicit `observed_completion_status=not_validated` until preregistered live terminal evidence
@@ -55,8 +64,9 @@ Notable changes per release. Dates are UTC.
 
 - Added a read-only public-release audit that reports source HEAD, GitHub main, the exact
   candidate PR, GitHub About/Release and npm dist-tags as separate machine-readable layers.
-  Report mode records drift without blocking local work; strict `--check` exits `2` until all
-  public layers align.
+  Report mode records drift without blocking local work. The strict candidate gate checks the
+  exact non-draft clean PR, base SHA, green checks and About truth before merge; the independent
+  publication gate runs from main after release and no longer requires an open PR.
 - Added an offline release-consistency gate that binds the candidate version, dated changelog
   section, measured physical-pack and MCP-tool counts, release tag and prerelease dist-tag.
   The tag workflow runs it before dependency installation or publication, rejects commits not

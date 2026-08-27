@@ -39,6 +39,7 @@ test("an unknown role on a visible run is INVALID_PARAMS", async () => {
     run_id: "ERRTEST-ROLE",
     tasks: ["market_data"],
     selection_receipt: selection.selection_receipt,
+    grounding: { facts_unavailable: true },
   });
   const response = await server.callTool("record_visible_decision", {
     run_id: "ERRTEST-ROLE",

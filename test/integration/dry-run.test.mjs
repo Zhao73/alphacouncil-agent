@@ -177,6 +177,7 @@ test("status.json keeps a dry-run structurally incomplete despite passing report
   assert.equal(status.debate_rounds_required, 3);
   assert.equal(status.debate_rounds_completed, 0);
   assert.deepEqual(status.missing, [
+    { stage: "methods", id: "master_buffett", reason: "deterministic_fallback" },
     { stage: "debate", id: "round_1", reason: "round_not_completed" },
     { stage: "debate", id: "round_2", reason: "round_not_completed" },
     { stage: "debate", id: "round_3", reason: "round_not_completed" },

@@ -108,14 +108,16 @@ voice is a recorded provisional method result, not the named person's words.
 
 Full remains `full_v2`. When launched through plugin-managed headless
 `analyze_symbol(council_mode="full")`, it runs at one of three depth tiers selected with
-`council_pace` -- `fast` 15 minutes, `normal` (default) 30, `slow` 60 -- measured from durable
-queueing through terminal artifact persistence. The tier raises every per-stage cap with the
+`council_pace` -- `fast` 15 minutes, `normal` (default) 30, `slow` 60 -- whose ceilings cover
+durable queueing through terminal artifact persistence. Their rounded configured stage totals
+are 13, 25 and 58 minutes; observed successful completion remains unvalidated. The tier raises every per-stage cap with the
 total, which is where the depth difference lives; all three preserve the separately confirmed
 eight-seat core or eleven-seat all-analyst roster and the three-round `full_v2` contract:
 
 - all receipt-bound evidence workers start in one parallel wave;
 - after the fail-closed evidence barrier, each selected physical v3 method freezes its
-  deterministic stance and gets one isolated voice worker that cannot alter it;
+  deterministic stance and gets one isolated voice worker that cannot alter it; any missing
+  real method voice stops full before debate and PM rather than becoming a successful fallback;
 - Bull and Bear start in parallel within each of three rounds, with a barrier between rounds
   and exact Round-2-question to Round-3-answer binding;
 - the PM and deterministic report persistence use the same global clock.

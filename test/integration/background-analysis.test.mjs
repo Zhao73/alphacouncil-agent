@@ -59,6 +59,7 @@ test("analyze_symbol returns a pollable run handle instead of holding an MCP cal
     assert.equal(completed.status.status, "incomplete");
     assert.equal(completed.status.terminal, "incomplete");
     assert.deepEqual(completed.status.missing, [
+      { stage: "methods", id: "master_buffett", reason: "deterministic_fallback" },
       { stage: "debate", id: "round_1", reason: "round_not_completed" },
       { stage: "debate", id: "round_2", reason: "round_not_completed" },
       { stage: "debate", id: "round_3", reason: "round_not_completed" },

@@ -63,6 +63,8 @@ AlphaCouncil Agent 面向 **Codex、Claude Code、OpenCode、Grok Build** 四个
 
 `npm install -g alphacouncil-agent` 安装的是 npm 当前公开的 `latest`，可能落后于本源代码候选版。
 `npm run release:public:audit` 会把源代码、main、候选 PR、GitHub Release、About 和 npm 分层报告。
+`npm run release:public:check` 是合并前候选门禁；`npm run release:public:check:publication`
+是发布后的 main / GitHub Release / npm 门禁。
 
 26 个方法席，每一席跑自己的公式和自己的阈值，读的是从 SEC 申报、FRED 序列、发行商持仓披露、
 公开指数聚合值、Section 16 持股、跨市场价格历史和带日期的行业新闻构建的类型化事实。
@@ -183,9 +185,9 @@ Codex 再用 `@alphacouncil-agent 分析 AAPL` 跑完整委员会；其他三个
 
 | 档位 | 持久化硬上限 | 完整完成实测 | 每证据席 | 每轮辩论每侧 |
 | --- | --- | --- | --- | --- |
-| `fast` 快速 | 15 分钟 | 尚未验证 | 3.5 分钟 | 90 秒 |
-| `normal` 标准（默认） | 30 分钟 | 尚未验证 | 6 分钟 | 150 秒 |
-| `slow` 深入 | 60 分钟 | 尚未验证 | 12 分钟 | 6 分钟 |
+| `fast` 快速 | 15 分钟（配置约 13 分钟） | 尚未验证 | 4.7 分钟 | 45 秒 |
+| `normal` 标准（默认） | 30 分钟（配置约 25 分钟） | 尚未验证 | 6 分钟 | 180 秒 |
+| `slow` 深入 | 60 分钟（配置约 58 分钟） | 尚未验证 | 12 分钟 | 6 分钟 |
 
 **三档都是同一个 `full_v2` 契约**——保留另行确认的 8 或 11 个分析席、跑完所有所选方法、三轮辩论和
 PM。档位只改**每席能想多久**，不改跑哪些席。硬上限只保证落盘一个明确终态（包括

@@ -2,6 +2,8 @@ const GITHUB_API = "https://api.github.com";
 const NPM_REGISTRY = "https://registry.npmjs.org";
 const SLUG_PART = /^[A-Za-z0-9_.-]+$/u;
 const SHA = /^[a-f0-9]{40}$/u;
+const AUDIT_PHASES = new Set(["report", "candidate", "publication"]);
+const ACCEPTED_CHECK_CONCLUSIONS = new Set(["success", "neutral", "skipped"]);
 
 export class PublicReleaseAuditError extends Error {
   constructor(code, message) {
@@ -146,13 +148,59 @@ function candidateIssues({ source, github }) {
       { matching_prs: matching.map((pull) => pull.number), exact_prs: exact.map((pull) => pull.number) },
     ));
   }
-  return { errors, exactPull: exact[0] ?? null };
+  const exactPullSummary = exact[0] ?? null;
+  const exactPull = exactPullSummary && github.candidate_pull?.number === exactPullSummary.number
+    ? github.candidate_pull
+    : exactPullSummary;
+  if (exactPull) {
+    if (exactPull.base?.sha !== github.main_sha) {
+      errors.push(issue(
+        "CANDIDATE_BASE_SHA_DRIFT",
+        "candidate",
+        `candidate PR base ${exactPull.base?.sha ?? "<missing>"} does not match current ${github.default_branch} ${github.main_sha}`,
+      ));
+    }
+    if (exactPull.draft !== false) {
+      errors.push(issue(
+        exactPull.draft === true ? "CANDIDATE_PR_DRAFT" : "CANDIDATE_DRAFT_STATE_UNKNOWN",
+        "candidate",
+        exactPull.draft === true ? "candidate PR is still a draft" : "candidate PR draft state is not observable",
+      ));
+    }
+    if (exactPull.mergeable !== true || exactPull.mergeable_state !== "clean") {
+      errors.push(issue(
+        exactPull.mergeable === false || exactPull.mergeable_state === "dirty"
+          ? "CANDIDATE_PR_CONFLICTING"
+          : "CANDIDATE_MERGEABILITY_NOT_CLEAN",
+        "candidate",
+        `candidate PR must be mergeable and clean; mergeable=${String(exactPull.mergeable)} state=${exactPull.mergeable_state ?? "<missing>"}`,
+      ));
+    }
+    if (!Array.isArray(github.check_runs) || github.check_runs.length === 0) {
+      errors.push(issue("CANDIDATE_CHECKS_MISSING", "candidate", "candidate commit has no observable check runs"));
+    } else {
+      const unhealthy = github.check_runs.filter((check) => (
+        check?.status !== "completed" || !ACCEPTED_CHECK_CONCLUSIONS.has(check?.conclusion)
+      ));
+      if (unhealthy.length) {
+        errors.push(issue(
+          "CANDIDATE_CHECKS_NOT_GREEN",
+          "candidate",
+          `${unhealthy.length} candidate check run(s) are pending or unsuccessful`,
+          { checks: unhealthy.map((check) => ({ name: check?.name, status: check?.status, conclusion: check?.conclusion })) },
+        ));
+      }
+    }
+  }
+  return { errors, exactPull };
 }
 
 function aboutIssues({ source, github }) {
   const errors = [];
   const claims = parseAboutClaims(github.description);
-  if (claims.pack_count !== null && claims.pack_count !== source.pack_count) {
+  if (claims.pack_count === null) {
+    errors.push(issue("ABOUT_PACK_COUNT_MISSING", "public_truth", "GitHub About does not state the measured method-pack/seat count"));
+  } else if (claims.pack_count !== source.pack_count) {
     errors.push(issue(
       "ABOUT_PACK_COUNT_DRIFT",
       "public_truth",
@@ -160,12 +208,21 @@ function aboutIssues({ source, github }) {
       { claimed: claims.pack_count, measured: source.pack_count },
     ));
   }
-  if (claims.tool_count !== null && claims.tool_count !== source.tool_count) {
+  if (claims.tool_count === null) {
+    errors.push(issue("ABOUT_TOOL_COUNT_MISSING", "public_truth", "GitHub About does not state the measured MCP tool count"));
+  } else if (claims.tool_count !== source.tool_count) {
     errors.push(issue(
       "ABOUT_TOOL_COUNT_DRIFT",
       "public_truth",
       `GitHub About claims ${claims.tool_count} tools; source measures ${source.tool_count}`,
       { claimed: claims.tool_count, measured: source.tool_count },
+    ));
+  }
+  if (!/(?:not\s+investment\s+advice|不构成投资建议|投資助言ではない)/iu.test(String(github.description || ""))) {
+    errors.push(issue(
+      "ABOUT_DISCLAIMER_MISSING",
+      "public_truth",
+      "GitHub About must state that the project is research software, not investment advice",
     ));
   }
   return { errors, claims };
@@ -175,8 +232,29 @@ function layerStatus(errors, layer) {
   return errors.some((entry) => entry.layer === layer) ? "drift_detected" : "aligned";
 }
 
-export function evaluatePublicReleaseSnapshot({ source, github, npm, observedAt }) {
+function publicationSourceIssues({ source, github }) {
+  if (source.candidate_sha === github.main_sha) return [];
+  return [issue(
+    "PUBLICATION_SOURCE_NOT_MAIN",
+    "publication",
+    `publication checks must run from ${github.default_branch}@${github.main_sha}; source is ${source.candidate_sha}`,
+    { expected: github.main_sha, actual: source.candidate_sha },
+  )];
+}
+
+function gateIssues(errors, phase) {
+  if (phase === "candidate") {
+    return errors.filter((entry) => ["source", "candidate", "public_truth"].includes(entry.layer));
+  }
+  if (phase === "publication") {
+    return errors.filter((entry) => ["source", "publication", "public_truth"].includes(entry.layer));
+  }
+  return errors;
+}
+
+export function evaluatePublicReleaseSnapshot({ source, github, npm, observedAt, phase = "report" }) {
   if (!source || !github || !npm) throw new TypeError("source, github and npm snapshots are required");
+  if (!AUDIT_PHASES.has(phase)) throw new PublicReleaseAuditError("INVALID_PHASE", `phase must be one of ${[...AUDIT_PHASES].join(", ")}`);
   if (!SHA.test(source.candidate_sha)) throw new PublicReleaseAuditError("INVALID_SHA", "candidate_sha must be a 40-character lowercase Git SHA");
   if (source.main_sha && !SHA.test(source.main_sha)) throw new PublicReleaseAuditError("INVALID_SHA", "main_sha must be null or a 40-character lowercase Git SHA");
   const candidate = candidateIssues({ source, github });
@@ -186,7 +264,9 @@ export function evaluatePublicReleaseSnapshot({ source, github, npm, observedAt 
     ...versionAlignmentIssues({ source, github, npm }),
     ...candidate.errors,
     ...about.errors,
+    ...(phase === "publication" ? publicationSourceIssues({ source, github }) : []),
   ].sort((left, right) => left.layer.localeCompare(right.layer) || left.code.localeCompare(right.code)));
+  const selectedGateIssues = Object.freeze(gateIssues(errors, phase));
   const layers = Object.freeze({
     source: layerStatus(errors, "source"),
     candidate: layerStatus(errors, "candidate"),
@@ -206,12 +286,30 @@ export function evaluatePublicReleaseSnapshot({ source, github, npm, observedAt 
       candidate_sha: github.candidate_sha,
       latest_release: github.latest_release,
       about: Object.freeze({ description: github.description, topics: Object.freeze([...(github.topics || [])]), claims: about.claims }),
-      canonical_pr: candidate.exactPull ? Object.freeze({ number: candidate.exactPull.number, url: candidate.exactPull.html_url, head_sha: candidate.exactPull.head.sha }) : null,
+      canonical_pr: candidate.exactPull ? Object.freeze({
+        number: candidate.exactPull.number,
+        url: candidate.exactPull.html_url,
+        head_sha: candidate.exactPull.head.sha,
+        base_sha: candidate.exactPull.base?.sha ?? null,
+        draft: candidate.exactPull.draft ?? null,
+        mergeable: candidate.exactPull.mergeable ?? null,
+        mergeable_state: candidate.exactPull.mergeable_state ?? null,
+        check_runs: Object.freeze((github.check_runs || []).map((check) => Object.freeze({
+          name: check?.name ?? null,
+          status: check?.status ?? null,
+          conclusion: check?.conclusion ?? null,
+        }))),
+      }) : null,
       open_prs: Object.freeze(github.open_pulls.map((pull) => Object.freeze({ number: pull.number, url: pull.html_url, head_ref: pull.head?.ref, head_sha: pull.head?.sha, base_ref: pull.base?.ref }))),
     }),
     npm: Object.freeze({ latest: npm.dist_tags?.latest ?? null, next: npm.dist_tags?.next ?? null, rc: npm.dist_tags?.rc ?? null }),
     layers,
     issues: errors,
+    gate: Object.freeze({
+      phase,
+      status: selectedGateIssues.length ? "blocked" : "passed",
+      issues: selectedGateIssues,
+    }),
   });
 }
 
@@ -224,6 +322,7 @@ export async function auditPublicRelease({
   githubToken = null,
   timeoutMs = 15_000,
   now = () => new Date(),
+  phase = "report",
 } = {}) {
   assertSlug(owner, "owner");
   assertSlug(repository, "repository");
@@ -232,6 +331,7 @@ export async function auditPublicRelease({
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1_000 || timeoutMs > 60_000) {
     throw new PublicReleaseAuditError("TIMEOUT_INVALID", "timeoutMs must be an integer from 1000 to 60000");
   }
+  if (!AUDIT_PHASES.has(phase)) throw new PublicReleaseAuditError("INVALID_PHASE", `phase must be one of ${[...AUDIT_PHASES].join(", ")}`);
   const repoUrl = `${GITHUB_API}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}`;
   const githubHeaders = {
     Accept: "application/vnd.github+json",
@@ -255,10 +355,25 @@ export async function auditPublicRelease({
     }),
   ]);
   if (!Array.isArray(openPulls)) throw new PublicReleaseAuditError("REMOTE_RESPONSE_INVALID", "GitHub pulls response must be an array");
+  const matchingPulls = openPulls.filter((pull) => (
+    pull?.head?.ref === source.candidate_ref
+    && pull?.head?.sha === source.candidate_sha
+    && pull?.base?.ref === defaultBranch
+  ));
+  const [candidatePull, checkRunsDocument] = matchingPulls.length === 1
+    ? await Promise.all([
+      fetchJson(fetchImpl, `${repoUrl}/pulls/${matchingPulls[0].number}`, common),
+      fetchJson(fetchImpl, `${repoUrl}/commits/${encodeURIComponent(source.candidate_sha)}/check-runs`, common),
+    ])
+    : [null, { check_runs: [] }];
+  if (!Array.isArray(checkRunsDocument?.check_runs)) {
+    throw new PublicReleaseAuditError("REMOTE_RESPONSE_INVALID", "GitHub check-runs response must contain an array");
+  }
   const mainPackage = decodePackageFile(mainPackageFile, defaultBranch);
   return evaluatePublicReleaseSnapshot({
     source,
     observedAt: now().toISOString(),
+    phase,
     github: {
       default_branch: defaultBranch,
       description: repoDocument.description ?? "",
@@ -273,6 +388,8 @@ export async function auditPublicRelease({
         html_url: latestRelease.html_url ?? null,
       } : null,
       open_pulls: openPulls,
+      candidate_pull: candidatePull,
+      check_runs: checkRunsDocument.check_runs,
     },
     npm: { dist_tags: npmDocument?.["dist-tags"] || {} },
   });
@@ -286,6 +403,7 @@ export function formatPublicReleaseAudit(result) {
     `github_release=${stripVersionTag(result.github.latest_release?.tag_name) ?? "none"}`,
     `npm_latest=${result.npm.latest ?? "none"}`,
     `canonical_pr=${result.github.canonical_pr?.number ?? "none"}`,
+    `gate.${result.gate.phase}=${result.gate.status}`,
     `about_counts=${result.github.about.claims.pack_count ?? "none"}/${result.github.about.claims.tool_count ?? "none"}`,
   ];
   for (const [layer, status] of Object.entries(result.layers)) lines.push(`layer.${layer}=${status}`);

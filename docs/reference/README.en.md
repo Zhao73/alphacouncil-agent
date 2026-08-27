@@ -92,7 +92,9 @@ This repository is the uploadable source copy. Runtime outputs are written outsi
 
 `npm install -g alphacouncil-agent` installs npm's current public `latest`, which may lag this
 source candidate. `npm run release:public:audit` reports source, main, candidate PR, GitHub
-Release, About and npm as separate layers.
+Release, About and npm as separate layers. `npm run release:public:check` is the pre-merge
+candidate gate; `npm run release:public:check:publication` is the post-release main/Release/npm
+gate.
 
 Twenty-six method seats, each running its own formulas and its own thresholds against typed
 facts built from SEC filings, FRED series, issuer holdings disclosures, published index
@@ -237,9 +239,9 @@ The run asks how deep to go before it asks which methods to seat. You never type
 
 | tier | persistence ceiling | observed complete run | evidence / seat | debate / round / side |
 | --- | --- | --- | --- | --- |
-| `fast` | 15 min | not validated | 3.5 min | 90 s |
-| `normal` (default) | 30 min | not validated | 6 min | 150 s |
-| `slow` | 60 min | not validated | 12 min | 6 min |
+| `fast` | 15 min (13 configured) | not validated | 4.7 min | 45 s |
+| `normal` (default) | 30 min (25 configured) | not validated | 6 min | 180 s |
+| `slow` | 60 min (58 configured) | not validated | 12 min | 6 min |
 
 **All three are the same `full_v2` contract** — the separately selected 8- or 11-seat analyst
 roster, every selected method, three debate rounds and the PM. A tier changes how long each seat

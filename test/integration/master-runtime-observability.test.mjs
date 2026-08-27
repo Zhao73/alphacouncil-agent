@@ -226,13 +226,12 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
   }
 });
 
-test("a stalled voice worker costs the reader the prose, not the seat", async () => {
+test("a stalled full-mode voice worker fails the seat and stops before debate", async () => {
   const TOTAL_TIMEOUT_MS = 80_000;
   assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 95_000);
   assert.equal(observerBudget(TOTAL_TIMEOUT_MS), TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS);
-  // A dead worker used to delete the seat from the report entirely -- no statement, no stance,
-  // no reason -- even though the decision was frozen deterministically before the worker was
-  // ever spawned. One such seat could take the debate and the PM with it.
+  // Full is the strict product contract: a frozen deterministic opinion cannot stand in for an
+  // actual method voice, and downstream debate must not hide that missing execution.
   const dataDir = makeDataDir();
   // Preserve the semantic ordering under slow CI scheduling: the fake worker must
   // outlive its worker timeout, while the full run still has ample time to persist
@@ -257,19 +256,14 @@ test("a stalled voice worker costs the reader the prose, not the seat", async ()
     }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     const seat = result.run.master_status.master_buffett;
-    assert.equal(seat.status, "completed", "the frozen decision still speaks for the seat");
-    const opinion = JSON.parse(readFileSync(join(dataDir, "runs", runId, "master_buffett.json"), "utf8"));
-    // The reader gets the method's own reading, and is told exactly why it is machine-rendered.
-    assert.equal(opinion.voice_status, "deterministic_fallback");
-    assert.equal(opinion.statement_origin, "deterministic_worker_failure_fallback");
-    assert.equal(opinion.dedicated_worker.status, "failed");
-    assert.equal(opinion.dedicated_worker.failure_kind, "timeout");
-    assert.ok(opinion.dedicated_worker.public_summary.length > 10, "the failure states its reason");
-    assert.ok(opinion.stance, "the frozen stance survives");
-    for (const field of ["would_i_act", "what_i_see", "how_my_method_reads_it"]) {
-      assert.ok(String(opinion.voice?.[field] || "").length > 10, `${field} is readable`);
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(seat.status, "failed");
+    assert.equal(seat.error, "timeout");
+    assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.json")), false);
+    assert.deepEqual(result.run.master_opinions, []);
+    for (const role of ["bull_researcher", "bear_researcher", "portfolio_manager"]) {
+      assert.equal(result.run.agent_status[role].status, "skipped", `${role} must not execute`);
     }
-    // The diagnostic is still written: a fallback is not a way to lose the failure record.
     assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.failure.json")), true);
   } finally {
     await server.close();

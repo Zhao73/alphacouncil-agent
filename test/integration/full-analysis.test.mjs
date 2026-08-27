@@ -13,7 +13,7 @@ import {
 } from "../helpers/rpc-client.mjs";
 import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
 import { compactEvidence } from "../../mcp/lib/packets.mjs";
-import { workerAttemptWaveOrder } from "../../mcp/lib/timing-ledger.mjs";
+import { deriveTimingLedger, workerAttemptWaveOrder } from "../../mcp/lib/timing-ledger.mjs";
 import { RUNTIME_WORKER_SCHEMA_IDS } from "../../mcp/lib/runtime-validation.mjs";
 
 const SELECTED_MASTERS = [
@@ -542,6 +542,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
       "all eight evidence starts must precede the first evidence finish in the event hash chain");
     assert.equal(events.find((event) => event.type === "debate_qna_gate")?.status, "passed");
     assert.deepEqual(events.filter((event) => event.type === "debate_round").map((event) => event.round), [1, 2, 3]);
+    assert.deepEqual(events.filter((event) => event.type === "debate_round_completed").map((event) => event.round), [1, 2, 3]);
     const masterParseRepairs = events.filter((event) => event.type === "master_parse_repair"
       && methodSchemaDiagnostics.has(event.master));
     assert.equal(masterParseRepairs.length, 2);
@@ -554,6 +555,14 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     }
 
     const status = readJson(join(dir, "status.json"));
+    const timing = deriveTimingLedger({
+      status,
+      evidence: readJson(join(dir, "evidence.json")),
+      events,
+    });
+    assert.equal(timing.coverage.status, "observed_process_boundary", JSON.stringify(timing.issues));
+    assert.equal(timing.topology.status, "valid", JSON.stringify(timing.issues));
+    assert.deepEqual(timing.issues, []);
     assert.equal(status.debate_format, "three_round_cross_exam_parallel_per_round");
     assert.equal(status.master_worker_contract, "one_isolated_worker_per_selected_method_v1");
     assert.equal(status.deadline_enforced, true);

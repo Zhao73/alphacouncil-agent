@@ -18,7 +18,10 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { diagnoseCouncilRuns } from "../../mcp/lib/council-diagnostics.mjs";
-import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
+import {
+  CLAIM_READY_METHOD_VOICE_STATUS,
+  RUNTIME_BUILD_IDENTITY,
+} from "../../mcp/lib/constants.mjs";
 import { jsonlEntryHash } from "../../mcp/lib/fsutil.mjs";
 import { canonicalJson } from "../../mcp/lib/personas-v3/canonical.mjs";
 import { CANONICAL_MASTER_IDS } from "../../mcp/lib/personas-v3/staging.mjs";
@@ -705,7 +708,10 @@ function seatContractProblems(opinion, master, tasks, dossier, sourceIds) {
   if (typeof opinion?.deterministic_stance === "string") {
     requireValue(opinion.acknowledged_stance === opinion.deterministic_stance, "acknowledged_stance does not equal deterministic_stance");
   }
-  requireValue(opinion?.voice_status === "completed", "voice_status is not completed");
+  requireValue(
+    opinion?.voice_status === CLAIM_READY_METHOD_VOICE_STATUS,
+    `voice_status is not ${CLAIM_READY_METHOD_VOICE_STATUS}`,
+  );
   requireValue(["dedicated_method_voice_worker", "visible_method_voice_worker"].includes(opinion?.statement_origin), "statement_origin is not a dedicated method voice worker");
   requireValue(opinion?.dedicated_worker?.status === "completed", "dedicated worker is not completed");
   requireValue(!["dry_run", "fallback"].includes(opinion?.dedicated_worker?.execution_mode), "dedicated worker used a dry or fallback transport");
@@ -1017,8 +1023,12 @@ export function verifyRunBundle({ bundleDir, packageRoot = PACKAGE_ROOT } = {}) 
     }
     const masterStates = new Map((Array.isArray(status.masters) ? status.masters : []).map((item) => [item.master, item]));
     for (const master of masters) {
-      if (masterStates.size && (masterStates.get(master)?.status !== "completed" || masterStates.get(master)?.voice_status !== "completed")) {
-        blockers.push(issue("method_status_not_completed", `${master} status/voice_status is not completed`));
+      if (masterStates.size && (masterStates.get(master)?.status !== "completed"
+        || masterStates.get(master)?.voice_status !== CLAIM_READY_METHOD_VOICE_STATUS)) {
+        blockers.push(issue(
+          "method_status_not_completed",
+          `${master} status is not completed or voice_status is not ${CLAIM_READY_METHOD_VOICE_STATUS}`,
+        ));
       }
     }
     if (dossier?.content_hash !== dossierContentHash(dossier)) {

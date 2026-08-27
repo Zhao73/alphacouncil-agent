@@ -68,9 +68,9 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
 
    ```
    本次分析要跑多深？（默认 2）
-     1. 快速   持久化上限 15 分钟；完整完成实测：尚未验证  每证据席 3.5 分钟，每轮辩论每侧 90 秒
-     2. 标准   持久化上限 30 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
-     3. 深入   持久化上限 60 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
+     1. 快速   持久化上限 15 分钟；配置分段约 13 分钟；完整完成实测：尚未验证  每证据席 4.7 分钟，每轮辩论每侧 45 秒
+     2. 标准   持久化上限 30 分钟；配置分段约 25 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 180 秒   ← 默认
+     3. 深入   持久化上限 60 分钟；配置分段约 58 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
    三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM，只是每席能想多久不同。
    ```
 
@@ -134,13 +134,10 @@ master-selection contract.
    Pass `total_timeout_ms` only to LOWER the tier's budget; above it the call is rejected.
    Tell the user which pace ran and what it bought: the tier raises every per-stage cap, so
    `slow` gives each evidence seat 12 minutes instead of 6 and each debate round 6 minutes per
-   side instead of 150 seconds. All three paces are the same `full_v2` contract.
-   `normal` is the pace to default to and the one to recommend when the user asks for a
-   complete, presentable report. Measured stage floors for a complete council are ~262s of
-   evidence, ~106s for the slowest method voice, ~142s per debate round and ~108s for the PM,
-   which lands a clean run around eighteen minutes -- inside `normal` and outside `fast`.
-   Say so plainly if the user asks for fifteen minutes: `fast` cannot hold a complete
-   three-round council, and it spends its shorter clock on evidence and the bench.
+   side instead of 3; `fast` gives 4.7 minutes and 45 seconds. All three paces are the same
+   `full_v2` contract. `normal` remains the default. No tier has a successful-completion time
+   claim until representative live terminal runs validate it; configured arithmetic is not a
+   measured speed result.
 8. `plan_visible_run` is owned by the external host. The plugin cannot force-stop its Task
    agents, so visible-host full must not be advertised as meeting the 30-minute deadline.
 9. The terminal full handoff must include the system price snapshot (or explicit unavailable

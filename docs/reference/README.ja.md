@@ -63,6 +63,8 @@ AlphaCouncil Agent は、**Codex、Claude Code、OpenCode、Grok Build** の 4 �
 `npm install -g alphacouncil-agent` は npm で現在公開されている `latest` をインストールし、
 このソース候補より遅れている場合があります。`npm run release:public:audit` はソース、main、
 候補 PR、GitHub Release、About、npm を別レイヤーとして報告します。
+`npm run release:public:check` はマージ前の候補ゲート、
+`npm run release:public:check:publication` は公開後の main / GitHub Release / npm ゲートです。
 
 26 の手法シートが、それぞれ自分の数式と自分のしきい値で判断します。読み込むのは SEC 提出書類、
 FRED 系列、発行体の保有銘柄開示、公開されている指数集計値から構築した型付きファクトです。
@@ -176,9 +178,9 @@ codex plugin add alphacouncil-agent@alphacouncil
 
 | 段階 | 永続化上限 | 完全完了の実測 | 根拠席あたり | 討論 1 ラウンド片側あたり |
 | --- | --- | --- | --- | --- |
-| `fast` | 15 分 | 未検証 | 3.5 分 | 90 秒 |
-| `normal`（既定） | 30 分 | 未検証 | 6 分 | 150 秒 |
-| `slow` | 60 分 | 未検証 | 12 分 | 6 分 |
+| `fast` | 15 分（設定約 13 分） | 未検証 | 4.7 分 | 45 秒 |
+| `normal`（既定） | 30 分（設定約 25 分） | 未検証 | 6 分 | 180 秒 |
+| `slow` | 60 分（設定約 58 分） | 未検証 | 12 分 | 6 分 |
 
 **3 段階はいずれも同一の `full_v2` 契約**です。別途確定した根拠席 8 または 11 件、選択した全メソッド、3 ラウンドの討論、PM を保持し、変わるのは各席が考えてよい時間だけです。上限が保証するのは `incomplete` を含む明示的終端の保存であり、成功完了ではありません。事前登録済みの実ホスト終端証拠を得るまで完了時間は公開しません。
 
