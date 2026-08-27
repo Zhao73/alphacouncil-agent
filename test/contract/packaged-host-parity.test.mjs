@@ -84,28 +84,39 @@ test("packaged parity CLI defaults to a read-only temporary check and Windows se
 
   const windowsPlan = buildTestPlan(PACKAGED_PARITY_REPO_ROOT, { platform: "win32" });
   assert.equal(windowsPlan.mode, "source_portable");
+  assert.deepEqual(WINDOWS_SERIAL_TEST_FILES, [
+    "test/integration/full-analysis.test.mjs",
+    "test/integration/master-runtime-observability.test.mjs",
+    "test/contract/packaged-host-parity.test.mjs",
+  ]);
   assert.deepEqual(windowsPlan.phases.map((phase) => phase.id), [
     "source_concurrent",
     "windows_serial",
   ]);
   const [concurrent, serial] = windowsPlan.phases;
-  assert.equal(WINDOWS_SERIAL_TEST_FILES[1], PACKAGED_HOST_PARITY_TEST_FILE);
-  assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.args.includes(file)));
-  assert.deepEqual(serial.args, [
-    "--test",
-    "--test-concurrency=1",
-    ...WINDOWS_SERIAL_TEST_FILES,
-  ]);
+  assert.equal(WINDOWS_SERIAL_TEST_FILES.at(-1), PACKAGED_HOST_PARITY_TEST_FILE);
+  assert.equal(concurrent.invocations.length, 1);
+  assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.invocations[0].args.includes(file)));
+  assert.deepEqual(serial.invocations.map((invocation) => invocation.file), WINDOWS_SERIAL_TEST_FILES);
+  for (const invocation of serial.invocations) {
+    assert.deepEqual(invocation.args, ["--test", "--test-concurrency=1", invocation.file]);
+  }
 
   const originalFiles = windowsPlan.args.filter((arg) => arg.endsWith(".mjs")).sort();
-  const scheduledFiles = [...concurrent.args, ...serial.args]
+  const scheduledFiles = [
+    ...concurrent.invocations[0].args,
+    ...serial.invocations.flatMap((invocation) => invocation.args),
+  ]
     .filter((arg) => arg.endsWith(".mjs"))
     .sort();
   assert.deepEqual(scheduledFiles, originalFiles, "Windows phases must neither omit nor duplicate a source file");
 
   const linuxPlan = buildTestPlan(PACKAGED_PARITY_REPO_ROOT, { platform: "linux" });
   assert.equal(linuxPlan.phases.length, 1);
-  assert.deepEqual(linuxPlan.phases[0], { id: "source_suite", args: linuxPlan.args });
+  assert.deepEqual(linuxPlan.phases[0], {
+    id: "source_suite",
+    invocations: [{ file: null, args: linuxPlan.args }],
+  });
 });
 
 test("npm execution never spawns a cmd shim directly on Windows", () => {

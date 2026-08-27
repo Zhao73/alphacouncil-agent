@@ -239,3 +239,45 @@ The macOS 2:38 result is recorded as another un-attributed single-run variance o
 does not change the Windows closure gate: five green jobs, Windows `Run checks` at or below nine
 minutes, zero packaged-parity retry notices and phase counts that sum to 1,417. The first WP4
 commit must still supply a second consecutive green Windows result.
+
+## Third WP3W-b CI correction: bounded three-file group
+
+The first explicit-group commit ran in
+[`33044857299`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33044857299).
+Ubuntu 20, macOS, Ubuntu 18 and Ubuntu 22 passed in 1:42, 1:47, 2:02 and 1:23. The Windows job
+[`98426386546`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33044857299/job/98426386546)
+failed in 5:55; `Run checks` took about 5:17. Its `source_concurrent` phase completed 1,401
+tests: 1,394 passed, one failed and 6 skipped in 248,325.7572 ms. The serial phase did not run,
+so its zero retry notices are again not parity-success evidence.
+
+The only failure was `directional prose from an abstaining voice fails loudly and never becomes
+a published opinion` in `master-runtime-observability.test.mjs`. Its 20-second outer RPC observer
+expired after 25,392.6195 ms of test wall time while the fixture shared the loaded Windows phase.
+The same file's provenance, intentional-stall and recovery cases passed. An isolated local run
+then completed all four file cases in 17,708.11675 ms. This is direct evidence to add the whole
+process-heavy file to the explicit group; no product assertion, worker timeout or observer
+timeout changes here.
+
+The fixed serial order is now `full-analysis`, `master-runtime-observability`, then
+`packaged-host-parity`, keeping parity last. The ordered local Windows-plan rehearsal completed
+1,397 concurrent tests in 106,923.06425 ms, then 11 full-analysis tests in 33,425.770875 ms,
+4 master-runtime-observability tests in 17,022.779833 ms and 5 packaged-parity tests in
+10,205.213417 ms. All four summaries had zero failures or skips, so the measured equation is
+1,397 + 11 + 4 + 5 = 1,417 rather than a static-source inference.
+
+An initial combined-argument rehearsal exposed that Node's test runner reorders explicit files
+by path: parity ran first even though it was last in the argument array. A combined `args` list
+therefore cannot prove execution order. The logical `windows_serial` phase now exposes and runs
+three ordered single-file invocations, emitting one `serial_file` marker before each; any
+non-zero invocation stops the phase immediately. The rehearsal emitted the three markers in
+the approved order and produced the separate timings recorded above.
+
+This three-file boundary is also the stop rule for further isolation. If a fourth distinct file
+has an evidence-specific process-heavy failure, the next change must reduce Windows
+`source_concurrent` from concurrency 4 to concurrency 2 and measure that `Run checks` remains at
+or below nine minutes; it must not append a fourth ad hoc serial entry.
+
+WP4 also inherits the observer-budget defect disclosed by this run. The failing case expresses
+`20000 = total_timeout 15000 + timeout 5000`, with no explicit settlement allowance. WP4 must
+standardize RPC observation budgets as `contract_ceiling + settlement_headroom` instead of
+scattering another one-off numeric increase through integration tests.

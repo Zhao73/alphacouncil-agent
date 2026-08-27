@@ -40,11 +40,14 @@ export const WINDOWS_SERIAL_TEST_FILES = Object.freeze([
   // A wall-clock parallel-wave assertion failed under Windows file-level concurrency:
   // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043857486/job/98423253736
   "test/integration/full-analysis.test.mjs",
+  // A bounded RPC observer expired while this process-heavy fixture shared the Windows phase:
+  // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33044857299/job/98426386546
+  "test/integration/master-runtime-observability.test.mjs",
   // Concurrent temporary installs produced bounded double-ETIMEDOUT parity failures:
   // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33041464732/job/98415795513
   "test/contract/packaged-host-parity.test.mjs",
 ]);
-export const PACKAGED_HOST_PARITY_TEST_FILE = WINDOWS_SERIAL_TEST_FILES[1];
+export const PACKAGED_HOST_PARITY_TEST_FILE = WINDOWS_SERIAL_TEST_FILES.at(-1);
 
 export function sourceTestConcurrencyArg(concurrency = SOURCE_TEST_CONCURRENCY, nodeVersion = process.versions.node) {
   const [major = 0, minor = 0] = String(nodeVersion).split(".").map(Number);
@@ -59,11 +62,23 @@ function sourceTestArgs(files = [], concurrency = SOURCE_TEST_CONCURRENCY) {
   return Object.freeze(["--test", ...(concurrencyArg ? [concurrencyArg] : []), ...files]);
 }
 
+function testInvocation(args, file = null) {
+  return Object.freeze({ file, args });
+}
+
+function singleInvocationPhase(id, args) {
+  return Object.freeze({
+    id,
+    invocations: Object.freeze([testInvocation(args)]),
+  });
+}
+
 function executionPhases({ mode, args, selectedFiles, requireWindowsSerialGroup }, platform = process.platform) {
   if (!mode.startsWith("source_") || platform !== "win32") {
-    return Object.freeze([
-      Object.freeze({ id: mode === "installed_package" ? "installed_package" : "source_suite", args }),
-    ]);
+    return Object.freeze([singleInvocationPhase(
+      mode === "installed_package" ? "installed_package" : "source_suite",
+      args,
+    )]);
   }
 
   const presentSerialFiles = WINDOWS_SERIAL_TEST_FILES.filter((file) => selectedFiles.includes(file));
@@ -72,20 +87,18 @@ function executionPhases({ mode, args, selectedFiles, requireWindowsSerialGroup 
     if (requireWindowsSerialGroup || presentSerialFiles.length > 0) {
       throw new Error(`Windows serial test group is missing from the source suite: ${missingSerialFiles.join(", ")}`);
     }
-    return Object.freeze([Object.freeze({ id: "source_suite", args })]);
+    return Object.freeze([singleInvocationPhase("source_suite", args)]);
   }
 
   const serialFiles = new Set(WINDOWS_SERIAL_TEST_FILES);
   const concurrentFiles = selectedFiles.filter((file) => !serialFiles.has(file));
   if (concurrentFiles.length === 0) throw new Error("Windows concurrent source-test phase is empty");
   return Object.freeze([
-    Object.freeze({
-      id: "source_concurrent",
-      args: sourceTestArgs(concurrentFiles),
-    }),
+    singleInvocationPhase("source_concurrent", sourceTestArgs(concurrentFiles)),
     Object.freeze({
       id: "windows_serial",
-      args: sourceTestArgs(WINDOWS_SERIAL_TEST_FILES, 1),
+      invocations: Object.freeze(WINDOWS_SERIAL_TEST_FILES.map((file) =>
+        testInvocation(sourceTestArgs([file], 1), file))),
     }),
   ]);
 }
@@ -178,14 +191,21 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
   });
 }
 
-export function main(root = repoRoot) {
-  const plan = buildTestPlan(root);
-  process.stdout.write(`alphacouncil-test: mode=${plan.mode} excluded=${plan.excluded.length}\n`);
+export function main(root = repoRoot, {
+  platform = process.platform,
+  spawn = spawnSync,
+  write = (chunk) => process.stdout.write(chunk),
+} = {}) {
+  const plan = buildTestPlan(root, { platform });
+  write(`alphacouncil-test: mode=${plan.mode} excluded=${plan.excluded.length}\n`);
   for (const phase of plan.phases) {
-    process.stdout.write(`alphacouncil-test: phase=${phase.id}\n`);
-    const result = spawnSync(process.execPath, phase.args, { cwd: root, env: process.env, stdio: "inherit" });
-    if (result.error) throw result.error;
-    if ((result.status ?? 1) !== 0) return result.status ?? 1;
+    write(`alphacouncil-test: phase=${phase.id}\n`);
+    for (const invocation of phase.invocations) {
+      if (invocation.file) write(`alphacouncil-test: serial_file=${invocation.file}\n`);
+      const result = spawn(process.execPath, invocation.args, { cwd: root, env: process.env, stdio: "inherit" });
+      if (result.error) throw result.error;
+      if ((result.status ?? 1) !== 0) return result.status ?? 1;
+    }
   }
   return 0;
 }

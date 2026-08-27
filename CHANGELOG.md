@@ -6,10 +6,10 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
-- Windows runs the two evidence-backed heavy-process files (`full-analysis` and
-  `packaged-host-parity`) as one explicit serial group after the four-way source phase; real
-  checkouts fail closed on a missing group member, while synthetic trees with neither keep one
-  phase, and other platforms, timeouts, assertions and the selected file set remain unchanged.
+- Windows runs the three evidence-backed heavy-process files (`full-analysis`,
+  `master-runtime-observability` and `packaged-host-parity`) as three ordered single-file
+  invocations in one serial group after the four-way source phase; real checkouts fail closed on
+  a missing member, while other platforms, timeouts, assertions and files stay fixed.
 - The parse-retry failure test now gives its outer RPC observer enough time to cover both
   bounded worker attempts, with a deterministic delayed-response probe and a frozen Windows
   timing attribution report; runtime deadlines and failure assertions are unchanged.

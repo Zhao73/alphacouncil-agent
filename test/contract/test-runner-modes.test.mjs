@@ -9,6 +9,7 @@ import {
   SOURCE_PORTABLE_EXCLUDED_TESTS,
   WINDOWS_SERIAL_TEST_FILES,
   buildTestPlan,
+  main,
   sourceTestConcurrencyArg,
   validatePortableExclusions,
 } from "../../scripts/run-tests.mjs";
@@ -29,6 +30,11 @@ const EXPECTED_PORTABLE_EXCLUSIONS = Object.freeze([
   "test/unit/persona-v3-semantic-source-adjudication.test.mjs",
   "test/unit/persona-v3-semantic-source-extraction.test.mjs",
   "test/unit/persona-v3-semantic-source-skeptic-review.test.mjs",
+]);
+const EXPECTED_WINDOWS_SERIAL_TEST_FILES = Object.freeze([
+  "test/integration/full-analysis.test.mjs",
+  "test/integration/master-runtime-observability.test.mjs",
+  "test/contract/packaged-host-parity.test.mjs",
 ]);
 
 function temporaryRoot(t) {
@@ -98,6 +104,8 @@ test("test runner selects every portable source test except the reviewed private
 
   assert.equal(SOURCE_PORTABLE_EXCLUDED_TEST_COUNT, EXPECTED_PORTABLE_EXCLUSIONS.length);
   assert.deepEqual(SOURCE_PORTABLE_EXCLUDED_TESTS, EXPECTED_PORTABLE_EXCLUSIONS);
+  assert.equal(WINDOWS_SERIAL_TEST_FILES.length, 3);
+  assert.deepEqual(WINDOWS_SERIAL_TEST_FILES, EXPECTED_WINDOWS_SERIAL_TEST_FILES);
   assert.deepEqual(validatePortableExclusions(root), [...EXPECTED_PORTABLE_EXCLUSIONS, "test/contract/portable.test.mjs"].sort());
 
   const plan = buildTestPlan(root);
@@ -106,7 +114,10 @@ test("test runner selects every portable source test except the reviewed private
   assert.deepEqual(plan.args, ["--test", "--test-concurrency=4", "test/contract/portable.test.mjs"]);
 
   const syntheticWindowsPlan = buildTestPlan(root, { platform: "win32" });
-  assert.deepEqual(syntheticWindowsPlan.phases, [{ id: "source_suite", args: syntheticWindowsPlan.args }]);
+  assert.deepEqual(syntheticWindowsPlan.phases, [{
+    id: "source_suite",
+    invocations: [{ file: null, args: syntheticWindowsPlan.args }],
+  }]);
 
   write(root, "scripts/run-tests.mjs");
   assert.throws(
@@ -119,22 +130,66 @@ test("test runner selects every portable source test except the reviewed private
     new RegExp(WINDOWS_SERIAL_TEST_FILES[1].replaceAll("/", "\\/")),
   );
   write(root, WINDOWS_SERIAL_TEST_FILES[1]);
+  assert.throws(
+    () => buildTestPlan(root, { platform: "win32" }),
+    new RegExp(WINDOWS_SERIAL_TEST_FILES[2].replaceAll("/", "\\/")),
+  );
+  write(root, WINDOWS_SERIAL_TEST_FILES[2]);
   const markedRealWindowsPlan = buildTestPlan(root, { platform: "win32" });
   assert.deepEqual(markedRealWindowsPlan.phases.map((phase) => phase.id), ["source_concurrent", "windows_serial"]);
-  assert.deepEqual(markedRealWindowsPlan.phases[1].args, [
-    "--test",
-    "--test-concurrency=1",
-    ...WINDOWS_SERIAL_TEST_FILES,
-  ]);
+  assert.deepEqual(
+    markedRealWindowsPlan.phases[1].invocations.map((invocation) => invocation.file),
+    WINDOWS_SERIAL_TEST_FILES,
+  );
+  assert.ok(markedRealWindowsPlan.phases[1].invocations.every((invocation) =>
+    invocation.args.length === 3
+    && invocation.args[0] === "--test"
+    && invocation.args[1] === "--test-concurrency=1"
+    && invocation.args[2] === invocation.file));
 
   const realWindowsPlan = buildTestPlan(repoRoot, { platform: "win32" });
   assert.deepEqual(realWindowsPlan.phases.map((phase) => phase.id), ["source_concurrent", "windows_serial"]);
   const [concurrent, serial] = realWindowsPlan.phases;
-  assert.deepEqual(serial.args.slice(2), WINDOWS_SERIAL_TEST_FILES);
-  assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.args.includes(file)));
+  assert.equal(concurrent.invocations.length, 1);
+  assert.equal(concurrent.invocations[0].file, null);
+  assert.deepEqual(serial.invocations.map((invocation) => invocation.file), WINDOWS_SERIAL_TEST_FILES);
+  assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.invocations[0].args.includes(file)));
   const selectedFiles = realWindowsPlan.args.filter((arg) => arg.endsWith(".mjs")).sort();
-  const scheduledFiles = [...concurrent.args, ...serial.args].filter((arg) => arg.endsWith(".mjs")).sort();
+  const scheduledFiles = [
+    ...concurrent.invocations[0].args,
+    ...serial.invocations.flatMap((invocation) => invocation.args),
+  ].filter((arg) => arg.endsWith(".mjs")).sort();
   assert.deepEqual(scheduledFiles, selectedFiles, "Windows phases must preserve the exact selected-file multiset");
+
+  const successfulCalls = [];
+  const successfulOutput = [];
+  assert.equal(main(repoRoot, {
+    platform: "win32",
+    spawn: (_command, args) => {
+      successfulCalls.push(args);
+      return { status: 0 };
+    },
+    write: (chunk) => successfulOutput.push(chunk),
+  }), 0);
+  assert.deepEqual(successfulCalls, [
+    concurrent.invocations[0].args,
+    ...serial.invocations.map((invocation) => invocation.args),
+  ]);
+  assert.deepEqual(
+    successfulOutput.filter((line) => line.includes("serial_file=")),
+    WINDOWS_SERIAL_TEST_FILES.map((file) => `alphacouncil-test: serial_file=${file}\n`),
+  );
+
+  const stoppedCalls = [];
+  assert.equal(main(repoRoot, {
+    platform: "win32",
+    spawn: (_command, args) => {
+      stoppedCalls.push(args);
+      return { status: stoppedCalls.length === 3 ? 7 : 0 };
+    },
+    write: () => {},
+  }), 7);
+  assert.deepEqual(stoppedCalls, successfulCalls.slice(0, 3), "a failed serial file must stop before parity");
 });
 
 test("portable mode fails closed when an exclusion no longer names a source test", (t) => {
