@@ -202,3 +202,40 @@ All four non-Windows jobs passed. Ubuntu timings stayed at 2:00, 1:47 and 1:39. 
 took 2:28 versus 1:41 in the immediately preceding run even though its single-phase plan is
 byte-for-byte unchanged. This is recorded as one un-attributed runner variance observation;
 it is not used as evidence that the scheduling change improved or regressed macOS.
+
+## Second WP3W-b CI correction: explicit Windows serial group
+
+The synthetic-tree correction ran in
+[`33043857486`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043857486).
+Ubuntu 22, Ubuntu 18, Ubuntu 20 and macOS passed in 1:35, 2:01, 1:53 and 2:38 respectively.
+The Windows job
+[`98423253736`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043857486/job/98423253736)
+failed in 5:11; its `Run checks` step ran for about 4:51. It entered only the
+`source_without_packaged_host_parity` phase and completed 1,412 tests: 1,405 passed, one
+failed and 6 skipped in 229,135.2886 ms. The serial parity phase did not run, so the zero retry
+notices in this job are not parity-success evidence.
+
+The sole failure was `full council proves dedicated master workers, parallel barriers, exact
+Q&A, display coverage and no-search parse repair` at `test/integration/full-analysis.test.mjs:417`.
+The 12,551.5597 ms case failed its existing assertion that all eight evidence-worker launch
+timestamps fall within a one-second wall-clock interval. No runtime, parity or seat-fidelity
+assertion failed. The assertion is intentionally unchanged here. WP4 inherits a requirement to
+replace this loaded-runner-sensitive clock comparison with a structural event-order contract:
+every required spawn must occur before any worker-completion event.
+
+The Windows scheduler now has one explicit, evidence-bounded serial-file group, rather than a
+growing set of ad hoc phases. In fixed order it contains `full-analysis.test.mjs`, evidenced by
+the job above, and `packaged-host-parity.test.mjs`, evidenced by the double-ETIMEDOUT job
+[`98415795513`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33041464732/job/98415795513).
+The remaining files stay at concurrency 4; the two listed files run afterward together at
+concurrency 1. A local two-phase rehearsal produced 1,401 concurrent tests plus 16 serial tests
+(11 full-analysis, including three parameterized cases, and 5 packaged-parity), preserving the
+1,417-test total. The earlier static 1,404 plus 13 draft was an unmeasured assumption, not
+evidence. Linux and macOS stay single-phase. A real checkout missing either listed file fails
+closed; a synthetic source tree containing neither keeps its single phase. No assertion or
+timeout changes in this correction.
+
+The macOS 2:38 result is recorded as another un-attributed single-run variance observation. It
+does not change the Windows closure gate: five green jobs, Windows `Run checks` at or below nine
+minutes, zero packaged-parity retry notices and phase counts that sum to 1,417. The first WP4
+commit must still supply a second consecutive green Windows result.

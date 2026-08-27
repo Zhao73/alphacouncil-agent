@@ -36,7 +36,15 @@ export const SOURCE_PORTABLE_EXCLUDED_TEST_COUNT = 14;
 // their own child processes. Node's CPU-count default can oversubscribe large CI
 // hosts and turn deterministic sub-second fixtures into platform-specific timeouts.
 export const SOURCE_TEST_CONCURRENCY = 4;
-export const PACKAGED_HOST_PARITY_TEST_FILE = "test/contract/packaged-host-parity.test.mjs";
+export const WINDOWS_SERIAL_TEST_FILES = Object.freeze([
+  // A wall-clock parallel-wave assertion failed under Windows file-level concurrency:
+  // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043857486/job/98423253736
+  "test/integration/full-analysis.test.mjs",
+  // Concurrent temporary installs produced bounded double-ETIMEDOUT parity failures:
+  // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33041464732/job/98415795513
+  "test/contract/packaged-host-parity.test.mjs",
+]);
+export const PACKAGED_HOST_PARITY_TEST_FILE = WINDOWS_SERIAL_TEST_FILES[1];
 
 export function sourceTestConcurrencyArg(concurrency = SOURCE_TEST_CONCURRENCY, nodeVersion = process.versions.node) {
   const [major = 0, minor = 0] = String(nodeVersion).split(".").map(Number);
@@ -51,29 +59,33 @@ function sourceTestArgs(files = [], concurrency = SOURCE_TEST_CONCURRENCY) {
   return Object.freeze(["--test", ...(concurrencyArg ? [concurrencyArg] : []), ...files]);
 }
 
-function executionPhases({ mode, args, selectedFiles, requirePackagedParity }, platform = process.platform) {
+function executionPhases({ mode, args, selectedFiles, requireWindowsSerialGroup }, platform = process.platform) {
   if (!mode.startsWith("source_") || platform !== "win32") {
     return Object.freeze([
       Object.freeze({ id: mode === "installed_package" ? "installed_package" : "source_suite", args }),
     ]);
   }
 
-  if (!selectedFiles.includes(PACKAGED_HOST_PARITY_TEST_FILE)) {
-    if (requirePackagedParity) {
-      throw new Error(`Windows isolated test is missing from the source suite: ${PACKAGED_HOST_PARITY_TEST_FILE}`);
+  const presentSerialFiles = WINDOWS_SERIAL_TEST_FILES.filter((file) => selectedFiles.includes(file));
+  const missingSerialFiles = WINDOWS_SERIAL_TEST_FILES.filter((file) => !selectedFiles.includes(file));
+  if (missingSerialFiles.length > 0) {
+    if (requireWindowsSerialGroup || presentSerialFiles.length > 0) {
+      throw new Error(`Windows serial test group is missing from the source suite: ${missingSerialFiles.join(", ")}`);
     }
     return Object.freeze([Object.freeze({ id: "source_suite", args })]);
   }
-  const concurrentFiles = selectedFiles.filter((file) => file !== PACKAGED_HOST_PARITY_TEST_FILE);
+
+  const serialFiles = new Set(WINDOWS_SERIAL_TEST_FILES);
+  const concurrentFiles = selectedFiles.filter((file) => !serialFiles.has(file));
   if (concurrentFiles.length === 0) throw new Error("Windows concurrent source-test phase is empty");
   return Object.freeze([
     Object.freeze({
-      id: "source_without_packaged_host_parity",
+      id: "source_concurrent",
       args: sourceTestArgs(concurrentFiles),
     }),
     Object.freeze({
-      id: "packaged_host_parity_isolated",
-      args: sourceTestArgs([PACKAGED_HOST_PARITY_TEST_FILE], 1),
+      id: "windows_serial",
+      args: sourceTestArgs(WINDOWS_SERIAL_TEST_FILES, 1),
     }),
   ]);
 }
@@ -120,8 +132,8 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
   const tests = hasRunnableSourceTests(root);
   const staging = stagingState(root);
   // Contract fixtures construct intentionally minimal source-shaped trees. A real checkout is
-  // identified by the runner file itself and must never silently lose the isolated parity test.
-  const requirePackagedParity = existsSync(join(root, "scripts", "run-tests.mjs"));
+  // identified by the runner file itself and must never silently lose the Windows serial group.
+  const requireWindowsSerialGroup = existsSync(join(root, "scripts", "run-tests.mjs"));
   if (staging === "partial") {
     throw new Error("private staging is partial: personas-v3 and persona-v3-formula-candidates must both exist or both be absent");
   }
@@ -132,7 +144,7 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
       mode,
       excluded: Object.freeze([]),
       args,
-      phases: executionPhases({ mode, args, selectedFiles: Object.freeze([]), requirePackagedParity }, platform),
+      phases: executionPhases({ mode, args, selectedFiles: Object.freeze([]), requireWindowsSerialGroup }, platform),
     });
   }
   if (staging === "present") {
@@ -143,7 +155,7 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
       mode,
       excluded: Object.freeze([]),
       args,
-      phases: executionPhases({ mode, args, selectedFiles, requirePackagedParity }, platform),
+      phases: executionPhases({ mode, args, selectedFiles, requireWindowsSerialGroup }, platform),
     });
   }
 
@@ -161,7 +173,7 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
       mode,
       args,
       selectedFiles: Object.freeze(selected),
-      requirePackagedParity,
+      requireWindowsSerialGroup,
     }, platform),
   });
 }

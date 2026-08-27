@@ -7,10 +7,12 @@ import { tmpdir } from "node:os";
 import {
   SOURCE_PORTABLE_EXCLUDED_TEST_COUNT,
   SOURCE_PORTABLE_EXCLUDED_TESTS,
+  WINDOWS_SERIAL_TEST_FILES,
   buildTestPlan,
   sourceTestConcurrencyArg,
   validatePortableExclusions,
 } from "../../scripts/run-tests.mjs";
+import { repoRoot } from "../../scripts/selfcheck.mjs";
 
 const EXPECTED_PORTABLE_EXCLUSIONS = Object.freeze([
   "test/integration/persona-v3-solo-formula-execution.test.mjs",
@@ -109,8 +111,30 @@ test("test runner selects every portable source test except the reviewed private
   write(root, "scripts/run-tests.mjs");
   assert.throws(
     () => buildTestPlan(root, { platform: "win32" }),
-    /Windows isolated test is missing from the source suite/,
+    /Windows serial test group is missing from the source suite/,
   );
+  write(root, WINDOWS_SERIAL_TEST_FILES[0]);
+  assert.throws(
+    () => buildTestPlan(root, { platform: "win32" }),
+    new RegExp(WINDOWS_SERIAL_TEST_FILES[1].replaceAll("/", "\\/")),
+  );
+  write(root, WINDOWS_SERIAL_TEST_FILES[1]);
+  const markedRealWindowsPlan = buildTestPlan(root, { platform: "win32" });
+  assert.deepEqual(markedRealWindowsPlan.phases.map((phase) => phase.id), ["source_concurrent", "windows_serial"]);
+  assert.deepEqual(markedRealWindowsPlan.phases[1].args, [
+    "--test",
+    "--test-concurrency=1",
+    ...WINDOWS_SERIAL_TEST_FILES,
+  ]);
+
+  const realWindowsPlan = buildTestPlan(repoRoot, { platform: "win32" });
+  assert.deepEqual(realWindowsPlan.phases.map((phase) => phase.id), ["source_concurrent", "windows_serial"]);
+  const [concurrent, serial] = realWindowsPlan.phases;
+  assert.deepEqual(serial.args.slice(2), WINDOWS_SERIAL_TEST_FILES);
+  assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.args.includes(file)));
+  const selectedFiles = realWindowsPlan.args.filter((arg) => arg.endsWith(".mjs")).sort();
+  const scheduledFiles = [...concurrent.args, ...serial.args].filter((arg) => arg.endsWith(".mjs")).sort();
+  assert.deepEqual(scheduledFiles, selectedFiles, "Windows phases must preserve the exact selected-file multiset");
 });
 
 test("portable mode fails closed when an exclusion no longer names a source test", (t) => {

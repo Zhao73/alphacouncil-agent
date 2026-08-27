@@ -10,6 +10,7 @@ import {
 } from "../../scripts/lib/packaged-host-parity.mjs";
 import {
   PACKAGED_HOST_PARITY_TEST_FILE,
+  WINDOWS_SERIAL_TEST_FILES,
   buildTestPlan,
 } from "../../scripts/run-tests.mjs";
 import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
@@ -76,7 +77,7 @@ function runPackagedParity(env, {
   };
 }
 
-test("packaged parity CLI defaults to a read-only temporary check and Windows isolates this file", () => {
+test("packaged parity CLI defaults to a read-only temporary check and Windows serializes the explicit heavy group", () => {
   assert.deepEqual(parseArgs([]), { json: false, markdown: false, help: false, checkOnly: true });
   assert.throws(() => parseArgs(["--write"]), /unknown argument/);
   assert.throws(() => parseArgs(["--json", "--markdown"]), /mutually exclusive/);
@@ -84,19 +85,20 @@ test("packaged parity CLI defaults to a read-only temporary check and Windows is
   const windowsPlan = buildTestPlan(PACKAGED_PARITY_REPO_ROOT, { platform: "win32" });
   assert.equal(windowsPlan.mode, "source_portable");
   assert.deepEqual(windowsPlan.phases.map((phase) => phase.id), [
-    "source_without_packaged_host_parity",
-    "packaged_host_parity_isolated",
+    "source_concurrent",
+    "windows_serial",
   ]);
-  const [concurrent, isolated] = windowsPlan.phases;
-  assert.ok(!concurrent.args.includes(PACKAGED_HOST_PARITY_TEST_FILE));
-  assert.deepEqual(isolated.args, [
+  const [concurrent, serial] = windowsPlan.phases;
+  assert.equal(WINDOWS_SERIAL_TEST_FILES[1], PACKAGED_HOST_PARITY_TEST_FILE);
+  assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.args.includes(file)));
+  assert.deepEqual(serial.args, [
     "--test",
     "--test-concurrency=1",
-    PACKAGED_HOST_PARITY_TEST_FILE,
+    ...WINDOWS_SERIAL_TEST_FILES,
   ]);
 
   const originalFiles = windowsPlan.args.filter((arg) => arg.endsWith(".mjs")).sort();
-  const scheduledFiles = [...concurrent.args, ...isolated.args]
+  const scheduledFiles = [...concurrent.args, ...serial.args]
     .filter((arg) => arg.endsWith(".mjs"))
     .sort();
   assert.deepEqual(scheduledFiles, originalFiles, "Windows phases must neither omit nor duplicate a source file");

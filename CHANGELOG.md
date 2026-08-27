@@ -6,11 +6,10 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
-- Synthetic source-tree contract fixtures without a packaged-host-parity file keep their
-  single source-test phase; a real Windows checkout still fails closed if that file is absent.
-- The Windows source-test plan moves the unchanged packaged-host-parity file to an isolated,
-  single-concurrency phase after the four-way source suite. Linux and macOS scheduling,
-  timeout ceilings, test assertions and the selected source-file set are unchanged.
+- Windows runs the two evidence-backed heavy-process files (`full-analysis` and
+  `packaged-host-parity`) as one explicit serial group after the four-way source phase; real
+  checkouts fail closed on a missing group member, while synthetic trees with neither keep one
+  phase, and other platforms, timeouts, assertions and the selected file set remain unchanged.
 - The parse-retry failure test now gives its outer RPC observer enough time to cover both
   bounded worker attempts, with a deterministic delayed-response probe and a frozen Windows
   timing attribution report; runtime deadlines and failure assertions are unchanged.
