@@ -643,6 +643,8 @@ function contractPaceForRun(run = {}) {
   if (run.council_mode === "quick") {
     return {
       total_ms: LIMITS.QUICK_TOTAL_MS,
+      grounding_ms: LIMITS.QUICK_GROUNDING_MS,
+      evidence_ms: LIMITS.QUICK_EVIDENCE_MS,
       master_ms: LIMITS.QUICK_MASTER_MS,
       master_waves: 1,
       verifier_ms: 0,
@@ -652,6 +654,19 @@ function contractPaceForRun(run = {}) {
     };
   }
   return councilPaceProfile(run.council_pace);
+}
+
+/** Contract-aware serial ceiling; quick_v1 has one debate round rather than full_v2's three. */
+export function contractStageTotalMs(run = {}) {
+  const profile = contractPaceForRun(run);
+  const contract = terminalReportContract(run);
+  return profile.grounding_ms
+    + profile.evidence_ms
+    + (profile.master_ms * (profile.master_waves || 1))
+    + (profile.verifier_ms || 0)
+    + (contract.debate_rounds_required * profile.debate_ms)
+    + profile.pm_ms
+    + profile.finalize_reserve_ms;
 }
 
 function remainingMethodWaves(run = {}) {
@@ -706,16 +721,44 @@ export function budgetAheadDecision(run = {}, {
   if (!Number.isFinite(startedMs) || !Number.isFinite(resolvedNowMs)) {
     throw new Error("budget-ahead decision requires valid started_at and nowMs");
   }
-  const elapsedMs = Math.max(0, resolvedNowMs - startedMs);
-  const remainingMs = Math.max(0, profile.total_ms - elapsedMs);
+  const totalMs = Number(run.time_budget_ms) || profile.total_ms;
+  const stageTotalMs = contractStageTotalMs(run);
+  const configuredDeadlineMs = Date.parse(run.deadline_at || "");
+  const capMs = Number.isFinite(configuredDeadlineMs)
+    ? configuredDeadlineMs
+    : startedMs + totalMs;
+  const capAt = new Date(capMs).toISOString();
+  if (!run.budget_ahead) {
+    run.budget_ahead = {
+      schema_version: 1,
+      applicability: totalMs < stageTotalMs
+        ? "reduced_budget_reservation_not_representable"
+        : "applicable",
+      total_ms: totalMs,
+      stage_total_ms: stageTotalMs,
+      cap_at: capAt,
+      checkpoints: [],
+      termination: null,
+    };
+  }
+  const remainingMs = Math.max(0, Date.parse(run.budget_ahead.cap_at) - resolvedNowMs);
+  const terminate = run.budget_ahead.applicability === "applicable"
+    && remainingMs < reservationMs;
+  run.budget_ahead.checkpoints.push({
+    checkpoint,
+    at: new Date(resolvedNowMs).toISOString(),
+    remaining_ms: remainingMs,
+    reservation_ms: reservationMs,
+    terminate,
+  });
   return {
-    terminate: remainingMs < reservationMs,
-    reason: remainingMs < reservationMs ? "budget_exhausted_ahead" : null,
+    terminate,
+    reason: terminate ? "budget_exhausted_ahead" : null,
     checkpoint,
     remaining_ms: remainingMs,
     reservation_ms: reservationMs,
     terminated_at: new Date(resolvedNowMs).toISOString(),
-    cap_at: new Date(startedMs + profile.total_ms).toISOString(),
+    cap_at: run.budget_ahead.cap_at,
   };
 }
 
@@ -5408,6 +5451,7 @@ function finalizeBudgetAhead(run, args, decision, bullRounds = [], bearRounds = 
   const completedAt = decision.terminated_at;
   const round = Number(String(decision.checkpoint).match(/\d+$/u)?.[0] || 0);
   run.budget_termination = { ...decision };
+  run.budget_ahead.termination = { ...run.budget_termination };
   run.terminated_at = completedAt;
   run.terminal_reason = "budget_exhausted_ahead";
   run.explicit_missing = budgetAheadMissing(run, decision.checkpoint, round);

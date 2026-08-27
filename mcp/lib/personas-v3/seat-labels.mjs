@@ -10,6 +10,7 @@ export const CAPABILITY_STATUSES = Object.freeze([
   "deterministic_stance",
   "abstain_missing_fact",
   "abstain_no_producer",
+  "abstain_policy_gate",
 ]);
 
 export const EVIDENCE_QUALITIES = Object.freeze([
@@ -44,10 +45,11 @@ function missingFacts(frozenOpinion) {
 function capabilityStatus(frozenOpinion, coverage) {
   if (frozenOpinion?.stance !== "out_of_scope") return "deterministic_stance";
   const missing = missingFacts(frozenOpinion);
+  if (missing.length === 0) return "abstain_policy_gate";
   const noProducer = new Set((coverage?.routes || [])
     .filter((route) => route?.critical === true && route?.status === "no_producer")
     .map((route) => route.fact_id));
-  return missing.length > 0 && missing.every((factId) => noProducer.has(factId))
+  return missing.every((factId) => noProducer.has(factId))
     ? "abstain_no_producer"
     : "abstain_missing_fact";
 }

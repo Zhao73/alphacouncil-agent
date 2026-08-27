@@ -30,7 +30,9 @@ investment rating.
 
 Before methods, each debate round and the portfolio manager, the orchestrator compares the
 remaining contract clock with a conservative reservation derived only from the already-frozen
-pace fields. The reservations are, respectively:
+pace fields. The clock is the run's actual `time_budget_ms` and `deadline_at`, including when a
+caller lowers the selected pace total; it is never silently replaced by the pace default. The
+reservations are, respectively:
 
 - `master_ms * remaining_master_waves + verifier_ms_if_applicable + required_rounds * debate_ms + pm_ms + finalize_reserve_ms`;
 - `remaining_required_rounds * debate_ms + pm_ms + finalize_reserve_ms`;
@@ -44,9 +46,17 @@ estimated average runtime.
 
 When remaining time is below the applicable reservation, the run terminates immediately as
 `incomplete` with `budget_exhausted_ahead`, the checkpoint, remaining time, reservation,
-termination time and contract cap. No downstream model call is launched. Tests use an injected
-clock so this boundary is deterministic. A dry run that only plans workers does not manufacture
-the missing debate rounds and therefore cannot claim decision-run completion.
+termination time and contract cap. No downstream model call is launched. If an operator lowers
+the total below the serial sum of the selected contract's frozen stage ceilings, that upper-bound
+reservation is not representable by construction; the run records
+`reduced_budget_reservation_not_representable` and skips budget-ahead termination while the real
+global deadline and per-worker caps remain enforced.
+
+`status.json.budget_ahead` records the applicability decision, actual total, contract-aware stage
+total, cap, every evaluated checkpoint and any termination. Its `termination` is `null` until a
+budget-ahead stop and then exactly mirrors `run.budget_termination`. Tests use an injected clock so
+the boundary is deterministic. A dry run that only plans workers does not manufacture the missing
+debate rounds and therefore cannot claim decision-run completion.
 
 ## Shared Required Outputs
 
@@ -387,8 +397,10 @@ dossier alone must not be relabeled as that stronger contract.
 Every frozen physical method result records three orthogonal labels before a voice worker
 runs:
 
-- `capability_status`: `deterministic_stance`, `abstain_missing_fact`, or
-  `abstain_no_producer`;
+- `capability_status`: `deterministic_stance`, `abstain_missing_fact`,
+  `abstain_no_producer`, or `abstain_policy_gate`. The policy-gate label means all required facts
+  were present but the method's own eligibility or veto policy still withheld a directional
+  stance;
 - `evidence_quality`: `estimated_only`, `mixed`, `recomputed`, or `not_evaluable`, derived
   only from applicable critical producer routes in the hash-bound producer catalog;
 - `voice_status`: `deterministic_only`, `deterministic_fallback`, `model_voice`, or

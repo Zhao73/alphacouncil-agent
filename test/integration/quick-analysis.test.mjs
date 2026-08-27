@@ -348,7 +348,7 @@ test("quick may finish its broad path after one evidence failure but terminal st
     assert.equal(result.report_quality.status, "passed", result.report_quality.missing.join("; "));
     assert.equal(result.report_quality.evidence_coverage, "degraded");
     assert.deepEqual(result.report_quality.degraded_evidence, ["valuation_long_short"]);
-    assert.match(result.final_report_markdown, /DEGRADED QUICK RUN/);
+    assert.match(result.final_report_markdown, /INCOMPLETE QUICK RUN/);
     assert.match(result.final_report_markdown, /valuation_long_short: degraded; exit code 17/);
     assert.match(result.user_response_markdown, /- Status: incomplete/);
 

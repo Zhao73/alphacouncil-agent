@@ -109,7 +109,7 @@ test("estimated_only is reachable with a synthetic critical coverage slice", () 
   }]);
 });
 
-test("Taleb and Damodaran distinguish no-producer abstention from an ordinary missing fact", () => {
+test("abstention labels distinguish no-producer, missing-fact and policy-gate outcomes", () => {
   for (const [master, missing] of [
     ["master_taleb", ["payoff.max_loss", "risk.ruin_possible"]],
     ["master_damodaran", ["valuation.cash_flow", "valuation.cost_of_capital"]],
@@ -137,5 +137,5 @@ test("Taleb and Damodaran distinguish no-producer abstention from an ordinary mi
   });
 
   assert.equal(ordinaryGap.capability_status, "abstain_missing_fact");
-  assert.equal(emptyGap.capability_status, "abstain_missing_fact");
+  assert.equal(emptyGap.capability_status, "abstain_policy_gate");
 });

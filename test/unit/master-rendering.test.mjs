@@ -335,7 +335,7 @@ test("the bench assurance line separates computability, no-producer gaps, fallba
       master_damodaran: {
         master: "master_damodaran",
         status: "failed",
-        capability_status: "abstain_missing_fact",
+        capability_status: "abstain_policy_gate",
         evidence_quality: "mixed",
         voice_status: "voice_contract_failure",
         failure_kind: "voice_contract_failure",
@@ -343,8 +343,9 @@ test("the bench assurance line separates computability, no-producer gaps, fallba
     },
   };
   const md = renderBenchSummary(run);
-  assert.match(md, /seats: 1 deterministic, 3 abstain \(1 no_producer\); voices: 1 fallback, 1 contract_failure, 1 deterministic_only/);
+  assert.match(md, /seats: 1 deterministic, 3 abstain \(1 no_producer, 1 policy_gate\); voices: 1 fallback, 1 contract_failure, 1 deterministic_only/);
   assert.match(md, /\| Method \| Stance \| Capability \| Evidence quality \| Voice status \| Confidence \| Verdict \|/);
+  assert.match(md, /abstain_policy_gate/);
 });
 
 test("legacy deterministic scope and worker-failure statuses map to the v1 voice labels", () => {
@@ -390,6 +391,33 @@ test("a failed abstention voice is withheld under the fixed no-computable-stance
   assert.match(markdown, /#### No computable stance/);
   assert.match(markdown, /voice withheld: contract failure/);
   assert.doesNotMatch(markdown, /DIRECTIONAL-ABSTENTION-SENTINEL/);
+});
+
+test("an incomplete quick run uses terminal-aligned ledger wording in every locale", () => {
+  for (const [language, expected] of [
+    ["zh-CN", "QUICK 运行不完整——一个或多个席位失败"],
+    ["English", "INCOMPLETE QUICK RUN — one or more seats failed"],
+    ["日本語", "QUICK 実行は不完全です——1つ以上の席が失敗しました"],
+    ["한국어", "QUICK 실행이 불완전합니다—하나 이상의 좌석이 실패했습니다"],
+  ]) {
+    const run = {
+      run_id: "QUICK-INCOMPLETE-LEDGER",
+      symbol: "TEST",
+      as_of: "2026-08-27",
+      language,
+      council_mode: "quick",
+      terminal: "incomplete",
+      status: "incomplete",
+      tasks: ["market_data"],
+      task_status: { market_data: { task: "market_data", status: "degraded", error: "timeout" } },
+      agent_status: {},
+      masters: [],
+      master_opinions: [],
+      packets: [],
+    };
+    const markdown = finalReportMarkdown(run, { report_markdown: reportWithout(null) });
+    assert.match(markdown, new RegExp(expected, "u"), language);
+  }
 });
 
 test("the recorded bench marker changes when its catalog-backed evidence basis changes", () => {

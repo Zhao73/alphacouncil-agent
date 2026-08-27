@@ -213,6 +213,7 @@ test("quick degraded evidence remains a separate axis from structural report qua
 
 test("degraded quick reports receive one idempotent system ledger and quality records the degraded axis", () => {
   const run = quickRun();
+  run.terminal = "degraded";
   run.task_status.market_data.status = "degraded";
   run.task_status.market_data.error = "timeout";
   const manager = { report_markdown: quickReport() };

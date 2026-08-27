@@ -123,6 +123,7 @@ export function statusSnapshot(run) {
     deadline_enforced: run.deadline_enforced === true,
     time_budget_ms: run.time_budget_ms || null,
     deadline_at: run.deadline_at || null,
+    budget_ahead: run.budget_ahead || null,
     remaining_budget_ms: run.deadline_at
       ? Math.max(0, Date.parse(run.deadline_at) - Date.now())
       : null,

@@ -6,6 +6,18 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Abstaining method voices now reject only subject-bound first-person trade actions. Sentiment
+  words, research verbs and quoted third-party recommendations no longer turn a valid abstention
+  into a `voice_contract_failure`; explicit buy, sell, add, trim and sizing commitments still
+  fail closed in all four supported languages.
+- An `out_of_scope` method result with no missing required fact is now labelled
+  `abstain_policy_gate` instead of being misreported as a missing-fact failure, and the bench
+  assurance count exposes that distinction.
+- Budget-ahead checks now use the run's real total and deadline. A caller budget below the frozen
+  stage-ceiling sum is disclosed as non-representable instead of triggering a vacuous early stop,
+  and every checkpoint is persisted in `status.json`.
+- Quick-run failure banners now say `incomplete` when the terminal contract is incomplete and
+  reserve `degraded` wording for structurally complete runs that used a disclosed substitute.
 - Windows runs the three evidence-backed heavy-process files (`full-analysis`,
   `master-runtime-observability` and `packaged-host-parity`) as three ordered single-file
   invocations in one serial group after the four-way source phase; real checkouts fail closed on

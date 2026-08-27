@@ -217,7 +217,7 @@ const MASTER_STATEMENT_COPY = Object.freeze({
 });
 
 function seatCapability(opinion) {
-  if (["deterministic_stance", "abstain_missing_fact", "abstain_no_producer"]
+  if (["deterministic_stance", "abstain_missing_fact", "abstain_no_producer", "abstain_policy_gate"]
     .includes(opinion?.capability_status)) return opinion.capability_status;
   return opinion?.stance && opinion.stance !== "out_of_scope"
     ? "deterministic_stance"
@@ -406,6 +406,9 @@ export function renderBenchSummary(run) {
   const noProducerCount = opinions.filter((opinion) => (
     seatCapability(opinion) === "abstain_no_producer"
   )).length;
+  const policyGateCount = opinions.filter((opinion) => (
+    seatCapability(opinion) === "abstain_policy_gate"
+  )).length;
   const fallbackStatuses = new Set([
     "deterministic_fallback",
     "deterministic_worker_failure",
@@ -417,7 +420,7 @@ export function renderBenchSummary(run) {
   const deterministicOnlyCount = opinions.filter((opinion) => (
     opinion.voice_status === "deterministic_only"
   )).length;
-  const assuranceSummary = `seats: ${deterministicCount} deterministic, ${abstainCount} abstain (${noProducerCount} no_producer); voices: ${fallbackCount} fallback, ${contractFailureCount} contract_failure, ${deterministicOnlyCount} deterministic_only`;
+  const assuranceSummary = `seats: ${deterministicCount} deterministic, ${abstainCount} abstain (${noProducerCount} no_producer, ${policyGateCount} policy_gate); voices: ${fallbackCount} fallback, ${contractFailureCount} contract_failure, ${deterministicOnlyCount} deterministic_only`;
   const counts = new Map();
   for (const o of opinions) counts.set(o.stance || "unknown", (counts.get(o.stance || "unknown") || 0) + 1);
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
@@ -987,12 +990,19 @@ function withDegradedLedger(run, markdown, completeness) {
       return `- ${role}: ${state.status}; ${state.error || debateUnavailable}`;
     }),
   ].join("\n");
-  const intro = {
-    zh: "**QUICK 运行已降级——一个或多个席位失败。** 报告结构可能通过质量检查，但下列席位没有提供可用证据；本轮不代表完整覆盖：",
-    en: "**DEGRADED QUICK RUN — one or more seats failed.** The report structure may pass quality checks, but the following seats supplied no usable evidence and this run is not full coverage:",
-    ja: "**QUICK 実行は縮退しました——1つ以上の席が失敗しました。** レポート構造が品質検査を通っても、次の席は利用可能な証拠を提供していないため、完全な網羅ではありません：",
-    ko: "**QUICK 실행 성능 저하—하나 이상의 좌석이 실패했습니다.** 보고서 구조가 품질 검사를 통과해도 다음 좌석은 사용 가능한 증거를 제공하지 않았으므로 전체 범위를 대표하지 않습니다:",
-  }[key];
+  const intro = run.terminal !== "degraded"
+    ? {
+        zh: "**QUICK 运行不完整——一个或多个席位失败。** 报告结构可能通过质量检查，但下列席位没有提供可用证据；本轮不代表完整覆盖：",
+        en: "**INCOMPLETE QUICK RUN — one or more seats failed.** The report structure may pass quality checks, but the following seats supplied no usable evidence and this run is not full coverage:",
+        ja: "**QUICK 実行は不完全です——1つ以上の席が失敗しました。** レポート構造が品質検査を通っても、次の席は利用可能な証拠を提供していないため、完全な網羅ではありません：",
+        ko: "**QUICK 실행이 불완전합니다—하나 이상의 좌석이 실패했습니다.** 보고서 구조가 품질 검사를 통과해도 다음 좌석은 사용 가능한 증거를 제공하지 않았으므로 전체 범위를 대표하지 않습니다:",
+      }[key]
+    : {
+        zh: "**QUICK 运行已降级——一个或多个席位失败。** 报告结构可能通过质量检查，但下列席位没有提供可用证据；本轮不代表完整覆盖：",
+        en: "**DEGRADED QUICK RUN — one or more seats failed.** The report structure may pass quality checks, but the following seats supplied no usable evidence and this run is not full coverage:",
+        ja: "**QUICK 実行は縮退しました——1つ以上の席が失敗しました。** レポート構造が品質検査を通っても、次の席は利用可能な証拠を提供していないため、完全な網羅ではありません：",
+        ko: "**QUICK 실행 성능 저하—하나 이상의 좌석이 실패했습니다.** 보고서 구조가 품질 검사를 통과해도 다음 좌석은 사용 가능한 증거를 제공하지 않았으므로 전체 범위를 대표하지 않습니다:",
+      }[key];
   const banner = `> [!WARNING]\n> ${intro}\n>\n${rows.split("\n").map((line) => `> ${line}`).join("\n")}`;
   return `${markerStart}\n${banner}\n${markerEnd}\n\n${cleaned.trimStart()}`;
 }

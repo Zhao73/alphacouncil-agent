@@ -1763,10 +1763,10 @@ export function sanitizeStatementMarkdown(value) {
 }
 
 const DIRECTIONAL_ABSTENTION_PATTERNS = Object.freeze([
-  /\b(?:bullish|bearish)\b|\b(?:i|we|investors?|one|the\s+portfolio)\s+(?:(?:would|will|should|could|can|must|may|might|do|does|intend\s+to|plan\s+to|choose\s+to|refuse\s+to|decline\s+to|am\s+going\s+to)\s+(?:not\s+)?)?(?:buy|sell|short|long|go\s+long|go\s+short|overweight|underweight|accumulate|trim|exit)\b|\b(?:i|we|investors?|one|the\s+portfolio)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to)\s+)?add\s+to\s+(?:the\s+)?(?:position|exposure|allocation)\b|\b(?:recommend(?:s|ed|ing)?|consider(?:s|ed|ing)?)\s+(?:not\s+)?(?:buying|selling|shorting|going\s+long|going\s+short|overweighting|underweighting|accumulating|trimming|exiting)\b/iu,
-  /(?:买入|買入|卖出|賣出|加仓|加倉|减仓|減倉|做多|做空|看多|看空|增持|减持|減持)/u,
-  /(?:買う|買います|買い増(?:す|し|した|せ)?|売る|売り|強気|弱気)/u,
-  /(?:추가\s*매수|매수|매도|강세|약세)/u,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does|intend\s+to|plan\s+to|choose\s+to|refuse\s+to|decline\s+to|am\s+going\s+to)\s+(?:not\s+)?)?(?:buy|sell|overweight|underweight|accumulate|trim)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to)\s+)?(?:not\s+)?add\s+to\s+(?:the\s+)?(?:position|exposure|allocation)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does)\s+)?(?:not\s+)?(?:recommend(?:s|ed|ing)?|consider(?:s|ed|ing)?)\s+(?:not\s+)?(?:buying|selling|accumulating|trimming|overweighting|underweighting|adding\s+to\s+(?:the\s+)?(?:position|exposure|allocation))\b/iu,
+  /(?:我|我们|本席|本方法)[^。！？：:\n]{0,30}?(?:买入|卖出|加仓|减仓|增持|减持)/u,
+  /(?:私|私は|当席|本席)[^。！？\n]{0,40}?(?:買います|買う|買い増(?:す|し|した|せ)?|売ります|売る|売り)/u,
+  /(?:저는|나는|우리는|본\s*좌석은)[^.!?\n]{0,40}?(?:추가\s*매수|매수|매도)/u,
 ]);
 
 function containsDirectionalAbstentionToken(value) {

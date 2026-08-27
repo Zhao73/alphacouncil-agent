@@ -1,10 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { COUNCIL_PACES, LIMITS } from "../../mcp/lib/constants.mjs";
+import { COUNCIL_PACES, COUNCIL_PACE_STAGE_TOTAL, LIMITS } from "../../mcp/lib/constants.mjs";
 import {
   applyTerminalContract,
   budgetAheadDecision,
+  contractStageTotalMs,
   terminalContractState,
 } from "../../mcp/lib/orchestrator.mjs";
 import { finalReportMarkdown, terminalContractHeader } from "../../mcp/lib/markdown.mjs";
@@ -250,6 +251,17 @@ test("budget-ahead reservations use only existing pace fields and terminate befo
   assert.equal(decision.reservation_ms, beforeMethods);
   assert.equal(decision.remaining_ms, beforeMethods - 1);
   assert.ok(Date.parse(decision.terminated_at) < Date.parse(decision.cap_at));
+  assert.equal(run.budget_ahead.applicability, "applicable");
+  assert.equal(run.budget_ahead.total_ms, run.time_budget_ms);
+  assert.equal(run.budget_ahead.stage_total_ms, COUNCIL_PACE_STAGE_TOTAL(profile));
+  assert.equal(run.budget_ahead.termination, null);
+  assert.deepEqual(run.budget_ahead.checkpoints[0], {
+    checkpoint: "before_methods",
+    at: decision.terminated_at,
+    remaining_ms: beforeMethods - 1,
+    reservation_ms: beforeMethods,
+    terminate: true,
+  });
 
   for (const round of [2, 3]) {
     const reservation = ((3 - round + 1) * profile.debate_ms)
@@ -271,6 +283,81 @@ test("budget-ahead reservations use only existing pace fields and terminate befo
   });
   assert.equal(pm.terminate, true);
   assert.equal(pm.reservation_ms, beforePm);
+});
+
+test("contract stage totals are finite and respect each report contract's debate depth", () => {
+  for (const [pace, profile] of Object.entries(COUNCIL_PACES)) {
+    const run = completeRun({ council_pace: pace, time_budget_ms: profile.total_ms });
+    assert.equal(contractStageTotalMs(run), COUNCIL_PACE_STAGE_TOTAL(profile), pace);
+    assert.equal(Number.isFinite(contractStageTotalMs(run)), true, pace);
+  }
+
+  const quick = completeRun({
+    council_mode: "quick",
+    council_pace: null,
+    debate_format: "single_round_parallel",
+    time_budget_ms: LIMITS.QUICK_TOTAL_MS,
+  });
+  const expected = LIMITS.QUICK_GROUNDING_MS
+    + LIMITS.QUICK_EVIDENCE_MS
+    + LIMITS.QUICK_MASTER_MS
+    + LIMITS.QUICK_SYNTHESIS_MS
+    + LIMITS.QUICK_SYNTHESIS_MS
+    + LIMITS.QUICK_FINALIZE_RESERVE_MS;
+  assert.equal(contractStageTotalMs(quick), expected);
+  assert.equal(Number.isFinite(contractStageTotalMs(quick)), true);
+});
+
+test("budget-ahead binds to a reduced real budget and records non-representable budgets without terminating", () => {
+  const profile = COUNCIL_PACES.slow;
+  const startedMs = Date.parse("2026-08-27T00:00:00.000Z");
+  const stageTotalMs = COUNCIL_PACE_STAGE_TOTAL(profile);
+  const representableTotalMs = Math.floor((stageTotalMs + profile.total_ms) / 2);
+  const representable = completeRun({
+    council_pace: "slow",
+    time_budget_ms: representableTotalMs,
+    deadline_at: new Date(startedMs + representableTotalMs).toISOString(),
+    masters: Array.from({ length: 26 }, (_, index) => `master_${index + 1}`),
+  });
+  const reservation = (profile.master_ms * profile.master_waves)
+    + profile.verifier_ms
+    + (3 * profile.debate_ms)
+    + profile.pm_ms
+    + profile.finalize_reserve_ms;
+  const applicable = budgetAheadDecision(representable, {
+    checkpoint: "before_methods",
+    remainingMasterWaves: profile.master_waves,
+    verifierStageApplies: true,
+    nowMs: startedMs + representableTotalMs - reservation + 1,
+  });
+  assert.equal(applicable.terminate, true);
+  assert.equal(applicable.remaining_ms, reservation - 1);
+  assert.equal(applicable.cap_at, representable.deadline_at);
+  assert.equal(representable.budget_ahead.total_ms, representableTotalMs);
+  assert.equal(representable.budget_ahead.applicability, "applicable");
+
+  const reducedTotalMs = Math.floor(profile.total_ms / 2);
+  const reduced = completeRun({
+    council_pace: "slow",
+    time_budget_ms: reducedTotalMs,
+    deadline_at: new Date(startedMs + reducedTotalMs).toISOString(),
+    masters: Array.from({ length: 26 }, (_, index) => `master_${index + 1}`),
+  });
+  const skipped = budgetAheadDecision(reduced, {
+    checkpoint: "before_methods",
+    remainingMasterWaves: profile.master_waves,
+    verifierStageApplies: true,
+    nowMs: startedMs,
+  });
+  assert.equal(skipped.terminate, false);
+  assert.equal(skipped.reason, null);
+  assert.equal(reduced.budget_ahead.applicability, "reduced_budget_reservation_not_representable");
+  assert.equal(reduced.budget_ahead.total_ms, reducedTotalMs);
+  assert.equal(reduced.budget_ahead.stage_total_ms, stageTotalMs);
+  assert.equal(reduced.budget_ahead.cap_at, reduced.deadline_at);
+  assert.equal(reduced.budget_ahead.termination, null);
+  assert.equal(reduced.budget_ahead.checkpoints.length, 1);
+  assert.deepEqual(statusSnapshot(reduced).budget_ahead, reduced.budget_ahead);
 });
 
 test("quick_v1 is complete after its one required round and its header never claims full-v2 depth", () => {
