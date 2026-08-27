@@ -46,12 +46,14 @@ For OpenCode, `command` takes an argv array:
 
 Or run it without installing: `npx alphacouncil-agent`.
 
-## Configuration: none required
+## Core setup: no data-vendor key required
 
-There is nothing to configure. Every core data source is keyless — SEC EDGAR for US
-filings, TWSE for Taiwan, Yahoo and Stooq for quotes and macro — and the package has no
-runtime dependencies, so the install is the download and nothing else. Development-only
-schema generation and property-test packages are not loaded by the installed plugin.
+The first US/Taiwan/market data check is keyless — SEC EDGAR for US filings, TWSE for
+Taiwan, and Yahoo/Stooq for quotes and macro — and the package has no runtime package
+dependencies. Headless council research additionally needs an installed and authenticated
+Codex CLI; visible workflows use the authenticated model supplied by their host.
+Development-only schema generation and property-test packages are not loaded by the
+installed plugin.
 
 Two optional free keys widen coverage. Without them the tools still answer; they report
 which market is missing a feed and which variable would unlock it, and analysts are told

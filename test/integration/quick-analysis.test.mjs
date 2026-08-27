@@ -406,7 +406,8 @@ test("quick PM transport failure writes standard artifacts and no synthetic Hold
     assert.equal(result.decision.rating, null);
     assert.equal(result.decision.pm_absence_reason, "failed");
     assert.match(result.user_response_markdown, /Rating: unavailable/);
-    assert.match(result.user_response_markdown, /NEEDS_MANAGER_REVIEW/);
+    assert.match(result.user_response_markdown, /No investment rating was produced/);
+    assert.doesNotMatch(result.user_response_markdown, /NEEDS_MANAGER_REVIEW/);
     const events = readFileSync(join(dir, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
     assert.deepEqual(validateHeadlessTrace(events, { mode: "quick" }), []);

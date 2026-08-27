@@ -7,6 +7,7 @@ import {
   evaluatePublicReleaseSnapshot,
   formatPublicReleaseAudit,
   parseAboutClaims,
+  REQUIRED_CANDIDATE_MATRIX_JOB_NAMES,
 } from "../../scripts/lib/public-release-audit.mjs";
 
 const CANDIDATE_SHA = "a".repeat(40);
@@ -19,6 +20,51 @@ const source = Object.freeze({
   pack_count: 26,
   tool_count: 34,
 });
+
+function successfulJobs(names, overrides = {}) {
+  return names.map((name) => ({
+    name,
+    status: "completed",
+    conclusion: "success",
+    ...(overrides[name] || {}),
+  }));
+}
+
+function workflowRun({ id, event, overrides = {} }) {
+  return {
+    id,
+    event,
+    status: "completed",
+    conclusion: "success",
+    head_sha: CANDIDATE_SHA,
+    head_branch: source.candidate_ref,
+    run_attempt: 1,
+    pull_requests: event === "pull_request" ? [{
+      number: 20,
+      head: { ref: source.candidate_ref, sha: CANDIDATE_SHA },
+      base: { ref: "main", sha: MAIN_SHA },
+    }] : [],
+    ...overrides,
+  };
+}
+
+function successfulCandidateWorkflows(overrides = {}) {
+  return {
+    check_push: {
+      run: workflowRun({ id: 101, event: "push" }),
+      jobs: successfulJobs(REQUIRED_CANDIDATE_MATRIX_JOB_NAMES),
+    },
+    check_pull_request: {
+      run: workflowRun({ id: 102, event: "pull_request" }),
+      jobs: successfulJobs(REQUIRED_CANDIDATE_MATRIX_JOB_NAMES),
+    },
+    fuzz_pull_request: {
+      run: workflowRun({ id: 103, event: "pull_request" }),
+      jobs: successfulJobs(["transport-runtime"]),
+    },
+    ...overrides,
+  };
+}
 
 function pull(overrides = {}) {
   return {
@@ -47,7 +93,7 @@ function snapshot(overrides = {}) {
       latest_release: { tag_name: "v1.5.0", published_at: "2026-08-28T00:00:00.000Z" },
       open_pulls: [pull()],
       candidate_pull: pull(),
-      check_runs: [{ name: "check", status: "completed", conclusion: "success" }],
+      candidate_workflows: successfulCandidateWorkflows(),
       ...overrides.github,
     },
     npm: { dist_tags: { latest: "1.5.0" }, ...overrides.npm },
@@ -117,7 +163,7 @@ test("candidate and publication gates are independently satisfiable", () => {
       candidate_sha: MAIN_SHA,
       open_pulls: [],
       candidate_pull: null,
-      check_runs: [],
+      candidate_workflows: {},
     },
   });
   assert.equal(publication.gate.status, "passed", "post-release gate does not require an open PR");
@@ -130,7 +176,7 @@ test("publication rejects a source tree that is not current main", () => {
   assert.ok(result.gate.issues.some(({ code }) => code === "PUBLICATION_SOURCE_NOT_MAIN"));
 });
 
-test("candidate gate checks exact base, non-draft mergeability and green checks", () => {
+test("candidate gate checks exact base, non-draft mergeability and green workflow jobs", () => {
   const result = snapshot({
     phase: "candidate",
     github: {
@@ -140,16 +186,115 @@ test("candidate gate checks exact base, non-draft mergeability and green checks"
         mergeable: false,
         mergeable_state: "dirty",
       }),
-      check_runs: [{ name: "check", status: "completed", conclusion: "failure" }],
+      candidate_workflows: successfulCandidateWorkflows({
+        check_push: {
+          run: workflowRun({ id: 101, event: "push" }),
+          jobs: successfulJobs(REQUIRED_CANDIDATE_MATRIX_JOB_NAMES, {
+            [REQUIRED_CANDIDATE_MATRIX_JOB_NAMES[0]]: { conclusion: "failure" },
+          }),
+        },
+      }),
     },
   });
   assert.equal(result.gate.status, "blocked");
   assert.deepEqual(new Set(result.gate.issues.map(({ code }) => code)), new Set([
     "CANDIDATE_BASE_SHA_DRIFT",
-    "CANDIDATE_CHECKS_NOT_GREEN",
+    "CANDIDATE_REQUIRED_JOBS_NOT_GREEN",
     "CANDIDATE_PR_CONFLICTING",
     "CANDIDATE_PR_DRAFT",
   ]));
+});
+
+test("candidate gate cannot pass on one arbitrary green check", () => {
+  const result = snapshot({
+    phase: "candidate",
+    github: {
+      candidate_workflows: {
+        check_push: {
+          run: workflowRun({ id: 101, event: "push" }),
+          jobs: [{ name: "cosmetic", status: "completed", conclusion: "success" }],
+        },
+      },
+    },
+  });
+  assert.equal(result.gate.status, "blocked");
+  const missingJobs = result.gate.issues.find(({ code }) => code === "CANDIDATE_REQUIRED_JOBS_MISSING");
+  assert.deepEqual(missingJobs?.jobs, REQUIRED_CANDIDATE_MATRIX_JOB_NAMES);
+  assert.equal(result.gate.issues.filter(({ code }) => code === "CANDIDATE_WORKFLOW_RUN_MISSING").length, 2);
+});
+
+for (const [workflowKey, requiredNames] of [
+  ["check_push", REQUIRED_CANDIDATE_MATRIX_JOB_NAMES],
+  ["check_pull_request", REQUIRED_CANDIDATE_MATRIX_JOB_NAMES],
+  ["fuzz_pull_request", ["transport-runtime"]],
+]) {
+  for (const missingName of requiredNames) {
+    test(`${workflowKey} requires the exact ${missingName} job`, () => {
+      const workflows = successfulCandidateWorkflows();
+      workflows[workflowKey] = {
+        ...workflows[workflowKey],
+        jobs: workflows[workflowKey].jobs.filter(({ name }) => name !== missingName),
+      };
+      const result = snapshot({ phase: "candidate", github: { candidate_workflows: workflows } });
+      assert.equal(result.gate.status, "blocked");
+      const missing = result.gate.issues.find((entry) => (
+        entry.code === "CANDIDATE_REQUIRED_JOBS_MISSING" && entry.workflow === workflowKey
+      ));
+      assert.deepEqual(missing?.jobs, [missingName]);
+    });
+  }
+}
+
+for (const [label, status, conclusion] of [
+  ["skipped", "completed", "skipped"],
+  ["neutral", "completed", "neutral"],
+  ["pending", "in_progress", null],
+  ["failure", "completed", "failure"],
+]) {
+  test(`a required ${label} job cannot satisfy the candidate gate`, () => {
+    const workflows = successfulCandidateWorkflows();
+    workflows.check_push = {
+      ...workflows.check_push,
+      jobs: successfulJobs(REQUIRED_CANDIDATE_MATRIX_JOB_NAMES, {
+        [REQUIRED_CANDIDATE_MATRIX_JOB_NAMES[0]]: { status, conclusion },
+      }),
+    };
+    const result = snapshot({ phase: "candidate", github: { candidate_workflows: workflows } });
+    assert.equal(result.gate.status, "blocked");
+    assert.ok(result.gate.issues.some(({ code }) => code === "CANDIDATE_REQUIRED_JOBS_NOT_GREEN"));
+  });
+}
+
+test("pull-request workflow evidence binds the exact PR base and head", () => {
+  const workflows = successfulCandidateWorkflows();
+  workflows.check_pull_request = {
+    ...workflows.check_pull_request,
+    run: workflowRun({
+      id: 102,
+      event: "pull_request",
+      overrides: {
+        pull_requests: [{
+          number: 20,
+          head: { ref: source.candidate_ref, sha: CANDIDATE_SHA },
+          base: { ref: "main", sha: "c".repeat(40) },
+        }],
+      },
+    }),
+  };
+  const result = snapshot({ phase: "candidate", github: { candidate_workflows: workflows } });
+  assert.equal(result.gate.status, "blocked");
+  assert.ok(result.gate.issues.some(({ code }) => code === "CANDIDATE_WORKFLOW_CONTEXT_INVALID"));
+});
+
+test("workflow success cannot hide a pending workflow run", () => {
+  const workflows = successfulCandidateWorkflows();
+  workflows.fuzz_pull_request = {
+    ...workflows.fuzz_pull_request,
+    run: workflowRun({ id: 103, event: "pull_request", overrides: { status: "in_progress", conclusion: null } }),
+  };
+  const result = snapshot({ phase: "candidate", github: { candidate_workflows: workflows } });
+  assert.equal(result.gate.status, "blocked");
+  assert.ok(result.gate.issues.some(({ code }) => code === "CANDIDATE_WORKFLOW_NOT_GREEN"));
 });
 
 test("a dirty worktree cannot masquerade as the audited candidate commit", () => {
@@ -180,7 +325,21 @@ test("remote audit uses public read-only endpoints and tolerates no GitHub relea
     [`https://api.github.com/repos/Zhao73/alphacouncil-agent/commits/${encodeURIComponent(source.candidate_ref)}`, { sha: CANDIDATE_SHA }],
     ["https://api.github.com/repos/Zhao73/alphacouncil-agent/pulls?state=open&per_page=100", [pull()]],
     ["https://api.github.com/repos/Zhao73/alphacouncil-agent/pulls/20", pull()],
-    [`https://api.github.com/repos/Zhao73/alphacouncil-agent/commits/${CANDIDATE_SHA}/check-runs`, { check_runs: [{ name: "check", status: "completed", conclusion: "success" }] }],
+    [`https://api.github.com/repos/Zhao73/alphacouncil-agent/actions/workflows/check.yml/runs?head_sha=${CANDIDATE_SHA}&per_page=100`, {
+      workflow_runs: [workflowRun({ id: 102, event: "pull_request" }), workflowRun({ id: 101, event: "push" })],
+    }],
+    [`https://api.github.com/repos/Zhao73/alphacouncil-agent/actions/workflows/fuzz.yml/runs?head_sha=${CANDIDATE_SHA}&per_page=100`, {
+      workflow_runs: [workflowRun({ id: 103, event: "pull_request" })],
+    }],
+    ["https://api.github.com/repos/Zhao73/alphacouncil-agent/actions/runs/101/jobs?filter=latest&per_page=100", {
+      jobs: successfulJobs(REQUIRED_CANDIDATE_MATRIX_JOB_NAMES),
+    }],
+    ["https://api.github.com/repos/Zhao73/alphacouncil-agent/actions/runs/102/jobs?filter=latest&per_page=100", {
+      jobs: successfulJobs(REQUIRED_CANDIDATE_MATRIX_JOB_NAMES),
+    }],
+    ["https://api.github.com/repos/Zhao73/alphacouncil-agent/actions/runs/103/jobs?filter=latest&per_page=100", {
+      jobs: successfulJobs(["transport-runtime"]),
+    }],
     ["https://registry.npmjs.org/alphacouncil-agent", { "dist-tags": { latest: "1.5.0" } }],
   ]);
   const fetchImpl = async (url) => {

@@ -50,6 +50,13 @@ test("analyze_symbol returns a pollable run handle instead of holding an MCP cal
     const immediateResponse = await server.callTool("read_run", { run_id: runId });
     assert.ok(immediateResponse.result, "an accepted run must be pollable immediately");
     const immediate = structured(immediateResponse);
+    assert.match(immediateResponse.result.content[0].text, new RegExp(runId));
+    if (["queued", "running"].includes(immediate.status.status)) {
+      assert.match(immediateResponse.result.content[0].text, /call read_run again with this same run_id/);
+      assert.doesNotMatch(immediateResponse.result.content[0].text, /^Loaded AlphaCouncil Agent run/u);
+    } else {
+      assert.match(immediateResponse.result.content[0].text, /No investment rating was produced/);
+    }
     assert.ok(
       ["queued", "running", "incomplete"].includes(immediate.status.status),
       `unexpected immediate status: ${immediate.status.status}`,

@@ -24,14 +24,14 @@
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="mcp" />
-  <img src="https://img.shields.io/badge/API_keys-none_required-2ea043?style=for-the-badge" alt="no api keys" />
+  <img src="https://img.shields.io/badge/data_check-no_vendor_key-2ea043?style=for-the-badge" alt="core data check needs no vendor key" />
   <img src="https://img.shields.io/badge/runtime_dependencies-zero-2ea043?style=for-the-badge" alt="zero runtime dependencies" />
 </p>
 
 <p>
   <a href="../INSTALL.md"><b>Install</b></a> ·
   <a href="#-usage"><b>Usage</b></a> ·
-  <a href="#-tools--34-all-keyless"><b>Tools</b></a> ·
+  <a href="#-tools--34-with-explicit-key-requirements"><b>Tools</b></a> ·
   <a href="#-the-bench--26-investor-method-lenses"><b>The bench</b></a> ·
   <a href="#-architecture"><b>Architecture</b></a> ·
   <a href="../../CHANGELOG.md"><b>Changelog</b></a> ·
@@ -44,9 +44,9 @@
 
 <div align="center">
 
-<img src="../../assets/demo.gif" alt="AlphaCouncil live: a council of analyst agents researching a ticker and debating to a verdict" width="100%" />
+<b>Question → sourced evidence → frozen method stances → Bull/Bear challenge → PM decision + saved audit</b>
 
-<sub><i>A real run, in real time. Want the still version? <a href="../../assets/run-example.png">Six lenses reaching the same call for different reasons</a> · <a href="../examples/final_report.SOX.zh.md">a complete real report</a> (SOX, full council, zh)</i></sub>
+<sub><i><a href="../../assets/demo.mp4">Historical UI recording</a> · <a href="../examples/final_report.SOX.zh.md">historical report artifact</a> (SOX, Chinese). Both predate the current 26-seat candidate and do not validate current timing, method fidelity, data accuracy, or four-host E2E.</i></sub>
 
 </div>
 
@@ -79,11 +79,11 @@ portfolio-manager report.
 | 💵 **Fund flow that refuses to be faked** | Creations minus redemptions, priced. Only a filed share count or the issuer's own assets-over-NAV identity may price a flow; a count reconstructed from positions is refused, because a difference cancels the number and keeps the error. |
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam. The exact `slow + all methods + all analysts` path must first pass `source_fidelity`, independent `rederivation`, and `refuter` over every material claim; zero verifier verdicts means `needs_verification`, never `complete`. Quick explicitly does not claim adversarial verification. |
 | ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the persistence ceiling, configured stage budget and live-verification status for each tier — you never type a speed. These are deadlines, not measured completion promises. Method seats and analyst breadth are separate choices: `core` runs 8 analysts, `all` runs exactly 11. |
-| 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
+| 🔍 **Auditable; gaps stay visible** | Material claims must map to source IDs. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. The system can still be wrong, so outputs retain sources and diagnostics for review. |
 | 📚 **One complete company dossier for every downstream seat** | A full operating-company run accounts for the fixed 52-item core roster, freezes `company_dossier.json`, and gives the same hash-bound artifact to every selected method, every Bull/Bear round and the PM. Each method returns a task/hash/status receipt for all selected packets: 8 in `core`, 11 in `all`. Critical missing data stops the decision instead of disappearing inside a summary. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
-| 🔑 **34 tools, zero API keys, zero runtime dependencies** | SEC EDGAR, issuer IR discovery, adaptive company feeds, CBOE options, Yahoo/Stooq quotes, 21 macro series, news and social — all keyless. `node mcp/server.mjs` and nothing else. |
+| 🔑 **34 tools, explicit key boundaries, zero runtime dependencies** | The first US/Taiwan/market data check needs no data-vendor key. DART and EDINET coverage use optional free keys; council workers require an authenticated host/model. `node mcp/server.mjs` has no runtime package dependencies. |
 | 🖥️ **One contract on four hosts** | Claude Code, Codex, OpenCode and Grok Build share the same selection, evidence and reporting gates. Quick is always executed by the plugin-managed headless `analyze_symbol` path. |
 
 This repository is the uploadable source copy. Runtime outputs are written outside the repo under `~/.alphacouncil-agent/runs/<run_id>/`.
@@ -110,8 +110,9 @@ pending human review — the governance status and what remains open are tracked
 [the v1.0.0 release contract](../releases/v1.0.0.md), and `npm run check` prints
 exactly where that stands.
 
-Trust posture: zero runtime dependencies, no install scripts, no telemetry, every data
-source keyless and public; analyst workers run in a read-only sandbox
+Trust posture: zero runtime dependencies, no install scripts, no telemetry; the core US/Taiwan
+data checks use public keyless sources, while optional DART/EDINET coverage is explicitly keyed.
+Council workers use the operator's authenticated host/model and run in a read-only sandbox
 (`codex exec -s read-only -a never --ephemeral`). Details in [SECURITY.md](../../SECURITY.md).
 
 See [the v1.0.0 release contract](../releases/v1.0.0.md) for the exact ETF/index and full/quick
@@ -336,9 +337,11 @@ The final report is readable directly in chat. It carries analyst work logs, dat
 summaries, the bull/bear debate, the PM verdict, entry price bands, short/medium/long-term
 views, data gaps, confidence and a source table.
 
-## 🔧 Tools — 34, all keyless
+## 🔧 Tools — 34, with explicit key requirements
 
-Nothing below needs an API key, an account, or a config file. Install and run.
+The first US/Taiwan/market check needs no data-vendor key. Optional DART and EDINET feeds
+need their documented free keys, and council research needs an authenticated host/model.
+The table below makes those boundaries explicit.
 
 | Area | Tools | Source |
 |---|---|---|

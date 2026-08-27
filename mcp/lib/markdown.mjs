@@ -1409,7 +1409,30 @@ function handoffCopy(language) {
       title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: (ceiling, analystCount) => `full_v2: 선택된 증거 좌석 ${analystCount}개, 선택된 모든 방법론 좌석의 감사 가능한 최종 발언, 3라운드 롱/숏 질의응답, PM. 이번 플러그인 관리 실행의 하드 상한은 ${ceiling}입니다.`, quickScope: "quick_v1 자체 계약: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full_council_equivalent=false.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", instrument: "종목 분류 및 조사 경로", assetType: "자산 유형", researchModel: "조사 모델", classifiedBy: "분류 근거", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "마지막: 방법론 좌석별 최종 발언(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "발언 출처", record: "동결 기록", statement: "전체 발언", notProduced: "이 좌석은 방법론 발언이나 방향성 판단을 생성하지 않았습니다. 약세 표가 아닙니다.", failure: "종료 사유", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", dossier: "공유 회사 자료", dossierCoverage: "회사 자료 커버리지", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
     },
   };
-  return shared[languageKey(language)] || shared.en;
+  const experience = {
+    zh: {
+      noDecisionFriendly: "本轮没有形成投资评级：关键研究或组合经理阶段未完成。已保存可用证据和缺口，没有把失败转换成买卖建议。",
+      next: "下一步", nextWithDecision: "先阅读完整报告、来源和失效条件，再独立判断；本工具不构成投资建议。", nextWithoutDecision: "先查看数据缺口和完整报告；修复数据源、网络或模型访问后，通过新的席位选择启动新一轮。当前工件会保留供审计。",
+      failureDetail: "技术原因已保存在运行状态和失败诊断工件中，不在这份交接摘要里展开。", statusFile: "运行状态与技术诊断",
+    },
+    en: {
+      noDecisionFriendly: "No investment rating was produced because a required research or portfolio-manager stage did not complete. Available evidence and gaps were saved; the failure was not converted into a buy or sell call.",
+      next: "Next step", nextWithDecision: "Read the full report, sources, and invalidation conditions before making an independent judgment. This is not investment advice.", nextWithoutDecision: "Review the data gaps and full report first. After restoring data, network, or model access, start a new run with a new seat selection; the current artifacts remain available for audit.",
+      failureDetail: "Technical causes remain in the status and failure-diagnostic artifacts instead of being dumped into this handoff.", statusFile: "Run status and technical diagnostics",
+    },
+    ja: {
+      noDecisionFriendly: "必須の調査またはポートフォリオマネージャー段階が完了しなかったため、投資評価は作成していません。利用可能な証拠と欠落は保存し、失敗を売買判断へ変換していません。",
+      next: "次の手順", nextWithDecision: "完全レポート、出典、無効化条件を確認してから独立に判断してください。本ツールは投資助言ではありません。", nextWithoutDecision: "まずデータ欠落と完全レポートを確認してください。データ、ネットワーク、またはモデル接続を復旧した後、新しい席選択で新規実行を開始してください。現在の成果物は監査用に残ります。",
+      failureDetail: "技術的な原因は実行状態と失敗診断の成果物に保存し、この引継ぎ要約には展開しません。", statusFile: "実行状態と技術診断",
+    },
+    ko: {
+      noDecisionFriendly: "필수 조사 또는 포트폴리오 매니저 단계가 완료되지 않아 투자 등급을 만들지 않았습니다. 사용 가능한 근거와 공백은 저장했으며 실패를 매수·매도 판단으로 바꾸지 않았습니다.",
+      next: "다음 단계", nextWithDecision: "전체 보고서, 출처, 무효화 조건을 확인한 뒤 독립적으로 판단하십시오. 이 도구는 투자 조언이 아닙니다.", nextWithoutDecision: "먼저 데이터 공백과 전체 보고서를 확인하십시오. 데이터, 네트워크 또는 모델 접근을 복구한 뒤 새 좌석 선택으로 새 실행을 시작하십시오. 현재 산출물은 감사용으로 보존됩니다.",
+      failureDetail: "기술 원인은 실행 상태와 실패 진단 산출물에 보존하며 이 인계 요약에는 그대로 노출하지 않습니다.", statusFile: "실행 상태 및 기술 진단",
+    },
+  };
+  const key = languageKey(language);
+  return { ...(shared[key] || shared.en), ...(experience[key] || experience.en) };
 }
 
 function fullCouncilCeiling(run) {
@@ -1519,13 +1542,11 @@ function handoffMethodTail(run, copy) {
     ];
     if (!mayPublishStatement) {
       const reason = localizedFailure(state.error || state.status, run.language);
-      const code = state.error_code ? ` (${state.error_code})` : "";
       lines.push(
         `  - ${copy.statement}: ${copy.notProduced}`,
-        `  - ${copy.failure}: ${reason}${code}`,
+        `  - ${copy.failure}: ${reason}. ${copy.failureDetail}`,
         `  - [statement_status=not_produced; seat_status=${state.status || "missing"}; not_a_directional_view=true]`,
       );
-      if (state.diagnostic) lines.push(`  - ${clipAtBoundary(state.diagnostic, 360)}`);
       return lines.join("\n");
     }
 
@@ -1624,7 +1645,7 @@ export function userResponseMarkdown(run, manager) {
     `- ${copy.rating}: ${localizedDisplayValue(decisionAvailable ? manager.rating : "unavailable", run.language)}`,
     `- ${copy.winner}: ${localizedDisplayValue(decisionAvailable ? (manager.winner || "unknown") : "unavailable", run.language)}`,
     `- ${copy.confidence}: ${localizedDisplayValue(decisionAvailable ? (manager.confidence || "low") : "unavailable", run.language)}`,
-    `- ${copy.judgment}: ${decisionAvailable ? clipAtBoundary(manager.verdict || manager.summary, 720) : copy.noDecision}`,
+    `- ${copy.judgment}: ${decisionAvailable ? clipAtBoundary(manager.verdict || manager.summary, 720) : copy.noDecisionFriendly}`,
     "",
     `## ${copy.analysts}`,
     analystLines,
@@ -1647,12 +1668,16 @@ export function userResponseMarkdown(run, manager) {
     `## ${copy.invalidation}`,
     invalidation,
     "",
+    `## ${copy.next}`,
+    `- ${decisionAvailable ? copy.nextWithDecision : copy.nextWithoutDecision}`,
+    "",
     `## ${copy.files}`,
     `- ${copy.report}: ${artifacts.final_report_md}`,
     ...(run.company_dossier?.path ? [`- ${copy.dossier}: ${run.company_dossier.path}`] : []),
     `- ${copy.index}: ${artifacts.artifact_index_md}`,
     `- ${copy.trace}: ${artifacts.all_agents_md}`,
     `- ${copy.quality}: ${artifacts.report_quality_json}`,
+    `- ${copy.statusFile}: ${artifacts.status_json}`,
     "",
     masterTail,
   ].join("\n");

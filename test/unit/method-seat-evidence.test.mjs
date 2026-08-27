@@ -85,4 +85,3 @@ test("the preregistered 3 x 6 x 3 boundary becomes reviewable without inventing 
   assert.ok(result.seat_decisions.every((seat) => METHOD_SEAT_STATUSES.includes(seat.status)));
   assert.ok(result.seat_decisions.every((seat) => !["merged", "deleted"].includes(seat.status)));
 });
-

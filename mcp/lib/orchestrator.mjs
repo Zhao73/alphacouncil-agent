@@ -1789,7 +1789,7 @@ export function recordMasterOpinion(args) {
       voice_mode: voice.voice_mode,
       disclosure_ack: voice.disclosure_ack,
       disclosure: voice.disclosure,
-      voice_status: "model_voice",
+      voice_status: CLAIM_READY_METHOD_VOICE_STATUS,
       voice_language: run.language,
       statement_origin: "visible_method_voice_worker",
       key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
@@ -1826,7 +1826,7 @@ export function recordMasterOpinion(args) {
       voice_statement: reconciled.opinion.voice_statement
         || reconciled.opinion.summary
         || reconciled.opinion.verdict,
-      voice_status: "model_voice",
+      voice_status: CLAIM_READY_METHOD_VOICE_STATUS,
       voice_language: run.language,
       statement_origin: "visible_legacy_method_worker",
     }, reconciled.engine);
@@ -4309,19 +4309,11 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
       stage: outcome.failure_stage || "worker_execution",
     });
     writeJson(diagnosticPath, { ...diagnostic, public_summary: publicSummary }, { mode: 0o600 });
-    // A dead voice worker used to delete the seat from the report entirely: no statement, no
-    // stance, no reason -- the reader simply never learned that this method had reached a
-    // verdict, and one such seat could take the debate and the PM with it. But the verdict is
-    // deterministic and already frozen, and the same renderer that gives an abstaining seat its
-    // five first-person fields works here with no model at all. So publish that, labelled for
-    // what it is: the method's own reading, rendered deterministically, with the worker failure
-    // and its reason attached. What the failure costs is the model-written prose, not the seat.
-    // Scope matters: a worker that could not SPEAK and a worker that spoke WRONGLY are
-    // different events. A stall, a killed process or an exhausted provider leaves the seat
-    // mute, and the frozen decision can speak for it. A forged source ID, a contract breach or
-    // reader-language violation is the worker actively misbehaving -- laundering that into a
-    // published seat is exactly the silent failure these gates exist to catch, so it still
-    // fails loudly and visibly.
+    // Quick mode may preserve an already frozen deterministic stance after a mute worker
+    // failure, clearly labelled as a fallback. Full mode never uses this path: any missing
+    // claim-ready model voice remains a missing seat and stops before debate/PM. Contract,
+    // provenance and reader-language violations are not mute failures in either mode and are
+    // always kept as visible failures.
     if (run.council_mode === "quick"
       && outcome.frozenOpinion
       && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error")) {
@@ -4667,15 +4659,9 @@ export async function runHeadlessMasters(run, args = {}) {
     const workerStartedAt = Date.now();
     let workerAttempt = 1;
     let result = await execute(prompt, timeoutMs, workerAttempt);
-    // A voice worker that produced nothing before its cap is almost always a stalled spawn,
-    // not a seat that needed longer. Measured worker time is ~106s for the slowest of 26, yet
-    // the failures land at EXACTLY the cap, on a different seat each run, at both 120s and
-    // 180s. Raising the cap chases that and pays the full cap for every stall; one fresh
-    // attempt does not, and a healthy retry finishes in the usual ~106s. A silence watchdog
-    // was measured and rejected: codex is legitimately silent for 15s+ on a trivial prompt
-    // and emits its answer in one final chunk, so silence cannot separate stalled from busy.
-    // Only a timeout earns the retry -- parse and policy failures have their own repair paths
-    // below -- and only when the run can still afford the attempt.
+    // A timed-out voice worker gets at most one fresh, budget-bounded attempt. Silence is not
+    // itself a failure signal because a worker may emit only its final payload. Parse and policy
+    // failures have separate repair paths below and do not earn this timeout retry.
     if (!result.ok && result.timedOut
       && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
       workerAttempt = 2;
@@ -4863,8 +4849,8 @@ export async function runHeadlessMasters(run, args = {}) {
       }
     }
     })();
-    // Carry the frozen decision into the commit so a dead voice worker costs the reader the
-    // PROSE, not the seat. The deterministic renderer needs no model.
+    // Carry the frozen decision to the commit helper. Only quick mode may turn an eligible mute
+    // worker failure into a labelled deterministic fallback; full mode records the seat missing.
     return commitHeadlessMasterOutcome(run, { ...outcome, frozenOpinion }, { dir, byId, selected });
   }, (error, { id, engine }) => commitHeadlessMasterOutcome(run, {
     id,
@@ -5317,12 +5303,9 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
 /**
  * Whether the recorded method bench is substantial enough to debate on.
  *
- * The bench gate used to be all-or-nothing, so one voice worker that hung took the debate and
- * the PM with it and the reader got a run with no rating at all -- twice in a row on a 26-seat
- * bench, each time a different seat pinned at exactly its cap with no retry. The risk that gate
- * exists for is a bench nobody consulted, presented as if the verdict had survived every lens;
- * twenty-five of twenty-six consulted is not that. So a near-complete bench proceeds, while a
- * materially unconsulted one still stops before the expensive downstream stages.
+ * Full mode is all-or-nothing: any missing claim-ready method voice stops before debate and PM.
+ * Quick mode may continue with a near-complete larger bench so a bounded fallback can still
+ * produce a clearly incomplete decision record, while a materially unconsulted bench stops.
  *
  * This does NOT make the run complete: the missing seats stay in `missing_masters`, the run
  * still terminates `incomplete`, and the report still names every seat that never reported.

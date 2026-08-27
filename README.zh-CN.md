@@ -25,7 +25,7 @@
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="兼容 MCP" />
-  <img src="https://img.shields.io/badge/API_keys-none_required-2ea043?style=for-the-badge" alt="无需 API 密钥" />
+  <img src="https://img.shields.io/badge/data_check-no_vendor_key-2ea043?style=for-the-badge" alt="核心数据检查不需要数据商密钥" />
   <img src="https://img.shields.io/badge/runtime_dependencies-zero-2ea043?style=for-the-badge" alt="零运行时依赖" />
 </p>
 
@@ -36,9 +36,11 @@
 <!-- readme-section:demo -->
 <div align="center">
 
-<img src="assets/demo-zh.gif" alt="AlphaCouncil 分析席收集证据、辩论并形成投资组合经理裁决" width="100%" />
+**问题 → 带来源证据 → 冻结方法立场 → 多空质询 → PM 决策 + 可保存审计链**
 
-**[观看 MP4](assets/demo.mp4)** · [查看静态图](assets/run-example.png) · [阅读完整 SOX 报告](docs/examples/final_report.SOX.zh.md)
+[历史界面录屏（MP4）](assets/demo.mp4) · [历史报告工件（SOX，中文）](docs/examples/final_report.SOX.zh.md)
+
+<sub>录屏早于当前 26 席候选版，只展示旧版界面；不证明当前耗时、方法忠实度、数据准确性或四宿主端到端状态。</sub>
 
 </div>
 

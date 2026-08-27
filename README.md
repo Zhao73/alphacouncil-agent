@@ -25,7 +25,7 @@
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="MCP compatible" />
-  <img src="https://img.shields.io/badge/API_keys-none_required-2ea043?style=for-the-badge" alt="No API keys required" />
+  <img src="https://img.shields.io/badge/data_check-no_vendor_key-2ea043?style=for-the-badge" alt="Core data check needs no vendor key" />
   <img src="https://img.shields.io/badge/runtime_dependencies-zero-2ea043?style=for-the-badge" alt="Zero runtime dependencies" />
 </p>
 
@@ -36,9 +36,11 @@
 <!-- readme-section:demo -->
 <div align="center">
 
-<img src="assets/demo.gif" alt="AlphaCouncil agents gather evidence, debate, and reach a portfolio-manager verdict" width="100%" />
+**Question → sourced evidence → frozen method stances → Bull/Bear challenge → PM decision + saved audit**
 
-**[Watch the MP4](assets/demo.mp4)** · [View the still](assets/run-example.png) · [Read a complete SOX report](docs/examples/final_report.SOX.zh.md)
+[Historical UI recording (MP4)](assets/demo.mp4) · [Historical report artifact (SOX, Chinese)](docs/examples/final_report.SOX.zh.md)
+
+<sub>The recording predates the current 26-seat candidate. It demonstrates an earlier interface only—not current timing, method fidelity, data accuracy, or four-host end-to-end validation.</sub>
 
 </div>
 

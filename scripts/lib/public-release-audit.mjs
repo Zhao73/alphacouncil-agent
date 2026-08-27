@@ -3,7 +3,18 @@ const NPM_REGISTRY = "https://registry.npmjs.org";
 const SLUG_PART = /^[A-Za-z0-9_.-]+$/u;
 const SHA = /^[a-f0-9]{40}$/u;
 const AUDIT_PHASES = new Set(["report", "candidate", "publication"]);
-const ACCEPTED_CHECK_CONCLUSIONS = new Set(["success", "neutral", "skipped"]);
+export const REQUIRED_CANDIDATE_MATRIX_JOB_NAMES = Object.freeze([
+  "check (ubuntu-latest, node 18)",
+  "check (ubuntu-latest, node 20)",
+  "check (ubuntu-latest, node 22)",
+  "check (ubuntu-latest, node 24)",
+  "check (windows-latest, node 20)",
+  "check (macos-latest, node 20)",
+]);
+export const REQUIRED_CANDIDATE_CHECK_NAMES = Object.freeze([
+  ...REQUIRED_CANDIDATE_MATRIX_JOB_NAMES,
+  "transport-runtime",
+]);
 
 export class PublicReleaseAuditError extends Error {
   constructor(code, message) {
@@ -121,6 +132,139 @@ function sourceIssues({ source }) {
   )] : [];
 }
 
+function workflowRunMatchesContext(run, { source, github, exactPull, event }) {
+  if (!run || run.event !== event || run.head_sha !== source.candidate_sha || run.head_branch !== source.candidate_ref) {
+    return false;
+  }
+  if (event !== "pull_request") return true;
+  return Array.isArray(run.pull_requests) && run.pull_requests.some((pull) => (
+    pull?.number === exactPull?.number
+    && pull?.head?.ref === source.candidate_ref
+    && pull?.head?.sha === source.candidate_sha
+    && pull?.base?.ref === github.default_branch
+    && pull?.base?.sha === github.main_sha
+  ));
+}
+
+function latestWorkflowRun(runs, context) {
+  return [...runs]
+    .filter((run) => workflowRunMatchesContext(run, context))
+    .sort((left, right) => (
+      Number(right?.run_attempt || 0) - Number(left?.run_attempt || 0)
+      || Number(right?.id || 0) - Number(left?.id || 0)
+    ))[0] || null;
+}
+
+function candidateWorkflowIssues({ source, github, exactPull }) {
+  const errors = [];
+  const workflows = github.candidate_workflows || {};
+  const required = [
+    { key: "check_push", event: "push", jobs: REQUIRED_CANDIDATE_MATRIX_JOB_NAMES },
+    { key: "check_pull_request", event: "pull_request", jobs: REQUIRED_CANDIDATE_MATRIX_JOB_NAMES },
+    { key: "fuzz_pull_request", event: "pull_request", jobs: ["transport-runtime"] },
+  ];
+
+  for (const requirement of required) {
+    const observed = workflows[requirement.key] || null;
+    const run = observed?.run || null;
+    if (!run) {
+      errors.push(issue(
+        "CANDIDATE_WORKFLOW_RUN_MISSING",
+        "candidate",
+        `${requirement.key} has no workflow run for the exact candidate context`,
+        { workflow: requirement.key },
+      ));
+      continue;
+    }
+    if (!workflowRunMatchesContext(run, { source, github, exactPull, event: requirement.event })) {
+      errors.push(issue(
+        "CANDIDATE_WORKFLOW_CONTEXT_INVALID",
+        "candidate",
+        `${requirement.key} does not bind the exact candidate head${requirement.event === "pull_request" ? " and PR base/head" : ""}`,
+        { workflow: requirement.key, run_id: run.id ?? null },
+      ));
+      continue;
+    }
+    if (run.status !== "completed" || run.conclusion !== "success") {
+      errors.push(issue(
+        "CANDIDATE_WORKFLOW_NOT_GREEN",
+        "candidate",
+        `${requirement.key} is not completed/success`,
+        { workflow: requirement.key, run_id: run.id ?? null, status: run.status ?? null, conclusion: run.conclusion ?? null },
+      ));
+    }
+
+    const jobs = Array.isArray(observed.jobs) ? observed.jobs : [];
+    const byName = new Map(requirement.jobs.map((name) => [name, []]));
+    for (const job of jobs) {
+      if (byName.has(job?.name)) byName.get(job.name).push(job);
+    }
+    const missing = requirement.jobs.filter((name) => byName.get(name).length === 0);
+    const unhealthy = requirement.jobs.filter((name) => {
+      const matches = byName.get(name);
+      return matches.length > 0 && !matches.some((job) => job?.status === "completed" && job?.conclusion === "success");
+    });
+    if (missing.length) {
+      errors.push(issue(
+        "CANDIDATE_REQUIRED_JOBS_MISSING",
+        "candidate",
+        `${requirement.key} is missing ${missing.length} required job(s)`,
+        { workflow: requirement.key, run_id: run.id ?? null, jobs: missing },
+      ));
+    }
+    if (unhealthy.length) {
+      errors.push(issue(
+        "CANDIDATE_REQUIRED_JOBS_NOT_GREEN",
+        "candidate",
+        `${requirement.key} has ${unhealthy.length} required job(s) without a completed success`,
+        {
+          workflow: requirement.key,
+          run_id: run.id ?? null,
+          jobs: unhealthy.map((name) => ({
+            name,
+            observed: byName.get(name).map((job) => ({ status: job?.status, conclusion: job?.conclusion })),
+          })),
+        },
+      ));
+    }
+  }
+  return errors;
+}
+
+function freezeCandidateWorkflows(workflows = {}) {
+  return Object.freeze(Object.fromEntries([
+    "check_push",
+    "check_pull_request",
+    "fuzz_pull_request",
+  ].map((key) => {
+    const observed = workflows[key] || null;
+    if (!observed) return [key, null];
+    const run = observed.run || null;
+    return [key, Object.freeze({
+      run: run ? Object.freeze({
+        id: run.id ?? null,
+        event: run.event ?? null,
+        status: run.status ?? null,
+        conclusion: run.conclusion ?? null,
+        head_sha: run.head_sha ?? null,
+        head_branch: run.head_branch ?? null,
+        pull_requests: Object.freeze((run.pull_requests || []).map((pull) => Object.freeze({
+          number: pull?.number ?? null,
+          head_ref: pull?.head?.ref ?? null,
+          head_sha: pull?.head?.sha ?? null,
+          base_ref: pull?.base?.ref ?? null,
+          base_sha: pull?.base?.sha ?? null,
+        }))),
+      }) : null,
+      jobs: Object.freeze((observed.jobs || []).map((job) => Object.freeze({
+        name: job?.name ?? null,
+        status: job?.status ?? null,
+        conclusion: job?.conclusion ?? null,
+      }))),
+    })];
+  })));
+}
+
 function candidateIssues({ source, github }) {
   const errors = [];
   if (github.candidate_sha !== source.candidate_sha) {
@@ -176,21 +320,7 @@ function candidateIssues({ source, github }) {
         `candidate PR must be mergeable and clean; mergeable=${String(exactPull.mergeable)} state=${exactPull.mergeable_state ?? "<missing>"}`,
       ));
     }
-    if (!Array.isArray(github.check_runs) || github.check_runs.length === 0) {
-      errors.push(issue("CANDIDATE_CHECKS_MISSING", "candidate", "candidate commit has no observable check runs"));
-    } else {
-      const unhealthy = github.check_runs.filter((check) => (
-        check?.status !== "completed" || !ACCEPTED_CHECK_CONCLUSIONS.has(check?.conclusion)
-      ));
-      if (unhealthy.length) {
-        errors.push(issue(
-          "CANDIDATE_CHECKS_NOT_GREEN",
-          "candidate",
-          `${unhealthy.length} candidate check run(s) are pending or unsuccessful`,
-          { checks: unhealthy.map((check) => ({ name: check?.name, status: check?.status, conclusion: check?.conclusion })) },
-        ));
-      }
-    }
+    errors.push(...candidateWorkflowIssues({ source, github, exactPull }));
   }
   return { errors, exactPull };
 }
@@ -294,11 +424,7 @@ export function evaluatePublicReleaseSnapshot({ source, github, npm, observedAt,
         draft: candidate.exactPull.draft ?? null,
         mergeable: candidate.exactPull.mergeable ?? null,
         mergeable_state: candidate.exactPull.mergeable_state ?? null,
-        check_runs: Object.freeze((github.check_runs || []).map((check) => Object.freeze({
-          name: check?.name ?? null,
-          status: check?.status ?? null,
-          conclusion: check?.conclusion ?? null,
-        }))),
+        workflows: freezeCandidateWorkflows(github.candidate_workflows),
       }) : null,
       open_prs: Object.freeze(github.open_pulls.map((pull) => Object.freeze({ number: pull.number, url: pull.html_url, head_ref: pull.head?.ref, head_sha: pull.head?.sha, base_ref: pull.base?.ref }))),
     }),
@@ -343,12 +469,24 @@ export async function auditPublicRelease({
   const defaultBranch = repoDocument.default_branch;
   assertSlug(defaultBranch, "default branch");
   const ref = encodeURIComponent(source.candidate_ref);
-  const [mainCommit, mainPackageFile, candidateCommit, latestRelease, openPulls, npmDocument] = await Promise.all([
+  const candidateSha = encodeURIComponent(source.candidate_sha);
+  const [
+    mainCommit,
+    mainPackageFile,
+    candidateCommit,
+    latestRelease,
+    openPulls,
+    checkWorkflowRunsDocument,
+    fuzzWorkflowRunsDocument,
+    npmDocument,
+  ] = await Promise.all([
     fetchJson(fetchImpl, `${repoUrl}/commits/${encodeURIComponent(defaultBranch)}`, common),
     fetchJson(fetchImpl, `${repoUrl}/contents/package.json?ref=${encodeURIComponent(defaultBranch)}`, common),
     fetchJson(fetchImpl, `${repoUrl}/commits/${ref}`, { ...common, allowNotFound: true }),
     fetchJson(fetchImpl, `${repoUrl}/releases/latest`, { ...common, allowNotFound: true }),
     fetchJson(fetchImpl, `${repoUrl}/pulls?state=open&per_page=100`, common),
+    fetchJson(fetchImpl, `${repoUrl}/actions/workflows/check.yml/runs?head_sha=${candidateSha}&per_page=100`, common),
+    fetchJson(fetchImpl, `${repoUrl}/actions/workflows/fuzz.yml/runs?head_sha=${candidateSha}&per_page=100`, common),
     fetchJson(fetchImpl, `${NPM_REGISTRY}/${encodeURIComponent(packageName)}`, {
       headers: { Accept: "application/json", "User-Agent": "alphacouncil-public-release-audit" },
       timeoutMs,
@@ -360,15 +498,35 @@ export async function auditPublicRelease({
     && pull?.head?.sha === source.candidate_sha
     && pull?.base?.ref === defaultBranch
   ));
-  const [candidatePull, checkRunsDocument] = matchingPulls.length === 1
-    ? await Promise.all([
-      fetchJson(fetchImpl, `${repoUrl}/pulls/${matchingPulls[0].number}`, common),
-      fetchJson(fetchImpl, `${repoUrl}/commits/${encodeURIComponent(source.candidate_sha)}/check-runs`, common),
-    ])
-    : [null, { check_runs: [] }];
-  if (!Array.isArray(checkRunsDocument?.check_runs)) {
-    throw new PublicReleaseAuditError("REMOTE_RESPONSE_INVALID", "GitHub check-runs response must contain an array");
+  const candidatePull = matchingPulls.length === 1
+    ? await fetchJson(fetchImpl, `${repoUrl}/pulls/${matchingPulls[0].number}`, common)
+    : null;
+  if (!Array.isArray(checkWorkflowRunsDocument?.workflow_runs) || !Array.isArray(fuzzWorkflowRunsDocument?.workflow_runs)) {
+    throw new PublicReleaseAuditError("REMOTE_RESPONSE_INVALID", "GitHub workflow-runs responses must contain arrays");
   }
+  const workflowContext = {
+    source,
+    github: { default_branch: defaultBranch, main_sha: mainCommit?.sha ?? null },
+    exactPull: candidatePull,
+  };
+  const selectedRuns = {
+    check_push: latestWorkflowRun(checkWorkflowRunsDocument.workflow_runs, { ...workflowContext, event: "push" }),
+    check_pull_request: latestWorkflowRun(checkWorkflowRunsDocument.workflow_runs, { ...workflowContext, event: "pull_request" }),
+    fuzz_pull_request: latestWorkflowRun(fuzzWorkflowRunsDocument.workflow_runs, { ...workflowContext, event: "pull_request" }),
+  };
+  const selectedEntries = Object.entries(selectedRuns);
+  const jobDocuments = await Promise.all(selectedEntries.map(([, run]) => (
+    run
+      ? fetchJson(fetchImpl, `${repoUrl}/actions/runs/${encodeURIComponent(String(run.id))}/jobs?filter=latest&per_page=100`, common)
+      : Promise.resolve({ jobs: [] })
+  )));
+  const candidateWorkflows = Object.fromEntries(selectedEntries.map(([key, run], index) => {
+    const jobs = jobDocuments[index]?.jobs;
+    if (!Array.isArray(jobs)) {
+      throw new PublicReleaseAuditError("REMOTE_RESPONSE_INVALID", `GitHub ${key} jobs response must contain an array`);
+    }
+    return [key, { run, jobs }];
+  }));
   const mainPackage = decodePackageFile(mainPackageFile, defaultBranch);
   return evaluatePublicReleaseSnapshot({
     source,
@@ -389,7 +547,7 @@ export async function auditPublicRelease({
       } : null,
       open_pulls: openPulls,
       candidate_pull: candidatePull,
-      check_runs: checkRunsDocument.check_runs,
+      candidate_workflows: candidateWorkflows,
     },
     npm: { dist_tags: npmDocument?.["dist-tags"] || {} },
   });

@@ -919,7 +919,9 @@ test("a caller-lowered full-council budget fails closed and persists a terminal 
     assert.ok(Object.values(result.run.task_status).every((state) =>
       ["failed", "timed_out", "skipped", "completed"].includes(state.status)),
     JSON.stringify(result.run.task_status, null, 2));
-    assert.match(readFileSync(join(dir, "user_response.md"), "utf8"), /NEEDS_MANAGER_REVIEW/);
+    const handoff = readFileSync(join(dir, "user_response.md"), "utf8");
+    assert.match(handoff, /No investment rating was produced/);
+    assert.doesNotMatch(handoff, /NEEDS_MANAGER_REVIEW/);
   } finally {
     await server.close();
     removeDataDir(dataDir);

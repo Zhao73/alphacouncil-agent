@@ -61,7 +61,9 @@ test("a failed manager path never becomes a synthetic Hold in the full handoff",
     rating: null,
   });
   assert.match(markdown, /Rating: unavailable/);
-  assert.match(markdown, /NEEDS_MANAGER_REVIEW/);
+  assert.match(markdown, /No investment rating was produced/);
+  assert.match(markdown, /start a new run with a new seat selection/);
+  assert.doesNotMatch(markdown, /NEEDS_MANAGER_REVIEW/);
   assert.doesNotMatch(markdown, /Rating: Hold/);
 });
 
@@ -347,7 +349,9 @@ test("an incomplete handoff ends with every selected seat and diagnoses a failed
   assert.match(tail, /Marks 方法席完整记录了周期位置、风险补偿和不建仓条件/);
   assert.match(tail, /master_graham/);
   assert.match(tail, /本席未产生方法陈词，也没有方向性观点；这不是看空票/);
-  assert.match(tail, /确定性方法政策执行失败 \(MISSING_NATIVE_OUTPUT\)/);
+  assert.match(tail, /确定性方法政策执行失败/);
+  assert.match(tail, /技术原因已保存在运行状态和失败诊断工件中/);
+  assert.doesNotMatch(tail, /MISSING_NATIVE_OUTPUT/);
   assert.match(tail, /statement_status=not_produced; seat_status=failed; not_a_directional_view=true/);
   assert.doesNotMatch(tail, /这是未完成席位的中间记录/);
   assert.doesNotMatch(tail, /master_graham.*建设性|master_graham.*反对/s);

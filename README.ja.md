@@ -25,7 +25,7 @@
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="MCP 対応" />
-  <img src="https://img.shields.io/badge/API_keys-none_required-2ea043?style=for-the-badge" alt="API キー不要" />
+  <img src="https://img.shields.io/badge/data_check-no_vendor_key-2ea043?style=for-the-badge" alt="コアのデータ確認はベンダーキー不要" />
   <img src="https://img.shields.io/badge/runtime_dependencies-zero-2ea043?style=for-the-badge" alt="ランタイム依存ゼロ" />
 </p>
 
@@ -36,9 +36,11 @@
 <!-- readme-section:demo -->
 <div align="center">
 
-<img src="assets/demo.gif" alt="AlphaCouncil が根拠を収集し、討論して PM 判定へ至る様子" width="100%" />
+**質問 → 出典付き根拠 → 固定した手法スタンス → 強気・弱気の反論 → PM 判断 + 保存可能な監査記録**
 
-**[MP4 を見る](assets/demo.mp4)** · [静止画を見る](assets/run-example.png) · [完全な SOX レポートを読む](docs/examples/final_report.SOX.zh.md)
+[過去版 UI の録画（MP4）](assets/demo.mp4) · [過去版レポート成果物（SOX、中国語）](docs/examples/final_report.SOX.zh.md)
+
+<sub>録画は現在の 26 席候補より前の UI です。現在の所要時間、手法忠実度、データ精度、4 ホスト E2E を証明するものではありません。</sub>
 
 </div>
 

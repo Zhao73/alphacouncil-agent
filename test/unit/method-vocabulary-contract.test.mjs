@@ -157,4 +157,3 @@ test("a characteristic statement needs three positive hits and no more conflict 
   assert.equal(confused.positive_hits, 1);
   assert.equal(confused.neighbor_conflict_hits, 4);
 });
-

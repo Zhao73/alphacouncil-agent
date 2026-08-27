@@ -217,7 +217,35 @@ function persistedUserResponse(runId) {
 
 function terminalHandoffText(run, fallback) {
   if (!isTerminalAnalysis(run) || !run?.run_id) return fallback;
-  return persistedUserResponse(run.run_id) || fallback;
+  return persistedUserResponse(run.run_id) || missingTerminalHandoffText(
+    run,
+    run.run_id,
+    join(runPath(run.run_id), "status.json"),
+  );
+}
+
+function nonterminalRunText(status, runIdValue) {
+  const copy = localized(status?.language, {
+    zh: { run: "AlphaCouncil 运行", state: "状态", phase: "阶段", evidence: "证据席", methods: "方法席", next: "下一步：继续用同一个 run_id 调用 read_run；终态前不要新建重复运行。" },
+    en: { run: "AlphaCouncil run", state: "status", phase: "phase", evidence: "evidence seats", methods: "method seats", next: "Next: call read_run again with this same run_id; do not create a duplicate run before it reaches a terminal state." },
+    ja: { run: "AlphaCouncil 実行", state: "状態", phase: "段階", evidence: "証拠席", methods: "メソッド席", next: "次の手順：同じ run_id で read_run を再度呼び出し、終端状態になる前に重複実行を作成しないでください。" },
+    ko: { run: "AlphaCouncil 실행", state: "상태", phase: "단계", evidence: "근거 좌석", methods: "방법론 좌석", next: "다음: 동일한 run_id로 read_run을 다시 호출하고 종결 상태 전에는 중복 실행을 만들지 마십시오." },
+  });
+  const tasks = Array.isArray(status?.tasks) ? status.tasks : [];
+  const completedTasks = tasks.filter((task) => task?.status === "completed").length;
+  const selectedMasters = Number.isInteger(status?.selected_master_count) ? status.selected_master_count : 0;
+  const recordedMasters = Number.isInteger(status?.recorded_master_count) ? status.recorded_master_count : 0;
+  return `${copy.run} ${runIdValue}: ${copy.state}=${status?.status || "unknown"}; ${copy.phase}=${status?.phase || "unknown"}; ${copy.evidence}=${completedTasks}/${tasks.length}; ${copy.methods}=${recordedMasters}/${selectedMasters}. ${copy.next}`;
+}
+
+function missingTerminalHandoffText(status, runIdValue, statusPath) {
+  const copy = localized(status?.language, {
+    zh: `运行 ${runIdValue} 已到终态（${status?.status || "未知"}），但用户交接文件缺失，因此不会推断或补造投资评级。请检查 ${statusPath} 和失败诊断；修复缺失阶段后，通过新的席位选择启动新一轮。`,
+    en: `Run ${runIdValue} is terminal (${status?.status || "unknown"}), but its user handoff is missing, so no investment rating will be inferred or invented. Review ${statusPath} and the failure diagnostics; after fixing the missing stage, start a new run with a new seat selection.`,
+    ja: `実行 ${runIdValue} は終端状態（${status?.status || "不明"}）ですが、ユーザー向け引継ぎファイルがありません。投資評価を推測・補完せず、${statusPath} と失敗診断を確認してください。欠落段階を修正後、新しい席選択で新規実行を開始してください。`,
+    ko: `실행 ${runIdValue}은 종결 상태(${status?.status || "알 수 없음"})이지만 사용자 인계 파일이 없습니다. 투자 등급을 추론하거나 만들어 내지 않습니다. ${statusPath}와 실패 진단을 확인하고 누락 단계를 수정한 뒤 새 좌석 선택으로 새 실행을 시작하십시오.`,
+  });
+  return copy;
 }
 
 function boundedCompactText(value, limit = 2_000) {
@@ -1496,10 +1524,13 @@ export async function handleToolCall(id, params) {
         return;
       }
       const accepted = started;
-      sendResult(id, jsonContent(
-        `Accepted AlphaCouncil Agent analysis for ${accepted.symbol}: ${accepted.run_id}. Poll read_run until status is terminal.`,
-        accepted,
-      ));
+      const acceptance = localized(accepted.language, {
+        zh: `已启动 ${accepted.symbol} 的 AlphaCouncil 分析：${accepted.run_id}。请用同一个 run_id 调用 read_run，直到出现终态；不要在等待时新建重复运行。`,
+        en: `Accepted AlphaCouncil Agent analysis for ${accepted.symbol}: ${accepted.run_id}. Poll read_run with this same run_id until status is terminal; do not create a duplicate run while waiting.`,
+        ja: `${accepted.symbol} の AlphaCouncil 分析を開始しました：${accepted.run_id}。同じ run_id で read_run を呼び出して終端状態まで確認し、待機中に重複実行を作成しないでください。`,
+        ko: `${accepted.symbol} AlphaCouncil 분석을 시작했습니다: ${accepted.run_id}. 동일한 run_id로 read_run을 호출해 종결 상태까지 확인하고 대기 중에는 중복 실행을 만들지 마십시오.`,
+      });
+      sendResult(id, jsonContent(acceptance, accepted));
       return;
     }
     const result = await withSelectedRun(args, "analyze_symbol", async (runArgs) => {
@@ -1546,9 +1577,9 @@ export async function handleToolCall(id, params) {
     };
     const userResponse = existsSync(userResponsePath) ? readFileSync(userResponsePath, "utf8") : "";
     const runStatus = status?.status || evidence?.status;
-    const text = isTerminalAnalysis(runStatus) && userResponse
-      ? userResponse
-      : `Loaded AlphaCouncil Agent run ${idArg}`;
+    const text = isTerminalAnalysis(runStatus)
+      ? (userResponse || missingTerminalHandoffText(status || evidence, idArg, statusPath))
+      : nonterminalRunText(status || evidence, idArg);
     if (detail === "compact") {
       sendResult(id, jsonContent(text, {
         status,
