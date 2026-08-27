@@ -107,9 +107,12 @@ Attempt 1 persisted the terminal kind and diagnostic paths for the Buffett and D
 workers, but the CI assertion output did not capture the specific schema fields or keywords
 that failed. No timing conclusion is drawn from this event.
 
-Disposition: WP4 should make a bounded list of violated method-voice schema paths and keywords
-available in the durable diagnostic and CI assertion output, without retaining rejected prose
-or changing the fail-closed result. This is an observability input, not a WP3W fix.
+Disposition: WP4d closes this input by preserving the pre-bound validation-error count, exposing
+an explicit truncation flag and bounded method-voice paths, keywords and structural property names
+in the durable attempt diagnostic and `master_parse_repair` event. The existing full-council test
+prints one fixed TAP diagnostic line per repaired method seat. Rejected prose is still represented
+only by length and digest, and the fail-closed/one-repair behavior is unchanged. This remains an
+observability change, not a WP3W timing fix.
 
 ## WP3W gate result
 

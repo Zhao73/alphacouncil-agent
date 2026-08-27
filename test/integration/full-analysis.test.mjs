@@ -14,6 +14,7 @@ import {
 import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
 import { compactEvidence } from "../../mcp/lib/packets.mjs";
 import { workerAttemptWaveOrder } from "../../mcp/lib/timing-ledger.mjs";
+import { RUNTIME_WORKER_SCHEMA_IDS } from "../../mcp/lib/runtime-validation.mjs";
 
 const SELECTED_MASTERS = [
   "master_buffett",
@@ -299,7 +300,7 @@ function readJsonl(path) {
   return readFileSync(path, "utf8").trim().split("\n").filter(Boolean).map((line) => JSON.parse(line));
 }
 
-test("full council proves dedicated master workers, parallel barriers, exact Q&A, display coverage and no-search parse repair", async () => {
+test("full council proves dedicated master workers, parallel barriers, exact Q&A, display coverage and no-search parse repair", async (t) => {
   const TOTAL_TIMEOUT_MS = 30_000;
   assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
@@ -444,6 +445,39 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.ok(masterRepairs.every((item) => item.search === false), "method schema repair cannot browse");
     assert.ok(masterRepairs.every((item) => item.exactMethodVoiceContract),
       "repair repeats the exact five-field voice, confidence enum, and allowed-source contract");
+    for (const id of ["master_buffett", "master_druckenmiller"]) {
+      assert.equal(result.run.master_status[id].attempts, 2);
+      assert.equal(result.run.master_status[id].voice_status, "model_voice");
+    }
+    const methodSchemaDiagnostics = new Map([
+      ["master_buffett", { path: "/", keyword: "required", property: "voice" }],
+      ["master_druckenmiller", { path: "/confidence", keyword: "enum", property: null }],
+    ].map(([master, expected]) => {
+      const diagnosticPath = join(dir, `${master}.attempt-1.failure.json`);
+      const diagnosticText = readFileSync(diagnosticPath, "utf8");
+      const diagnostic = JSON.parse(diagnosticText);
+      assert.equal(diagnostic.failure_kind, "schema_mismatch");
+      assert.equal(diagnostic.schema_id, RUNTIME_WORKER_SCHEMA_IDS.method_voice);
+      assert.equal(diagnostic.schema_error_count, 1);
+      assert.equal(diagnostic.schema_errors_truncated, false);
+      assert.ok(diagnostic.schema_errors.some((issue) => (
+        issue.path === expected.path
+          && issue.keyword === expected.keyword
+          && (expected.property === null || issue.missing_property === expected.property)
+      )));
+      assert.doesNotMatch(
+        diagnosticText,
+        /MASTER_SENTINEL_|I see only the bounded fixture evidence|I apply my declared method sequence/u,
+      );
+      const errors = diagnostic.schema_errors.map((issue) => {
+        const property = issue.missing_property || issue.unexpected_property;
+        return `${issue.path}:${issue.keyword}${property ? `(${property})` : ""}`;
+      }).join(",");
+      const line = `schema_mismatch master=${master} attempt=1 schema_id=${diagnostic.schema_id} count=${diagnostic.schema_error_count} truncated=${diagnostic.schema_errors_truncated} errors=${errors}`;
+      assert.match(line, /^schema_mismatch master=master_(?:buffett|druckenmiller) attempt=1 schema_id=[a-z0-9-]+ count=1 truncated=false errors=(?:\/:required\(voice\)|\/confidence:enum)$/u);
+      t.diagnostic(line);
+      return [master, diagnostic];
+    }));
     assert.deepEqual(
       result.run.master_opinions.find((item) => item.master === "master_taleb")?.key_findings,
       ['{"source_ids":["market_data:S1"],"text":"MASTER_STRUCTURED_FINDING_master_taleb"}'],
@@ -508,6 +542,16 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
       "all eight evidence starts must precede the first evidence finish in the event hash chain");
     assert.equal(events.find((event) => event.type === "debate_qna_gate")?.status, "passed");
     assert.deepEqual(events.filter((event) => event.type === "debate_round").map((event) => event.round), [1, 2, 3]);
+    const masterParseRepairs = events.filter((event) => event.type === "master_parse_repair"
+      && methodSchemaDiagnostics.has(event.master));
+    assert.equal(masterParseRepairs.length, 2);
+    for (const event of masterParseRepairs) {
+      const diagnostic = methodSchemaDiagnostics.get(event.master);
+      assert.equal(event.schema_id, diagnostic.schema_id);
+      assert.equal(event.schema_error_count, diagnostic.schema_error_count);
+      assert.equal(event.schema_errors_truncated, diagnostic.schema_errors_truncated);
+      assert.deepEqual(event.schema_errors, diagnostic.schema_errors);
+    }
 
     const status = readJson(join(dir, "status.json"));
     assert.equal(status.debate_format, "three_round_cross_exam_parallel_per_round");

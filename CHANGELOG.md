@@ -41,6 +41,10 @@ Notable changes per release. Dates are UTC.
 
 ### Added
 
+- Method-worker schema failures now retain the pre-truncation validation-error count, an explicit
+  truncation flag, and at most eight bounded paths, keywords and missing or unexpected property
+  names. The repair event and full-council TAP output expose the same structure without retaining
+  rejected model prose or changing the one-repair fail-closed contract.
 - Added a machine-readable terminal contract that distinguishes `complete`, `degraded` and
   `incomplete`, records every structural gap or substitute execution, gives portfolio-manager
   absence one exact reason, and terminates ahead of the global cap when the remaining frozen

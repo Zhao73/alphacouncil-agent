@@ -2609,6 +2609,9 @@ function boundedSchemaRepairIssues(errorOrIssues) {
     ...(typeof issue?.missing_property === "string"
       ? { missing_property: cleanLog(issue.missing_property, 120) }
       : {}),
+    ...(typeof issue?.unexpected_property === "string"
+      ? { unexpected_property: cleanLog(issue.unexpected_property, 120) }
+      : {}),
   }));
 }
 
@@ -3016,6 +3019,10 @@ export function masterAttemptFailureDiagnostic({
   stage = "worker_output",
 }) {
   const schemaErrors = boundedSchemaRepairIssues(error);
+  const schemaErrorCount = Number.isSafeInteger(error?.data?.error_total)
+    && error.data.error_total >= 0
+    ? error.data.error_total
+    : Array.isArray(error?.data?.errors) ? error.data.errors.length : schemaErrors.length;
   const provenanceReason = ["SOURCE_PROVENANCE_MISMATCH", "SOURCE_PROVENANCE_REQUIRED"]
     .includes(error?.data?.reason)
     ? error.data.reason
@@ -3073,7 +3080,8 @@ export function masterAttemptFailureDiagnostic({
     ...(schemaErrors.length ? {
       schema_id: boundedDiagnosticCode(error?.data?.schema_id, "unknown", 160),
       schema_kind: boundedDiagnosticCode(error?.data?.kind, "unknown", 80),
-      schema_error_count: Array.isArray(error?.data?.errors) ? error.data.errors.length : schemaErrors.length,
+      schema_error_count: schemaErrorCount,
+      schema_errors_truncated: schemaErrorCount > schemaErrors.length,
       schema_errors: schemaErrors,
     } : {}),
     ...(provenanceReason ? {
@@ -4736,6 +4744,12 @@ export async function runHeadlessMasters(run, args = {}) {
         budget_ms: repairBudget,
         reason: firstFailureKind,
         retry_diagnostic: retryDiagnostic,
+        ...(firstDiagnostic.schema_id ? {
+          schema_id: firstDiagnostic.schema_id,
+          schema_error_count: firstDiagnostic.schema_error_count,
+          schema_errors_truncated: firstDiagnostic.schema_errors_truncated,
+          schema_errors: firstDiagnostic.schema_errors,
+        } : {}),
       });
       updateMasterStatus(run, id, "running", { attempts: 2, retry_diagnostic: retryDiagnostic });
       const repairPrompt = [

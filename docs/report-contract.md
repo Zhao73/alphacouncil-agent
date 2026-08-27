@@ -75,6 +75,15 @@ writes the mode-appropriate versions of:
   `operating_company_dossier_v1` evidence snapshot, its coverage ledger and content hash.
 - `<task>.failure.json` for a worker failure, kept separate from investment evidence.
 
+A rejected method worker that violates the runtime schema writes
+`<master>.attempt-<n>.failure.json` with `schema_version: 1`, the stable schema ID and kind,
+the pre-truncation `schema_error_count`, a `schema_errors_truncated` flag and at most eight bounded
+`schema_errors`. Each retained error contains the schema-owned `path`, `keyword` and message;
+`required` errors may name `missing_property`, while `additionalProperties` errors may name
+`unexpected_property`. A `master_parse_repair` event mirrors those bounded schema fields so CI
+can attribute the repair. The rejected packet, its prose values, result text and stderr text are
+not persisted; output bodies remain represented only by length and digest metadata.
+
 `artifact_index.md` lists `publication_manifest.json` only when report quality has passed and
 the terminal publication step is expected to create that commit marker. An incomplete or
 `needs_revision` package does not publish a dangling path to a marker that does not exist.

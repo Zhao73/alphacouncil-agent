@@ -11,6 +11,42 @@ import {
   workerExecutionFailureKind,
 } from "../../mcp/lib/orchestrator.mjs";
 import { assertSourceIdsResolve } from "../../mcp/lib/packets.mjs";
+import {
+  assertRuntimeWorkerPayload,
+  RUNTIME_WORKER_SCHEMA_IDS,
+} from "../../mcp/lib/runtime-validation.mjs";
+
+const methodVoicePacket = () => ({
+  master: "master_druckenmiller",
+  acknowledged_stance: "cautious",
+  voice_mode: "first_person_public_method_simulation_v1",
+  disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
+  position_intent: "would_hold",
+  voice: {
+    what_i_see: "I see a bounded point-in-time record.",
+    how_my_method_reads_it: "I read liquidity and price together.",
+    would_i_act: "I would hold while the bounded evidence remains intact.",
+    what_changes_my_mind: "I would change my mind if liquidity reversed.",
+    where_i_disagree: "I disagree with adding facts outside this record.",
+  },
+  key_findings: ["Price confirms the bounded stance."],
+  disagreements: ["The cycle still matters."],
+  what_would_change_my_mind: ["A dated reversal would change my reading."],
+  source_ids: ["market_data:S1"],
+  confidence: "medium",
+});
+
+function captureMethodVoiceSchemaError(packet) {
+  let failure;
+  try {
+    assertRuntimeWorkerPayload("method_voice", packet);
+  } catch (error) {
+    failure = error;
+  }
+  assert.equal(failure?.data?.reason, "WORKER_OUTPUT_SCHEMA_MISMATCH");
+  assert.equal(failure.data.schema_id, RUNTIME_WORKER_SCHEMA_IDS.method_voice);
+  return failure;
+}
 
 test("run-specific method schema locks identity, decision, dossier and packet tasks", () => {
   const run = {
@@ -258,4 +294,81 @@ test("master attempt diagnostics retain bounded paths and provenance hashes with
     /SENSITIVE-(?:WORKER-BODY|FORGED-SOURCE-ID|ERROR-MESSAGE|OWNER)-MUST-NOT-BE-PERSISTED/u,
   );
   assert.doesNotMatch(JSON.stringify(diagnostic), /SENSITIVE-ERROR-MESSAGE/u);
+});
+
+test("method schema diagnostics retain real required, enum and unexpected-property rules", () => {
+  const packet = methodVoicePacket();
+  delete packet.voice;
+  packet.confidence = "very_high";
+  packet.evidence_packet_acks = [{
+    task: "market_data",
+    status: "used",
+    source_ids: ["market_data:S1"],
+    note: "I used the bounded evidence packet.",
+    extra_prose: "over-structured worker field",
+  }];
+  const error = captureMethodVoiceSchemaError(packet);
+  const diagnostic = masterAttemptFailureDiagnostic({
+    master: "master_druckenmiller",
+    attempt: 1,
+    failureKind: outputFailureKind(error),
+    error,
+    result: { text: JSON.stringify(packet) },
+  });
+
+  assert.ok(diagnostic.schema_errors.some((issue) => (
+    issue.path === "/" && issue.keyword === "required" && issue.missing_property === "voice"
+  )));
+  assert.ok(diagnostic.schema_errors.some((issue) => (
+    issue.path === "/confidence" && issue.keyword === "enum"
+  )));
+  assert.ok(diagnostic.schema_errors.some((issue) => (
+    issue.path === "/evidence_packet_acks/0"
+      && issue.keyword === "additionalProperties"
+      && issue.unexpected_property === "extra_prose"
+  )));
+  assert.equal(diagnostic.schema_error_count, 3);
+  assert.equal(diagnostic.schema_errors_truncated, false);
+});
+
+test("method schema diagnostics count before the twelve-error and eight-error bounds", () => {
+  const packet = methodVoicePacket();
+  delete packet.voice;
+  packet.master = 42;
+  packet.acknowledged_stance = "unknown";
+  packet.voice_mode = "unknown";
+  packet.disclosure_ack = "unknown";
+  packet.position_intent = "unknown";
+  packet.key_findings = Array.from({ length: 8 }, () => 42);
+  packet.confidence = "unknown";
+  const error = captureMethodVoiceSchemaError(packet);
+  const diagnostic = masterAttemptFailureDiagnostic({
+    master: "master_druckenmiller",
+    attempt: 1,
+    failureKind: outputFailureKind(error),
+    error,
+    result: { text: JSON.stringify(packet) },
+  });
+
+  assert.ok(error.data.error_total > 12);
+  assert.equal(diagnostic.schema_error_count, error.data.error_total);
+  assert.equal(diagnostic.schema_errors.length, 8);
+  assert.equal(diagnostic.schema_errors_truncated, true);
+});
+
+test("method schema diagnostics never persist rejected packet prose", () => {
+  const packet = methodVoicePacket();
+  delete packet.voice;
+  packet.key_findings = ["PRIVATE_PROSE_SENTINEL"];
+  const error = captureMethodVoiceSchemaError(packet);
+  const diagnostic = masterAttemptFailureDiagnostic({
+    master: "master_druckenmiller",
+    attempt: 1,
+    failureKind: outputFailureKind(error),
+    error,
+    result: { text: JSON.stringify(packet) },
+  });
+
+  assert.equal(diagnostic.schema_errors[0].missing_property, "voice");
+  assert.doesNotMatch(JSON.stringify(diagnostic), /PRIVATE_PROSE_SENTINEL/u);
 });

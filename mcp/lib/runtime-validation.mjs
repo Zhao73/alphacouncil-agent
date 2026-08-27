@@ -52,7 +52,12 @@ function readableErrors(errors = []) {
     path: error.instancePath || "/",
     keyword: error.keyword,
     message: error.message,
-    ...(error.params?.missingProperty ? { missing_property: error.params.missingProperty } : {}),
+    ...(error.keyword === "required" && error.params?.missingProperty
+      ? { missing_property: error.params.missingProperty }
+      : {}),
+    ...(error.keyword === "additionalProperties" && error.params?.additionalProperty
+      ? { unexpected_property: error.params.additionalProperty }
+      : {}),
   }));
 }
 
@@ -66,6 +71,7 @@ function assertRuntimePayload(kind, value, { client = false, context = {} } = {}
     reason: client ? "VISIBLE_INPUT_SCHEMA_MISMATCH" : "WORKER_OUTPUT_SCHEMA_MISMATCH",
     schema_id: entry.id,
     kind,
+    error_total: entry.validate.errors.length,
     errors,
     ...context,
   });
