@@ -10,6 +10,7 @@ import {
 } from "../../scripts/lib/packaged-host-parity.mjs";
 import {
   PACKAGED_HOST_PARITY_TEST_FILE,
+  WINDOWS_SOURCE_TEST_CONCURRENCY,
   WINDOWS_SERIAL_TEST_FILES,
   buildTestPlan,
 } from "../../scripts/run-tests.mjs";
@@ -90,10 +91,12 @@ test("packaged parity CLI defaults to a read-only temporary check and Windows se
     "test/contract/packaged-host-parity.test.mjs",
   ]);
   assert.deepEqual(windowsPlan.phases.map((phase) => phase.id), [
-    "source_concurrent",
+    "windows_bounded_source",
     "windows_serial",
   ]);
   const [concurrent, serial] = windowsPlan.phases;
+  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 2);
+  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=2");
   assert.equal(WINDOWS_SERIAL_TEST_FILES.at(-1), PACKAGED_HOST_PARITY_TEST_FILE);
   assert.equal(concurrent.invocations.length, 1);
   assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.invocations[0].args.includes(file)));

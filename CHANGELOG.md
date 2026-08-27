@@ -46,10 +46,10 @@ Notable changes per release. Dates are UTC.
   and every checkpoint is persisted in `status.json`.
 - Quick-run failure banners now say `incomplete` when the terminal contract is incomplete and
   reserve `degraded` wording for structurally complete runs that used a disclosed substitute.
-- Windows runs the three evidence-backed heavy-process files (`full-analysis`,
-  `master-runtime-observability` and `packaged-host-parity`) as three ordered single-file
-  invocations in one serial group after the four-way source phase; real checkouts fail closed on
-  a missing member, while other platforms, timeouts, assertions and files stay fixed.
+- Windows caps the ordinary process-owning source phase at two files, then runs the three
+  evidence-backed heavy-process files (`full-analysis`, `master-runtime-observability` and
+  `packaged-host-parity`) as ordered single-file invocations. Real checkouts fail closed on a
+  missing member; Linux and macOS retain the four-file source concurrency.
 - The parse-retry failure test now gives its outer RPC observer enough time to cover both
   bounded worker attempts, with a deterministic delayed-response probe and a frozen Windows
   timing attribution report; runtime deadlines and failure assertions are unchanged.

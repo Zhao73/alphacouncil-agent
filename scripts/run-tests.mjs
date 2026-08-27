@@ -36,6 +36,10 @@ export const SOURCE_PORTABLE_EXCLUDED_TEST_COUNT = 14;
 // their own child processes. Node's CPU-count default can oversubscribe large CI
 // hosts and turn deterministic sub-second fixtures into platform-specific timeouts.
 export const SOURCE_TEST_CONCURRENCY = 4;
+// Windows process creation becomes globally starved when four process-owning test files share
+// the runner. Keep the documented next-step reduction at two; the three especially heavy files
+// below still run as ordered single-file invocations after this bounded source phase.
+export const WINDOWS_SOURCE_TEST_CONCURRENCY = 2;
 export const WINDOWS_SERIAL_TEST_FILES = Object.freeze([
   // A wall-clock parallel-wave assertion failed under Windows file-level concurrency:
   // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043857486/job/98423253736
@@ -94,7 +98,10 @@ function executionPhases({ mode, args, selectedFiles, requireWindowsSerialGroup 
   const concurrentFiles = selectedFiles.filter((file) => !serialFiles.has(file));
   if (concurrentFiles.length === 0) throw new Error("Windows concurrent source-test phase is empty");
   return Object.freeze([
-    singleInvocationPhase("source_concurrent", sourceTestArgs(concurrentFiles)),
+    singleInvocationPhase(
+      "windows_bounded_source",
+      sourceTestArgs(concurrentFiles, WINDOWS_SOURCE_TEST_CONCURRENCY),
+    ),
     Object.freeze({
       id: "windows_serial",
       invocations: Object.freeze(WINDOWS_SERIAL_TEST_FILES.map((file) =>

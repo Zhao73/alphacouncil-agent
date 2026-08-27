@@ -422,3 +422,22 @@ Attempt 2 completed all five matrix jobs. Its four Windows TAP groups contained 
 `source_concurrent` preceded `windows_serial`; both expected method-schema diagnostic lines
 were present; packaged-host parity passed with zero actual retry announcements. The action
 runtime's Node.js 20 deprecation annotations were non-blocking and remain assigned to WP7.
+
+## Candidate regression: bound the ordinary Windows source phase
+
+Candidate head `18311038bbb512a20d66c6792252fafe3cf0a666` exposed the stop condition recorded
+in the third WP3W-b correction. Pull-request check run
+[`33105096639`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33105096639), Windows job
+[`98632700256`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33105096639/job/98632700256),
+ran the ordinary source phase for 352,938.0952 ms at file concurrency four. It finished 1,462
+tests with 1,441 passed, 15 failed and six intentionally skipped. The failures crossed several
+otherwise unrelated integration files and were all bounded RPC observer expirations after
+process startup slowed by roughly an order of magnitude; this was not one fourth heavy file to
+append to the special serial list.
+
+The scheduler therefore follows the pre-recorded stop rule: ordinary Windows source-file
+concurrency falls from four to two and the phase is now named `windows_bounded_source`. The
+three evidence-backed heavy files remain ordered `--test-concurrency=1` invocations afterward.
+Linux and macOS stay at concurrency four. This change does not relax a product deadline,
+runtime assertion, RPC observer or selected-file set. Closure requires both exact-head Windows
+jobs, the other ten matrix jobs and the pull-request fuzz job to pass without a rerun.
