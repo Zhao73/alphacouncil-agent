@@ -26,7 +26,7 @@ import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId,
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
-import { mapLimit, runCodex, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
+import { codexWorkerConfig, mapLimit, runCodex, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
@@ -144,6 +144,8 @@ function recordWorkerAttempt(run, invocationKey, meta, timing) {
     search_enabled: meta.search_enabled === true,
     started_at: timing.started_at,
     pid: Number.isInteger(timing.pid) && timing.pid > 0 ? timing.pid : null,
+    worker_model: timing.worker_execution_config?.model || null,
+    worker_reasoning_effort: timing.worker_execution_config?.reasoning_effort || null,
   };
   if (!timing.finished_at) {
     appendEvent(run, "worker_attempt_started", common);
@@ -174,6 +176,7 @@ async function runRecordedCodexAttempt(
     recordWorkerAttempt(run, invocationKey, meta, {
       started_at: payload.started_at,
       pid: payload.pid,
+      worker_execution_config: payload.worker_execution_config,
     });
     onStart(payload);
   }, onHeartbeat, runtime);
@@ -3303,6 +3306,7 @@ export function queueHeadlessRun(args) {
     language,
     dry_run: dryRun,
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
+    worker_execution_config: codexWorkerConfig(),
     entry_tool: args.entry_tool || "analyze_symbol",
     decision_requested: args.synthesis !== false,
     visibility_required: false,
@@ -3385,6 +3389,7 @@ export async function collectEvidence(args) {
     language,
     dry_run: dryRun,
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
+    worker_execution_config: codexWorkerConfig(),
     entry_tool: args.entry_tool || "collect_evidence",
     decision_requested: (args.entry_tool || "collect_evidence") !== "collect_evidence"
       && args.synthesis !== false,

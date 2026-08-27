@@ -516,7 +516,14 @@ export function exportRunBundle({
   if (existsSync(destination)) throw new Error(`output target already exists: ${destination}`);
   if (within(sourceRoot, destination)) throw new Error("output target cannot be inside the source run directory");
 
-  for (const name of ["status.json", "evidence.json", "publication_manifest.json"]) assertPlainFile(sourceRoot, name);
+  for (const name of ["status.json", "evidence.json"]) assertPlainFile(sourceRoot, name);
+  if (!existsSync(join(sourceRoot, "publication_manifest.json"))) {
+    throw new Error(
+      "run is not publication-ready: publication_manifest.json is absent; "
+      + "inspect report_quality.json and the terminal failure ledger before exporting a review bundle",
+    );
+  }
+  assertPlainFile(sourceRoot, "publication_manifest.json");
   const status = readJson(join(sourceRoot, "status.json"), "status.json");
   const evidence = readJson(join(sourceRoot, "evidence.json"), "evidence.json");
   const publication = readJson(join(sourceRoot, "publication_manifest.json"), "publication_manifest.json");

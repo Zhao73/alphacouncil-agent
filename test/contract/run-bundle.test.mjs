@@ -479,6 +479,19 @@ test("export refuses symlinked run artifacts and an existing output target", () 
   }
 });
 
+test("export explains that an unpublished terminal run is not bundle-ready", () => {
+  const { root, runDir } = fixture();
+  try {
+    rmSync(join(runDir, "publication_manifest.json"));
+    assert.throws(
+      () => exportRunBundle({ runDir, outputDir: join(root, "bundle") }),
+      /not publication-ready.*report_quality\.json.*terminal failure ledger/iu,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("26 renamed copies of one template are flagged by exploratory monitors, not certified as method collapse", () => {
   const opinions = CANONICAL_MASTER_IDS.map((master) => voice(
     master,

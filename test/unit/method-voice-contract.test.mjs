@@ -160,7 +160,11 @@ test("the abstention gate accepts sentiment, third-party advice and research ver
       "I short-list the missing filings rather than the thesis.",
       "I do not exit or enter this name; the seat stays silent until the filing lands.",
     ],
-    中文: ["我不把它当证据：分析师建议买入。"],
+    中文: [
+      "我不把它当证据：分析师建议买入。",
+      "我不同意把收入增长直接当作买入理由。",
+      "我反对把现金流改善改写成卖出或买入信号。",
+    ],
     日本語: ["私は強気でも弱気でもありません。"],
     한국어: ["저는 강세도 약세도 아닙니다."],
   };

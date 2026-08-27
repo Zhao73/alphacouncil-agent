@@ -27,6 +27,38 @@ export const MAX_WORKER_OUTPUT_BYTES = MAX_WORKER_JSON_CHARS * 4;
 
 const USAGE_LIMIT_PATTERN = /(?:you(?:'|’)ve hit your usage limit|usage limit[^\r\n]{0,160}purchase more credits|purchase more credits[^\r\n]{0,160}usage limit)/iu;
 const USAGE_LIMIT_RETRY_PATTERN = /try again at ([A-Za-z]{3,9} \d{1,2}(?:st|nd|rd|th)?, \d{4} \d{1,2}:\d{2} (?:AM|PM))/iu;
+const CODEX_MODEL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/+\-]{0,127}$/u;
+const CODEX_REASONING_EFFORTS = new Set([
+  "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
+]);
+
+function optionalWorkerSetting(value) {
+  const normalized = typeof value === "string" ? value.trim() : "";
+  return normalized || null;
+}
+
+/** Resolve and validate the non-secret Codex leaf-worker settings recorded with every run. */
+export function codexWorkerConfig(env = process.env) {
+  const model = optionalWorkerSetting(env.ALPHACOUNCIL_AGENT_CODEX_MODEL);
+  const reasoningEffort = optionalWorkerSetting(env.ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT);
+  if (model && !CODEX_MODEL_PATTERN.test(model)) {
+    throw new Error(
+      "ALPHACOUNCIL_AGENT_CODEX_MODEL must be a 1-128 character Codex model identifier",
+    );
+  }
+  if (reasoningEffort && !CODEX_REASONING_EFFORTS.has(reasoningEffort)) {
+    throw new Error(
+      `ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT must be one of ${[...CODEX_REASONING_EFFORTS].join(", ")}`,
+    );
+  }
+  return Object.freeze({
+    provider: "codex_cli",
+    model,
+    reasoning_effort: reasoningEffort,
+    model_source: model ? "explicit_environment" : "codex_default",
+    reasoning_effort_source: reasoningEffort ? "explicit_environment" : "codex_default",
+  });
+}
 
 /** Classify process failures before callers reduce every provider rejection to exit code 1. */
 export function workerExecutionFailureKind(result = {}) {
@@ -151,13 +183,25 @@ export function stopChild(child, force = false) {
  * second Codex-backed search bridge, creating recursive workers and multi-minute nested
  * timeouts. Authentication still comes from CODEX_HOME according to the Codex CLI contract.
  */
-export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true, outputSchema = null } = {}) {
+export function codexWorkerArgs(
+  outFile,
+  dataDir = DATA_DIR,
+  { search = true, outputSchema = null, model = null, reasoningEffort = null } = {},
+) {
+  const workerConfig = codexWorkerConfig({
+    ALPHACOUNCIL_AGENT_CODEX_MODEL: model || "",
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: reasoningEffort || "",
+  });
   return [
     ...(search ? ["--search"] : []),
     "-s",
     "read-only",
     "-a",
     "never",
+    ...(workerConfig.model ? ["-m", workerConfig.model] : []),
+    ...(workerConfig.reasoning_effort
+      ? ["-c", `model_reasoning_effort=${workerConfig.reasoning_effort}`]
+      : []),
     "exec",
     "--ignore-user-config",
     "--ephemeral",
@@ -173,6 +217,10 @@ export function codexWorkerArgs(outFile, dataDir = DATA_DIR, { search = true, ou
 export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}, runtime = {}) {
   return new Promise((resolvePromise) => {
     const workerDataDir = runtime.dataDir || DATA_DIR;
+    const runtimeEnv = { ...process.env, ...(runtime.env || {}) };
+    // Validate operator-supplied settings before allocating a per-worker runtime directory.
+    // A bad model name must fail without starting a process or leaking temporary state.
+    const workerConfig = codexWorkerConfig(runtimeEnv);
     mkdirSync(workerDataDir, { recursive: true });
     // Some Codex builds still start installed MCP plugins even with --ignore-user-config.
     // A nested AlphaCouncil server must never scan or recover the parent run. Isolate only
@@ -182,14 +230,15 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     const leafRuntimeDir = runtime.leafRuntimeDir
       || mkdtempSync(join(runtime.leafRuntimeRoot || tmpdir(), "alphacouncil-leaf-"));
     const childEnv = {
-      ...process.env,
-      ...(runtime.env || {}),
+      ...runtimeEnv,
       ALPHACOUNCIL_AGENT_DATA_DIR: leafRuntimeDir,
     };
     const outFile = join(workerDataDir, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
     const args = codexWorkerArgs(outFile, workerDataDir, {
       search: runtime.search !== false,
       outputSchema: runtime.outputSchema || null,
+      model: workerConfig.model,
+      reasoningEffort: workerConfig.reasoning_effort,
     });
     const invocation = codexInvocation(args, process.platform, childEnv);
     const spawnWorker = runtime.spawn || spawn;
@@ -239,7 +288,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     const timingPid = Number.isInteger(child.pid) && child.pid > 0 ? child.pid : null;
     child.stdin.on("error", () => {});
     child.stdin.end(prompt, "utf8");
-    onStart({ pid: child.pid, output: outFile, started_at: startedAt });
+    onStart({ pid: child.pid, output: outFile, started_at: startedAt, worker_execution_config: workerConfig });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -273,6 +322,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
           pid: timingPid,
           outcome,
           duration_scope: "local_child_spawn_to_settlement_wall_time",
+          worker_execution_config: workerConfig,
         },
       });
     };

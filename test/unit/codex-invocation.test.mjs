@@ -60,3 +60,35 @@ test("a leaf worker can bind Codex native structured output to a per-run schema"
   assert.ok(index > args.indexOf("exec"));
   assert.equal(args[index + 1], "/tmp/verifier-output.schema.json");
 });
+
+test("leaf workers can pin an auditable model and reasoning effort", () => {
+  const config = codexWorker.codexWorkerConfig({
+    ALPHACOUNCIL_AGENT_CODEX_MODEL: "gpt-5.6-sol",
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "max",
+  });
+  assert.deepEqual(config, {
+    provider: "codex_cli",
+    model: "gpt-5.6-sol",
+    reasoning_effort: "max",
+    model_source: "explicit_environment",
+    reasoning_effort_source: "explicit_environment",
+  });
+  const args = codexWorker.codexWorkerArgs("/tmp/worker-output.json", "/tmp/alpha-data", {
+    model: config.model,
+    reasoningEffort: config.reasoning_effort,
+  });
+  assert.deepEqual(args.slice(args.indexOf("-m"), args.indexOf("exec")), [
+    "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=max",
+  ]);
+});
+
+test("invalid explicit leaf-worker settings fail before a Codex process starts", () => {
+  assert.throws(
+    () => codexWorker.codexWorkerConfig({ ALPHACOUNCIL_AGENT_CODEX_MODEL: "bad model" }),
+    /CODEX_MODEL/u,
+  );
+  assert.throws(
+    () => codexWorker.codexWorkerConfig({ ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "maximum" }),
+    /CODEX_REASONING_EFFORT/u,
+  );
+});

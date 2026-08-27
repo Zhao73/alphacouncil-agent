@@ -628,6 +628,12 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
     ja: { title: "全エージェント監査トレース", metadata: "実行メタデータ", runId: "実行 ID", symbol: "銘柄コード", asOf: "基準日", language: "言語", execution: "実行モード", visibility: "可視性要件", dry: "ドライラン", status: "状態", phase: "フェーズ", started: "開始", updated: "更新", completed: "完了", tasks: "タスク", taskStatus: "証拠席の状態", debateStatus: "討論席の状態", evidence: "証拠分析サブエージェント", masters: "メソッド席", debate: "強気・弱気討論とポートフォリオ管理者", none: "なし" },
     ko: { title: "전체 에이전트 감사 추적", metadata: "실행 메타데이터", runId: "실행 ID", symbol: "종목 코드", asOf: "기준일", language: "언어", execution: "실행 모드", visibility: "가시성 요구", dry: "드라이런", status: "상태", phase: "단계", started: "시작", updated: "갱신", completed: "완료", tasks: "작업", taskStatus: "증거 좌석 상태", debateStatus: "토론 좌석 상태", evidence: "증거 분석 하위 에이전트", masters: "방법론 좌석", debate: "강세·약세 토론 및 포트폴리오 관리자", none: "없음" },
   }[key];
+  const workerLabel = {
+    zh: { model: "叶子模型", reasoning: "推理档位" },
+    en: { model: "Leaf model", reasoning: "Reasoning effort" },
+    ja: { model: "リーフモデル", reasoning: "推論レベル" },
+    ko: { model: "리프 모델", reasoning: "추론 수준" },
+  }[key];
   const taskStatus = run.tasks.map((task) => {
     const state = taskState(run, task);
     return `- ${task}: ${state.status}${state.output ? ` (${state.output})` : ""}${state.error ? ` - ${state.error}` : ""}`;
@@ -646,6 +652,8 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
     `- ${label.asOf}: ${run.as_of}`,
     `- ${label.language}: ${run.language || "auto"}`,
     `- ${label.execution}: ${run.execution_mode || "background_codex_exec"}`,
+    `- ${workerLabel.model}: ${run.worker_execution_config?.model || "codex_default"}`,
+    `- ${workerLabel.reasoning}: ${run.worker_execution_config?.reasoning_effort || "codex_default"}`,
     `- ${label.visibility}: ${run.visibility_required || false}`,
     `- ${label.dry}: ${run.dry_run}`,
     `- ${label.status}: ${run.status || "unknown"}`,

@@ -69,6 +69,20 @@ that figures for those names must come from a primary document and be cited as s
 | `ALPHACOUNCIL_EDINET_KEY` | Japanese filings (Kioxia, Tokyo Electron) | EDINET portal |
 | `ALPHACOUNCIL_SEC_USER_AGENT` | Your own SEC contact, advisable at volume | n/a |
 
+Headless runs normally inherit the authenticated Codex CLI's default model settings. To
+make a benchmark or production run explicit and auditable, pin either or both settings
+before starting the MCP server or ChatGPT Work gateway:
+
+```bash
+export ALPHACOUNCIL_AGENT_CODEX_MODEL=gpt-5.6-sol
+export ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT=max
+```
+
+Every spawned evidence, method, debate, verifier and PM worker receives the same explicit
+CLI overrides. The requested model and reasoning effort are written into `status.json`,
+`evidence.json`, `events.jsonl` and `all_agents.md`; this proves what was requested, while
+provider-side execution remains subject to the authenticated Codex service.
+
 Run `node scripts/doctor.mjs` at any time to see which copy is running, whether the
 persona set loads, and what the data directory holds.
 

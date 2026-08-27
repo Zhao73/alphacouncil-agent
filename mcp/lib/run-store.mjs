@@ -84,6 +84,7 @@ export function statusSnapshot(run) {
     as_of: run.as_of,
     language: run.language,
     execution_mode: run.execution_mode,
+    worker_execution_config: run.worker_execution_config || null,
     council_mode: run.council_mode || "full",
     analyst_scope: run.analyst_scope || run.master_selection?.analyst_scope || null,
     selected_analyst_count: Array.isArray(run.tasks) ? run.tasks.length : 0,
