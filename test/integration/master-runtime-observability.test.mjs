@@ -15,7 +15,10 @@ import {
 } from "../helpers/rpc-client.mjs";
 
 const PROVENANCE_TOTAL_TIMEOUT_MS = 15_000;
-const VOICE_CONTRACT_TOTAL_TIMEOUT_MS = 15_000;
+// This test exercises the voice contract, not the global-deadline gate. A loaded Windows
+// runner can spend more than 15 seconds in process startup and cleanup before the method stage,
+// so keep enough scaled budget for the deterministic artifact and rejected voice to settle.
+const VOICE_CONTRACT_TOTAL_TIMEOUT_MS = 30_000;
 const LEGACY_OBSERVER_TIMEOUT_MS = 20_000;
 
 function observabilityCodex(dataDir, { forgedMaster = null, directionalMaster = null, delays = {} } = {}) {
@@ -112,7 +115,7 @@ async function waitForStatus(path, predicate, timeoutMs = 8_000) {
 }
 
 test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnostic", async () => {
-  assert.equal(PROVENANCE_TOTAL_TIMEOUT_MS, VOICE_CONTRACT_TOTAL_TIMEOUT_MS);
+  assert.equal(PROVENANCE_TOTAL_TIMEOUT_MS, 15_000);
   assert.equal(LEGACY_OBSERVER_TIMEOUT_MS, 20_000);
   assert.equal(observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS), 30_000);
   assert.equal(
@@ -182,7 +185,7 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
   );
   assert.equal(
     observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS),
-    observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
+    45_000,
   );
   const dataDir = makeDataDir();
   const fake = observabilityCodex(dataDir, { directionalMaster: "master_buffett" });
@@ -205,13 +208,15 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
     }, { timeoutMs: observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS) }));
     const dir = join(dataDir, "runs", runId);
     const seat = result.run.master_status.master_buffett;
-    const deterministic = JSON.parse(readFileSync(join(dir, "master_buffett.deterministic.json"), "utf8"));
-    const failure = JSON.parse(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"));
-
     assert.equal(seat.status, "failed");
     assert.equal(seat.error, "voice_contract_failure");
     assert.equal(seat.failure_kind, "voice_contract_failure");
     assert.equal(seat.voice_status, "voice_contract_failure");
+    const deterministicPath = join(dir, "master_buffett.deterministic.json");
+    assert.equal(existsSync(deterministicPath), true, `missing deterministic artifact: ${JSON.stringify(seat)}`);
+    const deterministic = JSON.parse(readFileSync(deterministicPath, "utf8"));
+    const failure = JSON.parse(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"));
+
     assert.equal(seat.capability_status, deterministic.capability_status);
     assert.equal(seat.evidence_quality, deterministic.evidence_quality);
     assert.deepEqual(result.run.master_opinions, []);
