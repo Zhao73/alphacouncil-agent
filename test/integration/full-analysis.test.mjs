@@ -8,6 +8,7 @@ import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
 import { compactEvidence } from "../../mcp/lib/packets.mjs";
+import { workerAttemptWaveOrder } from "../../mcp/lib/timing-ledger.mjs";
 
 const SELECTED_MASTERS = [
   "master_buffett",
@@ -414,8 +415,6 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     const launches = readJsonl(fake.log);
     const evidence = launches.filter((item) => DEFAULT_TASKS.includes(item.role) && !item.parseRepair);
     assert.equal(evidence.length, DEFAULT_TASKS.length);
-    assert.ok(Math.max(...evidence.map((item) => item.at)) - Math.min(...evidence.map((item) => item.at)) < 1_000,
-      "all eight evidence seats must start in one parallel wave");
     assert.ok(evidence.every((item) => item.search === true), "initial evidence collection keeps native search");
     const repairs = launches.filter((item) => item.parseRepair && item.task === "forward_expectations");
     assert.equal(repairs.length, 1, "malformed evidence gets one bounded parse-only retry");
@@ -492,6 +491,14 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.deepEqual(manager.debate_rounds[2].bear.questions_answered, bear.debate_rounds[2].questions_answered);
     const events = readJsonl(join(dir, "events.jsonl"));
     assert.deepEqual(validateHeadlessTrace(events, { mode: "full" }), []);
+    const evidenceWave = workerAttemptWaveOrder(events, {
+      stage: "evidence",
+      expectedInvocationKeys: DEFAULT_TASKS.map((task) => `evidence:${task}:primary:1`),
+    });
+    assert.equal(evidenceWave.status, "passed", JSON.stringify(evidenceWave.issues));
+    assert.equal(evidenceWave.started_count, DEFAULT_TASKS.length);
+    assert.ok(evidenceWave.last_start_seq < evidenceWave.first_finish_seq,
+      "all eight evidence starts must precede the first evidence finish in the event hash chain");
     assert.equal(events.find((event) => event.type === "debate_qna_gate")?.status, "passed");
     assert.deepEqual(events.filter((event) => event.type === "debate_round").map((event) => event.round), [1, 2, 3]);
 

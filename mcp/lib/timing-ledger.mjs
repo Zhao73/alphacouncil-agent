@@ -115,6 +115,81 @@ function validateEventChain(events, issues) {
   });
 }
 
+/**
+ * Prove a worker wave from the append-only event chain rather than wall-clock proximity.
+ *
+ * Every expected start must be durably appended before the first corresponding finish. This
+ * is the scheduling property the runtime promises; process-start timestamps may legitimately
+ * spread on a loaded host and are not evidence that the fan-out was serialized.
+ */
+export function workerAttemptWaveOrder(events = [], {
+  stage,
+  expectedInvocationKeys = [],
+} = {}) {
+  const safeEvents = Array.isArray(events) ? events : [];
+  const issues = [];
+  validateEventChain(safeEvents, issues);
+
+  const expected = [...new Set(expectedInvocationKeys
+    .filter((key) => typeof key === "string" && key.length))];
+  if (!WORKER_STAGES.includes(stage)) {
+    pushIssue(issues, issue("worker_wave_stage_invalid", `worker wave has invalid stage ${String(stage)}`));
+  }
+  if (!expected.length) {
+    pushIssue(issues, issue("worker_wave_expected_empty", "worker wave has no expected invocation keys"));
+  }
+
+  const expectedSet = new Set(expected);
+  const starts = new Map();
+  const finishes = [];
+  for (const event of safeEvents) {
+    if (event?.stage !== stage || !expectedSet.has(event?.invocation_key)) continue;
+    if (event.type === "worker_attempt_started") {
+      if (starts.has(event.invocation_key)) {
+        pushIssue(issues, issue(
+          "worker_wave_duplicate_start",
+          `${event.invocation_key} has more than one worker_attempt_started event`,
+        ));
+      } else starts.set(event.invocation_key, event.seq);
+    } else if (event.type === "worker_attempt_finished") {
+      finishes.push(event.seq);
+    }
+  }
+
+  const missingInvocationKeys = expected.filter((key) => !starts.has(key));
+  for (const key of missingInvocationKeys) {
+    pushIssue(issues, issue("worker_wave_missing_start", `${key} has no worker_attempt_started event`));
+  }
+  const startSequences = expected
+    .filter((key) => starts.has(key))
+    .map((key) => ({ invocation_key: key, seq: starts.get(key) }));
+  const lastStartSeq = startSequences.length
+    ? Math.max(...startSequences.map((row) => row.seq))
+    : null;
+  const firstFinishSeq = finishes.length ? Math.min(...finishes) : null;
+  if (firstFinishSeq === null) {
+    pushIssue(issues, issue("worker_wave_finish_missing", `${String(stage)} worker wave has no finish event`));
+  } else if (lastStartSeq !== null && lastStartSeq >= firstFinishSeq) {
+    pushIssue(issues, issue(
+      "worker_wave_finish_precedes_all_starts",
+      `${String(stage)} finish seq ${firstFinishSeq} is not after last expected start seq ${lastStartSeq}`,
+    ));
+  }
+
+  return {
+    status: issues.length ? "failed" : "passed",
+    proof: "all_expected_worker_attempt_started_seq_before_first_worker_attempt_finished_seq",
+    stage: stage || null,
+    expected_count: expected.length,
+    started_count: startSequences.length,
+    start_sequences: startSequences,
+    last_start_seq: lastStartSeq,
+    first_finish_seq: firstFinishSeq,
+    missing_invocation_keys: missingInvocationKeys,
+    issues,
+  };
+}
+
 function attemptPairs(events, issues) {
   const starts = new Map();
   const finishes = new Map();

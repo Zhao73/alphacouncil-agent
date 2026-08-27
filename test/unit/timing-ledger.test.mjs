@@ -116,6 +116,56 @@ test("parallel stage duration uses first start to barrier, never summed worker t
   assert.ok(ledger.unattributed_ms >= 0);
 });
 
+test("evidence-wave proof fails when a finish is appended before the eighth start", async () => {
+  const { workerAttemptWaveOrder } = await timingApi();
+  const invocationKeys = Array.from({ length: 8 }, (_, index) => `evidence:task_${index + 1}:primary:1`);
+  const started = (invocationKey, index) => ({
+    schema_version: 1,
+    at: timingIso(100 + index),
+    type: "worker_attempt_started",
+    invocation_key: invocationKey,
+    stage: "evidence",
+    attempt: 1,
+    attempt_kind: "primary",
+  });
+  const finished = {
+    schema_version: 1,
+    at: timingIso(108),
+    type: "worker_attempt_finished",
+    invocation_key: invocationKeys[0],
+    stage: "evidence",
+    attempt: 1,
+    attempt_kind: "primary",
+  };
+  const starts = invocationKeys.map(started);
+
+  const invalidEvents = rehashTimingEvents([
+    ...starts.slice(0, 7),
+    finished,
+    { ...starts[7], at: timingIso(109) },
+  ]);
+  const invalid = workerAttemptWaveOrder(invalidEvents, {
+    stage: "evidence",
+    expectedInvocationKeys: invocationKeys,
+  });
+  assert.equal(invalid.status, "failed");
+  assert.ok(invalid.issues.some((item) => item.code === "worker_wave_finish_precedes_all_starts"));
+  assert.equal(invalid.first_finish_seq, 8);
+  assert.equal(invalid.last_start_seq, 9);
+
+  const validEvents = rehashTimingEvents([
+    ...starts,
+    { ...finished, at: timingIso(109) },
+  ]);
+  const valid = workerAttemptWaveOrder(validEvents, {
+    stage: "evidence",
+    expectedInvocationKeys: invocationKeys,
+  });
+  assert.equal(valid.status, "passed", JSON.stringify(valid.issues));
+  assert.equal(valid.last_start_seq, 8);
+  assert.equal(valid.first_finish_seq, 9);
+});
+
 test("attempt_kind preserves primary, timeout-retry and parse-repair causality within stages", async () => {
   const { deriveTimingLedger } = await timingApi();
   const input = fullTimingFixture();

@@ -298,3 +298,14 @@ The log emitted `source_concurrent`, then the three `serial_file` markers in the
 job emitted zero `packaged-parity: attempt 1 timed out; retrying` notices. This closes WP3W-b;
 the first WP4 commit still requires a new five-platform green run as the consecutive stability
 check and must return to the Windows group if that job is red.
+
+## WP4b evidence-wave proof
+
+The full-analysis contract no longer treats sub-second process-start proximity as proof of one
+parallel evidence wave. That wall-clock assertion was sensitive to Windows process scheduling
+without testing the actual barrier. The runtime already appends a hash-chained
+`worker_attempt_started` event from every worker's process-start callback and a matching
+`worker_attempt_finished` only after settlement. WP4b therefore proves the stronger scheduling
+invariant directly: all eight expected primary evidence start sequence numbers must be lower
+than the first corresponding evidence finish sequence number, after the complete event hash
+chain has validated. A counterexample with one finish before the eighth start fails this gate.
