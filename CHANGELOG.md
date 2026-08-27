@@ -2,6 +2,14 @@
 
 Notable changes per release. Dates are UTC.
 
+## [Unreleased]
+
+### Fixed
+
+- The advisory method-panel recommender no longer includes a physical pack when any required
+  typed fact is missing. A family without a fully covered admitted pack is now reported as an
+  explicit unfilled slot instead of throwing or recommending a known abstention.
+
 ## [1.5.0] — 2026-08-26
 
 ### Security

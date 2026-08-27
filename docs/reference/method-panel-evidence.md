@@ -31,8 +31,10 @@ remain on the v3 receipt contract and receive no guessed default panel.
 | Event / special situations | activism, catalysts, arbitrage, turnarounds, complex securities | activism specialists require event/corporate-action facts |
 
 Within each family, declared domain overlap is scored first, then available/missing required facts;
-stable master ID is the final tie-breaker. One pack cannot fill two slots. This is a method match,
-not a ranking of people, an independent-model count, or a claim of investment performance.
+stable master ID is the final tie-breaker. Only a pack with no missing required facts can fill a
+family slot. If no admitted pack is fully covered, the family is recorded as unfilled rather than
+throwing or recommending a known abstention. One pack cannot fill two slots. This is a method
+match, not a ranking of people, an independent-model count, or a claim of investment performance.
 
 ## Vocabulary review boundary
 

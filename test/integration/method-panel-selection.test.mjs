@@ -65,7 +65,11 @@ test("the recommendation is a displayed prefill only and excluded methods remain
   assert.deepEqual(opened.preselected_master_ids, [], "a recommendation must not silently become consent");
   assert.equal(recommendation.status, "recommended");
   assert.equal(recommendation.decisions.length, 26);
-  assert.equal(recommendation.included_master_ids.length, 8);
+  assert.ok(recommendation.included_master_ids.length > 0);
+  assert.ok(recommendation.included_master_ids.length <= 8);
+  assert.ok(recommendation.decisions
+    .filter((decision) => decision.decision === "include")
+    .every((decision) => decision.missing_facts.length === 0));
 
   const excluded = recommendation.decisions.find((decision) => decision.decision === "exclude")?.master_id;
   assert.ok(excluded);

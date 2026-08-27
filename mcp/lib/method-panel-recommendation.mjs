@@ -240,11 +240,11 @@ export function recommendMethodPanel({
     const ranked = capabilities
       .filter((capability) => !used.has(capability.master_id) && admission.get(capability.master_id).admitted)
       .map((capability) => ({ capability, match: familyScore(capability, familyId, facts, classification) }))
-      .filter((candidate) => candidate.match)
+      .filter((candidate) => candidate.match && candidate.match.missingFacts.length === 0)
       .sort((left, right) => right.match.score - left.match.score
         || stableCompare(left.capability.master_id, right.capability.master_id));
     const winner = ranked[0];
-    if (!winner) throw new Error(`method panel family has no admitted manifest-derived candidate: ${familyId}`);
+    if (!winner) continue;
     used.add(winner.capability.master_id);
     selected.set(winner.capability.master_id, { familyId, ...winner.match });
   }
@@ -266,12 +266,15 @@ export function recommendMethodPanel({
       family_id: picked?.familyId || null,
       reason_code: picked
         ? "highest_scoring_admitted_manifest_match"
-        : gate.admitted ? "another_manifest_match_filled_the_family" : gate.reason_code,
+        : best.missingFacts.length ? "required_facts_missing"
+          : gate.admitted ? "another_manifest_match_filled_the_family" : gate.reason_code,
       reason: picked
         ? `Selected for ${picked.familyId} from declared capability domains and available typed facts.`
-        : gate.admitted
-          ? "The pack remains selectable, but another admitted manifest match filled the advisory family slot."
-          : "The pack remains selectable, but its specialist admission predicate is not satisfied for this advisory panel.",
+        : best.missingFacts.length
+          ? "The pack remains selectable, but it is not recommended because required typed facts are missing."
+          : gate.admitted
+            ? "The pack remains selectable, but another admitted manifest match filled the advisory family slot."
+            : "The pack remains selectable, but its specialist admission predicate is not satisfied for this advisory panel.",
       missing_facts: best.missingFacts,
       capability_basis: {
         domains: best.matchedDomains,
@@ -280,20 +283,29 @@ export function recommendMethodPanel({
     });
   });
 
+  const familyAssignments = METHOD_PANEL_FAMILIES.map((familyId) => {
+    const decision = decisions.find((candidate) => candidate.family_id === familyId);
+    return { family_id: familyId, master_id: decision?.master_id || null };
+  });
+  const unfilledFamilies = familyAssignments
+    .filter((assignment) => assignment.master_id === null)
+    .map((assignment) => assignment.family_id);
+
   const hashSubject = canonicalValue({
-    hash_domain: "alphacouncil.method-panel-recommendation.v1",
-    schema_version: 1,
+    hash_domain: "alphacouncil.method-panel-recommendation.v2",
+    schema_version: 2,
     catalog_hash,
     capability_manifest_hash: manifestHash,
     instrument_classification: classification,
     typed_fact_coverage: facts,
     decisions,
+    unfilled_families: unfilledFamilies,
   });
   const recommendationHash = sha256(hashSubject);
   const includedMasterIds = decisions.filter((decision) => decision.decision === "include")
     .map((decision) => decision.master_id);
   return Object.freeze(canonicalValue({
-    schema_version: 1,
+    schema_version: 2,
     status: "recommended",
     reason_code: null,
     catalog_hash,
@@ -302,10 +314,8 @@ export function recommendMethodPanel({
     typed_fact_coverage: facts,
     recommendation_hash: recommendationHash,
     included_master_ids: includedMasterIds,
-    family_assignments: METHOD_PANEL_FAMILIES.map((familyId) => {
-      const decision = decisions.find((candidate) => candidate.family_id === familyId);
-      return { family_id: familyId, master_id: decision.master_id };
-    }),
+    family_assignments: familyAssignments,
+    unfilled_families: unfilledFamilies,
     decisions,
     disclosure: "Advisory method-simulation prefill only; the full catalog remains selectable and no research starts without explicit confirmation.",
   }));
