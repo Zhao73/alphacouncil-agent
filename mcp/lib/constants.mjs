@@ -133,6 +133,16 @@ export const COUNCIL_MODES = ["full", "quick"];
 export const RATINGS = ["Buy", "Overweight", "Hold", "Underweight", "Sell"];
 export const DEBATE_ROLES = ["bull_researcher", "bear_researcher", "portfolio_manager"];
 export const MASTER_STANCES = ["constructive", "cautious", "opposed", "out_of_scope"];
+export const TERMINAL_STATES = Object.freeze(["complete", "degraded", "incomplete"]);
+export const PM_ABSENCE_REASONS = Object.freeze([
+  "not_started_global_deadline",
+  "skipped_upstream_gate",
+  "failed",
+]);
+export const TERMINAL_REPORT_CONTRACTS = Object.freeze({
+  quick: Object.freeze({ id: "quick_v1", debate_rounds_required: 1, full_council_equivalent: false }),
+  full: Object.freeze({ id: "full_v2", debate_rounds_required: 3, full_council_equivalent: true }),
+});
 // product_design / creative_production / sales were removed: each described itself as
 // "not for investment summary". Unknown values fall back to public_equity, so a host
 // still passing an old name degrades cleanly instead of erroring.

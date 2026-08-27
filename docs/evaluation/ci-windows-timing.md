@@ -281,3 +281,20 @@ WP4 also inherits the observer-budget defect disclosed by this run. The failing 
 `20000 = total_timeout 15000 + timeout 5000`, with no explicit settlement allowance. WP4 must
 standardize RPC observation budgets as `contract_ceiling + settlement_headroom` instead of
 scattering another one-off numeric increase through integration tests.
+
+## WP3W-b closure baseline for the first WP4 commit
+
+The bounded three-file schedule passed all five matrix jobs at commit
+`cb05b7b22d45ebdfba279ddc309b5e98b316b81c` in check run
+[`33046391937`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33046391937).
+The Windows job
+[`98431271961`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33046391937/job/98431271961)
+ran `Run checks` from 06:35:42Z through 06:44:00Z, 8 minutes 18 seconds, below the nine-minute
+gate. The whole job took 8 minutes 57 seconds.
+
+The log emitted `source_concurrent`, then the three `serial_file` markers in the frozen order:
+`full-analysis`, `master-runtime-observability`, `packaged-host-parity`. Their summaries were
+1,397 + 11 + 4 + 5 = 1,417 tests: 1,411 passed, 6 skipped, zero failed and zero cancelled. The
+job emitted zero `packaged-parity: attempt 1 timed out; retrying` notices. This closes WP3W-b;
+the first WP4 commit still requires a new five-platform green run as the consecutive stability
+check and must return to the Windows group if that job is red.

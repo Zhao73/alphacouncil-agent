@@ -100,6 +100,9 @@ test("analyze_symbol schema keeps dry_run opt-in and exposes language and tasks"
 
 test("a dry run returns a DRY_RUN decision with both markdown payloads", () => {
   assert.equal(analysis.decision?.verdict, "DRY_RUN");
+  assert.equal(analysis.decision?.decision_available, false);
+  assert.equal(analysis.decision?.rating, null);
+  assert.equal(analysis.decision?.pm_absence_reason, "skipped_upstream_gate");
   assert.ok(analysis.final_report_markdown, "final_report_markdown must be returned");
   assert.ok(analysis.user_response_markdown, "user_response_markdown must be returned");
   assert.equal(analysis.report_quality?.status, "passed");
@@ -166,9 +169,22 @@ test("the chat handoff points at the saved files", () => {
   assert.match(index, /portfolio_manager\.md/);
 });
 
-test("status.json surfaces completion, quality, and verification", () => {
+test("status.json keeps a dry-run structurally incomplete despite passing report checks", () => {
   const status = JSON.parse(readFileSync(join(runDir, "status.json"), "utf8"));
-  assert.equal(status.status, "complete");
+  assert.equal(status.status, "incomplete");
+  assert.equal(status.terminal, "incomplete");
+  assert.equal(status.contract, "full_v2");
+  assert.equal(status.debate_rounds_required, 3);
+  assert.equal(status.debate_rounds_completed, 0);
+  assert.deepEqual(status.missing, [
+    { stage: "debate", id: "round_1", reason: "round_not_completed" },
+    { stage: "debate", id: "round_2", reason: "round_not_completed" },
+    { stage: "debate", id: "round_3", reason: "round_not_completed" },
+    { stage: "portfolio_manager", id: "portfolio_manager", reason: "skipped_upstream_gate" },
+  ]);
+  assert.ok(status.terminal_projection_passes >= 1 && status.terminal_projection_passes <= 3);
+  assert.equal(status.stage_outcomes.portfolio_manager.status, "not_started");
+  assert.equal(status.stage_outcomes.portfolio_manager.absence_reason, "skipped_upstream_gate");
   assert.ok(status.tasks.every((task) => task.status === "completed"));
   assert.equal(status.report_quality, "passed");
   assert.equal(status.verification, "passed");
@@ -188,5 +204,5 @@ test("status.json surfaces completion, quality, and verification", () => {
 test("events.jsonl records the run lifecycle", () => {
   const events = readFileSync(join(runDir, "events.jsonl"), "utf8");
   assert.match(events, /run_started/);
-  assert.match(events, /run_complete/);
+  assert.match(events, /"type":"incomplete"/);
 });

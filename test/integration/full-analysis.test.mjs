@@ -564,6 +564,10 @@ test("headless Q&A remains fail-closed when the bounded repair still changes exa
     assert.equal(result.run.agent_status.bull_researcher.status, "failed");
     assert.equal(result.run.agent_status.bear_researcher.status, "failed");
     assert.equal(result.run.agent_status.portfolio_manager.status, "skipped");
+    assert.equal(result.run.agent_status.portfolio_manager.absence_reason, "skipped_upstream_gate");
+    assert.equal(result.decision.pm_absence_reason, "skipped_upstream_gate");
+    assert.equal(result.decision.decision_available, false);
+    assert.equal(result.decision.rating, null);
     const events = readJsonl(join(dataDir, "runs", runId, "events.jsonl"));
     const repairs = events.filter((event) => event.type === "agent_parse_repair"
       && ["bull_researcher", "bear_researcher"].includes(event.role));
@@ -602,7 +606,12 @@ test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", a
     const events = readJsonl(join(dir, "events.jsonl"));
     assert.equal(result.run.status, "incomplete");
     assert.equal(status.status, "incomplete");
-    assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "skipped");
+    const portfolioManager = status.agents.find((agent) => agent.role === "portfolio_manager");
+    assert.equal(portfolioManager.status, "skipped");
+    assert.equal(portfolioManager.absence_reason, "skipped_upstream_gate");
+    assert.equal(result.decision.pm_absence_reason, "skipped_upstream_gate");
+    assert.equal(result.decision.decision_available, false);
+    assert.equal(result.decision.rating, null);
     for (const role of ["bull_researcher", "bear_researcher"]) {
       const agent = status.agents.find((entry) => entry.role === role);
       assert.equal(agent.status, "failed");
@@ -672,9 +681,12 @@ for (const [label, pmContractFailureMode, expectedPath] of [
       const status = readJson(join(dir, "status.json"));
       assert.equal(result.run.status, "incomplete");
       assert.equal(status.status, "incomplete");
-      assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "failed");
+      const portfolioManager = status.agents.find((agent) => agent.role === "portfolio_manager");
+      assert.equal(portfolioManager.status, "failed");
+      assert.equal(portfolioManager.absence_reason, "failed");
       assert.equal(decision.decision_available, false);
       assert.equal(decision.rating, null);
+      assert.equal(decision.pm_absence_reason, "failed");
       assert.equal(result.decision.rating, null);
       assert.equal(result.run.agent_status.portfolio_manager.attempts, 2);
 
@@ -765,9 +777,12 @@ test("two malformed full PM attempts persist sanitized diagnostics and never man
     const status = readJson(join(dir, "status.json"));
     assert.equal(result.run.status, "incomplete");
     assert.equal(status.status, "incomplete");
-    assert.equal(status.agents.find((agent) => agent.role === "portfolio_manager").status, "failed");
+    const portfolioManager = status.agents.find((agent) => agent.role === "portfolio_manager");
+    assert.equal(portfolioManager.status, "failed");
+    assert.equal(portfolioManager.absence_reason, "failed");
     assert.equal(decision.decision_available, false);
     assert.equal(decision.rating, null);
+    assert.equal(decision.pm_absence_reason, "failed");
     assert.equal(decision.confidence, "low");
     assert.match(decision.summary, /ran twice.*no usable decision/i);
 

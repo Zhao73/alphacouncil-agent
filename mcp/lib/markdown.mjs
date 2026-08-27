@@ -1011,13 +1011,64 @@ function withQuickScope(run, markdown) {
   }
   if (run.council_mode !== "quick") return cleaned;
   const copy = {
-    zh: "**QUICK_V1 范围。** 本轮不是 full council：固定 4 个核心证据席、1–4 个方法席、一次并行多空陈述和短 PM；没有三轮交叉问答或对抗核验。`full_council_equivalent=false`。",
-    en: "**QUICK_V1 SCOPE.** This is not a full council: four fixed core evidence seats, one to four method seats, one parallel bull/bear statement and a short PM; no three-round cross-exam or adversarial verifier. `full_council_equivalent=false`.",
-    ja: "**QUICK_V1 の範囲。** full council ではありません。固定4つの中核証拠席、1〜4のメソッド席、強気・弱気の並列1ラウンド、短いPMのみで、3ラウンドの交差質問や対抗検証はありません。`full_council_equivalent=false`。",
-    ko: "**QUICK_V1 범위.** full council이 아닙니다. 고정된 4개 핵심 증거 좌석, 1~4개 방법론 좌석, 병렬 강세·약세 1라운드와 짧은 PM만 실행하며 3라운드 교차 질문이나 적대적 검증은 없습니다. `full_council_equivalent=false`.",
+    zh: "**QUICK_V1 范围。** 本轮按 quick_v1 自身契约执行：固定 4 个核心证据席、1–4 个方法席、一次并行多空陈述和短 PM。`full_council_equivalent=false`。",
+    en: "**QUICK_V1 SCOPE.** This run follows its own quick_v1 contract: four fixed core evidence seats, one to four method seats, one parallel bull/bear statement and a short PM. `full_council_equivalent=false`.",
+    ja: "**QUICK_V1 の範囲。** quick_v1 固有の契約に従い、固定4つの中核証拠席、1〜4のメソッド席、強気・弱気の並列1ラウンド、短いPMを実行します。`full_council_equivalent=false`。",
+    ko: "**QUICK_V1 범위.** quick_v1 자체 계약에 따라 고정된 4개 핵심 증거 좌석, 1~4개 방법론 좌석, 병렬 강세·약세 1라운드와 짧은 PM을 실행합니다. `full_council_equivalent=false`.",
   }[languageKey(run.language)];
   const banner = `> [!NOTE]\n> ${copy}`;
   return `${markerStart}\n${banner}\n${markerEnd}\n\n${cleaned.trimStart()}`;
+}
+
+export function terminalContractHeader(run = {}) {
+  const terminal = run.terminal || "incomplete";
+  const contract = run.contract || (run.council_mode === "quick" ? "quick_v1" : "full_v2");
+  const roundsRequired = Number.isInteger(run.debate_rounds_required)
+    ? run.debate_rounds_required
+    : run.council_mode === "quick" ? 1 : 3;
+  const roundsCompleted = Number.isInteger(run.debate_rounds_completed)
+    ? run.debate_rounds_completed
+    : 0;
+  const equivalent = run.full_council_equivalent === true;
+  const key = languageKey(run.language);
+  const labels = {
+    zh: { terminal: "终态", contract: "契约", rounds: "辩论轮次", missing: "结构缺口", notes: "替代执行" },
+    en: { terminal: "terminal", contract: "contract", rounds: "debate rounds", missing: "structural gaps", notes: "substitute execution" },
+    ja: { terminal: "終端状態", contract: "契約", rounds: "討論ラウンド", missing: "構造的欠落", notes: "代替実行" },
+    ko: { terminal: "종료 상태", contract: "계약", rounds: "토론 라운드", missing: "구조적 누락", notes: "대체 실행" },
+  }[key];
+  const missing = Array.isArray(run.missing) ? run.missing : [];
+  const notes = Array.isArray(run.notes) ? run.notes : [];
+  // Report-quality diagnostics can contain source-shaped examples such as
+  // `market_data:S1`. Rendering those examples verbatim would make the next quality pass
+  // mistake its own diagnostic for a real scoped citation and oscillate forever. Preserve
+  // the reader-visible text while keeping system metadata inert to content validators.
+  const inertDiagnostic = (value) => String(value).replace(/([a-z_][a-z0-9_]*):([sS]\d+)/giu, "$1&#58;$2");
+  const rows = [
+    `> **${labels.terminal}: \`${terminal}\`; ${labels.contract}: \`${contract}\`; ${labels.rounds}: ${roundsCompleted}/${roundsRequired}; full_council_equivalent=${equivalent}.**`,
+    ...(missing.length
+      ? [`> ${labels.missing}:`, ...missing.map((item) => `> - ${item.stage}/${item.id}: ${inertDiagnostic(item.reason)}`)]
+      : []),
+    ...(notes.length
+      ? [`> ${labels.notes}:`, ...notes.map((item) => `> - ${item.stage}/${item.id}: ${inertDiagnostic(item.reason)}`)]
+      : []),
+  ];
+  return `> [!${terminal === "incomplete" ? "WARNING" : "NOTE"}]\n${rows.join("\n")}`;
+}
+
+function withTerminalContractHeader(run, markdown) {
+  const markerStart = "<!-- alphacouncil:terminal-contract:v1:begin -->";
+  const markerEnd = "<!-- alphacouncil:terminal-contract:v1:end -->";
+  let cleaned = String(markdown || "");
+  let start = cleaned.indexOf(markerStart);
+  while (start !== -1) {
+    const end = cleaned.indexOf(markerEnd, start + markerStart.length);
+    cleaned = end === -1
+      ? cleaned.slice(0, start)
+      : `${cleaned.slice(0, start)}${cleaned.slice(end + markerEnd.length)}`;
+    start = cleaned.indexOf(markerStart);
+  }
+  return `${markerStart}\n${terminalContractHeader(run)}\n${markerEnd}\n\n${cleaned.trimStart()}`;
 }
 
 export function finalReportMarkdown(run, manager) {
@@ -1031,16 +1082,19 @@ export function finalReportMarkdown(run, manager) {
       withRecordedPriceSnapshot(run, sourceBody),
     ),
   );
-  const report = withDisclaimer(
-    withCompletenessBanner(
-      withQuickScope(
-        run,
-        withDegradedLedger(run, withVerificationBanner(reportBody, gate, run.language), completeness),
+  const report = withTerminalContractHeader(
+    run,
+    withDisclaimer(
+      withCompletenessBanner(
+        withQuickScope(
+          run,
+          withDegradedLedger(run, withVerificationBanner(reportBody, gate, run.language), completeness),
+        ),
+        completeness,
+        run.language
       ),
-      completeness,
       run.language
-    ),
-    run.language
+    )
   );
   return `${report.trimEnd()}\n\n${handoffMethodTail(run, handoffCopy(run.language))}`;
 }
@@ -1193,7 +1247,7 @@ function quickUserResponse(run, manager, artifacts, chinese) {
     "## 状态与边界",
     `- Run status: ${run.status}`,
     `- Report quality: ${run.report_quality?.status || "not_checked"} (${run.report_quality?.contract_id || "quick_v1"})`,
-    "- 这是 quick_v1：4 个核心证据席、所选方法席、一次并行多空陈述和短 PM；没有三轮交叉问答或对抗核验，不等同 full council。",
+    "- 本轮按 quick_v1 自身契约执行：4 个核心证据席、所选方法席、一次并行多空陈述和短 PM；`full_council_equivalent=false`。",
     "",
     "## 结论",
     `- 评级: ${managerCompleted ? manager.rating : "unavailable"}`,
@@ -1229,7 +1283,7 @@ function quickUserResponse(run, manager, artifacts, chinese) {
     "## Status and Scope",
     `- Run status: ${run.status}`,
     `- Report quality: ${run.report_quality?.status || "not_checked"} (${run.report_quality?.contract_id || "quick_v1"})`,
-    "- This is quick_v1: four core evidence seats, selected method seats, one parallel bull/bear statement and a short PM. It has no three-round cross-exam or adversarial verification and is not equivalent to full council.",
+    "- This run follows its own quick_v1 contract: four core evidence seats, selected method seats, one parallel bull/bear statement and a short PM; `full_council_equivalent=false`.",
     "",
     "## Conclusion",
     `- Rating: ${managerCompleted ? manager.rating : "unavailable"}`,
@@ -1328,21 +1382,21 @@ function handoffCopy(language) {
   const shared = {
     zh: {
       title: "AlphaCouncil 运行摘要", status: "运行状态与时限", statusLabel: "状态", contract: "报告契约", scope: "执行范围", elapsed: "耗时", deadline: "硬截止时间", deadlineMet: "是否在截止前落盘",
-      fullScope: (ceiling, analystCount) => `full_v2：${analystCount} 个已选证据席、全部已选方法席的可审计终局陈词、三轮多空交叉问答和 PM；本次插件托管运行硬上限 ${ceiling}。`, quickScope: "quick_v1：4 个证据席、1–4 个方法席、单轮多空和短 PM；不等同 full council。",
+      fullScope: (ceiling, analystCount) => `full_v2：${analystCount} 个已选证据席、全部已选方法席的可审计终局陈词、三轮多空交叉问答和 PM；本次插件托管运行硬上限 ${ceiling}。`, quickScope: "quick_v1 自身契约：4 个证据席、1–4 个方法席、单轮多空和短 PM；full_council_equivalent=false。",
       price: "系统记录价格", noPrice: "未取得可验证报价；没有补造价格。", delayed: "延迟行情", instrument: "资产识别与研究路径", assetType: "资产类型", researchModel: "研究模型", classifiedBy: "识别来源", conclusion: "结论", rating: "评级", winner: "多空胜负", confidence: "置信度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW；工具或 PM 失败不能转换成投资评级。",
       masters: "结尾：逐席方法陈词（不是本人引语）", analysts: "分析师逐席内容", worker: "陈词来源", record: "冻结记录", statement: "完整陈词", notProduced: "本席未产生方法陈词，也没有方向性观点；这不是看空票。", failure: "终止原因", key: "关键内容", earnings: "最新财报", forward: "前瞻门槛", news: "新闻/行业信号", recentNews: "近期公司与行业新闻", newsSummary: "新闻席摘要", noDatedNews: "本轮没有取得 as_of 之前 120 天内且带日期的新闻来源。", newsExcluded: "新闻时间门禁排除", valuation: "估值/价位", position: "仓位", gaps: "数据缺口与失败席", invalidation: "失效条件", files: "文件位置", report: "完整报告", dossier: "统一公司资料包", dossierCoverage: "公司资料覆盖", index: "代理工件索引", trace: "全部代理追踪", quality: "报告质量检查", missing: "未覆盖。", noGaps: "未记录额外缺口。", noInvalidation: "没有正式失效条件。",
     },
     en: {
       title: "AlphaCouncil Run Summary", status: "Run Status and Deadline", statusLabel: "Status", contract: "Report contract", scope: "Execution scope", elapsed: "Elapsed", deadline: "Hard deadline", deadlineMet: "Persisted before deadline",
-      fullScope: (ceiling, analystCount) => `full_v2: ${analystCount} selected evidence seats, an auditable final statement for every selected method seat, three-round cross-examination and PM; this plugin-managed run has a hard ${ceiling} ceiling.`, quickScope: "quick_v1: four evidence seats, one to four method seats, one debate round and short PM; not equivalent to full council.",
+      fullScope: (ceiling, analystCount) => `full_v2: ${analystCount} selected evidence seats, an auditable final statement for every selected method seat, three-round cross-examination and PM; this plugin-managed run has a hard ${ceiling} ceiling.`, quickScope: "quick_v1 contract: four evidence seats, one to four method seats, one debate round and short PM; full_council_equivalent=false.",
       price: "System-Recorded Price", noPrice: "No verifiable quote was retrieved; no price was invented.", delayed: "delayed quote", instrument: "Instrument Classification and Research Path", assetType: "Asset type", researchModel: "Research model", classifiedBy: "Classified by", conclusion: "Conclusion", rating: "Rating", winner: "Debate winner", confidence: "Confidence", judgment: "Judgment", noDecision: "NEEDS_MANAGER_REVIEW; a tool or PM failure cannot be converted into an investment rating.",
       masters: "Final Per-Seat Method Statements (not quotes from the named people)", analysts: "Analyst Views by Seat", worker: "statement source", record: "Frozen record", statement: "Full statement", notProduced: "This seat produced no method statement and no directional view; this is not a bearish vote.", failure: "Terminal reason", key: "Key Content", earnings: "Latest earnings", forward: "Forward thresholds", news: "News / industry signal", recentNews: "Recent Company and Industry News", newsSummary: "News-seat summary", noDatedNews: "No dated news source inside the 120 days through as_of was retrieved.", newsExcluded: "Recent-news gate excluded", valuation: "Valuation / price range", position: "Position", gaps: "Data Gaps and Failed Seats", invalidation: "Invalidation", files: "File Locations", report: "Full report", dossier: "Shared company dossier", dossierCoverage: "Company dossier coverage", index: "Agent artifact index", trace: "Full agent trace", quality: "Report quality check", missing: "Not covered.", noGaps: "No additional gap was recorded.", noInvalidation: "No formal invalidation conditions are available.",
     },
     ja: {
-      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: (ceiling, analystCount) => `full_v2：選択済み証拠席${analystCount}席、選択された全メソッド席の監査可能な最終見解、3ラウンドの多空質疑、PM。本プラグイン管理実行のハード上限は${ceiling}です。`, quickScope: "quick_v1：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full council相当ではありません。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", instrument: "銘柄分類と調査経路", assetType: "資産タイプ", researchModel: "調査モデル", classifiedBy: "分類根拠", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "最後：メソッド席ごとの最終見解（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "見解の生成元", record: "凍結済み記録", statement: "完全な見解", notProduced: "この席はメソッド見解も方向性判断も生成していません。弱気票ではありません。", failure: "終了理由", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", dossier: "共有会社資料", dossierCoverage: "会社資料カバレッジ", index: "代理成果物一覧", trace: "全代理追跡", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
+      title: "AlphaCouncil 実行サマリー", status: "実行状況と期限", statusLabel: "状態", contract: "レポート契約", scope: "実行範囲", elapsed: "所要時間", deadline: "ハード期限", deadlineMet: "期限内に保存", fullScope: (ceiling, analystCount) => `full_v2：選択済み証拠席${analystCount}席、選択された全メソッド席の監査可能な最終見解、3ラウンドの多空質疑、PM。本プラグイン管理実行のハード上限は${ceiling}です。`, quickScope: "quick_v1 固有の契約：4つの証拠席、1–4のメソッド席、1ラウンドの多空議論、短いPM。full_council_equivalent=false。", price: "システム記録価格", noPrice: "検証可能な価格を取得できず、価格は補完していません。", delayed: "遅延価格", instrument: "銘柄分類と調査経路", assetType: "資産タイプ", researchModel: "調査モデル", classifiedBy: "分類根拠", conclusion: "結論", rating: "評価", winner: "勝者", confidence: "信頼度", judgment: "判断", noDecision: "NEEDS_MANAGER_REVIEW。ツールまたはPMの失敗を投資評価に変換できません。", masters: "最後：メソッド席ごとの最終見解（本人の発言・引用ではありません）", analysts: "分析担当ごとの内容", worker: "見解の生成元", record: "凍結済み記録", statement: "完全な見解", notProduced: "この席はメソッド見解も方向性判断も生成していません。弱気票ではありません。", failure: "終了理由", key: "主要内容", earnings: "直近決算", forward: "先行条件", news: "ニュース・業界シグナル", recentNews: "直近の企業・業界ニュース", newsSummary: "ニュース席の要約", noDatedNews: "as_of までの120日間にある日付付きニュース出典を取得できませんでした。", newsExcluded: "ニュース時刻ゲートで除外", valuation: "評価レンジ・価格条件", position: "ポジション", gaps: "データ欠落と失敗した席", invalidation: "無効化条件", files: "ファイル", report: "完全レポート", dossier: "共有会社資料", dossierCoverage: "会社資料カバレッジ", index: "代理成果物一覧", trace: "全代理追跡", quality: "レポート品質検査", missing: "未取得。", noGaps: "追加の欠落は記録されていません。", noInvalidation: "正式な無効化条件はありません。",
     },
     ko: {
-      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: (ceiling, analystCount) => `full_v2: 선택된 증거 좌석 ${analystCount}개, 선택된 모든 방법론 좌석의 감사 가능한 최종 발언, 3라운드 롱/숏 질의응답, PM. 이번 플러그인 관리 실행의 하드 상한은 ${ceiling}입니다.`, quickScope: "quick_v1: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full council과 동등하지 않습니다.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", instrument: "종목 분류 및 조사 경로", assetType: "자산 유형", researchModel: "조사 모델", classifiedBy: "분류 근거", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "마지막: 방법론 좌석별 최종 발언(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "발언 출처", record: "동결 기록", statement: "전체 발언", notProduced: "이 좌석은 방법론 발언이나 방향성 판단을 생성하지 않았습니다. 약세 표가 아닙니다.", failure: "종료 사유", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", dossier: "공유 회사 자료", dossierCoverage: "회사 자료 커버리지", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
+      title: "AlphaCouncil 실행 요약", status: "실행 상태 및 기한", statusLabel: "상태", contract: "보고서 계약", scope: "실행 범위", elapsed: "소요 시간", deadline: "하드 기한", deadlineMet: "기한 내 저장", fullScope: (ceiling, analystCount) => `full_v2: 선택된 증거 좌석 ${analystCount}개, 선택된 모든 방법론 좌석의 감사 가능한 최종 발언, 3라운드 롱/숏 질의응답, PM. 이번 플러그인 관리 실행의 하드 상한은 ${ceiling}입니다.`, quickScope: "quick_v1 자체 계약: 4개 증거 좌석, 1–4개 방법론 좌석, 단일 롱/숏 라운드, 짧은 PM. full_council_equivalent=false.", price: "시스템 기록 가격", noPrice: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다.", delayed: "지연 시세", instrument: "종목 분류 및 조사 경로", assetType: "자산 유형", researchModel: "조사 모델", classifiedBy: "분류 근거", conclusion: "결론", rating: "등급", winner: "토론 승자", confidence: "신뢰도", judgment: "판단", noDecision: "NEEDS_MANAGER_REVIEW. 도구 또는 PM 실패를 투자 등급으로 바꿀 수 없습니다.", masters: "마지막: 방법론 좌석별 최종 발언(본인의 실제 발언이나 인용이 아님)", analysts: "분석가 좌석별 내용", worker: "발언 출처", record: "동결 기록", statement: "전체 발언", notProduced: "이 좌석은 방법론 발언이나 방향성 판단을 생성하지 않았습니다. 약세 표가 아닙니다.", failure: "종료 사유", key: "핵심 내용", earnings: "최근 실적", forward: "선행 조건", news: "뉴스·산업 신호", recentNews: "최근 기업 및 산업 뉴스", newsSummary: "뉴스 좌석 요약", noDatedNews: "as_of까지 120일 이내의 날짜가 있는 뉴스 출처를 확보하지 못했습니다.", newsExcluded: "뉴스 시간 게이트에서 제외", valuation: "가치평가 범위·가격 조건", position: "포지션", gaps: "데이터 공백 및 실패 좌석", invalidation: "무효화 조건", files: "파일 위치", report: "전체 보고서", dossier: "공유 회사 자료", dossierCoverage: "회사 자료 커버리지", index: "에이전트 산출물 색인", trace: "전체 에이전트 추적", quality: "보고서 품질 검사", missing: "미확보.", noGaps: "추가 공백이 기록되지 않았습니다.", noInvalidation: "공식 무효화 조건이 없습니다.",
     },
   };
   return shared[languageKey(language)] || shared.en;

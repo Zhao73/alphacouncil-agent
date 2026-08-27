@@ -315,7 +315,7 @@ test("quick PM repairs one wrong-language JSON response with the shared bounded 
   }
 });
 
-test("quick delivers an explicit degraded terminal run when one evidence seat fails", async () => {
+test("quick may finish its broad path after one evidence failure but terminal stays incomplete", async () => {
   const dataDir = makeDataDir();
   const fake = fakeCodex(dataDir, { failedTask: "valuation_long_short" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -339,7 +339,10 @@ test("quick delivers an explicit degraded terminal run when one evidence seat fa
       selection_receipt: confirmed.selection_receipt,
     }, { timeoutMs: 45_000 }));
 
-    assert.equal(result.run.status, "degraded");
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(result.run.terminal, "incomplete");
+    assert.ok(result.run.missing.some((item) => item.stage === "evidence"
+      && item.id === "valuation_long_short" && item.reason === "exit code 17"));
     assert.equal(result.run.task_status.valuation_long_short.status, "degraded");
     assert.equal(result.run.task_status.valuation_long_short.error, "exit code 17");
     assert.equal(result.report_quality.status, "passed", result.report_quality.missing.join("; "));
@@ -347,7 +350,7 @@ test("quick delivers an explicit degraded terminal run when one evidence seat fa
     assert.deepEqual(result.report_quality.degraded_evidence, ["valuation_long_short"]);
     assert.match(result.final_report_markdown, /DEGRADED QUICK RUN/);
     assert.match(result.final_report_markdown, /valuation_long_short: degraded; exit code 17/);
-    assert.match(result.user_response_markdown, /- Status: degraded/);
+    assert.match(result.user_response_markdown, /- Status: incomplete/);
 
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
@@ -357,6 +360,7 @@ test("quick delivers an explicit degraded terminal run when one evidence seat fa
     assert.equal(evidence?.successful, 3);
     assert.equal(evidence?.degraded, 1);
     assert.equal(events.some((event) => event.type === "evidence_complete"), false);
+    assert.equal(events.some((event) => event.type === "incomplete"), true);
   } finally {
     await server.close();
     removeDataDir(dataDir);
@@ -389,8 +393,10 @@ test("quick PM transport failure writes standard artifacts and no synthetic Hold
     const dir = join(dataDir, "runs", runId);
     assert.equal(result.run.status, "incomplete");
     assert.equal(result.run.agent_status.portfolio_manager.status, "failed");
+    assert.equal(result.run.agent_status.portfolio_manager.absence_reason, "failed");
     assert.equal(result.decision.decision_available, false);
     assert.equal(result.decision.rating, null);
+    assert.equal(result.decision.pm_absence_reason, "failed");
     assert.match(result.user_response_markdown, /Rating: unavailable/);
     assert.match(result.user_response_markdown, /NEEDS_MANAGER_REVIEW/);
     const events = readFileSync(join(dir, "events.jsonl"), "utf8")

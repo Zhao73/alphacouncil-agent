@@ -554,7 +554,12 @@ test("concurrent retries create at most one council lifecycle", async () => {
     .trim().split("\n").map((line) => JSON.parse(line));
   assert.equal(events.filter((event) => event.type === "run_started").length, 1);
   assert.equal(events.filter((event) => event.type === "masters_started").length, 1);
-  assert.equal(events.filter((event) => event.type === "run_complete").length, 1);
+  const legacyTerminal = events.filter((event) => new Set([
+    "run_complete", "run_degraded", "incomplete", "needs_verification", "needs_revision", "background_run_failed",
+  ]).has(event.type));
+  assert.equal(legacyTerminal.length, 1);
+  assert.equal(legacyTerminal[0].type, "incomplete", "a dry run does not execute the required debate rounds or PM");
+  assert.equal(events.filter((event) => event.type === "terminal_contract").length, 1);
 });
 
 test("confirmation rejects empty, conflicting, stale, and undisplayed selections", async () => {

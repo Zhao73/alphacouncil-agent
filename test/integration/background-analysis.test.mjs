@@ -51,12 +51,19 @@ test("analyze_symbol returns a pollable run handle instead of holding an MCP cal
     assert.ok(immediateResponse.result, "an accepted run must be pollable immediately");
     const immediate = structured(immediateResponse);
     assert.ok(
-      ["queued", "running", "complete"].includes(immediate.status.status),
+      ["queued", "running", "incomplete"].includes(immediate.status.status),
       `unexpected immediate status: ${immediate.status.status}`,
     );
 
     const completed = await completedRun(server, runId);
-    assert.equal(completed.status.status, "complete");
+    assert.equal(completed.status.status, "incomplete");
+    assert.equal(completed.status.terminal, "incomplete");
+    assert.deepEqual(completed.status.missing, [
+      { stage: "debate", id: "round_1", reason: "round_not_completed" },
+      { stage: "debate", id: "round_2", reason: "round_not_completed" },
+      { stage: "debate", id: "round_3", reason: "round_not_completed" },
+      { stage: "portfolio_manager", id: "portfolio_manager", reason: "skipped_upstream_gate" },
+    ]);
     assert.equal(completed.decision.verdict, "DRY_RUN");
     assert.equal(
       completed.events_summary.type_counts.background_run_queued,

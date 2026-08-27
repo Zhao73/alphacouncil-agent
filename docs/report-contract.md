@@ -4,6 +4,50 @@ This contract prevents final handoffs from collapsing into a thin recap. The cha
 may stay concise, but saved artifacts must preserve the evidence chain and must identify the
 contract that actually ran. `quick_v1` is not a shorter claim of `full_v2` completion.
 
+## Terminal Contract
+
+Every decision run persists `contract`, `terminal`, `debate_rounds_required`,
+`debate_rounds_completed`, `missing[]`, `notes[]` and per-stage outcomes. `terminal` has exactly
+three values:
+
+- `complete`: every selected evidence task produced its confirmed packet, every selected method
+  seat has a frozen stance and an allowed model/fallback voice, the run completed the debate
+  rounds required by its own contract, the portfolio manager produced an available decision,
+  report structure passed and final artifacts were persisted. `full_v2` requires three paired
+  rounds; `quick_v1` requires one paired round. A quick run is therefore complete after its own
+  one-round contract, while still recording `full_council_equivalent=false`.
+- `degraded`: there is no structural gap, but the complete structure used a disclosed
+  deterministic method voice, same-day cache reuse or length compression. Every substitute is
+  recorded in non-empty `notes[]` rows with `{stage,id,reason}`.
+- `incomplete`: at least one structural requirement is absent. Every absence is recorded in
+  non-empty `missing[]` rows with `{stage,id,reason}`. Report-quality success, a legacy status
+  label or an available rating cannot upgrade this state.
+
+A portfolio manager that did not produce an available decision has one exact absence reason:
+`not_started_global_deadline`, `skipped_upstream_gate` or `failed`. All three force
+`decision_available=false` and `rating=null`; a fallback record is an audit artifact, not an
+investment rating.
+
+Before methods, each debate round and the portfolio manager, the orchestrator compares the
+remaining contract clock with a conservative reservation derived only from the already-frozen
+pace fields. The reservations are, respectively:
+
+- `master_ms * remaining_master_waves + verifier_ms_if_applicable + required_rounds * debate_ms + pm_ms + finalize_reserve_ms`;
+- `remaining_required_rounds * debate_ms + pm_ms + finalize_reserve_ms`;
+- `pm_ms + finalize_reserve_ms`.
+
+The existing pace invariant keeps the sum of stage ceilings at or below `P.total_ms`.
+Consequently, this upper-bound reservation does not stop a run that can still finish every
+remaining stage within its frozen ceiling; it fires only after prior overrun or unattributed
+startup/persistence time has consumed that slack. This is deliberately conservative, not an
+estimated average runtime.
+
+When remaining time is below the applicable reservation, the run terminates immediately as
+`incomplete` with `budget_exhausted_ahead`, the checkpoint, remaining time, reservation,
+termination time and contract cap. No downstream model call is launched. Tests use an injected
+clock so this boundary is deterministic. A dry run that only plans workers does not manufacture
+the missing debate rounds and therefore cannot claim decision-run completion.
+
 ## Shared Required Outputs
 
 Every terminal `analyze_symbol` run, and every completed full visible portfolio-manager run,

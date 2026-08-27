@@ -97,7 +97,22 @@ export function statusSnapshot(run) {
     visible_debate_rounds_recorded: visibleDebateRounds,
     visible_debate_qna_gate: visibleDebate?.qna_gate?.status || null,
     report_contract: evidenceOnly ? "evidence_only_v1" : run.council_mode === "quick" ? "quick_v1" : "full_v2",
-    full_council_equivalent: !evidenceOnly && run.council_mode !== "quick",
+    contract: run.contract || (evidenceOnly ? "evidence_only_v1" : run.council_mode === "quick" ? "quick_v1" : "full_v2"),
+    terminal: run.terminal || null,
+    missing: Array.isArray(run.missing) ? run.missing : [],
+    notes: Array.isArray(run.notes) ? run.notes : [],
+    stage_outcomes: run.stage_outcomes || {},
+    debate_rounds_required: Number.isInteger(run.debate_rounds_required)
+      ? run.debate_rounds_required
+      : evidenceOnly ? 0 : run.council_mode === "quick" ? 1 : 3,
+    debate_rounds_completed: Number.isInteger(run.debate_rounds_completed)
+      ? run.debate_rounds_completed
+      : 0,
+    terminal_projection_passes: Number.isInteger(run.terminal_projection_passes)
+      ? run.terminal_projection_passes
+      : null,
+    full_council_equivalent: run.full_council_equivalent === true
+      || (!evidenceOnly && run.council_mode !== "quick"),
     master_worker_contract: evidenceOnly
       ? "not_requested_evidence_only"
       : run.execution_mode === "background_codex_exec"

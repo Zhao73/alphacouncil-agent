@@ -1,7 +1,20 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ALL_ANALYST_TASKS, COUNCIL_MODES, DEBATE_ROLES, DEFAULT_TASKS, LIMITS, OUTPUT_MODES, QUICK_TASKS, councilPaceProfile } from "./constants.mjs";
+import {
+  ALL_ANALYST_TASKS,
+  COUNCIL_MODES,
+  DEBATE_ROLES,
+  DEFAULT_TASKS,
+  LIMITS,
+  MASTER_STANCES,
+  OUTPUT_MODES,
+  PM_ABSENCE_REASONS,
+  QUICK_TASKS,
+  TERMINAL_REPORT_CONTRACTS,
+  TERMINAL_STATES,
+  councilPaceProfile,
+} from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
@@ -412,23 +425,367 @@ export function bindDecisionDebateRounds(manager, bull, bear) {
   };
 }
 
-function commitFinalArtifacts(run, debate = {}) {
-  const prepared = writeFinalArtifacts(run, debate);
-  if (!prepared.publication_manifest && run.status === "complete") {
-    const events = readJsonl(artifactPaths(run).events_jsonl).entries;
-    if (!events.some((event) => event.type === "run_complete")) {
-      appendEvent(run, "run_complete", {
-        decision: debate.manager?.rating ?? null,
-        winner: debate.manager?.winner ?? null,
-      });
+function terminalReportContract(run = {}) {
+  return run.council_mode === "quick"
+    ? TERMINAL_REPORT_CONTRACTS.quick
+    : TERMINAL_REPORT_CONTRACTS.full;
+}
+
+function pairedDebateRoundCount(manager) {
+  const rounds = Array.isArray(manager?.debate_rounds) ? manager.debate_rounds : [];
+  let completed = 0;
+  for (let index = 0; index < rounds.length; index += 1) {
+    const round = rounds[index];
+    if (round?.round !== index + 1 || !round?.bull || !round?.bear) break;
+    completed += 1;
+  }
+  return completed;
+}
+
+function pmAbsenceReason(run = {}, decisionAvailable = false) {
+  const state = agentState(run, "portfolio_manager");
+  if (decisionAvailable) return null;
+  if (PM_ABSENCE_REASONS.includes(state.absence_reason)) return state.absence_reason;
+  if (state.status === "failed") return "failed";
+  if (state.status === "completed") return "failed";
+  const error = String(state.error || run.terminal_reason || "");
+  if (/global_deadline|budget_exhausted_ahead/iu.test(error)) return "not_started_global_deadline";
+  return "skipped_upstream_gate";
+}
+
+function uniqueTerminalRows(rows = []) {
+  const seen = new Set();
+  return rows.filter((row) => {
+    if (!row || typeof row !== "object") return false;
+    const normalized = {
+      stage: String(row.stage || "unknown"),
+      id: String(row.id || "unknown"),
+      reason: cleanLog(String(row.reason || "unknown")) || "unknown",
+    };
+    const key = `${normalized.stage}\0${normalized.id}\0${normalized.reason}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    Object.assign(row, normalized);
+    return true;
+  });
+}
+
+function substituteExecutionNotes(run) {
+  const notes = [];
+  const opinions = new Map((run.master_opinions || []).map((opinion) => [opinion?.master, opinion]));
+  for (const master of run.masters || []) {
+    const voiceStatus = opinions.get(master)?.voice_status || run.master_status?.[master]?.voice_status;
+    if (["deterministic_fallback", "deterministic_only"].includes(voiceStatus)) {
+      notes.push({ stage: "methods", id: master, reason: voiceStatus });
     }
   }
-  if (!prepared.publication_manifest) {
-    // report_quality is assigned while rendering; save the complete terminal state only
-    // after that gate, then render the trace once more from the exact persisted timestamp.
-    saveRun(run);
-    writeAllAgentsMarkdown(run, debate);
+  const sameDayCache = run.same_day_cache === true
+    || run.cache_reuse === "same_day"
+    || (run.packets || []).some((packet) => packet?.cache_status === "same_day"
+      || packet?.cache?.scope === "same_day");
+  if (sameDayCache) notes.push({ stage: "evidence", id: "cache", reason: "same_day_cache" });
+  if (run.length_compressed === true || run.output_compression === "length"
+    || run.report_quality?.length_compressed === true) {
+    notes.push({ stage: "report", id: "report", reason: "length_compression" });
   }
+  return notes;
+}
+
+/**
+ * Derive the public terminal contract from persisted structure, never from a broad legacy
+ * status label. A missing structural item always wins over every degraded substitute.
+ */
+export function terminalContractState(run = {}, { manager = null, finalizeStatus = "completed" } = {}) {
+  const contract = terminalReportContract(run);
+  const completeness = completenessStatus(run);
+  const missing = [];
+  const notes = substituteExecutionNotes(run);
+  const packets = new Map((run.packets || []).map((packet) => [packet?.task, packet]));
+
+  for (const task of run.tasks || []) {
+    const state = taskState(run, task);
+    if (state.status !== "completed") {
+      missing.push({ stage: "evidence", id: task, reason: state.error || state.status || "packet_missing" });
+      continue;
+    }
+    if (!packets.has(task)) {
+      missing.push({ stage: "evidence", id: task, reason: "packet_missing" });
+    }
+  }
+  if (completeness.company_dossier?.required
+    && completeness.company_dossier.decision_barrier_ready !== true) {
+    missing.push({
+      stage: "evidence",
+      id: "company_dossier",
+      reason: completeness.company_dossier.sufficiency || completeness.company_dossier.status || "dossier_incomplete",
+    });
+  }
+
+  const opinions = new Map((run.master_opinions || []).map((opinion) => [opinion?.master, opinion]));
+  for (const master of run.masters || []) {
+    const state = run.master_status?.[master] || { status: opinions.has(master) ? "completed" : "pending" };
+    const opinion = opinions.get(master);
+    if (!opinion || state.status !== "completed") {
+      missing.push({ stage: "methods", id: master, reason: state.error || state.status || "opinion_missing" });
+      continue;
+    }
+    if (!MASTER_STANCES.includes(opinion.stance)) {
+      missing.push({ stage: "methods", id: master, reason: "frozen_stance_missing" });
+      continue;
+    }
+    const voiceStatus = opinion.voice_status || state.voice_status;
+    if (!["model_voice", "deterministic_fallback", "deterministic_only"].includes(voiceStatus)) {
+      missing.push({ stage: "methods", id: master, reason: voiceStatus || "voice_status_missing" });
+    }
+  }
+
+  const derivedRounds = pairedDebateRoundCount(manager);
+  const recordedRounds = Number.isInteger(run.debate_rounds_completed)
+    ? run.debate_rounds_completed
+    : derivedRounds;
+  const debateRoundsCompleted = Math.min(contract.debate_rounds_required, Math.max(0, recordedRounds));
+  for (let round = debateRoundsCompleted + 1; round <= contract.debate_rounds_required; round += 1) {
+    missing.push({ stage: "debate", id: `round_${round}`, reason: "round_not_completed" });
+  }
+  for (const role of ["bull_researcher", "bear_researcher"]) {
+    const state = agentState(run, role);
+    if (state.status === "completed") continue;
+    missing.push({ stage: "debate", id: role, reason: state.error || state.status || "not_completed" });
+  }
+
+  const managerState = agentState(run, "portfolio_manager");
+  const decisionAvailable = managerState.status === "completed"
+    && manager?.decision_available !== false
+    && typeof manager?.rating === "string"
+    && manager.rating.length > 0;
+  const absenceReason = pmAbsenceReason(run, decisionAvailable);
+  if (!decisionAvailable) {
+    missing.push({
+      stage: "portfolio_manager",
+      id: "portfolio_manager",
+      reason: absenceReason || "decision_unavailable",
+    });
+  }
+
+  const verification = verificationStatus(run);
+  if (verification.verification !== "passed") {
+    missing.push({ stage: "verification", id: "verification_gate", reason: verification.verification });
+  }
+
+  const reportStatus = run.report_quality?.status || "pending";
+  if (run.report_quality && reportStatus !== "passed") {
+    const gaps = Array.isArray(run.report_quality.missing) && run.report_quality.missing.length
+      ? run.report_quality.missing
+      : [reportStatus];
+    for (const gap of gaps) missing.push({ stage: "report", id: "final_report", reason: String(gap) });
+  }
+  if (finalizeStatus !== "completed") {
+    missing.push({ stage: "finalize", id: "terminal_persistence", reason: finalizeStatus });
+  }
+  for (const item of run.explicit_missing || []) missing.push({ ...item });
+
+  const normalizedMissing = uniqueTerminalRows(missing);
+  const normalizedNotes = uniqueTerminalRows(notes);
+  const terminal = normalizedMissing.length
+    ? "incomplete"
+    : normalizedNotes.length ? "degraded" : "complete";
+  const stageStatus = (stage) => normalizedMissing.some((item) => item.stage === stage)
+    ? "incomplete"
+    : normalizedNotes.some((item) => item.stage === stage) ? "degraded" : "completed";
+  return {
+    terminal,
+    contract: contract.id,
+    full_council_equivalent: contract.full_council_equivalent,
+    debate_rounds_required: contract.debate_rounds_required,
+    debate_rounds_completed: debateRoundsCompleted,
+    missing: normalizedMissing,
+    notes: normalizedNotes,
+    stage_outcomes: {
+      evidence: { status: stageStatus("evidence") },
+      verification: {
+        status: verification.verification,
+        required: verification.verifier_audit?.required === true,
+      },
+      methods: { status: stageStatus("methods") },
+      debate: {
+        status: stageStatus("debate"),
+        rounds_required: contract.debate_rounds_required,
+        rounds_completed: debateRoundsCompleted,
+      },
+      portfolio_manager: {
+        status: decisionAvailable ? "completed" : managerState.status === "failed" ? "failed" : "not_started",
+        absence_reason: decisionAvailable ? null : absenceReason,
+        decision_available: decisionAvailable,
+      },
+      report: { status: stageStatus("report"), quality: reportStatus },
+      finalize: { status: stageStatus("finalize") },
+    },
+  };
+}
+
+export function applyTerminalContract(run, debate = {}, options = {}) {
+  const manager = debate?.manager || null;
+  const state = terminalContractState(run, { manager, ...options });
+  Object.assign(run, state);
+  if (manager && !state.stage_outcomes.portfolio_manager.decision_available) {
+    manager.decision_available = false;
+    manager.rating = null;
+    manager.pm_absence_reason = state.stage_outcomes.portfolio_manager.absence_reason;
+  }
+  if (TERMINAL_STATES.includes(run.status)) {
+    run.status = state.terminal;
+    run.phase = state.terminal;
+  }
+  return state;
+}
+
+function contractPaceForRun(run = {}) {
+  if (run.council_mode === "quick") {
+    return {
+      total_ms: LIMITS.QUICK_TOTAL_MS,
+      master_ms: LIMITS.QUICK_MASTER_MS,
+      master_waves: 1,
+      verifier_ms: 0,
+      debate_ms: LIMITS.QUICK_SYNTHESIS_MS,
+      pm_ms: LIMITS.QUICK_SYNTHESIS_MS,
+      finalize_reserve_ms: LIMITS.QUICK_FINALIZE_RESERVE_MS,
+    };
+  }
+  return councilPaceProfile(run.council_pace);
+}
+
+function remainingMethodWaves(run = {}) {
+  const selected = Array.isArray(run.masters) ? run.masters.length : 0;
+  if (!selected) return 0;
+  const concurrency = run.council_mode === "quick"
+    ? Math.min(selected, QUICK_TASKS.length)
+    : Math.min(selected, LIMITS.FULL_MASTER_CONCURRENCY);
+  return Math.ceil(selected / Math.max(1, concurrency));
+}
+
+function orchestrationNowMs(args = {}) {
+  const injected = typeof args.clock?.now === "function" ? Number(args.clock.now()) : NaN;
+  return Number.isFinite(injected) ? injected : Date.now();
+}
+
+/** Conservative stage reservation derived only from the already-frozen pace profile. */
+export function budgetAheadDecision(run = {}, {
+  checkpoint,
+  round = null,
+  nowMs = NaN,
+  clock = null,
+  remainingMasterWaves = remainingMethodWaves(run),
+  verifierStageApplies = tripleVerificationRequired(run),
+} = {}) {
+  const profile = contractPaceForRun(run);
+  const contract = terminalReportContract(run);
+  let reservationMs;
+  if (checkpoint === "before_methods") {
+    reservationMs = (profile.master_ms * Math.max(0, remainingMasterWaves))
+      + (verifierStageApplies ? profile.verifier_ms : 0)
+      + (contract.debate_rounds_required * profile.debate_ms)
+      + profile.pm_ms
+      + profile.finalize_reserve_ms;
+  } else if (/^before_debate_round_[1-3]$/u.test(String(checkpoint))) {
+    const currentRound = Number(round ?? String(checkpoint).match(/\d+$/u)?.[0]);
+    if (!Number.isInteger(currentRound) || currentRound < 1 || currentRound > contract.debate_rounds_required) {
+      throw new Error(`invalid debate budget checkpoint: ${String(checkpoint)}`);
+    }
+    reservationMs = ((contract.debate_rounds_required - currentRound + 1) * profile.debate_ms)
+      + profile.pm_ms
+      + profile.finalize_reserve_ms;
+  } else if (checkpoint === "before_pm") {
+    reservationMs = profile.pm_ms + profile.finalize_reserve_ms;
+  } else {
+    throw new Error(`unknown budget checkpoint: ${String(checkpoint)}`);
+  }
+  const resolvedNowMs = Number.isFinite(Number(nowMs))
+    ? Number(nowMs)
+    : orchestrationNowMs({ clock });
+  const startedMs = Date.parse(run.started_at || "");
+  if (!Number.isFinite(startedMs) || !Number.isFinite(resolvedNowMs)) {
+    throw new Error("budget-ahead decision requires valid started_at and nowMs");
+  }
+  const elapsedMs = Math.max(0, resolvedNowMs - startedMs);
+  const remainingMs = Math.max(0, profile.total_ms - elapsedMs);
+  return {
+    terminate: remainingMs < reservationMs,
+    reason: remainingMs < reservationMs ? "budget_exhausted_ahead" : null,
+    checkpoint,
+    remaining_ms: remainingMs,
+    reservation_ms: reservationMs,
+    terminated_at: new Date(resolvedNowMs).toISOString(),
+    cap_at: new Date(startedMs + profile.total_ms).toISOString(),
+  };
+}
+
+function commitFinalArtifacts(run, debate = {}) {
+  const artifacts = artifactPaths(run);
+  if (existsSync(artifacts.publication_manifest_json)) {
+    const prepared = writeFinalArtifacts(run, debate);
+    const publication_manifest = publishFinalArtifacts(run, debate);
+    return { ...prepared, publication_manifest };
+  }
+
+  // Project the already-known structure before rendering so the system-owned header is truthful.
+  // Report validation can itself add or clear a report gap, so iterate to a fixed point before
+  // persistence. A non-convergent projection is a publication error, not a state to guess through.
+  const projectionKey = () => JSON.stringify({
+    terminal: run.terminal,
+    missing: run.missing,
+    notes: run.notes,
+    status: run.status,
+  });
+  let prepared;
+  let projectionConverged = false;
+  let projectionPasses = 0;
+  for (let pass = 0; pass < 3; pass += 1) {
+    projectionPasses = pass + 1;
+    applyTerminalContract(run, debate);
+    const renderedProjection = projectionKey();
+    prepared = writeFinalArtifacts(run, debate);
+    applyTerminalContract(run, debate);
+    if (renderedProjection === projectionKey()) {
+      projectionConverged = true;
+      break;
+    }
+  }
+  if (!projectionConverged) {
+    throw new Error("terminal contract projection did not converge with report quality");
+  }
+  run.terminal_projection_passes = projectionPasses;
+  if (debate.manager) {
+    writeJson(join(runPath(run.run_id), "manager_synthesis.json"), debate.manager);
+    writeJson(join(runPath(run.run_id), "decision.json"), debate.manager);
+  }
+
+  const events = readJsonl(artifacts.events_jsonl).entries;
+  const terminalEvents = new Set([
+    "run_complete", "run_degraded", "incomplete", "needs_verification", "needs_revision", "background_run_failed",
+  ]);
+  const eventType = run.terminal === "complete"
+    ? "run_complete"
+    : run.terminal === "degraded" ? "run_degraded" : "incomplete";
+  if (!events.some((event) => terminalEvents.has(event.type))) {
+    appendEvent(run, eventType, {
+      decision: debate.manager?.rating ?? null,
+      winner: debate.manager?.winner ?? null,
+      terminal: run.terminal,
+      missing: run.missing,
+      notes: run.notes,
+    });
+  }
+  appendEvent(run, "terminal_contract", {
+    terminal: run.terminal,
+    contract: run.contract,
+    missing: run.missing,
+    notes: run.notes,
+    stage_outcomes: run.stage_outcomes,
+  });
+  // report_quality and the terminal projection are now frozen together; save before the
+  // publication marker, then render the trace from that exact persisted timestamp.
+  saveRun(run);
+  writeAllAgentsMarkdown(run, debate);
   const publication_manifest = publishFinalArtifacts(run, debate);
   return { ...prepared, publication_manifest };
 }
@@ -4778,6 +5135,12 @@ function debateFailure(step) {
 async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   const dir = runPath(run.run_id);
   const retryOnTimeout = stageRetryAllowed(args, "synthesis_timeout_ms");
+  const roundBudgetDecision = budgetAheadDecision(run, {
+    checkpoint: "before_debate_round_1",
+    round: 1,
+    clock: args.clock,
+  });
+  if (roundBudgetDecision.terminate) return finalizeBudgetAhead(run, args, roundBudgetDecision);
   appendEvent(run, "debate_round", { round: 1, format: "single_round_parallel" });
   const sideBudget = remainingCouncilBudget(run, timeoutMs);
   const [bullOutcome, bearOutcome] = await Promise.allSettled([
@@ -4821,8 +5184,16 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
     reason: "quick_single_round",
     full_council_equivalent: false,
   });
+  run.debate_rounds_completed = 1;
   writeAllAgentsMarkdown(run, { bull, bear });
 
+  const pmBudgetDecision = budgetAheadDecision(run, {
+    checkpoint: "before_pm",
+    clock: args.clock,
+  });
+  if (pmBudgetDecision.terminate) {
+    return finalizeBudgetAhead(run, args, pmBudgetDecision, [bullStep], [bearStep]);
+  }
   const managerBudget = remainingCouncilBudget(run, timeoutMs);
   const managerStep = await runDebateRole(run, "portfolio_manager", { bull, bear, outputMode, retryOnTimeout }, managerBudget);
   const managerError = debateFailure(managerStep);
@@ -4840,6 +5211,7 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
     error: managerOk
       ? undefined
       : managerError,
+    absence_reason: managerOk ? undefined : "failed",
   });
 
   const gate = verificationStatus(run);
@@ -4862,10 +5234,6 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
   } else if (completeness.degraded_evidence.length || completeness.degraded_debate.length) {
     run.phase = "degraded";
     run.status = "degraded";
-    appendEvent(run, "run_degraded", {
-      degraded_evidence: completeness.degraded_evidence,
-      degraded_debate: completeness.degraded_debate,
-    });
   } else {
     run.phase = "complete";
     run.status = "complete";
@@ -4905,7 +5273,15 @@ function finalizeBeforeDebate(run, args, reason) {
   const dir = runPath(run.run_id);
   for (const role of DEBATE_ROLES) {
     if (["pending", "waiting", "running"].includes(agentState(run, role).status)) {
-      updateAgent(run, role, "skipped", { error: reason, completed_at: new Date().toISOString() });
+      updateAgent(run, role, "skipped", {
+        error: reason,
+        ...(role === "portfolio_manager" ? {
+          absence_reason: /global_deadline|budget_exhausted_ahead/iu.test(reason)
+            ? "not_started_global_deadline"
+            : "skipped_upstream_gate",
+        } : {}),
+        completed_at: new Date().toISOString(),
+      });
     }
   }
   const manager = managerFallback(run, args.prompt || "");
@@ -4939,7 +5315,11 @@ function finalizeNeedsVerification(run, args, reason = "verification_gate_failed
   }
   for (const role of DEBATE_ROLES) {
     if (["pending", "waiting", "running"].includes(agentState(run, role).status)) {
-      updateAgent(run, role, "skipped", { error: reason, completed_at: new Date().toISOString() });
+      updateAgent(run, role, "skipped", {
+        error: reason,
+        ...(role === "portfolio_manager" ? { absence_reason: "skipped_upstream_gate" } : {}),
+        completed_at: new Date().toISOString(),
+      });
     }
   }
   const manager = managerFallback(run, args.prompt || "");
@@ -4981,6 +5361,7 @@ function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRoun
   });
   updateAgent(run, "portfolio_manager", "skipped", {
     error: reason,
+    absence_reason: "skipped_upstream_gate",
     completed_at: new Date().toISOString(),
   });
   const manager = bindDecisionDebateRounds(managerFallback(run, args.prompt || ""), bull, bear);
@@ -4996,6 +5377,91 @@ function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRoun
     missing_evidence: completeness.missing_evidence,
     missing_debate: completeness.missing_debate,
     missing_masters: completeness.missing_masters,
+  });
+  const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager });
+  return { bull, bear, manager, ...finalArtifacts };
+}
+
+function budgetAheadMissing(run, checkpoint, round = null) {
+  const contract = terminalReportContract(run);
+  const missing = [];
+  if (checkpoint === "before_methods") {
+    if (tripleVerificationRequired(run) && verificationStatus(run).verification !== "passed") {
+      missing.push({ stage: "verification", id: "triple_verification", reason: "budget_exhausted_ahead" });
+    }
+    for (const master of selectedMasters(run)) {
+      missing.push({ stage: "methods", id: master, reason: "budget_exhausted_ahead" });
+    }
+  }
+  const firstMissingRound = checkpoint === "before_methods"
+    ? 1
+    : checkpoint.startsWith("before_debate_round_") ? Number(round) : contract.debate_rounds_required + 1;
+  for (let value = firstMissingRound; value <= contract.debate_rounds_required; value += 1) {
+    missing.push({ stage: "debate", id: `round_${value}`, reason: "budget_exhausted_ahead" });
+  }
+  missing.push({ stage: "portfolio_manager", id: "portfolio_manager", reason: "not_started_global_deadline" });
+  return missing;
+}
+
+function finalizeBudgetAhead(run, args, decision, bullRounds = [], bearRounds = []) {
+  const dir = runPath(run.run_id);
+  const completedAt = decision.terminated_at;
+  const round = Number(String(decision.checkpoint).match(/\d+$/u)?.[0] || 0);
+  run.budget_termination = { ...decision };
+  run.terminated_at = completedAt;
+  run.terminal_reason = "budget_exhausted_ahead";
+  run.explicit_missing = budgetAheadMissing(run, decision.checkpoint, round);
+
+  if (decision.checkpoint === "before_methods") {
+    for (const master of selectedMasters(run)) {
+      const status = run.master_status?.[master]?.status || "pending";
+      if (["pending", "waiting", "running"].includes(status)) {
+        updateMasterStatus(run, master, "skipped", {
+          error: "budget_exhausted_ahead",
+          completed_at: completedAt,
+        });
+      }
+    }
+  }
+
+  const bull = mergeDebateRounds(bullRounds.map((step) => step?.packet).filter(Boolean));
+  const bear = mergeDebateRounds(bearRounds.map((step) => step?.packet).filter(Boolean));
+  if (bull) writeJson(join(dir, "bull_researcher.json"), bull);
+  if (bear) writeJson(join(dir, "bear_researcher.json"), bear);
+  const completedRounds = Math.min(bullRounds.length, bearRounds.length);
+  run.debate_rounds_completed = completedRounds;
+  if (decision.checkpoint !== "before_pm") {
+    for (const [role, packet] of [["bull_researcher", bull], ["bear_researcher", bear]]) {
+      updateAgent(run, role, packet ? "failed" : "skipped", {
+        error: "budget_exhausted_ahead",
+        completed_at: completedAt,
+        ...(packet ? { output: join(dir, `${role}.json`), last_completed_round: completedRounds } : {}),
+      });
+    }
+  }
+  updateAgent(run, "portfolio_manager", "skipped", {
+    error: "budget_exhausted_ahead",
+    absence_reason: "not_started_global_deadline",
+    completed_at: completedAt,
+  });
+
+  const manager = bindDecisionDebateRounds(managerFallback(run, args.prompt || ""), bull, bear);
+  manager.pm_absence_reason = "not_started_global_deadline";
+  manager.decision_available = false;
+  manager.rating = null;
+  writeJson(join(dir, "manager_synthesis.json"), manager);
+  writeJson(join(dir, "decision.json"), manager);
+  run.phase = "incomplete";
+  run.status = "incomplete";
+  run.completed_at = completedAt;
+  appendEvent(run, "incomplete", {
+    reason: "budget_exhausted_ahead",
+    checkpoint: decision.checkpoint,
+    remaining_ms: decision.remaining_ms,
+    reservation_ms: decision.reservation_ms,
+    terminated_at: decision.terminated_at,
+    cap_at: decision.cap_at,
+    downstream_model_calls_skipped: true,
   });
   const finalArtifacts = commitFinalArtifacts(run, { bull, bear, manager });
   return { bull, bear, manager, ...finalArtifacts };
@@ -5022,9 +5488,13 @@ export async function synthesizeDecision(run, args) {
     updateAgent(run, "bear_researcher", "running", { started_at: new Date().toISOString() });
     const bear = dryDebate("bear_researcher", run, debatePrompt("bear_researcher", run, { bull }));
     updateAgent(run, "bear_researcher", "completed", { completed_at: new Date().toISOString(), output: join(dir, "bear_researcher.json") });
-    updateAgent(run, "portfolio_manager", "running", { started_at: new Date().toISOString() });
     const fallback = bindDecisionDebateRounds(managerFallback(run, args.prompt || ""), bull, bear);
-    updateAgent(run, "portfolio_manager", "completed", { completed_at: new Date().toISOString(), output: join(dir, "manager_synthesis.json") });
+    updateAgent(run, "portfolio_manager", "skipped", {
+      error: "dry_run_no_portfolio_manager",
+      absence_reason: "skipped_upstream_gate",
+      completed_at: new Date().toISOString(),
+      output: join(dir, "manager_synthesis.json"),
+    });
     writeJson(join(dir, "bull_researcher.json"), bull);
     writeJson(join(dir, "bear_researcher.json"), bear);
     writeJson(join(dir, "manager_synthesis.json"), fallback);
@@ -5078,11 +5548,24 @@ export async function synthesizeDecision(run, args) {
   const failedRound = (round) => [debateFailure(round.bull), debateFailure(round.bear)].filter(Boolean);
 
   // Three-round debate with a strict inter-round barrier and parallel sides per round.
+  const r1Budget = budgetAheadDecision(run, {
+    checkpoint: "before_debate_round_1",
+    round: 1,
+    clock: args.clock,
+  });
+  if (r1Budget.terminate) return finalizeBudgetAhead(run, args, r1Budget);
   const r1 = await parallelRound(1, { brief: "long" }, { brief: "short" });
   if (failedRound(r1).length) {
     return finalizeAfterDebateFailure(run, args, `debate_round_1_failed:${failedRound(r1).join(",")}`, [r1.bull], [r1.bear]);
   }
+  run.debate_rounds_completed = 1;
 
+  const r2Budget = budgetAheadDecision(run, {
+    checkpoint: "before_debate_round_2",
+    round: 2,
+    clock: args.clock,
+  });
+  if (r2Budget.terminate) return finalizeBudgetAhead(run, args, r2Budget, [r1.bull], [r1.bear]);
   const r2 = await parallelRound(2,
     { otherCaseR1: r1.bear.packet },
     { otherCaseR1: r1.bull.packet });
@@ -5096,7 +5579,16 @@ export async function synthesizeDecision(run, args) {
     appendEvent(run, "debate_qna_gate", { status: "failed", errors: ["round 2 did not produce exactly three questions per side"] });
     return finalizeAfterDebateFailure(run, args, "debate_round_2_questions_incomplete", [r1.bull, r2.bull], [r1.bear, r2.bear]);
   }
+  run.debate_rounds_completed = 2;
 
+  const r3Budget = budgetAheadDecision(run, {
+    checkpoint: "before_debate_round_3",
+    round: 3,
+    clock: args.clock,
+  });
+  if (r3Budget.terminate) {
+    return finalizeBudgetAhead(run, args, r3Budget, [r1.bull, r2.bull], [r1.bear, r2.bear]);
+  }
   const r3 = await parallelRound(3, {
     otherCaseR1: r2.bear.packet,
     questionsYouAsked: r2.bull.packet.questions,
@@ -5129,6 +5621,7 @@ export async function synthesizeDecision(run, args) {
   if (qnaGate.status !== "passed") {
     return finalizeAfterDebateFailure(run, args, "debate_round_3_qna_incomplete", [bullR1, bullR2, bullR3], [bearR1, bearR2, bearR3]);
   }
+  run.debate_rounds_completed = 3;
   const bullQnaErrors = qnaGate.errors.filter((error) => error.startsWith("bull_researcher"));
   const bearQnaErrors = qnaGate.errors.filter((error) => error.startsWith("bear_researcher"));
   const bullTransportOk = [bullR1, bullR2, bullR3].every((step) => step.result.ok);
@@ -5166,6 +5659,19 @@ export async function synthesizeDecision(run, args) {
   });
   writeAllAgentsMarkdown(run, { bull, bear });
 
+  const pmBudgetDecision = budgetAheadDecision(run, {
+    checkpoint: "before_pm",
+    clock: args.clock,
+  });
+  if (pmBudgetDecision.terminate) {
+    return finalizeBudgetAhead(
+      run,
+      args,
+      pmBudgetDecision,
+      [bullR1, bullR2, bullR3],
+      [bearR1, bearR2, bearR3],
+    );
+  }
   const pmBudget = remainingCouncilBudget(run, portfolioManagerStageTimeout(args, run));
   const managerStep = await runDebateRole(run, "portfolio_manager", {
     bull,
@@ -5186,6 +5692,7 @@ export async function synthesizeDecision(run, args) {
     completed_at: new Date().toISOString(),
     output: join(dir, "manager_synthesis.json"),
     error: managerOk ? undefined : debateFailure(managerStep),
+    absence_reason: managerOk ? undefined : "failed",
     attempts: managerStep.attempts,
     ...(managerStep.attempt_diagnostics?.length
       ? { attempt_diagnostics: managerStep.attempt_diagnostics }
@@ -5228,10 +5735,44 @@ export async function analyzeSymbol(args) {
       artifacts: debate.artifacts || artifactPaths(run),
     };
   }
+  const beforeMethods = budgetAheadDecision(run, {
+    checkpoint: "before_methods",
+    clock: args.clock,
+    verifierStageApplies: tripleVerificationRequired(run),
+  });
+  if (beforeMethods.terminate) {
+    const debate = finalizeBudgetAhead(run, args, beforeMethods);
+    return {
+      run,
+      debate,
+      decision: debate.manager,
+      final_report_markdown: debate.final_report_markdown,
+      user_response_markdown: debate.user_response_markdown,
+      report_quality: debate.report_quality,
+      artifacts: debate.artifacts || artifactPaths(run),
+    };
+  }
   await runHeadlessVerification(run, args);
   const verificationGate = verificationStatus(run);
   if (verificationGate.verification === "needs_verification") {
     const debate = finalizeNeedsVerification(run, args, "verification_gate_failed_before_methods");
+    return {
+      run,
+      debate,
+      decision: debate.manager,
+      final_report_markdown: debate.final_report_markdown,
+      user_response_markdown: debate.user_response_markdown,
+      report_quality: debate.report_quality,
+      artifacts: debate.artifacts || artifactPaths(run),
+    };
+  }
+  const afterVerification = budgetAheadDecision(run, {
+    checkpoint: "before_methods",
+    clock: args.clock,
+    verifierStageApplies: false,
+  });
+  if (afterVerification.terminate) {
+    const debate = finalizeBudgetAhead(run, args, afterVerification);
     return {
       run,
       debate,

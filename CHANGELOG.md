@@ -22,6 +22,11 @@ Notable changes per release. Dates are UTC.
 
 ### Added
 
+- Added a machine-readable terminal contract that distinguishes `complete`, `degraded` and
+  `incomplete`, records every structural gap or substitute execution, gives portfolio-manager
+  absence one exact reason, and terminates ahead of the global cap when the remaining frozen
+  stage reservation cannot fit. Quick runs complete against their own one-round contract;
+  dry-run plans no longer present unexecuted full debate as complete.
 - Added Seat Fidelity Harness v1 for all 26 provisional operator lenses. It labels every
   policy record and structural parameter as an unsourced AI proposal, locks the pre-change
   policy subject, verifies 52 derivation bindings, exercises 118 fail-closed fact ablations
