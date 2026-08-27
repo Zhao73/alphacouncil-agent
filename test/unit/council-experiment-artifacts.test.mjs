@@ -269,3 +269,9 @@ test("CLI defaults to plan and rejects a symlink import source", (t) => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /physical regular file/);
 });
+
+test("experiment artifact CLI makes the file-scoped npm check contract explicit", () => {
+  const result = spawnSync(process.execPath, ["scripts/council-experiment-artifacts.mjs", "--help"], { cwd: process.cwd(), encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /npm run evaluation:artifacts:check -- --file FILE/u);
+});

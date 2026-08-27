@@ -87,17 +87,16 @@ and analyst scope are independent: selecting all methods never silently selects 
 seats, and selecting all analysts never changes the method bench.
 
 **Ask the tier; never make the user type `fast` or `slow`.** `begin_council_selection` returns
-`pace_options`, one row per tier with `expected_minutes`, `hard_ceiling_minutes` and what the
-extra time buys. Show it as a short menu ABOVE the seat catalog, because it is a three-option
-question and the catalog is long. Publish BOTH numbers: the ceiling on its own reads as the
-estimate, and then every fast run looks like it takes fifteen minutes. Render it like this, in
-the run's language:
+`pace_options`, one row per tier with `hard_ceiling_minutes`,
+`configured_stage_budget_minutes`, `observed_completion_status` and what the extra time buys.
+The configured budget is not an observed completion time. Show the menu ABOVE the seat catalog
+and leave completion explicitly unvalidated until a preregistered live terminal run exists:
 
 ```
 本次分析要跑多深？（默认 2）
-  1. 快速   预计 ~13 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
-  2. 标准   预计 ~22 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
-  3. 深入   预计 ~58 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
+  1. 快速   持久化上限 15 分钟；完整完成实测：尚未验证  每证据席 3.5 分钟，每轮辩论每侧 90 秒
+  2. 标准   持久化上限 30 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
+  3. 深入   持久化上限 60 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
 三档都保留已选择的分析席、方法席、三轮辩论和 PM；slow + 全部方法席 + 全部分析席另强制加入三重核验。
 ```
 

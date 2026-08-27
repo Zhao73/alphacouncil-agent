@@ -9,11 +9,24 @@ import {
   writeExternalHostPreflightArtifact,
 } from "./lib/external-host-e2e-artifacts.mjs";
 
+function usage() {
+  return [
+    "Usage:",
+    "  node scripts/host-e2e-artifacts.mjs --plan",
+    "  node scripts/host-e2e-artifacts.mjs --preflight --host HOST --executable PATH [--write --output FILE]",
+    "  node scripts/host-e2e-artifacts.mjs --check --file FILE",
+    "  node scripts/host-e2e-artifacts.mjs --import-result --file FILE --output DIR",
+    "",
+    "The npm check alias is file-scoped: npm run host:e2e:artifacts:check -- --file FILE",
+  ].join("\n");
+}
+
 function parse(argv) {
-  const options = { mode: "plan", file: null, output: null, write: false, host: null, executable: null, runtime: null, pathOverride: null, packageName: "alphacouncil-agent", packageVersion: null, packageArtifact: null };
+  const options = { mode: "plan", file: null, output: null, write: false, host: null, executable: null, runtime: null, pathOverride: null, packageName: "alphacouncil-agent", packageVersion: null, packageArtifact: null, help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--plan") options.mode = "plan";
+    if (arg === "--help" || arg === "-h") options.help = true;
+    else if (arg === "--plan") options.mode = "plan";
     else if (arg === "--preflight") options.mode = "preflight";
     else if (arg === "--check") options.mode = "check";
     else if (arg === "--import-result") options.mode = "import";
@@ -29,6 +42,7 @@ function parse(argv) {
     else if (arg === "--write") options.write = true;
     else throw new Error(`unknown argument: ${arg}`);
   }
+  if (options.help) return options;
   if (["check", "import"].includes(options.mode) && !options.file) throw new Error(`${options.mode} requires --file`);
   if (options.mode === "import" && !options.output) throw new Error("--import-result requires --output directory");
   if (options.mode === "preflight" && (!options.host || !options.executable)) throw new Error("--preflight requires --host and --executable");
@@ -39,16 +53,19 @@ function parse(argv) {
 try {
   const options = parse(process.argv.slice(2));
   let result;
-  if (options.mode === "plan") result = externalHostCollectionPlan();
+  if (options.help) process.stdout.write(`${usage()}\n`);
+  else if (options.mode === "plan") result = externalHostCollectionPlan();
   else if (options.mode === "preflight") {
     const artifact = preflightExternalHost({ hostId: options.host, executable: options.executable, runtime: options.runtime, pathOverride: options.pathOverride, packageName: options.packageName, packageVersion: options.packageVersion, packageArtifact: options.packageArtifact });
     result = options.write ? writeExternalHostPreflightArtifact(artifact, options.output) : artifact;
   } else if (options.mode === "check") result = checkExternalHostE2eFile(options.file);
   else result = importExternalHostE2eResult(options.file, options.output);
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-  if (options.mode === "check" && !result.valid) process.exitCode = 1;
+  if (!options.help) {
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (options.mode === "check" && !result.valid) process.exitCode = 1;
+  }
 } catch (error) {
-  process.stderr.write(`${error.message}\n`);
+  process.stderr.write(`${error.message}\n${usage()}\n`);
   for (const detail of error instanceof HostE2eArtifactError ? error.errors : []) process.stderr.write(`- ${detail}\n`);
   process.exitCode = 1;
 }

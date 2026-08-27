@@ -87,9 +87,10 @@ No research, run directory or worker may start before that receipt exists. Data-
   evidence seats, every selected method, three debate rounds and the PM. Quick rejects the field
   — it is a smaller contract, not a slower one. The tier is recorded in `status.json`.
 - The tier is ASKED at the selection gate, not typed as an argument.
-  `begin_council_selection` returns `pace_options`, one row per tier carrying both
-  `expected_minutes` and `hard_ceiling_minutes` plus what the extra time buys; a ceiling
-  published alone reads as the estimate. The answer goes to `confirm_master_selection` as
+  `begin_council_selection` returns `pace_options`, one row per tier carrying a
+  `hard_ceiling_minutes`, a configured stage budget and `observed_completion_status`. The
+  stage budget is not an expected duration; until preregistered live terminal evidence exists,
+  the observed status stays `not_validated`. The answer goes to `confirm_master_selection` as
   `council_pace` and binds into the receipt, so an execution call may repeat the confirmed tier
   but never change it — a user who approved 15 minutes cannot end up running an hour. A speed
   named in the request is a prefill exactly like a named master: it highlights the row, the menu

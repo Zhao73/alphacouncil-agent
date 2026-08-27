@@ -32,7 +32,7 @@ When `$ARGUMENTS` is empty, print exactly this and stop:
 /alpha <TICKER> news     dated filings and headlines           (no model spend)
 /alpha market <theme>    what the market is talking about      (no model spend)
 
-you do not have to type a speed: the run asks, and shows the predicted time for each
+you do not have to type a speed: the run asks, and shows the persistence ceiling for each
 tier. all three tiers are the same full_v2 contract at three depths; quick is a SMALLER
 contract (4 analysts, 1 debate round) and is never full-equivalent
 
@@ -62,14 +62,15 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
    `preselected_master_ids`; if it named a speed, pass `council_pace`. Both highlight a choice
    without confirming it.
 2. **Ask how deep to go first**, from the returned `pace_options`. It is a three-option
-   question and the catalog is long, so it goes above the catalog. Show BOTH numbers per tier
-   — the expected time and the hard ceiling — because a ceiling alone reads as the estimate:
+   question and the catalog is long, so it goes above the catalog. Show the persistence ceiling,
+   per-stage budget and `observed_completion_status`; never relabel configured budgets as an
+   expected duration:
 
    ```
    本次分析要跑多深？（默认 2）
-     1. 快速   预计 ~12 分钟（上限 15）  每证据席 3.5 分钟，每轮辩论每侧 90 秒
-     2. 标准   预计 ~20 分钟（上限 30）  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
-     3. 深入   预计 ~44 分钟（上限 60）  每证据席 12 分钟，每轮辩论每侧 360 秒
+     1. 快速   持久化上限 15 分钟；完整完成实测：尚未验证  每证据席 3.5 分钟，每轮辩论每侧 90 秒
+     2. 标准   持久化上限 30 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 150 秒   ← 默认
+     3. 深入   持久化上限 60 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
    三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM，只是每席能想多久不同。
    ```
 

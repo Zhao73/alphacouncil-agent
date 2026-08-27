@@ -78,7 +78,7 @@ portfolio-manager report.
 | 🌏 **What else you are betting on** | Correlation to the broad market, to KOSPI, to KOSDAQ and to the semiconductor cycle, plus dispersion across the eleven sector SPDRs. Sessions pair by date, because Korea and the United States keep different holidays. |
 | 💵 **Fund flow that refuses to be faked** | Creations minus redemptions, priced. Only a filed share count or the issuer's own assets-over-NAV identity may price a flow; a count reconstructed from positions is refused, because a difference cancels the number and keeps the error. |
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam. The exact `slow + all methods + all analysts` path must first pass `source_fidelity`, independent `rederivation`, and `refuter` over every material claim; zero verifier verdicts means `needs_verification`, never `complete`. Quick explicitly does not claim adversarial verification. |
-| ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the expected time beside the hard ceiling for each tier — you never type a speed. Method seats and analyst breadth are separate choices: `core` runs 8 analysts, `all` runs exactly 11. Every full tier preserves the confirmed roster, three debate rounds and PM. Plugin-managed full starts all selected analysts together and persists a terminal run inside the tier. |
+| ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the persistence ceiling, configured stage budget and live-verification status for each tier — you never type a speed. These are deadlines, not measured completion promises. Method seats and analyst breadth are separate choices: `core` runs 8 analysts, `all` runs exactly 11. |
 | 🔍 **Auditable, never hallucinated** | Every claim maps to a source ID. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. Gaps are a section, not an omission. |
 | 📚 **One complete company dossier for every downstream seat** | A full operating-company run accounts for the fixed 52-item core roster, freezes `company_dossier.json`, and gives the same hash-bound artifact to every selected method, every Bull/Bear round and the PM. Each method returns a task/hash/status receipt for all selected packets: 8 in `core`, 11 in `all`. Critical missing data stops the decision instead of disappearing inside a summary. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
@@ -90,17 +90,18 @@ This repository is the uploadable source copy. Runtime outputs are written outsi
 
 ## What this ships
 
-`npm install -g alphacouncil-agent` installs the current release.
+`npm install -g alphacouncil-agent` installs npm's current public `latest`, which may lag this
+source candidate. `npm run release:public:audit` reports source, main, candidate PR, GitHub
+Release, About and npm as separate layers.
 
 Twenty-six method seats, each running its own formulas and its own thresholds against typed
 facts built from SEC filings, FRED series, issuer holdings disclosures, published index
 aggregates, Section 16 ownership, cross-market price history and dated industry news.
 Fifty-two executable method tools.
 
-Measured against live grounding, with no fixtures: every one of the 26 seats reaches a stance
-somewhere across a mixed set of symbols, with no contract failures. A basket that had **no data
-path at all** — `SOX` was in neither registry — now produces 40-plus typed facts, and the seats
-that read them are running the same methods they run on a company.
+Deterministic and fixture-backed checks exercise each seat's policy, typed-fact and abstention
+paths. They do not prove a live 26-seat terminal run, method fidelity or usefulness. The current
+formal counters remain 0/8 registered canonical evaluation runs and 0/4 live-host E2E runs.
 
 Honesty note: seat formulas are AI-authored reconstructions of named published methods,
 pending human review — the governance status and what remains open are tracked in
@@ -210,7 +211,7 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Asks the depth tier with its expected time, shows every master, confirms `1..N`/ranges/`all`, then full; headless is bounded by the chosen tier (15/30/60m) | deterministic stance + one isolated strong-first-person voice worker per selected v3 seat, including `out_of_scope` |
+| `/alpha <ticker>` | Asks the depth tier with its persistence ceiling and unvalidated live-completion status, shows every master, confirms `1..N`/ranges/`all`, then full | deterministic stance + one isolated strong-first-person voice worker per selected v3 seat, including `out_of_scope` |
 | `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
@@ -231,20 +232,21 @@ Filings-based modes need a US filer; other markets are reported through `market_
 ### Full v2 — three depth tiers, chosen at the gate
 
 The run asks how deep to go before it asks which methods to seat. You never type a speed:
-`begin_council_selection` returns the menu, with the expected time and the hard ceiling for each
-tier side by side.
+`begin_council_selection` returns the persistence ceiling, configured stage budget and
+`observed_completion_status` for each tier. A configured budget is not an observed duration.
 
-| tier | expected | ceiling | evidence / seat | debate / round / side |
+| tier | persistence ceiling | observed complete run | evidence / seat | debate / round / side |
 | --- | --- | --- | --- | --- |
-| `fast` | ~13 min | 15 min | 3.5 min | 90 s |
-| `normal` (default) | ~22 min | 30 min | 6 min | 150 s |
-| `slow` | ~58 min | 60 min | 12 min | 6 min |
+| `fast` | 15 min | not validated | 3.5 min | 90 s |
+| `normal` (default) | 30 min | not validated | 6 min | 150 s |
+| `slow` | 60 min | not validated | 12 min | 6 min |
 
 **All three are the same `full_v2` contract** — the separately selected 8- or 11-seat analyst
 roster, every selected method, three debate rounds and the PM. A tier changes how long each seat
 may think, never which seats run.
-Both numbers are published because a ceiling shown alone reads as the estimate, and then every
-fast run looks like it takes fifteen minutes.
+The ceiling guarantees terminal persistence, including an explicit `incomplete` result; it does
+not promise successful completion. No tier receives a completion-time claim until preregistered
+live terminal evidence exists.
 
 A tier moves every per-stage cap together with the total, and it also shapes what each worker is
 asked to produce. That second half matters: a cap on its own is a timeout, and the same prompt

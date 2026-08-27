@@ -14,8 +14,8 @@ import { startServer, structured } from "../helpers/rpc-client.mjs";
  * It is the second decision the gate takes, so it travels inside the receipt and is checked at
  * consumption like every other bound field: a user who approved fifteen minutes must not end up
  * running an hour, and the reverse must not happen either. A tier's total is a ceiling rather
- * than a forecast, so the menu publishes both — given only the ceiling a reader treats it as the
- * estimate and expects every fast run to take fifteen minutes.
+ * than a forecast, while its stage budget only explains how that ceiling is allocated. Observed
+ * completion stays explicitly unvalidated until preregistered live runs supply it.
  */
 
 let dataDir;
@@ -86,7 +86,7 @@ async function run(receipt, prompt, extra = {}) {
   }, { timeoutMs: 60_000 });
 }
 
-test("the gate offers every tier with both its estimate and its ceiling", async () => {
+test("the gate offers every tier with its configured budget, ceiling, and validation status", async () => {
   const { opened } = await gate();
   assert.equal(opened.pace_options.length, 3);
   assert.equal(opened.default_council_pace, "normal");
@@ -97,18 +97,19 @@ test("the gate offers every tier with both its estimate and its ceiling", async 
     assert.ok(profile, option.pace);
     assert.equal(option.hard_ceiling_ms, profile.total_ms);
     assert.equal(option.hard_ceiling_minutes, Math.round(profile.total_ms / 60000));
-    // The estimate must be strictly below the ceiling, or publishing both says nothing.
-    assert.ok(option.expected_ms < option.hard_ceiling_ms, option.pace);
-    assert.ok(option.expected_minutes >= 1);
+    // The configured stage budget must fit inside the persisted queue-to-terminal ceiling.
+    assert.ok(option.configured_stage_budget_ms < option.hard_ceiling_ms, option.pace);
+    assert.ok(option.configured_stage_budget_minutes >= 1);
+    assert.equal(option.observed_completion_minutes, null);
+    assert.equal(option.observed_completion_status, "not_validated");
     // A user choosing a tier needs to see what the extra time is spent on.
     assert.ok(option.buys.zh.includes("证据席"), option.pace);
     assert.ok(option.buys.en.includes("evidence seat"), option.pace);
     assert.equal(option.debate_seconds_per_round, Math.round(profile.debate_ms / 1000));
   }
-  // normal moved 22 -> 25 when its method-voice and debate caps were raised to cover the
-  // measured stage floors; it was leaving 495s of its budget unspendable while a voice worker
-  // timed out at exactly 120007ms and a 150s debate cap covered a measured 142s round by 5%.
-  assert.deepEqual(opened.pace_options.map((option) => option.expected_minutes), [13, 25, 58]);
+  // The normal configured stage budget moved 22 -> 25 when its method-voice and debate caps were
+  // raised to cover measured stage floors. This is budget accounting, not a completion forecast.
+  assert.deepEqual(opened.pace_options.map((option) => option.configured_stage_budget_minutes), [13, 25, 58]);
   assert.deepEqual(opened.pace_options.map((option) => option.hard_ceiling_minutes), [15, 30, 60]);
   assert.deepEqual(opened.pace_options.filter((option) => option.is_default).map((o) => o.pace), ["normal"]);
 });

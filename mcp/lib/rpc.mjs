@@ -675,7 +675,7 @@ export function tools() {
         council_pace: {
           type: "string",
           enum: COUNCIL_PACE_NAMES,
-          description: "The depth tier the user picked from the pace_options this selection returned. Full only; omit to accept the default (normal, ~20 min expected, 30 min ceiling). Binds into the receipt, so an execution call may repeat it but never change it.",
+          description: "The depth tier the user picked from the pace_options this selection returned. Full only; omit to accept the default (normal, 30-minute persistence ceiling; observed completion remains unvalidated until live evidence exists). Binds into the receipt, so an execution call may repeat it but never change it.",
         },
         analyst_scope: {
           type: "string",

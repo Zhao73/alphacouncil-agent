@@ -55,6 +55,8 @@
     "persona:release:evidence:check": "node scripts/check-persona-v3-ga.mjs --expected-version 0.9.0 --require-release-evidence",
     "release:check": "npm run check && node scripts/check-persona-v3-ga.mjs --expected-version 0.9.0 --require-count 26 --require-min-admission operational --forbid-legacy --forbid-prompt-lens --require-release-evidence",
     "release:consistency": "node scripts/check-release-consistency.mjs --source",
+    "release:public:audit": "node scripts/audit-public-release.mjs",
+    "release:public:check": "node scripts/audit-public-release.mjs --check",
     "release:preview:check": "npm run check && npm run release:consistency && npm run facts:catalog:check && npm run seats:fidelity:check && npm run test:package",
     "persona:stage:init": "node scripts/scaffold-persona-v3-staging.mjs --write",
     "persona:stage:check": "node scripts/scaffold-persona-v3-staging.mjs --check",

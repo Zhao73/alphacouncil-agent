@@ -396,12 +396,11 @@ export function analystScopeMenu(catalog, mode = "full") {
 }
 
 /**
- * The pace menu shown at the selection gate, with what each tier costs and what it buys.
+ * The pace menu shown at the selection gate, with each persistence ceiling and stage budget.
  *
- * `total_ms` is a hard ceiling, not a forecast, so both are published: `expected_ms` is the
- * serial worst case if every stage uses its whole cap, which is the honest answer to "how long
- * will this take". A reader given only the ceiling reads it as the estimate and thinks every
- * fast run takes fifteen minutes.
+ * `COUNCIL_PACE_STAGE_TOTAL` is a configured budget proof, not an observed duration or a
+ * completion forecast. Until a tier has preregistered live terminal evidence, the menu says
+ * `not_validated` instead of presenting that budget as an expected completion time.
  */
 export function councilPaceMenu(mode = "full") {
   if (councilMode(mode) === "quick") return [];
@@ -412,8 +411,10 @@ export function councilPaceMenu(mode = "full") {
       is_default: name === DEFAULT_COUNCIL_PACE,
       hard_ceiling_ms: profile.total_ms,
       hard_ceiling_minutes: Math.round(profile.total_ms / 60000),
-      expected_ms: COUNCIL_PACE_STAGE_TOTAL(profile),
-      expected_minutes: Math.round(COUNCIL_PACE_STAGE_TOTAL(profile) / 60000),
+      configured_stage_budget_ms: COUNCIL_PACE_STAGE_TOTAL(profile),
+      configured_stage_budget_minutes: Math.round(COUNCIL_PACE_STAGE_TOTAL(profile) / 60000),
+      observed_completion_minutes: null,
+      observed_completion_status: "not_validated",
       evidence_seconds_per_seat: Math.round(profile.evidence_ms / 1000),
       debate_seconds_per_round: Math.round(profile.debate_ms / 1000),
       // Same contract at every tier: this is what changes and what does not.

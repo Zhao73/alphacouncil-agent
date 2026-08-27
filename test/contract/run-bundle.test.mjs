@@ -25,6 +25,7 @@ import {
   analyzeSeatContent,
   exportRunBundle,
   formatVerificationSummary,
+  seatContentMonitoringFindings,
   verifyRunBundle,
 } from "../../scripts/lib/run-bundle.mjs";
 
@@ -478,7 +479,7 @@ test("export refuses symlinked run artifacts and an existing output target", () 
   }
 });
 
-test("26 renamed copies of one template fail the anti-template gates", () => {
+test("26 renamed copies of one template are flagged by exploratory monitors, not certified as method collapse", () => {
   const opinions = CANONICAL_MASTER_IDS.map((master) => voice(
     master,
     "cautious",
@@ -486,7 +487,15 @@ test("26 renamed copies of one template fail the anti-template gates", () => {
   ));
   const result = analyzeSeatContent(opinions);
   assert.equal(result.similarity.status, "failed");
+  assert.equal(result.similarity.decision_use, "monitor_only_unpreregistered");
   assert.ok(result.similarity.pairs_at_or_above_threshold > 0);
   assert.equal(result.length_variance.status, "failed");
   assert.equal(result.stance_distribution.status, "failed");
+  const findings = seatContentMonitoringFindings(result);
+  assert.deepEqual(findings.map(({ code }) => code), [
+    "seat_text_similarity_monitor",
+    "seat_text_length_monitor",
+    "seat_stance_distribution_monitor",
+  ]);
+  assert.ok(findings.every(({ message }) => /not a fidelity or merge gate|repeated blinded cases/u.test(message)));
 });

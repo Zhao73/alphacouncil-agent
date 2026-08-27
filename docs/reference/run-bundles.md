@@ -37,10 +37,10 @@ The strict layer currently checks:
 1. a clean v1.5.0 runtime bound to the exact `v1.5.0` tag tree, with the run started after that release commit;
 2. a complete hash-linked, time-monotonic event ledger and a positive running/completed interval for every selected method seat;
 3. a separately persisted, completed method voice for every selected seat, including the exact frozen stance acknowledgement, five voice fields, source IDs, company-dossier hash and every selected analyst-packet acknowledgement;
-4. normalized trigram similarity below `0.5` for every seat pair, nondegenerate text lengths, non-unanimous stance without repeated-case support, and a method-specific reason for every `out_of_scope` result;
+4. a structured decision, disqualifier or invalidation reason for every `out_of_scope` result; character length, trigram similarity and one-run stance distribution are retained only as uncalibrated monitoring signals and never decide fidelity, seat merging or release;
 5. a hash-bound `council_diagnostics.json`; a missing seat may appear only as `not_produced`, never as synthetic content.
 
-The tool also reports `derived_marker_hits` using a fixed TF-IDF-like rule over pack-declared text. It is advisory only. It is not a reviewed method vocabulary and is not evidence that a seat is genuine.
+The tool also reports `derived_marker_hits` using a fixed TF-IDF-like rule over pack-declared text. It is advisory only. The same is true of text-similarity, length-variance and single-run stance-distribution findings. None is a reviewed method vocabulary or evidence that a seat is genuine; method fidelity requires preregistered, blinded, repeated-case review of facts, thresholds, rationale and counterfactual sensitivity.
 
 Until P1c preregisters reviewed per-seat vocabulary markers and thresholds, claim readiness intentionally remains `BLOCKED` with `reviewed_vocabulary_contract_pending`. This is an explicit evidence boundary, not a failed export.
 

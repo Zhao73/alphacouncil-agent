@@ -32,7 +32,7 @@ const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
 const MAX_BUNDLE_BYTES = 128 * 1024 * 1024;
 const MAX_BUNDLE_ENTRIES = 4_096;
-const SIMILARITY_THRESHOLD = 0.5;
+const SIMILARITY_MONITOR_THRESHOLD = 0.5;
 const WINDOWS_RENAME_DELAYS_MS = Object.freeze([1, 2, 4, 8, 16, 32, 64, 128]);
 const WINDOWS_RENAME_ERRORS = new Set(["EACCES", "EBUSY", "EPERM"]);
 const renameSignal = new Int32Array(new SharedArrayBuffer(4));
@@ -213,17 +213,17 @@ function jaccard(left, right) {
   return intersection / (left.size + right.size - intersection);
 }
 
-function outOfScopeReason(opinion) {
-  return [
-    opinion?.decision_reason,
-    ...(Array.isArray(opinion?.disqualifiers_triggered) ? opinion.disqualifiers_triggered : []),
-    ...(Array.isArray(opinion?.what_would_change_my_mind) ? opinion.what_would_change_my_mind : []),
-    opinion?.voice?.how_my_method_reads_it,
-    opinion?.voice?.what_changes_my_mind,
-  ].filter(Boolean).join(" ").trim();
+function nonEmptyString(value) {
+  return typeof value === "string" && /\S/u.test(value);
 }
 
-export function analyzeSeatContent(opinions, { similarityThreshold = SIMILARITY_THRESHOLD } = {}) {
+function hasStructuredOutOfScopeReason(opinion) {
+  return nonEmptyString(opinion?.decision_reason)
+    || (Array.isArray(opinion?.disqualifiers_triggered) && opinion.disqualifiers_triggered.some(nonEmptyString))
+    || (Array.isArray(opinion?.what_would_change_my_mind) && opinion.what_would_change_my_mind.some(nonEmptyString));
+}
+
+export function analyzeSeatContent(opinions, { similarityThreshold = SIMILARITY_MONITOR_THRESHOLD } = {}) {
   const seats = (Array.isArray(opinions) ? opinions : [])
     .filter((opinion) => typeof opinion?.master === "string")
     .map((opinion) => ({ opinion, master: opinion.master, text: normalizeSeatText(opinion) }))
@@ -254,13 +254,14 @@ export function analyzeSeatContent(opinions, { similarityThreshold = SIMILARITY_
   ]));
   const usedStances = Object.values(stances).filter((count) => count > 0).length;
   const outOfScopeFailures = seats
-    .filter((seat) => seat.opinion.stance === "out_of_scope" && outOfScopeReason(seat.opinion).length < 24)
+    .filter((seat) => seat.opinion.stance === "out_of_scope" && !hasStructuredOutOfScopeReason(seat.opinion))
     .map((seat) => seat.master);
   return {
     contract_id: "alphacouncil_seat_content_diagnostics_v1",
     seat_count: seats.length,
     similarity: {
       status: seats.length >= 2 && duplicatePairs.length === 0 ? "passed" : "failed",
+      decision_use: "monitor_only_unpreregistered",
       threshold: similarityThreshold,
       pair_count: pairs.length,
       pairs_at_or_above_threshold: duplicatePairs.length,
@@ -269,6 +270,7 @@ export function analyzeSeatContent(opinions, { similarityThreshold = SIMILARITY_
     },
     length_variance: {
       status: lengthPassed ? "passed" : "failed",
+      decision_use: "monitor_only_unpreregistered",
       required_range: Math.max(12, Math.floor(meanLength * 0.05)),
       distinct_length_count: distinctLengths,
       min_length: lengths.length ? Math.min(...lengths) : null,
@@ -277,12 +279,13 @@ export function analyzeSeatContent(opinions, { similarityThreshold = SIMILARITY_
     },
     stance_distribution: {
       status: seats.length >= 2 && usedStances >= 2 ? "passed" : "failed",
+      decision_use: "monitor_only_unpreregistered",
       counts: stances,
       note: usedStances < 2 ? "all recorded seats share one stance; repeated-case evidence is required to justify this" : null,
     },
     out_of_scope_reasons: {
       status: outOfScopeFailures.length ? "failed" : "passed",
-      minimum_dense_reason_length: 24,
+      decision_use: "structured_contract_support",
       missing_method_reason: outOfScopeFailures,
     },
   };
@@ -715,6 +718,7 @@ function seatContractProblems(opinion, master, tasks, dossier, sourceIds) {
     requireValue(Array.isArray(opinion?.[field]), `${field} must be an array`);
   }
   requireValue(["high", "medium", "low"].includes(opinion?.confidence), "confidence contract mismatch");
+  if (opinion?.stance === "out_of_scope") requireValue(hasStructuredOutOfScopeReason(opinion), "out_of_scope lacks a structured decision, disqualifier or invalidation reason");
   if (opinion?.stance !== "out_of_scope") requireValue((opinion?.source_ids || []).length > 0, "directional stance has no source_ids");
   for (const sourceId of opinion?.source_ids || []) requireValue(sourceIds.has(sourceId), `source_id is absent from source_manifest: ${sourceId}`);
   requireValue(opinion?.company_dossier_hash_ack === dossier?.content_hash, "company dossier hash ack mismatch");
@@ -729,20 +733,21 @@ function seatContractProblems(opinion, master, tasks, dossier, sourceIds) {
   return problems;
 }
 
-function contentBlockers(content) {
-  const blockers = [];
-  if (content?.similarity?.status !== "passed") blockers.push(issue(
-    "anti_template_similarity_failed",
-    `${content?.similarity?.pairs_at_or_above_threshold ?? "unknown"} seat pair(s) meet or exceed the ${SIMILARITY_THRESHOLD} trigram Jaccard limit`,
+export function seatContentMonitoringFindings(content) {
+  const findings = [];
+  if (content?.similarity?.status !== "passed") findings.push(issue(
+    "seat_text_similarity_monitor",
+    `${content?.similarity?.pairs_at_or_above_threshold ?? "unknown"} seat pair(s) meet or exceed the exploratory ${SIMILARITY_MONITOR_THRESHOLD} trigram Jaccard monitor; this is not a fidelity or merge gate`,
   ));
-  if (content?.length_variance?.status !== "passed") blockers.push(issue("anti_template_length_variance_failed", "seat text lengths are degenerate"));
-  if (content?.stance_distribution?.status !== "passed") blockers.push(issue("stance_distribution_unsubstantiated", "all seats share one stance without repeated-case support"));
-  if (content?.out_of_scope_reasons?.status !== "passed") blockers.push(issue(
-    "out_of_scope_reason_missing",
-    "one or more out-of-scope seats lack a method-specific reason",
-    content?.out_of_scope_reasons?.missing_method_reason,
+  if (content?.length_variance?.status !== "passed") findings.push(issue(
+    "seat_text_length_monitor",
+    "seat text lengths are similar; uncalibrated character counts are not a fidelity or merge gate",
   ));
-  return blockers;
+  if (content?.stance_distribution?.status !== "passed") findings.push(issue(
+    "seat_stance_distribution_monitor",
+    "all recorded seats share one stance; repeated blinded cases are required before interpreting this pattern",
+  ));
+  return findings;
 }
 
 function gitOutput(args, packageRoot) {
@@ -1056,7 +1061,7 @@ export function verifyRunBundle({ bundleDir, packageRoot = PACKAGE_ROOT } = {}) 
     }
     if (!errors.length) {
       const content = analyzeSeatContent(opinions);
-      blockers.push(...contentBlockers(content));
+      notEvaluable.push(...seatContentMonitoringFindings(content));
       blockers.push(...lifecycleBlockers(events, masters));
       if (diagnostics?.schema !== "alphacouncil_run_bundle_diagnostics_v1"
         || diagnostics?.schema_version !== 1

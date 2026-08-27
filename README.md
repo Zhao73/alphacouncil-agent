@@ -95,6 +95,10 @@ AlphaCouncil shows the work plan first. Full research asks separately for method
 | Full — normal | Same confirmed roster, frozen-stance sequence, 3 debate rounds, and PM, with a larger depth envelope | 30 minutes |
 | Full — slow | Same confirmed roster and stages with the largest depth envelope | 60 minutes |
 
+These are queue-to-terminal persistence ceilings, not measured completion times. They guarantee
+an explicit terminal record even when work is incomplete; a successful live fast run within 15
+minutes has not yet been demonstrated across the four hosts.
+
 When an instrument classification and typed-fact coverage are already available, the selector also
 shows an eight-family **advisory method match** derived from all 26 physical pack manifests. It is
 only a prefill: every pack remains selectable, no run starts without explicit confirmation, and a
@@ -131,6 +135,10 @@ This compares workflow shapes, not named products. A particular tool may impleme
 ## What the seats are—and are not
 
 The method-seat formulas are **AI-authored reconstructions of published methods, pending human review**. The named practitioners have not reviewed or endorsed these seats. They are not impersonations, independent models, or validated replicas. A stance is a structured argument to check against its inputs and sources—not a validated investment model.
+
+Current source evidence boundary: 26 provisional method seats, 0 validated method models, 0/8
+registered-and-completed canonical evaluation runs, and 0/4 live-host end-to-end runs. Passing source tests
+does not change those zeros.
 
 <!-- readme-section:disclaimer -->
 ## Disclaimer

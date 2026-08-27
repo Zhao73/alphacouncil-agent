@@ -115,6 +115,7 @@ node scripts/council-experiment-artifacts.mjs --build-case-freeze \
   --manifest /absolute/path/to/case-freeze-build-manifest.json \
   --write --output /absolute/evidence-directory/case-freeze.json
 node scripts/council-experiment-artifacts.mjs --check --file /absolute/path/to/artifact.json
+npm run evaluation:artifacts:check -- --file /absolute/path/to/artifact.json
 node scripts/council-experiment-artifacts.mjs --check --file /absolute/path/to/manifest.json \
   --artifact-directory /absolute/path/to/result-files
 node scripts/council-experiment-artifacts.mjs --import-result \
@@ -122,7 +123,9 @@ node scripts/council-experiment-artifacts.mjs --import-result \
   --output /absolute/path/to/immutable-import-directory
 ```
 
-The default command is plan-only and performs no experiment or model call. The schemas are
+The default command is plan-only and performs no experiment or model call. The npm `:check`
+alias is intentionally file-scoped, so a bare invocation reports usage instead of guessing an
+artifact. The schemas are
 `council-case-freeze-v1`, `council-arm-run-result-v1` and
 `council-experiment-result-manifest-v1`. They bind every run to the same case freeze and
 frozen-input hash, record source/cost/latency and failed/retried work, and represent E as the

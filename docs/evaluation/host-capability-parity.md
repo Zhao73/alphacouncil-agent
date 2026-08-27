@@ -114,12 +114,14 @@ node scripts/host-e2e-artifacts.mjs --preflight \
   --host codex --executable codex --write \
   --output /absolute/evidence-directory/codex-not-run.json
 node scripts/host-e2e-artifacts.mjs --check --file /absolute/path/to/host-result.json
+npm run host:e2e:artifacts:check -- --file /absolute/path/to/host-result.json
 node scripts/host-e2e-artifacts.mjs --import-result \
   --file /absolute/path/to/host-result.json \
   --output /absolute/path/to/immutable-import-directory
 ```
 
-`--preflight` is read-only. It may resolve and hash an explicit executable/runtime and run
+The npm `:check` alias is intentionally file-scoped; it never guesses which external result
+to validate. `--preflight` is read-only. It may resolve and hash an explicit executable/runtime and run
 only `--version`; it never invokes a prompt or paid model. Even a successful version probe
 returns `status: not_run`, because credentials, repository trust and an external run were not
 proved. A crash, missing executable or missing runtime is retained as a blocker/degradation.

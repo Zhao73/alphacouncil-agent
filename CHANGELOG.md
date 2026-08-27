@@ -6,6 +6,18 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Pace selection no longer presents configured stage-budget arithmetic as a measured completion
+  estimate. Each tier now exposes its persistence ceiling, configured stage budget and an
+  explicit `observed_completion_status=not_validated` until preregistered live terminal evidence
+  exists; the public READMEs state that 15 minutes is a terminal-persistence ceiling, not a
+  proven successful completion time.
+- Trigram similarity, character-length variance and one-run stance distribution are now
+  monitoring findings rather than method-fidelity, seat-merging or release gates. A structured
+  `out_of_scope` reason remains mandatory, while real fidelity stays blocked on preregistered,
+  blinded, repeated-case review of facts, thresholds, rationale and counterfactual sensitivity.
+- Evaluation and external-host artifact CLIs now provide `--help` output that makes their
+  file-scoped npm `:check` contract explicit instead of leaving a bare `requires --file` error
+  without the correct invocation.
 - Integration RPC observers now derive from the exercised contract ceiling plus one shared
   15-second process-settlement allowance. Eleven already-faithful sites remain numerically
   unchanged, four under-sized observers are normalized, and deliberately early-return or
@@ -41,6 +53,10 @@ Notable changes per release. Dates are UTC.
 
 ### Added
 
+- Added a read-only public-release audit that reports source HEAD, GitHub main, the exact
+  candidate PR, GitHub About/Release and npm dist-tags as separate machine-readable layers.
+  Report mode records drift without blocking local work; strict `--check` exits `2` until all
+  public layers align.
 - Added an offline release-consistency gate that binds the candidate version, dated changelog
   section, measured physical-pack and MCP-tool counts, release tag and prerelease dist-tag.
   The tag workflow runs it before dependency installation or publication, rejects commits not
