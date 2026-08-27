@@ -51,7 +51,7 @@ function sourceTestArgs(files = [], concurrency = SOURCE_TEST_CONCURRENCY) {
   return Object.freeze(["--test", ...(concurrencyArg ? [concurrencyArg] : []), ...files]);
 }
 
-function executionPhases({ mode, args, selectedFiles }, platform = process.platform) {
+function executionPhases({ mode, args, selectedFiles, requirePackagedParity }, platform = process.platform) {
   if (!mode.startsWith("source_") || platform !== "win32") {
     return Object.freeze([
       Object.freeze({ id: mode === "installed_package" ? "installed_package" : "source_suite", args }),
@@ -59,7 +59,10 @@ function executionPhases({ mode, args, selectedFiles }, platform = process.platf
   }
 
   if (!selectedFiles.includes(PACKAGED_HOST_PARITY_TEST_FILE)) {
-    throw new Error(`Windows isolated test is missing from the source suite: ${PACKAGED_HOST_PARITY_TEST_FILE}`);
+    if (requirePackagedParity) {
+      throw new Error(`Windows isolated test is missing from the source suite: ${PACKAGED_HOST_PARITY_TEST_FILE}`);
+    }
+    return Object.freeze([Object.freeze({ id: "source_suite", args })]);
   }
   const concurrentFiles = selectedFiles.filter((file) => file !== PACKAGED_HOST_PARITY_TEST_FILE);
   if (concurrentFiles.length === 0) throw new Error("Windows concurrent source-test phase is empty");
@@ -116,6 +119,9 @@ export function validatePortableExclusions(root = repoRoot) {
 export function buildTestPlan(root = repoRoot, { platform = process.platform } = {}) {
   const tests = hasRunnableSourceTests(root);
   const staging = stagingState(root);
+  // Contract fixtures construct intentionally minimal source-shaped trees. A real checkout is
+  // identified by the runner file itself and must never silently lose the isolated parity test.
+  const requirePackagedParity = existsSync(join(root, "scripts", "run-tests.mjs"));
   if (staging === "partial") {
     throw new Error("private staging is partial: personas-v3 and persona-v3-formula-candidates must both exist or both be absent");
   }
@@ -126,7 +132,7 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
       mode,
       excluded: Object.freeze([]),
       args,
-      phases: executionPhases({ mode, args, selectedFiles: Object.freeze([]) }, platform),
+      phases: executionPhases({ mode, args, selectedFiles: Object.freeze([]), requirePackagedParity }, platform),
     });
   }
   if (staging === "present") {
@@ -137,7 +143,7 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
       mode,
       excluded: Object.freeze([]),
       args,
-      phases: executionPhases({ mode, args, selectedFiles }, platform),
+      phases: executionPhases({ mode, args, selectedFiles, requirePackagedParity }, platform),
     });
   }
 
@@ -151,7 +157,12 @@ export function buildTestPlan(root = repoRoot, { platform = process.platform } =
     mode,
     excluded: SOURCE_PORTABLE_EXCLUDED_TESTS,
     args,
-    phases: executionPhases({ mode, args, selectedFiles: Object.freeze(selected) }, platform),
+    phases: executionPhases({
+      mode,
+      args,
+      selectedFiles: Object.freeze(selected),
+      requirePackagedParity,
+    }, platform),
   });
 }
 

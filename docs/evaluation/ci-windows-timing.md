@@ -177,3 +177,28 @@ the same 1,417 tests, a Windows `Run checks` duration in the nine-minute-or-less
 the contention source must be investigated again instead of calling WP3W-b complete. The first
 WP4 commit must then produce another green Windows job, so one favorable runner is not presented
 as proof of stability.
+
+## First WP3W-b CI correction
+
+The first scheduling commit ran in
+[`33043254765`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043254765).
+Its Windows job
+[`98421392091`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043254765/job/98421392091)
+entered `source_without_packaged_host_parity` and completed 1,412 tests: 1,404 passed, two
+failed and 6 skipped in 255,216.3387 ms. The only failures were existing test-plan contract
+cases whose synthetic temporary source trees intentionally omit the parity file. Those fixture
+trees inherited the real Windows platform and were incorrectly treated as malformed complete
+checkouts, so the isolated phase did not run. No parity, runtime, integration or seat-fidelity
+assertion failed.
+
+The correction keeps a single phase for a source-shaped synthetic tree that does not contain
+its own `scripts/run-tests.mjs`. A real checkout is identified by that runner file: on Windows
+it must include the packaged-host-parity test in the selected file set or fail closed. The
+already extended `packaged parity CLI defaults to a read-only temporary check and Windows
+isolates this file` contract test verifies the real repository's exact two phases and complete
+file multiset, so no duplicate test is added.
+
+All four non-Windows jobs passed. Ubuntu timings stayed at 2:00, 1:47 and 1:39. The macOS job
+took 2:28 versus 1:41 in the immediately preceding run even though its single-phase plan is
+byte-for-byte unchanged. This is recorded as one un-attributed runner variance observation;
+it is not used as evidence that the scheduling change improved or regressed macOS.

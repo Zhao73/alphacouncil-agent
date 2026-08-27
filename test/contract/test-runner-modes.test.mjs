@@ -102,6 +102,15 @@ test("test runner selects every portable source test except the reviewed private
   assert.equal(plan.mode, "source_portable");
   assert.deepEqual(plan.excluded, EXPECTED_PORTABLE_EXCLUSIONS);
   assert.deepEqual(plan.args, ["--test", "--test-concurrency=4", "test/contract/portable.test.mjs"]);
+
+  const syntheticWindowsPlan = buildTestPlan(root, { platform: "win32" });
+  assert.deepEqual(syntheticWindowsPlan.phases, [{ id: "source_suite", args: syntheticWindowsPlan.args }]);
+
+  write(root, "scripts/run-tests.mjs");
+  assert.throws(
+    () => buildTestPlan(root, { platform: "win32" }),
+    /Windows isolated test is missing from the source suite/,
+  );
 });
 
 test("portable mode fails closed when an exclusion no longer names a source test", (t) => {

@@ -6,6 +6,8 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Synthetic source-tree contract fixtures without a packaged-host-parity file keep their
+  single source-test phase; a real Windows checkout still fails closed if that file is absent.
 - The Windows source-test plan moves the unchanged packaged-host-parity file to an isolated,
   single-concurrency phase after the four-way source suite. Linux and macOS scheduling,
   timeout ceilings, test assertions and the selected source-file set are unchanged.
