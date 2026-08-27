@@ -377,6 +377,7 @@ async function runSlowAll(t, { failVerifiers = false, semanticFidelityRetry = fa
         profile: { name: "Acme Slow-All Fixture Corporation", cik: "0000000001" },
       }),
     },
+  // WP-4c: path_bounded_observer — the 60-minute pace total is not the exercised path; a contract-derived budget would permit a 60-minute hang. Needs a path-derived ceiling in a later package.
   }, { timeoutMs: 120_000 }));
   return { dataDir, fake, result, runId, selection };
 }

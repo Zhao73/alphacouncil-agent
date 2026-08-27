@@ -4,6 +4,17 @@ import { repoRoot, serverEntry } from "./paths.mjs";
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
+export const SETTLEMENT_HEADROOM_MS = 15_000;
+
+export function observerBudget(totalTimeoutMs) {
+  if (!Number.isSafeInteger(totalTimeoutMs) || totalTimeoutMs <= 0) {
+    throw new TypeError(
+      `observerBudget requires a positive integer contract ceiling, got ${String(totalTimeoutMs)}`,
+    );
+  }
+  return totalTimeoutMs + SETTLEMENT_HEADROOM_MS;
+}
+
 /**
  * Spawn the MCP server over stdio and resolve each request by its JSON-RPC id.
  *

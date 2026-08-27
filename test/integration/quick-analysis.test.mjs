@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 import { QUICK_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { startServer, structured } from "../helpers/rpc-client.mjs";
+import { observerBudget, startServer, structured } from "../helpers/rpc-client.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
 
@@ -174,6 +174,8 @@ writeFileSync(output, JSON.stringify(packet));
 }
 
 test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v1 handoff", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeCodex(dataDir);
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -210,12 +212,12 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
     const runId = `QUICK-ANALYSIS-${process.pid}`;
     const response = await server.callTool("analyze_symbol", {
       symbol: "RKLB", as_of: "2026-07-28", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 30_000,
+      council_mode: "quick", total_timeout_ms: TOTAL_TIMEOUT_MS,
       timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 45_000 });
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) });
     const result = structured(response);
     assert.equal(result.run.council_mode, "quick");
     assert.deepEqual(result.run.tasks, QUICK_TASKS);
@@ -270,6 +272,8 @@ test("quick council is mode-bound, news-inclusive, parallel and writes a quick_v
 });
 
 test("quick PM repairs one wrong-language JSON response with the shared bounded no-search path", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeCodex(dataDir, { wrongLanguagePmOnce: true });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -286,12 +290,12 @@ test("quick PM repairs one wrong-language JSON response with the shared bounded 
     const runId = `QUICK-PM-LANGUAGE-REPAIR-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "RKLB", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 30_000,
+      council_mode: "quick", total_timeout_ms: TOTAL_TIMEOUT_MS,
       timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 45_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     assert.equal(result.run.status, "complete", JSON.stringify(result.run.agent_status, null, 2));
     assert.equal(result.run.agent_status.portfolio_manager.status, "completed");
@@ -316,6 +320,8 @@ test("quick PM repairs one wrong-language JSON response with the shared bounded 
 });
 
 test("quick may finish its broad path after one evidence failure but terminal stays incomplete", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeCodex(dataDir, { failedTask: "valuation_long_short" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -332,12 +338,12 @@ test("quick may finish its broad path after one evidence failure but terminal st
     const runId = `QUICK-DEGRADED-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "RKLB", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 30_000,
+      council_mode: "quick", total_timeout_ms: TOTAL_TIMEOUT_MS,
       timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 45_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     assert.equal(result.run.status, "incomplete");
     assert.equal(result.run.terminal, "incomplete");
@@ -368,6 +374,8 @@ test("quick may finish its broad path after one evidence failure but terminal st
 });
 
 test("quick PM transport failure writes standard artifacts and no synthetic Hold", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeCodex(dataDir, { failedRole: "portfolio_manager" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -384,12 +392,12 @@ test("quick PM transport failure writes standard artifacts and no synthetic Hold
     const runId = `QUICK-PM-FAILURE-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "RKLB", run_id: runId, language: "English", prompt,
-      council_mode: "quick", total_timeout_ms: 30_000,
+      council_mode: "quick", total_timeout_ms: TOTAL_TIMEOUT_MS,
       timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true,
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: confirmed.selection_receipt,
-    }, { timeoutMs: 45_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
     const dir = join(dataDir, "runs", runId);
     assert.equal(result.run.status, "incomplete");
     assert.equal(result.run.agent_status.portfolio_manager.status, "failed");

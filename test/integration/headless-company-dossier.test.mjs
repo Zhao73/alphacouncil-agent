@@ -6,7 +6,13 @@ import { join } from "node:path";
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { verifyCompanyDossierArtifact } from "../../mcp/lib/company-dossier.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import {
+  SETTLEMENT_HEADROOM_MS,
+  confirmMasterSelection,
+  observerBudget,
+  startServer,
+  structured,
+} from "../helpers/rpc-client.mjs";
 
 const AS_OF = "2026-08-03";
 const SELECTED_MASTER = "master_buffett";
@@ -242,6 +248,9 @@ writeFileSync(output, JSON.stringify(packet));
 }
 
 test("headless operating-company full council freezes one dossier after typed grounding and binds every downstream consumer", { timeout: 60_000 }, async (t) => {
+  const TOTAL_TIMEOUT_MS = 60_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 75_000);
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS);
   const dataDir = makeDataDir();
   const fake = fakeHeadlessCompanyCodex(dataDir);
   const server = startServer({
@@ -290,8 +299,8 @@ test("headless operating-company full council freezes one dossier after typed gr
     selection_receipt: selection.selection_receipt,
     timeout_ms: 10_000,
     synthesis_timeout_ms: 10_000,
-    total_timeout_ms: 60_000,
-  }, { timeoutMs: 60_000 }));
+    total_timeout_ms: TOTAL_TIMEOUT_MS,
+  }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
   const dir = join(dataDir, "runs", runId);
   const dossierPath = join(dir, "company_dossier.json");

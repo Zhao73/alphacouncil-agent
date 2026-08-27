@@ -4,7 +4,12 @@ import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import {
+  confirmMasterSelection,
+  observerBudget,
+  startServer,
+  structured,
+} from "../helpers/rpc-client.mjs";
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 
 function languageFailureCodex(dataDir, failureTarget) {
@@ -155,6 +160,8 @@ function readJsonl(path) {
 }
 
 async function runChineseFullFailure(failureTarget) {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = languageFailureCodex(dataDir, failureTarget);
   const server = startServer({
@@ -171,7 +178,7 @@ async function runChineseFullFailure(failureTarget) {
   const runId = `RUNTIME-LANGUAGE-${failureTarget.toUpperCase()}-${process.pid}`;
   const result = structured(await server.callTool("analyze_symbol", {
     symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "中文", prompt,
-    council_mode: "full", tasks: DEFAULT_TASKS, total_timeout_ms: 30_000,
+    council_mode: "full", tasks: DEFAULT_TASKS, total_timeout_ms: TOTAL_TIMEOUT_MS,
     timeout_ms: 5_000, synthesis_timeout_ms: 5_000, wait_for_completion: true,
     grounding: {
       instrument: {
@@ -183,7 +190,7 @@ async function runChineseFullFailure(failureTarget) {
       unavailable: ["本地测试夹具"],
     },
     selection_receipt: selection.selection_receipt,
-  }, { timeoutMs: 45_000 }));
+  }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
   return { dataDir, fake, server, runId, result };
 }
 

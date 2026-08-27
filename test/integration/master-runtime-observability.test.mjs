@@ -6,7 +6,18 @@ import { join } from "node:path";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import {
+  SETTLEMENT_HEADROOM_MS,
+  confirmMasterSelection,
+  observerBudget,
+  startServer,
+  structured,
+} from "../helpers/rpc-client.mjs";
+
+const PROVENANCE_TOTAL_TIMEOUT_MS = 15_000;
+const VOICE_CONTRACT_TOTAL_TIMEOUT_MS = 15_000;
+const DELAYED_RESPONSE_MS = PROVENANCE_TOTAL_TIMEOUT_MS + 5_500;
+const LEGACY_OBSERVER_TIMEOUT_MS = 20_000;
 
 function observabilityCodex(dataDir, { forgedMaster = null, directionalMaster = null, delays = {} } = {}) {
   const driver = join(dataDir, "fake-master-observability.mjs");
@@ -102,6 +113,10 @@ async function waitForStatus(path, predicate, timeoutMs = 8_000) {
 }
 
 test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnostic", async () => {
+  assert.equal(
+    observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
+    PROVENANCE_TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS,
+  );
   const dataDir = makeDataDir();
   const fake = observabilityCodex(dataDir, { forgedMaster: "master_buffett" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -119,8 +134,8 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
         facts_unavailable: true, unavailable: ["fixture"],
       },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000, total_timeout_ms: 15_000,
-    }, { timeoutMs: 20_000 }));
+      timeout_ms: 5_000, total_timeout_ms: PROVENANCE_TOTAL_TIMEOUT_MS,
+    }, { timeoutMs: observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS) }));
     const dir = join(dataDir, "runs", runId);
     const attemptPath = join(dir, "master_buffett.attempt-1.failure.json");
     const finalPath = join(dir, "master_buffett.failure.json");
@@ -159,6 +174,14 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
 });
 
 test("directional prose from an abstaining voice fails loudly and never becomes a published opinion", async () => {
+  assert.equal(
+    observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS),
+    VOICE_CONTRACT_TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS,
+  );
+  assert.equal(
+    observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS),
+    observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
+  );
   const dataDir = makeDataDir();
   const fake = observabilityCodex(dataDir, { directionalMaster: "master_buffett" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -176,8 +199,8 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
         facts_unavailable: true, unavailable: ["fixture"],
       },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 5_000, total_timeout_ms: 15_000,
-    }, { timeoutMs: 20_000 }));
+      timeout_ms: 5_000, total_timeout_ms: VOICE_CONTRACT_TOTAL_TIMEOUT_MS,
+    }, { timeoutMs: observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS) }));
     const dir = join(dataDir, "runs", runId);
     const seat = result.run.master_status.master_buffett;
     const deterministic = JSON.parse(readFileSync(join(dir, "master_buffett.deterministic.json"), "utf8"));
@@ -201,7 +224,57 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
   }
 });
 
+test("a delayed RPC response proves the legacy observer loses a valid result that the contract budget receives", {
+  timeout: observerBudget(DELAYED_RESPONSE_MS) + 10_000,
+}, async () => {
+  const dataDir = makeDataDir();
+  const delayedServer = join(dataDir, "delayed-master-observer-rpc-server.mjs");
+  writeFileSync(delayedServer, `
+import { createInterface } from "node:readline";
+const delayMs = Number(process.env.ALPHACOUNCIL_TEST_RPC_DELAY_MS || 0);
+const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
+for await (const line of lines) {
+  const request = JSON.parse(line);
+  const respond = () => process.stdout.write(JSON.stringify({
+    jsonrpc: "2.0",
+    id: request.id,
+    result: request.method === "initialize"
+      ? {}
+      : { structuredContent: { status: "delayed_response_received" } },
+  }) + "\\n");
+  if (request.method === "initialize") respond();
+  else setTimeout(respond, delayMs);
+}
+`);
+  const server = startServer({
+    dataDir,
+    entry: delayedServer,
+    env: { ALPHACOUNCIL_TEST_RPC_DELAY_MS: String(DELAYED_RESPONSE_MS) },
+  });
+  try {
+    await server.request("initialize", {}, { timeoutMs: 5_000 });
+    assert.equal(DELAYED_RESPONSE_MS, 20_500);
+    assert.equal(observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS), 30_000);
+
+    const rejectedBelowContract = assert.rejects(
+      server.callTool("delayed_probe", {}, { timeoutMs: LEGACY_OBSERVER_TIMEOUT_MS }),
+      /timed out after 20000ms waiting for tools\/call/u,
+    );
+    const receivedWithinContract = server.callTool("delayed_probe", {}, {
+      timeoutMs: observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
+    });
+    const [, recovered] = await Promise.all([rejectedBelowContract, receivedWithinContract]);
+    assert.equal(structured(recovered).status, "delayed_response_received");
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
 test("a stalled voice worker costs the reader the prose, not the seat", async () => {
+  const TOTAL_TIMEOUT_MS = 80_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 95_000);
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS);
   // A dead worker used to delete the seat from the report entirely -- no statement, no stance,
   // no reason -- even though the decision was frozen deterministically before the worker was
   // ever spawned. One such seat could take the debate and the PM with it.
@@ -225,8 +298,8 @@ test("a stalled voice worker costs the reader the prose, not the seat", async ()
         facts_unavailable: true, unavailable: ["fixture"],
       },
       selection_receipt: selection.selection_receipt,
-      timeout_ms: 8_000, total_timeout_ms: 80_000,
-    }, { timeoutMs: 90_000 }));
+      timeout_ms: 8_000, total_timeout_ms: TOTAL_TIMEOUT_MS,
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     const seat = result.run.master_status.master_buffett;
     assert.equal(seat.status, "completed", "the frozen decision still speaks for the seat");

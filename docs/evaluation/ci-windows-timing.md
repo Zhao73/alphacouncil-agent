@@ -309,3 +309,62 @@ without testing the actual barrier. The runtime already appends a hash-chained
 invariant directly: all eight expected primary evidence start sequence numbers must be lower
 than the first corresponding evidence finish sequence number, after the complete event hash
 chain has validated. A counterexample with one finish before the eighth start fails this gate.
+
+## WP4a2 closure rerun and WP4c observer budgets
+
+WP4a2 check run
+[`33055769340`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33055769340)
+tested the exact head `98b80a6dbef05042d5d430af6efbd751ab5717fc`. The first Windows
+attempt was functionally green but missed the frozen nine-minute `Run checks` gate by four
+seconds. Before any rerun, the independent review froze one and only one clean Windows rerun on
+the same SHA; a second miss would have forbidden a third rerun and required an attributed
+performance change. Both attempts remain visible here:
+
+| Windows attempt | Jobs API `Run checks` interval | Duration | Source concurrent | Full analysis | Master observability | Packaged parity | Actual parity retry notices | Frozen gate |
+| --- | --- | ---: | --- | --- | --- | --- | ---: | --- |
+| Attempt 1 / [`98462053546`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33055769340/job/98462053546) | 2026-08-27 08:50:20Z–08:59:24Z | 544 s | 1,410 tests; 1,404 pass; 6 skip; 0 fail | 11/11; 0 fail | 4/4; 0 fail | 5/5; 0 fail | 0 | Missed: 544 s > 540 s |
+| Attempt 2 / [`98466063969`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33055769340/job/98466063969) | 2026-08-27 09:06:09Z–09:14:27Z | 498 s | 1,410 tests; 1,404 pass; 6 skip; 0 fail | 11/11; 0 fail | 4/4; 0 fail | 5/5; 0 fail | 0 | Passed: 498 s <= 540 s |
+
+Each attempt produced 1,430 tests across the four Windows TAP groups with zero failures. The
+second row closes the pre-declared rerun rule; it does not erase the first row or claim that
+shared-runner timing variance has disappeared.
+
+WP4c replaces faithful outer-RPC literals with one executable rule:
+`observerBudget(contract_ceiling) = contract_ceiling + 15,000 ms`. The helper rejects zero,
+negative, non-integer and non-finite inputs. The eleven pre-existing faithful sites remain
+numerically identical after conversion; four disclosed mismatches are normalized:
+
+| Class | File and pre-change anchor | Contract ceiling | Previous observer | Derived observer |
+| --- | --- | ---: | ---: | ---: |
+| Faithful | `full-analysis.test.mjs` L336 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `full-analysis.test.mjs` L533 | 45,000 | 60,000 | `observerBudget(45,000)` = 60,000 |
+| Faithful | `full-analysis.test.mjs` L609 | 45,000 | 60,000 | `observerBudget(45,000)` = 60,000 |
+| Faithful | `full-analysis.test.mjs` L684 | 60,000 | 75,000 | `observerBudget(60,000)` = 75,000 |
+| Faithful | `full-analysis.test.mjs` L730 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `full-analysis.test.mjs` L780 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `quick-analysis.test.mjs` L218 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `quick-analysis.test.mjs` L294 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `quick-analysis.test.mjs` L340 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `quick-analysis.test.mjs` L392 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Faithful | `runtime-language-failures.test.mjs` L186 | 30,000 | 45,000 | `observerBudget(30,000)` = 45,000 |
+| Normalized | `master-runtime-observability.test.mjs` L123 | 15,000 | 20,000 | `observerBudget(15,000)` = 30,000 |
+| Normalized | `master-runtime-observability.test.mjs` L180 | 15,000 | 20,000 | `observerBudget(15,000)` = 30,000 |
+| Normalized | `master-runtime-observability.test.mjs` L229 | 80,000 | 90,000 | `observerBudget(80,000)` = 95,000 |
+| Normalized | `headless-company-dossier.test.mjs` L294 | 60,000 | 60,000 | `observerBudget(60,000)` = 75,000 |
+
+The two 15-second master-runtime ceilings now use the same expression. A deterministic delayed
+RPC probe schedules a valid response after 20,500 ms: the former 20,000 ms observer rejects it,
+while the 30,000 ms contract-derived observer receives it. The existing parse-retry observer is
+also expressed as `observerBudget(30,000 * 2)`, preserving its proven 75,000 ms value.
+
+Three literals deliberately remain outside this rule:
+
+| File and pre-change anchor | Literal | Classification | Reason |
+| --- | ---: | --- | --- |
+| `full-analysis.test.mjs` L834 | 15,000 | `early_return_assertion` | The shorter observer is the assertion that a lowered-budget run settles before its 20-second cap. |
+| `full-analysis.test.mjs` L878 | 90,000 | `path_bounded_observer` | The test exercises a short default-pace path; deriving from the full pace could permit a 30-minute hang. |
+| `slow-all-triple-verification.test.mjs` L380 | 120,000 | `path_bounded_observer` | The fixture exercises a bounded synthetic path; deriving from the slow pace could permit a 60-minute hang. |
+
+Dry-run selection gates, probe-local observation literals and every pre-existing `node:test`
+timeout remain unchanged. The two path-bounded observers need a separately reviewed path-derived
+ceiling rather than a misleading pace-derived expansion.

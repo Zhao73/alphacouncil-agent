@@ -5,12 +5,18 @@ import { join } from "node:path";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import {
+  SETTLEMENT_HEADROOM_MS,
+  confirmMasterSelection,
+  observerBudget,
+  startServer,
+  structured,
+} from "../helpers/rpc-client.mjs";
 
 const PARSE_RETRY_WORKER_TIMEOUT_MS = 30_000;
 // One parse repair may launch two separately bounded workers. The RPC harness is an outer
 // observer, so it must cover both ceilings plus process-settlement headroom.
-const PARSE_RETRY_RPC_TIMEOUT_MS = PARSE_RETRY_WORKER_TIMEOUT_MS * 2 + 15_000;
+const PARSE_RETRY_RPC_TIMEOUT_MS = observerBudget(PARSE_RETRY_WORKER_TIMEOUT_MS * 2);
 
 function scriptedCodexCommand(dataDir, {
   targetTask = "forward_expectations",
@@ -472,6 +478,10 @@ for await (const line of lines) {
 });
 
 test("a transport failure on the parse retry remains empty evidence", async () => {
+  assert.equal(
+    PARSE_RETRY_RPC_TIMEOUT_MS,
+    PARSE_RETRY_WORKER_TIMEOUT_MS * 2 + SETTLEMENT_HEADROOM_MS,
+  );
   const dataDir = makeDataDir();
   const fake = scriptedCodexCommand(dataDir, { failOnSecondAttempt: true });
   const server = startServer({

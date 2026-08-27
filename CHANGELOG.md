@@ -6,6 +6,10 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Integration RPC observers now derive from the exercised contract ceiling plus one shared
+  15-second process-settlement allowance. Eleven already-faithful sites remain numerically
+  unchanged, four under-sized observers are normalized, and deliberately early-return or
+  path-bounded assertions stay explicit instead of inheriting a misleading full-pace timeout.
 - Abstaining method voices now reject only subject-bound first-person trade actions. Sentiment
   words, research verbs and quoted third-party recommendations no longer turn a valid abstention
   into a `voice_contract_failure`; explicit buy, sell, add, trim and sizing commitments still

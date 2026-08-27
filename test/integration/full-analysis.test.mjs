@@ -5,7 +5,12 @@ import { join } from "node:path";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
-import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
+import {
+  confirmMasterSelection,
+  observerBudget,
+  startServer,
+  structured,
+} from "../helpers/rpc-client.mjs";
 import { validateHeadlessTrace } from "../../scripts/lib/headless-trace-contract.mjs";
 import { compactEvidence } from "../../mcp/lib/packets.mjs";
 import { workerAttemptWaveOrder } from "../../mcp/lib/timing-ledger.mjs";
@@ -295,6 +300,8 @@ function readJsonl(path) {
 }
 
 test("full council proves dedicated master workers, parallel barriers, exact Q&A, display coverage and no-search parse repair", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir, {
     malformedMasterModes: {
@@ -322,7 +329,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
       // Keep the fixture-level worker cap comfortably above loaded Windows process-startup
       // latency. The separate lowered-budget test below proves fail-closed settlement; this
       // success-path test is responsible for the 30 s global contract and full topology.
-      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+      council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       max_concurrency: 1,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: {
@@ -333,7 +340,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
         },
         facts_unavailable: true, unavailable: ["typed facts intentionally omitted by fixture"],
       },
-    }, { timeoutMs: 45_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     const dir = join(dataDir, "runs", runId);
     assert.equal(result.run.status, "complete", JSON.stringify({
@@ -516,6 +523,8 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
 });
 
 async function runDebateQnaFixture(debateQnaFailureMode) {
+  const TOTAL_TIMEOUT_MS = 45_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 60_000);
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir, { malformedTask: null, debateQnaFailureMode });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -527,10 +536,10 @@ async function runDebateQnaFixture(debateQnaFailureMode) {
   const runId = `FULL-QNA-${debateQnaFailureMode.toUpperCase()}-${process.pid}`;
   const result = structured(await server.callTool("analyze_symbol", {
     symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
-    council_mode: "full", total_timeout_ms: 45_000, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+    council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
     wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
     grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
-  }, { timeoutMs: 60_000 }));
+  }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
   return { dataDir, fake, server, runId, result };
 }
 
@@ -588,6 +597,8 @@ test("headless Q&A remains fail-closed when the bounded repair still changes exa
 });
 
 test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", async () => {
+  const TOTAL_TIMEOUT_MS = 45_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 60_000);
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir, {
     malformedTask: null,
@@ -603,10 +614,10 @@ test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", a
     const runId = `FULL-DEBATE-USAGE-LIMIT-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
-      council_mode: "full", total_timeout_ms: 45_000, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+      council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
-    }, { timeoutMs: 60_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     const dir = join(dataDir, "runs", runId);
     const status = readJson(join(dir, "status.json"));
@@ -661,6 +672,8 @@ for (const [label, pmContractFailureMode, expectedPath] of [
   ["empty data_gaps", "empty_data_gaps", "/data_gaps"],
 ]) {
   test(`full headless PM fails closed on ${label} and never publishes a rating`, async () => {
+    const TOTAL_TIMEOUT_MS = 60_000;
+    assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 75_000);
     const dataDir = makeDataDir();
     const fake = fakeFullCodex(dataDir, { malformedTask: null, pmContractFailureMode });
     const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -678,10 +691,10 @@ for (const [label, pmContractFailureMode, expectedPath] of [
         // the old 30s council budget before PM starts, leaving PM correctly `skipped` but never
         // exercising the contract this test names. Keep the separate deadline tests at 30s and
         // give this contract fixture enough platform-independent headroom to reach both PM tries.
-        council_mode: "full", total_timeout_ms: 60_000, timeout_ms: 12_000, synthesis_timeout_ms: 12_000,
+        council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 12_000, synthesis_timeout_ms: 12_000,
         wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
         grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
-      }, { timeoutMs: 75_000 }));
+      }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
       const dir = join(dataDir, "runs", runId);
       const decision = readJson(join(dir, "decision.json"));
@@ -712,6 +725,8 @@ for (const [label, pmContractFailureMode, expectedPath] of [
 }
 
 test("full headless PM repairs one malformed decision without regenerating the long report in JSON", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir, { malformedTask: null, pmFailureMode: "first" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -724,10 +739,10 @@ test("full headless PM repairs one malformed decision without regenerating the l
     const runId = `FULL-PM-REPAIR-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
-      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
+      council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
-    }, { timeoutMs: 45_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     const dir = join(dataDir, "runs", runId);
     assert.equal(result.run.status, "complete", JSON.stringify(result.run.agent_status.portfolio_manager, null, 2));
@@ -762,6 +777,8 @@ test("full headless PM repairs one malformed decision without regenerating the l
 });
 
 test("two malformed full PM attempts persist sanitized diagnostics and never manufacture a rating", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 45_000);
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir, { malformedTask: null, pmFailureMode: "both" });
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
@@ -774,10 +791,10 @@ test("two malformed full PM attempts persist sanitized diagnostics and never man
     const runId = `FULL-PM-DOUBLE-FAIL-${process.pid}`;
     const result = structured(await server.callTool("analyze_symbol", {
       symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
-      council_mode: "full", total_timeout_ms: 30_000, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
+      council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 6_000, synthesis_timeout_ms: 6_000,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
-    }, { timeoutMs: 45_000 }));
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
     const dir = join(dataDir, "runs", runId);
     const decision = readJson(join(dir, "decision.json"));
@@ -831,6 +848,7 @@ test("a caller-lowered full-council budget fails closed and persists a terminal 
       council_mode: "full", total_timeout_ms: 20_000, timeout_ms: 300, synthesis_timeout_ms: 300,
       wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
       grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
+    // WP-4c: early_return_assertion — this observer IS the assertion that the run returns before its 20_000ms cap; not an observer budget.
     }, { timeoutMs: 15_000 }));
     const elapsed = Date.now() - started;
     const dir = join(dataDir, "runs", runId);
@@ -875,6 +893,7 @@ test("every abstaining seat receives and publishes its strong first-person metho
       council_mode: "full", wait_for_completion: true,
       selection_receipt: confirmed.selection_receipt,
       grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
+    // WP-4c: path_bounded_observer — pace total is not the exercised path; a contract-derived budget would permit a 30-minute hang. Needs a path-derived ceiling in a later package.
     }, { timeoutMs: 90_000 }));
 
     const dir = join(dataDir, "runs", runId);
