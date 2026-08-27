@@ -24,7 +24,7 @@ test("parse repair budgets scale across every fast, normal and slow stage", () =
   const expected = {
     // Derived from each stage cap, so this table moves with the tiers. It was last recomputed
     // when fast and normal were rebalanced onto their measured stage floors.
-    fast: { evidence_ms: 186_666, master_ms: 73_333, debate_ms: 30_000, pm_ms: 63_333 },
+    fast: { evidence_ms: 160_000, master_ms: 63_333, debate_ms: 56_666, pm_ms: 60_000 },
     normal: { evidence_ms: 240_000, master_ms: 120_000, debate_ms: 120_000, pm_ms: 120_000 },
     slow: { evidence_ms: 240_000, master_ms: 170_000, debate_ms: 240_000, pm_ms: 240_000 },
   };
@@ -93,8 +93,8 @@ test("fast primary, retry and repair share one immutable stage lifecycle", () =>
   const run = fullRun("fast");
   const expectedPrimary = {
     evidence: 220_000,
-    methods: 102_000,
-    debate_round_1: 38_000,
+    methods: 87_000,
+    debate_round_1: 70_000,
     portfolio_manager: 75_000,
   };
   const stageCaps = {
@@ -137,7 +137,7 @@ test("attempt timers reserve settlement grace against one absolute lifecycle dea
   });
   assert.deepEqual(primary, {
     absolute_deadline_ms: NOW + 220_000,
-    lifecycle_remaining_ms: 280_000,
+    lifecycle_remaining_ms: 240_000,
     settlement_grace_ms: 5_000,
     timeout_ms: 215_000,
   });
@@ -145,11 +145,11 @@ test("attempt timers reserve settlement grace against one absolute lifecycle dea
   const retry = stageAttemptWindow(run, {
     stageBudgetMs: COUNCIL_PACES.fast.evidence_ms,
     stageStartedAtMs: NOW,
-    requestedMs: 60_000,
+    requestedMs: 20_000,
     nowMs: NOW + 220_000,
   });
   assert.equal(retry.absolute_deadline_ms, NOW + COUNCIL_PACES.fast.evidence_ms);
-  assert.equal(retry.timeout_ms + retry.settlement_grace_ms, 60_000);
+  assert.equal(retry.timeout_ms + retry.settlement_grace_ms, 20_000);
   assert.equal(retry.absolute_deadline_ms - NOW, COUNCIL_PACES.fast.evidence_ms);
 
   const callerLowered = stageAttemptWindow(run, {

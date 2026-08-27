@@ -428,27 +428,27 @@ export const LIMITS = Object.freeze({
  * instead of three, and twelve minutes per evidence seat instead of six.
  */
 export const COUNCIL_PACES = Object.freeze({
-  // `fast` is a configured fifteen-minute ceiling with a thirteen-minute stage allocation.
+  // `fast` is a configured fifteen-minute ceiling with a 13.5-minute stage allocation.
   // It is not a measured completion claim: observed completion remains unvalidated until a
   // representative host run produces a timing ledger that passes the terminal contract.
   fast: Object.freeze({
     pace: "fast",
     total_ms: 15 * 60 * 1000,
     grounding_ms: 20 * 1000,
-    evidence_ms: 280 * 1000,
+    evidence_ms: 240 * 1000,
     // Semantic acquisition-ledger repair is no-search but commonly needed after an otherwise
-    // complete evidence packet. Keep this inside the 280-second seat lifecycle rather than
+    // complete evidence packet. Keep this inside the 240-second seat lifecycle rather than
     // handing a late packet whatever few milliseconds happen to remain.
-    evidence_repair_reserve_ms: 60 * 1000,
-    master_ms: 110 * 1000,
+    evidence_repair_reserve_ms: 20 * 1000,
+    master_ms: 95 * 1000,
     master_repair_reserve_ms: 8 * 1000,
     master_waves: 2,
     verifier_ms: 0,
-    debate_ms: 45 * 1000,
-    debate_repair_reserve_ms: 7 * 1000,
-    pm_ms: 95 * 1000,
-    pm_repair_reserve_ms: 20 * 1000,
-    finalize_reserve_ms: 45 * 1000,
+    debate_ms: 85 * 1000,
+    debate_repair_reserve_ms: 15 * 1000,
+    pm_ms: 90 * 1000,
+    pm_repair_reserve_ms: 15 * 1000,
+    finalize_reserve_ms: 15 * 1000,
   }),
   // `normal` is a thirty-minute ceiling with a twenty-five-minute configured stage allocation.
   // The three-minute debate cap leaves `slow` at twice the per-round allowance.

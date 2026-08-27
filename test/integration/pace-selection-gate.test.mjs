@@ -109,7 +109,7 @@ test("the gate offers every tier with its configured budget, ceiling, and valida
   }
   // The normal configured stage budget moved 22 -> 25 when its method-voice and debate caps were
   // raised to cover measured stage floors. This is budget accounting, not a completion forecast.
-  assert.deepEqual(opened.pace_options.map((option) => option.configured_stage_budget_minutes), [13, 25, 58]);
+  assert.deepEqual(opened.pace_options.map((option) => option.configured_stage_budget_minutes), [14, 25, 58]);
   assert.deepEqual(opened.pace_options.map((option) => option.hard_ceiling_minutes), [15, 30, 60]);
   assert.deepEqual(opened.pace_options.filter((option) => option.is_default).map((o) => o.pace), ["normal"]);
 });

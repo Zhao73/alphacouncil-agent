@@ -635,8 +635,8 @@ test("default fast call chain applies the candidate stage profile and reserves t
     assert.equal(pm.worker_reasoning_effort, "medium");
     assert.ok(pm.budget_ms > 60_000 && pm.budget_ms <= 70_000,
       `PM timer ${pm.budget_ms}ms must fit the 75s primary envelope plus 5s settlement grace`);
-    assert.ok(firstByStage("debate_round_1").budget_ms <= 33_000,
-      "debate timer must fit the 38s primary envelope plus 5s settlement grace");
+    assert.ok(firstByStage("debate_round_1").budget_ms <= 65_000,
+      "debate timer must fit the 70s primary envelope plus 5s settlement grace");
   } finally {
     await server.close();
     removeDataDir(dataDir);

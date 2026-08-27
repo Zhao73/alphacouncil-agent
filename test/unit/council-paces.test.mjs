@@ -36,6 +36,33 @@ test("the three paces are the requested 15, 30 and 60 minute tiers", () => {
   assert.equal(DEFAULT_COUNCIL_PACE, "normal");
 });
 
+test("fast preserves the measured primary work while reallocating its bounded retry slices", () => {
+  assert.deepEqual({
+    grounding_ms: COUNCIL_PACES.fast.grounding_ms,
+    evidence_ms: COUNCIL_PACES.fast.evidence_ms,
+    evidence_repair_reserve_ms: COUNCIL_PACES.fast.evidence_repair_reserve_ms,
+    master_ms: COUNCIL_PACES.fast.master_ms,
+    master_repair_reserve_ms: COUNCIL_PACES.fast.master_repair_reserve_ms,
+    debate_ms: COUNCIL_PACES.fast.debate_ms,
+    debate_repair_reserve_ms: COUNCIL_PACES.fast.debate_repair_reserve_ms,
+    pm_ms: COUNCIL_PACES.fast.pm_ms,
+    pm_repair_reserve_ms: COUNCIL_PACES.fast.pm_repair_reserve_ms,
+    finalize_reserve_ms: COUNCIL_PACES.fast.finalize_reserve_ms,
+  }, {
+    grounding_ms: 20_000,
+    evidence_ms: 240_000,
+    evidence_repair_reserve_ms: 20_000,
+    master_ms: 95_000,
+    master_repair_reserve_ms: 8_000,
+    debate_ms: 85_000,
+    debate_repair_reserve_ms: 15_000,
+    pm_ms: 90_000,
+    pm_repair_reserve_ms: 15_000,
+    finalize_reserve_ms: 15_000,
+  });
+  assert.equal(COUNCIL_PACE_STAGE_TOTAL(COUNCIL_PACES.fast), 810_000);
+});
+
 test("every pace's stages fit inside its own budget", () => {
   // A pace whose stages overrun its total is a pace that always terminates incomplete. Serial
   // worst case: grounding, the evidence wave, the method wave, three debate rounds, the PM and

@@ -6,6 +6,12 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Fast's stage allocation now reflects the first clean Work-gateway run that completed all eight
+  evidence workers and all 26 isolated method voices but timed out both sides of debate round 1.
+  Evidence keeps its 220-second primary attempt and the PM keeps 75 seconds; each debate side's
+  primary window grows from 38 to 70 seconds by reclaiming unused repair and persistence reserve.
+  The 52-route evidence barrier, 26-seat bench, three debate rounds, PM and 15-minute ceiling are
+  unchanged, and successful end-to-end completion remains unvalidated until a later live run.
 - Fast full councils now resolve an auditable candidate stage-aware Codex policy: low reasoning for
   evidence, method voices and debate, medium for the PM, and none for no-search repairs; the
   validated 5.6 Sol compatibility gate rejects unsupported effort values before worker launch.

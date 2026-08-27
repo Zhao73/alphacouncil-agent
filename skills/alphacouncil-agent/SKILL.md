@@ -94,7 +94,7 @@ and leave completion explicitly unvalidated until a preregistered live terminal 
 
 ```
 本次分析要跑多深？（默认 2）
-  1. 快速   持久化上限 15 分钟；配置分段约 13 分钟；完整完成实测：尚未验证  每证据席 4.7 分钟，每轮辩论每侧 45 秒
+  1. 快速   持久化上限 15 分钟；配置分段约 14 分钟；完整完成实测：尚未验证  每证据席 4 分钟，每轮辩论每侧 85 秒
   2. 标准   持久化上限 30 分钟；配置分段约 25 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 180 秒   ← 默认
   3. 深入   持久化上限 60 分钟；配置分段约 58 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
 三档都保留已选择的分析席、方法席、三轮辩论和 PM；slow + 全部方法席 + 全部分析席另强制加入三重核验。
@@ -207,9 +207,9 @@ Use this contract when full runs through headless `analyze_symbol`:
   timed-out/failed/skipped role. The deadline guarantees a terminal saved run, not successful
   completion under provider/search/data degradation.
 - The tier moves every per-stage cap with the total, because those caps are what bound each
-  worker: evidence 4.7/6/12 minutes per seat, method 1.8/3/4.25 minutes per seat, debate
-  45/180/360 seconds per round, PM 1.6/3/8 minutes. The rounded configured stage totals returned
-  by the selector are 13/25/58 minutes. Raising `total_timeout_ms` alone buys idle time rather
+  worker: evidence 4/6/12 minutes per seat, method 1.6/3/4.25 minutes per seat, debate
+  85/180/360 seconds per round, PM 1.5/3/8 minutes. The rounded configured stage totals returned
+  by the selector are 14/25/58 minutes. Raising `total_timeout_ms` alone buys idle time rather
   than depth; the tier is what buys depth. All three tiers are `full_v2` and preserve the
   separately selected analyst scope, method bench, three rounds and PM. The exact
   `slow + all methods + all analysts` combination also activates the mandatory triple-verifier

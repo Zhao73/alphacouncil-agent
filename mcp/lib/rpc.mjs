@@ -694,7 +694,7 @@ export function tools() {
     council_pace: {
       type: "string",
       enum: COUNCIL_PACE_NAMES,
-      description: "Full-council depth/time tier. fast = 15 minutes, normal = 30, slow = 60. The tier sets the total budget AND every per-stage cap together: fast gives each evidence seat 4.7 minutes and each debate side 45 seconds; normal gives 6 and 3 minutes; slow gives 12 and 6 minutes. These are configured ceilings, not measured completion times. Raising total_timeout_ms alone buys idle time, not depth. Quick rejects this field.",
+      description: "Full-council depth/time tier. fast = 15 minutes, normal = 30, slow = 60. The tier sets the total budget AND every per-stage cap together: fast gives each evidence seat 4 minutes and each debate side 85 seconds; normal gives 6 and 3 minutes; slow gives 12 and 6 minutes. These are configured ceilings, not measured completion times. Raising total_timeout_ms alone buys idle time, not depth. Quick rejects this field.",
     },
     total_timeout_ms: {
       type: "number",
