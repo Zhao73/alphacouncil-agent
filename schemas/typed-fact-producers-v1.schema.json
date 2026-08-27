@@ -1,0 +1,326 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/typed-fact-producers-v1.schema.json",
+  "title": "AlphaCouncil typed-fact producer catalog v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "hash_domain",
+    "catalog_hash",
+    "generator",
+    "sources",
+    "producers",
+    "pack_fact_coverage",
+    "no_producer"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "fact_id": { "type": "string", "pattern": "^[a-z0-9_]+(\\.[a-z0-9_]+)+$" },
+    "master_id": { "type": "string", "pattern": "^master_[a-z0-9_]+$" },
+    "section": {
+      "enum": [
+        "quote",
+        "options",
+        "market_history",
+        "screen",
+        "macro_series",
+        "fundamentals",
+        "instrument_aggregate",
+        "insider_ownership",
+        "cross_market",
+        "basket_news"
+      ]
+    },
+    "producer_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+:(quote|options|market_history|screen|macro_series|fundamentals|instrument_aggregate|insider_ownership|cross_market|basket_news):[a-z0-9_]+(\\.[a-z0-9_]+)+$"
+    },
+    "role": { "enum": ["required", "optional", "eligibility", "veto", "scoring", "tool_input"] },
+    "contract": {
+      "type": "object",
+      "required": ["value_kind", "unit", "period_basis"],
+      "additionalProperties": false,
+      "properties": {
+        "value_kind": { "enum": ["monetary", "ratio", "count", "scalar", "boolean", "text", "date"] },
+        "unit": { "type": ["string", "null"] },
+        "period_basis": { "enum": ["instant", "duration"] }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "hash_domain": { "const": "alphacouncil.typed-fact-producers.v1" },
+    "catalog_hash": { "$ref": "#/$defs/hash" },
+    "generator": {
+      "type": "object",
+      "required": [
+        "script",
+        "adapter_id",
+        "adapter_version",
+        "as_of",
+        "fixture_hashes",
+        "precedence_inferred_by_call_order"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "script": { "const": "scripts/build-fact-producer-catalog.mjs" },
+        "adapter_id": { "const": "grounding_to_typed_facts" },
+        "adapter_version": { "const": "1.0.0" },
+        "as_of": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+        "fixture_hashes": {
+          "type": "object",
+          "required": ["maximal", "section", "conditional"],
+          "additionalProperties": false,
+          "properties": {
+            "maximal": { "$ref": "#/$defs/hash" },
+            "section": {
+              "type": "object",
+              "required": [
+                "quote",
+                "options",
+                "market_history",
+                "screen",
+                "macro_series",
+                "fundamentals",
+                "instrument_aggregate",
+                "insider_ownership",
+                "cross_market",
+                "basket_news"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "quote": { "$ref": "#/$defs/hash" },
+                "options": { "$ref": "#/$defs/hash" },
+                "market_history": { "$ref": "#/$defs/hash" },
+                "screen": { "$ref": "#/$defs/hash" },
+                "macro_series": { "$ref": "#/$defs/hash" },
+                "fundamentals": { "$ref": "#/$defs/hash" },
+                "instrument_aggregate": { "$ref": "#/$defs/hash" },
+                "insider_ownership": { "$ref": "#/$defs/hash" },
+                "cross_market": { "$ref": "#/$defs/hash" },
+                "basket_news": { "$ref": "#/$defs/hash" }
+              }
+            },
+            "conditional": {
+              "type": "object",
+              "required": ["equity_us", "equity_non_us", "fund", "index", "options_absent", "cross_market_absent"],
+              "additionalProperties": false,
+              "properties": {
+                "equity_us": { "$ref": "#/$defs/hash" },
+                "equity_non_us": { "$ref": "#/$defs/hash" },
+                "fund": { "$ref": "#/$defs/hash" },
+                "index": { "$ref": "#/$defs/hash" },
+                "options_absent": { "$ref": "#/$defs/hash" },
+                "cross_market_absent": { "$ref": "#/$defs/hash" }
+              }
+            }
+          }
+        },
+        "precedence_inferred_by_call_order": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/fact_id" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["source_module", "export_name", "export_hash", "fact_ids"],
+        "additionalProperties": false,
+        "properties": {
+          "source_module": { "type": "string", "pattern": "^mcp/lib/[a-z0-9_./-]+\\.mjs$" },
+          "export_name": { "enum": ["FRED_SERIES", "FUNDAMENTAL_FACT_IDS", "LOOK_THROUGH_FACT_IDS", "SCREEN_FACTS", "CROSS_MARKET_FACTS"] },
+          "export_hash": { "$ref": "#/$defs/hash" },
+          "fact_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/fact_id" }
+          }
+        }
+      }
+    },
+    "producers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "fact_id",
+          "producer_id",
+          "section",
+          "kind",
+          "conditions",
+          "observed",
+          "declared_in",
+          "observed_in_section_runs",
+          "maximal_precedence"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "fact_id": { "$ref": "#/$defs/fact_id" },
+          "producer_id": { "$ref": "#/$defs/producer_id" },
+          "section": { "$ref": "#/$defs/section" },
+          "kind": { "enum": ["direct_fetch", "normalized_source_field", "deterministic_derived"] },
+          "conditions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": ["kind", "any_of"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": { "const": "instrument_class" },
+                    "any_of": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": { "enum": ["equity", "etf", "mutual_fund", "index", "option"] }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": ["kind", "id"],
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": { "const": "data_source" },
+                    "id": {
+                      "enum": [
+                        "options_chain",
+                        "sec_companyfacts",
+                        "sec_insider",
+                        "cross_market_reference"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "observed": {
+            "type": "object",
+            "required": ["value_kind", "unit", "period_basis", "derivation", "lineage_tool_id", "confidence"],
+            "additionalProperties": false,
+            "properties": {
+              "value_kind": { "enum": ["monetary", "ratio", "count", "scalar", "boolean", "text", "date"] },
+              "unit": { "type": ["string", "null"] },
+              "period_basis": { "enum": ["instant", "duration"] },
+              "derivation": { "enum": ["reported", "rederived", "estimated"] },
+              "lineage_tool_id": { "type": ["string", "null"] },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          },
+          "declared_in": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["source_module", "export_name", "key"],
+                "additionalProperties": false,
+                "properties": {
+                  "source_module": { "type": "string" },
+                  "export_name": { "type": "string" },
+                  "key": { "type": "string" }
+                }
+              }
+            ]
+          },
+          "observed_in_section_runs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/section" }
+          },
+          "maximal_precedence": { "type": "boolean" }
+        }
+      }
+    },
+    "pack_fact_coverage": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "master_id",
+          "fact_id",
+          "roles",
+          "critical",
+          "declared_optional_but_critical",
+          "producer_ids",
+          "status",
+          "contract_status",
+          "contract_detail"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "master_id": { "$ref": "#/$defs/master_id" },
+          "fact_id": { "$ref": "#/$defs/fact_id" },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/role" }
+          },
+          "critical": { "type": "boolean" },
+          "declared_optional_but_critical": { "type": "boolean" },
+          "producer_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/producer_id" }
+          },
+          "status": { "enum": ["produced", "conditional", "no_producer"] },
+          "contract_status": { "enum": ["match", "mismatch", "not_checked"] },
+          "contract_detail": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["expected", "observed"],
+                "additionalProperties": false,
+                "properties": {
+                  "expected": { "$ref": "#/$defs/contract" },
+                  "observed": { "$ref": "#/$defs/contract" }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "no_producer": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["fact_id", "master_ids", "critical", "roles"],
+        "additionalProperties": false,
+        "properties": {
+          "fact_id": { "$ref": "#/$defs/fact_id" },
+          "master_ids": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/master_id" }
+          },
+          "critical": { "type": "boolean" },
+          "roles": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/role" }
+          }
+        }
+      }
+    }
+  }
+}

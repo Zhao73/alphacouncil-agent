@@ -143,7 +143,7 @@ function baseFact({
   };
 }
 
-const SCREEN_FACTS = Object.freeze({
+export const SCREEN_FACTS = Object.freeze({
   roe_10y: { fact_id: "financial.return_on_equity_10y", kind: "percent", denominator: "average_positive_book_equity", window: "P10Y" },
   fcf_5y: { fact_id: "financial.free_cash_flow_5y", kind: "usd", window: "P5Y" },
   interest_cover: { fact_id: "financial.interest_coverage", kind: "multiple", denominator: "interest_expense" },
@@ -874,7 +874,7 @@ function crossMarketFacts(grounding, context) {
 }
 
 /** Reference market -> the fact id its correlation is published under. */
-const CROSS_MARKET_FACTS = Object.freeze({
+export const CROSS_MARKET_FACTS = Object.freeze({
   "^GSPC": "market.correlation_to_broad_market",
   "^KS11": "market.correlation_to_kospi",
   "^KQ11": "market.correlation_to_kosdaq",

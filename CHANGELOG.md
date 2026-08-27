@@ -10,6 +10,13 @@ Notable changes per release. Dates are UTC.
   typed fact is missing. A family without a fully covered admitted pack is now reported as an
   explicit unfilled slot instead of throwing or recommending a known abstention.
 
+### Added
+
+- Added a generated, hash-bound typed-fact producer catalog derived from the real grounding
+  adapter's offline emission paths. It covers every fact reference and role in all 26 physical
+  solo-test packs, distinguishes conditional production from no producer, checks tool-input
+  contracts, and requires an explicit acknowledgement for every critical no-producer fact.
+
 ## [1.5.0] — 2026-08-26
 
 ### Security

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "fact_id": "event.expiry_coverage",
+      "master_ids": ["master_taleb"],
+      "critical": true,
+      "reason_code": "requires_derivative_payoff_model",
+      "note": "Expiry coverage requires a contract-specific payoff model that this runtime does not implement."
+    },
+    {
+      "fact_id": "execution.round_trip_cost",
+      "master_ids": ["master_taleb"],
+      "critical": true,
+      "reason_code": "requires_derivative_payoff_model",
+      "note": "Round-trip option cost requires contract-specific execution modelling not emitted by this runtime."
+    },
+    {
+      "fact_id": "payoff.convexity",
+      "master_ids": ["master_taleb"],
+      "critical": true,
+      "reason_code": "requires_derivative_payoff_model",
+      "note": "Convexity requires a contract-specific derivative payoff model that this runtime does not implement."
+    },
+    {
+      "fact_id": "payoff.max_loss",
+      "master_ids": ["master_taleb"],
+      "critical": true,
+      "reason_code": "requires_derivative_payoff_model",
+      "note": "Maximum loss requires a contract-specific derivative payoff model that this runtime does not implement."
+    },
+    {
+      "fact_id": "risk.hidden_leverage",
+      "master_ids": ["master_taleb"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "Hidden leverage is a bounded judgement not emitted as a typed fact by the deterministic runtime."
+    },
+    {
+      "fact_id": "risk.ruin_possible",
+      "master_ids": ["master_taleb"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "Ruin possibility is a bounded judgement not emitted as a typed fact by the deterministic runtime."
+    },
+    {
+      "fact_id": "valuation.cash_flow",
+      "master_ids": ["master_damodaran"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "A valuation cash-flow forecast requires explicit forecast assumptions that the runtime does not emit."
+    },
+    {
+      "fact_id": "valuation.cost_of_capital",
+      "master_ids": ["master_damodaran"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "Cost of capital requires a valuation model and assumptions that the runtime does not emit."
+    },
+    {
+      "fact_id": "valuation.failure_probability",
+      "master_ids": ["master_damodaran"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "Failure probability requires an explicit probabilistic model that the runtime does not emit."
+    },
+    {
+      "fact_id": "valuation.implied_story",
+      "master_ids": ["master_damodaran"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "An implied valuation story is model interpretation and is not emitted as a deterministic typed fact."
+    },
+    {
+      "fact_id": "valuation.reinvestment_rate",
+      "master_ids": ["master_damodaran"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "Forward reinvestment requires explicit forecast assumptions that the runtime does not emit."
+    },
+    {
+      "fact_id": "valuation.target_margin",
+      "master_ids": ["master_damodaran"],
+      "critical": true,
+      "reason_code": "requires_model_judgement",
+      "note": "A target margin is a forecast assumption rather than an observed deterministic runtime fact."
+    }
+  ]
+}
