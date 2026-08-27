@@ -11,8 +11,8 @@ const DEFAULT_TIMEOUT_MS = 30000;
  * parsed whatever had arrived. That is a race: on a slow or Windows runner the
  * responses simply had not been written yet, and the failure looked like a logic bug.
  */
-export function startServer({ dataDir, cwd = repoRoot, env = {} } = {}) {
-  const child = spawn(process.execPath, [serverEntry], {
+export function startServer({ dataDir, cwd = repoRoot, env = {}, entry = serverEntry } = {}) {
+  const child = spawn(process.execPath, [entry], {
     cwd,
     stdio: ["pipe", "pipe", "pipe"],
     env: {

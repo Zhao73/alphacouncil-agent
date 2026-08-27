@@ -6,6 +6,9 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- The parse-retry failure test now gives its outer RPC observer enough time to cover both
+  bounded worker attempts, with a deterministic delayed-response probe and a frozen Windows
+  timing attribution report; runtime deadlines and failure assertions are unchanged.
 - The advisory method-panel recommender no longer includes a physical pack when any required
   typed fact is missing. A family without a fully covered admitted pack is now reported as an
   explicit unfilled slot instead of throwing or recommending a known abstention.

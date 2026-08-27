@@ -7,6 +7,11 @@ import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
+const PARSE_RETRY_WORKER_TIMEOUT_MS = 30_000;
+// One parse repair may launch two separately bounded workers. The RPC harness is an outer
+// observer, so it must cover both ceilings plus process-settlement headroom.
+const PARSE_RETRY_RPC_TIMEOUT_MS = PARSE_RETRY_WORKER_TIMEOUT_MS * 2 + 15_000;
+
 function scriptedCodexCommand(dataDir, {
   targetTask = "forward_expectations",
   recoverOnSecondAttempt = false,
@@ -427,6 +432,45 @@ test("valid JSON in the wrong reader language remains reader_language_mismatch a
   }
 });
 
+test("an injected delayed response proves the RPC harness fails below and passes above its service budget", async () => {
+  const dataDir = makeDataDir();
+  const delayedServer = join(dataDir, "delayed-rpc-server.mjs");
+  writeFileSync(delayedServer, `
+import { createInterface } from "node:readline";
+const delayMs = Number(process.env.ALPHACOUNCIL_TEST_RPC_DELAY_MS || 0);
+const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
+for await (const line of lines) {
+  const request = JSON.parse(line);
+  const respond = () => process.stdout.write(JSON.stringify({
+    jsonrpc: "2.0",
+    id: request.id,
+    result: request.method === "initialize"
+      ? {}
+      : { structuredContent: { status: "delayed_response_received" } },
+  }) + "\\n");
+  if (request.method === "initialize") respond();
+  else setTimeout(respond, delayMs);
+}
+`);
+  const server = startServer({
+    dataDir,
+    entry: delayedServer,
+    env: { ALPHACOUNCIL_TEST_RPC_DELAY_MS: "250" },
+  });
+  try {
+    await server.request("initialize", {}, { timeoutMs: 5_000 });
+    await assert.rejects(
+      server.callTool("delayed_probe", {}, { timeoutMs: 25 }),
+      /timed out after 25ms waiting for tools\/call/u,
+    );
+    const recovered = await server.callTool("delayed_probe", {}, { timeoutMs: 2_000 });
+    assert.equal(structured(recovered).status, "delayed_response_received");
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
 test("a transport failure on the parse retry remains empty evidence", async () => {
   const dataDir = makeDataDir();
   const fake = scriptedCodexCommand(dataDir, { failOnSecondAttempt: true });
@@ -449,7 +493,11 @@ test("a transport failure on the parse retry remains empty evidence", async () =
       selection_receipt: selection.selection_receipt,
       // Leave enough process-start budget for both deliberately separate transports on a
       // loaded Windows runner. The assertion still requires attempt 2's exit 17, never timeout.
-      timeout_ms: 30_000,
+      timeout_ms: PARSE_RETRY_WORKER_TIMEOUT_MS,
+    }, {
+      // CI evidence: https://github.com/Zhao73/alphacouncil-agent/actions/runs/33032648711/job/98389871168
+      // Outer observer = both worker ceilings from the same constant + 15s settlement headroom.
+      timeoutMs: PARSE_RETRY_RPC_TIMEOUT_MS,
     });
     const run = structured(response);
     const runDir = join(dataDir, "runs", runId);
