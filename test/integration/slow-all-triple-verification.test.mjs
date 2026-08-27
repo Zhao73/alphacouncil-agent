@@ -63,7 +63,7 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   role, task, verifier, master, round, coverageRetry, acquisitionRepair, transportRepair,
   search: args.includes("--search"), outputSchema: args.includes("--output-schema"),
   requiredUrlChecklist: prompt.includes("REQUIRED checked_urls BY CLAIM (binding work checklist)"),
-  pid: process.pid, at: Date.now(),
+  pid: process.pid, invocationOutput: output, at: Date.now(),
 }) + "\\n");
 
 if (verifier && ${JSON.stringify(failVerifiers)}) process.exit(17);
@@ -494,11 +494,23 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
     [...CANONICAL_MASTER_IDS].sort(),
     "the integration must launch every canonical method seat exactly once",
   );
-  assert.equal(
-    new Set(masterLaunches.map((entry) => entry.pid)).size,
-    CANONICAL_MASTER_IDS.length,
-    "each canonical method seat must run in its own worker process",
+  assert.ok(
+    masterLaunches.every((entry) => Number.isInteger(entry.pid) && entry.pid > 0),
+    "each canonical method invocation must cross a real worker-process boundary",
   );
+  // Windows may reuse a PID immediately after a short-lived worker exits, so uniqueness across
+  // two sequential waves is not a valid process-isolation contract. runCodex allocates one
+  // unpredictable output path per spawn; the fake child records that invocation token exactly
+  // once. Exact role coverage + valid child PIDs + unique tokens proves 26 distinct spawned
+  // invocations without assuming that an OS never recycles historical process identifiers.
+  assert.equal(
+    new Set(masterLaunches.map((entry) => entry.invocationOutput)).size,
+    CANONICAL_MASTER_IDS.length,
+    "each canonical method seat must run in its own Codex worker invocation",
+  );
+  assert.ok(masterLaunches.every((entry) => (
+    typeof entry.invocationOutput === "string" && /codex-\d+-[0-9a-f]+\.txt$/u.test(entry.invocationOutput)
+  )), "each method invocation must carry its generated worker output token");
   assert.ok(initialEvidenceLaunches.every((entry) => entry.search));
   assert.ok(initialEvidenceLaunches.every((entry) => entry.outputSchema));
   assert.ok(transportRepairLaunches.every((entry) => !entry.search));
