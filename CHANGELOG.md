@@ -6,6 +6,9 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- The Windows source-test plan moves the unchanged packaged-host-parity file to an isolated,
+  single-concurrency phase after the four-way source suite. Linux and macOS scheduling,
+  timeout ceilings, test assertions and the selected source-file set are unchanged.
 - The parse-retry failure test now gives its outer RPC observer enough time to cover both
   bounded worker attempts, with a deterministic delayed-response probe and a frozen Windows
   timing attribution report; runtime deadlines and failure assertions are unchanged.

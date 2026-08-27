@@ -8,6 +8,10 @@ import {
   PACKAGED_PARITY_REPO_ROOT,
   npmInvocation,
 } from "../../scripts/lib/packaged-host-parity.mjs";
+import {
+  PACKAGED_HOST_PARITY_TEST_FILE,
+  buildTestPlan,
+} from "../../scripts/run-tests.mjs";
 import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
 import { HOST_SELECTION_INSTRUCTION_PATHS } from "../../scripts/lib/host-selection-instruction-contract.mjs";
 import {
@@ -72,10 +76,34 @@ function runPackagedParity(env, {
   };
 }
 
-test("packaged parity CLI defaults to a read-only temporary check", () => {
+test("packaged parity CLI defaults to a read-only temporary check and Windows isolates this file", () => {
   assert.deepEqual(parseArgs([]), { json: false, markdown: false, help: false, checkOnly: true });
   assert.throws(() => parseArgs(["--write"]), /unknown argument/);
   assert.throws(() => parseArgs(["--json", "--markdown"]), /mutually exclusive/);
+
+  const windowsPlan = buildTestPlan(PACKAGED_PARITY_REPO_ROOT, { platform: "win32" });
+  assert.equal(windowsPlan.mode, "source_portable");
+  assert.deepEqual(windowsPlan.phases.map((phase) => phase.id), [
+    "source_without_packaged_host_parity",
+    "packaged_host_parity_isolated",
+  ]);
+  const [concurrent, isolated] = windowsPlan.phases;
+  assert.ok(!concurrent.args.includes(PACKAGED_HOST_PARITY_TEST_FILE));
+  assert.deepEqual(isolated.args, [
+    "--test",
+    "--test-concurrency=1",
+    PACKAGED_HOST_PARITY_TEST_FILE,
+  ]);
+
+  const originalFiles = windowsPlan.args.filter((arg) => arg.endsWith(".mjs")).sort();
+  const scheduledFiles = [...concurrent.args, ...isolated.args]
+    .filter((arg) => arg.endsWith(".mjs"))
+    .sort();
+  assert.deepEqual(scheduledFiles, originalFiles, "Windows phases must neither omit nor duplicate a source file");
+
+  const linuxPlan = buildTestPlan(PACKAGED_PARITY_REPO_ROOT, { platform: "linux" });
+  assert.equal(linuxPlan.phases.length, 1);
+  assert.deepEqual(linuxPlan.phases[0], { id: "source_suite", args: linuxPlan.args });
 });
 
 test("npm execution never spawns a cmd shim directly on Windows", () => {

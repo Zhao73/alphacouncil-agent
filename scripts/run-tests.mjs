@@ -36,6 +36,7 @@ export const SOURCE_PORTABLE_EXCLUDED_TEST_COUNT = 14;
 // their own child processes. Node's CPU-count default can oversubscribe large CI
 // hosts and turn deterministic sub-second fixtures into platform-specific timeouts.
 export const SOURCE_TEST_CONCURRENCY = 4;
+export const PACKAGED_HOST_PARITY_TEST_FILE = "test/contract/packaged-host-parity.test.mjs";
 
 export function sourceTestConcurrencyArg(concurrency = SOURCE_TEST_CONCURRENCY, nodeVersion = process.versions.node) {
   const [major = 0, minor = 0] = String(nodeVersion).split(".").map(Number);
@@ -45,9 +46,33 @@ export function sourceTestConcurrencyArg(concurrency = SOURCE_TEST_CONCURRENCY, 
   return supported ? `--test-concurrency=${concurrency}` : null;
 }
 
-function sourceTestArgs(files = []) {
-  const concurrencyArg = sourceTestConcurrencyArg();
+function sourceTestArgs(files = [], concurrency = SOURCE_TEST_CONCURRENCY) {
+  const concurrencyArg = sourceTestConcurrencyArg(concurrency);
   return Object.freeze(["--test", ...(concurrencyArg ? [concurrencyArg] : []), ...files]);
+}
+
+function executionPhases({ mode, args, selectedFiles }, platform = process.platform) {
+  if (!mode.startsWith("source_") || platform !== "win32") {
+    return Object.freeze([
+      Object.freeze({ id: mode === "installed_package" ? "installed_package" : "source_suite", args }),
+    ]);
+  }
+
+  if (!selectedFiles.includes(PACKAGED_HOST_PARITY_TEST_FILE)) {
+    throw new Error(`Windows isolated test is missing from the source suite: ${PACKAGED_HOST_PARITY_TEST_FILE}`);
+  }
+  const concurrentFiles = selectedFiles.filter((file) => file !== PACKAGED_HOST_PARITY_TEST_FILE);
+  if (concurrentFiles.length === 0) throw new Error("Windows concurrent source-test phase is empty");
+  return Object.freeze([
+    Object.freeze({
+      id: "source_without_packaged_host_parity",
+      args: sourceTestArgs(concurrentFiles),
+    }),
+    Object.freeze({
+      id: "packaged_host_parity_isolated",
+      args: sourceTestArgs([PACKAGED_HOST_PARITY_TEST_FILE], 1),
+    }),
+  ]);
 }
 
 function listMjsFiles(root, directory = join(root, "test")) {
@@ -88,20 +113,31 @@ export function validatePortableExclusions(root = repoRoot) {
   return files;
 }
 
-export function buildTestPlan(root = repoRoot) {
+export function buildTestPlan(root = repoRoot, { platform = process.platform } = {}) {
   const tests = hasRunnableSourceTests(root);
   const staging = stagingState(root);
   if (staging === "partial") {
     throw new Error("private staging is partial: personas-v3 and persona-v3-formula-candidates must both exist or both be absent");
   }
   if (!tests) {
-    return Object.freeze({ mode: "installed_package", excluded: Object.freeze([]), args: Object.freeze(["scripts/package-smoke.mjs"]) });
+    const mode = "installed_package";
+    const args = Object.freeze(["scripts/package-smoke.mjs"]);
+    return Object.freeze({
+      mode,
+      excluded: Object.freeze([]),
+      args,
+      phases: executionPhases({ mode, args, selectedFiles: Object.freeze([]) }, platform),
+    });
   }
   if (staging === "present") {
+    const mode = "source_with_staging";
+    const args = sourceTestArgs();
+    const selectedFiles = Object.freeze(sourceTestFiles(root).filter((file) => file.endsWith(".test.mjs")));
     return Object.freeze({
-      mode: "source_with_staging",
+      mode,
       excluded: Object.freeze([]),
-      args: sourceTestArgs(),
+      args,
+      phases: executionPhases({ mode, args, selectedFiles }, platform),
     });
   }
 
@@ -109,19 +145,26 @@ export function buildTestPlan(root = repoRoot) {
   const files = validatePortableExclusions(root);
   const selected = files.filter((file) => !excluded.has(file));
   if (selected.length === 0) throw new Error("source_portable test selection is empty");
+  const mode = "source_portable";
+  const args = sourceTestArgs(selected);
   return Object.freeze({
-    mode: "source_portable",
+    mode,
     excluded: SOURCE_PORTABLE_EXCLUDED_TESTS,
-    args: sourceTestArgs(selected),
+    args,
+    phases: executionPhases({ mode, args, selectedFiles: Object.freeze(selected) }, platform),
   });
 }
 
 export function main(root = repoRoot) {
   const plan = buildTestPlan(root);
   process.stdout.write(`alphacouncil-test: mode=${plan.mode} excluded=${plan.excluded.length}\n`);
-  const result = spawnSync(process.execPath, plan.args, { cwd: root, env: process.env, stdio: "inherit" });
-  if (result.error) throw result.error;
-  return result.status ?? 1;
+  for (const phase of plan.phases) {
+    process.stdout.write(`alphacouncil-test: phase=${phase.id}\n`);
+    const result = spawnSync(process.execPath, phase.args, { cwd: root, env: process.env, stdio: "inherit" });
+    if (result.error) throw result.error;
+    if ((result.status ?? 1) !== 0) return result.status ?? 1;
+  }
+  return 0;
 }
 
 const invoked = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);

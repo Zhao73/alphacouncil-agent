@@ -121,3 +121,59 @@ or changing the fail-closed result. This is an observability input, not a WP3W f
 - The only correction is alignment of the parse-retry test observer with its two-attempt
   contract; this package does not claim to have fixed general Windows timing variance.
 - A new five-platform CI run is still required for this package before WP3W can close.
+
+## WP3F recurrence and WP3W-b scheduling decision
+
+WP3F check run
+[`33041464732`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33041464732)
+reproduced the Windows contention shape at commit
+`7a16d4c0ae47a8e8e3f6afac4cbbd7969cb53a53`. The first Windows job
+[`98415795513`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33041464732/job/98415795513)
+failed after 12 minutes 41 seconds. Its source suite took 631,415.8502 ms: 1,417 tests,
+1,388 passed, 23 failed and 6 skipped. Both packaged-host-parity contract cases exhausted
+two bounded attempts with the same nested offline-install `ETIMEDOUT`. The remaining 21
+failures reported global deadlines, RPC observer timeouts or absent downstream artifacts
+while that work occupied the runner. Classifying those 21 as a contention cascade is an
+inference, supported by the bounded clean-runner comparison below; none was a seat-fidelity
+assertion failure.
+
+Only the failed Windows job was rerun. Attempt 2 job
+[`98418253637`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33041464732/job/98418253637)
+passed in 7 minutes 40 seconds; its `Run checks` step took 7 minutes 15 seconds. The source
+suite took 362,092.3768 ms: 1,417 tests, 1,411 passed, zero failed, zero cancelled and 6
+skipped. It still announced one packaged-parity timeout before its bounded retry succeeded.
+The other four matrix jobs were already green, so attempt 2 closed WP3F but did not establish
+that the Windows contention had disappeared.
+
+The two parity case durations are the isolation baseline:
+
+| CI attempt | npm tarball case | production-profile case | Retry notices | Result |
+| --- | ---: | ---: | ---: | --- |
+| Attempt 1 / `98415795513` | 257,203.009 ms | 251,161.8086 ms | 2 | Both cases exhausted both attempts and failed. |
+| Attempt 2 / `98418253637` | 271,171.2418 ms | 78,675.081 ms | 1 | First case passed on retry; second passed first try. |
+
+The TAP case durations cover setup, both attempts when retried and settlement; the log does not
+expose a separate stopwatch for each nested attempt, so no finer-grained duration is inferred.
+
+The ten WP3F seat-fidelity tests took 3,401.4159 ms in that successful Windows rerun. The two
+schema/policy-subject checks accounted for 1,585.1885 ms and 1,750.9463 ms; the method-reference
+comparison took 56.0006 ms and each remaining case took less than 4 ms. These measured timings
+quantitatively rule out WP3F's seat-fidelity tests as a material cause of the multi-minute
+increase. The repeated npm stall, not the WP3F fidelity workload, is the component that still
+needs isolation.
+
+WP3W-b therefore changes scheduling only on Windows:
+
+- the selected source-file set is partitioned without omission or duplication;
+- the ordinary source files retain `--test-concurrency=4`;
+- `test/contract/packaged-host-parity.test.mjs` runs afterward in its own
+  `--test-concurrency=1` phase;
+- Linux and macOS keep the original single source-suite phase;
+- the packaged test's assertions and 120/180/400-second boundaries are unchanged.
+
+The post-change gate is a five-platform green run with the two Windows phase summaries totaling
+the same 1,417 tests, a Windows `Run checks` duration in the nine-minute-or-less range and zero
+`packaged-parity: attempt 1 timed out; retrying` notices. If isolation leaves any such notice,
+the contention source must be investigated again instead of calling WP3W-b complete. The first
+WP4 commit must then produce another green Windows job, so one favorable runner is not presented
+as proof of stability.
