@@ -26,7 +26,7 @@ import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
 import { table, mark, metricValue, groundingDashboard, label, threshold, skippedMark } from "./tables.mjs";
 import { fetchUniverse } from "./sec.mjs";
 import { industryBrief, listIndustries, industryCoverage, peersBySic, SIC_GROUPS } from "./industry.mjs";
-import { analyzeSymbol, collectEvidence, finalizeUnhandledBackgroundFailure, finalizeVisibleRun, queueHeadlessRun, recordMasterOpinion, recordVerifierBatch, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
+import { analyzeSymbol, collectEvidence, councilAsOf, finalizeUnhandledBackgroundFailure, finalizeVisibleRun, queueHeadlessRun, recordMasterOpinion, recordVerifierBatch, recordVerifierVerdict, recordVisibleDecision, recordVisiblePacket, visibleAgentSpecs, visibleRun } from "./orchestrator.mjs";
 import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
@@ -337,6 +337,11 @@ export function tool(name, description, inputSchema, annotations = {}) {
  * request or worker exists. A caller-provided masters list cannot override the receipt.
  */
 function startValidation(args, entryTool) {
+  // Validate caller-controlled cutoff data before consuming the one-use selection receipt.
+  // Otherwise a typo or timezone-boundary future date burns the receipt, creates no run
+  // artifacts, and leaves the user with no retry path except repeating the whole catalog
+  // handshake. The orchestrator validates again at execution time as defense in depth.
+  councilAsOf(args.as_of);
   if ((entryTool === "collect_evidence" || entryTool === "analyze_symbol") && args.visibility_required === true) {
     throw invalidParams("visibility_required=true cannot be satisfied by headless MCP. Use host-visible agents or threads and plan_visible_run.", {
       reason: "VISIBLE_EXECUTION_REQUIRED",

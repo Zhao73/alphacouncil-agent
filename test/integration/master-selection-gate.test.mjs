@@ -480,6 +480,29 @@ test("headless visibility validation happens before receipt consumption", async 
   assert.ok(planned.result, "a pre-consumption validation error must not burn the receipt");
 });
 
+test("an invalid future as_of is rejected before receipt consumption and remains retryable", async () => {
+  const selection = await confirmMasterSelection(server, { symbol: "AAPL" });
+  const rejectedRunId = `SELECTION-FUTURE-AS-OF-${process.pid}`;
+  const blocked = await server.callTool("analyze_symbol", {
+    symbol: "AAPL",
+    as_of: "2999-01-01",
+    run_id: rejectedRunId,
+    dry_run: true,
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.equal(blocked.error?.data?.reason, "FUTURE_AS_OF");
+  assert.equal(existsSync(join(dataDir, "runs", rejectedRunId)), false);
+
+  const retriedRunId = `SELECTION-AFTER-FUTURE-AS-OF-${process.pid}`;
+  const retried = await server.callTool("analyze_symbol", {
+    symbol: "AAPL",
+    run_id: retriedRunId,
+    dry_run: true,
+    selection_receipt: selection.selection_receipt,
+  });
+  assert.ok(retried.result, "correcting as_of must not require the user to repeat selection");
+});
+
 test("full analyze_symbol cannot masquerade as a complete council with synthesis disabled", async () => {
   const selection = await confirmMasterSelection(server, { symbol: "CSCO" });
   const blocked = await server.callTool("analyze_symbol", {
