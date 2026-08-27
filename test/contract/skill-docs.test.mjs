@@ -125,6 +125,27 @@ test("CLAUDE.md names the roles that actually exist", async () => {
   assert.deepEqual(ghosts, [], `CLAUDE.md dispatches roles that no longer exist: ${ghosts.join(", ")}`);
 });
 
+// CLAUDE.md and AGENTS.md are executable host instructions. A stale Claude-only rule once
+// allowed a full run with two missing method voices to reach debate and PM even though the
+// runtime gate had already become all-or-nothing. Keep both hosts aligned with that gate.
+test("full method-voice failure stops every host before debate and PM", () => {
+  const authorities = {
+    "CLAUDE.md": read("CLAUDE.md"),
+    "AGENTS.md": read("AGENTS.md"),
+  };
+
+  for (const [name, text] of Object.entries(authorities)) {
+    assert.match(text,
+      /(?:every selected method[\s\S]{0,100}real `model_voice`|real `model_voice`[\s\S]{0,100}every selected method)/i,
+      `${name} must require every selected full-run method voice`);
+    assert.match(text, /(?:timeout|times out)[\s\S]{0,240}stop(?:s)?\s+before Bull\/Bear and PM/i,
+      `${name} must stop before debate and PM when a selected method voice fails`);
+  }
+  assert.doesNotMatch(authorities["CLAUDE.md"],
+    /Whether the debate and PM run at all[\s\S]{0,300}near-complete bench/i,
+    "Claude Code must not retain the superseded full-run quorum rule");
+});
+
 // Three of the four hosts read generated agent files, and none of them were in the npm
 // package: an install gave you the server and no subagent definitions.
 test("the npm package ships the files every host actually reads", () => {

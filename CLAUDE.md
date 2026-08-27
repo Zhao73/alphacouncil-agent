@@ -106,12 +106,12 @@ No research, run directory or worker may start before that receipt exists. Data-
 - Run Bull and Bear in parallel within Round 1, wait for both, then repeat for Round 2 and
   Round 3. Preserve the exact Round-2-question to Round-3-answer binding. Start the PM only
   after both Round-3 sides pass.
-- Every selected method seat must report for the run to be COMPLETE, and a seat that never
-  reported is always named in `missing_masters` and in the report. Whether the debate and PM
-  run at all is a separate, weaker question: a near-complete bench (at most two absent and at
-  least eight recorded) still proceeds to a decision, because one hung voice worker taking the
-  rating with it serves no reader. A materially unconsulted bench still stops before those
-  stages. Proceeding never upgrades the run: it terminates `incomplete` with the gap published.
+- Every selected method seat must return a real `model_voice` result for a full run. If even
+  one selected voice times out, fails transport or validation, returns empty, or falls back to
+  a dry-run/deterministic substitute, stop before Bull/Bear and PM. Name every absent seat in
+  `missing_masters`, persist the standard failure artifacts, and terminate `incomplete`. Only
+  explicit quick mode may continue with a disclosed near-complete bench; that never upgrades
+  the run to complete.
 - On global expiry, stop new downstream work and persist a terminal fail-closed `incomplete`
   run naming every timed-out, failed and skipped role. The ceiling guarantees a terminal
   artifact, not that external search/model/data services will let all seats succeed.
