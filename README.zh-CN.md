@@ -22,6 +22,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code" />
   <img src="https://img.shields.io/badge/OpenCode-1a7a6a?style=for-the-badge" alt="OpenCode" />
   <img src="https://img.shields.io/badge/Grok_Build-000000?style=for-the-badge&logo=x&logoColor=white" alt="Grok Build" />
+  <img src="https://img.shields.io/badge/ChatGPT_Work-%E5%BC%80%E5%8F%91%E8%80%85%E6%A8%A1%E5%BC%8F-412991?style=for-the-badge&logo=openai&logoColor=white" alt="ChatGPT Work 开发者模式" />
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="兼容 MCP" />
@@ -40,7 +41,7 @@
 
 [历史界面录屏（MP4）](assets/demo.mp4) · [历史报告工件（SOX，中文）](docs/examples/final_report.SOX.zh.md)
 
-<sub>录屏早于当前 26 席候选版，只展示旧版界面；不证明当前耗时、方法忠实度、数据准确性或四宿主端到端状态。</sub>
+<sub>录屏早于当前 26 席候选版，只展示旧版界面；不证明当前耗时、方法忠实度、数据准确性、四个代码宿主或 ChatGPT Work 的端到端状态。</sub>
 
 </div>
 
@@ -49,7 +50,7 @@
 
 AlphaCouncil 把证券问题变成可检查的研究流程：并行证据席从公开来源取证，所选投资方法席解读同一批带日期事实，多方与空方交叉质询，最后由投资组合经理记录结论及其失效条件。缺失输入会原样暴露，不会用猜测补齐。
 
-同一仓库支持 **Codex、Claude Code、OpenCode、Grok Build**。研究前会先区分公司、ETF 和市场指数，避免把一篮子资产当作有自身营收的公司来分析。
+同一仓库支持 **Codex、Claude Code、OpenCode、Grok Build**，并提供仅工具型的 **ChatGPT Work 开发者模式网关**。研究前会先区分公司、ETF 和市场指数，避免把一篮子资产当作有自身营收的公司来分析。
 
 <!-- readme-section:install -->
 ## 在 Codex 中安装
@@ -67,7 +68,7 @@ codex plugin add alphacouncil-agent@alphacouncil
 @alphacouncil-agent analyze AAPL
 ```
 
-Claude Code、OpenCode、Grok Build、Windows、故障排查及可选 npm 全局命令，请看 **[完整安装指南](docs/INSTALL.md)**。
+ChatGPT Work 开发者模式、Claude Code、OpenCode、Grok Build、Windows、故障排查及可选 npm 全局命令，请看 **[完整安装指南](docs/INSTALL.md)**。
 
 <!-- readme-section:first-run -->
 ## 免费首次运行

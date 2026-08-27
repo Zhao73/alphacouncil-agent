@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import readline from "node:readline";
@@ -19,7 +20,7 @@ import { getSocialPulse, verifyXPost } from "./social.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { beginCouncilSelection, confirmCouncilSelection, consumeCouncilSelection, selectionRequiredError } from "./council-selection.mjs";
 import { cleanupSelectionStore } from "./selection-cleanup.mjs";
-import { fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
+import { companyNewsTerms, fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
 import { screenTicker, explainResult, screenBatch } from "./screen.mjs";
 import { gatherGrounding, groundingBlock } from "./grounding.mjs";
 import { fetchMarketFinancials, coverageFor, MARKETS } from "./markets.mjs";
@@ -32,7 +33,14 @@ import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
 import { buildCompanySourceAcquisitionPlan, getCompanySourceMap } from "./company-source-acquisition.mjs";
 
+const responseContext = new AsyncLocalStorage();
+
 export function send(message) {
+  const capture = responseContext.getStore()?.capture;
+  if (capture) {
+    capture(message);
+    return;
+  }
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
@@ -328,8 +336,60 @@ export function compactGrounding(run) {
   return compact;
 }
 
+const TOOL_TITLES = Object.freeze({
+  begin_council_selection: "Choose Council Seats",
+  confirm_master_selection: "Confirm Council Seats",
+  plan_visible_run: "Plan a Visible Research Run",
+  record_visible_packet: "Record an Evidence Packet",
+  finalize_visible_run: "Close an Incomplete Visible Run",
+  record_visible_decision: "Record a Debate or PM Decision",
+  collect_evidence: "Collect Research Evidence",
+  analyze_symbol: "Start a Stock Research Council",
+  read_run: "Check a Research Run",
+  council_diagnostics: "Audit Council Differentiation",
+  compare_summary_modes: "Compare Report Formats",
+  record_master_opinion: "Record a Method-Seat Opinion",
+  get_macro_snapshot: "Get a Macro Snapshot",
+  list_council_options: "Browse Council Options",
+  get_options_chain: "Get an Options Chain",
+  get_market_narrative: "Summarize Market Narratives",
+  get_news: "Get Dated News and Filings",
+  get_company_sources: "Get Company Source Documents",
+  get_social_pulse: "Get a Social-Media Pulse",
+  verify_x_post: "Verify an X Post",
+  record_verifier_verdict: "Record a Claim Verification",
+  record_verifier_batch: "Record Verification Results",
+  industry_brief: "Build an Industry Brief",
+  market_financials: "Get Market Financials",
+  market_coverage: "Check Market Data Coverage",
+  compose_research_brief: "Compose a Grounded Research Brief",
+  industry_coverage: "Check Industry Coverage",
+  industry_peers: "Find Industry Peers",
+  list_industries: "List Covered Industries",
+  screen_ticker: "Screen a Ticker",
+  screen_candidates: "Screen Candidate Stocks",
+  list_us_universe: "Search the US Stock Universe",
+  preflight_permissions: "Check Research Permissions",
+  get_quote: "Get Delayed Market Quotes",
+});
+
 export function tool(name, description, inputSchema, annotations = {}) {
-  return { name, description, inputSchema, annotations };
+  const title = TOOL_TITLES[name];
+  if (!title) throw new Error(`Missing human-readable MCP title for ${name}`);
+  return {
+    name,
+    title,
+    description,
+    inputSchema,
+    outputSchema: { type: "object", additionalProperties: true },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+      ...annotations,
+    },
+  };
 }
 
 /**
@@ -739,7 +799,7 @@ export function tools() {
         run_id: { type: "string" },
       },
       required: ["symbol", "selection_receipt"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: true }),
     tool("record_visible_packet", "MANDATORY sequential step (not optional): record one completed visible evidence agent packet into a planned visible run. Every reader-facing field must use the run language or the packet is rejected without changing run state. Every planned evidence task MUST be recorded before debate completion and portfolio_manager.", {
       type: "object",
       properties: {
@@ -750,7 +810,7 @@ export function tools() {
         thread_title: { type: "string" },
       },
       required: ["run_id", "task", "packet"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
     tool("finalize_visible_run", "MANDATORY terminal fallback when a visible-host run cannot cross its next hard gate. It irreversibly closes the run as incomplete, preserves completed records, writes the standard no-rating report and handoff, and returns user_response_markdown whose final section accounts for every selected method seat. Never use it to turn a failed seat into an opinion.", {
       type: "object",
       properties: {
@@ -786,12 +846,12 @@ export function tools() {
           then: { not: { required: ["round"] } },
         },
       ],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
     tool("collect_evidence", "Launch Codex subagents and save shared JSON evidence packets. Use dry_run=true only for planning/self-tests.", {
       type: "object",
       properties: common,
       required: ["symbol", "selection_receipt"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: true }),
     tool("analyze_symbol", "Research an operating company, ETF, mutual fund or market index and write a manager-style decision summary. The instrument is classified before evidence routing: funds use holdings look-through, indices use aggregate methodology, and Company Facts screens apply only to operating companies. Set council_mode=quick for the bounded news-inclusive quick_v1 path; the default remains the full council.", {
       type: "object",
       properties: {
@@ -803,7 +863,7 @@ export function tools() {
         },
       },
       required: ["symbol", "selection_receipt"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: true }),
     tool("read_run", "Read a saved AlphaCouncil Agent run. Terminal text is the persisted user handoff. detail=compact (default) returns bounded polling state and artifact paths; detail=full returns the legacy complete evidence/report payload.", {
       type: "object",
       properties: {
@@ -879,7 +939,7 @@ export function tools() {
         thread_id: { type: "string" },
       },
       required: ["run_id", "master", "packet"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
     tool("get_macro_snapshot", "Keyless DELAYED top-down macro context in one call: rate curve, dollar and credit, commodities, risk appetite and breadth, and cross-market indices, plus derived pairs (10Y-3M spread, copper/gold, HY/IG, equal-weight vs cap-weight). Use it to place a single name inside its macro environment. These are observations, not a regime call, and unavailable series are data gaps for open_questions.", {
       type: "object",
       properties: {
@@ -914,7 +974,7 @@ export function tools() {
         top: { type: "number", description: "How many themes to return. Defaults to 6." },
       },
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
-    tool("get_news", "Dated headlines for one symbol, one search query, or one company's SEC filings, from keyless feeds (Yahoo Finance RSS, Google News RSS, EDGAR Atom). Every item must carry a parsable timestamp inside the window; undated and out-of-window items are counted and sampled under excluded_outside_window rather than being shown as recent. Filings are the one source here that cannot be spun, so prefer them for anything material.", {
+    tool("get_news", "Dated headlines for one symbol, one search query, or one company's SEC filings, from keyless feeds (Yahoo Finance RSS, Google News RSS, EDGAR Atom). Every item must carry a parsable timestamp inside the window; undated and out-of-window items are counted and sampled under excluded_outside_window rather than being shown as recent. Symbol-feed headlines must also name the ticker or quote-resolved issuer, and unrelated syndication noise is counted under excluded_irrelevant. Filings are the one source here that cannot be spun, so prefer them for anything material.", {
       type: "object",
       properties: {
         symbol: { type: "string", description: "Ticker for the Yahoo per-name feed." },
@@ -960,7 +1020,7 @@ export function tools() {
         note: { type: "string" },
       },
       required: ["run_id", "verifier", "seat", "verdict"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
     tool("record_verifier_batch", "Mandatory visible-run recorder for slow + all methods + all analysts. Record one complete batch from source_fidelity, rederivation, or refuter after all analyst packets and before any method seat. Every frozen material claim must appear exactly once; partial batches fail closed.", {
       type: "object",
       properties: {
@@ -971,7 +1031,7 @@ export function tools() {
         thread_title: { type: "string" },
       },
       required: ["run_id", "verifier", "packet"],
-    }),
+    }, { readOnlyHint: false, destructiveHint: false, openWorldHint: false }),
     tool("industry_brief", "Start from an industry rather than a ticker. Returns the participant list by position in the value chain -- INCLUDING the non-US names a SEC-only pipeline would silently drop, such as Korean and Japanese makers -- plus who actually drives demand, the questions a run must answer, how the industry behaves through a cycle, and which participants this pipeline can screen mechanically versus which need their own regulator's feed. Returns a frame, never a verdict.", {
       type: "object",
       properties: {
@@ -1417,14 +1477,19 @@ export async function handleToolCall(id, params) {
   }
   if (name === "get_news") {
     const specs = [];
-    if (args.symbol) specs.push(tickerNewsFeed(args.symbol));
+    if (args.symbol) {
+      const quoteData = await getQuotes({ symbol: args.symbol });
+      const quote = quoteData.quotes.find((entry) => !entry.error) || {};
+      specs.push({ ...tickerNewsFeed(args.symbol), relevance_terms: companyNewsTerms(args.symbol, quote) });
+    }
     if (args.query) specs.push(queryNewsFeed(args.query));
     if (args.cik) specs.push(filingsFeed(args.cik, args.forms || "8-K"));
     if (!specs.length) throw invalidParams("get_news needs at least one of symbol, query or cik");
     const data = await fetchFeeds(specs, { days: args.days ?? 14, asOf: args.as_of ?? null });
     sendResult(id, jsonContent(
       `${data.items.length} headlines in the last ${args.days ?? 14}d from ${data.feeds.filter((f) => f.ok).length}/${data.feeds.length} feeds; `
-      + `${data.excluded_outside_window} excluded as stale or undated.`,
+      + `${data.excluded_outside_window} excluded as stale or undated; `
+      + `${data.excluded_irrelevant} unrelated ticker-feed headlines excluded.`,
       data,
     ));
     return;
@@ -1677,19 +1742,35 @@ export async function handleRequest(message) {
 }
 
 /**
+ * Dispatch one JSON-RPC request without binding the response to stdout.
+ *
+ * The stdio host still writes newline-delimited frames. Remote transports use this
+ * request-scoped capture so the same implementation can safely serve concurrent HTTP
+ * calls without global stdout monkey-patching or a second copy of the tool handlers.
+ */
+export async function dispatchRequest(message) {
+  let response;
+  let responseCount = 0;
+  await responseContext.run({
+    capture(captured) {
+      responseCount += 1;
+      if (responseCount > 1) throw new Error(`JSON-RPC request ${String(message?.id)} produced multiple responses`);
+      response = captured;
+    },
+  }, async () => handleRequest(message));
+  return response;
+}
+
+/**
  * Set when the persona set fails to load. Every request then answers with an actionable
  * error instead of the server appearing healthy and producing empty prompts later.
  */
 let startupFailure = null;
+let runtimeInitialized = false;
 
-export function startStdioServer() {
-  // stdout is the JSON-RPC frame channel; diagnostics must never go there.
-  process.on("uncaughtException", (error) => {
-    process.stderr.write(`[alphacouncil] uncaught exception: ${error?.stack || error}\n`);
-  });
-  process.on("unhandledRejection", (reason) => {
-    process.stderr.write(`[alphacouncil] unhandled rejection: ${reason?.stack || reason}\n`);
-  });
+/** Initialize the shared runtime once for either stdio or Streamable HTTP. */
+export function initializeRuntime() {
+  if (runtimeInitialized) return;
   sweepStaleOutputs();
   // Keep expired selection/receipt records and recoverable dead-owner leases bounded in
   // real server operation, not only in unit tests. Cleanup itself is conservative: active,
@@ -1715,6 +1796,18 @@ export function startStdioServer() {
     startupFailure = error.message;
     process.stderr.write(`[alphacouncil] ${error.message}\n`);
   }
+  runtimeInitialized = true;
+}
+
+export function startStdioServer() {
+  // stdout is the JSON-RPC frame channel; diagnostics must never go there.
+  process.on("uncaughtException", (error) => {
+    process.stderr.write(`[alphacouncil] uncaught exception: ${error?.stack || error}\n`);
+  });
+  process.on("unhandledRejection", (reason) => {
+    process.stderr.write(`[alphacouncil] unhandled rejection: ${reason?.stack || reason}\n`);
+  });
+  initializeRuntime();
   const lines = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
   lines.on("line", (line) => {
     if (!line.trim()) return;

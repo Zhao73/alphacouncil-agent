@@ -22,6 +22,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code" />
   <img src="https://img.shields.io/badge/OpenCode-1a7a6a?style=for-the-badge" alt="OpenCode" />
   <img src="https://img.shields.io/badge/Grok_Build-000000?style=for-the-badge&logo=x&logoColor=white" alt="Grok Build" />
+  <img src="https://img.shields.io/badge/ChatGPT_Work-dev_mode-412991?style=for-the-badge&logo=openai&logoColor=white" alt="ChatGPT Work developer mode" />
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="MCP compatible" />
@@ -40,7 +41,7 @@
 
 [Historical UI recording (MP4)](assets/demo.mp4) · [Historical report artifact (SOX, Chinese)](docs/examples/final_report.SOX.zh.md)
 
-<sub>The recording predates the current 26-seat candidate. It demonstrates an earlier interface only—not current timing, method fidelity, data accuracy, or four-host end-to-end validation.</sub>
+<sub>The recording predates the current 26-seat candidate. It demonstrates an earlier interface only—not current timing, method fidelity, data accuracy, four-code-host validation, or ChatGPT Work validation.</sub>
 
 </div>
 
@@ -49,7 +50,7 @@
 
 AlphaCouncil turns a ticker question into a reviewable research process. Parallel evidence workers gather public sources, selected investment-method seats interpret the same dated facts, bull and bear challenge the case, and a portfolio manager records the decision and its invalidation conditions. Missing inputs stay visible instead of being filled with guesses.
 
-The same repository supports **Codex, Claude Code, OpenCode, and Grok Build**. It classifies companies, ETFs, and market indices before research so a basket is not analyzed as if it were an operating company.
+The same repository supports **Codex, Claude Code, OpenCode, and Grok Build**, plus a tool-only **ChatGPT Work developer-mode gateway**. It classifies companies, ETFs, and market indices before research so a basket is not analyzed as if it were an operating company.
 
 <!-- readme-section:install -->
 ## Install in Codex
@@ -67,7 +68,7 @@ Plugins load when Codex starts. Fully quit and restart Codex, open a new session
 @alphacouncil-agent analyze AAPL
 ```
 
-For Claude Code, OpenCode, Grok Build, Windows, troubleshooting, and the optional global npm command, use the **[complete install guide](docs/INSTALL.md)**.
+For ChatGPT Work developer mode, Claude Code, OpenCode, Grok Build, Windows, troubleshooting, and the optional global npm command, use the **[complete install guide](docs/INSTALL.md)**.
 
 <!-- readme-section:first-run -->
 ## Free first run

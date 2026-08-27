@@ -1,9 +1,12 @@
 # Install AlphaCouncil Agent
 
-AlphaCouncil Agent supports four host integrations: **OpenAI Codex**, **Claude Code**,
-**OpenCode**, and **Grok Build**. Codex loads the bundled Skills and MCP declaration from
-the plugin. Claude Code, OpenCode, and Grok Build also ship a host-native `/alpha` command.
-The same server can additionally load as an MCP-only connector in the Claude desktop app.
+AlphaCouncil Agent supports four code-host integrations—**OpenAI Codex**, **Claude Code**,
+**OpenCode**, and **Grok Build**—plus a tool-only **ChatGPT Work developer-mode gateway**.
+Codex loads the bundled Skills and MCP declaration from the plugin. Claude Code, OpenCode,
+and Grok Build also ship a host-native `/alpha` command. ChatGPT Work uses the isolated
+Streamable HTTP `/mcp` gateway under `work/`; it does not pretend hosted ChatGPT can run the
+repo's visible-thread recorders. The stdio server can additionally load as an MCP-only
+connector in the Claude desktop app.
 
 > ⚠️ **Disclaimer.** Educational/research use only. **Not investment advice.**
 > AI analysis can be incomplete, outdated, or wrong. Do your own research and
@@ -49,11 +52,12 @@ Or run it without installing: `npx alphacouncil-agent`.
 ## Core setup: no data-vendor key required
 
 The first US/Taiwan/market data check is keyless — SEC EDGAR for US filings, TWSE for
-Taiwan, and Yahoo/Stooq for quotes and macro — and the package has no runtime package
-dependencies. Headless council research additionally needs an installed and authenticated
-Codex CLI; visible workflows use the authenticated model supplied by their host.
-Development-only schema generation and property-test packages are not loaded by the
-installed plugin.
+Taiwan, and Yahoo/Stooq for quotes and macro — and the canonical stdio runtime has no
+runtime package dependencies. The separately installed ChatGPT Work gateway uses the
+official Model Context Protocol SDK. Headless council research additionally needs an
+installed and authenticated Codex CLI; visible workflows use the authenticated model
+supplied by their host. Development-only schema generation and property-test packages are
+not loaded by the canonical installed plugin.
 
 Two optional free keys widen coverage. Without them the tools still answer; they report
 which market is missing a feed and which variable would unlock it, and analysts are told
@@ -243,6 +247,60 @@ development; it keeps the user's installation tied to the GitHub marketplace sou
 @alphacouncil-agent analyze AAPL as a long/short pitch
 @alphacouncil-agent 帮我看看 NOK
 ```
+
+---
+
+## Install in ChatGPT Work developer mode
+
+This is a real tool-only MCP integration for a private development test. It is not yet a
+public, multi-tenant ChatGPT app. Use a source checkout so the isolated gateway dependency
+set does not alter the dependency-free stdio runtime. The gateway requires Node.js 18.14.1
+or newer:
+
+```bash
+git clone https://github.com/Zhao73/alphacouncil-agent.git
+cd alphacouncil-agent
+npm run work:install
+npm run work:test
+npm run work:start
+```
+
+The local endpoint is `http://127.0.0.1:8787/mcp`; `/healthz` reports the source version
+and tool count. Work exposes 26 chat-safe tools, not “26 model seats.” It hides the eight
+visible-host recorder/synchronous tools that hosted ChatGPT cannot safely supervise. The
+separate 26-method catalog still comes from `begin_council_selection` and must be displayed
+and confirmed for every real run.
+
+ChatGPT needs an HTTPS endpoint. Prefer OpenAI's Secure MCP Tunnel when the account has the
+required tunnel permission. For a short private test, a Cloudflare Quick Tunnel can expose
+localhost while preserving Host-header protection:
+
+```bash
+cloudflared tunnel --url http://127.0.0.1:8787 --http-host-header localhost
+```
+
+Then in ChatGPT Work:
+
+1. Open **Plugins**, enable **Developer mode** in its advanced settings, and create/register
+   a plugin from the temporary `https://.../mcp` URL.
+2. Keep the integration tool-only; do not add an iframe/UI resource for this first gate.
+3. Verify `list_council_options` returns the catalog, call one keyless data tool such as
+   `get_quote`, then complete one receipt-bound quick run and poll the same `run_id` through
+   `read_run` to a terminal state.
+4. Copy the generated technical app ID (`asdk_app_...`) only after registration. That exact
+   ID—not a guessed placeholder—belongs in a future root `.app.json` mapping and in the
+   `.codex-plugin/plugin.json` `apps` field.
+5. Stop the temporary tunnel immediately after the test.
+
+`analyze_symbol` is forced onto the durable background path in Work: omit
+`wait_for_completion` or set it to `false`, then poll `read_run`. A request for synchronous
+execution is rejected before any model spend so it cannot hang until the HTTP client times
+out.
+
+A random tunnel URL is not authentication. Public or team-wide hosting is a separate gate:
+OAuth 2.1/PKCE, tenant-separated run storage and credentials, quotas/cost controls, stable
+HTTPS, monitoring, and rollback must exist before any public submission or availability
+claim. The local gateway uses the owner's local Codex login and filesystem.
 
 ---
 
@@ -445,8 +503,9 @@ Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil
 ## 中文速览
 
 - 前置:Node ≥ 18;headless 真跑研究需要已登录的 Codex CLI(worker 是 `codex exec`)。Windows v0.3.0+ 原生支持 `codex.cmd`;WSL 只是 fallback。
-- 四个宿主:Codex、Claude Code、OpenCode、Grok Build;完整 full 的三档硬上限分别为 15/30/60 分钟。
+- 四个代码宿主:Codex、Claude Code、OpenCode、Grok Build;另有 ChatGPT Work 开发者模式的 26 工具远程网关。完整 full 的三档硬上限分别为 15/30/60 分钟。
 - Codex 安装:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `codex plugin add alphacouncil-agent@alphacouncil` → 重启;用 `@alphacouncil-agent AAPL news`，quick 用 `@alphacouncil-agent AAPL quick`。
+- ChatGPT Work:先运行 `npm run work:install && npm run work:test && npm run work:start`,再用 Secure MCP Tunnel 或短时 HTTPS tunnel 注册 `/mcp`;公开使用仍需 OAuth 和租户隔离。
 - Claude Code 安装:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
 - OpenCode/Grok Build:使用仓库 checkout 里的各自配置、agents 与 `/alpha` 命令;见上方对应小节。npm 全局安装只提供 MCP 可执行文件。
 - 没有 Codex CLI 时:用 visible 工作流,让 Claude 子代理产出证据并用 `record_visible_*` 录入,无需 codex。
@@ -456,8 +515,9 @@ Everything else is cross-platform: data lives under `%USERPROFILE%\.alphacouncil
 ## 日本語クイックガイド
 
 - 前提:Node ≥ 18。headless でリサーチを実走させるには、認証済みの Codex CLI が必要(worker は `codex exec`)。Windows は v0.3.0+ で `codex.cmd` をネイティブに起動可能。WSL は fallback。
-- 4 ホスト:Codex、Claude Code、OpenCode、Grok Build。full の深度別ハード上限は 15/30/60 分です。
+- 4 つのコードホスト:Codex、Claude Code、OpenCode、Grok Build。これに ChatGPT Work 開発者モード向け 26 ツールのリモートゲートウェイが加わります。full の深度別ハード上限は 15/30/60 分です。
 - Codex:`codex plugin marketplace add Zhao73/alphacouncil-agent` → `codex plugin add alphacouncil-agent@alphacouncil` → 再起動。`@alphacouncil-agent AAPL news` で使用し、quick は `@alphacouncil-agent AAPL quick`。
+- ChatGPT Work:`npm run work:install && npm run work:test && npm run work:start` の後、Secure MCP Tunnel または短時間の HTTPS tunnel で `/mcp` を登録します。公開利用には OAuth とテナント分離が必要です。
 - Claude Code でのインストール:`/plugin marketplace add Zhao73/alphacouncil-agent` → `/plugin install alphacouncil-agent@alphacouncil` → `/reload-plugins`。
 - OpenCode/Grok Build:リポジトリ checkout 内の専用設定、agents、`/alpha` コマンドを使用します。npm のグローバルインストールだけでは MCP 実行ファイルのみです。
 - Codex CLI が無い場合:visible ワークフローを使用。Claude のサブエージェントに根拠を生成させ、`record_visible_*` で記録する(codex 不要)。

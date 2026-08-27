@@ -1,6 +1,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseFeed, applyRecencyGate, tickerNewsFeed, queryNewsFeed, filingsFeed } from "../../mcp/lib/feeds.mjs";
+import {
+  applyHeadlineRelevance,
+  applyRecencyGate,
+  companyNewsTerms,
+  filingsFeed,
+  parseFeed,
+  queryNewsFeed,
+  tickerNewsFeed,
+} from "../../mcp/lib/feeds.mjs";
 import { classify, THEMES } from "../../mcp/lib/narrative.mjs";
 
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel>
@@ -75,6 +83,28 @@ test("feed URLs escape their inputs", () => {
   assert.match(tickerNewsFeed("BRK.B").url, /s=BRK\.B/);
   assert.match(filingsFeed("723125").url, /CIK=0000723125/, "CIK is zero-padded to ten digits");
   assert.match(filingsFeed("723125", "10-Q").url, /type=10-Q/);
+});
+
+test("quote identity creates bounded ticker-news aliases without corporate suffix noise", () => {
+  assert.deepEqual(companyNewsTerms("AAPL", { short_name: "Apple Inc.", long_name: "Apple Inc." }), ["aapl", "apple"]);
+  assert.deepEqual(
+    companyNewsTerms("EXM.P", { short_name: "Example Capital Holdings Inc.", long_name: "Example Capital Holdings Inc." }),
+    ["exm p", "exm", "example capital", "example"],
+  );
+});
+
+test("ticker-feed relevance excludes fresh but unrelated syndication noise", () => {
+  const items = [
+    { title: "Apple names a new CEO before its iPhone launch" },
+    { title: "AAPL shares rise after earnings" },
+    { title: "Google adds an Android commuter feature" },
+    { title: "Hint: this Berkshire holding is not Apple or American Express" },
+  ];
+  const { included, excluded } = applyHeadlineRelevance(items, ["AAPL", "Apple"]);
+  assert.deepEqual(included.map((item) => item.title), items.slice(0, 2).map((item) => item.title));
+  assert.deepEqual(included.map((item) => item.relevance.term), ["apple", "aapl"]);
+  assert.equal(excluded.length, 2);
+  assert.ok(excluded.every((item) => item.excluded_because === "ticker feed headline does not name the symbol or issuer"));
 });
 
 // ---- theme classification -------------------------------------------------

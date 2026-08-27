@@ -25,8 +25,8 @@ function stagedAuthority() {
   return root;
 }
 
-test("current install authority satisfies the four-host Skill-first contract", () => {
-  assert.deepEqual(checkInstallDocs(), { files: 5, hosts: 4, slashHosts: 3 });
+test("current install authority covers four code hosts and ChatGPT Work developer mode", () => {
+  assert.deepEqual(checkInstallDocs(), { files: 5, hosts: 5, slashHosts: 3 });
 });
 
 test("install documentation gate excludes historical records", () => {

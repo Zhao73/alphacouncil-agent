@@ -34,3 +34,22 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Run checks
         run: npm run check
+
+  chatgpt-work:
+    name: chatgpt-work (ubuntu-latest, node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: work/package-lock.json
+      - name: Install the isolated official MCP SDK gateway
+        run: npm ci --prefix work --ignore-scripts
+      - name: Test Streamable HTTP with the official MCP client
+        run: npm test --prefix work

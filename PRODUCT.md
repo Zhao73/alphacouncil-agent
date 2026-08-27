@@ -6,7 +6,7 @@ product
 
 ## Users
 
-AlphaCouncil serves investors, analysts, researchers, and technically capable users who run public-equity research from Claude Code, Codex, OpenCode, or Grok Build. They may be making a quick research pass or assembling a deeper investment-committee record, and they need to understand the time, cost, evidence coverage, and method lenses they are choosing before work begins.
+AlphaCouncil serves investors, analysts, researchers, and technically capable users who run public-equity research from Claude Code, Codex, OpenCode, Grok Build, or a private ChatGPT Work developer integration. They may be making a quick research pass or assembling a deeper investment-committee record, and they need to understand the time, cost, evidence coverage, and method lenses they are choosing before work begins.
 
 ## Product Purpose
 
@@ -22,7 +22,7 @@ Precise, rigorous, transparent. The product should communicate expert confidence
 - A casino-like voting screen that treats correlated persona outputs as independent votes.
 - Celebrity role-play whose only differentiation is a name, portrait, quote, or speaking style.
 - A dense configuration wizard that asks users to decide technical details they do not need to understand.
-- Host-specific workflows whose controls or completion rules drift between Claude Code, Codex, OpenCode, and Grok Build.
+- Host-specific workflows whose controls or completion rules drift between Claude Code, Codex, OpenCode, Grok Build, and ChatGPT Work.
 
 ## Design Principles
 

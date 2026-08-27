@@ -1,0 +1,21 @@
+{
+  "name": "@alphacouncil/chatgpt-work-gateway",
+  "version": "1.5.0",
+  "private": true,
+  "type": "module",
+  "description": "Local Streamable HTTP gateway for using AlphaCouncil Agent in ChatGPT Work developer mode.",
+  "engines": {
+    "node": ">=18.14.1"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.4.3"
+  },
+  "overrides": {
+    "@hono/node-server": "1.19.17"
+  }
+}

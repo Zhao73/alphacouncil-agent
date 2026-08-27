@@ -17,9 +17,10 @@ Run `npm run check` after any code or prompt change.
 Package/plugin version `1.5.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
 `latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
 PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
-`method_model` seats. Human review of the authored formulas and the live four-host
-end-to-end run are outstanding, so do not present a passing full/quick report or a packaged
-smoke as evidence that either has been done.
+`method_model` seats. Human review of the authored formulas, the live four-code-host
+end-to-end run, and the separate ChatGPT Work developer-mode end-to-end run are outstanding,
+so do not present a passing full/quick report or a packaged smoke as evidence that any has
+been done.
 
 ## Council Modes
 
@@ -115,16 +116,22 @@ the only routes that skip this gate; the three slash-command hosts expose them u
 | Codex | `.codex-plugin/plugin.json`, `codex.mcp.json` | — | `skills/` via the plugin manifest |
 | OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | workflow files listed by `instructions` |
 | Grok Build | `.grok/config.toml` | `.grok/agents/alphacouncil-*.md` | `AGENTS.md` (this file) |
+| ChatGPT Work (developer mode) | `work/server.mjs` remote `/mcp` | — | tool-only; background `analyze_symbol` + `read_run` |
 
 Host setup and compatibility details belong in [`docs/INSTALL.md`](docs/INSTALL.md), including
-the verified OpenCode 1.18.4 and Grok Build 0.2.101 configuration shapes. Keep this file focused
-on the runtime protocol shared after a host has loaded the integration.
+the verified OpenCode 1.18.4 and Grok Build 0.2.101 configuration shapes and the bounded
+ChatGPT Work developer gateway. Keep this file focused on the runtime protocol shared after
+a host has loaded the integration.
 
 ## Host invocation
 
 Codex is Skill-first: invoke `@alphacouncil-agent <request>`, including explicit modes such
 as `@alphacouncil-agent AAPL quick` and `@alphacouncil-agent AAPL news`. The installed plugin
 contributes its Skills and MCP declaration; Codex does not require a user prompt copy.
+
+ChatGPT Work is tool-only. It must use the 26-tool Work surface, not the visible-host
+recorders. Real council calls use the durable background `analyze_symbol` path and poll the
+same `run_id` through `read_run`; synchronous council execution is rejected before launch.
 
 ### Slash commands (Claude Code, OpenCode, and Grok Build only)
 

@@ -6,6 +6,10 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Symbol news now applies a deterministic issuer-relevance gate after the date gate. Yahoo
+  ticker RSS can return fresh but unrelated market syndication; the tool resolves the issuer
+  name from the quote endpoint, retains only headlines naming the ticker or issuer, and reports
+  excluded noise with samples instead of feeding it into research as company evidence.
 - Full-council method execution now fails closed when any selected dedicated voice worker is
   missing or substituted. Only quick may continue with an explicitly disclosed deterministic
   fallback; full stops before Bull/Bear and the portfolio manager and records the missing seat.
@@ -62,6 +66,11 @@ Notable changes per release. Dates are UTC.
 
 ### Added
 
+- Added an isolated ChatGPT Work developer-mode gateway using the official MCP SDK and stateless
+  Streamable HTTP `/mcp`. Its 26-tool chat surface hides visible-host recorders and synchronous
+  long calls, forces real councils onto durable `analyze_symbol` plus `read_run` polling, and
+  leaves the canonical stdio runtime dependency-free. Public hosting remains blocked on OAuth,
+  tenant isolation, stable HTTPS, quotas and live E2E evidence.
 - Added a read-only public-release audit that reports source HEAD, GitHub main, the exact
   candidate PR, GitHub About/Release and npm dist-tags as separate machine-readable layers.
   Report mode records drift without blocking local work. The strict candidate gate checks the

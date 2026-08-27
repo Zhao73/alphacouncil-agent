@@ -14,6 +14,16 @@ test("the published package ships everything the server loads at runtime", () =>
   for (const required of ["mcp/", "personas/", "data/", "skills/"]) {
     assert.ok(pkg.files.includes(required), `package.files must include ${required}`);
   }
+  for (const required of [
+    "work/README.md",
+    "work/package.json",
+    "work/package-lock.json",
+    "work/server.mjs",
+    "work/test/gateway.test.mjs",
+  ]) {
+    assert.ok(pkg.files.includes(required), `package.files must include ${required}`);
+  }
+  assert.ok(!pkg.files.includes("work/"), "package.files must not recursively include local Work dependencies");
   assert.ok(pkg.files.includes("README.md"));
   assert.ok(pkg.files.includes("LICENSE"));
 });
@@ -79,6 +89,9 @@ test("prepublishOnly proves the package works, not that the corpus is GA-ready",
   assert.match(pkg.scripts["package:inventory:check"], /report-package-inventory\.mjs --check/);
   assert.match(pkg.scripts["docs:install:check"], /check-install-docs\.mjs/);
   assert.match(pkg.scripts["docs:readme:check"], /check-readme-conversion\.mjs/);
+  assert.equal(pkg.scripts["work:install"], "npm ci --prefix work");
+  assert.equal(pkg.scripts["work:test"], "npm test --prefix work");
+  assert.equal(pkg.scripts["work:start"], "npm start --prefix work");
   assert.ok(pkg.files.includes("docs/reference/"));
   // The GA gate still exists and still runs the reports that fail closed.
   assert.match(pkg.scripts["release:check"], /npm run check/);

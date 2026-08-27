@@ -22,6 +22,7 @@
   <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code" />
   <img src="https://img.shields.io/badge/OpenCode-1a7a6a?style=for-the-badge" alt="OpenCode" />
   <img src="https://img.shields.io/badge/Grok_Build-000000?style=for-the-badge&logo=x&logoColor=white" alt="Grok Build" />
+  <img src="https://img.shields.io/badge/ChatGPT_Work-dev_mode-412991?style=for-the-badge&logo=openai&logoColor=white" alt="ChatGPT Work developer mode" />
 </p>
 <p>
   <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="MCP 対応" />
@@ -40,7 +41,7 @@
 
 [過去版 UI の録画（MP4）](assets/demo.mp4) · [過去版レポート成果物（SOX、中国語）](docs/examples/final_report.SOX.zh.md)
 
-<sub>録画は現在の 26 席候補より前の UI です。現在の所要時間、手法忠実度、データ精度、4 ホスト E2E を証明するものではありません。</sub>
+<sub>録画は現在の 26 席候補より前の UI です。現在の所要時間、手法忠実度、データ精度、4 つのコードホスト、ChatGPT Work の E2E を証明するものではありません。</sub>
 
 </div>
 
@@ -49,7 +50,7 @@
 
 AlphaCouncil は銘柄の質問を検証可能な調査工程へ変えます。並列の根拠ワーカーが公開情報を収集し、選んだ投資手法席が同じ日付付き事実を解釈し、強気と弱気が互いの論拠を問い、最後にポートフォリオマネージャーが判断と無効化条件を記録します。足りない入力を推測で埋めず、欠落として残します。
 
-同じリポジトリが **Codex、Claude Code、OpenCode、Grok Build** に対応します。調査前に企業、ETF、市場指数を分類するため、バスケットを自社売上のある事業会社として扱いません。
+同じリポジトリが **Codex、Claude Code、OpenCode、Grok Build** に対応し、ツール専用の **ChatGPT Work 開発者モードゲートウェイ** も提供します。調査前に企業、ETF、市場指数を分類するため、バスケットを自社売上のある事業会社として扱いません。
 
 <!-- readme-section:install -->
 ## Codex にインストール
@@ -67,7 +68,7 @@ codex plugin add alphacouncil-agent@alphacouncil
 @alphacouncil-agent analyze AAPL
 ```
 
-Claude Code、OpenCode、Grok Build、Windows、トラブル対応、任意の npm グローバルコマンドは **[完全なインストールガイド](docs/INSTALL.md)** を参照してください。
+ChatGPT Work 開発者モード、Claude Code、OpenCode、Grok Build、Windows、トラブル対応、任意の npm グローバルコマンドは **[完全なインストールガイド](docs/INSTALL.md)** を参照してください。
 
 <!-- readme-section:first-run -->
 ## 無料の初回実行

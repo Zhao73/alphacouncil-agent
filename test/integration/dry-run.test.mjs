@@ -74,8 +74,13 @@ test("tools/list exposes a coherent tool surface", () => {
   for (const name of mustHave) assert.ok(names.includes(name), `missing core tool: ${name}`);
 
   for (const tool of toolsList) {
+    assert.ok(tool.title?.length > 3, `${tool.name} needs a human-readable title`);
     assert.ok(tool.description?.length > 40, `${tool.name} needs a description a host can act on`);
     assert.equal(tool.inputSchema?.type, "object", `${tool.name} needs an object input schema`);
+    assert.equal(tool.outputSchema?.type, "object", `${tool.name} needs an object output schema`);
+    for (const key of ["readOnlyHint", "destructiveHint", "idempotentHint", "openWorldHint"]) {
+      assert.equal(typeof tool.annotations?.[key], "boolean", `${tool.name} needs ${key}`);
+    }
   }
 
   // Anything that only reads must say so, or hosts cannot reason about side effects.

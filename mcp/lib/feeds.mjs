@@ -73,6 +73,73 @@ export function applyRecencyGate(items, { days = 14, asOf = null } = {}) {
   return { included, excluded };
 }
 
+const CORPORATE_SUFFIXES = new Set([
+  "co", "company", "corp", "corporation", "inc", "incorporated", "ltd", "limited",
+  "llc", "lp", "plc", "sa", "se", "ag", "nv", "holdings", "holding", "group",
+  "common", "ordinary", "shares", "stock", "the",
+]);
+const GENERIC_FIRST_WORDS = new Set([
+  "american", "china", "first", "global", "international", "japan", "national",
+  "new", "taiwan", "united",
+]);
+
+function normalizedPhrase(value) {
+  return String(value || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .match(/[\p{L}\p{N}]+/gu)?.join(" ") || "";
+}
+
+/** Build deterministic headline aliases from the requested ticker and quote identity. */
+export function companyNewsTerms(symbol, quote = {}) {
+  const terms = [];
+  const ticker = normalizedPhrase(symbol);
+  if (ticker) {
+    terms.push(ticker);
+    const first = ticker.split(" ")[0];
+    if (first?.length >= 2) terms.push(first);
+  }
+  for (const rawName of [quote.short_name, quote.long_name]) {
+    const words = normalizedPhrase(rawName).split(" ").filter(Boolean);
+    const meaningful = words.filter((word) => !CORPORATE_SUFFIXES.has(word));
+    if (!meaningful.length) continue;
+    terms.push(meaningful.join(" "));
+    const first = meaningful[0];
+    if (first.length >= 3 && !GENERIC_FIRST_WORDS.has(first)) terms.push(first);
+  }
+  return [...new Set(terms.filter((term) => term.length >= 2))];
+}
+
+function headlineTermMatch(title, term) {
+  const normalizedTitle = normalizedPhrase(title);
+  if (!normalizedTitle || !term) return false;
+  const paddedTitle = ` ${normalizedTitle} `;
+  const paddedTerm = ` ${term} `;
+  if (!paddedTitle.includes(paddedTerm)) return false;
+  // Syndicated listicles frequently name the requested company only to say the article is
+  // about something else. Keep that explicit negative-control pattern out of evidence.
+  if (normalizedTitle.includes("hint") && paddedTitle.includes(` not ${term} `)) return false;
+  return true;
+}
+
+/**
+ * Keep only ticker-feed headlines whose title names the requested symbol or issuer.
+ * Upstream ticker RSS endpoints sometimes return a nearly general market feed; recency
+ * alone cannot make those items company evidence.
+ */
+export function applyHeadlineRelevance(items, terms = []) {
+  const normalizedTerms = [...new Set(terms.map(normalizedPhrase).filter(Boolean))];
+  if (!normalizedTerms.length) return { included: items, excluded: [] };
+  const included = [];
+  const excluded = [];
+  for (const item of items) {
+    const matched = normalizedTerms.find((term) => headlineTermMatch(item.title, term));
+    if (matched) included.push({ ...item, relevance: { kind: "headline_term", term: matched } });
+    else excluded.push({ ...item, excluded_because: "ticker feed headline does not name the symbol or issuer" });
+  }
+  return { included, excluded };
+}
+
 export async function fetchFeed(url, { source = null, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2 } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -94,13 +161,34 @@ export async function fetchFeed(url, { source = null, timeoutMs = LIMITS.QUOTE_F
 /** Fetch several feeds concurrently; a dead feed is reported, never silently dropped. */
 export async function fetchFeeds(specs, { days = 14, asOf = null } = {}) {
   const results = await Promise.all(specs.map((s) => fetchFeed(s.url, { source: s.source })));
-  const all = results.flatMap((r) => r.items);
-  const { included, excluded } = applyRecencyGate(all, { days, asOf });
+  const included = [];
+  const excluded = [];
+  const irrelevant = [];
+  const feedRows = results.map((result, index) => {
+    const recent = applyRecencyGate(result.items, { days, asOf });
+    excluded.push(...recent.excluded);
+    const relevant = applyHeadlineRelevance(recent.included, specs[index]?.relevance_terms || []);
+    included.push(...relevant.included);
+    irrelevant.push(...relevant.excluded);
+    return {
+      source: result.source,
+      url: result.url,
+      ok: result.ok,
+      reason: result.reason,
+      item_count: result.items.length,
+      included_count: relevant.included.length,
+      excluded_irrelevant: relevant.excluded.length,
+      relevance_terms: specs[index]?.relevance_terms || [],
+    };
+  });
+  included.sort((a, b) => Date.parse(b.published_at) - Date.parse(a.published_at));
   return {
     items: included,
-    feeds: results.map(({ url, source, ok, reason, items }) => ({ source, url, ok, reason, item_count: items.length })),
+    feeds: feedRows,
     excluded_outside_window: excluded.length,
     excluded_sample: excluded.slice(0, 5).map((e) => ({ title: e.title, published_at: e.published_at, why: e.excluded_because })),
+    excluded_irrelevant: irrelevant.length,
+    excluded_irrelevant_sample: irrelevant.slice(0, 5).map((e) => ({ title: e.title, why: e.excluded_because })),
     unreachable: results.filter((r) => !r.ok).map((r) => ({ source: r.source, reason: r.reason })),
   };
 }
