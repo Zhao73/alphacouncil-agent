@@ -869,7 +869,7 @@ test("every abstaining seat receives and publishes its strong first-person metho
       assert.ok(opinion, `${id} must still be recorded`);
       assert.equal(opinion.stance, "out_of_scope");
       assert.equal(result.run.master_status[id].status, "completed");
-      assert.equal(result.run.master_status[id].voice_status, "completed");
+      assert.equal(result.run.master_status[id].voice_status, "model_voice");
       assert.equal(opinion.dedicated_worker.status, "completed");
       assert.equal(opinion.voice_mode, "first_person_public_method_simulation_v1");
       assert.equal(opinion.disclosure_ack, "alphacouncil.first_person_public_method_simulation.v1");

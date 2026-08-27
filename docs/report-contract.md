@@ -340,6 +340,24 @@ unavailable input or returns `out_of_scope` when its own critical contract requi
 claim and coverage ledgers, artifact references and complete hash bindings; the company
 dossier alone must not be relabeled as that stronger contract.
 
+Every frozen physical method result records three orthogonal labels before a voice worker
+runs:
+
+- `capability_status`: `deterministic_stance`, `abstain_missing_fact`, or
+  `abstain_no_producer`;
+- `evidence_quality`: `estimated_only`, `mixed`, `recomputed`, or `not_evaluable`, derived
+  only from applicable critical producer routes in the hash-bound producer catalog;
+- `voice_status`: `deterministic_only`, `deterministic_fallback`, `model_voice`, or
+  `voice_contract_failure`. `deterministic_only` means no model voice was required;
+  `deterministic_fallback` means a planned voice worker failed or was deliberately skipped.
+
+The first two labels and their sorted `evidence_quality_basis` are frozen with the
+deterministic opinion and survive every later voice outcome. `status.json` records the exact
+`fact_producer_catalog_hash`. A model voice for `out_of_scope` may not introduce action or
+directional language. Such output is not repaired or replaced: the worker fails with
+`voice_contract_failure`, no opinion is published, and the report shows only the localized
+contract-failure notice under the fixed "No computable stance" section.
+
 ## full_v2 Contract
 
 Full remains the default. Its `final_report.md` visibly covers:
@@ -635,6 +653,12 @@ seat; `report_quality.json.method_statement_coverage` records selected/readable/
 counts and IDs. A missing statement or ID forces `needs_revision`. Fund/index runs also
 require the system-owned instrument-structure section. The authoritative lists are
 `REPORT_SECTIONS` and `QUICK_REPORT_SECTIONS` in `mcp/lib/constants.mjs`.
+
+The bench begins with the machine-readable assurance summary
+`seats: N deterministic, M abstain (x no_producer); voices: K fallback, J contract_failure, L deterministic_only`.
+Every seat row exposes capability, evidence quality and voice status. The recorded-bench
+marker hashes those labels, the evidence basis, the producer-catalog hash and terminal voice
+contract failures, so changing any assurance input invalidates a stale rendered bench.
 
 The handoff gate independently requires one begin/end ledger marker, the end marker as the
 last non-whitespace content, exactly one ordered seat marker for every selected stable ID, and

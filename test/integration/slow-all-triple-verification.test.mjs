@@ -452,6 +452,11 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   assert.ok(REQUIRED_VERIFIER_IDS.every((id) => persisted.verifier_status[id]?.status === "completed"));
 
   assert.equal(persisted.master_opinions.length, CANONICAL_MASTER_IDS.length);
+  assert.equal(
+    readJson(join(dir, "master_taleb.deterministic.json")).voice_status,
+    "deterministic_only",
+    "the pre-worker deterministic artifact is not counted as a worker-failure fallback",
+  );
   const frozenPacketHashes = new Map(dossier.packet_manifest.map((entry) => [
     entry.task, entry.packet_hash,
   ]));

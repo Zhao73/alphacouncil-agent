@@ -157,6 +157,9 @@ test("source provenance failures are not classified as parse failures", () => {
     data: { reason: "METHOD_VOICE_FIRST_PERSON_MISMATCH" },
   }), "method_voice_first_person_mismatch");
   assert.equal(outputFailureKind({
+    data: { reason: "METHOD_VOICE_DIRECTIONAL_ABSTENTION" },
+  }), "voice_contract_failure");
+  assert.equal(outputFailureKind({
     data: { reason: "WORKER_OUTPUT_SCHEMA_MISMATCH" },
   }), "schema_mismatch");
   assert.equal(outputFailureKind({

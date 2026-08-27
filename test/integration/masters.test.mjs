@@ -7,6 +7,7 @@ import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { expectedCoverageItems } from "../../mcp/lib/company-dossier.mjs";
 import { RpcCode } from "../../mcp/lib/errors.mjs";
+import { loadFactProducerCatalog } from "../../mcp/lib/personas-v3/fact-producer-catalog.mjs";
 
 let dataDir;
 let server;
@@ -197,6 +198,7 @@ after(async () => {
 // This fixture exercises the company method-seat lifecycle, so it satisfies the real full
 // evidence barrier: all eight roles and all 52 dossier coverage items are recorded first.
 test("every declined v3 seat launches an independent first-person voice worker and waits", () => {
+  const producerCatalog = loadFactProducerCatalog();
   const dossier = JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8"));
   assert.equal(dossier.coverage.expected_count, 52);
   assert.equal(dossier.coverage.covered_count, 52);
@@ -216,7 +218,14 @@ test("every declined v3 seat launches an independent first-person voice worker a
     assert.match(agent.output_contract, /five first-person voice fields/);
     assert.equal(plan.run.master_status[d.master].status, "waiting");
     assert.equal(plan.run.master_status[d.master].voice_required, true);
+    const frozen = plan.run.master_opinions.find((opinion) => opinion.master === d.master);
+    assert.equal(frozen.capability_status, "abstain_missing_fact");
+    assert.ok(["estimated_only", "mixed", "recomputed", "not_evaluable"].includes(frozen.evidence_quality));
+    assert.ok(Array.isArray(frozen.evidence_quality_basis));
+    assert.equal(frozen.voice_status, "deterministic_only");
+    assert.deepEqual(plan.run.master_status[d.master].evidence_quality_basis, frozen.evidence_quality_basis);
   }
+  assert.equal(plan.run.fact_producer_catalog_hash, producerCatalog.catalog_hash);
 });
 
 test("each declined v3 seat completes only after its own first-person voice returns", async () => {
@@ -232,13 +241,20 @@ test("each declined v3 seat completes only after its own first-person voice retu
       packet: methodVoicePacket(master, frozen.stance, JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8"))),
     }));
     assert.equal(recorded.opinion.stance, "out_of_scope");
-    assert.equal(recorded.opinion.voice_status, "completed");
+    assert.equal(recorded.opinion.voice_status, "model_voice");
     assert.equal(recorded.opinion.statement_origin, "visible_method_voice_worker");
     assert.equal(recorded.opinion.company_dossier_hash_ack, companyDossierHash);
     assert.equal(recorded.opinion.dedicated_worker.thread_id, threadId);
+    assert.equal(recorded.opinion.capability_status, frozen.capability_status);
+    assert.equal(recorded.opinion.evidence_quality, frozen.evidence_quality);
+    assert.deepEqual(recorded.opinion.evidence_quality_basis, frozen.evidence_quality_basis);
     const persisted = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
     assert.equal(persisted.master_status[master].status, "completed");
     assert.equal(persisted.master_status[master].voice_required, true);
+    assert.equal(persisted.master_status[master].voice_status, "model_voice");
+    assert.equal(persisted.master_status[master].capability_status, frozen.capability_status);
+    assert.equal(persisted.master_status[master].evidence_quality, frozen.evidence_quality);
+    assert.deepEqual(persisted.master_status[master].evidence_quality_basis, frozen.evidence_quality_basis);
     for (const pending of selectedMasters.slice(index + 1)) {
       assert.equal(persisted.master_status[pending].status, "waiting", `${pending} must wait for its own worker`);
     }
@@ -247,6 +263,8 @@ test("each declined v3 seat completes only after its own first-person voice retu
   const run = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
   assert.ok(selectedMasters.every((master) => run.master_status[master].status === "completed"));
   assert.equal(new Set(run.master_opinions.map((opinion) => opinion.dedicated_worker?.thread_id)).size, selectedMasters.length);
+  const status = JSON.parse(readFileSync(join(runDir, "status.json"), "utf8"));
+  assert.equal(status.fact_producer_catalog_hash, loadFactProducerCatalog().catalog_hash);
 });
 
 test("solo-test v3 seats never fall back to legacy judgment agents", () => {

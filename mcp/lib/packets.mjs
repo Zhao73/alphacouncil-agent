@@ -1762,6 +1762,18 @@ export function sanitizeStatementMarkdown(value) {
     .trim();
 }
 
+const DIRECTIONAL_ABSTENTION_PATTERNS = Object.freeze([
+  /\b(?:bullish|bearish)\b|\b(?:i|we|investors?|one|the\s+portfolio)\s+(?:(?:would|will|should|could|can|must|may|might|do|does|intend\s+to|plan\s+to|choose\s+to|refuse\s+to|decline\s+to|am\s+going\s+to)\s+(?:not\s+)?)?(?:buy|sell|short|long|go\s+long|go\s+short|overweight|underweight|accumulate|trim|exit)\b|\b(?:i|we|investors?|one|the\s+portfolio)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to)\s+)?add\s+to\s+(?:the\s+)?(?:position|exposure|allocation)\b|\b(?:recommend(?:s|ed|ing)?|consider(?:s|ed|ing)?)\s+(?:not\s+)?(?:buying|selling|shorting|going\s+long|going\s+short|overweighting|underweighting|accumulating|trimming|exiting)\b/iu,
+  /(?:买入|買入|卖出|賣出|加仓|加倉|减仓|減倉|做多|做空|看多|看空|增持|减持|減持)/u,
+  /(?:買う|買います|買い増(?:す|し|した|せ)?|売る|売り|強気|弱気)/u,
+  /(?:추가\s*매수|매수|매도|강세|약세)/u,
+]);
+
+function containsDirectionalAbstentionToken(value) {
+  const text = String(value || "");
+  return DIRECTIONAL_ABSTENTION_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw = "") {
   // Every one of these is rendered into the system-owned bench, so all of them are escaped.
   const list = (value) => (Array.isArray(value)
@@ -1812,6 +1824,17 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
       owner: masterId,
       invalid_fields: thirdPersonFields,
     });
+  }
+  if (frozenOpinion?.stance === "out_of_scope") {
+    const directionalFields = VOICE_FIELDS
+      .filter((field) => containsDirectionalAbstentionToken(voice[field]));
+    if (directionalFields.length) {
+      throw invalidParams(`dedicated method worker added directional prose to an abstaining seat ${masterId}: ${directionalFields.join(", ")}`, {
+        reason: "METHOD_VOICE_DIRECTIONAL_ABSTENTION",
+        owner: masterId,
+        invalid_fields: directionalFields,
+      });
+    }
   }
   const statement = composeVoiceStatement(voice, run.language);
 

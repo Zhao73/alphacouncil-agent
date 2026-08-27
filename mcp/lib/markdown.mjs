@@ -93,10 +93,10 @@ export function renderMasterMarkdown(opinion, lang) {
   if (!opinion) return "";
   const title = masterTitle(opinion.master, lang);
   const labels = {
-    zh: { statement: "本轮方法席终局陈词（不是大师本人引语）", stance: "立场", verdict: "冻结判断", confidence: "置信度", worker: "陈词来源", summary: "方法席说明", findings: "关键发现", disagreements: "与分析师的分歧", disqualifiers: "触发的排除条件", change: "改变判断所需证据", sources: "来源", packetAcks: "逐证据包读取回执" },
-    en: { statement: "Final Method-Seat Statement (not a quote from the named person)", stance: "Stance", verdict: "Frozen verdict", confidence: "Confidence", worker: "Statement source", summary: "Method-seat explanation", findings: "Key Findings", disagreements: "Disagreements With The Analysts", disqualifiers: "Disqualifiers Triggered", change: "What Would Change The View", sources: "Sources", packetAcks: "Per-Packet Evidence Acknowledgements" },
-    ja: { statement: "メソッド席の最終見解（本人の発言・引用ではありません）", stance: "スタンス", verdict: "凍結済み判定", confidence: "信頼度", worker: "見解の生成元", summary: "メソッド席の説明", findings: "主な所見", disagreements: "分析担当との相違", disqualifiers: "発動した除外条件", change: "判断が変わる条件", sources: "出典", packetAcks: "証拠パケット別の読取確認" },
-    ko: { statement: "방법론 좌석 최종 발언(본인의 실제 발언이나 인용이 아님)", stance: "입장", verdict: "동결된 판단", confidence: "신뢰도", worker: "발언 출처", summary: "방법론 좌석 설명", findings: "핵심 발견", disagreements: "분석가와의 이견", disqualifiers: "발동된 제외 조건", change: "판단 변경 조건", sources: "출처", packetAcks: "증거 패킷별 읽기 확인" },
+    zh: { statement: "本轮方法席终局陈词（不是大师本人引语）", stance: "立场", capability: "能力状态", evidenceQuality: "证据质量", voiceStatus: "发言状态", verdict: "冻结判断", confidence: "置信度", worker: "陈词来源", summary: "方法席说明", findings: "关键发现", disagreements: "与分析师的分歧", disqualifiers: "触发的排除条件", change: "改变判断所需证据", sources: "来源", packetAcks: "逐证据包读取回执" },
+    en: { statement: "Final Method-Seat Statement (not a quote from the named person)", stance: "Stance", capability: "Capability", evidenceQuality: "Evidence quality", voiceStatus: "Voice status", verdict: "Frozen verdict", confidence: "Confidence", worker: "Statement source", summary: "Method-seat explanation", findings: "Key Findings", disagreements: "Disagreements With The Analysts", disqualifiers: "Disqualifiers Triggered", change: "What Would Change The View", sources: "Sources", packetAcks: "Per-Packet Evidence Acknowledgements" },
+    ja: { statement: "メソッド席の最終見解（本人の発言・引用ではありません）", stance: "スタンス", capability: "能力ステータス", evidenceQuality: "証拠品質", voiceStatus: "発言ステータス", verdict: "凍結済み判定", confidence: "信頼度", worker: "見解の生成元", summary: "メソッド席の説明", findings: "主な所見", disagreements: "分析担当との相違", disqualifiers: "発動した除外条件", change: "判断が変わる条件", sources: "出典", packetAcks: "証拠パケット別の読取確認" },
+    ko: { statement: "방법론 좌석 최종 발언(본인의 실제 발언이나 인용이 아님)", stance: "입장", capability: "역량 상태", evidenceQuality: "근거 품질", voiceStatus: "발언 상태", verdict: "동결된 판단", confidence: "신뢰도", worker: "발언 출처", summary: "방법론 좌석 설명", findings: "핵심 발견", disagreements: "분석가와의 이견", disqualifiers: "발동된 제외 조건", change: "판단 변경 조건", sources: "출처", packetAcks: "증거 패킷별 읽기 확인" },
   }[languageKey(lang)];
   return [
     `## ${title}`,
@@ -105,6 +105,9 @@ export function renderMasterMarkdown(opinion, lang) {
     "",
     `- ID: ${opinion.master}`,
     `- ${labels.stance}: ${opinion.stance || "unknown"}`,
+    `- ${labels.capability}: ${seatCapability(opinion)}`,
+    `- ${labels.evidenceQuality}: ${opinion.evidence_quality || "not_evaluable"}`,
+    `- ${labels.voiceStatus}: ${opinion.voice_status || "not_recorded"}`,
     `- ${labels.verdict}: ${opinion.verdict || ""}`,
     `- ${labels.confidence}: ${opinion.confidence || "low"}`,
     `- ${labels.worker}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}${opinion.dedicated_worker?.pid ? ` (pid ${opinion.dedicated_worker.pid})` : ""}`,
@@ -162,6 +165,9 @@ const MASTER_STATEMENT_COPY = Object.freeze({
     abstainLead: (n) => `\u53e6\u6709 ${n} \u5e2d\u672c\u8f6e\u672a\u80fd\u53d6\u5f97\u5176\u65b9\u6cd5\u5fc5\u9700\u7684\u8f93\u5165\uff0c\u56e0\u6b64\u6ca1\u6709\u7ed9\u51fa\u65b9\u5411\u3002\u8fd9\u662f\u6570\u636e\u7f3a\u53e3\uff0c\u4e0d\u662f\u770b\u7a7a\u7968\uff1a`,
     declined: "\u770b\u8fc7\u4e4b\u540e\u51b3\u5b9a\u4e0d\u53c2\u4e0e\u7684\u5e2d\u4f4d",
     declinedLead: (n) => `\u4ee5\u4e0b ${n} \u5e2d\u7684\u65b9\u6cd5\u8dd1\u5b8c\u4e86\uff0c\u5e76\u4e14\u5f97\u51fa\u4e86\u201c\u4e0d\u662f\u8fd9\u4e2a\u201d\u3002\u8fd9\u662f\u5224\u65ad\uff0c\u4e0d\u662f\u7f3a\u6570\u636e\uff1a`,
+    capability: "能力状态", evidenceQuality: "证据质量", voiceStatus: "发言状态",
+    noComputable: "无可算立场", noComputableLead: (n) => `以下 ${n} 席没有可计算的立场；这是明确的能力或资料边界，不计作赞成或反对。`,
+    contractFailure: "发言已撤回：声音合同失败",
   },
   en: {
     heading: "Method-Seat Outputs", acted: "Seats with a view", abstained: "Seats that say this is not theirs to call",
@@ -170,6 +176,9 @@ const MASTER_STATEMENT_COPY = Object.freeze({
     abstainLead: (n) => `A further ${n} seat(s) issue no direction because a method-critical input did not arrive this round. This is a data gap, not a bearish vote:`,
     declined: "Seats whose method examined this and declined",
     declinedLead: (n) => `${n} seat(s) ran their method to completion and it returned "not this one". These are judgments, not missing data:`,
+    capability: "Capability", evidenceQuality: "Evidence quality", voiceStatus: "Voice status",
+    noComputable: "No computable stance", noComputableLead: (n) => `${n} seat(s) have no computable stance; this is an explicit capability or evidence boundary.`,
+    contractFailure: "voice withheld: contract failure",
   },
   ja: {
     heading: "\u30e1\u30bd\u30c3\u30c9\u5e2d\u3054\u3068\u306e\u51fa\u529b", acted: "\u5224\u65ad\u3092\u793a\u3057\u305f\u5e2d", abstained: "\u81ea\u5206\u306e\u62c5\u5f53\u3067\u306f\u306a\u3044\u3068\u3057\u305f\u5e2d",
@@ -178,6 +187,9 @@ const MASTER_STATEMENT_COPY = Object.freeze({
     abstainLead: (n) => `\u4ed6\u306b ${n} \u5e2d\u306f\u3001\u30e1\u30bd\u30c3\u30c9\u306b\u5fc5\u8981\u306a\u5165\u529b\u304c\u4eca\u56de\u5c4a\u304b\u306a\u304b\u3063\u305f\u305f\u3081\u65b9\u5411\u6027\u3092\u793a\u3057\u307e\u305b\u3093\u3002\u30c7\u30fc\u30bf\u306e\u6b20\u843d\u3067\u3042\u308a\u3001\u5f31\u6c17\u7968\u3067\u306f\u3042\u308a\u307e\u305b\u3093\uff1a`,
     declined: "\u691c\u8a0e\u3057\u305f\u4e0a\u3067\u898b\u9001\u3063\u305f\u5e2d",
     declinedLead: (n) => `\u6b21\u306e ${n} \u5e2d\u306f\u30e1\u30bd\u30c3\u30c9\u3092\u6700\u5f8c\u307e\u3067\u5b9f\u884c\u3057\u3001\u300c\u3053\u308c\u3067\u306f\u306a\u3044\u300d\u3068\u7d50\u8ad6\u3057\u307e\u3057\u305f\u3002\u30c7\u30fc\u30bf\u4e0d\u8db3\u3067\u306f\u306a\u304f\u5224\u65ad\u3067\u3059\uff1a`,
+    capability: "能力ステータス", evidenceQuality: "証拠品質", voiceStatus: "発言ステータス",
+    noComputable: "算出可能なスタンスなし", noComputableLead: (n) => `次の ${n} 席には算出可能なスタンスがありません。能力または証拠の境界として明示します。`,
+    contractFailure: "発言を差し止め：契約違反",
   },
   ko: {
     heading: "\ubc29\ubc95\ub860 \uc88c\uc11d\ubcc4 \ucd9c\ub825", acted: "\ud310\ub2e8\uc744 \ub0b8 \uc88c\uc11d", abstained: "\uc790\uae30 \uc18c\uad00\uc774 \uc544\ub2c8\ub77c\uace0 \ubc1d\ud78c \uc88c\uc11d",
@@ -186,8 +198,46 @@ const MASTER_STATEMENT_COPY = Object.freeze({
     abstainLead: (n) => `\uadf8 \uc678 ${n}\uac1c \uc88c\uc11d\uc740 \ubc29\ubc95\ub860\uc5d0 \ud544\uc694\ud55c \uc785\ub825\uc774 \uc774\ubc88 \ud68c\ucc28\uc5d0 \ub3c4\ucc29\ud558\uc9c0 \uc54a\uc544 \ubc29\ud5a5\uc744 \uc81c\uc2dc\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \ub370\uc774\ud130 \uacf5\ubc31\uc774\uba70 \uc57d\uc138 \ud22c\ud45c\uac00 \uc544\ub2d9\ub2c8\ub2e4:`,
     declined: "\uac80\ud1a0 \ud6c4 \ucc38\uc5ec\ud558\uc9c0 \uc54a\uae30\ub85c \ud55c \uc88c\uc11d",
     declinedLead: (n) => `\ub2e4\uc74c ${n}\uac1c \uc88c\uc11d\uc740 \ubc29\ubc95\ub860\uc744 \ub05d\uae4c\uc9c0 \uc218\ud589\ud588\uace0 "\uc774\uac83\uc740 \uc544\ub2c8\ub2e4"\ub77c\ub294 \uacb0\ub860\uc5d0 \ub3c4\ub2ec\ud588\uc2b5\ub2c8\ub2e4. \ub370\uc774\ud130 \ubd80\uc871\uc774 \uc544\ub2c8\ub77c \ud310\ub2e8\uc785\ub2c8\ub2e4:`,
+    capability: "역량 상태", evidenceQuality: "근거 품질", voiceStatus: "발언 상태",
+    noComputable: "계산 가능한 입장 없음", noComputableLead: (n) => `다음 ${n}개 좌석에는 계산 가능한 입장이 없습니다. 역량 또는 근거의 경계로 명시합니다.`,
+    contractFailure: "발언 보류: 계약 위반",
   },
 });
+
+function seatCapability(opinion) {
+  if (["deterministic_stance", "abstain_missing_fact", "abstain_no_producer"]
+    .includes(opinion?.capability_status)) return opinion.capability_status;
+  return opinion?.stance && opinion.stance !== "out_of_scope"
+    ? "deterministic_stance"
+    : "abstain_missing_fact";
+}
+
+function seatVoiceStatus(opinion, state = {}) {
+  if (state?.failure_kind === "voice_contract_failure"
+    || state?.voice_status === "voice_contract_failure"
+    || state?.error === "voice_contract_failure") return "voice_contract_failure";
+  const status = opinion?.voice_status || state?.voice_status || "not_recorded";
+  return ({
+    completed: "model_voice",
+    deterministic_scope: "deterministic_only",
+    deterministic_worker_failure: "deterministic_fallback",
+    dry_run: "deterministic_fallback",
+  })[status] || status;
+}
+
+/** One terminal record per selected seat, including a failed voice that published no prose. */
+function benchSeatRecords(run) {
+  const opinions = new Map((run?.master_opinions || []).map((opinion) => [opinion.master, opinion]));
+  const selected = [...new Set([
+    ...(run?.masters || []),
+    ...opinions.keys(),
+  ].filter((id) => typeof id === "string" && id))];
+  return selected.map((id) => {
+    const state = run?.master_status?.[id] || {};
+    const opinion = opinions.get(id) || null;
+    return { id, state, opinion, voice_status: seatVoiceStatus(opinion, state) };
+  });
+}
 
 /**
  * Seats that reached a decision are what a reader came for; seats that could not are context.
@@ -201,18 +251,28 @@ const MASTER_STATEMENT_COPY = Object.freeze({
 function renderMasterStatements(run) {
   const key = languageKey(run?.language);
   const copy = MASTER_STATEMENT_COPY[key] || MASTER_STATEMENT_COPY.en;
-  const voiced = (run?.master_opinions || []).filter((opinion) => Boolean(opinion.voice_statement));
-  if (!voiced.length) return "";
-  const acted = voiced.filter((opinion) => opinion.stance && opinion.stance !== "out_of_scope");
-  const abstained = voiced.filter((opinion) => !opinion.stance || opinion.stance === "out_of_scope");
+  const records = benchSeatRecords(run).filter(({ opinion, voice_status }) => (
+    Boolean(opinion?.voice_statement) || voice_status === "voice_contract_failure"
+  ));
+  if (!records.length) return "";
+  const acted = records.filter(({ opinion }) => seatCapability(opinion) === "deterministic_stance");
+  const abstained = records.filter(({ opinion }) => seatCapability(opinion) !== "deterministic_stance");
 
-  const seatBlock = (opinion) => {
-    const intent = opinion.position_intent ? intentLabel(opinion.position_intent, run.language) : null;
+  const seatBlock = ({ id, opinion, state, voice_status }) => {
+    if (!opinion && voice_status !== "voice_contract_failure") return "";
+    const intent = opinion?.position_intent ? intentLabel(opinion.position_intent, run.language) : null;
     const lines = [
-      `##### ${masterTitle(opinion.master, run.language)} (\`${opinion.master}\`)`,
-      `- ${copy.stance}: ${opinion.stance || "unknown"}${intent ? ` \u2014 ${copy.intent}: *${intent}*` : ""}`,
-      `- ${copy.origin}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}`,
+      `##### ${masterTitle(id, run.language)} (\`${id}\`)`,
+      `- ${copy.stance}: ${opinion?.stance || "out_of_scope"}${intent ? ` \u2014 ${copy.intent}: *${intent}*` : ""}`,
+      `- ${copy.capability}: ${opinion?.capability_status || state?.capability_status || "abstain_missing_fact"}`,
+      `- ${copy.evidenceQuality}: ${opinion?.evidence_quality || state?.evidence_quality || "not_evaluable"}`,
+      `- ${copy.voiceStatus}: ${voice_status}`,
+      `- ${copy.origin}: ${opinion?.dedicated_worker?.status || voice_status}`,
     ];
+    if (voice_status === "voice_contract_failure") {
+      lines.push(`- ${copy.statement}: ${copy.contractFailure}`);
+      return lines.join("\n");
+    }
     // The five-field voice reads as prose; a legacy flat statement keeps its single line.
     if (opinion.voice && typeof opinion.voice === "object") {
       for (const field of VOICE_FIELDS) {
@@ -232,27 +292,11 @@ function renderMasterStatements(run) {
   const sections = [`### ${copy.heading}`, voiceDisclaimer(run.language)];
   if (acted.length) sections.push(`#### ${copy.acted}`, acted.map(seatBlock).join("\n\n"));
   if (abstained.length) {
-    // Two reasons wear the same word and they are not the same event. A seat whose method
-    // examined the subject and declined has ANSWERED -- Graham finding no asset floor, a
-    // volatility seat finding no testable observation -- and reporting that as "missing an
-    // input" tells a reader the system broke when the method spoke. A seat whose required
-    // fact never arrived genuinely is a gap. Rendering them together made every run read as
-    // the second kind, which is the complaint this split exists to answer.
-    // One block per seat, not twenty-five names glued into a run-on paragraph: each seat
-    // speaks its own statement, because a reader asked for the bench precisely to hear each
-    // method say in its own words why this is or is not its call. The stable IDs stay
-    // visible so the gate and the reader can both account for every selected seat.
-    const merged = (group) => group
-      .map((opinion) => `**${masterTitle(opinion.master, run.language)}** (\`${opinion.master}\`)\n\n> ${opinion.voice_statement}`)
-      .join("\n\n");
-    const declined = abstained.filter((opinion) => methodDeclined(opinion));
-    const ungrounded = abstained.filter((opinion) => !methodDeclined(opinion));
-    if (declined.length) {
-      sections.push(`#### ${copy.declined}`, `${copy.declinedLead(declined.length)}\n\n${merged(declined)}`);
-    }
-    if (ungrounded.length) {
-      sections.push(`#### ${copy.abstained}`, `${copy.abstainLead(ungrounded.length)}\n\n${merged(ungrounded)}`);
-    }
+    sections.push(
+      `#### ${copy.noComputable}`,
+      copy.noComputableLead(abstained.length),
+      abstained.map(seatBlock).join("\n\n"),
+    );
   }
   return sections.join("\n\n");
 }
@@ -324,9 +368,42 @@ export function masterCorrelationNote(run) {
  * part of the fix rather than presentation.
  */
 export function renderBenchSummary(run) {
-  const opinions = run?.master_opinions || [];
-  if (!opinions.length) return "";
+  const records = benchSeatRecords(run).filter(({ opinion, voice_status }) => (
+    Boolean(opinion) || voice_status === "voice_contract_failure"
+  ));
+  if (!records.length) return "";
   const key = languageKey(run?.language);
+  const opinions = records.map(({ id, state, opinion, voice_status }) => (opinion
+    ? { ...opinion, voice_status }
+    : {
+      master: id,
+      stance: "out_of_scope",
+      confidence: "unavailable",
+      verdict: MASTER_STATEMENT_COPY[key]?.contractFailure || MASTER_STATEMENT_COPY.en.contractFailure,
+      capability_status: state.capability_status || "abstain_missing_fact",
+      evidence_quality: state.evidence_quality || "not_evaluable",
+      evidence_quality_basis: state.evidence_quality_basis || [],
+      voice_status,
+    }));
+  const deterministicCount = opinions.filter((opinion) => (
+    seatCapability(opinion) === "deterministic_stance"
+  )).length;
+  const abstainCount = opinions.length - deterministicCount;
+  const noProducerCount = opinions.filter((opinion) => (
+    seatCapability(opinion) === "abstain_no_producer"
+  )).length;
+  const fallbackStatuses = new Set([
+    "deterministic_fallback",
+    "deterministic_worker_failure",
+  ]);
+  const fallbackCount = opinions.filter((opinion) => fallbackStatuses.has(opinion.voice_status)).length;
+  const contractFailureCount = opinions.filter((opinion) => (
+    opinion.voice_status === "voice_contract_failure"
+  )).length;
+  const deterministicOnlyCount = opinions.filter((opinion) => (
+    opinion.voice_status === "deterministic_only"
+  )).length;
+  const assuranceSummary = `seats: ${deterministicCount} deterministic, ${abstainCount} abstain (${noProducerCount} no_producer); voices: ${fallbackCount} fallback, ${contractFailureCount} contract_failure, ${deterministicOnlyCount} deterministic_only`;
   const counts = new Map();
   for (const o of opinions) counts.set(o.stance || "unknown", (counts.get(o.stance || "unknown") || 0) + 1);
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
@@ -337,16 +414,16 @@ export function renderBenchSummary(run) {
   // The table is the frozen deterministic judgment; the dedicated worker statement is
   // rendered once in the per-seat detail block below. Keeping them separate prevents a
   // fluent explanation from being mistaken for, or duplicating, the frozen method result.
-  const row = (o) => `| ${masterTitle(o.master, run?.language)} (\`${o.master}\`) | ${o.stance || "unknown"} | ${o.confidence || "low"} | ${clip(o.verdict || o.deterministic_summary || o.summary || o.voice_statement || "", 140)} |`;
+  const row = (o) => `| ${masterTitle(o.master, run?.language)} (\`${o.master}\`) | ${o.stance || "unknown"} | ${seatCapability(o)} | ${o.evidence_quality || "not_evaluable"} | ${o.voice_status || "not_recorded"} | ${o.confidence || "low"} | ${clip(o.verdict || o.deterministic_summary || o.summary || o.voice_statement || "", 140)} |`;
   const copy = {
-    zh: { head: ["| 方法 | 立场 | 置信度 | 判断 |", "|---|---|---|---|"], minority: "### 少数派（先读这个）", minorityNone: "### 少数派：无\n\n所有席位立场一致。鉴于它们共享模型与证据，一致是预期结果而非确认——本轮没有产生任何独立的反对意见。", divergence: `${minority.length} 席与多数不同。分歧席位是本轮信息量最高的部分——请先判断分歧来自信息差还是方法差。`, rest: "### 其余席位" },
-    en: { head: ["| Method | Stance | Confidence | Verdict |", "|---|---|---|---|"], minority: "### Minority report (read this first)", minorityNone: "### Minority report: none\n\nEvery seat agreed. Given a shared model and a shared brief, agreement is the expected outcome rather than confirmation: this run produced no independent dissent.", divergence: `${minority.length} seat(s) diverge. Divergence is the highest-information part of this run: establish whether it comes from the evidence slice or from the method.`, rest: "### Concurring seats" },
-    ja: { head: ["| メソッド | スタンス | 信頼度 | 判定 |", "|---|---|---|---|"], minority: "### 少数意見（最初に読む）", minorityNone: "### 少数意見：なし\n\n全席が一致しました。同じモデルと証拠を共有するため、一致は確認ではなく予想される結果です。本輪では独立した反対意見が出ませんでした。", divergence: `${minority.length}席が多数と異なります。最も情報量が高い部分なので、相違が証拠範囲と方法のどちらに由来するか確認してください。`, rest: "### その他の席" },
-    ko: { head: ["| 방법론 | 입장 | 신뢰도 | 판단 |", "|---|---|---|---|"], minority: "### 소수 의견(먼저 확인)", minorityNone: "### 소수 의견: 없음\n\n모든 좌석이 일치했습니다. 동일한 모델과 증거를 공유하므로 일치는 확인이 아니라 예상되는 결과입니다. 이번 실행에는 독립적인 반대 의견이 없었습니다.", divergence: `${minority.length}개 좌석이 다수와 다릅니다. 가장 정보량이 높은 부분이므로 차이가 증거 범위와 방법론 중 어디에서 비롯됐는지 확인하십시오.`, rest: "### 나머지 좌석" },
+    zh: { head: ["| 方法 | 立场 | 能力状态 | 证据质量 | 发言状态 | 置信度 | 判断 |", "|---|---|---|---|---|---|---|"], minority: "### 少数派（先读这个）", minorityNone: "### 少数派：无\n\n所有席位立场一致。鉴于它们共享模型与证据，一致是预期结果而非确认——本轮没有产生任何独立的反对意见。", divergence: `${minority.length} 席与多数不同。分歧席位是本轮信息量最高的部分——请先判断分歧来自信息差还是方法差。`, rest: "### 其余席位" },
+    en: { head: ["| Method | Stance | Capability | Evidence quality | Voice status | Confidence | Verdict |", "|---|---|---|---|---|---|---|"], minority: "### Minority report (read this first)", minorityNone: "### Minority report: none\n\nEvery seat agreed. Given a shared model and a shared brief, agreement is the expected outcome rather than confirmation: this run produced no independent dissent.", divergence: `${minority.length} seat(s) diverge. Divergence is the highest-information part of this run: establish whether it comes from the evidence slice or from the method.`, rest: "### Concurring seats" },
+    ja: { head: ["| メソッド | スタンス | 能力 | 証拠品質 | 発言状態 | 信頼度 | 判定 |", "|---|---|---|---|---|---|---|"], minority: "### 少数意見（最初に読む）", minorityNone: "### 少数意見：なし\n\n全席が一致しました。同じモデルと証拠を共有するため、一致は確認ではなく予想される結果です。本輪では独立した反対意見が出ませんでした。", divergence: `${minority.length}席が多数と異なります。最も情報量が高い部分なので、相違が証拠範囲と方法のどちらに由来するか確認してください。`, rest: "### その他の席" },
+    ko: { head: ["| 방법론 | 입장 | 역량 | 근거 품질 | 발언 상태 | 신뢰도 | 판단 |", "|---|---|---|---|---|---|---|"], minority: "### 소수 의견(먼저 확인)", minorityNone: "### 소수 의견: 없음\n\n모든 좌석이 일치했습니다. 동일한 모델과 증거를 공유하므로 일치는 확인이 아니라 예상되는 결과입니다. 이번 실행에는 독립적인 반대 의견이 없었습니다.", divergence: `${minority.length}개 좌석이 다수와 다릅니다. 가장 정보량이 높은 부분이므로 차이가 증거 범위와 방법론 중 어디에서 비롯됐는지 확인하십시오.`, rest: "### 나머지 좌석" },
   }[key];
   const head = copy.head;
 
-  const sections = [masterCorrelationNote(run), ""];
+  const sections = [assuranceSummary, "", masterCorrelationNote(run), ""];
   if (minority.length) {
     sections.push(
       copy.minority,
@@ -656,8 +733,11 @@ export function writeReportQuality(run, markdown, handoffMarkdown) {
 // section by anchor instead of by heading text. See the note next to the constants.
 
 function recordedBenchMarker(run) {
-  const subject = (run?.master_opinions || []).map((opinion) => ({
+  const opinions = (run?.master_opinions || []).map((opinion) => ({
+    capability_status: String(opinion?.capability_status || ""),
     confidence: String(opinion?.confidence || "low"),
+    evidence_quality: String(opinion?.evidence_quality || "not_evaluable"),
+    evidence_quality_basis: opinion?.evidence_quality_basis || [],
     master: String(opinion?.master || ""),
     stance: String(opinion?.stance || "unknown"),
     summary: String(opinion?.summary || ""),
@@ -665,6 +745,21 @@ function recordedBenchMarker(run) {
     voice_statement: String(opinion?.voice_statement || ""),
     voice_status: String(opinion?.voice_status || ""),
   }));
+  const terminalVoiceFailures = Object.values(run?.master_status || {})
+    .filter((state) => seatVoiceStatus(null, state) === "voice_contract_failure")
+    .map((state) => ({
+      master: String(state?.master || ""),
+      capability_status: String(state?.capability_status || ""),
+      evidence_quality: String(state?.evidence_quality || "not_evaluable"),
+      evidence_quality_basis: state?.evidence_quality_basis || [],
+      voice_status: "voice_contract_failure",
+    }))
+    .sort((left, right) => left.master.localeCompare(right.master));
+  const subject = {
+    fact_producer_catalog_hash: run?.fact_producer_catalog_hash || null,
+    opinions,
+    terminal_voice_failures: terminalVoiceFailures,
+  };
   return `<!-- ${RECORDED_BENCH_MARKER_PREFIX}${sha256(subject)} -->`;
 }
 
@@ -769,7 +864,9 @@ function withRecordedInstrumentStructure(run, markdown) {
  */
 function withRecordedMasterBench(run, markdown) {
   const body = String(markdown || "");
-  if (!(run?.master_opinions || []).length) return body;
+  const hasContractFailure = benchSeatRecords(run)
+    .some(({ voice_status }) => voice_status === "voice_contract_failure");
+  if (!(run?.master_opinions || []).length && !hasContractFailure) return body;
   const lines = body.split(/\r?\n/);
   const headings = parseHeadings(body);
   const removals = [];
@@ -1263,10 +1360,10 @@ function localizedFailure(error, language) {
   const value = String(error || "");
   const key = languageKey(language);
   const labels = {
-    zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", qna_incomplete: "问答不完整", unexpected_error: "意外工具错误", v3_policy_execution_failed: "确定性方法政策执行失败", invalid_typed_grounding: "类型化事实输入无效", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
-    en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", qna_incomplete: "Q&A was incomplete", unexpected_error: "unexpected tool error", v3_policy_execution_failed: "deterministic method policy execution failed", invalid_typed_grounding: "typed grounding was invalid", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
-    ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", qna_incomplete: "質疑応答が不完全", unexpected_error: "予期しないツールエラー", v3_policy_execution_failed: "決定論的メソッド方針の実行に失敗", invalid_typed_grounding: "型付き根拠データが無効", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
-    ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", qna_incomplete: "질의응답 불완전", unexpected_error: "예기치 않은 도구 오류", v3_policy_execution_failed: "결정론적 방법론 정책 실행 실패", invalid_typed_grounding: "형식화된 근거 입력이 잘못됨", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
+    zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", qna_incomplete: "问答不完整", unexpected_error: "意外工具错误", voice_contract_failure: "发言已撤回：声音合同失败", v3_policy_execution_failed: "确定性方法政策执行失败", invalid_typed_grounding: "类型化事实输入无效", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
+    en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", qna_incomplete: "Q&A was incomplete", unexpected_error: "unexpected tool error", voice_contract_failure: "voice withheld: contract failure", v3_policy_execution_failed: "deterministic method policy execution failed", invalid_typed_grounding: "typed grounding was invalid", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
+    ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", qna_incomplete: "質疑応答が不完全", unexpected_error: "予期しないツールエラー", voice_contract_failure: "発言を差し止め：契約違反", v3_policy_execution_failed: "決定論的メソッド方針の実行に失敗", invalid_typed_grounding: "型付き根拠データが無効", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
+    ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", qna_incomplete: "질의응답 불완전", unexpected_error: "예기치 않은 도구 오류", voice_contract_failure: "발언 보류: 계약 위반", v3_policy_execution_failed: "결정론적 방법론 정책 실행 실패", invalid_typed_grounding: "형식화된 근거 입력이 잘못됨", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
   }[key];
   if (value.startsWith("exit code")) return labels.failed;
   if (value.startsWith("visible_finalize_upstream:")) return labels.skipped;

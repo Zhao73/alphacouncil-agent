@@ -245,7 +245,7 @@ function methodVoicePacket(runId, extra = {}) {
       would_i_act: "I would not issue a directional view from this incomplete evidence.",
       what_i_see: "I see that the fixture lacks my required point-in-time method facts.",
       how_my_method_reads_it: "I stop at my fact gate instead of manufacturing an unsupported investment claim.",
-      where_i_disagree: "I disagree with treating an abstention as a bearish vote.",
+      where_i_disagree: "I disagree with treating an abstention as a scored result.",
       what_changes_my_mind: "I would reassess when dated primary sources provide my missing method-critical facts.",
     },
     key_findings: ["The fixture does not contain the required method-specific point-in-time facts."],
@@ -650,7 +650,7 @@ test("a declined out-of-scope v3 seat still returns an independent first-person 
   ));
   assert.equal(persistedOpinion.acknowledged_stance, opinion.stance);
   assert.equal(persistedOpinion.acknowledged_stance, opinion.deterministic_stance);
-  assert.equal(opinion.voice_status, "completed");
+  assert.equal(opinion.voice_status, "model_voice");
   assert.equal(opinion.statement_origin, "visible_method_voice_worker");
   assert.equal(opinion.dedicated_worker.execution_mode, "visible_host_thread");
   assert.equal(opinion.company_dossier_hash_ack, recorded.completeDossier.content_hash);

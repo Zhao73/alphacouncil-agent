@@ -322,6 +322,104 @@ test("unanimity is reported as the absence of dissent, not as confirmation", () 
   assert.match(md, /agreement is the expected outcome rather than confirmation/);
 });
 
+test("the bench assurance line separates computability, no-producer gaps, fallback prose and contract failures", () => {
+  const run = {
+    language: "en",
+    masters: ["master_buffett", "master_taleb", "master_munger", "master_damodaran"],
+    master_opinions: [
+      opinion({ capability_status: "deterministic_stance", evidence_quality: "mixed", voice_status: "model_voice" }),
+      opinion({ master: "master_taleb", stance: "out_of_scope", capability_status: "abstain_no_producer", evidence_quality: "not_evaluable", voice_status: "deterministic_only" }),
+      opinion({ master: "master_munger", stance: "out_of_scope", capability_status: "abstain_missing_fact", evidence_quality: "recomputed", voice_status: "deterministic_fallback" }),
+    ],
+    master_status: {
+      master_damodaran: {
+        master: "master_damodaran",
+        status: "failed",
+        capability_status: "abstain_missing_fact",
+        evidence_quality: "mixed",
+        voice_status: "voice_contract_failure",
+        failure_kind: "voice_contract_failure",
+      },
+    },
+  };
+  const md = renderBenchSummary(run);
+  assert.match(md, /seats: 1 deterministic, 3 abstain \(1 no_producer\); voices: 1 fallback, 1 contract_failure, 1 deterministic_only/);
+  assert.match(md, /\| Method \| Stance \| Capability \| Evidence quality \| Voice status \| Confidence \| Verdict \|/);
+});
+
+test("legacy deterministic scope and worker-failure statuses map to the v1 voice labels", () => {
+  const md = renderBenchSummary({
+    language: "en",
+    master_opinions: [
+      opinion({ master: "master_taleb", voice_status: "deterministic_scope" }),
+      opinion({ master: "master_munger", voice_status: "deterministic_worker_failure" }),
+    ],
+  });
+  assert.match(md, /voices: 1 fallback, 0 contract_failure, 1 deterministic_only/);
+  assert.match(md, /\| deterministic_only \|/);
+  assert.match(md, /\| deterministic_fallback \|/);
+});
+
+test("a failed abstention voice is withheld under the fixed no-computable-stance heading", () => {
+  const run = {
+    language: "English",
+    masters: ["master_buffett", "master_taleb"],
+    master_opinions: [opinion({
+      capability_status: "deterministic_stance",
+      evidence_quality: "mixed",
+      evidence_quality_basis: [{ fact_id: "financial.owner_earnings", producer_id: "p1", derivation: "estimated", confidence: 0.65 }],
+      voice_status: "model_voice",
+    })],
+    master_status: {
+      master_taleb: {
+        master: "master_taleb",
+        status: "failed",
+        error: "voice_contract_failure",
+        failure_kind: "voice_contract_failure",
+        voice_status: "voice_contract_failure",
+        capability_status: "abstain_no_producer",
+        evidence_quality: "not_evaluable",
+        evidence_quality_basis: [],
+      },
+    },
+    fact_producer_catalog_hash: `sha256:${"a".repeat(64)}`,
+    tasks: [],
+    packets: [],
+  };
+  const markdown = finalReportMarkdown(run, { report_markdown: reportWithout("master_bench") });
+  assert.match(markdown, /#### No computable stance/);
+  assert.match(markdown, /voice withheld: contract failure/);
+  assert.doesNotMatch(markdown, /DIRECTIONAL-ABSTENTION-SENTINEL/);
+});
+
+test("the recorded bench marker changes when its catalog-backed evidence basis changes", () => {
+  const base = {
+    language: "English",
+    masters: ["master_buffett"],
+    tasks: [],
+    packets: [],
+    fact_producer_catalog_hash: `sha256:${"a".repeat(64)}`,
+  };
+  const first = finalReportMarkdown({
+    ...base,
+    master_opinions: [opinion({
+      capability_status: "deterministic_stance",
+      evidence_quality: "mixed",
+      evidence_quality_basis: [{ fact_id: "financial.owner_earnings", producer_id: "p1", derivation: "estimated", confidence: 0.65 }],
+    })],
+  }, { report_markdown: reportWithout("master_bench") });
+  const second = finalReportMarkdown({
+    ...base,
+    master_opinions: [opinion({
+      capability_status: "deterministic_stance",
+      evidence_quality: "recomputed",
+      evidence_quality_basis: [{ fact_id: "financial.owner_earnings", producer_id: "p2", derivation: "rederived", confidence: 0.9 }],
+    })],
+  }, { report_markdown: reportWithout("master_bench") });
+  const marker = /alphacouncil:recorded-master-bench:v1:(sha256:[0-9a-f]{64})/u;
+  assert.notEqual(marker.exec(first)?.[1], marker.exec(second)?.[1]);
+});
+
 test("the decision table shows coverage and marks the seats that cost nothing", () => {
   const md = renderDecisionTable([
     { persona_id: "master_buffett", stance: "out_of_scope", reason: "eligibility", score: null },

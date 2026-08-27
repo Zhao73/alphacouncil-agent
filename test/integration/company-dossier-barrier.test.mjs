@@ -382,7 +382,7 @@ test("operating-company dossier materializes only after the eight-packet barrier
     thread_id: "thread-master-correct-ack",
     packet: methodVoicePacket(stance, dossier.content_hash, dossier),
   }));
-  assert.equal(accepted.opinion.voice_status, "completed");
+  assert.equal(accepted.opinion.voice_status, "model_voice");
   assert.equal(accepted.opinion.company_dossier_hash, dossier.content_hash);
 
   const frozenEvidence = readFileSync(evidencePath, "utf8");

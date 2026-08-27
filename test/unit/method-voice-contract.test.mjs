@@ -122,6 +122,64 @@ test("flat, third-person, unacknowledged, or stance-widening method voices fail 
   }), master, runtimeRun(), frozen), /outside the frozen stance/u);
 });
 
+test("an abstaining seat rejects directional voice tokens in every supported locale", () => {
+  const examples = {
+    English: "I would buy after the missing fact arrives.",
+    中文: "我会在资料补齐后看多。",
+    日本語: "私は資料が揃えば買います。",
+    한국어: "저는 자료가 오면 매수하겠습니다.",
+  };
+  for (const [language, directional] of Object.entries(examples)) {
+    const voice = { ...localeVoice[language], where_i_disagree: directional };
+    assert.throws(
+      () => normalizeMasterVoice(packet(language, {
+        acknowledged_stance: "out_of_scope",
+        position_intent: "inputs_unavailable",
+        voice,
+      }), master, runtimeRun(language), { ...frozen, stance: "out_of_scope" }),
+      (error) => error?.data?.reason === "METHOD_VOICE_DIRECTIONAL_ABSTENTION"
+        && error.data.invalid_fields.includes("where_i_disagree"),
+      language,
+    );
+  }
+
+  assert.throws(
+    () => normalizeMasterVoice(packet("English", {
+      acknowledged_stance: "out_of_scope",
+      position_intent: "inputs_unavailable",
+      voice: {
+        ...localeVoice.English,
+        where_i_disagree: "I would add to the position despite the missing fact.",
+      },
+    }), master, runtimeRun("English"), { ...frozen, stance: "out_of_scope" }),
+    (error) => error?.data?.reason === "METHOD_VOICE_DIRECTIONAL_ABSTENTION",
+  );
+});
+
+test("the abstention gate does not confuse research or evidence-processing prose with a trade action", () => {
+  const examples = {
+    English: "We hold the view that owner earnings are unreliable here. I hold that this is outside my method. Investors can pass on this analysis until the filing lands. One should watch the credit spread series.",
+    中文: "我持有观点，但会继续观望证据并回避未经证实的结论。",
+    日本語: "私は追加資料が届くまで様子を見る必要があり、この判断は見送ります。",
+    한국어: "저는 자료가 올 때까지 판단을 보류하고 계속 지켜보겠습니다.",
+  };
+  for (const [language, prose] of Object.entries(examples)) {
+    const voice = {
+      ...localeVoice[language],
+      how_my_method_reads_it: prose,
+      where_i_disagree: language === "English"
+        ? "I apply the frozen method without adding facts. I do not add facts from memory, and I reject a sell-side narrative as evidence."
+        : localeVoice[language].where_i_disagree,
+    };
+    const normalized = normalizeMasterVoice(packet(language, {
+      acknowledged_stance: "out_of_scope",
+      position_intent: "inputs_unavailable",
+      voice,
+    }), master, runtimeRun(language), { ...frozen, stance: "out_of_scope" });
+    assert.equal(normalized.voice.how_my_method_reads_it, prose, language);
+  }
+});
+
 test("dedicated method voice source IDs must resolve to the run source manifest", () => {
   assert.throws(
     () => normalizeMasterVoice(packet("English", { source_ids: ["market_data:FORGED"] }), master, runtimeRun(), frozen),

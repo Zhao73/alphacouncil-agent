@@ -9,6 +9,9 @@ Notable changes per release. Dates are UTC.
 - The advisory method-panel recommender no longer includes a physical pack when any required
   typed fact is missing. A family without a fully covered admitted pack is now reported as an
   explicit unfilled slot instead of throwing or recommending a known abstention.
+- An `out_of_scope` method voice can no longer add buy/sell/hold-style language. The output
+  now fails closed as `voice_contract_failure`, is omitted from published opinions and is
+  rendered only as an explicit contract failure rather than silently replaced.
 
 ### Added
 
@@ -16,6 +19,9 @@ Notable changes per release. Dates are UTC.
   adapter's offline emission paths. It covers every fact reference and role in all 26 physical
   solo-test packs, distinguishes conditional production from no producer, checks tool-input
   contracts, and requires an explicit acknowledgement for every critical no-producer fact.
+- Added frozen capability, voice-provenance and catalog-derived evidence-quality labels for
+  each method seat. The final bench exposes their basis and catalog hash, and distinguishes
+  model-free deterministic output, worker-failure fallback, missing inputs and no-producer facts.
 
 ## [1.5.0] — 2026-08-26
 

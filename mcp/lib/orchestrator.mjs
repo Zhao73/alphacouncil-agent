@@ -19,6 +19,8 @@ import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsM
 import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
+import { loadFactProducerCatalog, seatCoverage } from "./personas-v3/fact-producer-catalog.mjs";
+import { labelFor } from "./personas-v3/seat-labels.mjs";
 import { intentsForStance, VOICE_FIELDS } from "./voice.mjs";
 import { managerDecisionNestedSourceIds, renderStructuredManagerReport } from "./manager-report.mjs";
 import {
@@ -62,6 +64,56 @@ const WORKER_ATTEMPT_KIND = Object.freeze({
   timeout_retry: Object.freeze({ attempt_kind: "timeout_retry" }),
   parse_repair: Object.freeze({ attempt_kind: "parse_repair" }),
 });
+
+/**
+ * Freeze the reader-facing assurance labels beside the deterministic seat result.
+ *
+ * The catalog is loaded once for the complete plan (and is itself process-cached). No seat
+ * performs I/O, and every persisted label can be recomputed from the frozen opinion, the
+ * catalog hash and the run's already-frozen instrument class.
+ */
+function methodSeatLabelContext(run) {
+  const catalog = loadFactProducerCatalog();
+  run.fact_producer_catalog_hash = catalog.catalog_hash;
+  return {
+    catalog,
+    instrumentClass: run?.grounding?.instrument?.asset_type || "unknown",
+  };
+}
+
+function labelFrozenMasterOpinion(run, item, opinion, context) {
+  if (!opinion) return opinion;
+  const missingRequiredFacts = [...new Set([
+    ...(opinion.missing_required_fact_types || []),
+    ...(item?.preDecision?.eligibility?.missing_required_fact_types || []),
+  ])].filter((factId) => typeof factId === "string" && factId).sort();
+  const frozenOpinion = {
+    ...opinion,
+    missing_required_fact_types: missingRequiredFacts,
+  };
+  const labels = labelFor({
+    frozenOpinion,
+    coverage: seatCoverage(context.catalog, item.id),
+    instrumentClass: context.instrumentClass,
+  });
+  return {
+    ...frozenOpinion,
+    ...labels,
+    // This is the immutable, pre-worker voice. A later worker may replace only the prose
+    // provenance label; capability and evidence labels always survive by object spread.
+    voice_status: "deterministic_only",
+  };
+}
+
+function masterLabelStatus(opinion) {
+  if (!opinion) return {};
+  return {
+    capability_status: opinion.capability_status,
+    evidence_quality: opinion.evidence_quality,
+    evidence_quality_basis: opinion.evidence_quality_basis,
+    voice_status: opinion.voice_status,
+  };
+}
 
 function recordWorkerAttempt(run, invocationKey, meta, timing) {
   if (!timing?.started_at) return;
@@ -419,19 +471,22 @@ function materializeCompanyDossier(run) {
 function bindVisibleMastersToCompanyDossier(run) {
   const selected = selectedMasters(run);
   const plan = planMasterSeats(run, selected);
+  const labelContext = methodSeatLabelContext(run);
   run.master_decisions = plan.decisions;
   run.fact_pack_hash = plan.shared_fact_pack_hash;
   run.master_runtime_provenance = masterRuntimeProvenance(run, plan);
   const byId = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
   for (const item of plan.declined) {
-    byId.set(item.id, attachMasterRuntimeProvenance(
+    const frozenOpinion = attachMasterRuntimeProvenance(
       run,
       item.id,
-      declinedMasterOpinion(run, item),
+      labelFrozenMasterOpinion(run, item, declinedMasterOpinion(run, item), labelContext),
       item.engine,
-    ));
+    );
+    byId.set(item.id, frozenOpinion);
     run.master_status[item.id] = {
       ...(run.master_status?.[item.id] || {}),
+      ...masterLabelStatus(frozenOpinion),
       master: item.id,
       status: "waiting",
       engine: item.engine,
@@ -442,14 +497,16 @@ function bindVisibleMastersToCompanyDossier(run) {
     };
   }
   for (const item of plan.completed) {
-    byId.set(item.id, attachMasterRuntimeProvenance(
+    const frozenOpinion = attachMasterRuntimeProvenance(
       run,
       item.id,
-      completedMasterOpinion(run, item),
+      labelFrozenMasterOpinion(run, item, completedMasterOpinion(run, item), labelContext),
       item.engine,
-    ));
+    );
+    byId.set(item.id, frozenOpinion);
     run.master_status[item.id] = {
       ...(run.master_status?.[item.id] || {}),
+      ...masterLabelStatus(frozenOpinion),
       master: item.id,
       status: "waiting",
       engine: item.engine,
@@ -937,6 +994,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
   // Visible v3 workers below may explain that frozen result after evidence completes, but
   // cannot turn an out_of_scope method into a directional vote.
   const plan = planMasterSeats(run, selectedMasters(run));
+  const labelContext = methodSeatLabelContext(run);
   run.master_decisions = plan.decisions;
   run.fact_pack_hash = plan.shared_fact_pack_hash;
   run.master_runtime_provenance = masterRuntimeProvenance(run, plan);
@@ -970,14 +1028,19 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     const byId = new Map((run.master_opinions || []).map((o) => [o.master, o]));
     for (const item of plan.declined) {
       if (!byId.has(item.id)) {
-        const fallback = declinedMasterOpinion(run, item);
+        const fallback = labelFrozenMasterOpinion(
+          run,
+          item,
+          declinedMasterOpinion(run, item),
+          labelContext,
+        );
         byId.set(item.id, attachMasterRuntimeProvenance(
           run,
           item.id,
           {
             ...fallback,
             voice_statement: fallback.voice_statement || fallback.summary || fallback.verdict,
-            voice_status: fallback.voice_status || "deterministic_fallback",
+            voice_status: fallback.voice_status || "deterministic_only",
             statement_origin: fallback.statement_origin || "deterministic_scope_fallback",
           },
           item.engine,
@@ -987,10 +1050,11 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       // that method's own first-person reasoning why the available facts do not open its gate.
       const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id), { run });
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
-        && byId.get(item.id)?.voice_status === "completed";
+        && ["model_voice", "completed"].includes(byId.get(item.id)?.voice_status);
       const completed = alreadyVoiced || !requiresVisibleVoice;
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
+        ...masterLabelStatus(byId.get(item.id)),
         master: item.id,
         status: completed ? "completed" : "waiting",
         engine: item.engine || "v2_method_model",
@@ -1010,7 +1074,12 @@ export function visibleAgentSpecs(run, userPrompt = "") {
         byId.set(item.id, attachMasterRuntimeProvenance(
           run,
           item.id,
-          completedMasterOpinion(run, item),
+          labelFrozenMasterOpinion(
+            run,
+            item,
+            completedMasterOpinion(run, item),
+            labelContext,
+          ),
           item.engine,
         ));
       }
@@ -1020,9 +1089,10 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       // not a bearish vote. Only seats that reached a stance have a reading to explain.
       const requiresVisibleVoice = needsMethodVoiceWorker(byId.get(item.id), { run });
       const alreadyVoiced = run.master_status?.[item.id]?.status === "completed"
-        && byId.get(item.id)?.voice_status === "completed";
+        && ["model_voice", "completed"].includes(byId.get(item.id)?.voice_status);
       run.master_status[item.id] = {
         ...(run.master_status[item.id] || {}),
+        ...masterLabelStatus(byId.get(item.id)),
         master: item.id,
         status: alreadyVoiced || !requiresVisibleVoice ? "completed" : "waiting",
         engine: item.engine,
@@ -1307,7 +1377,7 @@ export function recordMasterOpinion(args) {
       voice_mode: voice.voice_mode,
       disclosure_ack: voice.disclosure_ack,
       disclosure: voice.disclosure,
-      voice_status: "completed",
+      voice_status: "model_voice",
       voice_language: run.language,
       statement_origin: "visible_method_voice_worker",
       key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
@@ -1344,7 +1414,7 @@ export function recordMasterOpinion(args) {
       voice_statement: reconciled.opinion.voice_statement
         || reconciled.opinion.summary
         || reconciled.opinion.verdict,
-      voice_status: "completed",
+      voice_status: "model_voice",
       voice_language: run.language,
       statement_origin: "visible_legacy_method_worker",
     }, reconciled.engine);
@@ -1356,6 +1426,7 @@ export function recordMasterOpinion(args) {
   run.master_status = run.master_status || {};
   run.master_status[args.master] = {
     ...(run.master_status[args.master] || {}),
+    ...masterLabelStatus(opinion),
     master: args.master,
     status: "completed",
     company_dossier_hash_ack: opinion.company_dossier_hash_ack || null,
@@ -2473,6 +2544,7 @@ export function outputFailureKind(error) {
     METHOD_VOICE_DISCLOSURE_ACK_MISMATCH: "method_voice_disclosure_ack_mismatch",
     METHOD_VOICE_FIELDS_MISSING: "method_voice_fields_missing",
     METHOD_VOICE_FIRST_PERSON_MISMATCH: "method_voice_first_person_mismatch",
+    METHOD_VOICE_DIRECTIONAL_ABSTENTION: "voice_contract_failure",
     METHOD_VOICE_POSITION_INTENT_MISSING: "method_voice_position_intent_missing",
     METHOD_VOICE_POSITION_INTENT_MISMATCH: "method_voice_position_intent_mismatch",
     METHOD_VOICE_SOURCE_SCOPE_MISMATCH: "method_voice_source_scope_mismatch",
@@ -3782,7 +3854,14 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
     const diagnosticPath = join(dir, `${outcome.id}.failure.json`);
     const provenanceFailure = ["source_provenance_mismatch", "source_provenance_required"]
       .includes(outcome.error);
-    const publicSummary = outcome.error === "reader_language_mismatch"
+    const publicSummary = outcome.error === "voice_contract_failure"
+      ? localized(run.language, {
+        en: "The dedicated method worker violated the abstention voice contract; its prose was withheld and no method-seat statement is available.",
+        zh: "专属方法席 worker 违反了弃权发言合同；其陈词已撤回，没有可用的方法席发言。",
+        ja: "専用メソッド席ワーカーが棄権時の発言契約に違反したため、文章を差し止め、利用可能なメソッド席発言はありません。",
+        ko: "전용 방법론 좌석 워커가 기권 발언 계약을 위반해 해당 문구를 보류했으며 사용할 수 있는 방법론 좌석 발언이 없습니다.",
+      })
+      : outcome.error === "reader_language_mismatch"
       ? localized(run.language, {
         en: "The dedicated method worker returned reader-facing content in the wrong language; no method-seat statement is available.",
         zh: "专属方法席 worker 返回了错误语言的读者内容；没有可用的方法席发言。",
@@ -3828,7 +3907,7 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
         ...outcome.frozenOpinion,
         deterministic_summary: outcome.frozenOpinion.summary,
         voice_statement: outcome.frozenOpinion.voice_statement || outcome.frozenOpinion.summary,
-        voice_status: "deterministic_worker_failure",
+        voice_status: "deterministic_fallback",
         voice_language: run.language,
         statement_origin: "deterministic_worker_failure_fallback",
         dedicated_worker: {
@@ -3854,8 +3933,12 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
       }, { dir, byId, selected });
     }
     updateMasterStatus(run, outcome.id, "failed", {
+      ...masterLabelStatus(outcome.frozenOpinion),
       ...(outcome.engine ? { engine: outcome.engine } : {}),
       error: outcome.error || "unexpected_error",
+      ...(outcome.error === "voice_contract_failure"
+        ? { failure_kind: "voice_contract_failure", voice_status: "voice_contract_failure" }
+        : {}),
       ...(outcome.error_code ? { error_code: outcome.error_code } : {}),
       diagnostic: diagnosticPath,
       completed_at: completedAt,
@@ -3871,12 +3954,13 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
   const outputPath = join(dir, `${outcome.id}.json`);
   writeJson(outputPath, outcome.opinion);
   updateMasterStatus(run, outcome.id, "completed", {
+    ...masterLabelStatus(outcome.opinion),
     engine: outcome.opinion.engine || outcome.engine,
     worker_kind: outcome.opinion.dedicated_worker?.execution_mode === "dry_run"
       ? "dedicated_method_voice_dry_run"
       : "dedicated_method_worker",
     worker_pid: outcome.opinion.dedicated_worker?.pid || null,
-    voice_status: outcome.opinion.voice_status || "completed",
+    voice_status: outcome.opinion.voice_status || "model_voice",
     ...(outcome.opinion.company_dossier_hash_ack
       ? { company_dossier_hash_ack: outcome.opinion.company_dossier_hash_ack }
       : {}),
@@ -3909,6 +3993,7 @@ export async function runHeadlessMasters(run, args = {}) {
     Math.min(LIMITS.CONCURRENCY_MAX, Number.isFinite(requestedConcurrency) ? requestedConcurrency : defaultConcurrency),
   );
   const plan = planMasterSeats(run, selected);
+  const labelContext = methodSeatLabelContext(run);
   const byId = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
 
   run.phase = "masters";
@@ -3937,12 +4022,22 @@ export async function runHeadlessMasters(run, args = {}) {
   const workerItems = [
     ...plan.declined.map((item) => ({
       ...item,
-      frozenOpinion: attachMasterRuntimeProvenance(run, item.id, declinedMasterOpinion(run, item), item.engine),
+      frozenOpinion: attachMasterRuntimeProvenance(
+        run,
+        item.id,
+        labelFrozenMasterOpinion(run, item, declinedMasterOpinion(run, item), labelContext),
+        item.engine,
+      ),
       deterministic_decline: true,
     })),
     ...plan.completed.map((item) => ({
       ...item,
-      frozenOpinion: attachMasterRuntimeProvenance(run, item.id, completedMasterOpinion(run, item), item.engine),
+      frozenOpinion: attachMasterRuntimeProvenance(
+        run,
+        item.id,
+        labelFrozenMasterOpinion(run, item, completedMasterOpinion(run, item), labelContext),
+        item.engine,
+      ),
       deterministic_execution: true,
     })),
     ...plan.to_run,
@@ -3968,7 +4063,7 @@ export async function runHeadlessMasters(run, args = {}) {
       ...frozenOpinion,
       deterministic_summary: frozenOpinion.summary,
       voice_statement: frozenOpinion.voice_statement || frozenOpinion.summary,
-      voice_status: "deterministic_scope",
+      voice_status: "deterministic_only",
       voice_language: run.language,
       statement_origin: "deterministic_scope_fallback",
       dedicated_worker: {
@@ -4026,6 +4121,7 @@ export async function runHeadlessMasters(run, args = {}) {
       writeJson(methodVoiceSchemaPath, buildMethodVoiceHeadlessOutputSchema(run, id, frozenOpinion), { mode: 0o600 });
     }
     updateMasterStatus(run, id, "running", {
+      ...masterLabelStatus(frozenOpinion),
       started_at: new Date().toISOString(),
       worker_kind: frozenOpinion ? "dedicated_method_voice" : "dedicated_method_judgment",
       deterministic_decline: deterministic_decline || undefined,
@@ -4041,7 +4137,7 @@ export async function runHeadlessMasters(run, args = {}) {
             ...frozenOpinion,
             deterministic_summary: frozenOpinion.summary,
             voice_statement: frozenOpinion.summary,
-            voice_status: "dry_run",
+            voice_status: "deterministic_fallback",
             dedicated_worker: { status: "dry_run", language: run.language, execution_mode: "dry_run" },
           },
         };
@@ -4059,7 +4155,7 @@ export async function runHeadlessMasters(run, args = {}) {
         id,
         opinion: attachMasterRuntimeProvenance(run, id, {
           ...reconciled.opinion,
-          voice_status: "dry_run",
+          voice_status: "deterministic_fallback",
           dedicated_worker: { status: "dry_run", language: run.language, execution_mode: "dry_run" },
         }, resolvedEngine),
         engine: resolvedEngine,
@@ -4112,7 +4208,7 @@ export async function runHeadlessMasters(run, args = {}) {
           voice_mode: voice.voice_mode,
           disclosure_ack: voice.disclosure_ack,
           disclosure: voice.disclosure,
-          voice_status: "completed",
+          voice_status: "model_voice",
           voice_language: run.language,
           statement_origin: "dedicated_method_voice_worker",
           key_findings: voice.key_findings.length ? voice.key_findings : frozenOpinion.key_findings,
@@ -4141,7 +4237,7 @@ export async function runHeadlessMasters(run, args = {}) {
       return attachMasterRuntimeProvenance(run, id, {
         ...reconciled.opinion,
         voice_statement: reconciled.opinion.summary || reconciled.opinion.verdict,
-        voice_status: "completed",
+        voice_status: "model_voice",
         voice_language: run.language,
         dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
       }, resolvedEngine);

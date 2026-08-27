@@ -8,7 +8,7 @@ import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 
-function observabilityCodex(dataDir, { forgedMaster = null, delays = {} } = {}) {
+function observabilityCodex(dataDir, { forgedMaster = null, directionalMaster = null, delays = {} } = {}) {
   const driver = join(dataDir, "fake-master-observability.mjs");
   const log = join(dataDir, "master-observability.jsonl");
   writeFileSync(driver, `#!/usr/bin/env node
@@ -59,7 +59,11 @@ if (task) {
     disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
     position_intent: ({ constructive: "would_buy", cautious: "would_hold", opposed: "would_pass", out_of_scope: "not_in_my_circle" })[stance],
     voice: {
-      would_i_act: master === ${JSON.stringify(forgedMaster)} ? "I keep SENSITIVE-WORKER-BODY-MUST-NOT-BE-PERSISTED inside the rejected output." : "I would preserve the frozen stance and take no unsupported action.",
+      would_i_act: master === ${JSON.stringify(forgedMaster)}
+        ? "I keep SENSITIVE-WORKER-BODY-MUST-NOT-BE-PERSISTED inside the rejected output."
+        : master === ${JSON.stringify(directionalMaster)}
+          ? "I would buy DIRECTIONAL-ABSTENTION-SENTINEL despite the frozen abstention."
+          : "I would preserve the frozen stance and take no unsupported action.",
       what_i_see: "I see only the bounded fixture evidence supplied to this method.",
       how_my_method_reads_it: "I apply the method to the frozen record without adding facts.",
       where_i_disagree: "I disagree with any claim that extends beyond the cited fixture.",
@@ -154,6 +158,49 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
   }
 });
 
+test("directional prose from an abstaining voice fails loudly and never becomes a published opinion", async () => {
+  const dataDir = makeDataDir();
+  const fake = observabilityCodex(dataDir, { directionalMaster: "master_buffett" });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const selection = await confirmMasterSelection(server, {
+      symbol: "QQQ", selected_master_ids: ["master_buffett"],
+    });
+    const runId = `MASTER-VOICE-CONTRACT-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-08-03",
+      tasks: ["market_data"], wait_for_completion: true,
+      grounding: {
+        instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
+        facts_unavailable: true, unavailable: ["fixture"],
+      },
+      selection_receipt: selection.selection_receipt,
+      timeout_ms: 5_000, total_timeout_ms: 15_000,
+    }, { timeoutMs: 20_000 }));
+    const dir = join(dataDir, "runs", runId);
+    const seat = result.run.master_status.master_buffett;
+    const deterministic = JSON.parse(readFileSync(join(dir, "master_buffett.deterministic.json"), "utf8"));
+    const failure = JSON.parse(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"));
+
+    assert.equal(seat.status, "failed");
+    assert.equal(seat.error, "voice_contract_failure");
+    assert.equal(seat.failure_kind, "voice_contract_failure");
+    assert.equal(seat.voice_status, "voice_contract_failure");
+    assert.equal(seat.capability_status, deterministic.capability_status);
+    assert.equal(seat.evidence_quality, deterministic.evidence_quality);
+    assert.deepEqual(result.run.master_opinions, []);
+    assert.equal(existsSync(join(dir, "master_buffett.json")), false);
+    assert.match(failure.public_summary, /violated the abstention voice contract/i);
+    assert.doesNotMatch(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"), /DIRECTIONAL-ABSTENTION-SENTINEL/u);
+    const launches = readFileSync(fake.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+    assert.deepEqual(launches.filter((item) => item.role === "master_buffett").map((item) => item.parseRepair), [false]);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
 test("a stalled voice worker costs the reader the prose, not the seat", async () => {
   // A dead worker used to delete the seat from the report entirely -- no statement, no stance,
   // no reason -- even though the decision was frozen deterministically before the worker was
@@ -185,7 +232,7 @@ test("a stalled voice worker costs the reader the prose, not the seat", async ()
     assert.equal(seat.status, "completed", "the frozen decision still speaks for the seat");
     const opinion = JSON.parse(readFileSync(join(dataDir, "runs", runId, "master_buffett.json"), "utf8"));
     // The reader gets the method's own reading, and is told exactly why it is machine-rendered.
-    assert.equal(opinion.voice_status, "deterministic_worker_failure");
+    assert.equal(opinion.voice_status, "deterministic_fallback");
     assert.equal(opinion.statement_origin, "deterministic_worker_failure_fallback");
     assert.equal(opinion.dedicated_worker.status, "failed");
     assert.equal(opinion.dedicated_worker.failure_kind, "timeout");

@@ -600,6 +600,25 @@ export function coverageFor(masterId, catalog = loadFactProducerCatalog()) {
   }));
 }
 
+/** The full immutable catalog slice needed to reproduce one seat's runtime labels. */
+export function seatCoverage(catalog, masterId) {
+  matches(masterId, MASTER_ID, "master_id");
+  object(catalog, "catalog");
+  const routes = catalog.pack_fact_coverage
+    .filter((entry) => entry.master_id === masterId)
+    .sort((left, right) => stableCompare(left.fact_id, right.fact_id));
+  const producerIds = new Set(routes.flatMap((entry) => entry.producer_ids));
+  const producers = catalog.producers
+    .filter((producer) => producerIds.has(producer.producer_id))
+    .sort((left, right) => stableCompare(left.producer_id, right.producer_id));
+  return deepFreeze(canonicalValue({
+    master_id: masterId,
+    catalog_hash: catalog.catalog_hash,
+    routes,
+    producers,
+  }));
+}
+
 export function hasCriticalNoProducer(masterId, catalog = loadFactProducerCatalog()) {
   return coverageFor(masterId, catalog).critical_no_producer.length > 0;
 }

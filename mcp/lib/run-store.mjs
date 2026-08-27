@@ -181,6 +181,7 @@ export function statusSnapshot(run) {
     selection_id: run.master_selection?.selection_id || null,
     catalog_hash: run.master_selection?.catalog_hash || null,
     selection_hash: run.master_selection?.selection_hash || null,
+    fact_producer_catalog_hash: run.fact_producer_catalog_hash || null,
     fact_pack_hash: run.fact_pack_hash || run.grounding?.typed_fact_pack?.fact_pack_hash || null,
     typed_fact_count: run.grounding?.typed_fact_pack?.facts?.length || 0,
     information_richness: richnessSummary(run),

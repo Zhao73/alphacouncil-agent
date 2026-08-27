@@ -142,3 +142,30 @@ test("without a classification the gate remains open but produces no guessed rec
   assert.equal(confirmed.selection_hash_version, 3);
   assert.equal(confirmed.recommendation_hash, null);
 });
+
+test("an empty advisory panel names every unfilled family and never renders a blank panel sentence", async () => {
+  const response = await server.callTool("begin_council_selection", {
+    symbol: "SPARSE",
+    language: "en-US",
+    host: "codex",
+    council_mode: "full",
+    instrument_classification: instrumentClassification,
+    typed_fact_coverage: ["market.price"],
+  });
+  const opened = structured(response);
+  const text = response.result?.content?.map((item) => item.text || "").join("\n") || "";
+
+  assert.deepEqual(opened.method_panel_recommendation.included_master_ids, []);
+  assert.equal(opened.method_panel_recommendation.family_assignments.length, 8);
+  assert.equal(opened.method_panel_recommendation.unfilled_families.length, 8);
+  assert.match(text, /Unfilled method families:/u);
+  for (const family of opened.method_panel_recommendation.unfilled_families) assert.match(text, new RegExp(family, "u"));
+  assert.doesNotMatch(text, /Advisory method-simulation panel:\s*\./u);
+
+  const confirmed = structured(await confirm(opened, {
+    selected_master_ids: [opened.masters[0].id],
+  }));
+  assert.equal(confirmed.status, "confirmed");
+  assert.deepEqual(confirmed.selected_master_ids, [opened.masters[0].id]);
+  assert.equal(confirmed.recommendation_hash, opened.method_panel_recommendation.recommendation_hash);
+});

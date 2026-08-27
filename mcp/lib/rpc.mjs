@@ -109,13 +109,22 @@ function renderSelectionCatalog(data) {
     `${labels.maturity}: ${master.maturity_label} (${master.maturity})`,
     `${labels.pack}: ${master.pack_format} (${master.admission_level})`,
   ].join("\n   ")).join("\n\n");
+  const recommendedIds = data.method_panel_recommendation?.included_master_ids || [];
+  const unfilledFamilies = data.method_panel_recommendation?.unfilled_families || [];
   const recommendationNotice = data.method_panel_recommendation?.status === "recommended"
-    ? copy({
-      en: `Advisory method-simulation panel: ${data.method_panel_recommendation.included_master_ids.join(", ")}. This is selection help only: the full catalog remains available, it does not represent human experts, and no research starts without your explicit submission. Return recommendation_hash with confirmation.`,
-      zh: `方法模拟建议面板：${data.method_panel_recommendation.included_master_ids.join("、")}。这只帮助选择：完整目录仍可选，不代表真人专家；未经你明确提交不会开始研究。确认时请原样回传 recommendation_hash。`,
-      ja: `参考メソッド候補：${data.method_panel_recommendation.included_master_ids.join(", ")}。選択補助に限られ、全カタログは引き続き選択可能です。実在の専門家を表すものではなく、明示的な送信なしに調査は開始しません。確認時に recommendation_hash をそのまま返してください。`,
-      ko: `참고 방법 후보: ${data.method_panel_recommendation.included_master_ids.join(", ")}. 선택 보조일 뿐이며 전체 카탈로그는 계속 선택할 수 있습니다. 실제 전문가를 뜻하지 않고 명시적으로 제출하기 전에는 조사가 시작되지 않습니다. 확인 시 recommendation_hash를 그대로 보내십시오.`,
-    })
+    ? recommendedIds.length
+      ? copy({
+        en: `Advisory method-simulation panel: ${recommendedIds.join(", ")}. Unfilled method families: ${unfilledFamilies.join(", ") || "none"}. This is selection help only: the full catalog remains available, it does not represent human experts, and no research starts without your explicit submission. Return recommendation_hash with confirmation.`,
+        zh: `方法模拟建议面板：${recommendedIds.join("、")}。未填充方法族：${unfilledFamilies.join("、") || "无"}。这只帮助选择：完整目录仍可选，不代表真人专家；未经你明确提交不会开始研究。确认时请原样回传 recommendation_hash。`,
+        ja: `参考メソッド候補：${recommendedIds.join(", ")}。未充足のメソッド群：${unfilledFamilies.join(", ") || "なし"}。選択補助に限られ、全カタログは引き続き選択可能です。実在の専門家を表すものではなく、明示的な送信なしに調査は開始しません。確認時に recommendation_hash をそのまま返してください。`,
+        ko: `참고 방법 후보: ${recommendedIds.join(", ")}. 채워지지 않은 방법론 계열: ${unfilledFamilies.join(", ") || "없음"}. 선택 보조일 뿐이며 전체 카탈로그는 계속 선택할 수 있습니다. 실제 전문가를 뜻하지 않고 명시적으로 제출하기 전에는 조사가 시작되지 않습니다. 확인 시 recommendation_hash를 그대로 보내십시오.`,
+      })
+      : copy({
+        en: `No method passed the advisory coverage gate. Unfilled method families: ${unfilledFamilies.join(", ") || "none"}. The full catalog remains selectable; confirm an explicit choice with recommendation_hash.`,
+        zh: `没有方法通过本次建议覆盖闸门。未填充方法族：${unfilledFamilies.join("、") || "无"}。完整目录仍可选择；请带 recommendation_hash 明确确认你的选择。`,
+        ja: `参考カバレッジゲートを通過したメソッドはありません。未充足のメソッド群：${unfilledFamilies.join(", ") || "なし"}。全カタログは選択可能です。recommendation_hash を添えて明示的に確認してください。`,
+        ko: `권고 커버리지 게이트를 통과한 방법론이 없습니다. 채워지지 않은 방법론 계열: ${unfilledFamilies.join(", ") || "없음"}. 전체 카탈로그는 선택할 수 있으며 recommendation_hash와 함께 명시적으로 확인해야 합니다.`,
+      })
     : copy({
       en: "No advisory panel was generated because the instrument classification is missing. Choose explicitly from the full catalog; no default eight was guessed.",
       zh: "由于缺少资产分类，本次未生成方法建议面板。请从完整目录明确选择；系统没有猜测默认 8 席。",
