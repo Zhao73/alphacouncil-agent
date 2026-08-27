@@ -368,3 +368,35 @@ Three literals deliberately remain outside this rule:
 Dry-run selection gates, probe-local observation literals and every pre-existing `node:test`
 timeout remain unchanged. The two path-bounded observers need a separately reviewed path-derived
 ceiling rather than a misleading pace-derived expansion.
+
+## WP4c latency result and WP4cP attributable-cost move
+
+WP4c check run
+[`33058961948`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33058961948)
+tested exact commit `8b15b326c3cf46610205ddc1717fe92f6758fd56`. Both Windows attempts
+were functionally green, but both missed the frozen 540-second `Run checks` gate. The one
+pre-authorized same-SHA latency rerun was used; no third attempt was made:
+
+| Windows attempt | Jobs API `Run checks` interval | Duration | Source concurrent | Full analysis | Master observability | Packaged parity | Actual parity retry notices | Frozen gate |
+| --- | --- | ---: | --- | --- | --- | --- | ---: | --- |
+| Attempt 1 / [`98472689551`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33058961948/job/98472689551) | 2026-08-27 09:31:59Z–09:41:57Z | 598 s | 1,411 tests; 1,405 pass; 6 skip; 0 fail | 11/11; 0 fail | 5/5; 0 fail | 5/5; 0 fail | 0 | Missed: 598 s > 540 s |
+| Attempt 2 / [`98475805738`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33058961948/job/98475805738) | 2026-08-27 09:44:27Z–09:55:36Z | 669 s | 1,411 tests; 1,405 pass; 6 skip; 0 fail | 11/11; 0 fail | 5/5; 0 fail | 5/5; 0 fail | 0 | Missed: 669 s > 540 s |
+
+The TAP group durations distinguish the package's attributable cost from shared-runner variance:
+
+| Evidence run | Source concurrent | Full analysis | Master observability | Packaged parity | Jobs API `Run checks` |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| WP4a2 attempt 2 baseline (`98466063969`) | 218,294.5487 ms | 63,500.7658 ms | 29,353.3730 ms | 116,103.3184 ms | 498 s |
+| WP4c attempt 1 (`98472689551`) | 240,996.1381 ms | 95,729.5762 ms | 60,235.9352 ms | 86,674.0138 ms | 598 s |
+| WP4c attempt 2 (`98475805738`) | 277,831.3905 ms | 107,937.8561 ms | 57,301.0467 ms | 117,126.5274 ms | 669 s |
+
+The only deterministic cost added by WP4c was the 20,500 ms delayed-response probe plus child
+startup and settlement inside the serial master-observability group. WP4cP preserves that real
+child-process red/green proof while scaling it to a 1,500 ms ceiling, 2,000 ms legacy observer
+and 2,500 ms response. The locked 4:3 ratio matches the real 15,000 ms ceiling to 20,000 ms
+legacy observer, while static assertions retain the real 15,000/20,000/30,000 relationships.
+The new probe file runs in the concurrent source phase rather than the Windows serial group.
+
+The probe's approximately 21-second attributable cost is removed from the serial path; the
+source and full-analysis increases are attributed to shared-runner variation because WP4c made
+no corresponding code-path change. 本包不声称消除共享 runner 方差，也不保证 ≤540 s.

@@ -16,7 +16,6 @@ import {
 
 const PROVENANCE_TOTAL_TIMEOUT_MS = 15_000;
 const VOICE_CONTRACT_TOTAL_TIMEOUT_MS = 15_000;
-const DELAYED_RESPONSE_MS = PROVENANCE_TOTAL_TIMEOUT_MS + 5_500;
 const LEGACY_OBSERVER_TIMEOUT_MS = 20_000;
 
 function observabilityCodex(dataDir, { forgedMaster = null, directionalMaster = null, delays = {} } = {}) {
@@ -113,6 +112,9 @@ async function waitForStatus(path, predicate, timeoutMs = 8_000) {
 }
 
 test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnostic", async () => {
+  assert.equal(PROVENANCE_TOTAL_TIMEOUT_MS, VOICE_CONTRACT_TOTAL_TIMEOUT_MS);
+  assert.equal(LEGACY_OBSERVER_TIMEOUT_MS, 20_000);
+  assert.equal(observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS), 30_000);
   assert.equal(
     observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
     PROVENANCE_TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS,
@@ -218,53 +220,6 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
     assert.doesNotMatch(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"), /DIRECTIONAL-ABSTENTION-SENTINEL/u);
     const launches = readFileSync(fake.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
     assert.deepEqual(launches.filter((item) => item.role === "master_buffett").map((item) => item.parseRepair), [false]);
-  } finally {
-    await server.close();
-    removeDataDir(dataDir);
-  }
-});
-
-test("a delayed RPC response proves the legacy observer loses a valid result that the contract budget receives", {
-  timeout: observerBudget(DELAYED_RESPONSE_MS) + 10_000,
-}, async () => {
-  const dataDir = makeDataDir();
-  const delayedServer = join(dataDir, "delayed-master-observer-rpc-server.mjs");
-  writeFileSync(delayedServer, `
-import { createInterface } from "node:readline";
-const delayMs = Number(process.env.ALPHACOUNCIL_TEST_RPC_DELAY_MS || 0);
-const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
-for await (const line of lines) {
-  const request = JSON.parse(line);
-  const respond = () => process.stdout.write(JSON.stringify({
-    jsonrpc: "2.0",
-    id: request.id,
-    result: request.method === "initialize"
-      ? {}
-      : { structuredContent: { status: "delayed_response_received" } },
-  }) + "\\n");
-  if (request.method === "initialize") respond();
-  else setTimeout(respond, delayMs);
-}
-`);
-  const server = startServer({
-    dataDir,
-    entry: delayedServer,
-    env: { ALPHACOUNCIL_TEST_RPC_DELAY_MS: String(DELAYED_RESPONSE_MS) },
-  });
-  try {
-    await server.request("initialize", {}, { timeoutMs: 5_000 });
-    assert.equal(DELAYED_RESPONSE_MS, 20_500);
-    assert.equal(observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS), 30_000);
-
-    const rejectedBelowContract = assert.rejects(
-      server.callTool("delayed_probe", {}, { timeoutMs: LEGACY_OBSERVER_TIMEOUT_MS }),
-      /timed out after 20000ms waiting for tools\/call/u,
-    );
-    const receivedWithinContract = server.callTool("delayed_probe", {}, {
-      timeoutMs: observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
-    });
-    const [, recovered] = await Promise.all([rejectedBelowContract, receivedWithinContract]);
-    assert.equal(structured(recovered).status, "delayed_response_received");
   } finally {
     await server.close();
     removeDataDir(dataDir);
