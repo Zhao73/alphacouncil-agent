@@ -98,6 +98,77 @@ test("runCodex force-settles after kill grace even if a broken child never close
   assert.ok(Date.now() - started < 250, "forced settlement must not wait for a close event");
 });
 
+test("runCodex re-clamps its timer after spawn so settlement fits an absolute deadline", async () => {
+  class NeverClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 424244;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  let startPayload;
+  const killGraceMs = 20;
+  const absoluteDeadlineMs = Date.now() + 80;
+  const result = await runCodex("fixture", 1_000, (payload) => {
+    startPayload = payload;
+  }, () => {}, {
+    spawn: () => new NeverClosingChild(),
+    stopChild: () => {},
+    sigkillGraceMs: killGraceMs,
+    absoluteDeadlineMs,
+  });
+  assert.ok(startPayload.worker_timeout_ms <= absoluteDeadlineMs - Date.parse(startPayload.started_at) - killGraceMs);
+  assert.equal(startPayload.settlement_grace_ms, killGraceMs);
+  assert.equal(result.timing.worker_timeout_ms, startPayload.worker_timeout_ms);
+  assert.equal(result.timing.settlement_grace_ms, startPayload.settlement_grace_ms);
+  assert.equal(result.timedOut, true);
+  assert.equal(result.forced_settle, true);
+  assert.ok(
+    Date.parse(result.timing.finished_at) <= absoluteDeadlineMs + 25,
+    "timer plus forced-settlement grace must stay at the absolute boundary apart from scheduler jitter",
+  );
+});
+
+test("runCodex adds no grace when synchronous spawn has already consumed the absolute deadline", async () => {
+  class NeverClosingChild extends EventEmitter {
+    constructor() {
+      super();
+      this.pid = 424245;
+      this.stdin = { on() {}, end() {} };
+      this.stdout = new EventEmitter();
+      this.stderr = new EventEmitter();
+    }
+  }
+  const stops = [];
+  const absoluteDeadlineMs = Date.now() + 20;
+  let spawnReturnedAt = null;
+  let startPayload;
+  const result = await runCodex("fixture", 1_000, (payload) => {
+    startPayload = payload;
+  }, () => {}, {
+    spawn: () => {
+      while (Date.now() <= absoluteDeadlineMs + 10) {
+        // Model a synchronous spawn implementation that returns after the lifecycle expired.
+      }
+      spawnReturnedAt = Date.now();
+      return new NeverClosingChild();
+    },
+    stopChild: (_child, force = false) => stops.push(force ? "KILL" : "TERM"),
+    sigkillGraceMs: 100,
+    absoluteDeadlineMs,
+  });
+
+  assert.equal(startPayload.worker_timeout_ms, 0);
+  assert.equal(startPayload.settlement_grace_ms, 0);
+  assert.equal(result.timing.settlement_grace_ms, 0);
+  assert.equal(result.timedOut, true);
+  assert.equal(result.forced_settle, true);
+  assert.deepEqual(stops, ["TERM", "KILL"]);
+  assert.ok(Date.now() - spawnReturnedAt < 50, "expired startup must settle without a new grace wait");
+});
+
 test("runCodex exposes one process-boundary clock shared byte-for-byte with onStart", async () => {
   const dir = makeDataDir();
   class ClosingChild extends EventEmitter {

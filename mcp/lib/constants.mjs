@@ -436,11 +436,18 @@ export const COUNCIL_PACES = Object.freeze({
     total_ms: 15 * 60 * 1000,
     grounding_ms: 20 * 1000,
     evidence_ms: 280 * 1000,
+    // Semantic acquisition-ledger repair is no-search but commonly needed after an otherwise
+    // complete evidence packet. Keep this inside the 280-second seat lifecycle rather than
+    // handing a late packet whatever few milliseconds happen to remain.
+    evidence_repair_reserve_ms: 60 * 1000,
     master_ms: 110 * 1000,
+    master_repair_reserve_ms: 8 * 1000,
     master_waves: 2,
     verifier_ms: 0,
     debate_ms: 45 * 1000,
+    debate_repair_reserve_ms: 7 * 1000,
     pm_ms: 95 * 1000,
+    pm_repair_reserve_ms: 20 * 1000,
     finalize_reserve_ms: 45 * 1000,
   }),
   // `normal` is a thirty-minute ceiling with a twenty-five-minute configured stage allocation.
@@ -450,11 +457,15 @@ export const COUNCIL_PACES = Object.freeze({
     total_ms: 30 * 60 * 1000,
     grounding_ms: 30 * 1000,
     evidence_ms: 6 * 60 * 1000,
+    evidence_repair_reserve_ms: 0,
     master_ms: 3 * 60 * 1000,
+    master_repair_reserve_ms: 0,
     master_waves: 2,
     verifier_ms: 0,
     debate_ms: 180 * 1000,
+    debate_repair_reserve_ms: 0,
     pm_ms: 180 * 1000,
+    pm_repair_reserve_ms: 0,
     finalize_reserve_ms: 45 * 1000,
   }),
   slow: Object.freeze({
@@ -462,15 +473,19 @@ export const COUNCIL_PACES = Object.freeze({
     total_ms: 60 * 60 * 1000,
     grounding_ms: 45 * 1000,
     evidence_ms: 12 * 60 * 1000,
+    evidence_repair_reserve_ms: 0,
     // Leaves at least 90s of total scheduling headroom while reserving a short final
     // language-only repair after the normal worker and transport repair.
     master_ms: (4 * 60 * 1000) + 15 * 1000,
+    master_repair_reserve_ms: 0,
     master_waves: 2,
     // `slow + all methods + all analysts` spends this bounded stage on all three verifier
     // roles. The workers run in parallel, so the stage costs one cap rather than three.
     verifier_ms: 10 * 60 * 1000,
     debate_ms: 6 * 60 * 1000,
+    debate_repair_reserve_ms: 0,
     pm_ms: 8 * 60 * 1000,
+    pm_repair_reserve_ms: 0,
     finalize_reserve_ms: 60 * 1000,
   }),
 });

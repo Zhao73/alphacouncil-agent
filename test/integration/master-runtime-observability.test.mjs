@@ -270,6 +270,19 @@ test("a stalled full-mode voice worker fails the seat and stops before debate", 
       assert.equal(result.run.agent_status[role].status, "skipped", `${role} must not execute`);
     }
     assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.failure.json")), true);
+    const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
+      .trim().split("\n").map((line) => JSON.parse(line));
+    const attemptStart = events.find((event) => event.type === "worker_attempt_started"
+      && event.stage === "methods" && event.attempt_kind === "primary");
+    const attemptFinish = events.find((event) => event.type === "worker_attempt_finished"
+      && event.invocation_key === attemptStart?.invocation_key);
+    const settlementGraceMs = Math.min(5_000, Math.max(50, Math.floor(TOTAL_TIMEOUT_MS * 0.02)));
+    assert.ok(attemptStart.budget_ms > 0 && attemptStart.budget_ms <= 8_000 - settlementGraceMs);
+    assert.equal(attemptFinish.budget_ms, attemptStart.budget_ms);
+    assert.ok(
+      attemptFinish.elapsed_ms <= attemptStart.budget_ms + settlementGraceMs + 250,
+      "the real method invocation must settle inside its 8s lifecycle apart from scheduler jitter",
+    );
   } finally {
     await server.close();
     removeDataDir(dataDir);

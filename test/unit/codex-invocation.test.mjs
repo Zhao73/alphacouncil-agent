@@ -92,3 +92,96 @@ test("invalid explicit leaf-worker settings fail before a Codex process starts",
     /CODEX_REASONING_EFFORT/u,
   );
 });
+
+test("fast runs freeze a stage-aware reasoning policy while keeping one model", () => {
+  const env = { ALPHACOUNCIL_AGENT_CODEX_MODEL: "gpt-5.6-sol" };
+  const runConfig = codexWorker.codexRunConfig(env, { councilPace: "fast" });
+  assert.equal(runConfig.model, "gpt-5.6-sol");
+  assert.equal(runConfig.reasoning_profile, "fast_stage_profile_v1");
+  assert.equal(runConfig.pace_profile_conformance, "candidate_default");
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(runConfig.stage_reasoning).map(([stage, item]) => [stage, item.reasoning_effort])),
+    {
+      evidence: "low",
+      methods: "low",
+      debate: "low",
+      portfolio_manager: "medium",
+      repair: "minimal",
+    },
+  );
+  const repair = codexWorker.codexAttemptConfig(env, {
+    councilPace: "fast",
+    stage: "evidence",
+    attemptKind: "parse_repair",
+  });
+  assert.equal(repair.reasoning_effort, "minimal");
+  assert.equal(repair.reasoning_effort_source, "fast_stage_profile_v1");
+  assert.equal(repair.reasoning_policy_stage, "repair");
+});
+
+test("stage-specific effort wins over global effort, which wins over the fast default", () => {
+  const stage = codexWorker.codexAttemptConfig({
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "medium",
+    ALPHACOUNCIL_AGENT_CODEX_EVIDENCE_REASONING_EFFORT: "low",
+  }, { councilPace: "fast", stage: "evidence", attemptKind: "primary" });
+  assert.equal(stage.reasoning_effort, "low");
+  assert.match(stage.reasoning_effort_source, /explicit_stage_environment/u);
+
+  const global = codexWorker.codexAttemptConfig({
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "medium",
+  }, { councilPace: "fast", stage: "methods", attemptKind: "primary" });
+  assert.equal(global.reasoning_effort, "medium");
+  assert.equal(global.reasoning_effort_source, "explicit_environment");
+});
+
+test("fast rejects an unvalidated global high-or-deeper override before queueing", () => {
+  assert.throws(
+    () => codexWorker.codexRunConfig({
+      ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "max",
+    }, { councilPace: "fast" }),
+    /effective fast reasoning is not validated/u,
+  );
+  const diagnostic = codexWorker.codexRunConfig({
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "max",
+    ALPHACOUNCIL_AGENT_ALLOW_UNVALIDATED_FAST_REASONING: "true",
+  }, { councilPace: "fast" });
+  assert.equal(diagnostic.pace_profile_conformance, "overridden_unvalidated");
+  assert.equal(diagnostic.stage_reasoning.evidence.reasoning_effort, "max");
+});
+
+test("fast validates the effective stage map rather than the legacy global field", () => {
+  const medium = codexWorker.codexRunConfig({
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "medium",
+  }, { councilPace: "fast" });
+  assert.equal(medium.pace_profile_conformance, "overridden_unvalidated");
+  assert.ok(Object.values(medium.stage_reasoning).every((item) => item.reasoning_effort === "medium"));
+
+  assert.throws(
+    () => codexWorker.codexRunConfig({
+      ALPHACOUNCIL_AGENT_CODEX_METHOD_REASONING_EFFORT: "max",
+    }, { councilPace: "fast" }),
+    /methods=max/u,
+  );
+
+  const safelyOverridden = codexWorker.codexRunConfig({
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "max",
+    ALPHACOUNCIL_AGENT_CODEX_EVIDENCE_REASONING_EFFORT: "low",
+    ALPHACOUNCIL_AGENT_CODEX_METHOD_REASONING_EFFORT: "low",
+    ALPHACOUNCIL_AGENT_CODEX_DEBATE_REASONING_EFFORT: "low",
+    ALPHACOUNCIL_AGENT_CODEX_PM_REASONING_EFFORT: "medium",
+    ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT: "minimal",
+  }, { councilPace: "fast" });
+  assert.equal(safelyOverridden.pace_profile_conformance, "candidate_default");
+  assert.equal(safelyOverridden.stage_reasoning.methods.source.includes("explicit_stage_environment"), true);
+});
+
+test("unknown runtime stages fail closed instead of inheriting evidence reasoning", () => {
+  assert.throws(
+    () => codexWorker.codexReasoningPolicyStage("debtae_round_1", "primary"),
+    /unknown Codex reasoning policy stage/u,
+  );
+  assert.throws(
+    () => codexWorker.codexReasoningPolicyStage("debtae_round_1", "parse_repair"),
+    /unknown Codex reasoning policy stage/u,
+  );
+});

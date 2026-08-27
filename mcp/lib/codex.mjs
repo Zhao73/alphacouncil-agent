@@ -31,6 +31,20 @@ const CODEX_MODEL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/+\-]{0,127}$/u;
 const CODEX_REASONING_EFFORTS = new Set([
   "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
 ]);
+const FAST_REASONING_PROFILE = Object.freeze({
+  evidence: "low",
+  methods: "low",
+  debate: "low",
+  portfolio_manager: "medium",
+  repair: "minimal",
+});
+const STAGE_REASONING_ENV = Object.freeze({
+  evidence: "ALPHACOUNCIL_AGENT_CODEX_EVIDENCE_REASONING_EFFORT",
+  methods: "ALPHACOUNCIL_AGENT_CODEX_METHOD_REASONING_EFFORT",
+  debate: "ALPHACOUNCIL_AGENT_CODEX_DEBATE_REASONING_EFFORT",
+  portfolio_manager: "ALPHACOUNCIL_AGENT_CODEX_PM_REASONING_EFFORT",
+  repair: "ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT",
+});
 
 function optionalWorkerSetting(value) {
   const normalized = typeof value === "string" ? value.trim() : "";
@@ -57,6 +71,110 @@ export function codexWorkerConfig(env = process.env) {
     reasoning_effort: reasoningEffort,
     model_source: model ? "explicit_environment" : "codex_default",
     reasoning_effort_source: reasoningEffort ? "explicit_environment" : "codex_default",
+  });
+}
+
+export function codexReasoningPolicyStage(stage, attemptKind) {
+  const runtimeStage = String(stage || "");
+  const knownRuntimeStage = runtimeStage === "evidence"
+    || runtimeStage === "verification"
+    || runtimeStage === "methods"
+    || runtimeStage === "portfolio_manager"
+    || /^debate_round_[1-3]$/u.test(runtimeStage);
+  const syntheticRepairStage = runtimeStage === "repair" && attemptKind === "parse_repair";
+  if (!knownRuntimeStage && !syntheticRepairStage) {
+    throw new Error(`unknown Codex reasoning policy stage: ${runtimeStage || "<empty>"}`);
+  }
+  if (attemptKind === "parse_repair") return "repair";
+  if (runtimeStage === "methods") return "methods";
+  if (runtimeStage === "portfolio_manager") return "portfolio_manager";
+  if (runtimeStage === "evidence" || runtimeStage === "verification") return "evidence";
+  return "debate";
+}
+
+function explicitBoolean(value) {
+  return /^(?:1|true|yes)$/iu.test(String(value || "").trim());
+}
+
+function assertReasoningEffort(value, label) {
+  if (value && !CODEX_REASONING_EFFORTS.has(value)) {
+    throw new Error(
+      `${label} must be one of ${[...CODEX_REASONING_EFFORTS].join(", ")}`,
+    );
+  }
+}
+
+/**
+ * Resolve the immutable per-attempt policy for one run.
+ *
+ * Explicit stage settings win over the legacy global setting. The fast profile is used only
+ * when neither was supplied; it keeps search/explanation calls at low, reserves medium for the
+ * PM, and makes no-search repairs mechanical. A global high-or-deeper fast run is rejected
+ * before queueing unless the operator explicitly marks it as an unvalidated diagnostic.
+ */
+export function codexAttemptConfig(env = process.env, {
+  councilPace = null,
+  stage = "evidence",
+  attemptKind = "primary",
+} = {}) {
+  const base = codexWorkerConfig(env);
+  const policyStage = codexReasoningPolicyStage(stage, attemptKind);
+  const stageEnv = STAGE_REASONING_ENV[policyStage];
+  const stageEffort = optionalWorkerSetting(env[stageEnv]);
+  assertReasoningEffort(stageEffort, stageEnv);
+  const fastDefault = councilPace === "fast" ? FAST_REASONING_PROFILE[policyStage] : null;
+  const reasoningEffort = stageEffort || base.reasoning_effort || fastDefault;
+  const reasoningSource = stageEffort
+    ? `explicit_stage_environment:${stageEnv}`
+    : base.reasoning_effort
+      ? "explicit_environment"
+      : fastDefault
+        ? "fast_stage_profile_v1"
+        : "codex_default";
+  return Object.freeze({
+    ...base,
+    reasoning_effort: reasoningEffort,
+    reasoning_effort_source: reasoningSource,
+    reasoning_policy_stage: policyStage,
+    reasoning_profile: councilPace === "fast" ? "fast_stage_profile_v1" : "uniform_or_codex_default",
+  });
+}
+
+/** Validate and describe the complete worker policy before a run directory is queued. */
+export function codexRunConfig(env = process.env, { councilPace = null } = {}) {
+  const base = codexWorkerConfig(env);
+  const allowUnvalidated = explicitBoolean(env.ALPHACOUNCIL_AGENT_ALLOW_UNVALIDATED_FAST_REASONING);
+  const stages = Object.fromEntries(Object.keys(FAST_REASONING_PROFILE).map((stage) => {
+    const attemptKind = stage === "repair" ? "parse_repair" : "primary";
+    const runtimeStage = stage === "debate" ? "debate_round_1" : stage;
+    const config = codexAttemptConfig(env, { councilPace, stage: runtimeStage, attemptKind });
+    return [stage, {
+      reasoning_effort: config.reasoning_effort,
+      source: config.reasoning_effort_source,
+    }];
+  }));
+  const deepFastStages = councilPace === "fast"
+    ? Object.entries(stages)
+      .filter(([, config]) => ["high", "xhigh", "max", "ultra"].includes(config.reasoning_effort))
+      .map(([stage, config]) => `${stage}=${config.reasoning_effort}`)
+    : [];
+  if (deepFastStages.length && !allowUnvalidated) {
+    throw new Error(
+      `effective fast reasoning is not validated (${deepFastStages.join(", ")}); `
+      + "use normal/slow, lower the effective stage settings, or explicitly set "
+      + "ALPHACOUNCIL_AGENT_ALLOW_UNVALIDATED_FAST_REASONING=true for a diagnostic run",
+    );
+  }
+  const matchesFastCandidate = councilPace === "fast"
+    && Object.entries(FAST_REASONING_PROFILE)
+      .every(([stage, effort]) => stages[stage]?.reasoning_effort === effort);
+  return Object.freeze({
+    ...base,
+    reasoning_profile: councilPace === "fast" ? "fast_stage_profile_v1" : "uniform_or_codex_default",
+    stage_reasoning: stages,
+    pace_profile_conformance: councilPace !== "fast"
+      ? "not_applicable"
+      : matchesFastCandidate ? "candidate_default" : "overridden_unvalidated",
   });
 }
 
@@ -220,7 +338,23 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     const runtimeEnv = { ...process.env, ...(runtime.env || {}) };
     // Validate operator-supplied settings before allocating a per-worker runtime directory.
     // A bad model name must fail without starting a process or leaking temporary state.
-    const workerConfig = codexWorkerConfig(runtimeEnv);
+    const requestedWorkerConfig = runtime.workerConfig || codexWorkerConfig(runtimeEnv);
+    const validatedWorkerConfig = codexWorkerConfig({
+      ALPHACOUNCIL_AGENT_CODEX_MODEL: requestedWorkerConfig.model || "",
+      ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: requestedWorkerConfig.reasoning_effort || "",
+    });
+    const workerConfig = Object.freeze({
+      ...validatedWorkerConfig,
+      model_source: requestedWorkerConfig.model_source || validatedWorkerConfig.model_source,
+      reasoning_effort_source:
+        requestedWorkerConfig.reasoning_effort_source || validatedWorkerConfig.reasoning_effort_source,
+      ...(requestedWorkerConfig.reasoning_policy_stage
+        ? { reasoning_policy_stage: requestedWorkerConfig.reasoning_policy_stage }
+        : {}),
+      ...(requestedWorkerConfig.reasoning_profile
+        ? { reasoning_profile: requestedWorkerConfig.reasoning_profile }
+        : {}),
+    });
     mkdirSync(workerDataDir, { recursive: true });
     // Some Codex builds still start installed MCP plugins even with --ignore-user-config.
     // A nested AlphaCouncil server must never scan or recover the parent run. Isolate only
@@ -285,21 +419,44 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     }
     const startedAt = new Date().toISOString();
     const startedAtMs = Date.parse(startedAt);
+    const absoluteDeadlineMs = Number.isFinite(runtime.absoluteDeadlineMs)
+      ? Number(runtime.absoluteDeadlineMs)
+      : null;
+    // The timeout timer starts only after spawn. Re-clamp here so process startup cannot push
+    // timeout + SIGKILL settlement beyond the caller's absolute seat/round deadline.
+    const remainingAfterSpawnMs = absoluteDeadlineMs === null
+      ? null
+      : Math.max(0, absoluteDeadlineMs - startedAtMs);
+    const effectiveKillGraceMs = remainingAfterSpawnMs === null
+      ? killGraceMs
+      : Math.min(killGraceMs, remainingAfterSpawnMs);
+    const workerTimeoutMs = absoluteDeadlineMs === null
+      ? Math.max(0, timeoutMs)
+      : Math.max(0, Math.min(timeoutMs, remainingAfterSpawnMs - effectiveKillGraceMs));
     const timingPid = Number.isInteger(child.pid) && child.pid > 0 ? child.pid : null;
     child.stdin.on("error", () => {});
     child.stdin.end(prompt, "utf8");
-    onStart({ pid: child.pid, output: outFile, started_at: startedAt, worker_execution_config: workerConfig });
+    onStart({
+      pid: child.pid,
+      output: outFile,
+      started_at: startedAt,
+      worker_timeout_ms: workerTimeoutMs,
+      settlement_grace_ms: effectiveKillGraceMs,
+      worker_execution_config: workerConfig,
+    });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     let settled = false;
+    let heartbeat = null;
+    let timer = null;
     let killTimer = null;
     const finish = (value, outcome = "failed") => {
       if (settled) return;
       settled = true;
       const finishedAt = new Date().toISOString();
-      clearTimeout(timer);
-      clearInterval(heartbeat);
+      if (timer) clearTimeout(timer);
+      if (heartbeat) clearInterval(heartbeat);
       if (killTimer) clearTimeout(killTimer);
       // The caller already has the text by now. Nothing deleted this before, so every
       // analyst of every run left one file behind in DATA_DIR forever.
@@ -322,33 +479,43 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
           pid: timingPid,
           outcome,
           duration_scope: "local_child_spawn_to_settlement_wall_time",
+          worker_timeout_ms: workerTimeoutMs,
+          settlement_grace_ms: effectiveKillGraceMs,
           worker_execution_config: workerConfig,
         },
       });
     };
-    const heartbeat = setInterval(() => {
+    heartbeat = setInterval(() => {
       onHeartbeat({ pid: child.pid, output: outFile, elapsed_ms: Date.now() - startedAtMs });
     }, LIMITS.HEARTBEAT_MS);
-    const timer = setTimeout(() => {
+    const forceSettle = () => {
+      if (settled) return;
+      stopWorker(child, true);
+      // Do not trust a broken process tree to emit `close`. The worker deadline plus the
+      // grace period is a hard settlement boundary; any output written afterwards is
+      // rejected and removed by the late close handler or the startup sweeper.
+      finish({
+        ok: false,
+        code: null,
+        text: "",
+        stderr: appendLimited(stderr, "\nworker did not close after SIGKILL grace"),
+        stdout,
+        outFile,
+        timedOut: true,
+        forced_settle: true,
+      }, "timed_out");
+    };
+    const beginTimeout = () => {
+      if (settled) return;
       timedOut = true;
       stopWorker(child);
-      killTimer = setTimeout(() => {
-        stopWorker(child, true);
-        // Do not trust a broken process tree to emit `close`. The worker deadline plus the
-        // grace period is a hard settlement boundary; any output written afterwards is
-        // rejected and removed by the late close handler or the startup sweeper.
-        finish({
-          ok: false,
-          code: null,
-          text: "",
-          stderr: appendLimited(stderr, "\nworker did not close after SIGKILL grace"),
-          stdout,
-          outFile,
-          timedOut: true,
-          forced_settle: true,
-        }, "timed_out");
-      }, killGraceMs);
-    }, timeoutMs);
+      if (settled) return;
+      if (effectiveKillGraceMs === 0) {
+        forceSettle();
+        return;
+      }
+      killTimer = setTimeout(forceSettle, effectiveKillGraceMs);
+    };
     // Drain both pipes; switch to streaming logs if a progress UI needs live CLI output.
     child.stdout.on("data", (chunk) => { stdout = appendLimited(stdout, chunk.toString()); });
     child.stderr.on("data", (chunk) => { stderr = appendLimited(stderr, chunk.toString()); });
@@ -396,6 +563,13 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         timedOut,
       }, timedOut ? "timed_out" : ok ? "completed" : "failed");
     });
+    if (absoluteDeadlineMs !== null && remainingAfterSpawnMs === 0) {
+      // Synchronous process startup already consumed the lifecycle. Terminate and settle now;
+      // adding the configured grace here would move the attempt past its absolute deadline.
+      beginTimeout();
+    } else {
+      timer = setTimeout(beginTimeout, workerTimeoutMs);
+    }
   });
 }
 

@@ -575,6 +575,74 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
   }
 });
 
+test("default fast call chain applies the candidate stage profile and reserves the PM repair slice", {
+  timeout: 90_000,
+}, async () => {
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir, { malformedTask: null });
+  const server = startServer({
+    dataDir,
+    env: {
+      ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver,
+      ALPHACOUNCIL_AGENT_CODEX_MODEL: "gpt-5.6-sol",
+    },
+  });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Exercise the unlowered fast lifecycle and frozen stage reasoning policy.";
+    const confirmed = await confirmMasterSelection(server, {
+      symbol: "QQQ",
+      language: "English",
+      prompt,
+      selected_master_ids: ["master_buffett"],
+      council_pace: "fast",
+    });
+    const runId = `FULL-FAST-POLICY-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ",
+      run_id: runId,
+      as_of: "2026-07-28",
+      language: "English",
+      prompt,
+      council_mode: "full",
+      council_pace: "fast",
+      wait_for_completion: true,
+      selection_receipt: confirmed.selection_receipt,
+      grounding: {
+        instrument: QQQ_INDEX_INSTRUMENT,
+        quote: {
+          price: 512.34,
+          currency: "USD",
+          quote_time: "2026-07-28T20:00:00Z",
+          exchange: "NASDAQ",
+          source_url: "https://example.com/qqq-quote",
+        },
+        facts_unavailable: true,
+        unavailable: ["typed facts intentionally omitted by fixture"],
+      },
+    }, { timeoutMs: 60_000 }));
+
+    assert.equal(result.run.status, "complete");
+    assert.equal(result.run.worker_execution_config.pace_profile_conformance, "candidate_default");
+    const events = readJsonl(join(dataDir, "runs", runId, "events.jsonl"));
+    const starts = events.filter((event) => event.type === "worker_attempt_started"
+      && event.attempt_kind === "primary");
+    const firstByStage = (stage) => starts.find((event) => event.stage === stage);
+    assert.equal(firstByStage("evidence").worker_reasoning_effort, "low");
+    assert.equal(firstByStage("methods").worker_reasoning_effort, "low");
+    assert.equal(firstByStage("debate_round_1").worker_reasoning_effort, "low");
+    const pm = firstByStage("portfolio_manager");
+    assert.equal(pm.worker_reasoning_effort, "medium");
+    assert.ok(pm.budget_ms > 60_000 && pm.budget_ms <= 70_000,
+      `PM timer ${pm.budget_ms}ms must fit the 75s primary envelope plus 5s settlement grace`);
+    assert.ok(firstByStage("debate_round_1").budget_ms <= 33_000,
+      "debate timer must fit the 38s primary envelope plus 5s settlement grace");
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
 async function runDebateQnaFixture(debateQnaFailureMode) {
   const TOTAL_TIMEOUT_MS = 45_000;
   assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 60_000);

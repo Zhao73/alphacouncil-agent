@@ -101,6 +101,8 @@ AlphaCouncil shows the work plan first. Full research asks separately for method
 These are queue-to-terminal persistence ceilings, not measured completion times. They guarantee
 an explicit terminal record even when work is incomplete; a successful live fast run within 15
 minutes has not yet been demonstrated across the four hosts.
+Fast keeps the full contract but uses an auditable stage-aware reasoning profile and one shared
+lifecycle budget per primary/retry/repair chain; retries cannot silently double a seat's cap.
 
 When an instrument classification and typed-fact coverage are already available, the selector also
 shows an eight-family **advisory method match** derived from all 26 physical pack manifests. It is

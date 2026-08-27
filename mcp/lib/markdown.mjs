@@ -629,11 +629,17 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
     ko: { title: "전체 에이전트 감사 추적", metadata: "실행 메타데이터", runId: "실행 ID", symbol: "종목 코드", asOf: "기준일", language: "언어", execution: "실행 모드", visibility: "가시성 요구", dry: "드라이런", status: "상태", phase: "단계", started: "시작", updated: "갱신", completed: "완료", tasks: "작업", taskStatus: "증거 좌석 상태", debateStatus: "토론 좌석 상태", evidence: "증거 분석 하위 에이전트", masters: "방법론 좌석", debate: "강세·약세 토론 및 포트폴리오 관리자", none: "없음" },
   }[key];
   const workerLabel = {
-    zh: { model: "叶子模型", reasoning: "推理档位" },
-    en: { model: "Leaf model", reasoning: "Reasoning effort" },
-    ja: { model: "リーフモデル", reasoning: "推論レベル" },
-    ko: { model: "리프 모델", reasoning: "추론 수준" },
+    zh: { model: "叶子模型", reasoning: "统一推理档位", profile: "推理策略", stages: "分阶段推理档位" },
+    en: { model: "Leaf model", reasoning: "Uniform reasoning effort", profile: "Reasoning policy", stages: "Stage reasoning efforts" },
+    ja: { model: "リーフモデル", reasoning: "共通推論レベル", profile: "推論ポリシー", stages: "段階別推論レベル" },
+    ko: { model: "리프 모델", reasoning: "공통 추론 수준", profile: "추론 정책", stages: "단계별 추론 수준" },
   }[key];
+  const stageReasoning = run.worker_execution_config?.stage_reasoning;
+  const stageReasoningSummary = stageReasoning && typeof stageReasoning === "object"
+    ? Object.entries(stageReasoning)
+      .map(([stage, item]) => `${stage}=${item?.reasoning_effort || "codex_default"}`)
+      .join(", ")
+    : "";
   const taskStatus = run.tasks.map((task) => {
     const state = taskState(run, task);
     return `- ${task}: ${state.status}${state.output ? ` (${state.output})` : ""}${state.error ? ` - ${state.error}` : ""}`;
@@ -654,6 +660,8 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
     `- ${label.execution}: ${run.execution_mode || "background_codex_exec"}`,
     `- ${workerLabel.model}: ${run.worker_execution_config?.model || "codex_default"}`,
     `- ${workerLabel.reasoning}: ${run.worker_execution_config?.reasoning_effort || "codex_default"}`,
+    `- ${workerLabel.profile}: ${run.worker_execution_config?.reasoning_profile || "uniform_or_codex_default"}`,
+    ...(stageReasoningSummary ? [`- ${workerLabel.stages}: ${stageReasoningSummary}`] : []),
     `- ${label.visibility}: ${run.visibility_required || false}`,
     `- ${label.dry}: ${run.dry_run}`,
     `- ${label.status}: ${run.status || "unknown"}`,

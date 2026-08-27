@@ -54,6 +54,17 @@ test("fast and slow reach every worker prompt, in the run's language", () => {
   }
 });
 
+test("out-of-scope guidance blocks only the seat's own trade action, not evidence vocabulary", () => {
+  const voice = masterVoicePrompt("master_forensic_short", enRun("fast"), {
+    stance: "out_of_scope", verdict: "v", summary: "s",
+  });
+  assert.match(voice, /never couple this method's first-person subject/u);
+  assert.match(voice, /short interest or sell-side consensus.*remain allowed/u);
+  assert.match(voice, /third-party recommendations.*remain allowed/u);
+  assert.match(voice, /Do not write 'I would not buy\/sell\/short/u);
+  assert.doesNotMatch(voice, /Avoid these literal action words/u);
+});
+
 test("fast compresses prose and never the evidence discipline", () => {
   for (const chinese of [true, false]) {
     const text = paceShapingInstruction("fast", "bull_researcher", chinese);

@@ -28,8 +28,9 @@ AlphaCouncil Agent runs an autonomous research workflow. Be aware that:
 - Worker subprocesses are launched sandboxed: `codex exec` runs with
   `-s read-only -a never --ephemeral --ignore-user-config`, so an analyst
   worker cannot write to disk, auto-approve actions, or recursively load the
-  user's own MCP configuration. Optional model/reasoning overrides are passed as
-  validated argv values, never through a shell, and are recorded in run artifacts.
+  user's own MCP configuration. Optional model and stage-aware reasoning overrides are passed
+  as validated argv values, never through a shell, and are recorded with their provenance in
+  run artifacts. Unvalidated global high-or-deeper overrides fail before a fast run is queued.
 - This software is for educational/research use only and is **not investment
   advice** (see the README disclaimer).
 

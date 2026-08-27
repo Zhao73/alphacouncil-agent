@@ -504,6 +504,13 @@ The tier moves every per-stage cap together with the total, because the per-stag
 bound each worker. The configured stage allocation fits inside its ceiling, but that arithmetic
 does not establish successful completion or a measured end-to-end duration.
 
+For the default, unlowered `fast` path, those lifecycle caps are split into a primary attempt plus a reserved bounded retry
+or no-search repair: evidence `220s + 60s`, method `102s + 8s`, each debate side
+`38s + 7s`, and PM `75s + 20s`. The split never adds time to the table above: primary,
+timeout retry and parse repair all debit the same per-seat or per-round wall clock. Fast also
+uses a recorded stage-aware reasoning profile (`low` evidence/method/debate, `medium` PM,
+`minimal` repair). It does not reduce the evidence, method, debate or report contracts.
+
 The tier also shapes what each worker is asked to produce. A cap on its own is a timeout, and a
 timeout is not a plan: the identical prompt with a shorter fuse buys a packet the worker could
 not finish rather than a faster good one. Because an LLM call's wall clock is dominated by the

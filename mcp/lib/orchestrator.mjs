@@ -26,7 +26,7 @@ import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId,
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
-import { codexWorkerConfig, mapLimit, runCodex, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
+import { codexAttemptConfig, codexReasoningPolicyStage, codexRunConfig, mapLimit, runCodex, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
@@ -140,12 +140,14 @@ function recordWorkerAttempt(run, invocationKey, meta, timing) {
     stage: meta.stage,
     attempt: meta.attempt,
     attempt_kind: meta.attempt_kind,
-    budget_ms: Math.max(0, Math.floor(meta.budget_ms || 0)),
+    budget_ms: Math.max(0, Math.floor(timing.worker_timeout_ms ?? meta.budget_ms ?? 0)),
     search_enabled: meta.search_enabled === true,
     started_at: timing.started_at,
     pid: Number.isInteger(timing.pid) && timing.pid > 0 ? timing.pid : null,
     worker_model: timing.worker_execution_config?.model || null,
     worker_reasoning_effort: timing.worker_execution_config?.reasoning_effort || null,
+    worker_reasoning_effort_source: timing.worker_execution_config?.reasoning_effort_source || null,
+    worker_reasoning_policy_stage: timing.worker_execution_config?.reasoning_policy_stage || null,
   };
   if (!timing.finished_at) {
     appendEvent(run, "worker_attempt_started", common);
@@ -172,14 +174,35 @@ async function runRecordedCodexAttempt(
   onHeartbeat = () => {},
   runtime = {},
 ) {
+  const policyStage = codexReasoningPolicyStage(meta.stage, meta.attempt_kind);
+  const frozenRunConfig = run?.worker_execution_config;
+  const frozenStageConfig = frozenRunConfig?.stage_reasoning?.[policyStage];
+  // A queued run owns its worker policy. Do not re-read a mutable process environment between
+  // evidence, methods and synthesis; the attempt events must match the frozen status snapshot.
+  const workerConfig = frozenStageConfig
+    ? Object.freeze({
+      provider: frozenRunConfig.provider || "codex_cli",
+      model: frozenRunConfig.model || null,
+      model_source: frozenRunConfig.model_source || "codex_default",
+      reasoning_effort: frozenStageConfig.reasoning_effort || null,
+      reasoning_effort_source: frozenStageConfig.source || "codex_default",
+      reasoning_policy_stage: policyStage,
+      reasoning_profile: frozenRunConfig.reasoning_profile || "uniform_or_codex_default",
+    })
+    : codexAttemptConfig(process.env, {
+      councilPace: run?.council_pace || null,
+      stage: meta.stage,
+      attemptKind: meta.attempt_kind,
+    });
   const result = await runCodex(prompt, timeoutMs, (payload) => {
     recordWorkerAttempt(run, invocationKey, meta, {
       started_at: payload.started_at,
       pid: payload.pid,
+      worker_timeout_ms: payload.worker_timeout_ms,
       worker_execution_config: payload.worker_execution_config,
     });
     onStart(payload);
-  }, onHeartbeat, runtime);
+  }, onHeartbeat, { ...runtime, workerConfig });
   if (result.timing?.started_at) recordWorkerAttempt(run, invocationKey, meta, result.timing);
   return result;
 }
@@ -1108,8 +1131,8 @@ function visibleCouncilTiming(args) {
   };
 }
 
-function remainingCouncilBudget(run, capMs, nowMs = Date.now()) {
-  if (!run.deadline_at) return capMs;
+function councilSettlementDeadlineMs(run) {
+  if (!run?.deadline_at) return null;
   const configuredReserve = run.council_mode === "quick"
     ? LIMITS.QUICK_FINALIZE_RESERVE_MS
     : runPace(run).finalize_reserve_ms;
@@ -1117,10 +1140,15 @@ function remainingCouncilBudget(run, capMs, nowMs = Date.now()) {
     configuredReserve,
     Math.max(100, Math.floor(Number(run.time_budget_ms || LIMITS.FULL_TOTAL_MS) * 0.1)),
   );
+  return Date.parse(run.deadline_at) - reserve;
+}
+
+function remainingCouncilBudget(run, capMs, nowMs = Date.now()) {
+  if (!run.deadline_at) return capMs;
   const killGrace = councilKillGrace(run);
   // runCodex may need one SIGKILL grace after its timeout. Budget that grace before
   // launching a child so the queue-to-persistence deadline remains the outer boundary.
-  const usable = Date.parse(run.deadline_at) - nowMs - reserve - killGrace;
+  const usable = councilSettlementDeadlineMs(run) - nowMs - killGrace;
   return Math.max(0, Math.min(capMs, usable));
 }
 
@@ -1131,6 +1159,71 @@ function councilKillGrace(run) {
   // The exact same value is passed to runCodex, so forced settlement remains inside the
   // queue-to-persistence deadline rather than becoming an unaccounted overrun.
   return Math.min(LIMITS.SIGKILL_GRACE_MS, Math.max(50, Math.floor(total * 0.02)));
+}
+
+function attemptSettlementGrace(run, remainingMs) {
+  const remaining = Math.max(0, Math.floor(Number(remainingMs) || 0));
+  // A fixed run-level grace can consume an entire caller-lowered stage or repair window.
+  // Keep at least 80% of a positive invocation window available to the worker while retaining
+  // the reviewed five-second ceiling for normal fast-profile attempts.
+  const proportionalGrace = Math.max(50, Math.floor(remaining * 0.2));
+  return Math.min(councilKillGrace(run), remaining, proportionalGrace);
+}
+
+/** Remaining wall time in one seat/round lifecycle, shared by primary, retry and repair. */
+export function stageLifecycleRemainingMs(stageBudgetMs, stageStartedAtMs, nowMs = Date.now()) {
+  const budget = Math.max(0, Math.floor(Number(stageBudgetMs) || 0));
+  const started = Number.isFinite(Number(stageStartedAtMs)) ? Number(stageStartedAtMs) : nowMs;
+  return Math.max(0, budget - Math.max(0, nowMs - started));
+}
+
+/**
+ * Freeze one child invocation inside both its seat/round lifecycle and the outer council.
+ * `timeout_ms` excludes the one settlement grace; runCodex re-clamps it after spawn against
+ * `absolute_deadline_ms`, so process startup cannot move the timer past the lifecycle edge.
+ */
+export function stageAttemptWindow(run, {
+  stageBudgetMs,
+  stageStartedAtMs,
+  requestedMs,
+  nowMs = Date.now(),
+} = {}) {
+  const stageBudget = Math.max(0, Math.floor(Number(stageBudgetMs) || 0));
+  const stageStarted = Number.isFinite(Number(stageStartedAtMs)) ? Number(stageStartedAtMs) : nowMs;
+  const requested = Math.max(0, Math.floor(Number(requestedMs) || 0));
+  const deadlines = [stageStarted + stageBudget, nowMs + requested];
+  const councilDeadline = councilSettlementDeadlineMs(run);
+  if (Number.isFinite(councilDeadline)) deadlines.push(councilDeadline);
+  const absoluteDeadlineMs = Math.min(...deadlines);
+  const remaining = Math.max(0, absoluteDeadlineMs - nowMs);
+  const settlementGraceMs = attemptSettlementGrace(run, remaining);
+  return Object.freeze({
+    absolute_deadline_ms: absoluteDeadlineMs,
+    lifecycle_remaining_ms: stageLifecycleRemainingMs(stageBudget, stageStarted, nowMs),
+    settlement_grace_ms: settlementGraceMs,
+    timeout_ms: Math.max(0, remaining - settlementGraceMs),
+  });
+}
+
+function stageRepairReserveMs(run, stage) {
+  if (run?.council_mode === "quick" || run?.council_pace !== "fast") return 0;
+  const profile = runPace(run);
+  if (stage === "evidence") return profile.evidence_repair_reserve_ms || 0;
+  if (stage === "methods") return profile.master_repair_reserve_ms || 0;
+  if (stage === "portfolio_manager") return profile.pm_repair_reserve_ms || 0;
+  if (/^debate_round_[1-3]$/u.test(stage)) return profile.debate_repair_reserve_ms || 0;
+  return 0;
+}
+
+/**
+ * Keep a reviewed repair slice inside the existing fast-stage cap. Tiny caller-lowered test
+ * budgets stay untouched, and an explicit caller cap still disables retries at the call site.
+ */
+export function stagePrimaryAttemptBudget(run, stage, stageBudgetMs, { reserveRepair = true } = {}) {
+  const budget = Math.max(0, Math.floor(Number(stageBudgetMs) || 0));
+  if (!reserveRepair) return budget;
+  const reserve = Math.max(0, Math.floor(stageRepairReserveMs(run, stage)));
+  return budget > reserve + 1_000 ? budget - reserve : budget;
 }
 
 /**
@@ -1145,8 +1238,7 @@ export function parseRepairBudget(run, {
 } = {}) {
   const stageBudget = Math.max(0, Math.floor(Number(stageBudgetMs) || 0));
   const stageStarted = Number.isFinite(Number(stageStartedAtMs)) ? Number(stageStartedAtMs) : nowMs;
-  const stageElapsed = Math.max(0, nowMs - stageStarted);
-  const stageRemaining = Math.max(0, stageBudget - stageElapsed);
+  const stageRemaining = stageLifecycleRemainingMs(stageBudget, stageStarted, nowMs);
   const paceAwareCap = Math.floor(stageBudget * LIMITS.PARSE_REPAIR_STAGE_FRACTION);
   const boundedCap = Math.max(0, Math.min(LIMITS.PARSE_REPAIR_MS, paceAwareCap, stageRemaining));
   return Math.floor(remainingCouncilBudget(run, boundedCap, nowMs));
@@ -3295,10 +3387,13 @@ export function queueHeadlessRun(args) {
   const dryRun = isDryRun(args);
   const language = resolveLanguage(args);
   const frozen = frozenMasterSelection(args);
-  const dir = runPath(id);
-  mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
   const timing = councilTiming(args, startedAt);
+  // Resolve every operator setting before allocating persistent state. Invalid fast-profile
+  // overrides must fail without leaving an apparently queued run behind.
+  const workerExecutionConfig = codexRunConfig(process.env, { councilPace: timing.council_pace });
+  const dir = runPath(id);
+  mkdirSync(dir, { recursive: true });
   const run = {
     run_id: id,
     symbol,
@@ -3306,7 +3401,7 @@ export function queueHeadlessRun(args) {
     language,
     dry_run: dryRun,
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
-    worker_execution_config: codexWorkerConfig(),
+    worker_execution_config: workerExecutionConfig,
     entry_tool: args.entry_tool || "analyze_symbol",
     decision_requested: args.synthesis !== false,
     visibility_required: false,
@@ -3356,6 +3451,9 @@ export async function collectEvidence(args) {
   const frozen = frozenMasterSelection(args);
   const startedAt = args.queued_run?.started_at || new Date().toISOString();
   const timing = councilTiming(args, startedAt);
+  // Validate the complete stage policy before grounding performs network I/O or a run directory
+  // is created. The same frozen object is persisted for later audit.
+  const workerExecutionConfig = codexRunConfig(process.env, { councilPace: timing.council_pace });
   const timeoutMs = evidenceStageTimeout(args, timing);
   const defaultConcurrency = timing.council_mode === "quick"
     ? QUICK_TASKS.length
@@ -3389,7 +3487,7 @@ export async function collectEvidence(args) {
     language,
     dry_run: dryRun,
     execution_mode: dryRun ? "dry_run" : "background_codex_exec",
-    worker_execution_config: codexWorkerConfig(),
+    worker_execution_config: workerExecutionConfig,
     entry_tool: args.entry_tool || "collect_evidence",
     decision_requested: (args.entry_tool || "collect_evidence") !== "collect_evidence"
       && args.synthesis !== false,
@@ -3528,7 +3626,12 @@ export async function collectEvidence(args) {
       outputSchema = EVIDENCE_OUTPUT_SCHEMA_PATH,
       attemptKind = WORKER_ATTEMPT_KIND.primary.attempt_kind,
     } = {}) => {
-      const allowedMs = remainingCouncilBudget(run, budgetMs);
+      const attemptWindow = stageAttemptWindow(run, {
+        stageBudgetMs: timeoutMs,
+        stageStartedAtMs: workerStartedAt,
+        requestedMs: budgetMs,
+      });
+      const allowedMs = attemptWindow.timeout_ms;
       if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
       const result = await runRecordedCodexAttempt(run, `evidence:${task}:${attemptKind}:${attempt}`, {
         stage: "evidence",
@@ -3541,8 +3644,13 @@ export async function collectEvidence(args) {
       }, ({ pid, output, elapsed_ms }) => {
         updateTask(run, task, "running", { pid, output, attempts: attempt });
         appendEvent(run, "task_heartbeat", { task, pid, output, elapsed_ms, attempt });
-      }, { search, outputSchema, sigkillGraceMs: councilKillGrace(run) });
-      return { ...result, budget_ms: allowedMs };
+      }, {
+        search,
+        outputSchema,
+        sigkillGraceMs: attemptWindow.settlement_grace_ms,
+        absoluteDeadlineMs: attemptWindow.absolute_deadline_ms,
+      });
+      return { ...result, budget_ms: result.timing?.worker_timeout_ms ?? allowedMs };
     };
     const commitFailure = ({ failedResult, budgetMs, attempts, failureKind, parseError, retryDiagnostic }) => {
       const failure = workerFailureArtifacts({
@@ -3576,7 +3684,10 @@ export async function collectEvidence(args) {
     };
 
     let executionAttempt = 1;
-    let result = await runAttempt(prompt, timeoutMs, executionAttempt);
+    const primaryBudgetMs = stagePrimaryAttemptBudget(run, "evidence", timeoutMs, {
+      reserveRepair: stageRetryAllowed(args),
+    });
+    let result = await runAttempt(prompt, primaryBudgetMs, executionAttempt);
     // Same stall as the method bench, and here it is more expensive: a core evidence seat that
     // produced nothing before its cap closes the evidence barrier and takes the whole council
     // with it. Two consecutive MU runs died this way -- once on `market_data`, once on
@@ -3585,11 +3696,18 @@ export async function collectEvidence(args) {
     // the cap is not the thing to raise. Only a timeout earns the retry; a parse or coverage
     // failure has its own bounded repair path below, and `remainingCouncilBudget` refuses the
     // attempt when the run can no longer afford it.
+    let lifecycleRemainingMs = stageLifecycleRemainingMs(timeoutMs, workerStartedAt);
     if (!result.ok && result.timedOut
-      && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
+      && stageRetryAllowed(args) && lifecycleRemainingMs > 0
+      && remainingCouncilBudget(run, lifecycleRemainingMs) > 0) {
       executionAttempt = 2;
-      appendEvent(run, "task_retry", { task, reason: "worker_timeout", attempt: executionAttempt });
-      result = await runAttempt(prompt, timeoutMs, executionAttempt, {
+      appendEvent(run, "task_retry", {
+        task,
+        reason: "worker_timeout",
+        attempt: executionAttempt,
+        remaining_lifecycle_ms: lifecycleRemainingMs,
+      });
+      result = await runAttempt(prompt, lifecycleRemainingMs, executionAttempt, {
         attemptKind: WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
       });
     }
@@ -4587,7 +4705,12 @@ export async function runHeadlessMasters(run, args = {}) {
       attempt,
       attemptKind = WORKER_ATTEMPT_KIND.primary.attempt_kind,
     ) => {
-      const allowedMs = remainingCouncilBudget(run, budgetMs);
+      const attemptWindow = stageAttemptWindow(run, {
+        stageBudgetMs: timeoutMs,
+        stageStartedAtMs: workerStartedAt,
+        requestedMs: budgetMs,
+      });
+      const allowedMs = attemptWindow.timeout_ms;
       if (allowedMs <= 0) return { ...deadlineResult(run), budget_ms: 0 };
       const result = await runRecordedCodexAttempt(run, `methods:${id}:${attemptKind}:${attempt}`, {
         stage: "methods",
@@ -4603,9 +4726,10 @@ export async function runHeadlessMasters(run, args = {}) {
       }, {
         search: false,
         outputSchema: methodVoiceSchemaPath,
-        sigkillGraceMs: councilKillGrace(run),
+        sigkillGraceMs: attemptWindow.settlement_grace_ms,
+        absoluteDeadlineMs: attemptWindow.absolute_deadline_ms,
       });
-      return { ...result, budget_ms: allowedMs };
+      return { ...result, budget_ms: result.timing?.worker_timeout_ms ?? allowedMs };
     };
     const parse = (result, { repairedTransport = false } = {}) => {
       if (frozenOpinion) {
@@ -4663,17 +4787,27 @@ export async function runHeadlessMasters(run, args = {}) {
 
     const workerStartedAt = Date.now();
     let workerAttempt = 1;
-    let result = await execute(prompt, timeoutMs, workerAttempt);
+    const primaryBudgetMs = stagePrimaryAttemptBudget(run, "methods", timeoutMs, {
+      reserveRepair: stageRetryAllowed(args),
+    });
+    let result = await execute(prompt, primaryBudgetMs, workerAttempt);
     // A timed-out voice worker gets at most one fresh, budget-bounded attempt. Silence is not
     // itself a failure signal because a worker may emit only its final payload. Parse and policy
     // failures have separate repair paths below and do not earn this timeout retry.
+    const lifecycleRemainingMs = stageLifecycleRemainingMs(timeoutMs, workerStartedAt);
     if (!result.ok && result.timedOut
-      && stageRetryAllowed(args) && remainingCouncilBudget(run, timeoutMs) > 0) {
+      && stageRetryAllowed(args) && lifecycleRemainingMs > 0
+      && remainingCouncilBudget(run, lifecycleRemainingMs) > 0) {
       workerAttempt = 2;
-      appendEvent(run, "master_retry", { master: id, reason: "worker_timeout", attempt: workerAttempt });
+      appendEvent(run, "master_retry", {
+        master: id,
+        reason: "worker_timeout",
+        attempt: workerAttempt,
+        remaining_lifecycle_ms: lifecycleRemainingMs,
+      });
       result = await execute(
         prompt,
-        timeoutMs,
+        lifecycleRemainingMs,
         workerAttempt,
         WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
       );
@@ -4882,9 +5016,19 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   });
   updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round, attempts: 1 });
   const workerStartedAt = Date.now();
+  const stage = debateWorkerStage(role, context.round);
+  const primaryBudgetMs = stagePrimaryAttemptBudget(run, stage, timeoutMs, {
+    reserveRepair: context.reserveRepair ?? (context.retryOnTimeout === true),
+  });
+  const attemptWindow = (requestedMs) => stageAttemptWindow(run, {
+    stageBudgetMs: timeoutMs,
+    stageStartedAtMs: workerStartedAt,
+    requestedMs,
+  });
+  const primaryWindow = attemptWindow(primaryBudgetMs);
   let attemptCount = 1;
   const attemptDiagnostics = [];
-  let result = timeoutMs <= 0
+  let result = primaryWindow.timeout_ms <= 0
     ? deadlineResult(run)
     : await runRecordedCodexAttempt(
       run,
@@ -4893,17 +5037,21 @@ export async function runDebateRole(run, role, context, timeoutMs) {
         stage: debateWorkerStage(role, context.round),
         attempt: 1,
         attempt_kind: WORKER_ATTEMPT_KIND.primary.attempt_kind,
-        budget_ms: timeoutMs,
+        budget_ms: primaryWindow.timeout_ms,
         search_enabled: false,
       },
       prompt,
-      timeoutMs,
+      primaryWindow.timeout_ms,
       ({ pid, output }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round });
     }, ({ pid, output, elapsed_ms }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round });
       appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
-    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+    }, {
+      search: false,
+      sigkillGraceMs: primaryWindow.settlement_grace_ms,
+      absoluteDeadlineMs: primaryWindow.absolute_deadline_ms,
+    });
   const parseWorkerPacket = (workerResult, workerPrompt, { repairedTransport = false } = {}) => {
     const candidate = debateFromCodex(workerResult, role, run, workerPrompt, {
       managerDecisionOnly: structuredManagerDecision,
@@ -5049,10 +5197,19 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   // `retryOnTimeout` is opt-in from the caller that owns `args`: a caller-lowered synthesis
   // budget means every side times out by construction, and a retry there only doubles the
   // process spawns before the same fail-closed answer.
+  const lifecycleRemainingMs = stageLifecycleRemainingMs(timeoutMs, workerStartedAt);
+  const retryWindow = attemptWindow(lifecycleRemainingMs);
   if (!result.ok && result.timedOut
-    && context.retryOnTimeout === true && remainingCouncilBudget(run, timeoutMs) > 0) {
+    && context.retryOnTimeout === true && retryWindow.timeout_ms > 0
+    && remainingCouncilBudget(run, lifecycleRemainingMs) > 0) {
     attemptCount = 2;
-    appendEvent(run, "agent_retry", { role, round: context.round, reason: "worker_timeout", attempt: attemptCount });
+    appendEvent(run, "agent_retry", {
+      role,
+      round: context.round,
+      reason: "worker_timeout",
+      attempt: attemptCount,
+      remaining_lifecycle_ms: lifecycleRemainingMs,
+    });
     updateAgent(run, role, "running", { round: context.round, attempts: attemptCount });
     result = await runRecordedCodexAttempt(
       run,
@@ -5061,17 +5218,21 @@ export async function runDebateRole(run, role, context, timeoutMs) {
         stage: debateWorkerStage(role, context.round),
         attempt: attemptCount,
         attempt_kind: WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
-        budget_ms: timeoutMs,
+        budget_ms: retryWindow.timeout_ms,
         search_enabled: false,
       },
       prompt,
-      timeoutMs,
+      retryWindow.timeout_ms,
       ({ pid, output }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
     }, ({ pid, output, elapsed_ms }) => {
       updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
       appendEvent(run, "agent_heartbeat", { role, round: context.round, pid, output, elapsed_ms });
-    }, { search: false, sigkillGraceMs: councilKillGrace(run) });
+    }, {
+      search: false,
+      sigkillGraceMs: retryWindow.settlement_grace_ms,
+      absoluteDeadlineMs: retryWindow.absolute_deadline_ms,
+    });
   }
 
   let packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, prompt)));
@@ -5082,9 +5243,15 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       stageBudgetMs: timeoutMs,
       stageStartedAtMs: workerStartedAt,
     });
-    if (repairBudget > 0) {
+    const repairWindow = attemptWindow(repairBudget);
+    if (repairWindow.timeout_ms > 0) {
       const repairReason = packet.failure_kind;
-      appendEvent(run, "agent_parse_repair", { role, round: context.round, budget_ms: repairBudget, reason: repairReason });
+      appendEvent(run, "agent_parse_repair", {
+        role,
+        round: context.round,
+        budget_ms: repairWindow.timeout_ms,
+        reason: repairReason,
+      });
       const repairPrompt = [
         "PARSE-ONLY TRANSPORT REPAIR. Do not search, browse, add facts or redo the analysis.",
         `Role: ${role}; symbol: ${run.symbol}; as_of: ${run.as_of}; reader language: ${run.language}; round: ${context.round || "final"}.`,
@@ -5121,14 +5288,18 @@ export async function runDebateRole(run, role, context, timeoutMs) {
           stage: debateWorkerStage(role, context.round),
           attempt: attemptCount,
           attempt_kind: WORKER_ATTEMPT_KIND.parse_repair.attempt_kind,
-          budget_ms: repairBudget,
+          budget_ms: repairWindow.timeout_ms,
           search_enabled: false,
         },
         repairPrompt,
-        repairBudget,
+        repairWindow.timeout_ms,
         ({ pid, output }) => {
         updateAgent(run, role, "running", { pid, output, round: context.round, attempts: attemptCount });
-      }, () => {}, { search: false, sigkillGraceMs: councilKillGrace(run) });
+      }, () => {}, {
+        search: false,
+        sigkillGraceMs: repairWindow.settlement_grace_ms,
+        absoluteDeadlineMs: repairWindow.absolute_deadline_ms,
+      });
       persistTransportAttemptDiagnostic(2, result);
       packet = enforceLanguage(enforceRoundQna(parseWorkerPacket(result, repairPrompt, { repairedTransport: true })));
       if (packet?.failure_kind) persistManagerAttemptDiagnostic(2, packet, result);
@@ -5747,6 +5918,8 @@ export async function synthesizeDecision(run, args) {
     bear,
     outputMode,
     structuredDecisionOnly: true,
+    retryOnTimeout,
+    reserveRepair: retryOnTimeout,
   }, pmBudget);
   const managerOk = !debateFailure(managerStep);
   const manager = bindDecisionDebateRounds(

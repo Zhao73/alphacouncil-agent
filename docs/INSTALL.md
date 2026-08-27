@@ -70,18 +70,37 @@ that figures for those names must come from a primary document and be cited as s
 | `ALPHACOUNCIL_SEC_USER_AGENT` | Your own SEC contact, advisable at volume | n/a |
 
 Headless runs normally inherit the authenticated Codex CLI's default model settings. To
-make a benchmark or production run explicit and auditable, pin either or both settings
-before starting the MCP server or ChatGPT Work gateway:
+make a benchmark or production run explicit and auditable, pin the model before starting
+the MCP server or ChatGPT Work gateway:
 
 ```bash
 export ALPHACOUNCIL_AGENT_CODEX_MODEL=gpt-5.6-sol
+```
+
+The `fast` pace then uses the candidate stage profile automatically: `low` for evidence,
+methods and debate, `medium` for the portfolio manager, and `minimal` for no-search repair.
+That profile was selected from live worker timing rather than by lowering the 52-coverage-item,
+26-method, three-round or PM contracts. A single global `high`, `xhigh`, `max` or `ultra`
+override is rejected for `fast` because those settings exhausted the 15-minute envelope in
+live trials. They remain available for `normal`/`slow`:
+
+```bash
 export ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT=max
 ```
 
-Every spawned evidence, method, debate, verifier and PM worker receives the same explicit
-CLI overrides. The requested model and reasoning effort are written into `status.json`,
-`evidence.json`, `events.jsonl` and `all_agents.md`; this proves what was requested, while
-provider-side execution remains subject to the authenticated Codex service.
+Advanced operators may override individual stages with
+`ALPHACOUNCIL_AGENT_CODEX_EVIDENCE_REASONING_EFFORT`,
+`ALPHACOUNCIL_AGENT_CODEX_METHOD_REASONING_EFFORT`,
+`ALPHACOUNCIL_AGENT_CODEX_DEBATE_REASONING_EFFORT`,
+`ALPHACOUNCIL_AGENT_CODEX_PM_REASONING_EFFORT`, and
+`ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT`. Stage settings take precedence over the
+legacy global setting. Any effective deviation from the candidate map is recorded as
+unvalidated. Any effective high-or-deeper fast stage additionally requires
+`ALPHACOUNCIL_AGENT_ALLOW_UNVALIDATED_FAST_REASONING=true`.
+
+The requested model, resolved stage efforts and their provenance are written into
+`status.json`, `evidence.json`, `events.jsonl` and `all_agents.md`; this proves what was
+requested, while provider-side execution remains subject to the authenticated Codex service.
 
 Run `node scripts/doctor.mjs` at any time to see which copy is running, whether the
 persona set loads, and what the data directory holds.
@@ -147,6 +166,9 @@ the server saves a terminal `incomplete` run naming failed/timed-out/skipped sea
 selected tier's 15-, 30-, or 60-minute bound guarantees terminal persistence, not complete
 results when search, model transport or data providers are unavailable. `plan_visible_run`
 has no such enforceable deadline because the external host owns and schedules its subagents.
+In the default, unlowered `fast` path, each primary, timeout retry and no-search parse repair shares one seat/round
+lifecycle cap; a retry can consume only the time left inside that cap and cannot silently
+double it.
 
 A full `user_response.md` lists all eight or eleven receipt-bound analyst statuses and summaries, every selected
 stable master ID with its stance and isolated-worker output/status, and a system-owned price

@@ -2,7 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { COUNCIL_PACES, LIMITS } from "../../mcp/lib/constants.mjs";
-import { parseRepairBudget } from "../../mcp/lib/orchestrator.mjs";
+import {
+  parseRepairBudget,
+  stageAttemptWindow,
+  stageLifecycleRemainingMs,
+  stagePrimaryAttemptBudget,
+} from "../../mcp/lib/orchestrator.mjs";
 
 const NOW = Date.parse("2026-08-03T08:00:00.000Z");
 
@@ -82,4 +87,81 @@ test("stage elapsed time and a lowered total deadline both reduce the repair bud
     stageStartedAtMs: NOW,
     nowMs: NOW,
   }), 0);
+});
+
+test("fast primary, retry and repair share one immutable stage lifecycle", () => {
+  const run = fullRun("fast");
+  const expectedPrimary = {
+    evidence: 220_000,
+    methods: 102_000,
+    debate_round_1: 38_000,
+    portfolio_manager: 75_000,
+  };
+  const stageCaps = {
+    evidence: COUNCIL_PACES.fast.evidence_ms,
+    methods: COUNCIL_PACES.fast.master_ms,
+    debate_round_1: COUNCIL_PACES.fast.debate_ms,
+    portfolio_manager: COUNCIL_PACES.fast.pm_ms,
+  };
+
+  for (const [stage, primaryMs] of Object.entries(expectedPrimary)) {
+    const stageCapMs = stageCaps[stage];
+    assert.equal(stagePrimaryAttemptBudget(run, stage, stageCapMs), primaryMs, stage);
+    const retryMs = stageLifecycleRemainingMs(stageCapMs, NOW, NOW + primaryMs);
+    assert.equal(primaryMs + retryMs, stageCapMs, `${stage} retry cannot double its lifecycle`);
+    assert.equal(stageLifecycleRemainingMs(stageCapMs, NOW, NOW + stageCapMs + 1), 0);
+  }
+});
+
+test("non-fast and explicitly non-retrying callers retain their existing primary cap", () => {
+  const normal = fullRun("normal");
+  assert.equal(
+    stagePrimaryAttemptBudget(normal, "evidence", COUNCIL_PACES.normal.evidence_ms),
+    COUNCIL_PACES.normal.evidence_ms,
+  );
+  const fast = fullRun("fast");
+  assert.equal(
+    stagePrimaryAttemptBudget(fast, "methods", COUNCIL_PACES.fast.master_ms, { reserveRepair: false }),
+    COUNCIL_PACES.fast.master_ms,
+  );
+  assert.equal(stagePrimaryAttemptBudget(fast, "methods", 8_500), 8_500, "tiny caller cap is not erased");
+});
+
+test("attempt timers reserve settlement grace against one absolute lifecycle deadline", () => {
+  const run = fullRun("fast");
+  const primary = stageAttemptWindow(run, {
+    stageBudgetMs: COUNCIL_PACES.fast.evidence_ms,
+    stageStartedAtMs: NOW,
+    requestedMs: 220_000,
+    nowMs: NOW,
+  });
+  assert.deepEqual(primary, {
+    absolute_deadline_ms: NOW + 220_000,
+    lifecycle_remaining_ms: 280_000,
+    settlement_grace_ms: 5_000,
+    timeout_ms: 215_000,
+  });
+
+  const retry = stageAttemptWindow(run, {
+    stageBudgetMs: COUNCIL_PACES.fast.evidence_ms,
+    stageStartedAtMs: NOW,
+    requestedMs: 60_000,
+    nowMs: NOW + 220_000,
+  });
+  assert.equal(retry.absolute_deadline_ms, NOW + COUNCIL_PACES.fast.evidence_ms);
+  assert.equal(retry.timeout_ms + retry.settlement_grace_ms, 60_000);
+  assert.equal(retry.absolute_deadline_ms - NOW, COUNCIL_PACES.fast.evidence_ms);
+
+  const callerLowered = stageAttemptWindow(run, {
+    stageBudgetMs: 5_000,
+    stageStartedAtMs: NOW,
+    requestedMs: 5_000,
+    nowMs: NOW,
+  });
+  assert.deepEqual(callerLowered, {
+    absolute_deadline_ms: NOW + 5_000,
+    lifecycle_remaining_ms: 5_000,
+    settlement_grace_ms: 1_000,
+    timeout_ms: 4_000,
+  });
 });

@@ -6,6 +6,17 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Fast full councils now resolve an auditable candidate stage-aware Codex policy: low reasoning for
+  evidence, method voices and debate, medium for the PM, and minimal for no-search repairs.
+  A global high-or-deeper fast override fails before queueing unless explicitly marked as an
+  unvalidated diagnostic; normal and slow retain operator-selected global reasoning.
+- Evidence, method, debate and PM timeout retries now debit the original seat/round lifecycle
+  instead of receiving a second full stage cap. Fast reserves bounded repair slices inside the
+  existing 15-minute allocation, records actual per-attempt reasoning provenance, and exposes
+  the complete stage profile in persisted audit artifacts.
+- Out-of-scope method prompts now forbid directional action vocabulary in every first-person
+  field, including disagreement prose, so a substantive abstaining method voice can pass the
+  existing action-safety gate without being replaced or falsely treated as a trade.
 - Symbol news now applies a deterministic issuer-relevance gate after the date gate. Yahoo
   ticker RSS can return fresh but unrelated market syndication; the tool resolves the issuer
   name from the quote endpoint, retains only headlines naming the ticker or issuer, and reports
