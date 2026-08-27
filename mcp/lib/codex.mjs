@@ -31,12 +31,15 @@ const CODEX_MODEL_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/+\-]{0,127}$/u;
 const CODEX_REASONING_EFFORTS = new Set([
   "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
 ]);
+const GPT_56_SOL_REASONING_EFFORTS = new Set([
+  "none", "low", "medium", "high", "xhigh", "max",
+]);
 const FAST_REASONING_PROFILE = Object.freeze({
   evidence: "low",
   methods: "low",
   debate: "low",
   portfolio_manager: "medium",
-  repair: "minimal",
+  repair: "none",
 });
 const STAGE_REASONING_ENV = Object.freeze({
   evidence: "ALPHACOUNCIL_AGENT_CODEX_EVIDENCE_REASONING_EFFORT",
@@ -51,8 +54,19 @@ function optionalWorkerSetting(value) {
   return normalized || null;
 }
 
+function assertModelReasoningEffort(model, reasoningEffort, label) {
+  // Only the canonical ID was verified against the live Codex CLI. Provider namespaces,
+  // aliases and future suffixes may route to different capability sets and must not inherit
+  // this allowlist by pattern guesswork.
+  if (model !== "gpt-5.6-sol" || !reasoningEffort) return;
+  if (GPT_56_SOL_REASONING_EFFORTS.has(reasoningEffort)) return;
+  throw new Error(
+    `${label}=${reasoningEffort} is not supported by ${model}; use one of ${[...GPT_56_SOL_REASONING_EFFORTS].join(", ")}`,
+  );
+}
+
 /** Resolve and validate the non-secret Codex leaf-worker settings recorded with every run. */
-export function codexWorkerConfig(env = process.env) {
+export function codexWorkerConfig(env = process.env, { validateModelReasoning = true } = {}) {
   const model = optionalWorkerSetting(env.ALPHACOUNCIL_AGENT_CODEX_MODEL);
   const reasoningEffort = optionalWorkerSetting(env.ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT);
   if (model && !CODEX_MODEL_PATTERN.test(model)) {
@@ -64,6 +78,9 @@ export function codexWorkerConfig(env = process.env) {
     throw new Error(
       `ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT must be one of ${[...CODEX_REASONING_EFFORTS].join(", ")}`,
     );
+  }
+  if (validateModelReasoning) {
+    assertModelReasoningEffort(model, reasoningEffort, "ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT");
   }
   return Object.freeze({
     provider: "codex_cli",
@@ -117,13 +134,16 @@ export function codexAttemptConfig(env = process.env, {
   stage = "evidence",
   attemptKind = "primary",
 } = {}) {
-  const base = codexWorkerConfig(env);
+  // Parse the global setting without validating its model compatibility yet: an explicit
+  // stage setting has higher precedence and may replace an unsupported global fallback.
+  const base = codexWorkerConfig(env, { validateModelReasoning: false });
   const policyStage = codexReasoningPolicyStage(stage, attemptKind);
   const stageEnv = STAGE_REASONING_ENV[policyStage];
   const stageEffort = optionalWorkerSetting(env[stageEnv]);
   assertReasoningEffort(stageEffort, stageEnv);
   const fastDefault = councilPace === "fast" ? FAST_REASONING_PROFILE[policyStage] : null;
   const reasoningEffort = stageEffort || base.reasoning_effort || fastDefault;
+  assertModelReasoningEffort(base.model, reasoningEffort, stageEnv);
   const reasoningSource = stageEffort
     ? `explicit_stage_environment:${stageEnv}`
     : base.reasoning_effort
@@ -142,7 +162,7 @@ export function codexAttemptConfig(env = process.env, {
 
 /** Validate and describe the complete worker policy before a run directory is queued. */
 export function codexRunConfig(env = process.env, { councilPace = null } = {}) {
-  const base = codexWorkerConfig(env);
+  const base = codexWorkerConfig(env, { validateModelReasoning: false });
   const allowUnvalidated = explicitBoolean(env.ALPHACOUNCIL_AGENT_ALLOW_UNVALIDATED_FAST_REASONING);
   const stages = Object.fromEntries(Object.keys(FAST_REASONING_PROFILE).map((stage) => {
     const attemptKind = stage === "repair" ? "parse_repair" : "primary";

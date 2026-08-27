@@ -78,7 +78,8 @@ export ALPHACOUNCIL_AGENT_CODEX_MODEL=gpt-5.6-sol
 ```
 
 The `fast` pace then uses the candidate stage profile automatically: `low` for evidence,
-methods and debate, `medium` for the portfolio manager, and `minimal` for no-search repair.
+methods and debate, `medium` for the portfolio manager, and `none` for no-search repair.
+For `gpt-5.6-sol`, unsupported effort values fail before a worker is launched.
 That profile was selected from live worker timing rather than by lowering the 52-coverage-item,
 26-method, three-round or PM contracts. A single global `high`, `xhigh`, `max` or `ultra`
 override is rejected for `fast` because those settings exhausted the 15-minute envelope in

@@ -7,7 +7,8 @@ Notable changes per release. Dates are UTC.
 ### Fixed
 
 - Fast full councils now resolve an auditable candidate stage-aware Codex policy: low reasoning for
-  evidence, method voices and debate, medium for the PM, and minimal for no-search repairs.
+  evidence, method voices and debate, medium for the PM, and none for no-search repairs; the
+  validated 5.6 Sol compatibility gate rejects unsupported effort values before worker launch.
   A global high-or-deeper fast override fails before queueing unless explicitly marked as an
   unvalidated diagnostic; normal and slow retain operator-selected global reasoning.
 - Evidence, method, debate and PM timeout retries now debit the original seat/round lifecycle

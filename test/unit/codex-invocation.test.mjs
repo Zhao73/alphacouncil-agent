@@ -106,7 +106,7 @@ test("fast runs freeze a stage-aware reasoning policy while keeping one model", 
       methods: "low",
       debate: "low",
       portfolio_manager: "medium",
-      repair: "minimal",
+      repair: "none",
     },
   );
   const repair = codexWorker.codexAttemptConfig(env, {
@@ -114,7 +114,7 @@ test("fast runs freeze a stage-aware reasoning policy while keeping one model", 
     stage: "evidence",
     attemptKind: "parse_repair",
   });
-  assert.equal(repair.reasoning_effort, "minimal");
+  assert.equal(repair.reasoning_effort, "none");
   assert.equal(repair.reasoning_effort_source, "fast_stage_profile_v1");
   assert.equal(repair.reasoning_policy_stage, "repair");
 });
@@ -169,10 +169,54 @@ test("fast validates the effective stage map rather than the legacy global field
     ALPHACOUNCIL_AGENT_CODEX_METHOD_REASONING_EFFORT: "low",
     ALPHACOUNCIL_AGENT_CODEX_DEBATE_REASONING_EFFORT: "low",
     ALPHACOUNCIL_AGENT_CODEX_PM_REASONING_EFFORT: "medium",
-    ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT: "minimal",
+    ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT: "none",
   }, { councilPace: "fast" });
   assert.equal(safelyOverridden.pace_profile_conformance, "candidate_default");
   assert.equal(safelyOverridden.stage_reasoning.methods.source.includes("explicit_stage_environment"), true);
+});
+
+test("gpt-5.6-sol rejects unsupported reasoning values before a worker starts", () => {
+  assert.throws(
+    () => codexWorker.codexRunConfig({
+      ALPHACOUNCIL_AGENT_CODEX_MODEL: "gpt-5.6-sol",
+      ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT: "minimal",
+    }, { councilPace: "fast" }),
+    /minimal is not supported by gpt-5\.6-sol/u,
+  );
+  assert.throws(
+    () => codexWorker.codexWorkerConfig({
+      ALPHACOUNCIL_AGENT_CODEX_MODEL: "gpt-5.6-sol",
+      ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "ultra",
+    }),
+    /ultra is not supported by gpt-5\.6-sol/u,
+  );
+
+  const stageOverridesWin = codexWorker.codexRunConfig({
+    ALPHACOUNCIL_AGENT_CODEX_MODEL: "gpt-5.6-sol",
+    ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "minimal",
+    ALPHACOUNCIL_AGENT_CODEX_EVIDENCE_REASONING_EFFORT: "low",
+    ALPHACOUNCIL_AGENT_CODEX_METHOD_REASONING_EFFORT: "low",
+    ALPHACOUNCIL_AGENT_CODEX_DEBATE_REASONING_EFFORT: "low",
+    ALPHACOUNCIL_AGENT_CODEX_PM_REASONING_EFFORT: "medium",
+    ALPHACOUNCIL_AGENT_CODEX_REPAIR_REASONING_EFFORT: "none",
+  }, { councilPace: "fast" });
+  assert.equal(stageOverridesWin.pace_profile_conformance, "candidate_default");
+  assert.ok(Object.values(stageOverridesWin.stage_reasoning)
+    .every((item) => item.source.startsWith("explicit_stage_environment:")));
+
+  for (const unknownCapabilityId of [
+    "provider/gpt-5.6-sol",
+    "provider:gpt-5.6-sol",
+    "gpt-5.6-sol-custom",
+    "gpt-5.6-terra",
+    "gpt-5.6-luna",
+    "gpt-5.6-solution",
+  ]) {
+    assert.doesNotThrow(() => codexWorker.codexWorkerConfig({
+      ALPHACOUNCIL_AGENT_CODEX_MODEL: unknownCapabilityId,
+      ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: "minimal",
+    }), `${unknownCapabilityId} must not inherit the exact canonical model allowlist`);
+  }
 });
 
 test("unknown runtime stages fail closed instead of inheriting evidence reasoning", () => {

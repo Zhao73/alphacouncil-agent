@@ -509,7 +509,8 @@ or no-search repair: evidence `220s + 60s`, method `102s + 8s`, each debate side
 `38s + 7s`, and PM `75s + 20s`. The split never adds time to the table above: primary,
 timeout retry and parse repair all debit the same per-seat or per-round wall clock. Fast also
 uses a recorded stage-aware reasoning profile (`low` evidence/method/debate, `medium` PM,
-`minimal` repair). It does not reduce the evidence, method, debate or report contracts.
+`none` repair). It does not reduce the evidence, method, debate or report contracts. The
+`gpt-5.6-sol` profile rejects unsupported effort values before worker launch.
 
 The tier also shapes what each worker is asked to produce. A cap on its own is a timeout, and a
 timeout is not a plan: the identical prompt with a shorter fuse buys a packet the worker could
