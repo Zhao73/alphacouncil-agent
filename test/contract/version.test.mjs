@@ -5,38 +5,20 @@ import { __test__ } from "../../mcp/server.mjs";
 import { repoFile } from "../helpers/paths.mjs";
 import { CANONICAL_MASTER_COUNT } from "../../mcp/lib/personas-v3/staging.mjs";
 import { RUNTIME_BUILD_IDENTITY } from "../../mcp/lib/constants.mjs";
+import { collectVersionDeclarations } from "../../scripts/check-release-consistency.mjs";
 
 const readJson = (rel) => JSON.parse(readFileSync(repoFile(rel), "utf8"));
 const readText = (rel) => readFileSync(repoFile(rel), "utf8");
 
 test("every manifest and the served VERSION agree with package.json", () => {
-  const expected = readJson("package.json").version;
-  const marketplace = readJson(".claude-plugin/marketplace.json");
-  const packageLock = readJson("package-lock.json");
-  const server = readJson("server.json");
-  const declared = {
-    "mcp/server.mjs VERSION": __test__.VERSION,
-    ".claude-plugin/plugin.json": readJson(".claude-plugin/plugin.json").version,
-    ".codex-plugin/plugin.json": readJson(".codex-plugin/plugin.json").version,
-    ".claude-plugin/marketplace.json metadata": marketplace.metadata.version,
-    ".claude-plugin/marketplace.json plugins[0]": marketplace.plugins[0].version,
-    "package-lock.json root": packageLock.version,
-    "package-lock.json packages root": packageLock.packages[""].version,
-    "server.json root": server.version,
-    "server.json packages[0]": server.packages[0].version,
-    "data/build-profile.v1.json package_version": readJson("data/build-profile.v1.json").package_version,
-  };
-  for (const [where, version] of Object.entries(declared)) {
+  const { canonical: expected, declarations } = collectVersionDeclarations(repoFile("."));
+  const declared = [
+    { location: "mcp/server.mjs VERSION", version: __test__.VERSION },
+    ...declarations,
+  ];
+  for (const { location: where, version } of declared) {
     assert.equal(version, expected, `${where} drifted from package.json`);
   }
-  assert.ok(
-    readText("CLAUDE.md").includes(`declared package/plugin version is \`${expected}\``),
-    "CLAUDE.md current build profile drifted from package.json",
-  );
-  assert.ok(
-    readText("AGENTS.md").includes(`Package/plugin version \`${expected}\` is the current source release candidate`),
-    "AGENTS.md current release boundary drifted from package.json",
-  );
 });
 
 test("runtime build identity binds the version to the critical executable source bytes", () => {

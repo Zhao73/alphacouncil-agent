@@ -9,6 +9,8 @@ jobs:
   publish:
     name: Publish npm package
     runs-on: ubuntu-latest
+    outputs:
+      dist_tag: ${{ steps.release-consistency.outputs.dist_tag }}
     permissions:
       contents: read
       id-token: write
@@ -28,6 +30,22 @@ jobs:
           npm --version
           node scripts/check-release-workflow.mjs --assert-tag "$RELEASE_TAG"
           node scripts/check-release-workflow.mjs --assert-npm-version "$(npm --version)"
+      - name: Verify release consistency
+        id: release-consistency
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node scripts/check-release-consistency.mjs --tag "$RELEASE_TAG"
+          echo "dist_tag=$(node scripts/check-release-consistency.mjs --dist-tag "$RELEASE_TAG")" >> "$GITHUB_OUTPUT"
+      - name: Verify tag is on main
+        run: |
+          git fetch --no-tags --depth=200 origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+              git fetch --no-tags --unshallow origin main:refs/remotes/origin/main
+            fi
+            git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          fi
       - name: Install exact dependencies
         run: npm ci
       - name: Run source checks
@@ -35,7 +53,9 @@ jobs:
       - name: Run packaged-host checks
         run: npm run test:package
       - name: Publish package through OIDC
-        run: npm publish --access public
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: npm publish --access public --tag "$(node scripts/check-release-consistency.mjs --dist-tag "$RELEASE_TAG")"
 
   github-release:
     name: Create or refresh GitHub release
@@ -47,11 +67,23 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       RELEASE_TAG: ${{ github.ref_name }}
+      DIST_TAG: ${{ needs.publish.outputs.dist_tag }}
     steps:
       - name: Create or refresh release
         run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest
+          if [ "$DIST_TAG" = "rc" ]; then
+            if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+              gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --prerelease
+            else
+              gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --prerelease
+            fi
+          elif [ "$DIST_TAG" = "latest" ]; then
+            if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+              gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest
+            else
+              gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --latest
+            fi
           else
-            gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --latest
+            echo "unsupported release dist-tag: $DIST_TAG" >&2
+            exit 1
           fi

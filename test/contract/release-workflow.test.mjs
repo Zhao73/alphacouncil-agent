@@ -76,13 +76,43 @@ test("workflow gate requires both idempotent GitHub release branches", () => {
     'gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest',
     'echo "release already exists"',
   );
-  assert.ok(validateReleaseWorkflow(noEdit).some((error) => error.includes("edit an existing release")));
+  assert.ok(validateReleaseWorkflow(noEdit).some((error) => error.includes("stable GitHub releases")));
 
   const noCreate = workflowText().replace(
     'gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --latest',
     'echo "release is missing"',
   );
-  assert.ok(validateReleaseWorkflow(noCreate).some((error) => error.includes("create a release")));
+  assert.ok(validateReleaseWorkflow(noCreate).some((error) => error.includes("stable GitHub releases")));
+});
+
+test("workflow gate requires release consistency and main ancestry before install", () => {
+  const noConsistency = workflowText().replace(
+    '          node scripts/check-release-consistency.mjs --tag "$RELEASE_TAG"',
+    '          echo "consistency skipped"',
+  );
+  assert.ok(validateReleaseWorkflow(noConsistency).some((error) => error.includes("validate the tag")));
+
+  const noAncestry = workflowText().replace(
+    '          git fetch --no-tags --unshallow origin main:refs/remotes/origin/main',
+    '          echo "unshallow skipped"',
+  );
+  assert.ok(validateReleaseWorkflow(noAncestry).some((error) => error.includes("unshallow fallback")));
+});
+
+test("workflow gate rejects a publish command that can route prereleases to latest", () => {
+  const untagged = workflowText().replace(
+    'npm publish --access public --tag "$(node scripts/check-release-consistency.mjs --dist-tag "$RELEASE_TAG")"',
+    "npm publish --access public",
+  );
+  assert.ok(validateReleaseWorkflow(untagged).some((error) => error.includes("latest-or-rc dist-tag")));
+});
+
+test("workflow gate rejects an rc GitHub release marked latest", () => {
+  const rcLatest = workflowText().replace(
+    'gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --prerelease',
+    'gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest',
+  );
+  assert.ok(validateReleaseWorkflow(rcLatest).some((error) => error.includes("rc GitHub releases")));
 });
 
 test("workflow YAML parser fails closed on duplicate keys and tabs", () => {

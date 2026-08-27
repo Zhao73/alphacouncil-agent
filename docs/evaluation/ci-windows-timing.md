@@ -403,3 +403,22 @@ The new probe file runs in the concurrent source phase rather than the Windows s
 The probe's approximately 21-second attributable cost is removed from the serial path; the
 source and full-analysis increases are attributed to shared-runner variation because WP4c made
 no corresponding code-path change. 本包不声称消除共享 runner 方差，也不保证 ≤540 s.
+
+## WP4d closure run
+
+WP4d check run
+[`33063711767`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33063711767)
+tested exact commit `ba151bcbfd426e3d020101c3864c6b6e75a6c094`. Attempt 1 was
+functionally green but missed the frozen latency gate. The one permitted same-SHA whole-run
+rerun then passed; no third attempt was made:
+
+| Windows attempt | Jobs API job interval | Job duration | `Run checks` interval | `Run checks` duration | Result |
+| --- | --- | ---: | --- | ---: | --- |
+| Attempt 1 / [`98488520587`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33063711767/job/98488520587) | 2026-08-27 10:35:40Z–10:46:26Z | 646 s | 10:36:00Z–10:46:23Z | 623 s | FAIL: latency only; 623 s > 540 s |
+| Attempt 2 / [`98491259196`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33063711767/job/98491259196) | 2026-08-27 10:47:26Z–10:56:20Z | 534 s | 10:47:49Z–10:56:15Z | 506 s | PASS: 506 s ≤ 540 s; job 534 s ≤ 540 s |
+
+Attempt 2 completed all five matrix jobs. Its four Windows TAP groups contained 1,415, 11,
+4 and 5 tests respectively, totalling 1,435 with zero failures and six intentional skips.
+`source_concurrent` preceded `windows_serial`; both expected method-schema diagnostic lines
+were present; packaged-host parity passed with zero actual retry announcements. The action
+runtime's Node.js 20 deprecation annotations were non-blocking and remain assigned to WP7.

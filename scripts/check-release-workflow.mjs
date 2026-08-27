@@ -242,6 +242,8 @@ export function validateReleaseWorkflow(text) {
     "Check out tagged source",
     "Set up Node for npm Trusted Publishing",
     "Verify tag and npm version",
+    "Verify release consistency",
+    "Verify tag is on main",
     "Install exact dependencies",
     "Run source checks",
     "Run packaged-host checks",
@@ -257,10 +259,12 @@ export function validateReleaseWorkflow(text) {
   const checkout = stepByName(publish, expectedPublishSteps[0]);
   const setup = stepByName(publish, expectedPublishSteps[1]);
   const guard = stepByName(publish, expectedPublishSteps[2]);
-  const install = stepByName(publish, expectedPublishSteps[3]);
-  const sourceCheck = stepByName(publish, expectedPublishSteps[4]);
-  const packageCheck = stepByName(publish, expectedPublishSteps[5]);
-  const publishStep = stepByName(publish, expectedPublishSteps[6]);
+  const consistency = stepByName(publish, expectedPublishSteps[3]);
+  const mainGuard = stepByName(publish, expectedPublishSteps[4]);
+  const install = stepByName(publish, expectedPublishSteps[5]);
+  const sourceCheck = stepByName(publish, expectedPublishSteps[6]);
+  const packageCheck = stepByName(publish, expectedPublishSteps[7]);
+  const publishStep = stepByName(publish, expectedPublishSteps[8]);
 
   requireCondition(errors, checkout?.uses === "actions/checkout@v7", "release checkout action must use the reviewed current major v7");
   requireCondition(errors, setup?.uses === "actions/setup-node@v7", "release setup-node action must use the reviewed current major v7");
@@ -286,10 +290,40 @@ export function validateReleaseWorkflow(text) {
     guardRun.includes('node scripts/check-release-workflow.mjs --assert-npm-version "$(npm --version)"'),
     `release guard must enforce npm >=${MINIMUM_NPM_VERSION}`,
   );
+  requireCondition(
+    errors,
+    sameKeys(publish?.outputs, ["dist_tag"])
+      && publish.outputs.dist_tag === "${{ steps.release-consistency.outputs.dist_tag }}",
+    "publish must expose the checked dist-tag from the release-consistency step",
+  );
+  requireCondition(errors, consistency?.id === "release-consistency", "release consistency step must expose the release-consistency id");
+  requireCondition(errors, consistency?.env?.RELEASE_TAG === "${{ github.ref_name }}", "release consistency must bind github.ref_name");
+  requireCondition(
+    errors,
+    exactRun(consistency) === [
+      'node scripts/check-release-consistency.mjs --tag "$RELEASE_TAG"',
+      'echo "dist_tag=$(node scripts/check-release-consistency.mjs --dist-tag "$RELEASE_TAG")" >> "$GITHUB_OUTPUT"',
+    ].join("\n"),
+    "release consistency must validate the tag and expose its reviewed dist-tag before install",
+  );
+
+  const mainGuardRun = exactRun(mainGuard);
+  const shallowFetch = "git fetch --no-tags --depth=200 origin main:refs/remotes/origin/main";
+  const ancestorCheck = 'git merge-base --is-ancestor "$GITHUB_SHA" origin/main';
+  const unshallowFetch = "git fetch --no-tags --unshallow origin main:refs/remotes/origin/main";
+  requireCondition(errors, mainGuardRun.includes(shallowFetch), "main ancestry guard must fetch a bounded origin/main history first");
+  requireCondition(errors, (mainGuardRun.match(new RegExp(ancestorCheck.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "gu")) ?? []).length === 2, "main ancestry guard must fail, unshallow if needed, and assert the tag commit again");
+  requireCondition(errors, mainGuardRun.includes('git rev-parse --is-shallow-repository'), "main ancestry guard must inspect shallow checkout state");
+  requireCondition(errors, mainGuardRun.includes(unshallowFetch), "main ancestry guard must support an unshallow fallback");
   requireCondition(errors, exactRun(install) === "npm ci", "release install must be exactly npm ci");
   requireCondition(errors, exactRun(sourceCheck) === "npm run check", "release T1 step must run npm run check");
   requireCondition(errors, exactRun(packageCheck) === "npm run test:package", "release T2 step must run npm run test:package");
-  requireCondition(errors, exactRun(publishStep) === "npm publish --access public", "release publish must be exactly npm publish --access public");
+  requireCondition(errors, publishStep?.env?.RELEASE_TAG === "${{ github.ref_name }}", "release publish must bind github.ref_name for dist-tag selection");
+  requireCondition(
+    errors,
+    exactRun(publishStep) === 'npm publish --access public --tag "$(node scripts/check-release-consistency.mjs --dist-tag "$RELEASE_TAG")"',
+    "release publish must use the checked latest-or-rc dist-tag",
+  );
 
   requireCondition(errors, githubRelease?.needs === "publish", "github-release must need the successful publish job");
   requireCondition(errors, githubRelease?.["runs-on"] === "ubuntu-latest", "github-release must use ubuntu-latest");
@@ -302,21 +336,32 @@ export function validateReleaseWorkflow(text) {
   requireCondition(errors, githubRelease?.env?.GH_TOKEN === "${{ github.token }}", "github-release must use the bounded GitHub token");
   requireCondition(errors, githubRelease?.env?.GH_REPO === "${{ github.repository }}", "github-release must bind the current repository explicitly");
   requireCondition(errors, githubRelease?.env?.RELEASE_TAG === "${{ github.ref_name }}", "github-release must bind the pushed tag");
+  requireCondition(
+    errors,
+    githubRelease?.env?.DIST_TAG === "${{ needs.publish.outputs.dist_tag }}",
+    "github-release must consume the publish job's checked dist-tag",
+  );
   requireCondition(errors, Array.isArray(githubRelease?.steps) && githubRelease.steps.length === 1, "github-release must have one create-or-edit step");
 
   const releaseRun = exactRun(stepByName(githubRelease, "Create or refresh release"));
-  requireCondition(errors, releaseRun.includes('gh release view "$RELEASE_TAG"'), "github-release must check whether the release exists");
+  requireCondition(errors, (releaseRun.match(/gh release view "\$RELEASE_TAG"/gu) ?? []).length === 2, "github-release must check whether stable and rc releases exist");
+  const rcBranch = releaseRun.match(/if \[ "\$DIST_TAG" = "rc" \]; then([\s\S]*?)elif \[ "\$DIST_TAG" = "latest" \]; then/u)?.[1] ?? "";
+  const latestBranch = releaseRun.match(/elif \[ "\$DIST_TAG" = "latest" \]; then([\s\S]*?)\nelse\n\s+echo "unsupported release dist-tag/u)?.[1] ?? "";
   requireCondition(
     errors,
-    releaseRun.includes('gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest'),
-    "github-release must idempotently edit an existing release",
+    rcBranch.includes('gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --prerelease')
+      && rcBranch.includes('gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --prerelease')
+      && !rcBranch.includes("--latest"),
+    "rc GitHub releases must use --prerelease and must not use --latest",
   );
   requireCondition(
     errors,
-    releaseRun.includes('gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --latest'),
-    "github-release must create a release only for an existing tag",
+    latestBranch.includes('gh release edit "$RELEASE_TAG" --verify-tag --title "$RELEASE_TAG" --latest')
+      && latestBranch.includes('gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG" --latest')
+      && !latestBranch.includes("--prerelease"),
+    "stable GitHub releases must use --latest and must not use --prerelease",
   );
-  requireCondition(errors, /\belse\b[\s\S]*gh release create/u.test(releaseRun), "release creation must be the missing-release branch");
+  requireCondition(errors, rcBranch.includes("else") && latestBranch.includes("else"), "release creation must remain the missing-release branch for rc and stable tags");
 
   const forbiddenTokenFallback = /\bNODE_AUTH_TOKEN\b|\bNPM_TOKEN\b|secrets\.[A-Za-z0-9_]*NPM|_authToken|npm\s+(?:login|adduser)|--provenance\b/iu;
   requireCondition(errors, !forbiddenTokenFallback.test(text), "release workflow must not contain an npm token fallback, npm login or manual provenance flag");

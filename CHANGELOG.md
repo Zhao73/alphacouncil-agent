@@ -41,6 +41,10 @@ Notable changes per release. Dates are UTC.
 
 ### Added
 
+- Added an offline release-consistency gate that binds the candidate version, dated changelog
+  section, measured physical-pack and MCP-tool counts, release tag and prerelease dist-tag.
+  The tag workflow runs it before dependency installation or publication, rejects commits not
+  on `main`, routes `rc.N` only to npm `rc` and GitHub prereleases, and fails closed on drift.
 - Method-worker schema failures now retain the pre-truncation validation-error count, an explicit
   truncation flag, and at most eight bounded paths, keywords and missing or unexpected property
   names. The repair event and full-council TAP output expose the same structure without retaining
