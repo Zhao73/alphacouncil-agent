@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_passive_only"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:16fb57696593fc4dc"
         ]
@@ -38,6 +41,9 @@
         "on_uncomputable": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_passive_only"
+        },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
         },
         "source_ids": [
           "proxy:16fb57696593fc4dc"
@@ -73,6 +79,9 @@
           "native_state": "provisional_passive_only"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:16fb57696593fc4dc"
       ],
@@ -98,6 +107,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_passive_only"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:16fb57696593fc4dc"
@@ -128,6 +140,9 @@
     "provisional_watch",
     "provisional_engagement_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -135,21 +150,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_infeasible"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_engagement_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -172,6 +196,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "ackman_value_gap_over_the_long_bond",
         "source_ids": [
           "proxy:16fb57696593fc4dc"
@@ -189,6 +216,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "ackman_balance_sheet_can_carry_the_change",
         "source_ids": [
           "proxy:16fb57696593fc4dc"
@@ -206,6 +236,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "ackman_capital_allocation_lever_exists",
         "source_ids": [
           "proxy:16fb57696593fc4dc"

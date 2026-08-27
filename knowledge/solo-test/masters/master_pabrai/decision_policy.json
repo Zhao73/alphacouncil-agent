@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_floor"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:cfe480714da62e4dd"
         ]
@@ -38,6 +41,9 @@
         "on_uncomputable": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_floor"
+        },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
         },
         "source_ids": [
           "proxy:cfe480714da62e4dd"
@@ -73,6 +79,9 @@
           "native_state": "provisional_no_floor"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:cfe480714da62e4dd"
       ],
@@ -98,6 +107,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_floor"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:cfe480714da62e4dd"
@@ -128,6 +140,9 @@
     "provisional_watch",
     "provisional_asymmetric_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -135,21 +150,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_reject"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_asymmetric_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -172,6 +196,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "pabrai_floor_covers_the_price",
         "source_ids": [
           "proxy:cfe480714da62e4dd"
@@ -189,6 +216,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "pabrai_uncertainty_is_high_where_risk_is_not",
         "source_ids": [
           "proxy:cfe480714da62e4dd"
@@ -206,6 +236,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "pabrai_financing_survives_to_resolution",
         "source_ids": [
           "proxy:cfe480714da62e4dd"

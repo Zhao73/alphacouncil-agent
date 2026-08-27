@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_regime_unknown"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:89c1ba22ac2965e32"
         ]
@@ -67,6 +70,9 @@
           "native_state": "provisional_regime_unknown"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:89c1ba22ac2965e32"
       ],
@@ -96,6 +102,9 @@
     "provisional_unbalanced",
     "provisional_regime_resilient"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -103,21 +112,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_fragile"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_unbalanced"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_regime_resilient"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -154,6 +172,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "dalio_growth_axis_rising",
         "source_ids": [
           "proxy:89c1ba22ac2965e32"
@@ -185,6 +206,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "dalio_inflation_axis_falling",
         "source_ids": [
           "proxy:89c1ba22ac2965e32"
@@ -202,6 +226,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "dalio_policy_not_restrictive",
         "source_ids": [
           "proxy:89c1ba22ac2965e32"

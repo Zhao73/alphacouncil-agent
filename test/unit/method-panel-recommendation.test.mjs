@@ -20,7 +20,7 @@ const manifests = new Map(catalog.all_master_ids.map((masterId) => [masterId, ma
 const allFacts = [...new Set([...manifests.values()]
   .flatMap((entry) => entry.capability.required_fact_types))].sort();
 const V1_ALL_FACTS_HASH = "sha256:630119afae35062f08443b1ca076318f44906ddb29fa35a438669f6a7fd50499";
-const UNKNOWN_MARKET_PRICE_RESULT_DIGEST = "b654cd95511a9feed2aed549f6416ab0cc121298d2c54f63473f07e3eeafaec4";
+const UNKNOWN_MARKET_PRICE_PAYLOAD_DIGEST = "5e9d5320dec85cc2d0b62e19e304823539c421393494744fde151162d5261338";
 const FUND_FACTS = Object.freeze([
   "market.price",
   "market.change_pct",
@@ -163,10 +163,13 @@ test("missing instrument classification fails closed without guessing a default 
   assert.equal(result.recommendation_hash, null);
   assert.equal(result.decisions.length, 26);
   assert.ok(result.decisions.every((decision) => decision.decision === "exclude"));
+  assert.equal(result.catalog_hash, catalog.catalog_hash);
+  const { catalog_hash: currentCatalogIdentity, ...identityIndependentPayload } = result;
+  assert.equal(currentCatalogIdentity, catalog.catalog_hash);
   assert.equal(
-    createHash("sha256").update(JSON.stringify(result)).digest("hex"),
-    UNKNOWN_MARKET_PRICE_RESULT_DIGEST,
-    "the v1 fail-closed contract must remain byte-identical",
+    createHash("sha256").update(JSON.stringify(identityIndependentPayload)).digest("hex"),
+    UNKNOWN_MARKET_PRICE_PAYLOAD_DIGEST,
+    "the unknown-classification fail-closed payload is frozen modulo catalog identity",
   );
 });
 

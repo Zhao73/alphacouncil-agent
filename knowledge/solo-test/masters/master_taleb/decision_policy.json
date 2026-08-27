@@ -63,6 +63,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_trade"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:678e17ab8610dd057"
         ]
@@ -97,6 +100,9 @@
           "native_state": "provisional_no_trade"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:678e17ab8610dd057"
       ],
@@ -122,6 +128,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_trade"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:678e17ab8610dd057"
@@ -152,6 +161,9 @@
     "provisional_robust",
     "provisional_convex_opportunity"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -159,28 +171,40 @@
         "common_stance": "opposed",
         "native_state": "provisional_no_trade"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_hedge_only"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_robust"
       },
-      "min_ratio": 0.75
+      "min_ratio": 0.75,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_convex_opportunity"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -203,6 +227,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "taleb_maximum_loss_is_bounded_to_capital",
         "source_ids": [
           "proxy:678e17ab8610dd057"
@@ -220,6 +247,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "taleb_payoff_is_positively_convex",
         "source_ids": [
           "proxy:678e17ab8610dd057"

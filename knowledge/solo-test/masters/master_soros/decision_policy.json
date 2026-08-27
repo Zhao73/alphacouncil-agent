@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_loop"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:efa4c7a15523b575e"
         ]
@@ -52,6 +55,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_loop"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:efa4c7a15523b575e"
@@ -93,6 +99,9 @@
           "native_state": "provisional_no_loop"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:efa4c7a15523b575e"
       ],
@@ -122,6 +131,9 @@
     "provisional_testing_reversal",
     "provisional_broken"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -129,21 +141,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_broken"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_testing_reversal"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_reinforcing"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -166,6 +187,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "soros_price_leg_rising",
         "source_ids": [
           "proxy:efa4c7a15523b575e"
@@ -183,6 +207,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "soros_financing_leg_permissive",
         "source_ids": [
           "proxy:efa4c7a15523b575e"

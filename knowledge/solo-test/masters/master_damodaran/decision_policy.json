@@ -48,6 +48,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_unvalued"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
         ]
@@ -84,6 +87,9 @@
     "provisional_company_valuation_recomputable",
     "provisional_company_valuation_review_required"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -91,21 +97,30 @@
         "common_stance": "out_of_scope",
         "native_state": "provisional_company_inputs_partial"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_company_valuation_recomputable"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_company_valuation_review_required"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -125,6 +140,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "damodaran_company_cash_flow_recomputable",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
@@ -139,6 +157,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "damodaran_reverse_valuation_recomputable",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"

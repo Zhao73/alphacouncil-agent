@@ -52,6 +52,7 @@ import {
 import { defaultPersonaDir } from "../../mcp/lib/personas/registry.mjs";
 
 export const SOLO_TEST_ASSURANCE_CLASS = "provisional_derived_proxy";
+export const UNSOURCED_POLICY_PROVENANCE = Object.freeze({ status: "unsourced_ai_proposal" });
 export const SOLO_TEST_FORMULA_DIRNAME = "persona-v3-solo-test-formulas";
 export const DEFAULT_SOLO_TEST_FORMULA_ROOT = fileURLToPath(new URL(
   "../../knowledge/solo-test/persona-v3-solo-test-formulas/",
@@ -332,6 +333,7 @@ function authoredDecisionPolicy(seat, tools, authored) {
     schema_version: 1,
     dsl_version: "1.1",
     native_decision_schema: seat.native_decision_contract.schema_id,
+    provenance: UNSOURCED_POLICY_PROVENANCE,
     native_states: seat.native_decision_contract.states.map(executableNativeState),
     abstention_policy: "fail_closed",
     fact_gate: { on_missing_critical: { native_state: outOfScope, common_stance: "out_of_scope" } },
@@ -342,6 +344,7 @@ function authoredDecisionPolicy(seat, tools, authored) {
       all: (authored.eligibility?.all || []).map((entry) => ({
         condition_id: entry.condition_id,
         condition: entry.condition,
+        provenance: UNSOURCED_POLICY_PROVENANCE,
         on_false: {
           native_state: state(entry.on_false.native_state),
           common_stance: entry.on_false.common_stance,
@@ -356,6 +359,7 @@ function authoredDecisionPolicy(seat, tools, authored) {
     hard_vetoes: (authored.hard_vetoes || []).map((veto) => ({
       veto_id: veto.veto_id,
       condition: veto.condition,
+      provenance: UNSOURCED_POLICY_PROVENANCE,
       on_trigger: {
         native_state: state(veto.on_trigger.native_state),
         common_stance: veto.on_trigger.common_stance,
@@ -378,6 +382,7 @@ function authoredDecisionPolicy(seat, tools, authored) {
       rules: authored.scoring.map((rule) => ({
         rule_id: rule.rule_id,
         condition: rule.condition,
+        provenance: UNSOURCED_POLICY_PROVENANCE,
         points: rule.points,
         coverage_weight: rule.coverage_weight ?? 1,
         source_ids: [authored.source_id],
@@ -385,6 +390,7 @@ function authoredDecisionPolicy(seat, tools, authored) {
     },
     score_bands: authored.bands.map((band) => ({
       min_ratio: band.min_ratio,
+      provenance: UNSOURCED_POLICY_PROVENANCE,
       decision: { native_state: state(band.native_state), common_stance: band.common_stance },
     })),
     native_output_fields: tools.map((tool, index) => ({
@@ -412,6 +418,7 @@ function buildDecisionPolicy(seat, tools, sourceId) {
     schema_version: 1,
     dsl_version: "1.1",
     native_decision_schema: seat.native_decision_contract.schema_id,
+    provenance: UNSOURCED_POLICY_PROVENANCE,
     native_states: states,
     abstention_policy: "fail_closed",
     fact_gate: {
@@ -426,6 +433,7 @@ function buildDecisionPolicy(seat, tools, sourceId) {
       rules: tools.map((tool, index) => ({
         rule_id: `proxy_score_${index + 1}`,
         condition: { op: "gt", left: { output_id: tool.output_id }, right: { literal: 0 } },
+        provenance: UNSOURCED_POLICY_PROVENANCE,
         points: 1,
         coverage_weight: 1,
         source_ids: [sourceId],
@@ -433,6 +441,7 @@ function buildDecisionPolicy(seat, tools, sourceId) {
     },
     score_bands: scoredStates.map((state, index) => ({
       min_ratio: ratios[index],
+      provenance: UNSOURCED_POLICY_PROVENANCE,
       decision: {
         native_state: executableNativeState(state),
         common_stance: provisionalProjection(state),

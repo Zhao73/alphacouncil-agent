@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:d53bcf5dc5e04ede002ed68da58a84e6551016f90c5e9bf99970ddaba99baeeb`
+- Pack snapshot hash: `sha256:b60187eb5e3c4f4d74b4e5ba4ff3b6ce9a8be419f5d4b9f6711e21f931d08baf`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -364,6 +364,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_category_mismatch"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:68711236c84ce159a"
         ]
@@ -383,6 +386,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "on_uncomputable": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_category_mismatch"
+        },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
         },
         "source_ids": [
           "proxy:68711236c84ce159a"
@@ -418,6 +424,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "native_state": "provisional_story_invalid"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:68711236c84ce159a"
       ],
@@ -443,6 +452,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_story_invalid"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:68711236c84ce159a"
@@ -473,6 +485,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_watch",
     "provisional_category_opportunity"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -480,21 +495,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "opposed",
         "native_state": "provisional_story_invalid"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_category_opportunity"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -517,6 +541,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "lynch_multiple_at_or_below_growth_rate",
         "source_ids": [
           "proxy:68711236c84ce159a"
@@ -534,6 +561,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "lynch_normal_balance_sheet",
         "source_ids": [
           "proxy:68711236c84ce159a"
@@ -551,6 +581,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "lynch_fast_grower_growth_rate",
         "source_ids": [
           "proxy:68711236c84ce159a"

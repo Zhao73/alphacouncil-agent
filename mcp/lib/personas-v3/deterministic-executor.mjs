@@ -41,6 +41,7 @@ const POLICY_FIELDS = new Set([
   "abstention_policy", "fact_gate", "eligibility", "hard_vetoes", "scoring",
   "score_bands", "native_output_fields",
 ]);
+const POLICY_ALLOWED_FIELDS = new Set([...POLICY_FIELDS, "provenance"]);
 const TOOL_BASE_FIELDS = new Set([
   "schema_version", "dsl_version", "id", "version", "kind", "operation", "on_missing",
   "inputs", "input_contracts", "output_id", "value_kind", "unit", "output_period", "input_schema_hash",
@@ -129,6 +130,30 @@ function validateSourceIds(value, path, errors) {
     else if (seen.has(id)) add(errors, `${path}[${index}]`, `duplicate ${JSON.stringify(id)}`);
     seen.add(id);
   });
+}
+
+/**
+ * Validate an assurance label without granting it any executable meaning.
+ *
+ * Provenance is deliberately metadata-only: the evaluator never reads it, and a sourced
+ * label is only a schema shape here. Admission and signature verification remain separate
+ * gates. The current solo-test tree is required elsewhere to use only the unsourced shape.
+ */
+function validateProvenance(value, path, errors) {
+  if (!isObject(value)) {
+    add(errors, path, "must be an object");
+    return;
+  }
+  if (value.status === "unsourced_ai_proposal") {
+    exactFields(value, path, new Set(["status"]), ["status"], errors);
+    return;
+  }
+  if (value.status === "sourced") {
+    if (!exactFields(value, path, new Set(["status", "source_id"]), ["status", "source_id"], errors)) return;
+    if (typeof value.source_id !== "string" || !value.source_id.trim()) add(errors, `${path}.source_id`, "must be a non-empty string");
+    return;
+  }
+  add(errors, `${path}.status`, "must be unsourced_ai_proposal or sourced");
 }
 
 function validateUniqueId(records, field, path, errors) {
@@ -323,7 +348,8 @@ export function validateDeterministicPolicyArtifacts({
   const errors = [];
   const references = { factIds: new Set(), outputIds: new Set() };
   const mappedStates = new Set();
-  if (!exactFields(policy, "decision_policy", POLICY_FIELDS, [...POLICY_FIELDS], errors)) return errors;
+  if (!exactFields(policy, "decision_policy", POLICY_ALLOWED_FIELDS, [...POLICY_FIELDS], errors)) return errors;
+  if (hasOwn(policy, "provenance")) validateProvenance(policy.provenance, "decision_policy.provenance", errors);
   if (policy.schema_version !== 1) add(errors, "decision_policy.schema_version", "must be 1");
   if (policy.dsl_version !== DSL_VERSION) add(errors, "decision_policy.dsl_version", `must be ${DSL_VERSION}`);
   if (dslVersion !== DSL_VERSION) add(errors, "manifest.computation.dsl_version", `must be ${DSL_VERSION}`);
@@ -345,8 +371,10 @@ export function validateDeterministicPolicyArtifacts({
     validateUniqueId(policy.eligibility.all, "condition_id", "decision_policy.eligibility.all", errors);
     policy.eligibility.all.forEach((record, index) => {
       const path = `decision_policy.eligibility.all[${index}]`;
-      const fields = new Set(["condition_id", "condition", "source_ids", "on_false", "on_uncomputable"]);
-      if (!exactFields(record, path, fields, [...fields], errors)) return;
+      const required = ["condition_id", "condition", "source_ids", "on_false", "on_uncomputable"];
+      const fields = new Set([...required, "provenance"]);
+      if (!exactFields(record, path, fields, required, errors)) return;
+      if (hasOwn(record, "provenance")) validateProvenance(record.provenance, `${path}.provenance`, errors);
       validateCondition(record.condition, `${path}.condition`, errors, references);
       validateSourceIds(record.source_ids, `${path}.source_ids`, errors);
       validateMapping(record.on_false, `${path}.on_false`, errors, mappedStates, { requireOutOfScope: true });
@@ -359,8 +387,10 @@ export function validateDeterministicPolicyArtifacts({
     validateUniqueId(policy.hard_vetoes, "veto_id", "decision_policy.hard_vetoes", errors);
     policy.hard_vetoes.forEach((record, index) => {
       const path = `decision_policy.hard_vetoes[${index}]`;
-      const fields = new Set(["veto_id", "condition", "source_ids", "on_trigger", "on_uncomputable"]);
-      if (!exactFields(record, path, fields, [...fields], errors)) return;
+      const required = ["veto_id", "condition", "source_ids", "on_trigger", "on_uncomputable"];
+      const fields = new Set([...required, "provenance"]);
+      if (!exactFields(record, path, fields, required, errors)) return;
+      if (hasOwn(record, "provenance")) validateProvenance(record.provenance, `${path}.provenance`, errors);
       validateCondition(record.condition, `${path}.condition`, errors, references);
       validateSourceIds(record.source_ids, `${path}.source_ids`, errors);
       validateMapping(record.on_trigger, `${path}.on_trigger`, errors, mappedStates, {
@@ -388,8 +418,10 @@ export function validateDeterministicPolicyArtifacts({
       validateUniqueId(scoring.rules, "rule_id", "decision_policy.scoring.rules", errors);
       scoring.rules.forEach((record, index) => {
         const path = `decision_policy.scoring.rules[${index}]`;
-        const fields = new Set(["rule_id", "condition", "points", "coverage_weight", "source_ids"]);
-        if (!exactFields(record, path, fields, [...fields], errors)) return;
+        const required = ["rule_id", "condition", "points", "coverage_weight", "source_ids"];
+        const fields = new Set([...required, "provenance"]);
+        if (!exactFields(record, path, fields, required, errors)) return;
+        if (hasOwn(record, "provenance")) validateProvenance(record.provenance, `${path}.provenance`, errors);
         if (!Number.isFinite(record.points) || record.points <= 0) add(errors, `${path}.points`, "must be positive and finite");
         if (!Number.isFinite(record.coverage_weight) || record.coverage_weight <= 0) add(errors, `${path}.coverage_weight`, "must be positive and finite");
         validateCondition(record.condition, `${path}.condition`, errors, references);
@@ -405,7 +437,8 @@ export function validateDeterministicPolicyArtifacts({
     const ratios = new Set();
     policy.score_bands.forEach((band, index) => {
       const path = `decision_policy.score_bands[${index}]`;
-      if (!exactFields(band, path, new Set(["min_ratio", "decision"]), ["min_ratio", "decision"], errors)) return;
+      if (!exactFields(band, path, new Set(["min_ratio", "decision", "provenance"]), ["min_ratio", "decision"], errors)) return;
+      if (hasOwn(band, "provenance")) validateProvenance(band.provenance, `${path}.provenance`, errors);
       if (!Number.isFinite(band.min_ratio) || band.min_ratio < 0 || band.min_ratio > 1) add(errors, `${path}.min_ratio`, "must be between 0 and 1");
       else if (ratios.has(band.min_ratio)) add(errors, `${path}.min_ratio`, `duplicate ${band.min_ratio}`);
       ratios.add(band.min_ratio);

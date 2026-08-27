@@ -22,6 +22,7 @@
     "schema_version": { "const": 1 },
     "dsl_version": { "const": "1.1" },
     "native_decision_schema": { "$ref": "#/$defs/id" },
+    "provenance": { "$ref": "#/$defs/provenance" },
     "native_states": {
       "type": "array",
       "minItems": 2,
@@ -58,6 +59,7 @@
         "properties": {
           "veto_id": { "$ref": "#/$defs/id" },
           "condition": { "$ref": "#/$defs/condition" },
+          "provenance": { "$ref": "#/$defs/provenance" },
           "source_ids": { "$ref": "#/$defs/sourceIds" },
           "on_trigger": { "$ref": "#/$defs/vetoMapping" },
           "on_uncomputable": { "$ref": "#/$defs/vetoUncomputable" }
@@ -83,6 +85,7 @@
             "properties": {
               "rule_id": { "$ref": "#/$defs/id" },
               "condition": { "$ref": "#/$defs/condition" },
+              "provenance": { "$ref": "#/$defs/provenance" },
               "points": { "type": "number", "exclusiveMinimum": 0 },
               "coverage_weight": { "type": "number", "exclusiveMinimum": 0 },
               "source_ids": { "$ref": "#/$defs/sourceIds" }
@@ -101,6 +104,7 @@
         "additionalProperties": false,
         "properties": {
           "min_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+          "provenance": { "$ref": "#/$defs/provenance" },
           "decision": { "$ref": "#/$defs/decisionMapping" }
         }
       },
@@ -135,6 +139,25 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1 }
+    },
+    "provenance": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["status"],
+          "additionalProperties": false,
+          "properties": { "status": { "const": "unsourced_ai_proposal" } }
+        },
+        {
+          "type": "object",
+          "required": ["status", "source_id"],
+          "additionalProperties": false,
+          "properties": {
+            "status": { "const": "sourced" },
+            "source_id": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
     },
     "decisionMapping": {
       "type": "object",
@@ -252,6 +275,7 @@
       "properties": {
         "condition_id": { "$ref": "#/$defs/id" },
         "condition": { "$ref": "#/$defs/condition" },
+        "provenance": { "$ref": "#/$defs/provenance" },
         "source_ids": { "$ref": "#/$defs/sourceIds" },
         "on_false": { "$ref": "#/$defs/abstentionMapping" },
         "on_uncomputable": { "$ref": "#/$defs/abstentionMapping" }

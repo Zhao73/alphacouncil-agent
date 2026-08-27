@@ -16,7 +16,7 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:02b47b29091e7f7dae08961d9441c524f4054cf0969ab810528351365d0414ec",
+    "input_hash": "sha256:c88ca98573bd467493f1202076f67855e4a3f82af350d2f6c0b9c1007e6d969b",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
@@ -37,7 +37,7 @@
     "verifier_checks": []
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:18b330e12bf85e11f098912e0add8b274b7f23a339105f4fede8f2971962e633",
+  "run_artifact_hash": "sha256:3e1d44e1aaafffc4d679c5f70bdc4c5ddb1a27cdd8b9a6c85177d6ed3eb49834",
   "run_id": "C",
   "schema_version": 1,
   "simulation_scope": "prompt-catalog binding only; prompt-only LLM outputs are not simulated"

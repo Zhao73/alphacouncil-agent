@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:44750deceeabf04e0b0fb3e044629048440c0d99eb69920ce9143e38713497cb`
+- Pack snapshot hash: `sha256:9996ea9ef55886d354ef8839bd899b24d01eae576bbe67d8420635ac0b09fe4f`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -350,6 +350,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_unidentified_exposure"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:b5b13eff4215f804d"
         ]
@@ -398,6 +401,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "native_state": "provisional_unidentified_exposure"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:b5b13eff4215f804d"
       ],
@@ -427,6 +433,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_mixed",
     "provisional_residual_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -434,21 +443,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "cautious",
         "native_state": "provisional_factor_replication"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_mixed"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_residual_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -471,6 +489,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "asness_real_yield_gap_positive",
         "source_ids": [
           "proxy:b5b13eff4215f804d"
@@ -488,6 +509,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "asness_momentum_confirms_value",
         "source_ids": [
           "proxy:b5b13eff4215f804d"
@@ -505,6 +529,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "asness_equity_premium_beats_credit_premium",
         "source_ids": [
           "proxy:b5b13eff4215f804d"

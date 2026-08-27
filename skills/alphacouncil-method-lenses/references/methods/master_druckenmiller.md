@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:d2e038a13221582e26d051f7d1ec16704bb344fad37992c95a6ff911287d3d69`
+- Pack snapshot hash: `sha256:08fb4dfab19fbfa88995b406d97058ba73c493d5d72388ecc9bd51ba651d9d38`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -348,6 +348,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_inflection"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:807c7db58258313d3"
         ]
@@ -396,6 +399,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "native_state": "provisional_no_inflection"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:807c7db58258313d3"
       ],
@@ -425,6 +431,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_probing",
     "provisional_asymmetric_setup"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -432,21 +441,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_probing"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_asymmetric_setup"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -469,6 +487,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "druckenmiller_liquidity_and_curve_impulse_positive",
         "source_ids": [
           "proxy:807c7db58258313d3"
@@ -486,6 +507,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "druckenmiller_policy_real_rate_not_restrictive",
         "source_ids": [
           "proxy:807c7db58258313d3"
@@ -503,6 +527,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "druckenmiller_price_confirms",
         "source_ids": [
           "proxy:807c7db58258313d3"

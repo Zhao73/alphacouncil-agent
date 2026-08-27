@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:c6c4a7372387f019795c3e451473cb57162cea7e3948ee651e567827e3d428c0`
+- Pack snapshot hash: `sha256:51d92197907c4ae0a3106a121bdcb65c81b6048a2786d304e5b565bd7ff313ac`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -348,6 +348,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_unvalued"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
         ]
@@ -384,6 +387,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_company_valuation_recomputable",
     "provisional_company_valuation_review_required"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -391,21 +397,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "out_of_scope",
         "native_state": "provisional_company_inputs_partial"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_company_valuation_recomputable"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_company_valuation_review_required"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -425,6 +440,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "damodaran_company_cash_flow_recomputable",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"
@@ -439,6 +457,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "damodaran_reverse_valuation_recomputable",
         "source_ids": [
           "proxy:bcabfc2d756d028b0"

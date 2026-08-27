@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:53a041b2073f5da2547d5d7517615274b235a6c8d3ba0225c33eba091f17ecce`
+- Pack snapshot hash: `sha256:1705fd189a171169771c1feb6493eac23f94f813646a0a81e710dffa7e819b66`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -351,6 +351,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_passive_only"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:16fb57696593fc4dc"
         ]
@@ -370,6 +373,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "on_uncomputable": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_passive_only"
+        },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
         },
         "source_ids": [
           "proxy:16fb57696593fc4dc"
@@ -405,6 +411,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "native_state": "provisional_passive_only"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:16fb57696593fc4dc"
       ],
@@ -430,6 +439,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_passive_only"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:16fb57696593fc4dc"
@@ -460,6 +472,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_watch",
     "provisional_engagement_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -467,21 +482,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "opposed",
         "native_state": "provisional_infeasible"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_engagement_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -504,6 +528,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "ackman_value_gap_over_the_long_bond",
         "source_ids": [
           "proxy:16fb57696593fc4dc"
@@ -521,6 +548,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "ackman_balance_sheet_can_carry_the_change",
         "source_ids": [
           "proxy:16fb57696593fc4dc"
@@ -538,6 +568,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "ackman_capital_allocation_lever_exists",
         "source_ids": [
           "proxy:16fb57696593fc4dc"

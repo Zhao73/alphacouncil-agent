@@ -1,0 +1,100 @@
+{
+  "artifact_kind": "alphacouncil_impersonation_lint",
+  "identity_templates": [
+    {
+      "flags": "iu",
+      "id": "named_identity_en",
+      "pattern": "\\bI\\s+(?:am|'m)\\s+{identity}\\b"
+    },
+    {
+      "flags": "u",
+      "id": "named_identity_zh",
+      "pattern": "我是{identity}(?:本人)?"
+    },
+    {
+      "flags": "u",
+      "id": "named_identity_ja",
+      "pattern": "私は{identity}(?:本人)?です"
+    },
+    {
+      "flags": "u",
+      "id": "named_identity_ko",
+      "pattern": "저는\\s*{identity}(?:입니다|이에요)"
+    }
+  ],
+  "rules": [
+    {
+      "description": "First-person English biography claim",
+      "flags": "iu",
+      "id": "biography_en",
+      "pattern": "\\bI\\s+(?:was born|grew up|graduated|studied|founded|co-founded|served as|worked at|managed)\\b"
+    },
+    {
+      "description": "First-person Chinese biography claim",
+      "flags": "u",
+      "id": "biography_zh",
+      "pattern": "我(?:出生于|长大于|毕业于|就读于|创办了|曾任|管理过)"
+    },
+    {
+      "description": "First-person Japanese biography claim",
+      "flags": "u",
+      "id": "biography_ja",
+      "pattern": "私は(?:生まれ|育ち|卒業|創業|勤務し|務め)"
+    },
+    {
+      "description": "First-person Korean biography claim",
+      "flags": "u",
+      "id": "biography_ko",
+      "pattern": "저는\\s*(?:태어났|자랐|졸업했|창업했|근무했|역임했)"
+    },
+    {
+      "description": "Invented English quotation or catchphrase ownership",
+      "flags": "iu",
+      "id": "quotation_en",
+      "pattern": "\\bI\\s+(?:once|previously|have)\\s+(?:said|wrote|argued)\\b|\\bmy\\s+(?:famous|well-known)\\s+(?:quote|saying)\\b"
+    },
+    {
+      "description": "Invented Chinese quotation or catchphrase ownership",
+      "flags": "u",
+      "id": "quotation_zh",
+      "pattern": "我(?:曾经|以前|一向)?(?:说过|写过|主张过)|我的(?:名言|口头禅)"
+    },
+    {
+      "description": "Invented Japanese quotation or catchphrase ownership",
+      "flags": "u",
+      "id": "quotation_ja",
+      "pattern": "私は(?:かつて|以前)(?:言った|書いた|主張した)|私の(?:名言|口癖)"
+    },
+    {
+      "description": "Invented Korean quotation or catchphrase ownership",
+      "flags": "u",
+      "id": "quotation_ko",
+      "pattern": "저는\\s*(?:예전에|과거에)(?:말했|썼|주장했)|제\\s*(?:명언|말버릇)"
+    },
+    {
+      "description": "Claim of current English holdings or portfolio",
+      "flags": "iu",
+      "id": "holdings_en",
+      "pattern": "\\bmy\\s+(?:current\\s+)?(?:portfolio|holdings?|positions?)\\b|\\bI\\s+(?:currently\\s+)?(?:own|hold)\\b"
+    },
+    {
+      "description": "Claim of current Chinese holdings or portfolio",
+      "flags": "u",
+      "id": "holdings_zh",
+      "pattern": "我的(?:当前|目前|现有)?(?:持仓|组合|仓位)|我(?:目前|现在|当前)(?:持有|重仓|持仓)"
+    },
+    {
+      "description": "Claim of current Japanese holdings or portfolio",
+      "flags": "u",
+      "id": "holdings_ja",
+      "pattern": "私の(?:現在の)?(?:保有銘柄|ポートフォリオ|ポジション)|私は現在(?:保有|所有)"
+    },
+    {
+      "description": "Claim of current Korean holdings or portfolio",
+      "flags": "u",
+      "id": "holdings_ko",
+      "pattern": "제\\s*(?:현재\\s*)?(?:보유종목|포트폴리오|포지션)|저는\\s*현재\\s*(?:보유|소유)"
+    }
+  ],
+  "schema_version": 1
+}

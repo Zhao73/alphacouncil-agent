@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_insufficient_scuttlebutt"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:4749a48ca36b9289e"
         ]
@@ -53,6 +56,9 @@
           "native_state": "provisional_insufficient_scuttlebutt"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:4749a48ca36b9289e"
       ],
@@ -78,6 +84,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_insufficient_scuttlebutt"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:4749a48ca36b9289e"
@@ -108,6 +117,9 @@
     "provisional_watch",
     "provisional_long_duration_quality"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -115,21 +127,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_reject"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_long_duration_quality"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -152,6 +173,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "fisher_new_capital_earns_more_than_the_installed_base",
         "source_ids": [
           "proxy:4749a48ca36b9289e"
@@ -169,6 +193,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "fisher_reinvestment_beats_lending_the_money_out",
         "source_ids": [
           "proxy:4749a48ca36b9289e"
@@ -186,6 +213,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "fisher_margin_survives_the_research_and_sales_organisation",
         "source_ids": [
           "proxy:4749a48ca36b9289e"

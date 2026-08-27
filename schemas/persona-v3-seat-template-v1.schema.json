@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Zhao73/alphacouncil-agent/schemas/persona-v3-seat-template-v1.schema.json",
+  "title": "AlphaCouncil PersonaPack v3 seat fidelity template v1",
+  "description": "One mechanically inspectable provisional method-seat record. Passing this schema is structural evidence only; it is not method attribution, investment accuracy, or profit evidence.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_kind",
+    "persona_id",
+    "build_profile",
+    "maturity",
+    "policy_subject_hash",
+    "threshold_provenance",
+    "derivation_bindings",
+    "case_inventory",
+    "fact_coverage",
+    "ablations",
+    "hard_vetoes",
+    "voice_safety"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "artifact_kind": { "const": "persona_v3_seat_fidelity_template" },
+    "persona_id": { "$ref": "#/$defs/masterId" },
+    "build_profile": { "const": "solo_test" },
+    "maturity": { "const": "operator_lens" },
+    "policy_subject_hash": { "$ref": "#/$defs/hash" },
+    "threshold_provenance": {
+      "type": "object",
+      "required": ["unsourced", "sourced", "breakdown", "structural_unsourced"],
+      "additionalProperties": false,
+      "properties": {
+        "unsourced": { "$ref": "#/$defs/count" },
+        "sourced": { "$ref": "#/$defs/count" },
+        "structural_unsourced": { "type": "boolean" },
+        "breakdown": {
+          "type": "object",
+          "required": ["eligibility", "vetoes", "scoring_rules", "score_bands"],
+          "additionalProperties": false,
+          "properties": {
+            "eligibility": { "$ref": "#/$defs/count" },
+            "vetoes": { "$ref": "#/$defs/count" },
+            "scoring_rules": { "$ref": "#/$defs/count" },
+            "score_bands": { "$ref": "#/$defs/count" }
+          }
+        }
+      }
+    },
+    "derivation_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": ["tool_id", "derivation_spec_id", "derivation_spec_hash", "derivation_evidence_hash"],
+        "additionalProperties": false,
+        "properties": {
+          "tool_id": { "$ref": "#/$defs/id" },
+          "derivation_spec_id": { "$ref": "#/$defs/id" },
+          "derivation_spec_hash": { "$ref": "#/$defs/hash" },
+          "derivation_evidence_hash": { "$ref": "#/$defs/hash" }
+        }
+      }
+    },
+    "case_inventory": {
+      "type": "object",
+      "required": ["total", "golden", "pairwise", "calibration", "unlabeled", "temporal_errors"],
+      "additionalProperties": false,
+      "properties": {
+        "total": { "$ref": "#/$defs/count" },
+        "golden": { "$ref": "#/$defs/count" },
+        "pairwise": { "$ref": "#/$defs/count" },
+        "calibration": { "$ref": "#/$defs/count" },
+        "unlabeled": { "$ref": "#/$defs/count" },
+        "temporal_errors": { "$ref": "#/$defs/count" }
+      }
+    },
+    "fact_coverage": {
+      "type": "object",
+      "required": ["target_facts", "produced", "conditional", "acknowledged_no_producer", "uncovered"],
+      "additionalProperties": false,
+      "properties": {
+        "target_facts": { "$ref": "#/$defs/count" },
+        "produced": { "$ref": "#/$defs/count" },
+        "conditional": { "$ref": "#/$defs/count" },
+        "acknowledged_no_producer": { "$ref": "#/$defs/count" },
+        "uncovered": { "$ref": "#/$defs/count" }
+      }
+    },
+    "ablations": {
+      "type": "object",
+      "required": ["individual_target_count", "individual_out_of_scope_count", "all_targets_out_of_scope"],
+      "additionalProperties": false,
+      "properties": {
+        "individual_target_count": { "$ref": "#/$defs/count" },
+        "individual_out_of_scope_count": { "$ref": "#/$defs/count" },
+        "all_targets_out_of_scope": { "type": "boolean" }
+      }
+    },
+    "hard_vetoes": {
+      "type": "object",
+      "required": ["total", "mechanically_triggered", "pending_nonliteral", "pending_ids"],
+      "additionalProperties": false,
+      "properties": {
+        "total": { "$ref": "#/$defs/count" },
+        "mechanically_triggered": { "$ref": "#/$defs/count" },
+        "pending_nonliteral": { "$ref": "#/$defs/count" },
+        "pending_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/id" }
+        }
+      }
+    },
+    "voice_safety": {
+      "type": "object",
+      "required": [
+        "directional_abstention_rejected",
+        "artifacts_scanned",
+        "impersonation_hits",
+        "disclosure_prefix",
+        "threshold_disclosure"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "directional_abstention_rejected": { "type": "boolean" },
+        "artifacts_scanned": { "$ref": "#/$defs/count" },
+        "impersonation_hits": { "$ref": "#/$defs/count" },
+        "disclosure_prefix": { "type": "string", "pattern": "^AI simulation of the .+ method — not the person$" },
+        "threshold_disclosure": { "type": "string", "pattern": "^thresholds: [0-9]+ AI-proposed, unsourced" }
+      }
+    }
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_.:-]{1,159}$" },
+    "masterId": { "type": "string", "pattern": "^master_[a-z0-9_]+$" }
+  }
+}

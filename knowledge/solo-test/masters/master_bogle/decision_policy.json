@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_not_a_basket"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
         ]
@@ -53,6 +56,9 @@
           "native_state": "provisional_insufficient_return_inputs"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:1b982d2dc6b935fc0"
       ],
@@ -83,6 +89,9 @@
     "provisional_fair_expected_return",
     "provisional_low_cost_index_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -90,21 +99,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_overpriced_market"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_fair_expected_return"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_low_cost_index_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -127,6 +145,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "bogle_fundamental_return_beats_long_bond",
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
@@ -144,6 +165,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "bogle_multiple_at_or_below_long_run_norm",
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
@@ -161,6 +185,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "bogle_owns_the_whole_market",
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"

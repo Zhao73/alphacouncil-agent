@@ -20,6 +20,7 @@ import { gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { loadFactProducerCatalog, seatCoverage } from "./personas-v3/fact-producer-catalog.mjs";
+import { provenanceSummary } from "./personas-v3/seat-fidelity.mjs";
 import { labelFor } from "./personas-v3/seat-labels.mjs";
 import { intentsForStance, VOICE_FIELDS } from "./voice.mjs";
 import { managerDecisionNestedSourceIds, renderStructuredManagerReport } from "./manager-report.mjs";
@@ -99,6 +100,9 @@ function labelFrozenMasterOpinion(run, item, opinion, context) {
   return {
     ...frozenOpinion,
     ...labels,
+    ...(item?.pack?.components?.decision_policy?.provenance ? {
+      threshold_provenance: provenanceSummary(item.pack.components.decision_policy),
+    } : {}),
     // This is the immutable, pre-worker voice. A later worker may replace only the prose
     // provenance label; capability and evidence labels always survive by object spread.
     voice_status: "deterministic_only",

@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_unsupported_allegation"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:df6d07b15dbc9546c"
         ]
@@ -67,6 +70,9 @@
           "native_state": "provisional_unsupported_allegation"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:df6d07b15dbc9546c"
       ],
@@ -96,6 +102,9 @@
     "provisional_watch",
     "provisional_forensic_short_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -103,21 +112,30 @@
         "common_stance": "cautious",
         "native_state": "provisional_red_flags_no_trade"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "opposed",
         "native_state": "provisional_forensic_short_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -140,6 +158,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "forensic_short_earnings_do_not_become_cash",
         "source_ids": [
           "proxy:df6d07b15dbc9546c"
@@ -157,6 +178,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "forensic_short_shortfall_sits_on_a_levered_balance_sheet",
         "source_ids": [
           "proxy:df6d07b15dbc9546c"
@@ -174,6 +198,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "forensic_short_fixed_charges_thinly_covered",
         "source_ids": [
           "proxy:df6d07b15dbc9546c"

@@ -14,6 +14,7 @@ import { readJson, readJsonl, writeJson, writeTextAtomic } from "./fsutil.mjs";
 import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
 import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
+import { thresholdDisclosure } from "./personas-v3/seat-fidelity.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { bullets, clip, clipAtBoundary, fence } from "./text.mjs";
 import { completenessStatus, validateFinalReport, validateUserResponse, verificationStatus, withCompletenessBanner, withDisclaimer, withVerificationBanner } from "./gates.mjs";
@@ -31,6 +32,14 @@ import {
 } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 import { hardVerificationFindings } from "./verification.mjs";
+
+function seatFidelityDisclosure(opinion, title) {
+  if (!opinion?.threshold_provenance) return [];
+  return [
+    `AI simulation of the ${title} method — not the person`,
+    thresholdDisclosure(opinion.threshold_provenance),
+  ];
+}
 
 export function renderPacketMarkdown(packet, index = 0, language = packet?.language) {
   const key = languageKey(language);
@@ -92,6 +101,7 @@ export function renderPacketMarkdown(packet, index = 0, language = packet?.langu
 export function renderMasterMarkdown(opinion, lang) {
   if (!opinion) return "";
   const title = masterTitle(opinion.master, lang);
+  const fidelityDisclosure = seatFidelityDisclosure(opinion, title);
   const labels = {
     zh: { statement: "本轮方法席终局陈词（不是大师本人引语）", stance: "立场", capability: "能力状态", evidenceQuality: "证据质量", voiceStatus: "发言状态", verdict: "冻结判断", confidence: "置信度", worker: "陈词来源", summary: "方法席说明", findings: "关键发现", disagreements: "与分析师的分歧", disqualifiers: "触发的排除条件", change: "改变判断所需证据", sources: "来源", packetAcks: "逐证据包读取回执" },
     en: { statement: "Final Method-Seat Statement (not a quote from the named person)", stance: "Stance", capability: "Capability", evidenceQuality: "Evidence quality", voiceStatus: "Voice status", verdict: "Frozen verdict", confidence: "Confidence", worker: "Statement source", summary: "Method-seat explanation", findings: "Key Findings", disagreements: "Disagreements With The Analysts", disqualifiers: "Disqualifiers Triggered", change: "What Would Change The View", sources: "Sources", packetAcks: "Per-Packet Evidence Acknowledgements" },
@@ -101,6 +111,8 @@ export function renderMasterMarkdown(opinion, lang) {
   return [
     `## ${title}`,
     "",
+    ...fidelityDisclosure,
+    ...(fidelityDisclosure.length ? [""] : []),
     voiceDisclaimer(lang),
     "",
     `- ID: ${opinion.master}`,
@@ -261,8 +273,10 @@ function renderMasterStatements(run) {
   const seatBlock = ({ id, opinion, state, voice_status }) => {
     if (!opinion && voice_status !== "voice_contract_failure") return "";
     const intent = opinion?.position_intent ? intentLabel(opinion.position_intent, run.language) : null;
+    const fidelityDisclosure = seatFidelityDisclosure(opinion, masterTitle(id, run.language));
     const lines = [
       `##### ${masterTitle(id, run.language)} (\`${id}\`)`,
+      ...(fidelityDisclosure.length ? ["", ...fidelityDisclosure, ""] : []),
       `- ${copy.stance}: ${opinion?.stance || "out_of_scope"}${intent ? ` \u2014 ${copy.intent}: *${intent}*` : ""}`,
       `- ${copy.capability}: ${opinion?.capability_status || state?.capability_status || "abstain_missing_fact"}`,
       `- ${copy.evidenceQuality}: ${opinion?.evidence_quality || state?.evidence_quality || "not_evaluable"}`,

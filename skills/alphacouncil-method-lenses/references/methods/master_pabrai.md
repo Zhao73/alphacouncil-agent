@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:4d187743d4dfde3d1a9885bab1711ee2e868a2b43db400ed8a8d56da2924b1ea`
+- Pack snapshot hash: `sha256:9c7b0c2e6dca7ffb1049c9b5adca0d3f2640c97f044265cc90a56824bfe3422c`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -350,6 +350,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_floor"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:cfe480714da62e4dd"
         ]
@@ -369,6 +372,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "on_uncomputable": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_floor"
+        },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
         },
         "source_ids": [
           "proxy:cfe480714da62e4dd"
@@ -404,6 +410,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "native_state": "provisional_no_floor"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:cfe480714da62e4dd"
       ],
@@ -429,6 +438,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_no_floor"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:cfe480714da62e4dd"
@@ -459,6 +471,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_watch",
     "provisional_asymmetric_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -466,21 +481,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "opposed",
         "native_state": "provisional_reject"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_watch"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_asymmetric_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -503,6 +527,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "pabrai_floor_covers_the_price",
         "source_ids": [
           "proxy:cfe480714da62e4dd"
@@ -520,6 +547,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "pabrai_uncertainty_is_high_where_risk_is_not",
         "source_ids": [
           "proxy:cfe480714da62e4dd"
@@ -537,6 +567,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "pabrai_financing_survives_to_resolution",
         "source_ids": [
           "proxy:cfe480714da62e4dd"

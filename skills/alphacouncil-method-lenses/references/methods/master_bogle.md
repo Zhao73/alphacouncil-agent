@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:eb086e56862cbdcb5a6e8cb81ddcf4712f78dacdc199c7aacf6d14d7bd9e122a`
+- Pack snapshot hash: `sha256:1ac7972260c054274685b99d1f6f2d6166883f5303d1129a48f66fd5a2e16f50`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -375,6 +375,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "common_stance": "out_of_scope",
           "native_state": "provisional_not_a_basket"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
         ]
@@ -409,6 +412,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
           "native_state": "provisional_insufficient_return_inputs"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:1b982d2dc6b935fc0"
       ],
@@ -439,6 +445,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_fair_expected_return",
     "provisional_low_cost_index_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -446,21 +455,30 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "common_stance": "opposed",
         "native_state": "provisional_overpriced_market"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_fair_expected_return"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_low_cost_index_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -483,6 +501,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "bogle_fundamental_return_beats_long_bond",
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
@@ -500,6 +521,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "bogle_multiple_at_or_below_long_run_norm",
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"
@@ -517,6 +541,9 @@ Numeric thresholds or transformations below belong to the current project proxy 
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "bogle_owns_the_whole_market",
         "source_ids": [
           "proxy:1b982d2dc6b935fc0"

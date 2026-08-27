@@ -18,6 +18,19 @@ Notable changes per release. Dates are UTC.
 
 ### Added
 
+- Added Seat Fidelity Harness v1 for all 26 provisional operator lenses. It labels every
+  policy record and structural parameter as an unsourced AI proposal, locks the pre-change
+  policy subject, verifies 52 derivation bindings, exercises 118 fail-closed fact ablations
+  and 34 hard-veto branches, and leaves three live-operand vetoes explicitly pending.
+- Added a multilingual impersonation lint and fixed per-seat reader disclosures. The current
+  evaluation corpus remains truthfully reported as zero cases; future rows must carry a
+  point-in-time `case_as_of` boundary.
+- Regenerated the AI machine-simulation artifacts because policy identity hashes changed;
+  a parent snapshot proves their non-identity semantics are unchanged and keeps the n-eff
+  disclosure byte-identical.
+- Regenerated all 26 method-reference documents and their catalog to expose the new provenance
+  labels and rebind identity hashes; stripped-corpus snapshots prove their other semantics are
+  unchanged.
 - Added a generated, hash-bound typed-fact producer catalog derived from the real grounding
   adapter's offline emission paths. It covers every fact reference and role in all 26 physical
   solo-test packs, distinguishes conditional production from no producer, checks tool-input

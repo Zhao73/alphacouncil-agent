@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_insufficient_inputs"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:514255b4bf1696d6c"
         ]
@@ -53,6 +56,9 @@
           "native_state": "provisional_insufficient_inputs"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:514255b4bf1696d6c"
       ],
@@ -82,6 +88,9 @@
     "provisional_paper_edge",
     "provisional_executable_edge"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -89,21 +98,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_no_net_edge"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_paper_edge"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_executable_edge"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -126,6 +144,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "sinclair_round_trip_leaves_room_for_an_edge",
         "source_ids": [
           "proxy:514255b4bf1696d6c"
@@ -143,6 +164,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "sinclair_premium_sits_in_the_puts",
         "source_ids": [
           "proxy:514255b4bf1696d6c"

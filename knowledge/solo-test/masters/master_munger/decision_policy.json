@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_out_of_scope"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:d4d52af8b246f7129"
         ]
@@ -38,6 +41,9 @@
         "on_uncomputable": {
           "common_stance": "out_of_scope",
           "native_state": "provisional_out_of_scope"
+        },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
         },
         "source_ids": [
           "proxy:d4d52af8b246f7129"
@@ -87,6 +93,9 @@
           "native_state": "provisional_out_of_scope"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:d4d52af8b246f7129"
       ],
@@ -112,6 +121,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_out_of_scope"
         }
+      },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
       },
       "source_ids": [
         "proxy:d4d52af8b246f7129"
@@ -142,6 +154,9 @@
     "provisional_monitor",
     "provisional_no_fatal_path_found"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -149,21 +164,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_fatal_path"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_monitor"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_no_fatal_path_found"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -186,6 +210,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "munger_earnings_arrive_as_cash",
         "source_ids": [
           "proxy:d4d52af8b246f7129"
@@ -203,6 +230,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "munger_debt_service_has_a_cushion",
         "source_ids": [
           "proxy:d4d52af8b246f7129"
@@ -220,6 +250,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "munger_no_leverage_dependency",
         "source_ids": [
           "proxy:d4d52af8b246f7129"

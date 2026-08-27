@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_unidentified_exposure"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:b5b13eff4215f804d"
         ]
@@ -67,6 +70,9 @@
           "native_state": "provisional_unidentified_exposure"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:b5b13eff4215f804d"
       ],
@@ -96,6 +102,9 @@
     "provisional_mixed",
     "provisional_residual_candidate"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -103,21 +112,30 @@
         "common_stance": "cautious",
         "native_state": "provisional_factor_replication"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_mixed"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_residual_candidate"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -140,6 +158,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "asness_real_yield_gap_positive",
         "source_ids": [
           "proxy:b5b13eff4215f804d"
@@ -157,6 +178,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "asness_momentum_confirms_value",
         "source_ids": [
           "proxy:b5b13eff4215f804d"
@@ -174,6 +198,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "asness_equity_premium_beats_credit_premium",
         "source_ids": [
           "proxy:b5b13eff4215f804d"

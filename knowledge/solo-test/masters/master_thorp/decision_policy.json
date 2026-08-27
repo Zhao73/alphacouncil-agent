@@ -19,6 +19,9 @@
           "common_stance": "out_of_scope",
           "native_state": "provisional_out_of_scope"
         },
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "source_ids": [
           "proxy:1366952123de20fc8"
         ]
@@ -53,6 +56,9 @@
           "native_state": "provisional_out_of_scope"
         }
       },
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      },
       "source_ids": [
         "proxy:1366952123de20fc8"
       ],
@@ -82,6 +88,9 @@
     "provisional_fractional_position",
     "provisional_out_of_scope"
   ],
+  "provenance": {
+    "status": "unsourced_ai_proposal"
+  },
   "schema_version": 1,
   "score_bands": [
     {
@@ -89,21 +98,30 @@
         "common_stance": "opposed",
         "native_state": "provisional_no_measurable_edge"
       },
-      "min_ratio": 0
+      "min_ratio": 0,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "cautious",
         "native_state": "provisional_positive_edge_no_size"
       },
-      "min_ratio": 0.5
+      "min_ratio": 0.5,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     },
     {
       "decision": {
         "common_stance": "constructive",
         "native_state": "provisional_fractional_position"
       },
-      "min_ratio": 1
+      "min_ratio": 1,
+      "provenance": {
+        "status": "unsourced_ai_proposal"
+      }
     }
   ],
   "scoring": {
@@ -126,6 +144,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "thorp_edge_beyond_one_session_sigma",
         "source_ids": [
           "proxy:1366952123de20fc8"
@@ -143,6 +164,9 @@
         },
         "coverage_weight": 1,
         "points": 1,
+        "provenance": {
+          "status": "unsourced_ai_proposal"
+        },
         "rule_id": "thorp_loss_cannot_exceed_the_stake",
         "source_ids": [
           "proxy:1366952123de20fc8"
