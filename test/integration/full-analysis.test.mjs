@@ -726,6 +726,7 @@ for (const [label, pmContractFailureMode, expectedPath] of [
 ]) {
   test(`full headless PM fails closed on ${label} and never publishes a rating`, async () => {
     const TOTAL_TIMEOUT_MS = 60_000;
+    const SYNTHESIS_TIMEOUT_MS = 30_000;
     assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 75_000);
     const dataDir = makeDataDir();
     const fake = fakeFullCodex(dataDir, { malformedTask: null, pmContractFailureMode });
@@ -740,11 +741,12 @@ for (const [label, pmContractFailureMode, expectedPath] of [
       const result = structured(await server.callTool("analyze_symbol", {
         symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
         // This fixture is checking the PM schema barrier, not the deadline barrier. On a busy
-        // Windows runner, process startup for the earlier evidence/debate fixtures can consume
-        // the old 30s council budget before PM starts, leaving PM correctly `skipped` but never
-        // exercising the contract this test names. Keep the separate deadline tests at 30s and
-        // give this contract fixture enough platform-independent headroom to reach both PM tries.
-        council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 12_000, synthesis_timeout_ms: 12_000,
+        // Windows runner, process startup for an earlier debate worker can exceed a small
+        // caller-lowered synthesis cap, leaving PM correctly `skipped` but never exercising the
+        // contract this test names. Keep the separate deadline tests at 30s and give this PM
+        // contract fixture enough per-worker headroom to reach both schema attempts.
+        council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 12_000,
+        synthesis_timeout_ms: SYNTHESIS_TIMEOUT_MS,
         wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
         grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
       }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
@@ -755,7 +757,13 @@ for (const [label, pmContractFailureMode, expectedPath] of [
       assert.equal(result.run.status, "incomplete");
       assert.equal(status.status, "incomplete");
       const portfolioManager = status.agents.find((agent) => agent.role === "portfolio_manager");
-      assert.equal(portfolioManager.status, "failed");
+      const debateAgents = status.agents.filter((agent) => ["bull_researcher", "bear_researcher"].includes(agent.role));
+      assert.equal(portfolioManager.status, "failed", JSON.stringify({
+        portfolio_manager: portfolioManager,
+        debate_agents: debateAgents,
+        terminal_reason: status.terminal_reason,
+        budget_termination: status.budget_termination,
+      }, null, 2));
       assert.equal(portfolioManager.absence_reason, "failed");
       assert.equal(decision.decision_available, false);
       assert.equal(decision.rating, null);
