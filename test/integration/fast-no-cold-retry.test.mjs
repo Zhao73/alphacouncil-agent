@@ -86,6 +86,8 @@ await new Promise((resolve) => setTimeout(resolve, 2_000));
     else process.env.ALPHACOUNCIL_AGENT_DATA_DIR = previousDataDir;
     if (previousCodexCommand === undefined) delete process.env.ALPHACOUNCIL_AGENT_CODEX_CMD;
     else process.env.ALPHACOUNCIL_AGENT_CODEX_CMD = previousCodexCommand;
-    rmSync(dataDir, { recursive: true, force: true });
+    // A Windows .cmd shim can release its executing script a fraction after the wrapper exits.
+    // Let Node's bounded rimraf retry only that transient lock; assertion failures remain fatal.
+    rmSync(dataDir, { recursive: true, force: true, maxRetries: 30, retryDelay: 100 });
   }
 });
