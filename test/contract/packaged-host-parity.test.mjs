@@ -95,8 +95,8 @@ test("packaged parity CLI defaults to a read-only temporary check and Windows se
     "windows_serial",
   ]);
   const [concurrent, serial] = windowsPlan.phases;
-  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 2);
-  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=2");
+  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 1);
+  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=1");
   assert.equal(WINDOWS_SERIAL_TEST_FILES.at(-1), PACKAGED_HOST_PARITY_TEST_FILE);
   assert.equal(concurrent.invocations.length, 1);
   assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.invocations[0].args.includes(file)));

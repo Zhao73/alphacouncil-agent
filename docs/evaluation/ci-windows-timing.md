@@ -441,3 +441,17 @@ three evidence-backed heavy files remain ordered `--test-concurrency=1` invocati
 Linux and macOS stay at concurrency four. This change does not relax a product deadline,
 runtime assertion, RPC observer or selected-file set. Closure requires both exact-head Windows
 jobs, the other ten matrix jobs and the pull-request fuzz job to pass without a rerun.
+
+## v1.5.0 release-candidate regression: serialize the ordinary Windows source phase
+
+Release-candidate head `3205790c462a4cb885175c30ed509a92a9e3dad0` did not satisfy that
+closure rule. Push run [`33163118840`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33163118840)
+and pull-request run [`33163129833`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33163129833)
+both passed Linux, macOS and ChatGPT Work checks, but their Windows jobs failed in different test
+files while the ordinary phase ran at file concurrency two. The failures were transient file-lock
+release and RPC observer expirations across `fast-no-cold-retry`, `runtime-language-failures`,
+`pace-selection-gate` and `quick-analysis`; no common product assertion failed on both runners.
+
+The ordinary Windows source phase therefore moves from concurrency two to one. The selected-file
+set, product deadlines, RPC observers and assertions remain unchanged. The existing three heavy
+files still run as individually named serial invocations so their timing remains visible.

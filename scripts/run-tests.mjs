@@ -36,10 +36,10 @@ export const SOURCE_PORTABLE_EXCLUDED_TEST_COUNT = 14;
 // their own child processes. Node's CPU-count default can oversubscribe large CI
 // hosts and turn deterministic sub-second fixtures into platform-specific timeouts.
 export const SOURCE_TEST_CONCURRENCY = 4;
-// Windows process creation becomes globally starved when four process-owning test files share
-// the runner. Keep the documented next-step reduction at two; the three especially heavy files
-// below still run as ordered single-file invocations after this bounded source phase.
-export const WINDOWS_SOURCE_TEST_CONCURRENCY = 2;
+// Windows process creation remains nondeterministic when even two process-owning test files share
+// a hosted runner. Run the ordinary source phase one file at a time; the three especially heavy
+// files below remain separate invocations so their timing and failure evidence stay attributable.
+export const WINDOWS_SOURCE_TEST_CONCURRENCY = 1;
 export const WINDOWS_SERIAL_TEST_FILES = Object.freeze([
   // A wall-clock parallel-wave assertion failed under Windows file-level concurrency:
   // https://github.com/Zhao73/alphacouncil-agent/actions/runs/33043857486/job/98423253736
