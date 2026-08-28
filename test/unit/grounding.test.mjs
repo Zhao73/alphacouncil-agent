@@ -715,7 +715,8 @@ test("fast quant gets a bounded task-only projection and keeps every frozen quan
   assert.match(prompt, /do not create a percent_move field/);
   assert.match(prompt, /Do not repeat that numeric move in metrics, claims, summary, or open_questions/);
   assert.match(prompt, /Return one final non-empty envelope/);
-  assert.match(prompt, /plus every task-specific native-schema field/);
+  assert.match(prompt, /task-native fields \(news: claim_type\)/);
+  assert.match(prompt, /open_questions_json decodes only to an array of non-empty reader-language strings, never objects/);
 });
 
 test("headless news envelope preserves the task-specific claim_type field", () => {
@@ -729,7 +730,7 @@ test("headless news envelope preserves the task-specific claim_type field", () =
     grounding,
   };
   const prompt = buildHeadlessEvidencePrompt("news_industry_management", run, "Audit current news.");
-  assert.match(prompt, /news requires claim_type/);
+  assert.match(prompt, /news: claim_type/);
   assert.doesNotMatch(prompt, /claims_json row is exactly \{claim,evidence,confidence,source_ids\}/);
 });
 
@@ -758,7 +759,7 @@ test("fast valuation uses a bounded no-exec projection with server-computed scen
   assert.match(prompt, /fast 估值 coverage/);
   assert.match(prompt, /fast 估值来源账本/);
   assert.match(prompt, /12 个 query、6 个 URL、24 次尝试/);
-  assert.match(prompt, /plus every task-specific native-schema field/);
+  assert.match(prompt, /task-native fields \(news: claim_type\)/);
   for (const route of grounding.source_acquisition_plan.tasks.valuation_long_short) {
     assert.match(prompt, new RegExp(route.coverage_id.replaceAll(".", "\\.")));
   }

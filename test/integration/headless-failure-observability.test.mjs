@@ -312,7 +312,8 @@ test("schema repair receives bounded validator paths and a pace-aware budget", a
     assert.ok(repair);
     assert.equal(repair.search, false);
     assert.match(repair.prompt, /\/claims\/0\/source_ids \[minItems\]/u);
-    assert.match(repair.prompt, /required top-level fields are summary/u);
+    assert.match(repair.prompt, /Evidence schema: summary=non-empty string/u);
+    assert.match(repair.prompt, /open_questions=array of non-empty reader-language strings \(never objects\)/u);
     assert.match(repair.prompt, /source_ids containing at least one non-empty source id/u);
     assert.match(repair.prompt, /Never invent a source id or fact/u);
 

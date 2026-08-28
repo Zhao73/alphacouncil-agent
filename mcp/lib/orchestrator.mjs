@@ -421,7 +421,7 @@ export function headlessEvidenceEnvelopeInstruction(kind) {
   return [
     "NATIVE SEGMENTED ENVELOPE: return only the segmented_evidence_v1 outer object, never one packet string.",
     `Decoded segments form one complete ${kind}; transport=segmented_evidence_v1.`,
-    "claims_json, metrics_json, sources_json and open_questions_json are compact one-line JSON strings. Claims have non-empty reader-language claim/evidence, high|medium|low confidence, source_ids, plus every task-specific native-schema field (news requires claim_type).",
+    "claims_json, metrics_json, sources_json and open_questions_json are one-line JSON strings. Claims keep non-empty reader-language claim/evidence, high|medium|low confidence, source_ids and task-native fields (news: claim_type). open_questions_json decodes only to an array of non-empty reader-language strings, never objects.",
     "coverage_items_json, acquisition_ledger_json and official_source_coverage_json are JSON strings; absent values are the literal string null. macro_regime, market_narrative and social_pulse use null coverage and ledger.",
     "Coverage rows use {id,status,source_ids,note,attempted,attempted_urls,gap}; the last four are strings except attempted_urls, an HTTP-URL array. Ledger rows use {coverage_id,outcome,source_ids,attempts,data/reason}; attempts is an object array of {stage,locator_type,locator,result,source_ids,note}, never prose.",
     "Keep summary, confidence and information_richness outermost. Return one final non-empty envelope, with no draft, correction or second JSON root.",
@@ -2936,7 +2936,7 @@ function schemaRepairIssuePrompt(errorOrIssues) {
 }
 
 const EVIDENCE_REPAIR_SCHEMA_CONTRACT = [
-  "Evidence schema contract: required top-level fields are summary (non-empty string), claims (array), metrics (object), sources (array), open_questions (array), and confidence (high|medium|low).",
+  "Evidence schema: summary=non-empty string; claims=array; metrics=object; sources=array; open_questions=array of non-empty reader-language strings (never objects); confidence=high|medium|low.",
   "Every claim requires non-empty claim and evidence strings, confidence (high|medium|low), and source_ids containing at least one non-empty source id.",
   "Every source requires non-empty id, title, url, published_at, and retrieved_at. At least one of claims or open_questions must be non-empty.",
   "When a source cites a server-read SEC primary-document excerpt, preserve its raw_url as url and copy grounding_document_ref, accession, persisted_text_sha256, and excerpt_sha256 exactly from the frozen grounding block; never recalculate, shorten, or substitute those bindings.",
