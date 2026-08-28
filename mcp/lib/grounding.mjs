@@ -883,6 +883,9 @@ function fastQuantGroundingBlock(grounding, language) {
     chinese
       ? "把实际采用的 canonical_sources 一一复制为本包内无冒号的来源别名；原样保留 URL、时间戳、动态快照类型和口径。一标准差 ATM-IV 波幅只能以 recomputed_proxy 发布，不能称为跨式盈亏平衡或方向预测；iv_history 仍不足时，IV rank/percentile 必须保持 unavailable。"
       : "Copy every canonical_sources row actually used to a unique colon-free packet-local source alias, preserving URL, timestamps, dynamic-snapshot kind, and measurement basis. Publish the one-standard-deviation ATM-IV move only as a recomputed_proxy, never as a straddle breakeven or directional forecast. When iv_history is still insufficient, IV rank/percentile stays unavailable.",
+    chinese
+      ? "期权波幅账本必须逐字采用冻结 proxy 的公式和数值：data.inputs 必须是 spot、reference_atm_iv、dte 三行数组，每行含 name、value、source_ids，且 source_ids 指向本包内对应 fast_quant_options_snapshot URL 的来源别名；data.observations 必须写 metric=one_standard_deviation_atm_iv_move_proxy、value=<冻结 percent_move>、unit=% of spot、period=\"<冻结 expiry> expiry\"、scope，不得另建 percent_move 字段。不要在 metrics、claims、summary 或 open_questions 重复这个数值。"
+      : "The option-move ledger must preserve the frozen proxy formula and values: data.inputs is exactly three rows (spot, reference_atm_iv, dte), each with name, value, and source_ids pointing to this packet's alias for the fast_quant_options_snapshot URL. data.observations uses metric=one_standard_deviation_atm_iv_move_proxy, value=<frozen percent_move>, unit=% of spot, period=\"<frozen expiry> expiry\", and scope; do not create a percent_move field. Do not repeat that numeric move in metrics, claims, summary, or open_questions.",
   ].join("\n");
 }
 

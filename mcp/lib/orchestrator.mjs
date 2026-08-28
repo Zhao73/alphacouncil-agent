@@ -419,12 +419,12 @@ export const FAST_VALUATION_USER_OBJECTIVE_RESERVE_BYTES = FAST_VALUATION_USER_O
 
 export function headlessEvidenceEnvelopeInstruction(kind) {
   return [
-    "NATIVE SEGMENTED STRUCTURED-OUTPUT ENVELOPE (mandatory): return the exact outer fields required by segmented_evidence_v1; do not return the evidence packet as one monolithic string.",
-    `The decoded fields together represent the one complete ${kind} required above. Set transport exactly to segmented_evidence_v1.`,
-    "Serialize claims, metrics, sources, and open_questions separately into their matching *_json strings as compact single-line JSON. Every claims_json row is exactly {claim,evidence,confidence,source_ids}: claim and evidence are non-empty reader-language strings, confidence is high|medium|low, and source_ids is a JSON array of cited source IDs.",
-    "Serialize coverage_items, acquisition_ledger, and official_source_coverage into their matching *_json strings; use the literal string null when that top-level field is not applicable or absent under the packet contract. In particular, macro_regime, market_narrative, and social_pulse must set coverage_items_json and acquisition_ledger_json to the literal string null because those supplemental seats own no company dossier routes.",
-    "Do not confuse the two coverage shapes: every coverage_items_json row uses id, status, source_ids, note, attempted, attempted_urls, and gap. note, attempted, and gap are plain strings (never arrays or objects); attempted_urls is an array of HTTP URLs. acquisition_ledger_json items separately use coverage_id, outcome, source_ids, attempts, and data/reason. Every acquisition `attempts` value MUST be a JSON array of objects, never a prose string; each attempt object uses stage, locator_type, locator, result, source_ids, and note.",
-    "Put summary, confidence, and information_richness directly in the outer object. Do not emit an empty or intermediate envelope. Silently discard drafts before answering; never append a correction or a second JSON root inside any segment.",
+    "NATIVE SEGMENTED ENVELOPE: return only the segmented_evidence_v1 outer object, never one packet string.",
+    `Decoded segments form one complete ${kind}; transport=segmented_evidence_v1.`,
+    "claims_json, metrics_json, sources_json and open_questions_json are compact one-line JSON strings. Claims have non-empty reader-language claim/evidence, high|medium|low confidence, source_ids, plus every task-specific native-schema field (news requires claim_type).",
+    "coverage_items_json, acquisition_ledger_json and official_source_coverage_json are JSON strings; absent values are the literal string null. macro_regime, market_narrative and social_pulse use null coverage and ledger.",
+    "Coverage rows use {id,status,source_ids,note,attempted,attempted_urls,gap}; the last four are strings except attempted_urls, an HTTP-URL array. Ledger rows use {coverage_id,outcome,source_ids,attempts,data/reason}; attempts is an object array of {stage,locator_type,locator,result,source_ids,note}, never prose.",
+    "Keep summary, confidence and information_richness outermost. Return one final non-empty envelope, with no draft, correction or second JSON root.",
   ].join(" ");
 }
 

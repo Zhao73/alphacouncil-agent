@@ -710,8 +710,27 @@ test("fast quant gets a bounded task-only projection and keeps every frozen quan
   }
   assert.match(prompt, /at most 8 queries and 3 URLs/);
   assert.match(prompt, /Copy stage\/type\/locator verbatim/);
-  assert.match(prompt, /Do not emit an empty or intermediate envelope/);
-  assert.match(prompt, /Every claims_json row is exactly \{claim,evidence,confidence,source_ids\}/);
+  assert.match(prompt, /data\.inputs is exactly three rows \(spot, reference_atm_iv, dte\)/);
+  assert.match(prompt, /value=<frozen percent_move>/);
+  assert.match(prompt, /do not create a percent_move field/);
+  assert.match(prompt, /Do not repeat that numeric move in metrics, claims, summary, or open_questions/);
+  assert.match(prompt, /Return one final non-empty envelope/);
+  assert.match(prompt, /plus every task-specific native-schema field/);
+});
+
+test("headless news envelope preserves the task-specific claim_type field", () => {
+  const grounding = fastQuantFixture();
+  const run = {
+    symbol: "AAPL",
+    as_of: grounding.as_of,
+    language: "English",
+    council_mode: "full",
+    council_pace: "fast",
+    grounding,
+  };
+  const prompt = buildHeadlessEvidencePrompt("news_industry_management", run, "Audit current news.");
+  assert.match(prompt, /news requires claim_type/);
+  assert.doesNotMatch(prompt, /claims_json row is exactly \{claim,evidence,confidence,source_ids\}/);
 });
 
 test("fast valuation uses a bounded no-exec projection with server-computed scenarios", () => {
@@ -736,9 +755,10 @@ test("fast valuation uses a bounded no-exec projection with server-computed scen
   assert.match(prompt, /server_valuation_sensitivity/);
   assert.match(prompt, /illustrative_server_model_not_forecast/);
   assert.match(prompt, /禁止调用 shell、Python、SciPy/);
+  assert.match(prompt, /fast 估值 coverage/);
   assert.match(prompt, /fast 估值来源账本/);
   assert.match(prompt, /12 个 query、6 个 URL、24 次尝试/);
-  assert.match(prompt, /Every claims_json row is exactly \{claim,evidence,confidence,source_ids\}/);
+  assert.match(prompt, /plus every task-specific native-schema field/);
   for (const route of grounding.source_acquisition_plan.tasks.valuation_long_short) {
     assert.match(prompt, new RegExp(route.coverage_id.replaceAll(".", "\\.")));
   }
@@ -813,24 +833,30 @@ test("fast valuation persists the exact projection and rejects conflicting or mi
 test("fast valuation reserves eight KiB for user intent and fails closed above the limit", () => {
   assert.equal(FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES, 8 * 1024);
   const grounding = fastQuantFixture();
-  const run = {
+  const baseRun = {
     symbol: "AAPL",
     as_of: grounding.as_of,
-    language: "English",
     council_mode: "full",
     council_pace: "fast",
     grounding,
   };
-  const prompt = buildHeadlessEvidencePrompt(
-    "valuation_long_short",
-    run,
-    "x".repeat(FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES),
-  );
-  assert.ok(Buffer.byteLength(prompt, "utf8") <= FAST_VALUATION_HEADLESS_PROMPT_MAX_BYTES);
+  for (const language of ["English", "中文"]) {
+    const prompt = buildHeadlessEvidencePrompt(
+      "valuation_long_short",
+      { ...baseRun, language },
+      "x".repeat(FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES),
+    );
+    const promptBytes = Buffer.byteLength(prompt, "utf8");
+    assert.ok(promptBytes <= FAST_VALUATION_HEADLESS_PROMPT_MAX_BYTES);
+    assert.ok(
+      FAST_VALUATION_HEADLESS_PROMPT_MAX_BYTES - promptBytes >= 1024,
+      `${language} maximum user objective needs at least 1 KiB of final-prompt drift headroom`,
+    );
+  }
   assert.throws(
     () => buildHeadlessEvidencePrompt(
       "valuation_long_short",
-      run,
+      { ...baseRun, language: "English" },
       "x".repeat(FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES + 1),
     ),
     (error) => error?.data?.reason === "FAST_VALUATION_USER_OBJECTIVE_TOO_LARGE",
