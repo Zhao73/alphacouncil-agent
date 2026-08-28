@@ -15,6 +15,9 @@ import {
   fetchFilingIndex,
   fetchSubmissions,
   fetchUniverse,
+  filingDocumentUrl,
+  machineReadableFilingDocumentName,
+  secFilingIndexUrl,
   secUserAgent,
 } from "./sec.mjs";
 
@@ -44,6 +47,10 @@ const MAX_OFFICIAL_LEAD_PAGES = 6;
 const MAX_STARTER_NEWS_ITEMS = 80;
 const MIN_STARTER_NEWS_ITEMS_PER_TOPIC = 6;
 const MAX_SOURCE_BODY_BYTES = 1_500_000;
+const XSL_RENDERED_XML_DOCUMENT = /^xsl[^/]*\/.+\.xml$/iu;
+const MAX_SEC_PRIMARY_DOCUMENT_TEXT_BYTES = 512_000;
+const MAX_SEC_PRIMARY_DOCUMENT_EXCERPT_CHARS = 2_400;
+export const SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID = "sec_primary_document_evidence_v1";
 const GENERIC_IDENTITY_WORDS = new Set([
   "and", "company", "corporation", "corp", "inc", "incorporated", "limited", "ltd",
   "holdings", "holding", "group", "plc", "class", "common", "stock", "the",
@@ -548,6 +555,150 @@ function htmlExcerpt(html) {
   return text ? text.slice(0, 2_400) : null;
 }
 
+function sha256Text(value) {
+  return `sha256:${createHash("sha256").update(String(value), "utf8").digest("hex")}`;
+}
+
+function secPrimaryDocumentExcerpt(xml) {
+  const normalized = decodeHtml(xml);
+  if (!normalized) return null;
+  return {
+    text: normalized.slice(0, MAX_SEC_PRIMARY_DOCUMENT_EXCERPT_CHARS),
+    truncated: normalized.length > MAX_SEC_PRIMARY_DOCUMENT_EXCERPT_CHARS,
+  };
+}
+
+function secPrimaryDocumentRef({ cik, accession, rawUrl, persistedTextHash, excerptHash }) {
+  return `sec-primary-document-v1:${createHash("sha256").update([
+    String(cik || ""),
+    String(accession || ""),
+    String(rawUrl || ""),
+    String(persistedTextHash || ""),
+    String(excerptHash || ""),
+  ].join("\0"), "utf8").digest("hex")}`;
+}
+
+async function fetchRegulatorDocumentWithinBudget(filingDocumentImpl, args, {
+  signal,
+  timeoutMs,
+}) {
+  const controller = new AbortController();
+  const relayAbort = () => controller.abort(signal?.reason);
+  if (signal?.aborted) relayAbort();
+  else signal?.addEventListener?.("abort", relayAbort, { once: true });
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`SEC primary document timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([
+      filingDocumentImpl(...args, { signal: controller.signal }),
+      timeout,
+    ]);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener?.("abort", relayAbort);
+  }
+}
+
+async function acquireLatestRegulatorDocument(profile, filings, {
+  signal,
+  filingDocumentImpl,
+  timeoutMs,
+}) {
+  const filing = filings.find((candidate) => (
+    candidate?.accession
+      && XSL_RENDERED_XML_DOCUMENT.test(String(candidate.primary_document || ""))
+  ));
+  if (!profile?.cik || !filing) return { documents: [], attempts: [] };
+  const documentName = machineReadableFilingDocumentName(filing.primary_document);
+  const rawUrl = filingDocumentUrl(profile.cik, filing.accession, documentName);
+  const indexUrl = secFilingIndexUrl(profile.cik, filing.accession);
+  try {
+    const document = await fetchRegulatorDocumentWithinBudget(
+      filingDocumentImpl,
+      [profile.cik, filing.accession, documentName],
+      { signal, timeoutMs },
+    );
+    const body = String(document?.text || "");
+    const persistedTextByteLength = Buffer.byteLength(body, "utf8");
+    if (persistedTextByteLength > MAX_SEC_PRIMARY_DOCUMENT_TEXT_BYTES) {
+      throw new Error(`SEC primary document exceeded the ${MAX_SEC_PRIMARY_DOCUMENT_TEXT_BYTES}-byte starter-evidence limit`);
+    }
+    const excerpt = secPrimaryDocumentExcerpt(body);
+    if (!body || !excerpt?.text) throw new Error("SEC primary document returned no readable text");
+    const retrievedAt = new Date().toISOString();
+    const url = document.url || rawUrl;
+    if (url !== rawUrl) throw new Error("SEC primary document resolved to an unexpected URL");
+    const persistedTextHash = sha256Text(body);
+    const excerptHash = sha256Text(excerpt.text);
+    const groundingDocumentRef = secPrimaryDocumentRef({
+      cik: profile.cik,
+      accession: filing.accession,
+      rawUrl: url,
+      persistedTextHash,
+      excerptHash,
+    });
+    return {
+      documents: [{
+        schema_version: SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID,
+        cik: String(profile.cik).replace(/\D/gu, "").padStart(10, "0"),
+        form: filing.form || null,
+        accession: filing.accession,
+        filing_date: filing.filing_date || null,
+        accepted_at: filing.accepted_at || null,
+        report_date: filing.report_date || null,
+        document_name: documentName,
+        title: `${profile.name || "SEC filer"} ${filing.form || "filing"} ${filing.filing_date || filing.accession}`,
+        index_url: indexUrl,
+        raw_url: url,
+        retrieved_at: retrievedAt,
+        persisted_text_byte_length: persistedTextByteLength,
+        persisted_text_sha256: persistedTextHash,
+        excerpt: excerpt.text,
+        excerpt_byte_length: Buffer.byteLength(excerpt.text, "utf8"),
+        excerpt_sha256: excerptHash,
+        excerpt_truncated: excerpt.truncated,
+        extraction_method: "xml_text_content_normalized_v1",
+        grounding_document_ref: groundingDocumentRef,
+        cache_status: document.cache_status || null,
+      }],
+      attempts: [{
+        form: filing.form || null,
+        accession: filing.accession,
+        filing_date: filing.filing_date || null,
+        accepted_at: filing.accepted_at || null,
+        requested_document: filing.primary_document,
+        resolved_document: documentName,
+        index_url: indexUrl,
+        raw_url: url,
+        status: "succeeded",
+        grounding_document_ref: groundingDocumentRef,
+        persisted_text_sha256: persistedTextHash,
+      }],
+    };
+  } catch (error) {
+    return {
+      documents: [],
+      attempts: [{
+        form: filing.form || null,
+        accession: filing.accession,
+        filing_date: filing.filing_date || null,
+        accepted_at: filing.accepted_at || null,
+        requested_document: filing.primary_document,
+        resolved_document: documentName,
+        index_url: indexUrl,
+        raw_url: rawUrl,
+        status: "unreachable",
+        reason: String(error?.message || error).slice(0, 500),
+      }],
+    };
+  }
+}
+
 function extractFeedLinks(html, pageUrl, rootUrls) {
   const found = [];
   const linkPattern = /<link\b[^>]*>/giu;
@@ -976,8 +1127,26 @@ export async function acquireCompanyStarterEvidence({
   requestImpl,
   timeoutMs = 12_000,
   days = 120,
+  filingDocumentImpl = fetchFilingDocument,
 } = {}) {
   const specs = companyStarterFeedSpecs({ symbol, profile, issuerIndex });
+  const cutoff = asOf ? Date.parse(`${asOf}T23:59:59.999Z`) : Infinity;
+  const filings = (profile.recent_filings || []).filter((filing) => {
+    const date = Date.parse(filing.accepted_at || filing.filing_date || "");
+    return Number.isFinite(date) && date <= cutoff;
+  }).sort((left, right) => (
+    Date.parse(right.accepted_at || right.filing_date || 0)
+      - Date.parse(left.accepted_at || left.filing_date || 0)
+  ));
+  // Only XSL-wrapped XML is prefetched here. These documents are small, machine-readable and
+  // are the exact SEC routes most often rejected by browser search. Large 10-K/10-Q/8-K HTML
+  // remains on the existing bounded issuer/document paths rather than adding another full-body
+  // fetch to every run.
+  const regulatorDocumentPromise = acquireLatestRegulatorDocument(profile, filings, {
+    signal,
+    filingDocumentImpl,
+    timeoutMs: Math.max(1, Math.min(timeoutMs, 8_000)),
+  });
   const attempts = await Promise.all(specs.map((spec) => fetchStarterFeed(spec, {
     signal, fetchImpl, lookupImpl, requestImpl, timeoutMs,
   })));
@@ -1012,11 +1181,7 @@ export async function acquireCompanyStarterEvidence({
     seenDocuments.add(key);
     issuerDocuments.push(document);
   }
-  const cutoff = asOf ? Date.parse(`${asOf}T23:59:59.999Z`) : Infinity;
-  const filings = (profile.recent_filings || []).filter((filing) => {
-    const date = Date.parse(filing.accepted_at || filing.filing_date || "");
-    return Number.isFinite(date) && date <= cutoff;
-  });
+  const regulator = await regulatorDocumentPromise;
   return {
     schema_version: 1,
     symbol: String(symbol || profile.tickers?.[0] || "").toUpperCase(),
@@ -1027,6 +1192,11 @@ export async function acquireCompanyStarterEvidence({
       ? "succeeded"
       : "unreachable",
     filings,
+    sec_primary_document_evidence: {
+      schema_version: SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID,
+      documents: regulator.documents,
+      attempts: regulator.attempts,
+    },
     issuer_documents: issuerDocuments,
     news,
     feed_attempts: attempts.map((attempt) => ({
@@ -1709,6 +1879,136 @@ function addIssue(issues, path, keyword, message) {
   issues.push({ path, keyword, message });
 }
 
+/**
+ * A worker may cite a server-read SEC excerpt without opening the filing again, but only by
+ * copying the frozen binding. This makes the hashes operational: changing the URL, accession,
+ * excerpt hash or server ref fails the evidence gate instead of leaving decorative metadata.
+ */
+export function secPrimaryDocumentEvidenceIssues(packet, grounding) {
+  const issues = [];
+  const evidence = grounding?.company_starter_evidence?.sec_primary_document_evidence;
+  if (!evidence) return issues;
+  const basePath = "/grounding/company_starter_evidence/sec_primary_document_evidence";
+  if (evidence.schema_version !== SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID) {
+    addIssue(issues, `${basePath}/schema_version`, "const", `must equal ${SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID}`);
+    return issues;
+  }
+  if (!Array.isArray(evidence.documents)) {
+    addIssue(issues, `${basePath}/documents`, "type", "must be an array");
+    return issues;
+  }
+  const validDocuments = [];
+  for (let index = 0; index < evidence.documents.length; index += 1) {
+    const document = evidence.documents[index];
+    const path = `${basePath}/documents/${index}`;
+    if (!document || typeof document !== "object" || Array.isArray(document)) {
+      addIssue(issues, path, "type", "must be an object");
+      continue;
+    }
+    const before = issues.length;
+    const expectedRawUrl = filingDocumentUrl(document.cik, document.accession, document.document_name);
+    const expectedIndexUrl = secFilingIndexUrl(document.cik, document.accession);
+    const expectedExcerptBytes = Buffer.byteLength(String(document.excerpt || ""), "utf8");
+    const expectedExcerptHash = sha256Text(document.excerpt || "");
+    const expectedRef = secPrimaryDocumentRef({
+      cik: document.cik,
+      accession: document.accession,
+      rawUrl: document.raw_url,
+      persistedTextHash: document.persisted_text_sha256,
+      excerptHash: document.excerpt_sha256,
+    });
+    if (document.schema_version !== SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID) {
+      addIssue(issues, `${path}/schema_version`, "const", `must equal ${SEC_PRIMARY_DOCUMENT_EVIDENCE_SCHEMA_ID}`);
+    }
+    if (!/^\d{10}$/u.test(String(document.cik || ""))) addIssue(issues, `${path}/cik`, "format", "must be a ten-digit CIK");
+    if (typeof document.accession !== "string" || !document.accession.trim()) addIssue(issues, `${path}/accession`, "required", "must be non-empty");
+    if (safeUrl(document.raw_url) !== safeUrl(expectedRawUrl)) addIssue(issues, `${path}/raw_url`, "integrity", "must equal the canonical raw SEC document URL");
+    if (safeUrl(document.index_url) !== safeUrl(expectedIndexUrl)) addIssue(issues, `${path}/index_url`, "integrity", "must equal the canonical SEC filing-index URL");
+    const asOfEnd = Date.parse(`${grounding?.company_starter_evidence?.as_of || ""}T23:59:59.999Z`);
+    const accepted = Date.parse(document.accepted_at || document.filing_date || "");
+    if (!Number.isFinite(accepted) || (Number.isFinite(asOfEnd) && accepted > asOfEnd)) {
+      addIssue(issues, `${path}/accepted_at`, "point_in_time", "must be dated on or before the frozen as_of cutoff");
+    }
+    if (!/^sha256:[a-f0-9]{64}$/u.test(String(document.persisted_text_sha256 || ""))) {
+      addIssue(issues, `${path}/persisted_text_sha256`, "format", "must be a SHA-256 over the persisted UTF-8 text");
+    }
+    if (!Number.isSafeInteger(document.persisted_text_byte_length)
+      || document.persisted_text_byte_length <= 0
+      || document.persisted_text_byte_length > MAX_SEC_PRIMARY_DOCUMENT_TEXT_BYTES) {
+      addIssue(issues, `${path}/persisted_text_byte_length`, "range", "must be a bounded positive UTF-8 byte length");
+    }
+    if (!document.excerpt || expectedExcerptBytes !== document.excerpt_byte_length) {
+      addIssue(issues, `${path}/excerpt_byte_length`, "integrity", "must equal the UTF-8 length of excerpt");
+    }
+    if (expectedExcerptHash !== document.excerpt_sha256) {
+      addIssue(issues, `${path}/excerpt_sha256`, "integrity", "must equal the SHA-256 of excerpt");
+    }
+    if (expectedExcerptBytes > document.persisted_text_byte_length) {
+      addIssue(issues, `${path}/excerpt_byte_length`, "range", "cannot exceed persisted text length");
+    }
+    if (expectedRef !== document.grounding_document_ref) {
+      addIssue(issues, `${path}/grounding_document_ref`, "integrity", "does not match the frozen SEC document identity and hashes");
+    }
+    if (issues.length === before) validDocuments.push(document);
+  }
+  // Every evidence task receives the shared grounding block. Validate every packet source that
+  // points at a frozen raw URL or claims a frozen binding; otherwise a non-news task (or an
+  // unavailable news coverage row) could quote the excerpt while bypassing this check.
+  for (let index = 0; index < (packet?.sources || []).length; index += 1) {
+    const source = packet.sources[index];
+    if (!source || typeof source !== "object" || Array.isArray(source)) continue;
+    const sourcePath = `/sources/${index}`;
+    const carriesFrozenBinding = typeof source.grounding_document_ref === "string"
+      || typeof source.persisted_text_sha256 === "string"
+      || typeof source.excerpt_sha256 === "string";
+    const frozen = validDocuments.find((document) => (
+      document.grounding_document_ref === source.grounding_document_ref
+        || safeUrl(document.raw_url) === safeUrl(source.url)
+    ));
+    if (!frozen) {
+      if (carriesFrozenBinding) {
+        addIssue(issues, `${sourcePath}/grounding_document_ref`, "frozen_binding", "does not match any server-frozen SEC primary document");
+      }
+      continue;
+    }
+    const checks = [
+      ["grounding_document_ref", frozen.grounding_document_ref],
+      ["accession", frozen.accession],
+      ["persisted_text_sha256", frozen.persisted_text_sha256],
+      ["excerpt_sha256", frozen.excerpt_sha256],
+    ];
+    for (const [field, expected] of checks) {
+      if (source[field] !== expected) {
+        addIssue(issues, `${sourcePath}/${field}`, "frozen_binding", `must equal the server-frozen SEC ${field}`);
+      }
+    }
+    if (safeUrl(source.url) !== safeUrl(frozen.raw_url)) {
+      addIssue(issues, `${sourcePath}/url`, "frozen_binding", "must equal the server-frozen raw SEC URL");
+    }
+    if (String(source.published_at || "").slice(0, 10) !== frozen.filing_date) {
+      addIssue(issues, `${sourcePath}/published_at`, "frozen_binding", "must equal the filing date of the server-frozen SEC document");
+    }
+  }
+  return issues;
+}
+
+export function secPrimaryDocumentRepairPromptBlock(grounding) {
+  const documents = grounding?.company_starter_evidence?.sec_primary_document_evidence?.documents;
+  if (!Array.isArray(documents) || !documents.length) return "";
+  const bindings = documents.slice(0, 1).map((document) => ({
+    grounding_document_ref: document.grounding_document_ref,
+    accession: document.accession,
+    raw_url: document.raw_url,
+    filing_date: document.filing_date,
+    persisted_text_sha256: document.persisted_text_sha256,
+    excerpt_sha256: document.excerpt_sha256,
+  }));
+  return [
+    "Server-frozen SEC source binding for transport repair (copy these exact values only when the malformed source cited this server-read document; this metadata is not new evidence):",
+    JSON.stringify(bindings),
+  ].join("\n");
+}
+
 export function companySourceAcquisitionIssues(packet, run) {
   if (!requiresOperatingCompanyDossier(run)) return [];
   canonicalizeCompanySourceAcquisitionPacket(packet, run);
@@ -1716,6 +2016,7 @@ export function companySourceAcquisitionIssues(packet, run) {
   const plan = run?.grounding?.source_acquisition_plan;
   const routes = plan?.tasks?.[task];
   const issues = [];
+  issues.push(...secPrimaryDocumentEvidenceIssues(packet, run?.grounding));
   // Legacy/replayed runs may carry a pre-1.2.1 grounding object with no frozen plan. Preserve
   // read/replay compatibility, but never claim the new acquisition policy ran. Every fresh
   // gatherGrounding path installs the plan and therefore takes the strict branch below.

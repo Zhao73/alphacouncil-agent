@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { createHash } from "node:crypto";
 import { PassThrough } from "node:stream";
 
 import {
@@ -11,6 +12,8 @@ import {
   companySourceAcquisitionIssues,
   discoverIssuerOfficialSources,
   discoverIssuerRootsFromFilings,
+  secPrimaryDocumentEvidenceIssues,
+  secPrimaryDocumentRepairPromptBlock,
   sourceAcquisitionPromptBlock,
 } from "../../mcp/lib/company-source-acquisition.mjs";
 
@@ -296,6 +299,285 @@ test("adaptive starter evidence retrieves dated cross-topic content without an A
   assert.ok(result.excluded_irrelevant >= result.feed_attempts.length);
   assert.ok(result.feed_attempts.length >= 6);
   assert.ok(result.feed_attempts.every((attempt) => attempt.ok));
+});
+
+test("starter evidence exposes a server-read raw SEC XML document instead of only its XSL alias", async () => {
+  const feed = "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+  const body = [
+    "<?xml version=\"1.0\"?><ownershipDocument>",
+    "<documentType>4</documentType><periodOfReport>2026-08-25</periodOfReport>",
+    "<rptOwnerName>Example Officer</rptOwnerName><transactionShares><value>1439</value></transactionShares>",
+    "<transactionPricePerShare><value>310.95</value></transactionPricePerShare>",
+    "<sharesOwnedFollowingTransaction><value>37229</value></sharesOwnedFollowingTransaction>",
+    "<aff10b5One>1</aff10b5One><dateOfPlanAdoption>2026-05-05</dateOfPlanAdoption>",
+    "</ownershipDocument>",
+  ].join("");
+  let requested = null;
+  const result = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-28",
+    profile: {
+      cik: "0001045810",
+      name: "Alpha Circuit Corporation",
+      recent_filings: [{
+        form: "4",
+        accession: "0001045810-26-000062",
+        primary_document: "xslF345X06/form4.xml",
+        primary_document_url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/xslF345X06/form4.xml",
+        filing_date: "2026-08-27",
+        report_date: "2026-08-25",
+        accepted_at: "2026-08-27T18:30:30.000Z",
+      }],
+    },
+  }, {
+    fetchImpl: async (url) => ({ ok: true, status: 200, url, headers: { get: () => "application/rss+xml" }, text: async () => feed }),
+    filingDocumentImpl: async (cik, accession, document) => {
+      requested = { cik, accession, document };
+      return {
+        url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/form4.xml",
+        text: body,
+        cache_status: "miss",
+      };
+    },
+    timeoutMs: 1_000,
+  });
+
+  assert.deepEqual(requested, {
+    cik: "0001045810",
+    accession: "0001045810-26-000062",
+    document: "form4.xml",
+  });
+  const evidence = result.sec_primary_document_evidence;
+  const document = evidence.documents[0];
+  assert.equal(evidence.schema_version, "sec_primary_document_evidence_v1");
+  assert.equal(evidence.attempts[0].status, "succeeded");
+  assert.equal(evidence.attempts[0].requested_document, "xslF345X06/form4.xml");
+  assert.equal(evidence.documents.length, 1);
+  assert.match(document.raw_url, /\/form4\.xml$/u);
+  assert.match(document.index_url, /0001045810-26-000062-index\.html$/u);
+  assert.equal(document.persisted_text_byte_length, Buffer.byteLength(body, "utf8"));
+  assert.equal(document.persisted_text_sha256, `sha256:${createHash("sha256").update(body, "utf8").digest("hex")}`);
+  assert.equal(document.excerpt_byte_length, Buffer.byteLength(document.excerpt, "utf8"));
+  assert.equal(document.excerpt_sha256, `sha256:${createHash("sha256").update(document.excerpt, "utf8").digest("hex")}`);
+  assert.match(document.grounding_document_ref, /^sec-primary-document-v1:[a-f0-9]{64}$/u);
+  assert.match(document.excerpt, /Example Officer.*1439.*310\.95.*37229.*2026-05-05/u);
+});
+
+test("a failed raw SEC XML prefetch remains an explicit attempt and creates no excerpt", async () => {
+  const feed = "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+  const result = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-28",
+    profile: {
+      cik: "0001045810",
+      name: "Alpha Circuit Corporation",
+      recent_filings: [{
+        form: "4",
+        accession: "0001045810-26-000062",
+        primary_document: "xslF345X06/form4.xml",
+        primary_document_url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/xslF345X06/form4.xml",
+        filing_date: "2026-08-27",
+        accepted_at: "2026-08-27T18:30:30.000Z",
+      }],
+    },
+  }, {
+    fetchImpl: async (url) => ({ ok: true, status: 200, url, headers: { get: () => "application/rss+xml" }, text: async () => feed }),
+    filingDocumentImpl: async () => { throw new Error("HTTP 403 from SEC primary document"); },
+    timeoutMs: 1_000,
+  });
+
+  assert.deepEqual(result.sec_primary_document_evidence.documents, []);
+  assert.equal(result.sec_primary_document_evidence.attempts[0].status, "unreachable");
+  assert.match(result.sec_primary_document_evidence.attempts[0].reason, /HTTP 403/u);
+});
+
+test("starter SEC evidence excludes post-cutoff filings before choosing the latest raw document", async () => {
+  const feed = "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+  const requested = [];
+  const result = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-28",
+    profile: {
+      cik: "0001045810",
+      name: "Alpha Circuit Corporation",
+      recent_filings: [
+        {
+          form: "4", accession: "0001045810-26-000099", primary_document: "xslF345X06/future.xml",
+          filing_date: "2026-08-29", accepted_at: "2026-08-29T00:00:01.000Z",
+        },
+        {
+          form: "4", accession: "0001045810-26-000062", primary_document: "xslF345X06/form4.xml",
+          filing_date: "2026-08-27", accepted_at: "2026-08-27T18:30:30.000Z",
+        },
+      ],
+    },
+  }, {
+    fetchImpl: async (url) => ({ ok: true, status: 200, url, headers: { get: () => "application/rss+xml" }, text: async () => feed }),
+    filingDocumentImpl: async (cik, accession, document) => {
+      requested.push({ cik, accession, document });
+      return {
+        url: `https://www.sec.gov/Archives/edgar/data/1045810/${accession.replace(/-/gu, "")}/${document}`,
+        text: "<ownershipDocument><rptOwnerName>Cutoff-safe officer</rptOwnerName></ownershipDocument>",
+      };
+    },
+    timeoutMs: 1_000,
+  });
+
+  assert.deepEqual(requested, [{
+    cik: "0001045810", accession: "0001045810-26-000062", document: "form4.xml",
+  }]);
+  assert.deepEqual(result.filings.map((filing) => filing.accession), ["0001045810-26-000062"]);
+});
+
+test("a slow SEC primary-document probe times out inside the starter-evidence budget", async () => {
+  const feed = "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+  const started = Date.now();
+  const result = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-28",
+    profile: {
+      cik: "0001045810",
+      recent_filings: [{
+        form: "4", accession: "0001045810-26-000062", primary_document: "xslF345X06/form4.xml",
+        filing_date: "2026-08-27", accepted_at: "2026-08-27T18:30:30.000Z",
+      }],
+    },
+  }, {
+    fetchImpl: async (url) => ({ ok: true, status: 200, url, headers: { get: () => "application/rss+xml" }, text: async () => feed }),
+    filingDocumentImpl: async () => new Promise(() => {}),
+    timeoutMs: 20,
+  });
+
+  assert.ok(Date.now() - started < 500);
+  assert.equal(result.sec_primary_document_evidence.attempts[0].status, "unreachable");
+  assert.match(result.sec_primary_document_evidence.attempts[0].reason, /timed out after 20ms/u);
+});
+
+test("an oversized SEC primary document is rejected instead of entering the analyst prompt", async () => {
+  const feed = "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+  const result = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-28",
+    profile: {
+      cik: "0001045810",
+      recent_filings: [{
+        form: "4", accession: "0001045810-26-000062", primary_document: "xslF345X06/form4.xml",
+        filing_date: "2026-08-27", accepted_at: "2026-08-27T18:30:30.000Z",
+      }],
+    },
+  }, {
+    fetchImpl: async (url) => ({ ok: true, status: 200, url, headers: { get: () => "application/rss+xml" }, text: async () => feed }),
+    filingDocumentImpl: async () => ({
+      url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/form4.xml",
+      text: `<ownershipDocument>${"x".repeat(512_001)}</ownershipDocument>`,
+    }),
+    timeoutMs: 1_000,
+  });
+
+  assert.deepEqual(result.sec_primary_document_evidence.documents, []);
+  assert.match(result.sec_primary_document_evidence.attempts[0].reason, /starter-evidence limit/u);
+});
+
+test("a cited server-read SEC document rejects tampered ref, hash, URL, or accession", async () => {
+  const feed = "<?xml version=\"1.0\"?><rss><channel></channel></rss>";
+  const starter = await acquireCompanyStarterEvidence({
+    symbol: "ACIR",
+    asOf: "2026-08-28",
+    profile: {
+      cik: "0001045810",
+      name: "Alpha Circuit Corporation",
+      recent_filings: [{
+        form: "4", accession: "0001045810-26-000062", primary_document: "xslF345X06/form4.xml",
+        filing_date: "2026-08-27", accepted_at: "2026-08-27T18:30:30.000Z",
+      }],
+    },
+  }, {
+    fetchImpl: async (url) => ({ ok: true, status: 200, url, headers: { get: () => "application/rss+xml" }, text: async () => feed }),
+    filingDocumentImpl: async () => ({
+      url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/form4.xml",
+      text: "<ownershipDocument><rptOwnerName>Example Officer</rptOwnerName></ownershipDocument>",
+    }),
+    timeoutMs: 1_000,
+  });
+  const frozen = starter.sec_primary_document_evidence.documents[0];
+  const sourceId = "news_industry_management:S1";
+  const packet = {
+    task: "news_industry_management",
+    sources: [{
+      id: sourceId,
+      title: "SEC Form 4",
+      url: frozen.raw_url,
+      published_at: frozen.filing_date,
+      retrieved_at: frozen.retrieved_at,
+      grounding_document_ref: frozen.grounding_document_ref,
+      accession: frozen.accession,
+      persisted_text_sha256: frozen.persisted_text_sha256,
+      excerpt_sha256: frozen.excerpt_sha256,
+    }],
+    coverage_items: [{ id: "news.regulator_timeline", status: "covered", source_ids: [sourceId] }],
+    acquisition_ledger: {
+      items: [{
+        coverage_id: "news.regulator_timeline",
+        source_ids: [sourceId],
+        attempts: [{ stage: "regulator_filing", result: "succeeded", source_ids: [sourceId] }],
+      }],
+    },
+  };
+  const grounding = { company_starter_evidence: starter };
+  assert.deepEqual(secPrimaryDocumentEvidenceIssues(packet, grounding), []);
+
+  const mutations = {
+    grounding_document_ref: "sec-primary-document-v1:tampered",
+    persisted_text_sha256: `sha256:${"0".repeat(64)}`,
+    excerpt_sha256: `sha256:${"1".repeat(64)}`,
+    url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000062/tampered.xml",
+    accession: "0001045810-26-999999",
+  };
+  for (const [field, value] of Object.entries(mutations)) {
+    const changed = structuredClone(packet);
+    changed.sources[0][field] = value;
+    assert.ok(secPrimaryDocumentEvidenceIssues(changed, grounding).some((issue) => issue.path.endsWith(`/${field}`)), field);
+  }
+  const rebound = structuredClone(packet);
+  Object.assign(rebound.sources[0], mutations);
+  assert.ok(secPrimaryDocumentEvidenceIssues(rebound, grounding).some((issue) => (
+    issue.keyword === "frozen_binding" && /does not match any server-frozen/u.test(issue.message)
+  )));
+
+  const insiderWithoutBinding = structuredClone(packet);
+  insiderWithoutBinding.task = "insider_sec";
+  delete insiderWithoutBinding.sources[0].grounding_document_ref;
+  delete insiderWithoutBinding.sources[0].accession;
+  delete insiderWithoutBinding.sources[0].persisted_text_sha256;
+  delete insiderWithoutBinding.sources[0].excerpt_sha256;
+  const insiderIssues = secPrimaryDocumentEvidenceIssues(insiderWithoutBinding, grounding);
+  assert.ok(insiderIssues.some((issue) => issue.path === "/sources/0/grounding_document_ref"));
+  assert.ok(insiderIssues.some((issue) => issue.path === "/sources/0/accession"));
+
+  const unavailableNewsWithoutBinding = structuredClone(insiderWithoutBinding);
+  unavailableNewsWithoutBinding.task = "news_industry_management";
+  unavailableNewsWithoutBinding.coverage_items[0].status = "unavailable";
+  assert.ok(secPrimaryDocumentEvidenceIssues(unavailableNewsWithoutBinding, grounding).some((issue) => (
+    issue.path === "/sources/0/persisted_text_sha256"
+  )));
+
+  const independentSecSource = {
+    task: "insider_sec",
+    sources: [{
+      id: "insider_sec:S2",
+      title: "Different SEC filing",
+      url: "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000061/form3.xml",
+      accession: "0001045810-26-000061",
+      published_at: "2026-08-26",
+    }],
+  };
+  assert.deepEqual(secPrimaryDocumentEvidenceIssues(independentSecSource, grounding), []);
+
+  const repairContext = secPrimaryDocumentRepairPromptBlock(grounding);
+  assert.match(repairContext, new RegExp(frozen.grounding_document_ref, "u"));
+  assert.match(repairContext, new RegExp(frozen.accession, "u"));
+  assert.match(repairContext, new RegExp(frozen.persisted_text_sha256, "u"));
+  assert.doesNotMatch(repairContext, /Example Officer/u, "transport repair receives the binding, not source prose");
 });
 
 test("starter evidence preserves an older management event and resolves its issuer original", async () => {

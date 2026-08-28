@@ -18,7 +18,12 @@
  * filing, of which a large registrant has hundreds.
  */
 
-import { fetchCompanyFacts, fetchFilingDocument, fetchFilingIndex } from "./sec.mjs";
+import {
+  fetchCompanyFacts,
+  fetchFilingDocument,
+  fetchFilingIndex,
+  machineReadableFilingDocumentName,
+} from "./sec.mjs";
 
 /** Section 16 ownership forms. 3 is the initial statement, 4 a change, 5 an annual catch-up. */
 const OWNERSHIP_FORMS = new Set(["3", "4", "5", "3/A", "4/A", "5/A"]);
@@ -262,10 +267,12 @@ export async function fetchInsiderOwnership(cik, {
     .filter((row) => OWNERSHIP_FORMS.has(row.form))
     .filter((row) => Date.parse(`${row.filing_date}T00:00:00.000Z`) <= cutoff)
     .filter((row) => /\.xml$/iu.test(row.primary_document || ""))
-    // EDGAR names the XSL-RENDERED view as the primary document (`xslF345X06/form4.xml`),
-    // which is HTML. The machine-readable source sits beside it in the same folder under the
-    // same leaf name, so the stylesheet directory is what has to go.
-    .map((row) => ({ ...row, primary_document: row.primary_document.replace(/^xsl[^/]*\//u, "") }));
+    // Keep the canonical machine-readable path on the record as well as at the fetch boundary,
+    // so persisted source URLs and diagnostics name the filing bytes that were actually read.
+    .map((row) => ({
+      ...row,
+      primary_document: machineReadableFilingDocumentName(row.primary_document),
+    }));
   if (!ownershipFilings.length) {
     return gap(`insider ownership: ${index.name || cik} has filed no Section 16 ownership document`);
   }

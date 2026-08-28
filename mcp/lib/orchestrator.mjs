@@ -54,6 +54,7 @@ import {
   assertCompanySourceAcquisition,
   buildCompanySourceAcquisitionPlan,
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+  secPrimaryDocumentRepairPromptBlock,
   sourceAcquisitionPromptBlock,
 } from "./company-source-acquisition.mjs";
 import { recordCompanyAcquisitionObservations } from "./company-observations.mjs";
@@ -2871,6 +2872,7 @@ const EVIDENCE_REPAIR_SCHEMA_CONTRACT = [
   "Evidence schema contract: required top-level fields are summary (non-empty string), claims (array), metrics (object), sources (array), open_questions (array), and confidence (high|medium|low).",
   "Every claim requires non-empty claim and evidence strings, confidence (high|medium|low), and source_ids containing at least one non-empty source id.",
   "Every source requires non-empty id, title, url, published_at, and retrieved_at. At least one of claims or open_questions must be non-empty.",
+  "When a source cites a server-read SEC primary-document excerpt, preserve its raw_url as url and copy grounding_document_ref, accession, persisted_text_sha256, and excerpt_sha256 exactly from the frozen grounding block; never recalculate, shorten, or substitute those bindings.",
   "Every coverage_items row uses strings for note, attempted and gap (empty string when unused), and arrays for source_ids and attempted_urls (empty array when unused). For a directly observed dynamic quote/table/index with no publication date, preserve published_at as unknown and add source_kind=dynamic_snapshot plus observed_at from the actual UTC retrieval observation. Never substitute the host's next local calendar date for the UTC timestamp, and never set observed_at after as_of. Never apply this label to an ordinary undated article; news and event claims still need dated evidence.",
   "When the prompt carries company_source_acquisition_v1, preserve top-level acquisition_ledger with exactly one item per owned coverage id. Do not delete acquisition attempts, formulas, inputs, assumptions, or actual/proxy/model labels during transport repair.",
   "Use only source ids already present in the supplied sources array. Never invent a source id or fact; remove an unsupported claim and record the lost point in open_questions instead of returning empty source_ids.",
@@ -2891,8 +2893,15 @@ function evidenceRepairSchemaContract(task) {
 }
 
 function isCompanySourceAcquisitionFailure(error) {
-  return error?.data?.schema_id === COMPANY_SOURCE_ACQUISITION_POLICY_ID
+  const acquisitionFailure = error?.data?.schema_id === COMPANY_SOURCE_ACQUISITION_POLICY_ID
     || ["WORKER_SOURCE_ACQUISITION_MISMATCH", "VISIBLE_SOURCE_ACQUISITION_MISMATCH"].includes(error?.data?.reason);
+  if (!acquisitionFailure) return false;
+  const errors = Array.isArray(error?.data?.errors) ? error.data.errors : [];
+  // A ledger-only repair cannot repair a source row or server-frozen document binding. Route
+  // those failures through the complete transport repair, which preserves facts while allowing
+  // the worker to copy the exact frozen ref/hash fields into sources. Genuine ledger defects
+  // retain the smaller mutation surface.
+  return errors.length > 0 && errors.every((issue) => String(issue?.path || "").startsWith("/acquisition_ledger"));
 }
 
 function acquisitionRepairPacketSubset(packet) {
@@ -3898,6 +3907,7 @@ export async function collectEvidence(args) {
             ? "Translate only the reader-facing strings in the supplied valid JSON into the requested language. Preserve the evidence packet schema, claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. Return exactly one JSON object and nothing else."
             : "Convert only the supplied malformed worker output into exactly one valid JSON object matching the evidence packet schema. Preserve claims, numbers, source IDs, URLs, dates, explicit gaps and uncertainty. If a field cannot be recovered, use an empty value and record the loss in open_questions. Return JSON only.",
           evidenceRepairSchemaContract(task),
+          secPrimaryDocumentRepairPromptBlock(run.grounding),
           companyCoverageInstruction(task, run),
           sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
           schemaRepairIssuePrompt(firstParseError),

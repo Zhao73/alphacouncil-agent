@@ -178,6 +178,8 @@ export function statusSnapshot(run) {
     issuer_official_source_page_count: run?.grounding?.issuer_source_index?.pages?.length || 0,
     company_starter_source_status: run?.grounding?.company_starter_evidence?.source_status || null,
     company_starter_filing_count: run?.grounding?.company_starter_evidence?.filings?.length || 0,
+    company_starter_regulator_document_count:
+      run?.grounding?.company_starter_evidence?.sec_primary_document_evidence?.documents?.length || 0,
     company_starter_issuer_document_count: run?.grounding?.company_starter_evidence?.issuer_documents?.length || 0,
     company_starter_news_count: run?.grounding?.company_starter_evidence?.news?.length || 0,
     company_starter_feed_success_count: (run?.grounding?.company_starter_evidence?.feed_attempts || [])

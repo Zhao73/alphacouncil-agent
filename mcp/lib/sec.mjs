@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DATA_DIR, LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
@@ -58,9 +58,20 @@ function cachedFiling(url, cacheDir) {
   const path = filingCachePath(url, cacheDir);
   if (!existsSync(path)) return null;
   try {
+    const size = statSync(path).size;
+    if (size > MAX_FILING_DOCUMENT_TEXT_BYTES) {
+      throw new Error(`cached SEC filing document exceeds the ${MAX_FILING_DOCUMENT_TEXT_BYTES}-byte text limit`);
+    }
     const text = readFileSync(path, "utf8");
+    if (Buffer.byteLength(text, "utf8") > MAX_FILING_DOCUMENT_TEXT_BYTES) {
+      throw new Error(`cached SEC filing document exceeds the ${MAX_FILING_DOCUMENT_TEXT_BYTES}-byte text limit`);
+    }
     return text ? { url, text, cache_status: "hit", cache_path: path } : null;
-  } catch {
+  } catch (error) {
+    // An oversized cache entry is not a miss. Treating it as one would hide a breached hard
+    // limit behind a new network request while still having read untrusted bytes in other
+    // processes. Corrupt or transiently unreadable small entries remain ordinary misses.
+    if (/cached SEC filing document exceeds/u.test(String(error?.message || ""))) throw error;
     return null;
   }
 }
@@ -92,15 +103,50 @@ function persistFiling(url, text, cacheDir) {
  */
 const RATE_LIMIT_ATTEMPTS = 3;
 const RATE_LIMIT_BACKOFF_MS = 400;
+const MAX_FILING_DOCUMENT_TEXT_BYTES = 10_000_000;
+const filingDocumentFlights = new Map();
 
 function isRateLimited(status) {
   return status === 429 || status === 503;
 }
 
-async function withRateLimitRetry(attempt) {
+function secAbortError(signal, fallback = "SEC request aborted") {
+  if (signal?.reason instanceof Error) return signal.reason;
+  const error = new Error(fallback);
+  error.name = "AbortError";
+  return error;
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) throw secAbortError(signal);
+}
+
+async function abortableDelay(ms, signal) {
+  if (!signal) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+    return;
+  }
+  throwIfAborted(signal);
+  let timer;
+  let onAbort;
+  try {
+    await new Promise((resolve, reject) => {
+      timer = setTimeout(resolve, ms);
+      onAbort = () => reject(secAbortError(signal));
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+  } finally {
+    if (timer) clearTimeout(timer);
+    signal.removeEventListener("abort", onAbort);
+  }
+}
+
+async function withRateLimitRetry(attempt, { signal } = {}) {
   let lastError = null;
   for (let tries = 0; tries < RATE_LIMIT_ATTEMPTS; tries += 1) {
-    if (tries > 0) await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_BACKOFF_MS * (2 ** (tries - 1))));
+    throwIfAborted(signal);
+    if (tries > 0) await abortableDelay(RATE_LIMIT_BACKOFF_MS * (2 ** (tries - 1)), signal);
+    throwIfAborted(signal);
     const outcome = await attempt();
     if (!outcome.rateLimited) return outcome;
     lastError = outcome.error;
@@ -127,18 +173,93 @@ async function secJson(url, timeoutMs = LIMITS.QUOTE_FETCH_MS * 2, upstreamSigna
     } finally {
       abort.cleanup();
     }
-  });
+  }, { signal: upstreamSignal });
   return outcome.value;
 }
 
 const submissionsUrl = (paddedCik) => `https://data.sec.gov/submissions/CIK${paddedCik}.json`;
 
-function filingDocumentUrl(paddedCik, accession, primaryDocument) {
+export function filingDocumentUrl(paddedCik, accession, primaryDocument) {
   if (!accession || !primaryDocument) return null;
   const registrant = String(paddedCik).replace(/^0+/u, "") || "0";
   const folder = String(accession).replace(/-/gu, "");
   const documentPath = String(primaryDocument).split("/").map(encodeURIComponent).join("/");
   return `https://www.sec.gov/Archives/edgar/data/${registrant}/${folder}/${documentPath}`;
+}
+
+/** Stable SEC filing-index URL for one accession. */
+export function secFilingIndexUrl(cik, accession) {
+  const registrant = String(cik || "").replace(/\D/gu, "").replace(/^0+/u, "") || "0";
+  const canonicalAccession = String(accession || "").trim();
+  if (!canonicalAccession) return null;
+  const folder = canonicalAccession.replace(/-/gu, "");
+  return `https://www.sec.gov/Archives/edgar/data/${registrant}/${folder}/${canonicalAccession}-index.html`;
+}
+
+/**
+ * Resolve EDGAR's XSL-rendered XML alias to the machine-readable sibling document.
+ *
+ * The submissions feed commonly names Section 16 and ownership documents as
+ * `xslF345X06/form4.xml`. That route is a rendered wrapper which browser/search tools may
+ * refuse, while the actual filing bytes live beside it as `form4.xml`. HTML filings and
+ * ordinary XML paths are returned unchanged.
+ */
+export function machineReadableFilingDocumentName(document) {
+  const value = String(document || "").trim();
+  return /\.xml$/iu.test(value) ? value.replace(/^xsl[^/]*\//iu, "") : value;
+}
+
+async function boundedResponseText(response, maxBytes = MAX_FILING_DOCUMENT_TEXT_BYTES) {
+  const declared = Number(response.headers?.get?.("content-length"));
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    throw new Error(`SEC filing document exceeds the ${maxBytes}-byte text limit`);
+  }
+  if (response.body?.getReader) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8", { fatal: false });
+    const chunks = [];
+    let received = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value?.byteLength || 0;
+      if (received > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error(`SEC filing document exceeds the ${maxBytes}-byte text limit`);
+      }
+      chunks.push(decoder.decode(value, { stream: true }));
+    }
+    chunks.push(decoder.decode());
+    return chunks.join("");
+  }
+  const text = await response.text();
+  if (Buffer.byteLength(text, "utf8") > maxBytes) {
+    throw new Error(`SEC filing document exceeds the ${maxBytes}-byte text limit`);
+  }
+  return text;
+}
+
+async function waitForFilingFlight(record, flightKey, signal) {
+  if (signal?.aborted) throw secAbortError(signal, "SEC filing document wait aborted");
+  record.waiters += 1;
+  let onAbort;
+  try {
+    if (!signal) return await record.promise;
+    const aborted = new Promise((_, reject) => {
+      onAbort = () => reject(secAbortError(signal, "SEC filing document wait aborted"));
+      signal.addEventListener("abort", onAbort, { once: true });
+    });
+    return await Promise.race([record.promise, aborted]);
+  } finally {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+    record.waiters -= 1;
+    if (!record.settled && record.waiters === 0) {
+      // Once every caller has left, keeping the immutable download alive only creates an
+      // orphan which can consume the process-wide SEC throttle after its run was cancelled.
+      record.controller.abort(new Error("SEC filing document request aborted after all callers left"));
+      if (filingDocumentFlights.get(flightKey) === record) filingDocumentFlights.delete(flightKey);
+    }
+  }
 }
 
 /**
@@ -221,23 +342,40 @@ export async function fetchFilingDocument(cik, accession, document, {
   cache = true,
   cacheDir = join(DATA_DIR, "cache", "sec-filings"),
 } = {}) {
+  throwIfAborted(signal);
   const stripped = String(cik).replace(/\D/gu, "").replace(/^0+/u, "");
   const folder = String(accession).replace(/-/gu, "");
-  const url = `https://www.sec.gov/Archives/edgar/data/${stripped}/${folder}/${document}`;
+  const resolvedDocument = machineReadableFilingDocumentName(document);
+  const url = `https://www.sec.gov/Archives/edgar/data/${stripped}/${folder}/${resolvedDocument}`;
   if (cache) {
     const hit = cachedFiling(url, cacheDir);
     if (hit) return hit;
   }
-  const outcome = await withRateLimitRetry(async () => {
+  // Grounding and the ownership adapter may ask for the same immutable Form 4 concurrently.
+  // Share that one SEC request instead of turning a fast evidence path into a duplicate burst.
+  const flightKey = `${url}\0${cache ? cacheDir : "no-cache"}`;
+  const existing = filingDocumentFlights.get(flightKey);
+  if (existing) return waitForFilingFlight(existing, flightKey, signal);
+  const controller = new AbortController();
+  const record = {
+    controller,
+    promise: null,
+    settled: false,
+    waiters: 0,
+  };
+  record.promise = withRateLimitRetry(async () => {
     await throttle();
-    const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, signal);
+    // The shared immutable download owns its bounded transport timeout. A short-lived caller
+    // may stop waiting without aborting another caller that joined the same flight.
+    throwIfAborted(controller.signal);
+    const abort = linkedAbort(LIMITS.QUOTE_FETCH_MS * 2, controller.signal);
     try {
       const res = await fetch(url, { signal: abort.signal, headers: { "User-Agent": UA } });
       if (isRateLimited(res.status)) {
         return { rateLimited: true, error: new Error(`HTTP ${res.status} for ${url}`) };
       }
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-      const text = await res.text();
+      const text = await boundedResponseText(res);
       const cachePath = cache ? persistFiling(url, text, cacheDir) : null;
       return {
         rateLimited: false,
@@ -251,8 +389,13 @@ export async function fetchFilingDocument(cik, accession, document, {
     } finally {
       abort.cleanup();
     }
-  });
-  return outcome.value;
+  }, { signal: controller.signal }).then((outcome) => outcome.value);
+  filingDocumentFlights.set(flightKey, record);
+  void record.promise.finally(() => {
+    record.settled = true;
+    if (filingDocumentFlights.get(flightKey) === record) filingDocumentFlights.delete(flightKey);
+  }).catch(() => {});
+  return waitForFilingFlight(record, flightKey, signal);
 }
 
 /** The full US listed universe: ~10k entries of {cik, ticker, title}. */
