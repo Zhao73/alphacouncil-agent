@@ -364,13 +364,23 @@ test("leaf workers share one auth home while isolating plugin data and user skil
         assert.equal(options.env.USERPROFILE, leafUserHome);
         assert.equal(existsSync(join(leafRuntimeDir, "codex-home")), false);
         assert.equal(readFileSync(join(sourceCodexHome, "auth.json"), "utf8"), authFixture);
-        assert.deepEqual(args.slice(args.indexOf("--disable"), args.indexOf("exec")), [
-          "--disable", "plugins",
-          "--disable", "apps",
-          "--disable", "tool_suggest",
-          "--disable", "multi_agent",
-          "-c", `skills.config=[{path=${JSON.stringify(disabledSkillPath)},enabled=false}]`,
-        ]);
+        if (process.platform === "win32") {
+          const commandLine = args[3];
+          for (const feature of ["plugins", "apps", "tool_suggest", "multi_agent"]) {
+            assert.match(commandLine, new RegExp(`--disable ${feature}(?: |$)`, "u"));
+          }
+          assert.match(commandLine, /skills\.config=/u);
+          assert.match(commandLine, /enabled=false/u);
+          assert.match(commandLine, /SKILL\.md/u);
+        } else {
+          assert.deepEqual(args.slice(args.indexOf("--disable"), args.indexOf("exec")), [
+            "--disable", "plugins",
+            "--disable", "apps",
+            "--disable", "tool_suggest",
+            "--disable", "multi_agent",
+            "-c", `skills.config=[{path=${JSON.stringify(disabledSkillPath)},enabled=false}]`,
+          ]);
+        }
         const child = new ClosingChild();
         queueMicrotask(() => {
           writeFileSync(outFile, JSON.stringify({ ok: true }));

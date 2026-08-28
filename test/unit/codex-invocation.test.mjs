@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { join } from "node:path";
 import { __test__ } from "../../mcp/server.mjs";
 import * as codexWorker from "../../mcp/lib/codex.mjs";
 
@@ -49,7 +50,7 @@ test("Codex home resolution ignores conflicting shell HOME unless CODEX_HOME is 
       { HOME: "/c/Users/MSYS", USERPROFILE: "C:\\Users\\Native" },
       "/native/home",
     ),
-    "/native/home/.codex",
+    join("/native/home", ".codex"),
   );
   assert.equal(
     codexWorker.resolveCodexHome(
