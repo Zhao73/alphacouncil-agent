@@ -455,3 +455,10 @@ release and RPC observer expirations across `fast-no-cold-retry`, `runtime-langu
 The ordinary Windows source phase therefore moves from concurrency two to one. The selected-file
 set, product deadlines, RPC observers and assertions remain unchanged. The existing three heavy
 files still run as individually named serial invocations so their timing remains visible.
+
+The first serialized candidate, `2d906eeafa0bef374a52a5ea64b2547ab939c330`, exposed a separate
+pre-test failure in pull-request run
+[`33164118743`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33164118743): the offline
+tarball install exhausted its existing 120-second process ceiling before the source phase began.
+The CLI now permits exactly one Windows-only retry of that `ETIMEDOUT`, and the retry starts the
+entire parity check in a fresh temporary root. Other errors remain immediately fatal.

@@ -8,8 +8,8 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
-- Windows source CI now runs process-owning test files one at a time after two exact-head runners
-  showed unrelated file-lock and RPC observer starvation; product deadlines remain unchanged.
+- Windows source CI now runs process-owning test files one at a time and retries one transient
+  offline tarball-install timeout with a fresh root; product deadlines remain unchanged.
 - Leaf `codex exec` workers now share the caller's one authenticated `CODEX_HOME` while using an
   isolated temporary user home. `--ignore-user-config` skips `config.toml` but still discovers
   filesystem Skills; a live Work-gateway run showed an earnings worker spending its entire
