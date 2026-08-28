@@ -594,6 +594,8 @@ test("one bounded parse-only retry can recover a valid evidence packet", async (
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 30_000,
+    }, {
+      timeoutMs: PARSE_RETRY_RPC_TIMEOUT_MS,
     });
     const run = structured(response);
     const runDir = join(dataDir, "runs", runId);
@@ -643,6 +645,8 @@ test("parse-only retry accepts one schema-valid packet beside non-contract JSON 
       grounding: { facts_unavailable: true, unavailable: ["fixture"] },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 30_000,
+    }, {
+      timeoutMs: PARSE_RETRY_RPC_TIMEOUT_MS,
     }));
     const dir = join(dataDir, "runs", runId);
     assert.equal(readFileSync(fake.counter, "utf8"), "2");

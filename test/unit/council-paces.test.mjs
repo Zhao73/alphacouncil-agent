@@ -51,7 +51,7 @@ test("fast preserves the measured primary work while reserving only useful repai
   }, {
     grounding_ms: 20_000,
     evidence_ms: 240_000,
-    evidence_repair_reserve_ms: 20_000,
+    evidence_repair_reserve_ms: 0,
     master_ms: 120_000,
     master_repair_reserve_ms: 0,
     debate_ms: 85_000,

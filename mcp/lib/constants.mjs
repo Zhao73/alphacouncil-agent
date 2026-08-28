@@ -436,10 +436,11 @@ export const COUNCIL_PACES = Object.freeze({
     total_ms: 15 * 60 * 1000,
     grounding_ms: 20 * 1000,
     evidence_ms: 240 * 1000,
-    // Semantic acquisition-ledger repair is no-search but commonly needed after an otherwise
-    // complete evidence packet. Keep this inside the 240-second seat lifecycle rather than
-    // handing a late packet whatever few milliseconds happen to remain.
-    evidence_repair_reserve_ms: 20 * 1000,
+    // A live eight-seat run showed why a cold timeout retry is not useful here: the primary was
+    // killed after roughly 215s, then the replacement had only 20s to start from zero and search.
+    // Give one primary the complete lifecycle instead. Parse/language/ledger repair remains
+    // no-search and may use the stage time left when a primary returns before the deadline.
+    evidence_repair_reserve_ms: 0,
     // Live Work-gateway runs completed 25/26 voices, but one silent worker consumed the old
     // primary window and then received a cold retry too short to finish. Give one primary the
     // complete two-minute lifecycle instead; a successful primary may still use whatever time

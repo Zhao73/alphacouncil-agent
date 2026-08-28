@@ -92,7 +92,7 @@ test("stage elapsed time and a lowered total deadline both reduce the repair bud
 test("fast primary, retry and repair share one immutable stage lifecycle", () => {
   const run = fullRun("fast");
   const expectedPrimary = {
-    evidence: 220_000,
+    evidence: 240_000,
     methods: 120_000,
     debate_round_1: 70_000,
     portfolio_manager: 75_000,
@@ -129,28 +129,41 @@ test("non-fast and explicitly non-retrying callers retain their existing primary
 
 test("attempt timers reserve settlement grace against one absolute lifecycle deadline", () => {
   const run = fullRun("fast");
-  const primary = stageAttemptWindow(run, {
+  const evidencePrimary = stageAttemptWindow(run, {
     stageBudgetMs: COUNCIL_PACES.fast.evidence_ms,
     stageStartedAtMs: NOW,
-    requestedMs: 220_000,
+    requestedMs: COUNCIL_PACES.fast.evidence_ms,
+    nowMs: NOW,
+  });
+  assert.deepEqual(evidencePrimary, {
+    absolute_deadline_ms: NOW + 240_000,
+    lifecycle_remaining_ms: 240_000,
+    settlement_grace_ms: 5_000,
+    timeout_ms: 235_000,
+  });
+
+  const primary = stageAttemptWindow(run, {
+    stageBudgetMs: COUNCIL_PACES.fast.debate_ms,
+    stageStartedAtMs: NOW,
+    requestedMs: 70_000,
     nowMs: NOW,
   });
   assert.deepEqual(primary, {
-    absolute_deadline_ms: NOW + 220_000,
-    lifecycle_remaining_ms: 240_000,
+    absolute_deadline_ms: NOW + 70_000,
+    lifecycle_remaining_ms: 85_000,
     settlement_grace_ms: 5_000,
-    timeout_ms: 215_000,
+    timeout_ms: 65_000,
   });
 
   const retry = stageAttemptWindow(run, {
-    stageBudgetMs: COUNCIL_PACES.fast.evidence_ms,
+    stageBudgetMs: COUNCIL_PACES.fast.debate_ms,
     stageStartedAtMs: NOW,
-    requestedMs: 20_000,
-    nowMs: NOW + 220_000,
+    requestedMs: 15_000,
+    nowMs: NOW + 70_000,
   });
-  assert.equal(retry.absolute_deadline_ms, NOW + COUNCIL_PACES.fast.evidence_ms);
-  assert.equal(retry.timeout_ms + retry.settlement_grace_ms, 20_000);
-  assert.equal(retry.absolute_deadline_ms - NOW, COUNCIL_PACES.fast.evidence_ms);
+  assert.equal(retry.absolute_deadline_ms, NOW + COUNCIL_PACES.fast.debate_ms);
+  assert.equal(retry.timeout_ms + retry.settlement_grace_ms, 15_000);
+  assert.equal(retry.absolute_deadline_ms - NOW, COUNCIL_PACES.fast.debate_ms);
 
   const callerLowered = stageAttemptWindow(run, {
     stageBudgetMs: 5_000,

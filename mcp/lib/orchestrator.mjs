@@ -3795,34 +3795,16 @@ export async function collectEvidence(args) {
       return failure.packet;
     };
 
-    let executionAttempt = 1;
+    const executionAttempt = 1;
     const primaryBudgetMs = stagePrimaryAttemptBudget(run, "evidence", timeoutMs, {
-      reserveRepair: stageRetryAllowed(args),
+      reserveRepair: false,
     });
     let result = await runAttempt(prompt, primaryBudgetMs, executionAttempt);
-    // Same stall as the method bench, and here it is more expensive: a core evidence seat that
-    // produced nothing before its cap closes the evidence barrier and takes the whole council
-    // with it. Two consecutive MU runs died this way -- once on `market_data`, once on
-    // `quant_factor` -- while every other seat finished comfortably inside the cap (median 136s
-    // against 360s). That is a worker that never got going, not a seat that needed longer, so
-    // the cap is not the thing to raise. Only a timeout earns the retry; a parse or coverage
-    // failure has its own bounded repair path below, and `remainingCouncilBudget` refuses the
-    // attempt when the run can no longer afford it.
-    let lifecycleRemainingMs = stageLifecycleRemainingMs(timeoutMs, workerStartedAt);
-    if (!result.ok && result.timedOut
-      && stageRetryAllowed(args) && lifecycleRemainingMs > 0
-      && remainingCouncilBudget(run, lifecycleRemainingMs) > 0) {
-      executionAttempt = 2;
-      appendEvent(run, "task_retry", {
-        task,
-        reason: "worker_timeout",
-        attempt: executionAttempt,
-        remaining_lifecycle_ms: lifecycleRemainingMs,
-      });
-      result = await runAttempt(prompt, lifecycleRemainingMs, executionAttempt, {
-        attemptKind: WORKER_ATTEMPT_KIND.timeout_retry.attempt_kind,
-      });
-    }
+    // A timed-out evidence worker has consumed the useful search window. Starting a fresh
+    // search process in the settlement tail cannot continue its work and, in the live 26-seat
+    // candidate, took 20 seconds away from the only attempt that could finish. Evidence now
+    // follows the method bench: one primary owns the complete lifecycle. A primary that returns
+    // early may still receive the bounded no-search transport/language/ledger repair below.
     if (!result.ok) {
       return commitFailure({
         failedResult: result,
