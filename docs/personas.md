@@ -10,11 +10,13 @@ To add a role, add one file. It appears in the tool schema automatically.
 | id | kind | enabled | rosters | model tier | title | tags | provenance |
 |---|---|---|---|---|---|---|---|
 | `_evidence_base` | analyst | no | - | fast | Evidence worker preamble | shared | original |
+| `_evidence_base_fast` | analyst | no | - | fast | Fast evidence worker preamble | shared, bounded | original |
 | `macro_regime` | analyst | yes | full | standard | Macro Regime Analyst | regime, rates, liquidity, cross-market | original |
 | `market_data` | analyst | yes | default | fast | Market Data Analyst | price, volume, technicals | original |
 | `earnings_deep_dive` | analyst | yes | default | fast | Earnings Deep Dive Analyst | earnings, margins, segments, cash-flow | original |
 | `forward_expectations` | analyst | yes | default | fast | Forward Expectations Analyst | guidance, consensus, thresholds | original |
 | `quant_factor` | analyst | yes | default | standard | Quant Factor Analyst | momentum, volatility, short-interest, options | original |
+| `quant_factor_fast` | analyst | no | - | fast | Fast Quant Factor Analyst | momentum, volatility, short-interest, options, bounded | original |
 | `valuation_long_short` | analyst | yes | default | standard | Valuation & Long/Short Analyst | valuation, thesis, position-sizing | original |
 | `news_industry_management` | analyst | yes | default | fast | News & Industry Analyst | news, industry, management | original |
 | `market_narrative` | analyst | yes | full | fast | Market Narrative Analyst | narrative, positioning, macro-context | original |
@@ -56,7 +58,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 26 masters, 46 files.
+Totals: 11 evidence analysts, 3 debate roles, 26 masters, 48 files.
 
 ## Provenance
 

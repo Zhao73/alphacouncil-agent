@@ -6,6 +6,8 @@ import { PassThrough } from "node:stream";
 
 import {
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+  FAST_QUANT_MAX_QUERY_LOCATORS,
+  FAST_QUANT_MAX_URL_LOCATORS,
   acquireCompanyStarterEvidence,
   buildCompanySourceAcquisitionPlan,
   canonicalizeCompanySourceAcquisitionPacket,
@@ -1344,4 +1346,434 @@ test("the prompt contract requires actual, proxy, model, or an exhausted ladder"
   assert.match(prompt, /company_source_acquisition_v1/u);
   assert.match(prompt, /task:"quant_factor"/u);
   assert.match(prompt, /observations/u);
+});
+
+function fastQuantBoundFixture() {
+  const sourceUrl = "https://cdn.cboe.com/api/global/delayed_quotes/options/AAPL.json";
+  const observedAt = "2026-08-28T03:50:12.000Z";
+  const retrievedAt = "2026-08-28T03:51:00.000Z";
+  const plan = buildCompanySourceAcquisitionPlan({
+    symbol: "AAPL",
+    asOf: "2026-08-28",
+    profile: {
+      ...profile({ cik: "0000320193", name: "Apple Inc." }),
+      exchanges: ["NASDAQ"],
+    },
+  });
+  const routes = plan.tasks.quant_factor;
+  const items = routes.map((route) => ({
+    coverage_id: route.coverage_id,
+    outcome: "not_applicable",
+    source_ids: [],
+    attempts: [],
+    reason: "Fixture route is outside this semantic assertion.",
+  }));
+  const coverageItems = routes.map((route) => ({
+    id: route.coverage_id,
+    status: "not_applicable",
+    source_ids: [],
+    note: "Fixture route is outside this semantic assertion.",
+    attempted: "",
+    attempted_urls: [],
+    gap: "",
+  }));
+  const target = routes.findIndex((route) => route.coverage_id === "quant.options_iv_skew_expected_move");
+  const targetRoute = routes[target];
+  const sourceId = "quant_factor:S1";
+  const locator = (stage) => {
+    const entry = targetRoute.stages.find((row) => row.stage === stage);
+    return entry.locators[0];
+  };
+  items[target] = {
+    coverage_id: targetRoute.coverage_id,
+    outcome: "recomputed_proxy",
+    source_ids: [sourceId],
+    attempts: [
+      {
+        stage: "local_observation",
+        locator_type: locator("local_observation").locator_type,
+        locator: locator("local_observation").locator,
+        result: "succeeded",
+        source_ids: [sourceId],
+        note: "Consumed the frozen server option snapshot.",
+      },
+      {
+        stage: "derived_proxy",
+        locator_type: locator("derived_proxy").locator_type,
+        locator: locator("derived_proxy").locator,
+        result: "succeeded",
+        source_ids: [],
+        note: "Recomputed the one-standard-deviation ATM-IV move proxy.",
+      },
+    ],
+    data: {
+      formula: "spot * reference_atm_iv * sqrt(dte / 365)",
+      inputs: [
+        { name: "spot", value: 314.58, source_ids: [sourceId] },
+        { name: "reference_atm_iv", value: 0.2302, source_ids: [sourceId] },
+        { name: "dte", value: 7, source_ids: [sourceId] },
+      ],
+      observations: [{
+        metric: "one_standard_deviation_atm_iv_move_proxy",
+        value: 3.187924,
+        unit: "% of spot",
+        period: "2026-09-04 expiry",
+        scope: "one-standard-deviation ATM-IV proxy",
+      }],
+    },
+  };
+  coverageItems[target] = {
+    id: targetRoute.coverage_id,
+    status: "covered",
+    source_ids: [sourceId],
+    note: "Frozen delayed CBOE snapshot and server recomputation.",
+    attempted: "Consumed server snapshot and recomputed proxy.",
+    attempted_urls: [sourceUrl],
+    gap: "",
+  };
+  const packet = {
+    task: "quant_factor",
+    as_of: "2026-08-28",
+    summary: "一标准差 ATM-IV 波幅代理为 3.187924%，不是方向预测。",
+    claims: [{
+      claim: "一标准差 ATM-IV 波幅代理为 3.187924%。",
+      evidence: "由冻结 spot、ATM IV 与 7 日 DTE 复算。",
+      source_ids: [sourceId],
+    }],
+    metrics: { one_standard_deviation_atm_iv_move_proxy_pct: 3.187924 },
+    sources: [{
+      id: sourceId,
+      title: "CBOE delayed option-chain snapshot",
+      url: sourceUrl,
+      published_at: "unknown",
+      retrieved_at: retrievedAt,
+      observed_at: observedAt,
+      source_kind: "dynamic_snapshot",
+    }],
+    open_questions: ["IV rank/percentile unavailable while like-for-like history builds (1/60)."],
+    coverage_items: coverageItems,
+    acquisition_ledger: {
+      policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+      task: "quant_factor",
+      items,
+    },
+  };
+  const run = {
+    council_mode: "full",
+    council_pace: "fast",
+    dry_run: false,
+    decision_requested: true,
+    entry_tool: "analyze_symbol",
+    as_of: "2026-08-28",
+    grounding: {
+      instrument: { research_model: "operating_company" },
+      quote: { currency: "USD" },
+      source_acquisition_plan: plan,
+      options: {
+        available: true,
+        source_url: sourceUrl,
+        retrieved_at: retrievedAt,
+        chain_timestamp: observedAt,
+        spot: 314.58,
+        reference_expiry: { expiry: "2026-09-04", dte: 7, atm_iv: 0.2302 },
+        iv_history: { status: "building_history", observation_count: 1, minimum_observations: 60, percentile: null },
+      },
+    },
+  };
+  return { packet, run, plan, routes, target, sourceId };
+}
+
+test("fast quant server gate binds frozen locators, limits, and official domains", () => {
+  const valid = fastQuantBoundFixture();
+  assert.deepEqual(companySourceAcquisitionIssues(valid.packet, valid.run), []);
+
+  const invented = structuredClone(valid);
+  invented.packet.acquisition_ledger.items[invented.target].attempts[0].locator = "local:AAPL:invented";
+  assert.ok(companySourceAcquisitionIssues(invented.packet, invented.run).some((issue) => issue.keyword === "frozen_locator"));
+
+  const repeated = structuredClone(valid);
+  repeated.packet.acquisition_ledger.items[repeated.target].attempts.push(
+    structuredClone(repeated.packet.acquisition_ledger.items[repeated.target].attempts[0]),
+  );
+  assert.ok(companySourceAcquisitionIssues(repeated.packet, repeated.run).some((issue) => issue.keyword === "unique"));
+
+  const over = structuredClone(valid);
+  for (const [routeIndex, route] of over.routes.entries()) {
+    for (const entry of route.stages) {
+      for (const frozen of entry.locators.filter((row) => row.locator_type === "query")) {
+        over.packet.acquisition_ledger.items[routeIndex].attempts.push({
+          stage: entry.stage,
+          locator_type: "query",
+          locator: frozen.locator,
+          result: "not_found",
+          source_ids: [],
+          note: "bounded fixture query",
+        });
+      }
+    }
+  }
+  const firstQuery = over.packet.acquisition_ledger.items.flatMap((item) => item.attempts)
+    .find((attempt) => attempt.locator_type === "query");
+  over.packet.acquisition_ledger.items[0].attempts.push(structuredClone(firstQuery));
+  const overIssues = companySourceAcquisitionIssues(over.packet, over.run);
+  assert.equal(FAST_QUANT_MAX_QUERY_LOCATORS, 8);
+  assert.ok(overIssues.some((issue) => issue.keyword === "max_query_locators"));
+
+  const unofficial = structuredClone(valid);
+  unofficial.packet.sources.push({ id: "quant_factor:S2", url: "https://example.com/options" });
+  const officialStage = unofficial.routes[0].stages.find((entry) => entry.stage === "market_official");
+  unofficial.packet.acquisition_ledger.items[0].attempts.push({
+    stage: "market_official",
+    locator_type: officialStage.locators[0].locator_type,
+    locator: officialStage.locators[0].locator,
+    result: "succeeded",
+    source_ids: ["quant_factor:S2"],
+    note: "spoofed official result",
+  });
+  assert.ok(companySourceAcquisitionIssues(unofficial.packet, unofficial.run).some((issue) => issue.keyword === "official_domain"));
+
+  const frozenUrls = valid.routes.flatMap((route) => route.stages)
+    .flatMap((entry) => entry.locators.map((locator) => ({ ...locator, stage: entry.stage })))
+    .filter((locator) => locator.locator_type === "url");
+  assert.equal(frozenUrls.length, FAST_QUANT_MAX_URL_LOCATORS);
+  assert.ok(frozenUrls.some((locator) => /finance\.yahoo\.com\/quote\/AAPL\/key-statistics/u.test(locator.locator)));
+
+  const laundered = structuredClone(valid);
+  laundered.packet.sources.push(
+    { id: "quant_factor:S_GOOD", url: "https://www.nasdaqtrader.com/Trader.aspx?id=ShortInterest" },
+    { id: "quant_factor:S_BAD", url: "https://example.com/invented-factor" },
+  );
+  const firstRoute = laundered.routes[0];
+  const firstOfficial = firstRoute.stages.find((entry) => entry.stage === "market_official");
+  laundered.packet.acquisition_ledger.items[0].attempts.push({
+    stage: "market_official",
+    locator_type: firstOfficial.locators[0].locator_type,
+    locator: firstOfficial.locators[0].locator,
+    result: "succeeded",
+    source_ids: ["quant_factor:S_GOOD"],
+    note: "authorised fixture source",
+  });
+  laundered.packet.acquisition_ledger.items[0].source_ids = ["quant_factor:S_BAD"];
+  laundered.packet.acquisition_ledger.items[0].data = {
+    inputs: [{ name: "invented_factor", value: 99, source_ids: ["quant_factor:S_BAD"] }],
+  };
+  laundered.packet.coverage_items[0].source_ids = ["quant_factor:S_BAD"];
+  laundered.packet.claims.push({
+    claim: "Invented factor claim.",
+    evidence: "Laundered through another attempt.",
+    source_ids: ["quant_factor:S_BAD"],
+  });
+  const launderingIssues = companySourceAcquisitionIssues(laundered.packet, laundered.run);
+  assert.ok(launderingIssues.some((issue) => issue.keyword === "attempt_source_binding"));
+  assert.ok(launderingIssues.some((issue) => issue.keyword === "authorised_source_binding"));
+
+  const disconfirming = structuredClone(valid);
+  const shortIndex = disconfirming.routes.findIndex((route) => route.coverage_id === "quant.short_interest_borrow");
+  const disconfirmingStage = disconfirming.routes[shortIndex].stages.find((entry) => entry.stage === "disconfirming_search");
+  assert.ok(disconfirmingStage.authorized_domains.includes("iborrowdesk.com"));
+  disconfirming.packet.sources.push({ id: "quant_factor:S_IBD", url: "https://iborrowdesk.com/report/AAPL" });
+  disconfirming.packet.acquisition_ledger.items[shortIndex].attempts.push({
+    stage: "disconfirming_search",
+    locator_type: disconfirmingStage.locators[0].locator_type,
+    locator: disconfirmingStage.locators[0].locator,
+    result: "not_disclosed",
+    source_ids: ["quant_factor:S_IBD"],
+    note: "Opened the frozen allowlisted result without a complete disclosed field.",
+  });
+  disconfirming.packet.acquisition_ledger.items[shortIndex].source_ids = ["quant_factor:S_IBD"];
+  disconfirming.packet.coverage_items[shortIndex].source_ids = ["quant_factor:S_IBD"];
+  disconfirming.packet.coverage_items[shortIndex].attempted_urls = ["https://iborrowdesk.com/report/AAPL"];
+  assert.deepEqual(companySourceAcquisitionIssues(disconfirming.packet, disconfirming.run), []);
+
+  const disconfirmingSpoof = structuredClone(disconfirming);
+  const ibdSource = disconfirmingSpoof.packet.sources.find((source) => source.id === "quant_factor:S_IBD");
+  ibdSource.url = "https://example.com/report/AAPL";
+  disconfirmingSpoof.packet.coverage_items[shortIndex].attempted_urls = [ibdSource.url];
+  assert.ok(companySourceAcquisitionIssues(disconfirmingSpoof.packet, disconfirmingSpoof.run)
+    .some((issue) => issue.keyword === "official_domain"));
+
+  const forgedAttemptUrl = structuredClone(valid);
+  forgedAttemptUrl.packet.coverage_items[forgedAttemptUrl.target].attempted_urls.push("https://example.com/never-attempted");
+  assert.ok(companySourceAcquisitionIssues(forgedAttemptUrl.packet, forgedAttemptUrl.run)
+    .some((issue) => issue.keyword === "attempt_url_binding"));
+
+  const singularSource = structuredClone(valid);
+  singularSource.packet.metrics.invented_factor = {
+    value: 99,
+    unit: "score",
+    source_id: singularSource.sourceId,
+  };
+  assert.ok(companySourceAcquisitionIssues(singularSource.packet, singularSource.run)
+    .some((issue) => issue.keyword === "source_id_shape"));
+});
+
+test("fast quant rejects invented IV rank and binds expected move across ledger, metrics, claims, source, and time", () => {
+  const valid = fastQuantBoundFixture();
+  assert.deepEqual(companySourceAcquisitionIssues(valid.packet, valid.run), []);
+
+  const inventedIv = structuredClone(valid);
+  inventedIv.packet.metrics.iv_rank = 99;
+  inventedIv.packet.claims[0].claim = "IV rank 99, so volatility is expensive.";
+  inventedIv.packet.acquisition_ledger.items[inventedIv.target].data.observations.push({
+    metric: "iv_percentile",
+    value: 99,
+    unit: "%",
+    period: "2026-09-04 expiry",
+    scope: "single snapshot",
+  });
+  const ivIssues = companySourceAcquisitionIssues(inventedIv.packet, inventedIv.run);
+  assert.ok(ivIssues.filter((issue) => issue.keyword === "iv_history_binding").length >= 3);
+
+  const wrongValue = structuredClone(valid);
+  wrongValue.packet.acquisition_ledger.items[wrongValue.target].data.observations[0].value = 99;
+  wrongValue.packet.metrics.one_standard_deviation_atm_iv_move_proxy_pct = 99;
+  wrongValue.packet.claims[0].claim = "一标准差 ATM-IV 波幅代理为 99%。";
+  const valueIssues = companySourceAcquisitionIssues(wrongValue.packet, wrongValue.run);
+  assert.ok(valueIssues.some((issue) => issue.keyword === "expected_move_value_binding"));
+  assert.ok(valueIssues.some((issue) => issue.keyword === "expected_move_cross_field_binding"));
+
+  const wrongSource = structuredClone(valid);
+  wrongSource.packet.sources[0].url = "https://example.com/fake-options";
+  wrongSource.packet.sources[0].observed_at = "2026-08-28T03:50:13.000Z";
+  const sourceIssues = companySourceAcquisitionIssues(wrongSource.packet, wrongSource.run);
+  assert.ok(sourceIssues.some((issue) => issue.keyword === "expected_move_source_binding"));
+
+  const wrongFormulaAndInputs = structuredClone(valid);
+  wrongFormulaAndInputs.packet.acquisition_ledger.items[wrongFormulaAndInputs.target].data.formula = "spot + reference_atm_iv + sqrt(dte / 365)";
+  wrongFormulaAndInputs.packet.acquisition_ledger.items[wrongFormulaAndInputs.target].data.inputs = [
+    { name: "spot", value: 999, source_ids: [wrongFormulaAndInputs.sourceId] },
+    { name: "reference_atm_iv", value: 9.9, source_ids: [wrongFormulaAndInputs.sourceId] },
+    { name: "dte", value: 99, source_ids: [wrongFormulaAndInputs.sourceId] },
+  ];
+  const formulaIssues = companySourceAcquisitionIssues(wrongFormulaAndInputs.packet, wrongFormulaAndInputs.run);
+  assert.ok(formulaIssues.some((issue) => issue.keyword === "expected_move_formula_binding"));
+  assert.ok(formulaIssues.filter((issue) => issue.keyword === "expected_move_input_binding").length >= 3);
+
+  const nestedIv = structuredClone(valid);
+  nestedIv.packet.metrics = { options: { iv_history: { percentile: 99 } } };
+  assert.ok(companySourceAcquisitionIssues(nestedIv.packet, nestedIv.run)
+    .some((issue) => issue.keyword === "iv_history_binding"));
+
+  const japaneseIv = structuredClone(valid);
+  japaneseIv.packet.claims[0].claim = "IVランクは99です。";
+  assert.ok(companySourceAcquisitionIssues(japaneseIv.packet, japaneseIv.run)
+    .some((issue) => issue.keyword === "iv_history_binding"));
+
+  const percentWord = structuredClone(valid);
+  percentWord.packet.metrics = { expected_move: { value: 99, unit: "percent" } };
+  assert.ok(companySourceAcquisitionIssues(percentWord.packet, percentWord.run)
+    .some((issue) => issue.keyword === "expected_move_cross_field_binding"));
+
+  const noOptions = structuredClone(valid);
+  noOptions.run.grounding.options = { available: false };
+  noOptions.packet.metrics = {
+    iv_rank: 99,
+    expected_move: { value: 99, unit: "percent" },
+  };
+  const noOptionIssues = companySourceAcquisitionIssues(noOptions.packet, noOptions.run);
+  assert.ok(noOptionIssues.some((issue) => issue.keyword === "iv_history_binding"));
+  assert.ok(noOptionIssues.some((issue) => issue.keyword === "expected_move_binding"));
+
+  const legacy = structuredClone(valid);
+  const legacyData = legacy.packet.acquisition_ledger.items[legacy.target].data;
+  legacy.packet.acquisition_ledger.items[legacy.target].data = {
+    value: legacyData.observations[0].value,
+    unit: legacyData.observations[0].unit,
+    period: legacyData.observations[0].period,
+    formula: legacyData.formula,
+    inputs: legacyData.inputs,
+  };
+  assert.deepEqual(companySourceAcquisitionIssues(legacy.packet, legacy.run), []);
+
+  const observationLocal = structuredClone(valid);
+  const observationLocalData = observationLocal.packet.acquisition_ledger.items[observationLocal.target].data;
+  observationLocalData.observations[0].formula = observationLocalData.formula;
+  observationLocalData.observations[0].inputs = observationLocalData.inputs;
+  delete observationLocalData.formula;
+  delete observationLocalData.inputs;
+  assert.deepEqual(companySourceAcquisitionIssues(observationLocal.packet, observationLocal.run), []);
+
+  for (const mutate of [
+    (fixture) => { fixture.packet.metrics.options = { history_note: "IV rank: 99" }; },
+    (fixture) => { fixture.packet.acquisition_ledger.items[fixture.target].data.extra_note = "IV percentile is 99%"; },
+    (fixture) => { fixture.packet.claims[0].claim = "IV percentile of 99"; },
+  ]) {
+    const stringIv = structuredClone(valid);
+    mutate(stringIv);
+    assert.ok(companySourceAcquisitionIssues(stringIv.packet, stringIv.run)
+      .some((issue) => issue.keyword === "iv_history_binding"));
+  }
+
+  for (const mutate of [
+    (fixture) => { fixture.packet.metrics.expected_move_note = "expected move 99 percent"; },
+    (fixture) => { fixture.packet.acquisition_ledger.items[fixture.target].data.extra_note = "Expected move: 99%"; },
+    (fixture) => { fixture.packet.claims[0].claim = "予想変動幅は99%です。"; },
+    (fixture) => { fixture.packet.claims[0].claim = "期待変動幅は99%。"; },
+    (fixture) => { fixture.packet.claims[0].claim = "예상 변동폭은 99%입니다."; },
+  ]) {
+    const stringMove = structuredClone(valid);
+    mutate(stringMove);
+    assert.ok(companySourceAcquisitionIssues(stringMove.packet, stringMove.run)
+      .some((issue) => issue.keyword === "expected_move_cross_field_binding"));
+  }
+
+  for (const text of [
+    "99 is the IV rank.",
+    "99% IV percentile.",
+    "The 99th percentile is the IV rank.",
+    "IV 99th percentile.",
+    "IV rank in the 99th percentile.",
+    "IV rank unavailable, but likely 99.",
+    "IV percentile cannot be computed; I estimate 99%.",
+    "IV rank unavailable — likely 99.",
+    "IV rank unavailable, estimated at 99.",
+    "IV percentile unavailable though likely 99.",
+    "IV rank unavailable, model output 99.",
+    "IV rank unavailable (99 modeled).",
+    "IV percentile unavailable, my guess 99.",
+  ]) {
+    const leadingIv = structuredClone(valid);
+    leadingIv.packet.claims[0].claim = text;
+    const leadingIvIssues = companySourceAcquisitionIssues(leadingIv.packet, leadingIv.run);
+    assert.ok(leadingIvIssues.some((issue) => issue.keyword === "iv_history_binding"), text);
+  }
+
+  for (const text of [
+    "99% expected move.",
+    "A 99 percent expected move.",
+    "expected 99% move.",
+    "expected move comes to 99%.",
+    "Expected move: roughly 99%.",
+    "Expected move unavailable, but proxy is 99%.",
+    "Expected move insufficient from frozen data; use 99% anyway.",
+    "Expected move unavailable, estimated at 99%.",
+    "Expected move unavailable — use 99% anyway.",
+    "99%の予想変動幅です。",
+    "99%의 예상 변동폭입니다.",
+  ]) {
+    const leadingMove = structuredClone(valid);
+    leadingMove.packet.claims[0].claim = text;
+    assert.ok(companySourceAcquisitionIssues(leadingMove.packet, leadingMove.run)
+      .some((issue) => issue.keyword === "expected_move_cross_field_binding"));
+  }
+
+  for (const text of [
+    "IV rank unavailable; only 1 of 60 observations have been saved.",
+    "IV percentile cannot be computed until 60 observations exist.",
+  ]) {
+    const unavailableHistory = structuredClone(valid);
+    unavailableHistory.packet.claims[0].claim = text;
+    assert.ok(!companySourceAcquisitionIssues(unavailableHistory.packet, unavailableHistory.run)
+      .some((issue) => issue.keyword === "iv_history_binding"));
+  }
+
+  const dteExplanation = structuredClone(valid);
+  dteExplanation.packet.claims[0].evidence = "Expected move proxy uses 7 DTE and remains a volatility range, not direction.";
+  assert.ok(!companySourceAcquisitionIssues(dteExplanation.packet, dteExplanation.run)
+    .some((issue) => issue.keyword === "expected_move_unit_binding"));
+
+  const unavailableDte = structuredClone(valid);
+  unavailableDte.packet.claims[0].evidence = "Expected move unavailable without a complete snapshot; 7 DTE was requested.";
+  assert.ok(!companySourceAcquisitionIssues(unavailableDte.packet, unavailableDte.run)
+    .some((issue) => issue.keyword === "expected_move_unit_binding"));
 });

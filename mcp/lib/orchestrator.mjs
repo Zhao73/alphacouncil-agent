@@ -409,15 +409,60 @@ export function buildMethodVoiceHeadlessOutputSchema(run, masterId, frozenOpinio
   return build(false);
 }
 
-function headlessEvidenceEnvelopeInstruction(kind) {
+export const FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES = 32 * 1024;
+export const FAST_QUANT_USER_OBJECTIVE_MAX_BYTES = 8 * 1024;
+export const FAST_QUANT_USER_OBJECTIVE_RESERVE_BYTES = FAST_QUANT_USER_OBJECTIVE_MAX_BYTES + 128;
+
+export function headlessEvidenceEnvelopeInstruction(kind) {
   return [
     "NATIVE SEGMENTED STRUCTURED-OUTPUT ENVELOPE (mandatory): return the exact outer fields required by segmented_evidence_v1; do not return the evidence packet as one monolithic string.",
     `The decoded fields together represent the one complete ${kind} required above. Set transport exactly to segmented_evidence_v1.`,
     "Serialize claims, metrics, sources, and open_questions separately into their matching *_json strings as compact single-line JSON.",
     "Serialize coverage_items, acquisition_ledger, and official_source_coverage into their matching *_json strings; use the literal string null when that top-level field is not applicable or absent under the packet contract. In particular, macro_regime, market_narrative, and social_pulse must set coverage_items_json and acquisition_ledger_json to the literal string null because those supplemental seats own no company dossier routes.",
     "Do not confuse the two coverage shapes: every coverage_items_json row uses id, status, source_ids, note, attempted, attempted_urls, and gap. note, attempted, and gap are plain strings (never arrays or objects); attempted_urls is an array of HTTP URLs. acquisition_ledger_json items separately use coverage_id, outcome, source_ids, attempts, and data/reason. Every acquisition `attempts` value MUST be a JSON array of objects, never a prose string; each attempt object uses stage, locator_type, locator, result, source_ids, and note.",
-    "Put summary, confidence, and information_richness directly in the outer object. Silently discard drafts before answering; never append a correction or a second JSON root inside any segment.",
+    "Put summary, confidence, and information_richness directly in the outer object. Do not emit an empty or intermediate envelope. Silently discard drafts before answering; never append a correction or a second JSON root inside any segment.",
   ].join(" ");
+}
+
+export function buildHeadlessEvidencePrompt(task, run, userPrompt = "") {
+  const assemble = (objective) => [
+    taskPrompt(task, run.symbol, run.as_of, objective, run.language, run.grounding, run.council_pace),
+    companyCoverageInstruction(task, run),
+    headlessEvidenceEnvelopeInstruction(`${task} evidence packet`),
+  ].filter(Boolean).join("\n\n");
+  const fastQuant = task === "quant_factor" && String(run?.council_pace || "").toLowerCase() === "fast";
+  if (fastQuant) {
+    const objectiveBytes = Buffer.byteLength(String(userPrompt || ""), "utf8");
+    if (objectiveBytes > FAST_QUANT_USER_OBJECTIVE_MAX_BYTES) {
+      throw invalidParams(`fast quant user objective is ${objectiveBytes} bytes; limit is ${FAST_QUANT_USER_OBJECTIVE_MAX_BYTES}`, {
+        reason: "FAST_QUANT_USER_OBJECTIVE_TOO_LARGE",
+        bytes: objectiveBytes,
+        max_bytes: FAST_QUANT_USER_OBJECTIVE_MAX_BYTES,
+      });
+    }
+    const fixedBytes = Buffer.byteLength(assemble(""), "utf8");
+    const fixedLimit = FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES - FAST_QUANT_USER_OBJECTIVE_RESERVE_BYTES;
+    if (fixedBytes > fixedLimit) {
+      throw invalidParams(`fast quant fixed prompt is ${fixedBytes} bytes; limit is ${fixedLimit}`, {
+        reason: "FAST_QUANT_FIXED_PROMPT_TOO_LARGE",
+        bytes: fixedBytes,
+        max_bytes: fixedLimit,
+        reserved_user_objective_bytes: FAST_QUANT_USER_OBJECTIVE_MAX_BYTES,
+      });
+    }
+  }
+  const prompt = assemble(userPrompt);
+  if (fastQuant) {
+    const bytes = Buffer.byteLength(prompt, "utf8");
+    if (bytes > FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES) {
+      throw invalidParams(`fast quant headless prompt is ${bytes} bytes; limit is ${FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES}`, {
+        reason: "FAST_QUANT_PROMPT_TOO_LARGE",
+        bytes,
+        max_bytes: FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES,
+      });
+    }
+  }
+  return prompt;
 }
 
 function headlessMethodLanguageInstruction(language) {
@@ -3729,11 +3774,7 @@ export async function collectEvidence(args) {
         : "QUICK COUNCIL PRIORITY: return only the 4-6 highest-information claims needed for a directional read. Keep the packet concise, source every claim, and make unknowns explicit."
       : "";
     const workerObjective = [args.prompt || "", quickPriority].filter(Boolean).join("\n\n");
-    const prompt = [
-      taskPrompt(task, symbol, asOfDate, workerObjective, language, run.grounding, run.council_pace),
-      companyCoverageInstruction(task, run),
-      headlessEvidenceEnvelopeInstruction(`${task} evidence packet`),
-    ].filter(Boolean).join("\n\n");
+    const prompt = buildHeadlessEvidencePrompt(task, run, workerObjective);
     updateTask(run, task, "running", { started_at: new Date().toISOString() });
     if (dryRun) {
       const packet = dryPacket(task, symbol, asOfDate, prompt, language);

@@ -164,9 +164,10 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
   const resolvedLanguage = resolveLanguage({ language, prompt: userPrompt });
   const chinese = isChineseLanguage(resolvedLanguage);
   const reg = registry();
+  const fastQuant = task === "quant_factor" && String(pace || "").toLowerCase() === "fast";
 
   const base = [
-    render(personaPrompt(reg.get("_evidence_base"), resolvedLanguage), {
+    render(personaPrompt(reg.get(fastQuant ? "_evidence_base_fast" : "_evidence_base"), resolvedLanguage), {
       symbol,
       as_of: asOfDate,
       language: resolvedLanguage,
@@ -174,14 +175,19 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
     userPrompt ? (chinese ? `用户目标：${userPrompt}` : `User objective: ${userPrompt}`) : "",
   ].filter(Boolean).join("\n");
 
-  const body = render(personaPrompt(reg.get(task), resolvedLanguage), { symbol, as_of: asOfDate, language: resolvedLanguage })
+  const body = render(personaPrompt(reg.get(fastQuant ? "quant_factor_fast" : task), resolvedLanguage), { symbol, as_of: asOfDate, language: resolvedLanguage })
     || (chinese ? "收集与投资决策相关的证据。" : "Collect evidence relevant to the investment decision.");
 
   // Grounding goes AFTER the role brief: the analyst must know its job before it is told
   // which facts are already settled, or it reads them as the whole assignment.
   const instrumentOverride = fundOrIndexTaskInstruction(task, grounding?.instrument, resolvedLanguage);
-  const grounded = groundingBlock(grounding, resolvedLanguage);
-  const sourceAcquisition = sourceAcquisitionPromptBlock(grounding?.source_acquisition_plan, task, resolvedLanguage);
+  const grounded = groundingBlock(grounding, resolvedLanguage, { task, pace });
+  const sourceAcquisition = sourceAcquisitionPromptBlock(
+    grounding?.source_acquisition_plan,
+    task,
+    resolvedLanguage,
+    { fastQuant },
+  );
   return [
     `${base}\n\n${chinese ? "任务：" : "Task: "}${task}\n${body}`,
     instrumentOverride,

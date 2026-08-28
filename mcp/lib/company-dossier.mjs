@@ -552,6 +552,26 @@ export function companyCoverageInstruction(task, run) {
   const ids = expectedCoverageItems(task);
   if (!ids.length) return "";
   const chinese = isChineseLanguage(run.language);
+  const fastQuant = task === "quant_factor" && String(run?.council_pace || "").toLowerCase() === "fast";
+  if (fastQuant) {
+    const fastInstructions = localized(run.language, {
+      zh: [
+        "## fast 量化 coverage（强制）",
+        "coverage_items 必须恰好包含下列六个冻结 ID。每行字段固定为 {id,status,source_ids,note,attempted,attempted_urls,gap}；后三个文本字段是字符串，两个 *_ids/urls 字段是数组。status 只能是 covered|unavailable|not_applicable。",
+        "covered 必须引用本包实际使用的 HTTP 来源。静态来源给不晚于 as_of 的 published_at；无发布日期的动态行情只可写 published_at=unknown，并给 source_kind=dynamic_snapshot 与实际 observed_at。unavailable 必须给真实 attempted、至少一个实际尝试的 HTTP URL、gap，并把完全相同的 gap 放入 open_questions；not_applicable 必须给原因。",
+        "先使用服务器冻结的 market_history/options 完成 momentum、relative strength、liquidity、options；不得重搜已给数字。联网只补 short-interest/borrow 和 peer cross-section；服务器拒绝非冻结或重复 locator，并强制最多 8 个 query、3 个 URL。六行 coverage 与 acquisition ledger 都必须保留；一次性输出最终对象，禁止空或中间 envelope。",
+      ].join("\n"),
+      en: [
+        "## Fast quant coverage (mandatory)",
+        "coverage_items contains exactly the six frozen IDs below. Each row is {id,status,source_ids,note,attempted,attempted_urls,gap}; the last three text fields are strings and only *_ids/urls are arrays. status is covered|unavailable|not_applicable.",
+        "covered cites packet-local HTTP evidence actually used. Static sources have published_at no later than as_of. A dynamic market snapshot without a publication date uses published_at=unknown plus source_kind=dynamic_snapshot and its real observed_at. unavailable needs a real attempted description, at least one HTTP URL actually attempted, a gap repeated exactly in open_questions; not_applicable needs a reason.",
+        "Use server-frozen market_history/options first for momentum, relative strength, liquidity, and options; never rediscover supplied figures. Network only fills short-interest/borrow and peer cross-section. The server rejects non-frozen or repeated locators and enforces at most 8 queries and 3 URLs. Preserve all six coverage and ledger rows; emit one final object, never an empty/intermediate envelope.",
+      ].join("\n"),
+      ja: "fast quant coverage: 下記6 IDを各1回返し、server-frozen market/optionsを先に使用します。外部取得は frozen locator のみ各1回、最大8 query/3 URLです。covered は出典、unavailable は実試行URLと一致する gap、not_applicable は理由が必須です。空・中間 envelopeは禁止です。",
+      ko: "fast quant coverage: 아래 6개 ID를 각각 한 번 반환하고 server-frozen market/options를 먼저 사용합니다. 외부 수집은 frozen locator만 각 1회, 최대 8 query/3 URL입니다. covered는 출처, unavailable는 실제 시도 URL과 동일한 gap, not_applicable는 이유가 필수입니다. 빈·중간 envelope는 금지됩니다.",
+    });
+    return `${fastInstructions}\n\nRequired coverage IDs JSON: ${JSON.stringify(ids)}\nReader language: ${run.language}; task: ${task}; contract: ${COMPANY_DOSSIER_CONTRACT_ID}; chinese=${chinese}`;
+  }
   const instructions = localized(run.language, {
     zh: [
       "## 公司资料覆盖契约（强制）",
