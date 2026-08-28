@@ -382,8 +382,10 @@ export function stopChild(child, force = false, {
 } = {}) {
   if (!child.pid) return;
   if (platform === "win32") {
-    const args = ["/pid", String(child.pid), "/t"];
-    if (force) args.push("/f");
+    // Windows has no cooperative POSIX SIGTERM path for ChildProcess.kill(): Node treats it
+    // as an abrupt direct-process termination. Kill the complete cmd.exe -> codex tree on the
+    // first timeout instead, while the root PID still exists for taskkill to enumerate.
+    const args = ["/pid", String(child.pid), "/t", "/f"];
     try {
       const result = killWindowsTree(args);
       if (result?.error || result?.status !== 0) child.kill(force ? "SIGKILL" : "SIGTERM");

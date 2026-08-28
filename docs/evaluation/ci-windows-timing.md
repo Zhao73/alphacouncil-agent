@@ -465,6 +465,8 @@ entire parity check in a fresh temporary root. Other errors remain immediately f
 
 Candidate `fc5c7386d725e0833b1e11761ded6df2c69a4013` then exposed the remaining shutdown
 race in push run [`33164652799`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33164652799):
-all product assertions passed, but `fast-no-cold-retry` could not remove an executing `.cmd` shim
-after the asynchronous `taskkill` request. Windows worker shutdown now invokes bounded synchronous
-`taskkill /t` settlement, with the existing direct-child signal retained as the failure fallback.
+all product assertions passed, but `fast-no-cold-retry` could not remove an executing `.cmd` shim.
+The first non-forced `taskkill` could fail and the direct-child fallback could remove the command
+shim before the force phase could enumerate its tree. Windows worker timeout now invokes bounded
+synchronous `taskkill /t /f` on its first stop, while retaining the direct-child signal only as a
+failure fallback.

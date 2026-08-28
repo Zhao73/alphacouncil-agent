@@ -44,11 +44,11 @@ test("windows invocation fails closed before cmd expansion or the 8191-character
   );
 });
 
-test("Windows worker shutdown waits for taskkill to settle the whole process tree", () => {
+test("Windows worker timeout force-terminates the whole process tree on its first stop", () => {
   const calls = [];
   const signals = [];
   const child = { pid: 73, kill: (signal) => signals.push(signal) };
-  codexWorker.stopChild(child, true, {
+  codexWorker.stopChild(child, false, {
     platform: "win32",
     killWindowsTree: (args) => {
       calls.push(args);

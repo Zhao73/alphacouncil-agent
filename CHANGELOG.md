@@ -8,8 +8,8 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
-- Windows worker shutdown now waits for `taskkill` to settle the full process tree before the
-  attempt resolves, preventing executing command shims from holding temporary directories open.
+- Windows worker timeout now uses `taskkill /t /f` on its first stop, before the command-shim PID
+  disappears, preventing an orphaned worker from holding temporary directories open.
 - Windows source CI now runs process-owning test files one at a time and retries one transient
   offline tarball-install timeout with a fresh root; product deadlines remain unchanged.
 - Leaf `codex exec` workers now share the caller's one authenticated `CODEX_HOME` while using an
