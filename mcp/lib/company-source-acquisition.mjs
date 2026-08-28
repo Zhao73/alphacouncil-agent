@@ -1516,14 +1516,19 @@ function reportedActualObservations(data, coverageId) {
 
 function acquisitionAttemptState(item, route) {
   const prefix = String(route?.coverage_id || "").split(".")[0];
-  const attemptedStages = new Set((item?.attempts || []).map((attempt) => attempt?.stage));
+  // Keep malformed worker transport on the validation path. Treating a truthy string or
+  // object as an array here threw a JavaScript TypeError before the semantic gate could emit
+  // the precise `/attempts: type` repair issue, so a recoverable ledger mistake became an
+  // opaque parse failure.
+  const attempts = Array.isArray(item?.attempts) ? item.attempts : [];
+  const attemptedStages = new Set(attempts.map((attempt) => attempt?.stage));
   const terminalLadderRecorded = (route?.required_terminal_stages || [])
     .every((stage) => attemptedStages.has(stage));
   let officialSuccess = false;
   let directObservationSuccess = false;
   let citedInputSuccess = false;
   let derivedSuccess = false;
-  for (const attempt of item?.attempts || []) {
+  for (const attempt of attempts) {
     if (attempt?.result !== "succeeded") continue;
     const ids = Array.isArray(attempt.source_ids) ? attempt.source_ids : [];
     if (DERIVATION_SUCCESS_STAGES.has(attempt.stage)) derivedSuccess = true;

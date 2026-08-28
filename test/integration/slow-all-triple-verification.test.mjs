@@ -58,11 +58,16 @@ const lineJson = (prefix) => {
   const line = prompt.split("\\n").find((item) => item.startsWith(prefix));
   return line ? JSON.parse(line.slice(prefix.length)) : [];
 };
+const evidenceLine = prompt.split("\\n").find((item) => item.startsWith("Evidence JSON: "));
+const promptEvidence = evidenceLine ? JSON.parse(evidenceLine.slice("Evidence JSON: ".length)) : null;
 
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   role, task, verifier, master, round, coverageRetry, acquisitionRepair, transportRepair,
   search: args.includes("--search"), outputSchema: args.includes("--output-schema"),
   requiredUrlChecklist: prompt.includes("REQUIRED checked_urls BY CLAIM (binding work checklist)"),
+  projectionPacketCount: (promptEvidence?.packets || []).length,
+  projectionRouteCount: (promptEvidence?.packets || [])
+    .reduce((total, packet) => total + (packet.routes || []).length, 0),
   pid: process.pid, invocationOutput: output, at: Date.now(),
 }) + "\\n");
 
@@ -480,6 +485,9 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   const acquisitionRepairLaunches = evidenceLaunches.filter((entry) => entry.acquisitionRepair);
   const verifierLaunches = launches.filter((entry) => REQUIRED_VERIFIER_IDS.includes(entry.role));
   const masterLaunches = launches.filter((entry) => CANONICAL_MASTER_IDS.includes(entry.role));
+  const decisionLaunches = launches.filter((entry) => (
+    ["bull_researcher", "bear_researcher", "portfolio_manager"].includes(entry.role)
+  ));
   assert.equal(initialEvidenceLaunches.length, 11);
   assert.equal(transportRepairLaunches.length, 1);
   assert.equal(acquisitionRepairLaunches.length, 2);
@@ -489,6 +497,9 @@ test("slow + all runs 11 analysts, all 26 methods and all three claim-complete v
   assert.equal(verifierLaunches.filter((entry) => entry.role === "refuter").length, 2);
   assert.equal(verifierLaunches.length, 8);
   assert.equal(masterLaunches.length, CANONICAL_MASTER_IDS.length);
+  assert.equal(decisionLaunches.length, 7);
+  assert.ok(decisionLaunches.every((entry) => entry.projectionPacketCount === 11));
+  assert.ok(decisionLaunches.every((entry) => entry.projectionRouteCount === 52));
   assert.deepEqual(
     masterLaunches.map((entry) => entry.role).sort(),
     [...CANONICAL_MASTER_IDS].sort(),

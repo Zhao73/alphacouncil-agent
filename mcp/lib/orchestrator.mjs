@@ -366,7 +366,7 @@ function headlessEvidenceEnvelopeInstruction(kind) {
     `The decoded fields together represent the one complete ${kind} required above. Set transport exactly to segmented_evidence_v1.`,
     "Serialize claims, metrics, sources, and open_questions separately into their matching *_json strings as compact single-line JSON.",
     "Serialize coverage_items, acquisition_ledger, and official_source_coverage into their matching *_json strings; use the literal string null when that top-level field is not applicable or absent under the packet contract. In particular, macro_regime, market_narrative, and social_pulse must set coverage_items_json and acquisition_ledger_json to the literal string null because those supplemental seats own no company dossier routes.",
-    "Do not confuse the two coverage shapes: every coverage_items_json row uses id, status, source_ids, note, attempted, attempted_urls, and gap. note, attempted, and gap are plain strings (never arrays or objects); attempted_urls is an array of HTTP URLs. acquisition_ledger_json items separately use coverage_id, outcome, source_ids, attempts, and data/reason.",
+    "Do not confuse the two coverage shapes: every coverage_items_json row uses id, status, source_ids, note, attempted, attempted_urls, and gap. note, attempted, and gap are plain strings (never arrays or objects); attempted_urls is an array of HTTP URLs. acquisition_ledger_json items separately use coverage_id, outcome, source_ids, attempts, and data/reason. Every acquisition `attempts` value MUST be a JSON array of objects, never a prose string; each attempt object uses stage, locator_type, locator, result, source_ids, and note.",
     "Put summary, confidence, and information_richness directly in the outer object. Silently discard drafts before answering; never append a correction or a second JSON root inside any segment.",
   ].join(" ");
 }
@@ -2946,7 +2946,7 @@ function evidenceReaderText(packet) {
   ]);
   const acquisitionProse = (packet?.acquisition_ledger?.items || []).flatMap((item) => [
     item?.reason,
-    ...(item?.attempts || []).map((attempt) => attempt?.note),
+    ...(Array.isArray(item?.attempts) ? item.attempts : []).map((attempt) => attempt?.note),
     ...(Array.isArray(item?.data?.assumptions) ? item.data.assumptions : []),
   ]);
   const officialCoverageProse = [

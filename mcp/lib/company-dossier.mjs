@@ -791,6 +791,7 @@ function decisionProjectionSource(record) {
 }
 
 function decisionProjectionRoute(coverage, acquisition) {
+  const attempts = Array.isArray(acquisition?.attempts) ? acquisition.attempts : [];
   const route = {
     id: coverage.id,
     status: coverage.status,
@@ -800,7 +801,7 @@ function decisionProjectionRoute(coverage, acquisition) {
     // A successful acquisition may cite a source used only to prove how the fact was
     // obtained (for example, the dated endpoint actually queried) rather than the fact's
     // final value. Keep those bindings without copying the full successful-attempt prose.
-    attempt_source_ids: [...new Set((acquisition?.attempts || [])
+    attempt_source_ids: [...new Set(attempts
       .flatMap((attempt) => Array.isArray(attempt?.source_ids) ? attempt.source_ids : []))],
   };
   for (const key of ["note", "attempted", "attempted_urls", "gap", "reason"]) {
@@ -809,7 +810,7 @@ function decisionProjectionRoute(coverage, acquisition) {
   if (acquisition?.data !== undefined) route.data = jsonClone(acquisition.data);
   if (acquisition?.reason !== undefined) route.outcome_reason = jsonClone(acquisition.reason);
   if (coverage.status === "unavailable" || acquisition?.outcome === "unavailable") {
-    route.attempts = jsonClone(acquisition?.attempts || []);
+    route.attempts = jsonClone(attempts);
   }
   return route;
 }
@@ -848,17 +849,28 @@ export function companyDossierDecisionProjection(run) {
     }
 
     const coverageById = uniqueRowsBy(packet.coverage_items || [], "id", `${task} coverage rows`);
+    const expectedIds = expectedCoverageItems(task);
+    const taskAcquisitionRequired = acquisitionRequired && expectedIds.length > 0;
+    const acquisitionRows = packet.acquisition_ledger?.items;
+    if (taskAcquisitionRequired && !Array.isArray(acquisitionRows)) {
+      decisionProjectionFailure("acquisition rows must be an array under the frozen source policy", {
+        task,
+      });
+    }
+    // Legacy/replayed dossiers without a frozen source-acquisition policy never passed the
+    // typed acquisition gate. Supplemental breadth packets also own no acquisition routes even
+    // when the eight core packets share a run-level policy. Do not let either unverified surface
+    // enter a decision prompt; coverage and cited evidence remain.
     const acquisitionById = uniqueRowsBy(
-      packet.acquisition_ledger?.items || [],
+      taskAcquisitionRequired ? acquisitionRows : [],
       "coverage_id",
       `${task} acquisition rows`,
     );
-    const expectedIds = expectedCoverageItems(task);
     if (expectedIds.length) {
       const unexpectedCoverage = [...coverageById.keys()].filter((id) => !expectedIds.includes(id));
       const unexpectedAcquisition = [...acquisitionById.keys()].filter((id) => !expectedIds.includes(id));
       const missingCoverage = expectedIds.filter((id) => !coverageById.has(id));
-      const missingAcquisition = acquisitionRequired
+      const missingAcquisition = taskAcquisitionRequired
         ? expectedIds.filter((id) => !acquisitionById.has(id))
         : [];
       if (unexpectedCoverage.length || unexpectedAcquisition.length || missingCoverage.length || missingAcquisition.length) {

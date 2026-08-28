@@ -623,6 +623,24 @@ function acquisitionFixture({ task, targetId, item, covered = true }) {
   return { packet, plan, route: routes[target], run, sourceId, target };
 }
 
+test("a prose acquisition attempts field reaches the typed repair gate instead of throwing", () => {
+  const fixture = acquisitionFixture({
+    task: "ib_event_analysis",
+    targetId: "events.event_calendar",
+    covered: false,
+    item: (route) => exhaustiveUnavailable(route),
+  });
+  fixture.packet.acquisition_ledger.items[fixture.target].attempts = "Reviewed issuer filings and calendars.";
+
+  assert.doesNotThrow(() => canonicalizeCompanySourceAcquisitionPacket(fixture.packet, fixture.run));
+  const issues = companySourceAcquisitionIssues(fixture.packet, fixture.run);
+  assert.ok(issues.some((issue) => (
+    issue.path === `/acquisition_ledger/items/${fixture.target}/attempts`
+      && issue.keyword === "type"
+      && issue.message === "must be an array"
+  )));
+});
+
 test("an unavailable field treats an opened cited page as not_disclosed rather than data success", () => {
   const { packet, run, target, sourceId } = acquisitionFixture({
     task: "earnings_deep_dive",

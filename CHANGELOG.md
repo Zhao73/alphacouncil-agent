@@ -15,6 +15,9 @@ Notable changes per release. Dates are UTC.
   packet/dossier hashes. Selected method seats keep
   the mandatory full-dossier read and per-packet acknowledgements. Failed debate attempts are no
   longer counted as completed rounds in terminal status.
+- Malformed acquisition `attempts` values now reach the typed ledger repair gate with an exact
+  field path instead of escaping as an opaque JavaScript `.map` failure; headless prompts also
+  state explicitly that every acquisition attempt is an object inside an array.
 - Fast's stage allocation now reflects the first clean Work-gateway run that completed all eight
   evidence workers and all 26 isolated method voices but timed out both sides of debate round 1.
   Evidence keeps its 220-second primary attempt and the PM keeps 75 seconds; each debate side's

@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { verifyCompanyDossierArtifact } from "../../mcp/lib/company-dossier.mjs";
+import { buildCompanySourceAcquisitionPlan } from "../../mcp/lib/company-source-acquisition.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import {
   SETTLEMENT_HEADROOM_MS,
@@ -49,6 +50,7 @@ const role = /You are the portfolio_manager|Role:\\s*portfolio_manager/iu.test(p
   : /You are the bear_researcher|Role:\\s*bear_researcher/iu.test(prompt) ? "bear_researcher"
   : master || task || "unknown";
 const round = Number(/Debate round:\\s*(\\d+)/u.exec(prompt)?.[1] || 0);
+const ledgerRepair = prompt.includes("SOURCE-ACQUISITION LEDGER TRANSPORT REPAIR ONLY");
 const dossierHash = /Content hash:\\s*(sha256:[a-f0-9]{64})/u.exec(prompt)?.[1]
   || /company_dossier_hash_ack[^a-f0-9]*(sha256:[a-f0-9]{64})/u.exec(prompt)?.[1]
   || null;
@@ -75,15 +77,19 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   prompt_chars: prompt.length,
   search: args.includes("--search"),
   outputSchema: args.includes("--output-schema"),
+  ledger_repair: ledgerRepair,
 }) + "\\n");
 
 let packet;
 if (task) {
   const coverageLine = prompt.split("\\n")
     .find((line) => line.startsWith("Required coverage IDs JSON: "));
+  const acquisitionRoutes = lineJson("Frozen source plan: ");
   const coverageIds = coverageLine
     ? JSON.parse(coverageLine.slice("Required coverage IDs JSON: ".length))
-    : [];
+    : acquisitionRoutes.length
+      ? acquisitionRoutes.map((item) => item.coverage_id)
+      : [];
   const source = {
     id: "S1",
     title: task + " dated operating-company fixture source",
@@ -96,6 +102,33 @@ if (task) {
     published_at: source.published_at,
     url: source.url,
     source_id: "S1",
+  };
+  const officialStages = new Set([
+    "regulator_filing", "issuer_ir", "issuer_product_docs", "market_official",
+    "customer_official", "supplier_official", "competitor_official", "other_regulator",
+    "court_record", "peer_filing", "ownership_filing",
+  ]);
+  const validAcquisitionLedger = {
+    policy_id: "worker_metadata_is_server_bound",
+    task: "worker_task_is_server_bound",
+    items: acquisitionRoutes.map((route) => ({
+      coverage_id: route.coverage_id,
+      outcome: "reported_actual",
+      source_ids: ["S1"],
+      attempts: [{
+        stage: route.required_terminal_stages.find((stage) => officialStages.has(stage)),
+        locator_type: "url",
+        locator: source.url,
+        result: "succeeded",
+        source_ids: ["S1"],
+        note: "The dated fixture source is the authorised disclosure for this integration row.",
+      }],
+      data: {
+        period: ${JSON.stringify(AS_OF)},
+        fixture_primary_count: 1,
+        fixture_secondary_pct: 2,
+      },
+    })),
   };
   packet = {
     summary: task + " completed every owned company-dossier item from one dated fixture source and retained its limits.",
@@ -115,24 +148,7 @@ if (task) {
       source_ids: ["S1"],
       note: "The dated fixture source covers this bounded integration item.",
     })),
-    acquisition_ledger: {
-      policy_id: "company_source_acquisition_v1",
-      task,
-      items: coverageIds.map((id) => ({
-        coverage_id: id,
-        outcome: "reported_actual",
-        source_ids: ["S1"],
-        attempts: [{
-          stage: "fixture_source",
-          locator_type: "url",
-          locator: source.url,
-          result: "succeeded",
-          source_ids: ["S1"],
-          note: "The dated fixture source returned this bounded integration observation.",
-        }],
-        data: { observations: [{ value: 1, unit: "fixture", source_ids: ["S1"] }] },
-      })),
-    },
+    acquisition_ledger: validAcquisitionLedger,
     confidence: "medium",
     information_richness: "B",
     ...(task === "news_industry_management" ? {
@@ -157,6 +173,11 @@ if (task) {
       },
     } : {}),
   };
+  if (ledgerRepair) {
+    packet = { acquisition_ledger: validAcquisitionLedger };
+  } else if (task === "ib_event_analysis") {
+    packet.acquisition_ledger.items[0].attempts = "Reviewed issuer filings and event calendars.";
+  }
 } else if (master) {
   const frozenLine = prompt.split("\\n")
     .find((line) => line.startsWith("Frozen method result JSON: "));
@@ -322,6 +343,11 @@ test("headless operating-company full council freezes one dossier after typed gr
         timestamp: `${AS_OF}T15:30:00Z`,
         source: "headless_company_fixture",
       },
+      source_acquisition_plan: buildCompanySourceAcquisitionPlan({
+        symbol,
+        asOf: AS_OF,
+        profile: { name: "Acme Fixture Corporation", cik: "0000000001" },
+      }),
     },
     wait_for_completion: true,
     selection_receipt: selection.selection_receipt,
@@ -343,7 +369,11 @@ test("headless operating-company full council freezes one dossier after typed gr
   const workers = readJsonl(fake.log);
   const dossierHash = dossier.content_hash;
 
-  assert.equal(result.run.status, "complete");
+  assert.equal(result.run.status, "complete", JSON.stringify({
+    task_status: result.run.task_status,
+    agent_status: result.run.agent_status,
+    missing: result.run.missing,
+  }, null, 2));
   assert.equal(persisted.status, "complete");
   assert.equal(status.status, "complete");
   assert.equal(status.report_quality, "passed");
@@ -379,7 +409,13 @@ test("headless operating-company full council freezes one dossier after typed gr
   }
   assert.equal(manager.company_dossier_hash_ack, dossierHash);
 
-  assert.equal(workers.filter((entry) => entry.task).length, DEFAULT_TASKS.length);
+  const evidenceWorkers = workers.filter((entry) => entry.task);
+  assert.equal(evidenceWorkers.length, DEFAULT_TASKS.length + 1,
+    "one malformed prose attempts value must receive exactly one ledger-only repair");
+  assert.equal(evidenceWorkers.filter((entry) => entry.task === "ib_event_analysis").length, 2);
+  assert.equal(evidenceWorkers.filter((entry) => entry.ledger_repair).length, 1);
+  assert.equal(evidenceWorkers.find((entry) => entry.ledger_repair)?.task, "ib_event_analysis");
+  assert.equal(evidenceWorkers.find((entry) => entry.ledger_repair)?.search, false);
   const downstreamWorkers = workers.filter((entry) => !entry.task);
   assert.equal(downstreamWorkers.length, 8, "one method, six debate sides, and one PM must run");
   assert.ok(downstreamWorkers.every((entry) => entry.dossier_hash === dossierHash));
@@ -401,6 +437,14 @@ test("headless operating-company full council freezes one dossier after typed gr
   assert.ok(decisionWorkers.every((entry) => entry.projection_contract === "operating_company_dossier_decision_projection_v1"));
   assert.ok(decisionWorkers.every((entry) => entry.projection_route_count === 52));
   assert.ok(decisionWorkers.every((entry) => entry.prompt_chars > 0));
+
+  const events = readJsonl(join(dir, "events.jsonl"));
+  assert.ok(events.some((event) => event.type === "task_retry"
+    && event.task === "ib_event_analysis"
+    && event.repair_scope === "acquisition_ledger_only"));
+  assert.ok(events.some((event) => event.type === "task_repair_succeeded"
+    && event.task === "ib_event_analysis"
+    && event.repair_scope === "acquisition_ledger_only"));
 
   assert.ok(existsSync(join(dir, "final_report.md")));
   assert.equal(manifest.artifacts.company_dossier_json.path, dossierPath);

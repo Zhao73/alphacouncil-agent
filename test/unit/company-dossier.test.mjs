@@ -269,6 +269,28 @@ test("the debate projection is derived from the verified dossier without droppin
   }
 });
 
+test("a planless legacy dossier cannot project unverified acquisition values or malformed attempts", () => {
+  const market = coveredPacket("market_data");
+  market.acquisition_ledger.items[0].attempts = "Reviewed a provider in prose.";
+  market.acquisition_ledger.items[0].data = { value: 999_999, unit: "fabricated_fixture" };
+  const run = companyRun(DEFAULT_TASKS.map((task) => task === market.task ? market : coveredPacket(task)));
+  const frozen = freezeCompanyDossier(run);
+  try {
+    assert.equal(frozen.dossier.consumer_contract.source_acquisition_policy_id, null);
+    const projection = companyDossierDecisionProjection(run);
+    const quote = projection.packets
+      .find((packet) => packet.task === "market_data")
+      .routes.find((route) => route.id === "market.quote_snapshot");
+    assert.equal(quote.outcome, "not_recorded");
+    assert.deepEqual(quote.outcome_source_ids, []);
+    assert.deepEqual(quote.attempt_source_ids, []);
+    assert.equal(Object.hasOwn(quote, "data"), false);
+    assert.doesNotMatch(JSON.stringify(projection), /fabricated_fixture|999999|Reviewed a provider/u);
+  } finally {
+    rmSync(frozen.dir, { recursive: true, force: true });
+  }
+});
+
 test("an oversized decision projection fails closed instead of silently truncating evidence", () => {
   const market = coveredPacket("market_data");
   market.claims[0].evidence = "X".repeat(COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES + 1);
