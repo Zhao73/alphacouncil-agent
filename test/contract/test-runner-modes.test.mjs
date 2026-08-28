@@ -62,7 +62,7 @@ function createSourceTree(root) {
 }
 
 test("bounded test concurrency degrades safely on older supported Node releases", () => {
-  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 2);
+  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 1);
   assert.equal(sourceTestConcurrencyArg(4, "18.18.2"), null);
   assert.equal(sourceTestConcurrencyArg(4, "18.19.0"), "--test-concurrency=4");
   assert.equal(sourceTestConcurrencyArg(8, "20.9.0"), null);
@@ -139,7 +139,7 @@ test("test runner selects every portable source test except the reviewed private
   write(root, WINDOWS_SERIAL_TEST_FILES[2]);
   const markedRealWindowsPlan = buildTestPlan(root, { platform: "win32" });
   assert.deepEqual(markedRealWindowsPlan.phases.map((phase) => phase.id), ["windows_bounded_source", "windows_serial"]);
-  assert.equal(markedRealWindowsPlan.phases[0].invocations[0].args[1], "--test-concurrency=2");
+  assert.equal(markedRealWindowsPlan.phases[0].invocations[0].args[1], "--test-concurrency=1");
   assert.deepEqual(
     markedRealWindowsPlan.phases[1].invocations.map((invocation) => invocation.file),
     WINDOWS_SERIAL_TEST_FILES,
@@ -155,7 +155,7 @@ test("test runner selects every portable source test except the reviewed private
   const [concurrent, serial] = realWindowsPlan.phases;
   assert.equal(concurrent.invocations.length, 1);
   assert.equal(concurrent.invocations[0].file, null);
-  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=2");
+  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=1");
   assert.deepEqual(serial.invocations.map((invocation) => invocation.file), WINDOWS_SERIAL_TEST_FILES);
   assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.invocations[0].args.includes(file)));
   const selectedFiles = realWindowsPlan.args.filter((arg) => arg.endsWith(".mjs")).sort();

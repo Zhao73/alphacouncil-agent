@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -372,13 +372,26 @@ export function codexInvocation(args, platform = process.platform, env = process
   };
 }
 
-export function stopChild(child, force = false) {
+export function stopChild(child, force = false, {
+  platform = process.platform,
+  killWindowsTree = (args) => spawnSync("taskkill", args, {
+    stdio: "ignore",
+    windowsHide: true,
+    timeout: 5_000,
+  }),
+} = {}) {
   if (!child.pid) return;
-  if (process.platform === "win32") {
-    const args = ["/pid", String(child.pid), "/t"];
-    if (force) args.push("/f");
-    const killer = spawn("taskkill", args, { stdio: "ignore", windowsHide: true });
-    killer.on("error", () => child.kill(force ? "SIGKILL" : "SIGTERM"));
+  if (platform === "win32") {
+    // Windows has no cooperative POSIX SIGTERM path for ChildProcess.kill(): Node treats it
+    // as an abrupt direct-process termination. Kill the complete cmd.exe -> codex tree on the
+    // first timeout instead, while the root PID still exists for taskkill to enumerate.
+    const args = ["/pid", String(child.pid), "/t", "/f"];
+    try {
+      const result = killWindowsTree(args);
+      if (result?.error || result?.status !== 0) child.kill(force ? "SIGKILL" : "SIGTERM");
+    } catch {
+      child.kill(force ? "SIGKILL" : "SIGTERM");
+    }
     return;
   }
   try {

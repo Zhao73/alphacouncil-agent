@@ -441,3 +441,32 @@ three evidence-backed heavy files remain ordered `--test-concurrency=1` invocati
 Linux and macOS stay at concurrency four. This change does not relax a product deadline,
 runtime assertion, RPC observer or selected-file set. Closure requires both exact-head Windows
 jobs, the other ten matrix jobs and the pull-request fuzz job to pass without a rerun.
+
+## v1.5.0 release-candidate regression: serialize the ordinary Windows source phase
+
+Release-candidate head `3205790c462a4cb885175c30ed509a92a9e3dad0` did not satisfy that
+closure rule. Push run [`33163118840`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33163118840)
+and pull-request run [`33163129833`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33163129833)
+both passed Linux, macOS and ChatGPT Work checks, but their Windows jobs failed in different test
+files while the ordinary phase ran at file concurrency two. The failures were transient file-lock
+release and RPC observer expirations across `fast-no-cold-retry`, `runtime-language-failures`,
+`pace-selection-gate` and `quick-analysis`; no common product assertion failed on both runners.
+
+The ordinary Windows source phase therefore moves from concurrency two to one. The selected-file
+set, product deadlines, RPC observers and assertions remain unchanged. The existing three heavy
+files still run as individually named serial invocations so their timing remains visible.
+
+The first serialized candidate, `2d906eeafa0bef374a52a5ea64b2547ab939c330`, exposed a separate
+pre-test failure in pull-request run
+[`33164118743`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33164118743): the offline
+tarball install exhausted its existing 120-second process ceiling before the source phase began.
+The CLI now permits exactly one Windows-only retry of that `ETIMEDOUT`, and the retry starts the
+entire parity check in a fresh temporary root. Other errors remain immediately fatal.
+
+Candidate `fc5c7386d725e0833b1e11761ded6df2c69a4013` then exposed the remaining shutdown
+race in push run [`33164652799`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33164652799):
+all product assertions passed, but `fast-no-cold-retry` could not remove an executing `.cmd` shim.
+The first non-forced `taskkill` could fail and the direct-child fallback could remove the command
+shim before the force phase could enumerate its tree. Windows worker timeout now invokes bounded
+synchronous `taskkill /t /f` on its first stop, while retaining the direct-child signal only as a
+failure fallback.

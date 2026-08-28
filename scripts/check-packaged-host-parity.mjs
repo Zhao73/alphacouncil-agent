@@ -20,6 +20,23 @@ export function parseArgs(argv) {
   if (args.json && args.markdown) throw new Error("--json and --markdown are mutually exclusive");
   return Object.freeze(args);
 }
+
+export async function runPackagedHostParityWithRetry({
+  run = runPackagedHostParity,
+  platform = process.platform,
+  log = (message) => process.stderr.write(`${message}\n`),
+} = {}) {
+  try {
+    return await run();
+  } catch (error) {
+    const transientWindowsInstallTimeout = platform === "win32"
+      && /offline npm install from tarball.*ETIMEDOUT/su.test(String(error?.message || error));
+    if (!transientWindowsInstallTimeout) throw error;
+    log("packaged-host-parity: offline install timed out; retrying once with a fresh temporary root (attempt 2/2)");
+    return run();
+  }
+}
+
 export async function main(argv = process.argv.slice(2)) {
   const args = parseArgs(argv);
   if (args.help) {
@@ -33,7 +50,7 @@ export async function main(argv = process.argv.slice(2)) {
     ].join("\n"));
     return 0;
   }
-  const report = await runPackagedHostParity();
+  const report = await runPackagedHostParityWithRetry();
   if (args.json) process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   else if (args.markdown) process.stdout.write(renderPackagedHostParityMarkdown(report));
   else {

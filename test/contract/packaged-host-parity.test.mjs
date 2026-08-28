@@ -14,7 +14,10 @@ import {
   WINDOWS_SERIAL_TEST_FILES,
   buildTestPlan,
 } from "../../scripts/run-tests.mjs";
-import { parseArgs } from "../../scripts/check-packaged-host-parity.mjs";
+import {
+  parseArgs,
+  runPackagedHostParityWithRetry,
+} from "../../scripts/check-packaged-host-parity.mjs";
 import { HOST_SELECTION_INSTRUCTION_PATHS } from "../../scripts/lib/host-selection-instruction-contract.mjs";
 import {
   PACKAGE_INVENTORY_CATEGORIES,
@@ -95,8 +98,8 @@ test("packaged parity CLI defaults to a read-only temporary check and Windows se
     "windows_serial",
   ]);
   const [concurrent, serial] = windowsPlan.phases;
-  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 2);
-  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=2");
+  assert.equal(WINDOWS_SOURCE_TEST_CONCURRENCY, 1);
+  assert.equal(concurrent.invocations[0].args[1], "--test-concurrency=1");
   assert.equal(WINDOWS_SERIAL_TEST_FILES.at(-1), PACKAGED_HOST_PARITY_TEST_FILE);
   assert.equal(concurrent.invocations.length, 1);
   assert.ok(WINDOWS_SERIAL_TEST_FILES.every((file) => !concurrent.invocations[0].args.includes(file)));
@@ -120,6 +123,28 @@ test("packaged parity CLI defaults to a read-only temporary check and Windows se
     id: "source_suite",
     invocations: [{ file: null, args: linuxPlan.args }],
   });
+});
+
+test("packaged parity CLI retries one Windows offline-install timeout with a fresh run", async () => {
+  const attempts = [];
+  const announcements = [];
+  const expected = Object.freeze({ status: "passed" });
+  const result = await runPackagedHostParityWithRetry({
+    platform: "win32",
+    log: (message) => announcements.push(message),
+    run: async () => {
+      attempts.push(attempts.length + 1);
+      if (attempts.length === 1) {
+        throw new Error("offline npm install from tarball failed to start: spawnSync node.exe ETIMEDOUT");
+      }
+      return expected;
+    },
+  });
+  assert.equal(result, expected);
+  assert.deepEqual(attempts, [1, 2]);
+  assert.deepEqual(announcements, [
+    "packaged-host-parity: offline install timed out; retrying once with a fresh temporary root (attempt 2/2)",
+  ]);
 });
 
 test("npm execution never spawns a cmd shim directly on Windows", () => {

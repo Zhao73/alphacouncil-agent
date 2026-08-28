@@ -44,6 +44,30 @@ test("windows invocation fails closed before cmd expansion or the 8191-character
   );
 });
 
+test("Windows worker timeout force-terminates the whole process tree on its first stop", () => {
+  const calls = [];
+  const signals = [];
+  const child = { pid: 73, kill: (signal) => signals.push(signal) };
+  codexWorker.stopChild(child, false, {
+    platform: "win32",
+    killWindowsTree: (args) => {
+      calls.push(args);
+      return { status: 0, error: undefined };
+    },
+  });
+  assert.deepEqual(calls, [["/pid", "73", "/t", "/f"]]);
+  assert.deepEqual(signals, []);
+});
+
+test("Windows worker shutdown falls back to the direct child when taskkill fails", () => {
+  const signals = [];
+  codexWorker.stopChild({ pid: 74, kill: (signal) => signals.push(signal) }, false, {
+    platform: "win32",
+    killWindowsTree: () => ({ status: 1, error: undefined }),
+  });
+  assert.deepEqual(signals, ["SIGTERM"]);
+});
+
 test("Codex home resolution ignores conflicting shell HOME unless CODEX_HOME is explicit", () => {
   assert.equal(
     codexWorker.resolveCodexHome(

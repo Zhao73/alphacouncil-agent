@@ -4,8 +4,14 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-08-28
+
 ### Fixed
 
+- Windows worker timeout now uses `taskkill /t /f` on its first stop, before the command-shim PID
+  disappears, preventing an orphaned worker from holding temporary directories open.
+- Windows source CI now runs process-owning test files one at a time and retries one transient
+  offline tarball-install timeout with a fresh root; product deadlines remain unchanged.
 - Leaf `codex exec` workers now share the caller's one authenticated `CODEX_HOME` while using an
   isolated temporary user home. `--ignore-user-config` skips `config.toml` but still discovers
   filesystem Skills; a live Work-gateway run showed an earnings worker spending its entire
@@ -153,8 +159,6 @@ Notable changes per release. Dates are UTC.
 - Added frozen capability, voice-provenance and catalog-derived evidence-quality labels for
   each method seat. The final bench exposes their basis and catalog hash, and distinguishes
   model-free deterministic output, worker-failure fallback, missing inputs and no-producer facts.
-
-## [1.5.0] — 2026-08-26
 
 ### Security
 
