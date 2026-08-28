@@ -249,14 +249,20 @@ coverage contract, not a claim to have read the whole internet.
   unavailable or not-applicable decision-critical field makes sufficiency `insufficient`,
   prevents methods, debate and PM from starting, and cannot be repaired into a rating by prose.
 - At the evidence barrier, freeze `company_dossier.json` and its canonical SHA-256 hash. Every
-  selected method voice (including `out_of_scope`), every Bull/Bear round and the PM must read
-  that same full artifact by path and return the exact `company_dossier_hash_ack`. Before
-  acceptance, the runtime re-hashes the on-disk artifact. Missing/mismatched acknowledgement,
-  artifact mutation or a conflicting evidence replay fails closed.
-- The compact evidence embedded in a prompt is only an index. Never reason from it as if it
-  were the full packet. The dossier hash is bound into every physical v3 evidence snapshot,
-  while its deterministic stance still consumes only compatible point-in-time typed facts;
-  do not claim arbitrary dossier prose changed the frozen policy result.
+  selected method voice (including `out_of_scope`) reads that same full artifact by path. Before
+  each Bull/Bear or PM worker, the runtime re-reads and re-hashes the frozen disk artifact and
+  derives `operating_company_dossier_decision_projection_v1`: all packet claims, every referenced
+  source, the exact 52 coverage rows, frozen acquisition outcomes/data, complete packet metrics,
+  explicit gaps and packet/dossier hashes, without raw acquisition payloads or large time series.
+  Successful acquisition routes retain deduplicated `attempt_source_ids`; unavailable routes
+  retain their full bounded attempt records. The projection has a deterministic hash and a 512 KiB fail-closed cap; it is never silently
+  truncated or rebuilt from a separately mutable run summary.
+- Every method, Bull/Bear round and PM returns the exact original `company_dossier_hash_ack`.
+  Missing/mismatched acknowledgement, artifact mutation, projection oversize or a conflicting
+  evidence replay fails closed. Method voices additionally keep the packet-by-packet receipts.
+  The dossier hash is bound into every physical v3 evidence snapshot, while its deterministic
+  stance still consumes only compatible point-in-time typed facts; do not claim arbitrary dossier
+  prose changed the frozen policy result.
 - `collect_evidence` remains the task-selective evidence-only diagnostic and reports
   `evidence_only_v1`. Public `analyze_symbol` is always decision-producing and rejects
   `synthesis=false`; an evidence-only result must never be described as a completed full council.

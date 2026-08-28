@@ -8,7 +8,12 @@ import { groundingBlock } from "./grounding.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
 import { intentsForStance } from "./voice.mjs";
-import { companyDossierPacketAckTemplate, companyDossierPromptBlock, requiresOperatingCompanyDossier } from "./company-dossier.mjs";
+import {
+  companyDossierDecisionProjection,
+  companyDossierPacketAckTemplate,
+  companyDossierPromptBlock,
+  requiresOperatingCompanyDossier,
+} from "./company-dossier.mjs";
 import { sourceAcquisitionPromptBlock } from "./company-source-acquisition.mjs";
 import { compactHardVerificationFindings } from "./verification.mjs";
 
@@ -210,9 +215,40 @@ export function hardVerificationPromptBlock(run, role, { structuredDecisionOnly 
 }
 
 export function debatePrompt(role, run, context = {}) {
-  const evidencePath = join(runPath(run.run_id), "evidence.json");
   const quick = run.council_mode === "quick";
-  const evidenceJson = JSON.stringify(quick ? compactQuickEvidence(run) : compactEvidence(run));
+  const operatingDossierRequired = !quick && requiresOperatingCompanyDossier(run);
+  const dossierReferenceReady = Boolean(
+    run?.company_dossier?.path && run?.company_dossier?.content_hash,
+  );
+  // A visible plan is produced before evidence exists, so it needs an explicit inert
+  // placeholder. Every real downstream invocation is strict: projection construction
+  // re-hashes the frozen dossier and throws before a worker launches if the reference is
+  // missing or invalid. Never silently fall back to evidence.json for an operating company.
+  const planningDossierPlaceholder = operatingDossierRequired
+    && context.planning === true
+    && !dossierReferenceReady;
+  const dossierProjection = operatingDossierRequired && !planningDossierPlaceholder
+    ? companyDossierDecisionProjection(run)
+    : null;
+  const dossierPlanningEvidence = planningDossierPlaceholder
+    ? {
+      schema_version: 1,
+      context_contract: "operating_company_dossier_planning_placeholder_v1",
+      run_id: run.run_id,
+      symbol: run.symbol,
+      as_of: run.as_of,
+      status: "not_materialized",
+      execution_requirement: "freeze_and_verify_company_dossier_before_downstream_launch",
+    }
+    : null;
+  const evidencePath = dossierProjection
+    ? "inline server-verified decision projection (full audit retained server-side)"
+    : planningDossierPlaceholder
+      ? "inline planning placeholder (frozen company dossier not materialized)"
+      : join(runPath(run.run_id), "evidence.json");
+  const evidenceJson = JSON.stringify(
+    dossierProjection || dossierPlanningEvidence || (quick ? compactQuickEvidence(run) : compactEvidence(run)),
+  );
   const language = run.language || "English";
   const chinese = isChineseLanguage(language);
   const reg = registry();
@@ -273,7 +309,16 @@ export function debatePrompt(role, run, context = {}) {
     // separated by blank lines in the final prompt. Preserve that exactly.
     ...base.split("\n"),
     roleText,
-    companyDossierPromptBlock(run),
+    dossierProjection
+      ? companyDossierPromptBlock(run, { consumer: "decision_projection" })
+      : planningDossierPlaceholder
+        ? localized(run.language, {
+          zh: "这是仅用于 plan_visible_run 的无路径占位提示。证据完成后，服务端必须先冻结并重新校验完整公司资料包，再重写本提示；在此之前不得启动任何辩论或组合经理席。",
+          en: "This is a path-free plan_visible_run placeholder only. After evidence completes, the server must freeze and revalidate the full company dossier and rewrite this prompt before any debate or portfolio-manager worker launches.",
+          ja: "これは plan_visible_run 専用のパスを含まないプレースホルダーです。証拠完了後、討論・PM worker の起動前に、サーバーが会社資料を凍結・再検証してこの prompt を再生成する必要があります。",
+          ko: "이는 plan_visible_run 전용의 경로 없는 자리표시자입니다. 증거 완료 후 토론 또는 PM worker를 시작하기 전에 서버가 전체 회사 자료를 동결·재검증하고 이 prompt를 다시 작성해야 합니다.",
+        })
+        : "",
     quickInstruction,
     instrumentReportInstruction,
     roundTwoInstruction,

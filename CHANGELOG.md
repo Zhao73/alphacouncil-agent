@@ -6,6 +6,15 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
+- Operating-company Bull/Bear and portfolio-manager workers no longer reopen the multi-megabyte
+  raw audit dossier on every turn. The server still re-reads and re-hashes the complete frozen
+  artifact before each worker, then injects a bounded decision projection containing every
+  packet claim; every source referenced by claims, metrics, coverage rows, acquisition outcomes
+  or unavailable attempts, including source-only provenance from successful acquisition attempts;
+  all 52 coverage outcomes; frozen acquisition data; explicit gaps and
+  packet/dossier hashes. Selected method seats keep
+  the mandatory full-dossier read and per-packet acknowledgements. Failed debate attempts are no
+  longer counted as completed rounds in terminal status.
 - Fast's stage allocation now reflects the first clean Work-gateway run that completed all eight
   evidence workers and all 26 isolated method voices but timed out both sides of debate round 1.
   Evidence keeps its 220-second primary attempt and the PM keeps 75 seconds; each debate side's

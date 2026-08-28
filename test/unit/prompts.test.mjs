@@ -141,6 +141,34 @@ test("full headless portfolio-manager prompt ends with the compact decision cont
     "the compact transport contract must be the final output-form instruction");
 });
 
+test("operating-company debate cannot fall back when the frozen dossier is missing", async () => {
+  const { debatePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "MISSING-DOSSIER",
+    symbol: "ACME",
+    as_of: "2026-08-27",
+    language: "English",
+    council_mode: "full",
+    dry_run: false,
+    entry_tool: "analyze_symbol",
+    decision_requested: true,
+    tasks: [], packets: [], masters: [], master_opinions: [],
+    grounding: { instrument: { research_model: "operating_company" } },
+  };
+  assert.throws(
+    () => debatePrompt("bull_researcher", run, { round: 1 }),
+    (error) => error?.data?.reason === "COMPANY_DOSSIER_ARTIFACT_INTEGRITY_FAILURE",
+  );
+
+  const planned = debatePrompt("bull_researcher", { ...run, entry_tool: "plan_visible_run" }, {
+    round: 1,
+    planning: true,
+  });
+  assert.match(planned, /operating_company_dossier_planning_placeholder_v1/u);
+  assert.match(planned, /freeze and revalidate the full company dossier/iu);
+  assert.doesNotMatch(planned, /evidence\.json|company_dossier\.json|\/runs\//iu);
+});
+
 test("a method voice receives frozen decision causality and hard verification corrections", async () => {
   const { masterVoicePrompt } = await import("../../mcp/lib/prompts.mjs");
   const run = {

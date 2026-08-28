@@ -152,8 +152,10 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
     || (prompt.includes("Do not return") && prompt.includes("report_markdown")),
 }) + "\\n");
 
-if (${JSON.stringify(debateTransportFailureMode)} === "round2_usage_limit"
-  && ["bull_researcher", "bear_researcher"].includes(role) && round === 2) {
+const forcedUsageLimitRound = ${JSON.stringify(debateTransportFailureMode)} === "round1_usage_limit"
+  ? 1
+  : ${JSON.stringify(debateTransportFailureMode)} === "round2_usage_limit" ? 2 : 0;
+if (forcedUsageLimitRound === round && ["bull_researcher", "bear_researcher"].includes(role)) {
   process.stderr.write("ERROR: You've hit your usage limit. Visit settings to purchase more credits or try again at Aug 10th, 2026 1:56 PM. PRIVATE_PROVIDER_SENTINEL\\n");
   process.exit(1);
 }
@@ -705,6 +707,7 @@ test("headless Q&A remains fail-closed when the bounded repair still changes exa
     assert.equal(result.decision.pm_absence_reason, "skipped_upstream_gate");
     assert.equal(result.decision.decision_available, false);
     assert.equal(result.decision.rating, null);
+    assert.equal(result.run.debate_rounds_completed, 2, "the failed third round is attempted, not completed");
     const events = readJsonl(join(dataDir, "runs", runId, "events.jsonl"));
     const repairs = events.filter((event) => event.type === "agent_parse_repair"
       && ["bull_researcher", "bear_researcher"].includes(event.role));
@@ -745,6 +748,7 @@ test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", a
     const events = readJsonl(join(dir, "events.jsonl"));
     assert.equal(result.run.status, "incomplete");
     assert.equal(status.status, "incomplete");
+    assert.equal(status.debate_rounds_completed, 1, "the failed second round is attempted, not completed");
     const portfolioManager = status.agents.find((agent) => agent.role === "portfolio_manager");
     assert.equal(portfolioManager.status, "skipped");
     assert.equal(portfolioManager.absence_reason, "skipped_upstream_gate");
@@ -755,6 +759,8 @@ test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", a
       const agent = status.agents.find((entry) => entry.role === role);
       assert.equal(agent.status, "failed");
       assert.equal(agent.round_status, "failed");
+      assert.equal(agent.last_attempted_round, 2);
+      assert.equal(agent.last_completed_round, 1);
       assert.equal(agent.failure_kind, "usage_limit_exhausted");
       assert.equal(agent.provider_retry_hint, "Aug 10th, 2026 1:56 PM");
       const diagnosticPath = join(dir, `${role}.round-2.attempt-1.failure.json`);
@@ -781,6 +787,46 @@ test("round-2 Codex usage exhaustion stays explicit, bounded and fail-closed", a
     const durableText = ["status.json", "evidence.json", "events.jsonl", "decision.json"]
       .map((name) => readFileSync(join(dir, name), "utf8")).join("\n");
     assert.doesNotMatch(durableText, /PRIVATE_PROVIDER_SENTINEL|purchase more credits/u);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
+test("a failed first debate attempt reports zero completed rounds", async () => {
+  const TOTAL_TIMEOUT_MS = 45_000;
+  const dataDir = makeDataDir();
+  const fake = fakeFullCodex(dataDir, {
+    malformedTask: null,
+    debateTransportFailureMode: "round1_usage_limit",
+  });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Do not count a failed first debate attempt as a completed round.";
+    const confirmed = await confirmMasterSelection(server, {
+      symbol: "QQQ", language: "English", prompt, selected_master_ids: ["master_buffett"],
+    });
+    const runId = `FULL-DEBATE-ROUND-ONE-FAILURE-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
+      council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+      wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
+      grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
+
+    const status = readJson(join(dataDir, "runs", runId, "status.json"));
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(result.run.debate_rounds_completed, 0);
+    assert.equal(status.debate_rounds_completed, 0);
+    assert.ok(status.missing.some((item) => item.stage === "debate" && item.id === "round_1"));
+    for (const role of ["bull_researcher", "bear_researcher"]) {
+      const agent = status.agents.find((entry) => entry.role === role);
+      assert.equal(agent.last_attempted_round, 1);
+      assert.notEqual(agent.last_completed_round, 1);
+    }
+    assert.equal(result.decision.decision_available, false);
+    assert.equal(result.decision.rating, null);
   } finally {
     await server.close();
     removeDataDir(dataDir);

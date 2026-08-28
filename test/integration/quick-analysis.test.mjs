@@ -420,6 +420,44 @@ test("quick PM transport failure writes standard artifacts and no synthetic Hold
   }
 });
 
+test("quick does not count a one-sided failed statement as a completed debate round", async () => {
+  const TOTAL_TIMEOUT_MS = 30_000;
+  const dataDir = makeDataDir();
+  const fake = fakeCodex(dataDir, { failedRole: "bull_researcher" });
+  const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+  try {
+    await server.request("initialize", {});
+    const prompt = "Do not count a failed quick bull statement as a completed round.";
+    const opened = structured(await server.callTool("begin_council_selection", {
+      symbol: "RKLB", language: "English", prompt, council_mode: "quick",
+    }));
+    const confirmed = structured(await server.callTool("confirm_master_selection", {
+      selection_id: opened.selection_id, catalog_hash: opened.catalog_hash, display_ack: true,
+      selected_master_ids: ["master_buffett"],
+    }));
+    const runId = `QUICK-DEBATE-FAILURE-${process.pid}`;
+    const result = structured(await server.callTool("analyze_symbol", {
+      symbol: "RKLB", run_id: runId, language: "English", prompt,
+      council_mode: "quick", total_timeout_ms: TOTAL_TIMEOUT_MS,
+      timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
+      wait_for_completion: true,
+      grounding: { facts_unavailable: true, unavailable: ["fixture"] },
+      selection_receipt: confirmed.selection_receipt,
+    }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
+
+    const status = JSON.parse(readFileSync(join(dataDir, "runs", runId, "status.json"), "utf8"));
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(result.run.debate_rounds_completed, 0);
+    assert.equal(status.debate_rounds_completed, 0);
+    const bull = status.agents.find((entry) => entry.role === "bull_researcher");
+    assert.equal(bull.last_attempted_round, 1);
+    assert.notEqual(bull.last_completed_round, 1);
+  } finally {
+    await server.close();
+    removeDataDir(dataDir);
+  }
+});
+
 test("a quick selection receipt cannot be consumed as full", async () => {
   const dataDir = makeDataDir();
   const server = startServer({ dataDir });

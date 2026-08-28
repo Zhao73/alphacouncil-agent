@@ -358,18 +358,29 @@ The system freezes the applicable dossier as `company_dossier.json` and computes
 SHA-256 `content_hash`. The eight mandatory evidence analysts collectively populate the core
 artifact and all 52 coverage rows. An all-scope run freezes the three supplemental packets in
 the same revision, so the dossier contains eight packets for `core` and eleven for `all`. Every
-mandatory downstream consumer for that dossier revision receives the exact same hash-bound
-artifact, not independently summarized copies:
+mandatory downstream consumer is bound to that exact revision and hash:
 
-- for a confirmed `all` selection, all 26 active method seats; for another valid selection,
-  every selected method seat;
-- Bull and Bear in every required debate round; and
-- the portfolio manager.
+- for a confirmed `all` selection, all 26 active method seats read the full dossier; for another
+  valid selection, every selected method seat does the same;
+- Bull and Bear in every required debate round receive a server-generated decision projection;
+  and
+- the portfolio manager receives that same projection contract.
 
-Compact evidence embedded in a prompt is only an index. Information omitted from that index
-remains available through the full hash-bound dossier artifact. Before accepting a mandatory
-consumer's output, the runtime revalidates the persisted dossier against the expected hash and
-requires that output (or the deterministic method execution record) to carry the exact
+Before each consumer prompt is created, the runtime re-reads and re-hashes the complete artifact.
+Method seats then receive the full path because their contract must account for every frozen
+packet. Debate and PM workers instead receive `operating_company_dossier_decision_projection_v1`: a bounded
+projection with every packet claim, every source referenced by a claim, coverage row or
+acquisition disposition, all 52 coverage outcomes, frozen acquisition dispositions, complete packet metrics,
+explicit gaps, per-packet content hashes and the full dossier hash. Raw acquisition payloads and
+large time-series bodies remain in the audit artifact and are not reopened on every debate turn.
+Successful acquisition attempts retain their deduplicated `attempt_source_ids`, even when the
+full successful-attempt prose is omitted; unavailable routes retain the full bounded attempt
+record. The projection is derived only from the just-verified disk artifact, has its own deterministic
+hash and a 512 KiB fail-closed ceiling; it is never reconstructed from a separately mutable run
+summary or silently truncated. This is a transport optimization, not a weaker evidence or coverage gate.
+
+Before accepting a mandatory consumer's output, the runtime requires that output (or the
+deterministic method execution record) to carry the exact
 `company_dossier_hash_ack`. Every method voice additionally returns one `evidence_packet_acks`
 row for each packet frozen in that revision: the eight core rows are always mandatory and an
 all-scope run adds the three supplemental rows. Each row must bind the exact task and packet

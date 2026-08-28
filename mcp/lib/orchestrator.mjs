@@ -1471,7 +1471,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
     role,
     title: `AlphaCouncil Agent ${run.symbol} ${role}`,
     prompt_template: [
-      debatePrompt(role, run),
+      debatePrompt(role, run, { planning: true }),
       "",
       localized(run.language, {
         en: "The main thread must paste the completed Evidence JSON before running this visible agent.", zh: "主线程必须先粘贴已完成的 Evidence JSON，再运行这个可见代理。", ja: "メインスレッドは、この可視エージェントを実行する前に完成済みの Evidence JSON を貼り付ける必要があります。", ko: "메인 스레드는 이 표시형 에이전트를 실행하기 전에 완료된 Evidence JSON을 붙여 넣어야 합니다.",
@@ -5272,7 +5272,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
           : role === "portfolio_manager"
             ? `portfolio_manager.report_markdown is mandatory and must contain every authored report section. Required headings: ${requiredReportSectionAliases(run).map((section) => section.suggested_heading).join("; ")}.`
           : "",
-        companyDossierPromptBlock(run),
+        companyDossierPromptBlock(run, { consumer: "hash_ack_only" }),
         hardVerificationPromptBlock(run, role, { structuredDecisionOnly: structuredManagerDecision }),
         schemaRepairIssuePrompt(packet.schema_errors),
         `Write every reader-facing value in ${run.language}. Translation is allowed only to repair language; preserve facts, numbers, source IDs and exact Q&A bindings.`,
@@ -5314,7 +5314,8 @@ export async function runDebateRole(run, role, context, timeoutMs) {
     updateAgent(run, role, "waiting", {
       round: context.round,
       round_status: roundSucceeded ? "completed" : "failed",
-      last_completed_round: context.round,
+      last_attempted_round: context.round,
+      ...(roundSucceeded ? { last_completed_round: context.round } : {}),
       round_completed_at: roundCompletedAt,
       pid: null,
       output: null,
@@ -5418,7 +5419,7 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
     reason: "quick_single_round",
     full_council_equivalent: false,
   });
-  run.debate_rounds_completed = 1;
+  run.debate_rounds_completed = bullError || bearError ? 0 : 1;
   writeAllAgentsMarkdown(run, { bull, bear });
 
   const pmBudgetDecision = budgetAheadDecision(run, {
@@ -5577,6 +5578,12 @@ function finalizeNeedsVerification(run, args, reason = "verification_gate_failed
 
 function finalizeAfterDebateFailure(run, args, reason, bullRounds = [], bearRounds = []) {
   const dir = runPath(run.run_id);
+  // The orchestrator advances this counter only after both transports and the round-specific
+  // Q&A gate pass. Attempted or merged failure packets must never inflate terminal completion.
+  const completedRounds = Number.isInteger(run.debate_rounds_completed)
+    ? Math.max(0, Math.min(3, run.debate_rounds_completed))
+    : 0;
+  run.debate_rounds_completed = completedRounds;
   const bull = mergeDebateRounds(bullRounds.map((step) => step?.packet).filter(Boolean));
   const bear = mergeDebateRounds(bearRounds.map((step) => step?.packet).filter(Boolean));
   if (bull) writeJson(join(dir, "bull_researcher.json"), bull);

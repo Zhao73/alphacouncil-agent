@@ -130,6 +130,11 @@ test("an operating-company full plan keeps all prompts file-backed until the dos
       assert.match(written, new RegExp(id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${agent.role}:${id}`);
     }
   }
+  for (const agent of planned.debate_agents) {
+    const written = readFileSync(agent.prompt_file, "utf8");
+    assert.match(written, /operating_company_dossier_planning_placeholder_v1/u);
+    assert.doesNotMatch(written, /evidence\.json|company_dossier\.json|\/runs\//iu);
+  }
 });
 
 test("a small non-company plan still returns prompt copies inline as well as on disk", async () => {

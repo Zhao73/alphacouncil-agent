@@ -5,6 +5,8 @@ import { internalError, invalidParams } from "./errors.mjs";
 import { isChineseLanguage, localized } from "./lang.mjs";
 
 export const COMPANY_DOSSIER_CONTRACT_ID = "operating_company_dossier_v1";
+export const COMPANY_DOSSIER_DECISION_PROJECTION_ID = "operating_company_dossier_decision_projection_v1";
+export const COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES = 512 * 1024;
 export const EVIDENCE_PACKET_ACK_STATUSES = Object.freeze([
   "used",
   "reviewed_not_relevant",
@@ -527,7 +529,11 @@ export function buildCompanyDossier(run, sourceManifest = null) {
       method_seats: Array.isArray(run.masters) ? run.masters.length : null,
       evidence_roles: Object.keys(OPERATING_COMPANY_COVERAGE),
       downstream_roles: ["bull_researcher", "bear_researcher", "portfolio_manager"],
-      read_mode: "full_artifact_by_path_and_hash",
+      read_mode: "role_scoped_verified_consumption",
+      method_read_mode: "full_artifact_by_path_and_hash",
+      decision_read_mode: "verified_decision_projection_bound_to_full_dossier",
+      decision_projection_contract: COMPANY_DOSSIER_DECISION_PROJECTION_ID,
+      decision_projection_max_bytes: COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES,
       acknowledgement_field: "company_dossier_hash_ack",
       method_packet_acknowledgement_field: "evidence_packet_acks",
       method_packet_acknowledgement_statuses: EVIDENCE_PACKET_ACK_STATUSES,
@@ -600,10 +606,38 @@ export function companyCoverageInstruction(task, run) {
   return `${instructions}${taskSpecific ? `\n${taskSpecific}` : ""}\n\nRequired coverage IDs JSON: ${JSON.stringify(ids)}\nReader language: ${run.language}; task: ${task}; contract: ${COMPANY_DOSSIER_CONTRACT_ID}; chinese=${chinese}`;
 }
 
-export function companyDossierPromptBlock(run) {
+export function companyDossierPromptBlock(run, { consumer = "full" } = {}) {
   const ref = run?.company_dossier;
   if (!requiresOperatingCompanyDossier(run) || !ref?.path || !ref?.content_hash) return "";
   verifyCompanyDossierArtifact(run);
+  if (consumer === "hash_ack_only") {
+    return localized(run.language, {
+      zh: `服务端已重新校验冻结公司资料包。修复后的完整对象中，\`company_dossier_hash_ack\` 必须原样保持为 \`${ref.content_hash}\`；这是格式修复，不得重读资料包或重新分析。`,
+      en: `The server revalidated the frozen company dossier. In the complete repaired object, preserve \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`. This is transport repair; do not reopen the dossier or redo the analysis.`,
+      ja: `サーバーは凍結済み会社資料を再検証しました。修復後の完全な object で company_dossier_hash_ack を ${ref.content_hash} のまま保持し、資料の再読込や再分析は行わないでください。`,
+      ko: `서버가 동결된 회사 자료를 다시 검증했습니다. 복구된 전체 object에서 company_dossier_hash_ack를 ${ref.content_hash}로 그대로 유지하고 자료를 다시 읽거나 분석하지 마십시오.`,
+    });
+  }
+  if (consumer === "decision_projection") {
+    return localized(run.language, {
+      zh: [
+        "## 统一公司资料包（服务端验证的决策投影）",
+        `内容哈希：${ref.content_hash}`,
+        "服务端已在启动本席位前重新读取并校验完整冻结资料包，并从校验后的磁盘内容生成有界、服务端验证的决策投影，注入下方 Evidence JSON。辩论和组合经理必须只使用该投影；不要打开任何运行产物，也不要再次打开或处理包含原始采集记录和时间序列的多 MB 审计文件。",
+        "该投影保留全部决策论断及其引用来源、52 项覆盖结果、每项已冻结的采集结论与数据、完整指标、明确数据缺口、逐包哈希和完整资料包哈希；未被决策证据引用的原始传输内容只保留在审计资料包中。不得用模型记忆或外部资料补足投影之外的信息。",
+        `输出必须原样带回 \`company_dossier_hash_ack\`: \`${ref.content_hash}\`。哈希缺失或不一致会使该席位失败。`,
+      ].join("\n"),
+      en: [
+        "## Shared company dossier (server-verified decision projection)",
+        `Content hash: ${ref.content_hash}`,
+        "The server re-read and re-hashed the complete frozen dossier immediately before launching this worker, then generated the bounded, server-verified decision projection in the Evidence JSON below from those verified disk bytes. Debate and portfolio-manager workers must use that projection; do not open any run artifact or reopen and reprocess the multi-megabyte audit file containing raw acquisition records and time series.",
+        "The projection retains every decision claim and its referenced sources, all 52 coverage outcomes, every frozen acquisition disposition and its data, complete packet metrics, explicit gaps, packet hashes, and the full dossier hash. Raw transport content not referenced by decision evidence remains only in the audit dossier. Never fill anything outside the projection from model memory or external information.",
+        `Return \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`; a missing or different hash fails this worker.`,
+      ].join("\n"),
+      ja: `完全な監査用会社資料（${ref.content_hash}）は、実行直前にサーバーが再読込・再ハッシュし、その検証済みディスク内容から以下の限定的な意思決定投影を生成しました。この Evidence JSON だけを使用し、他の実行成果物や複数 MB の生の取得記録・時系列ファイルを再処理しないでください。投影には全ての意思決定クレームと参照元、52 項目の結果、凍結済み取得結果とデータ、完全な packet 指標、明示的 gap、packet hash と資料全体の hash が含まれます。company_dossier_hash_ack に同じハッシュを返してください。`,
+      ko: `전체 감사용 회사 자료(${ref.content_hash})는 실행 직전에 서버가 다시 읽고 해시를 검증했으며, 검증된 디스크 내용에서 아래 제한형 의사결정 투영을 생성했습니다. 이 Evidence JSON만 사용하고 다른 실행 산출물이나 수 MB의 원시 수집 기록·시계열 파일을 다시 처리하지 마십시오. 투영에는 모든 의사결정 주장과 참조 출처, 52개 결과, 동결된 수집 결론과 데이터, 전체 packet 지표, 명시적 공백, packet hash와 전체 자료 hash가 포함됩니다. company_dossier_hash_ack에 같은 해시를 반환하십시오.`,
+    });
+  }
   const manifests = run.packets.map(packetManifest);
   const ackContract = JSON.stringify(Object.fromEntries(
     companyDossierPacketAckTemplate(run, { includePacketHash: false })
@@ -670,6 +704,249 @@ export function verifyCompanyDossierArtifact(run, { client = false } = {}) {
     diagnostic: failure,
   };
   throw (client ? invalidParams(failure, data) : internalError(failure, data));
+}
+
+function decisionProjectionFailure(message, details = {}) {
+  throw internalError(message, {
+    reason: "COMPANY_DOSSIER_DECISION_PROJECTION_INVALID",
+    contract_id: COMPANY_DOSSIER_DECISION_PROJECTION_ID,
+    ...details,
+  });
+}
+
+function uniqueRowsBy(rows, key, label) {
+  const result = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const value = row?.[key];
+    if (typeof value !== "string" || !value || result.has(value)) {
+      decisionProjectionFailure(`${label} must contain unique non-empty ${key} values`, {
+        label,
+        key,
+        duplicate_or_invalid_value: value ?? null,
+      });
+    }
+    result.set(value, row);
+  }
+  return result;
+}
+
+function collectDecisionProjectionSourceIds(value, target = new Set()) {
+  if (Array.isArray(value)) {
+    for (const item of value) collectDecisionProjectionSourceIds(item, target);
+    return target;
+  }
+  if (!value || typeof value !== "object") return target;
+  for (const [key, item] of Object.entries(value)) {
+    if ((key === "source_ids" || key.endsWith("_source_ids")) && Array.isArray(item)) {
+      for (const id of item) if (typeof id === "string" && id) target.add(id);
+      continue;
+    }
+    if (key === "source_id" && typeof item === "string" && item) {
+      target.add(item);
+      continue;
+    }
+    collectDecisionProjectionSourceIds(item, target);
+  }
+  return target;
+}
+
+function bindDecisionProjectionSourceIds(value, task, sourceLedgerById) {
+  const resolve = (id) => {
+    if (typeof id !== "string" || !id) return id;
+    if (sourceLedgerById.has(id)) return id;
+    const scoped = `${task}:${id}`;
+    return sourceLedgerById.has(scoped) ? scoped : id;
+  };
+  if (Array.isArray(value)) {
+    return value.map((item) => bindDecisionProjectionSourceIds(item, task, sourceLedgerById));
+  }
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => {
+    if ((key === "source_ids" || key.endsWith("_source_ids")) && Array.isArray(item)) {
+      // Scope first, then deduplicate: a worker may mix `S1` and `task:S1`, which are
+      // different strings before binding but the same frozen source afterwards.
+      return [key, [...new Set(item.map(resolve))]];
+    }
+    if (key === "source_id" && typeof item === "string") return [key, resolve(item)];
+    return [key, bindDecisionProjectionSourceIds(item, task, sourceLedgerById)];
+  }));
+}
+
+function decisionProjectionSource(record) {
+  const selected = {};
+  for (const key of [
+    "id",
+    "title",
+    "url",
+    "published_at",
+    "public_at",
+    "retrieved_at",
+    "observed_at",
+    "source_kind",
+    "source_record_hash",
+  ]) {
+    if (record?.[key] !== undefined) selected[key] = jsonClone(record[key]);
+  }
+  return selected;
+}
+
+function decisionProjectionRoute(coverage, acquisition) {
+  const route = {
+    id: coverage.id,
+    status: coverage.status,
+    coverage_source_ids: jsonClone(coverage.source_ids || []),
+    outcome: acquisition?.outcome || "not_recorded",
+    outcome_source_ids: jsonClone(acquisition?.source_ids || []),
+    // A successful acquisition may cite a source used only to prove how the fact was
+    // obtained (for example, the dated endpoint actually queried) rather than the fact's
+    // final value. Keep those bindings without copying the full successful-attempt prose.
+    attempt_source_ids: [...new Set((acquisition?.attempts || [])
+      .flatMap((attempt) => Array.isArray(attempt?.source_ids) ? attempt.source_ids : []))],
+  };
+  for (const key of ["note", "attempted", "attempted_urls", "gap", "reason"]) {
+    if (coverage?.[key] !== undefined) route[key] = jsonClone(coverage[key]);
+  }
+  if (acquisition?.data !== undefined) route.data = jsonClone(acquisition.data);
+  if (acquisition?.reason !== undefined) route.outcome_reason = jsonClone(acquisition.reason);
+  if (coverage.status === "unavailable" || acquisition?.outcome === "unavailable") {
+    route.attempts = jsonClone(acquisition?.attempts || []);
+  }
+  return route;
+}
+
+/**
+ * Derive the bounded debate/PM input from the just-verified on-disk dossier, never from a
+ * separately mutable runtime projection. The full artifact remains the audit source of truth.
+ */
+export function companyDossierDecisionProjection(run) {
+  const dossier = verifyCompanyDossierArtifact(run);
+  if (!dossier) return null;
+
+  const packetByTask = uniqueRowsBy(dossier.packets, "task", "dossier packets");
+  const manifestByTask = uniqueRowsBy(dossier.packet_manifest, "task", "packet manifest");
+  if (packetByTask.size !== manifestByTask.size) {
+    decisionProjectionFailure("packet manifest and packet list have different task counts", {
+      packet_count: packetByTask.size,
+      manifest_count: manifestByTask.size,
+    });
+  }
+
+  const sourceLedgerById = uniqueRowsBy(dossier.source_ledger, "id", "source ledger");
+  const acquisitionRequired = Boolean(dossier.consumer_contract?.source_acquisition_policy_id);
+  let coreRouteCount = 0;
+  const packets = [];
+
+  for (const [task, packet] of packetByTask) {
+    const manifest = manifestByTask.get(task);
+    const actualManifest = packetManifest(packet);
+    if (!manifest || manifest.packet_hash !== actualManifest.packet_hash) {
+      decisionProjectionFailure("packet hash does not match the frozen manifest", {
+        task,
+        expected_packet_hash: manifest?.packet_hash || null,
+        actual_packet_hash: actualManifest.packet_hash,
+      });
+    }
+
+    const coverageById = uniqueRowsBy(packet.coverage_items || [], "id", `${task} coverage rows`);
+    const acquisitionById = uniqueRowsBy(
+      packet.acquisition_ledger?.items || [],
+      "coverage_id",
+      `${task} acquisition rows`,
+    );
+    const expectedIds = expectedCoverageItems(task);
+    if (expectedIds.length) {
+      const unexpectedCoverage = [...coverageById.keys()].filter((id) => !expectedIds.includes(id));
+      const unexpectedAcquisition = [...acquisitionById.keys()].filter((id) => !expectedIds.includes(id));
+      const missingCoverage = expectedIds.filter((id) => !coverageById.has(id));
+      const missingAcquisition = acquisitionRequired
+        ? expectedIds.filter((id) => !acquisitionById.has(id))
+        : [];
+      if (unexpectedCoverage.length || unexpectedAcquisition.length || missingCoverage.length || missingAcquisition.length) {
+        decisionProjectionFailure("coverage or acquisition routes do not match the frozen company roster", {
+          task,
+          unexpected_coverage: unexpectedCoverage,
+          unexpected_acquisition: unexpectedAcquisition,
+          missing_coverage: missingCoverage,
+          missing_acquisition: missingAcquisition,
+        });
+      }
+      coreRouteCount += expectedIds.length;
+    }
+
+    const routeIds = expectedIds.length ? expectedIds : [...coverageById.keys()];
+    const routes = routeIds.map((id) => decisionProjectionRoute(
+      coverageById.get(id),
+      acquisitionById.get(id),
+    ));
+    const decisionContent = bindDecisionProjectionSourceIds({
+      claims: jsonClone(packet.claims || []),
+      metrics: jsonClone(packet.metrics || {}),
+      official_source_coverage: jsonClone(packet.official_source_coverage || null),
+      routes,
+    }, task, sourceLedgerById);
+    const referencedSourceIds = [...collectDecisionProjectionSourceIds(decisionContent)].sort();
+    const unresolvedSourceIds = referencedSourceIds.filter((id) => !sourceLedgerById.has(id));
+    if (unresolvedSourceIds.length) {
+      decisionProjectionFailure("decision projection contains source references absent from the frozen source ledger", {
+        task,
+        unresolved_source_ids: unresolvedSourceIds,
+      });
+    }
+
+    packets.push({
+      task,
+      packet_hash: manifest.packet_hash,
+      summary: packet.summary || "",
+      ...decisionContent,
+      sources: referencedSourceIds.map((id) => decisionProjectionSource(sourceLedgerById.get(id))),
+      open_questions: jsonClone(packet.open_questions || []),
+      confidence: packet.confidence || "low",
+      information_richness: packet.information_richness || null,
+    });
+  }
+
+  const expectedCoreRouteCount = Object.values(OPERATING_COMPANY_COVERAGE)
+    .reduce((total, ids) => total + ids.length, 0);
+  if (coreRouteCount !== expectedCoreRouteCount || dossier.coverage?.expected_count !== expectedCoreRouteCount) {
+    decisionProjectionFailure("decision projection does not contain the exact fixed company coverage roster", {
+      expected_route_count: expectedCoreRouteCount,
+      projected_route_count: coreRouteCount,
+      dossier_expected_count: dossier.coverage?.expected_count ?? null,
+    });
+  }
+
+  const content = {
+    schema_version: 1,
+    projection_contract: COMPANY_DOSSIER_DECISION_PROJECTION_ID,
+    source_dossier: {
+      contract_id: dossier.contract_id,
+      run_id: dossier.run_id,
+      symbol: dossier.symbol,
+      as_of: dossier.as_of,
+      language: dossier.language,
+      input_binding_hash: dossier.input_binding_hash,
+      content_hash: dossier.content_hash,
+    },
+    instrument: jsonClone(dossier.instrument || null),
+    coverage: jsonClone(dossier.coverage),
+    packet_manifest: jsonClone(dossier.packet_manifest),
+    packets,
+    consumer_contract: {
+      read_mode: "verified_decision_projection_bound_to_full_dossier",
+      acknowledgement_field: "company_dossier_hash_ack",
+    },
+  };
+  const projection = { ...content, projection_hash: hashCanonical(content) };
+  const bytes = Buffer.byteLength(JSON.stringify(projection));
+  if (bytes > COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES) {
+    throw internalError("company dossier decision projection exceeds its fail-closed byte limit", {
+      reason: "COMPANY_DOSSIER_DECISION_PROJECTION_OVERSIZE",
+      contract_id: COMPANY_DOSSIER_DECISION_PROJECTION_ID,
+      bytes,
+      max_bytes: COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES,
+    });
+  }
+  return projection;
 }
 
 export function assertCompanyDossierAck(packet, run, label, { client = false } = {}) {

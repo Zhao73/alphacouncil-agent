@@ -56,6 +56,8 @@ const lineJson = (prefix) => {
   const line = prompt.split("\\n").find((item) => item.startsWith(prefix));
   return line ? JSON.parse(line.slice(prefix.length)) : [];
 };
+const evidenceLine = prompt.split("\\n").find((item) => item.startsWith("Evidence JSON: "));
+const promptEvidence = evidenceLine ? JSON.parse(evidenceLine.slice("Evidence JSON: ".length)) : null;
 
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   role,
@@ -63,6 +65,14 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   master,
   round,
   dossier_hash: dossierHash,
+  requires_full_dossier_read: /Read the JSON file in full before answering/iu.test(prompt),
+  uses_server_verified_projection: /server-verified decision projection/iu.test(prompt),
+  has_dossier_path: /company_dossier\\.json/iu.test(prompt),
+  has_evidence_path: /evidence\\.json/iu.test(prompt),
+  projection_contract: promptEvidence?.projection_contract || null,
+  projection_route_count: (promptEvidence?.packets || [])
+    .reduce((total, packet) => total + (packet.routes || []).length, 0),
+  prompt_chars: prompt.length,
   search: args.includes("--search"),
   outputSchema: args.includes("--output-schema"),
 }) + "\\n");
@@ -105,6 +115,24 @@ if (task) {
       source_ids: ["S1"],
       note: "The dated fixture source covers this bounded integration item.",
     })),
+    acquisition_ledger: {
+      policy_id: "company_source_acquisition_v1",
+      task,
+      items: coverageIds.map((id) => ({
+        coverage_id: id,
+        outcome: "reported_actual",
+        source_ids: ["S1"],
+        attempts: [{
+          stage: "fixture_source",
+          locator_type: "url",
+          locator: source.url,
+          result: "succeeded",
+          source_ids: ["S1"],
+          note: "The dated fixture source returned this bounded integration observation.",
+        }],
+        data: { observations: [{ value: 1, unit: "fixture", source_ids: ["S1"] }] },
+      })),
+    },
     confidence: "medium",
     information_richness: "B",
     ...(task === "news_industry_management" ? {
@@ -359,7 +387,20 @@ test("headless operating-company full council freezes one dossier after typed gr
     downstreamWorkers.filter((entry) => entry.master).map((entry) => entry.master),
     [SELECTED_MASTER],
   );
-  assert.ok(downstreamWorkers.filter((entry) => entry.master).every((entry) => entry.outputSchema));
+  const methodWorkers = downstreamWorkers.filter((entry) => entry.master);
+  const decisionWorkers = downstreamWorkers.filter((entry) => !entry.master);
+  assert.ok(methodWorkers.every((entry) => entry.outputSchema));
+  assert.ok(methodWorkers.every((entry) => entry.requires_full_dossier_read === true));
+  assert.ok(methodWorkers.every((entry) => entry.uses_server_verified_projection === false));
+  assert.ok(methodWorkers.every((entry) => entry.has_dossier_path === true));
+  assert.equal(decisionWorkers.length, 7, "six debate sides and one PM use the decision projection");
+  assert.ok(decisionWorkers.every((entry) => entry.requires_full_dossier_read === false));
+  assert.ok(decisionWorkers.every((entry) => entry.uses_server_verified_projection === true));
+  assert.ok(decisionWorkers.every((entry) => entry.has_dossier_path === false));
+  assert.ok(decisionWorkers.every((entry) => entry.has_evidence_path === false));
+  assert.ok(decisionWorkers.every((entry) => entry.projection_contract === "operating_company_dossier_decision_projection_v1"));
+  assert.ok(decisionWorkers.every((entry) => entry.projection_route_count === 52));
+  assert.ok(decisionWorkers.every((entry) => entry.prompt_chars > 0));
 
   assert.ok(existsSync(join(dir, "final_report.md")));
   assert.equal(manifest.artifacts.company_dossier_json.path, dossierPath);

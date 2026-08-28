@@ -150,8 +150,10 @@ codex plugin add alphacouncil-agent@alphacouncil
 同じディレクトリに各アナリストの Markdown ファイルと `artifact_index.md` も保存されます。フルの要約には、システム価格（または明示的な価格データ欠落）、確定済み 8 または 11 アナリスト全員の状態/要約、選択した各メソッド席の凍結 stance と独立 worker の説明/状態が表示されます。
 
 事業会社の完全な意思決定では `company_dossier.json` も保存されます。8 つの core 証拠 packet が
-固定 52 項目を一つずつ説明し、all ではさらに 3 packet を追加します。同じ SHA-256 で全メソッド席、3 ラウンドの Bull/Bear、PM に
-渡されます。重大な欠落があれば判断を停止し、短縮された prompt の索引を完全資料とは扱いません。
+固定 52 項目を一つずつ説明し、all ではさらに 3 packet を追加します。全メソッド席は完全な資料を読みます。
+サーバーは各 downstream worker の直前に完全資料を再読込・再ハッシュし、3 ラウンドの Bull/Bear と PM には、
+全 decision claim、参照 source、52 項目の結果と gap を含む限定的な decision projection を渡します。全 worker は同じ SHA-256 を確認します。
+重大な欠落があれば判断を停止し、生の取得記録と大容量時系列は監査資料に保持したまま各 round では再処理しません。
 
 ### スラッシュコマンド（Claude Code、OpenCode、Grok Build）
 

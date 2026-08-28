@@ -1,11 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import {
+  COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES,
   OPERATING_COMPANY_COVERAGE,
   buildCompanyDossier,
   companyCoverageInstruction,
+  companyDossierDecisionProjection,
+  companyDossierPromptBlock,
   companyDossierCoverageStatus,
   expectedCoverageItems,
   requiresOperatingCompanyDossier,
@@ -25,6 +31,7 @@ function source(task, index = 1) {
 
 function coveredPacket(task, { expanded = false } = {}) {
   const sources = Array.from({ length: expanded ? 14 : 1 }, (_, index) => source(task, index + 1));
+  const coverageIds = expectedCoverageItems(task);
   const claims = Array.from({ length: expanded ? 10 : 1 }, (_, index) => ({
     claim: `${task} fixture claim ${index + 1}`,
     evidence: `${task} fixture evidence ${index + 1}`,
@@ -40,12 +47,30 @@ function coveredPacket(task, { expanded = false } = {}) {
       : {},
     sources,
     open_questions: [],
-    coverage_items: expectedCoverageItems(task).map((id) => ({
+    coverage_items: coverageIds.map((id) => ({
       id,
       status: "covered",
       source_ids: [sources[0].id],
       note: `Covered by ${sources[0].id}.`,
     })),
+    acquisition_ledger: {
+      policy_id: "company_source_acquisition_v1",
+      task,
+      items: coverageIds.map((id) => ({
+        coverage_id: id,
+        outcome: "reported_actual",
+        source_ids: [sources[0].id],
+        attempts: [{
+          stage: "fixture_source",
+          locator_type: "url",
+          locator: sources[0].url,
+          result: "succeeded",
+          source_ids: [sources[0].id],
+          note: "The dated fixture source returned the recorded observation.",
+        }],
+        data: { observations: [{ value: 1, unit: "fixture", source_ids: [sources[0].id] }] },
+      })),
+    },
     confidence: "medium",
     information_richness: "B",
     raw_text: `RAW-${task}-A`,
@@ -120,7 +145,33 @@ function markUnavailable(packet, id, {
     gap,
   });
   packet.open_questions.push(gap);
+  const acquisition = packet.acquisition_ledger?.items?.find((entry) => entry.coverage_id === id);
+  if (acquisition) {
+    Object.assign(acquisition, {
+      outcome: "unavailable",
+      source_ids: [],
+      attempts: attemptedUrls.map((url) => ({
+        stage: "fixture_source",
+        locator_type: "url",
+        locator: url,
+        result: "not_found",
+        source_ids: [],
+        note: gap,
+      })),
+      reason: gap,
+    });
+    delete acquisition.data;
+  }
   return packet;
+}
+
+function freezeCompanyDossier(run) {
+  const dir = mkdtempSync(join(tmpdir(), "alphacouncil-company-projection-"));
+  const path = join(dir, "company_dossier.json");
+  const dossier = buildCompanyDossier(run, sourceManifest(run));
+  writeFileSync(path, JSON.stringify(dossier));
+  run.company_dossier = { path, content_hash: dossier.content_hash };
+  return { dir, dossier };
 }
 
 test("the operating-company registry owns 52 unique items across the eight mandatory roles", () => {
@@ -135,6 +186,102 @@ test("the operating-company registry owns 52 unique items across the eight manda
   for (const task of DEFAULT_TASKS) {
     assert.ok(expectedCoverageItems(task).length > 0, `${task} must own coverage items`);
     assert.deepEqual(expectedCoverageItems(task), OPERATING_COMPANY_COVERAGE[task]);
+  }
+});
+
+test("the debate projection is derived from the verified dossier without dropping routes or source bindings", () => {
+  const market = coveredPacket("market_data", { expanded: true });
+  const successfulAttemptOnlySource = source("market_data", 15);
+  market.claims = market.sources.map((item, index) => ({
+    claim: `decision claim ${index + 1}`,
+    evidence: `decision evidence ${index + 1}`,
+    confidence: "medium",
+    source_ids: [item.id],
+  }));
+  market.metrics = {
+    price: { value: 100, unit: "USD", source_ids: ["S14"] },
+    nested: { formula: { inputs: [1, 2, 3], assumptions: ["bounded fixture"] } },
+  };
+  market.sources[13].source_kind = "dynamic_snapshot";
+  market.sources[13].observed_at = `${AS_OF}T12:00:00Z`;
+  market.sources.push(successfulAttemptOnlySource);
+  const outcome = market.acquisition_ledger.items.find((item) => item.coverage_id === "market.quote_snapshot");
+  outcome.source_ids = [market.sources[13].id];
+  outcome.attempts = [{
+    stage: "fixture_source",
+    locator_type: "url",
+    locator: successfulAttemptOnlySource.url,
+    result: "succeeded",
+    source_ids: [successfulAttemptOnlySource.id, "S15"],
+    note: "The independent route established how the quote was acquired.",
+  }];
+  outcome.data = {
+    observations: [{ value: 100, unit: "USD", source_ids: [market.sources[13].id] }],
+    formula: "fixture_actual",
+    inputs: [100],
+    assumptions: ["No unstated input."],
+  };
+  markUnavailable(market, "market.liquidity_volume", {
+    attemptedUrls: ["https://example.test/liquidity-attempt"],
+    gap: "The liquidity route remained unavailable after the named fixture attempt.",
+  });
+
+  const packets = DEFAULT_TASKS.map((task) => task === market.task ? market : coveredPacket(task));
+  const run = companyRun(packets);
+  run.grounding.source_acquisition_plan = { policy_id: "company_source_acquisition_v1" };
+  run.grounding.macro_series = { raw_transport_sentinel: "RAW-MACRO-SENTINEL".repeat(20_000) };
+  const frozen = freezeCompanyDossier(run);
+  try {
+    const projection = companyDossierDecisionProjection(run);
+    const serialized = JSON.stringify(projection);
+    const projectedMarket = projection.packets.find((packet) => packet.task === market.task);
+    assert.equal(projection.projection_contract, "operating_company_dossier_decision_projection_v1");
+    assert.equal(projection.source_dossier.content_hash, frozen.dossier.content_hash);
+    assert.match(projection.projection_hash, /^sha256:[a-f0-9]{64}$/u);
+    assert.ok(Buffer.byteLength(serialized) <= COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES);
+    assert.equal(projection.packets.reduce((total, packet) => total + packet.routes.length, 0), 52);
+    assert.equal(projectedMarket.claims.length, 14);
+    assert.equal(projectedMarket.sources.length, 15);
+    assert.equal(projectedMarket.metrics.price.source_ids[0], "market_data:S14");
+    assert.equal(projectedMarket.sources.find((item) => item.id === "market_data:S14").source_kind, "dynamic_snapshot");
+    assert.equal(projectedMarket.sources.find((item) => item.id === "market_data:S14").observed_at, `${AS_OF}T12:00:00Z`);
+    assert.ok(projectedMarket.sources.every((item) => /^sha256:[a-f0-9]{64}$/u.test(item.source_record_hash)));
+    const quoteRoute = projectedMarket.routes.find((route) => route.id === "market.quote_snapshot");
+    assert.equal(quoteRoute.outcome, "reported_actual");
+    assert.deepEqual(quoteRoute.outcome_source_ids, ["market_data:S14"]);
+    assert.deepEqual(quoteRoute.attempt_source_ids, ["market_data:S15"]);
+    assert.ok(projectedMarket.sources.some((item) => item.id === "market_data:S15"));
+    assert.deepEqual(quoteRoute.data.inputs, [100]);
+    const unavailableRoute = projectedMarket.routes.find((route) => route.id === "market.liquidity_volume");
+    assert.equal(unavailableRoute.outcome, "unavailable");
+    assert.equal(unavailableRoute.attempts.length, 1);
+    assert.equal(unavailableRoute.gap, "The liquidity route remained unavailable after the named fixture attempt.");
+    assert.doesNotMatch(serialized, /RAW-MACRO-SENTINEL|\[nested object\]|\[\d+ items\]/u);
+
+    const decisionPrompt = companyDossierPromptBlock(run, { consumer: "decision_projection" });
+    assert.match(decisionPrompt, /server-verified decision projection/iu);
+    assert.doesNotMatch(decisionPrompt, new RegExp(run.company_dossier.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+    const repairPrompt = companyDossierPromptBlock(run, { consumer: "hash_ack_only" });
+    assert.match(repairPrompt, new RegExp(frozen.dossier.content_hash, "u"));
+    assert.doesNotMatch(repairPrompt, /decision projection|Read the JSON file in full|company_dossier\.json/iu);
+  } finally {
+    rmSync(frozen.dir, { recursive: true, force: true });
+  }
+});
+
+test("an oversized decision projection fails closed instead of silently truncating evidence", () => {
+  const market = coveredPacket("market_data");
+  market.claims[0].evidence = "X".repeat(COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES + 1);
+  const run = companyRun(DEFAULT_TASKS.map((task) => task === market.task ? market : coveredPacket(task)));
+  run.grounding.source_acquisition_plan = { policy_id: "company_source_acquisition_v1" };
+  const frozen = freezeCompanyDossier(run);
+  try {
+    assert.throws(
+      () => companyDossierDecisionProjection(run),
+      (error) => error?.data?.reason === "COMPANY_DOSSIER_DECISION_PROJECTION_OVERSIZE",
+    );
+  } finally {
+    rmSync(frozen.dir, { recursive: true, force: true });
   }
 });
 
