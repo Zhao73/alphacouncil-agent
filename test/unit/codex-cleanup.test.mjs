@@ -104,7 +104,7 @@ test("runCodex force-settles after kill grace even if a broken child never close
   assert.ok(Date.now() - started < 250, "forced settlement must not wait for a close event");
 });
 
-test("runCodex re-clamps its timer after spawn so settlement fits an absolute deadline", async () => {
+test("runCodex re-clamps its timer after spawn so settlement fits an absolute deadline", async (t) => {
   class NeverClosingChild extends EventEmitter {
     constructor() {
       super();
@@ -115,26 +115,43 @@ test("runCodex re-clamps its timer after spawn so settlement fits an absolute de
     }
   }
   let startPayload;
+  const stops = [];
+  const timers = [];
+  let clockMs = Date.now();
+  t.mock.method(Date, "now", () => clockMs);
+  // Capture the timeout callback directly instead of depending on the experimental MockTimers
+  // API, whose argument shape differs across the supported Node 18-26 range.
+  t.mock.method(globalThis, "setTimeout", (callback, delay) => {
+    const timer = { callback, delay };
+    timers.push(timer);
+    return timer;
+  });
+  t.mock.method(globalThis, "clearTimeout", () => {});
   const killGraceMs = 20;
-  const absoluteDeadlineMs = Date.now() + 80;
-  const result = await runCodex("fixture", 1_000, (payload) => {
+  const absoluteDeadlineMs = clockMs + 80;
+  const resultPromise = runCodex("fixture", 1_000, (payload) => {
     startPayload = payload;
   }, () => {}, {
     spawn: () => new NeverClosingChild(),
-    stopChild: () => {},
+    stopChild: (_child, force = false) => stops.push(force ? "KILL" : "TERM"),
     sigkillGraceMs: killGraceMs,
     absoluteDeadlineMs,
   });
+  assert.equal(timers.length, 1);
+  assert.ok(timers[0].delay <= 60);
+  // Invoking the timeout only at the absolute boundary models an event-loop callback that
+  // wakes late. It must force-settle immediately instead of allocating a second grace window.
+  clockMs = absoluteDeadlineMs;
+  timers.shift().callback();
+  assert.deepEqual(stops, ["TERM", "KILL"]);
+  assert.equal(timers.length, 0);
+  const result = await resultPromise;
   assert.ok(startPayload.worker_timeout_ms <= absoluteDeadlineMs - Date.parse(startPayload.started_at) - killGraceMs);
   assert.equal(startPayload.settlement_grace_ms, killGraceMs);
   assert.equal(result.timing.worker_timeout_ms, startPayload.worker_timeout_ms);
   assert.equal(result.timing.settlement_grace_ms, startPayload.settlement_grace_ms);
   assert.equal(result.timedOut, true);
   assert.equal(result.forced_settle, true);
-  assert.ok(
-    Date.parse(result.timing.finished_at) <= absoluteDeadlineMs + 25,
-    "timer plus forced-settlement grace must stay at the absolute boundary apart from scheduler jitter",
-  );
 });
 
 test("runCodex adds no grace when synchronous spawn has already consumed the absolute deadline", async () => {

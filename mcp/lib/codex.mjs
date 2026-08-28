@@ -743,11 +743,17 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       timedOut = true;
       stopWorker(child);
       if (settled) return;
-      if (effectiveKillGraceMs === 0) {
+      // The timeout callback itself can be delayed when the event loop is busy. Re-clamp the
+      // settlement grace at the callback boundary too, otherwise a late timer would borrow a
+      // fresh grace period after the caller's absolute deadline had already elapsed.
+      const remainingKillGraceMs = absoluteDeadlineMs === null
+        ? effectiveKillGraceMs
+        : Math.min(effectiveKillGraceMs, Math.max(0, absoluteDeadlineMs - Date.now()));
+      if (remainingKillGraceMs === 0) {
         forceSettle();
         return;
       }
-      killTimer = setTimeout(forceSettle, effectiveKillGraceMs);
+      killTimer = setTimeout(forceSettle, remainingKillGraceMs);
     };
     // Drain both pipes; switch to streaming logs if a progress UI needs live CLI output.
     child.stdout.on("data", (chunk) => { stdout = appendLimited(stdout, chunk.toString()); });
