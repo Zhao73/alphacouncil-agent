@@ -24,7 +24,7 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, sourceManifest, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractUnvalidatedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { codexAttemptConfig, codexReasoningPolicyStage, codexRunConfig, mapLimit, runCodex, workerActivitySummary, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
@@ -53,6 +53,7 @@ import {
 import {
   assertCompanySourceAcquisition,
   buildCompanySourceAcquisitionPlan,
+  canonicalizeCompanySourceAcquisitionPacket,
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
   fastValuationSourceAcquisitionPlan,
   secPrimaryDocumentRepairPromptBlock,
@@ -3022,6 +3023,63 @@ function acquisitionLedgerRepairPrompt({ packet, run, task, symbol, asOfDate, la
   ].join("\n\n");
 }
 
+function acquisitionAttemptIdentity(coverageId, attempt) {
+  return JSON.stringify({
+    coverage_id: coverageId ?? null,
+    stage: attempt?.stage ?? null,
+    locator_type: attempt?.locator_type ?? null,
+    locator: attempt?.locator ?? null,
+    result: attempt?.result ?? null,
+    source_ids: Array.isArray(attempt?.source_ids) ? [...attempt.source_ids].sort() : null,
+  });
+}
+
+function acquisitionAttemptCounts(packet) {
+  const counts = new Map();
+  for (const item of packet?.acquisition_ledger?.items || []) {
+    if (!Array.isArray(item?.attempts)) continue;
+    for (const attempt of item.attempts) {
+      const identity = acquisitionAttemptIdentity(item?.coverage_id, attempt);
+      counts.set(identity, (counts.get(identity) || 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/**
+ * Keep a no-search transport repair from manufacturing acquisition history.
+ *
+ * An attempt is an external observation, not formatting. A repair may omit or reorder attempts,
+ * but every retained attempt (including its result and cited source ids) must already exist in the
+ * primary packet. If the primary packet could not be normalized, no attempt can be proven and the
+ * repaired evidence must fail closed instead of turning model prose into apparent source work.
+ */
+export function assertAcquisitionRepairAttemptSubset(primaryPacket, repairedPacket) {
+  const available = acquisitionAttemptCounts(primaryPacket);
+  for (const item of repairedPacket?.acquisition_ledger?.items || []) {
+    if (!Array.isArray(item?.attempts)) continue;
+    for (const attempt of item.attempts) {
+      const identity = acquisitionAttemptIdentity(item?.coverage_id, attempt);
+      const remaining = available.get(identity) || 0;
+      if (remaining <= 0) {
+        const attemptLabel = [item?.coverage_id, attempt?.stage, attempt?.result]
+          .map((value) => String(value ?? "unknown"))
+          .join("/");
+        throw invalidParams(`source-acquisition repair introduced an attempt not present in the primary packet (${attemptLabel})`, {
+          reason: "WORKER_SOURCE_ACQUISITION_REPAIR_ADDED_ATTEMPT",
+          schema_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+          coverage_id: item?.coverage_id ?? null,
+          stage: attempt?.stage ?? null,
+          locator_type: attempt?.locator_type ?? null,
+          locator: attempt?.locator ?? null,
+          result: attempt?.result ?? null,
+        });
+      }
+      available.set(identity, remaining - 1);
+    }
+  }
+}
+
 function mergeAcquisitionLedgerRepair(packet, text) {
   const parsed = extractJson(text);
   const ledger = parsed?.acquisition_ledger ?? parsed;
@@ -4002,6 +4060,28 @@ export async function collectEvidence(args) {
       });
       return packet;
     } catch (firstParseError) {
+      // Keep the primary worker's observed attempt set immutable across every no-search repair.
+      // The reference remains stable when `packet` is later replaced with a repaired object.
+      let primaryAcquisitionPacket = packet;
+      if (!primaryAcquisitionPacket) {
+        try {
+          // Runtime-schema rejection can happen before normalizePacket assigns `packet` (for
+          // example, a malformed claim beside a well-formed acquisition ledger). Decode the
+          // rejected transport only to freeze its attempt identities; it is never accepted as
+          // evidence and every ordinary validator still runs on the repaired candidate.
+          primaryAcquisitionPacket = normalizePacket(
+            extractUnvalidatedWorkerJson(result.text),
+            task,
+            symbol,
+            asOfDate,
+            result.text,
+            { observationTime: run.grounding?.gathered_at },
+          );
+        } catch {
+          primaryAcquisitionPacket = undefined;
+        }
+      }
+      canonicalizeCompanySourceAcquisitionPacket(primaryAcquisitionPacket, run);
       const firstFailureKind = evidenceOutputFailureKind(firstParseError);
       const firstFailure = workerFailureArtifacts({
         task,
@@ -4094,7 +4174,7 @@ export async function collectEvidence(args) {
         });
       }
       try {
-        packet = acquisitionLedgerOnlyRepair
+        const repairedPacket = acquisitionLedgerOnlyRepair
           ? mergeAcquisitionLedgerRepair(packet, result.text)
           : normalizePacket(
             extractRepairedWorkerJson(
@@ -4108,10 +4188,15 @@ export async function collectEvidence(args) {
             result.text,
             { observationTime: run.grounding?.gathered_at },
           );
+        packet = repairedPacket;
         applyGroundedRegulatorCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
         assertCompanyCoveragePacket(packet, run);
         assertCompanySourceAcquisition(packet, run);
+        // Source-acquisition validation first canonicalizes server-owned ids and result
+        // semantics. Compare those canonical forms so formatting changes are allowed while
+        // new observations, success upgrades and locators remain impossible.
+        assertAcquisitionRepairAttemptSubset(primaryAcquisitionPacket, packet);
         assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} repair`);
         commitPacket(packet);
         appendEvent(run, "task_repair_succeeded", {
@@ -4209,6 +4294,7 @@ export async function collectEvidence(args) {
             assertOfficialSourceCoverage(packet, { task, asOfDate, grounding: run.grounding });
             assertCompanyCoveragePacket(packet, run);
             assertCompanySourceAcquisition(packet, run);
+            assertAcquisitionRepairAttemptSubset(primaryAcquisitionPacket, packet);
             assertReaderLanguage(evidenceReaderText(packet), language, `evidence worker ${task} chained acquisition repair`);
             commitPacket(packet);
             appendEvent(run, "task_repair_succeeded", {

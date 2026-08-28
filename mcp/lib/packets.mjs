@@ -274,6 +274,25 @@ export function extractWorkerJson(text, kind, context = {}) {
 }
 
 /**
+ * Decode only the outer worker transport without accepting it as valid evidence.
+ *
+ * This is intentionally narrow: callers may inspect an invalid primary response for an
+ * immutable provenance baseline, but must still use extractWorkerJson before publishing it.
+ */
+export function extractUnvalidatedWorkerJson(text) {
+  const value = extractJson(text);
+  if (objectRecord(value) && value.transport === "segmented_evidence_v1") {
+    return decodeSegmentedEvidenceEnvelope(value);
+  }
+  if (objectRecord(value)
+    && Object.keys(value).length === 1
+    && typeof value.packet_json === "string") {
+    return parseJsonTransport(value.packet_json).value;
+  }
+  return value;
+}
+
+/**
  * A parse-only repair worker may accidentally append a diagnostic JSON object to the repaired
  * packet. Accept a result only when runtime-schema validation leaves exactly one distinct
  * contract-valid value; two different valid packets and any truncated extra root stay

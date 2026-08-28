@@ -179,7 +179,7 @@ if (task) {
   if (ledgerRepair) {
     packet = { acquisition_ledger: validAcquisitionLedger };
   } else if (task === "ib_event_analysis") {
-    packet.acquisition_ledger.items[0].attempts = "Reviewed issuer filings and event calendars.";
+    delete packet.acquisition_ledger.items[0].data;
   }
 } else if (master) {
   const frozenLine = prompt.split("\\n")
@@ -414,7 +414,7 @@ test("headless operating-company full council freezes one dossier after typed gr
 
   const evidenceWorkers = workers.filter((entry) => entry.task);
   assert.equal(evidenceWorkers.length, DEFAULT_TASKS.length + 1,
-    "one malformed prose attempts value must receive exactly one ledger-only repair");
+    "one malformed acquisition data value must receive exactly one ledger-only repair");
   assert.equal(evidenceWorkers.filter((entry) => entry.task === "ib_event_analysis").length, 2);
   assert.equal(evidenceWorkers.filter((entry) => entry.ledger_repair).length, 1);
   assert.equal(evidenceWorkers.find((entry) => entry.ledger_repair)?.task, "ib_event_analysis");
