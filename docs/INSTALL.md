@@ -150,7 +150,7 @@ Full remains `full_v2`. When launched through plugin-managed headless
 `analyze_symbol(council_mode="full")`, it runs at one of three depth tiers selected with
 `council_pace` -- `fast` 15 minutes, `normal` (default) 30, `slow` 60 -- whose ceilings cover
 durable queueing through terminal artifact persistence. Their rounded configured stage totals
-are 13, 25 and 58 minutes; observed successful completion remains unvalidated. The tier raises every per-stage cap with the
+are 14, 25 and 58 minutes; observed successful completion remains unvalidated. The tier raises every per-stage cap with the
 total, which is where the depth difference lives; all three preserve the separately confirmed
 eight-seat core or eleven-seat all-analyst roster and the three-round `full_v2` contract:
 

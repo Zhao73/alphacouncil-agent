@@ -507,7 +507,7 @@ persistence. A caller or environment may lower the selected tier's budget, never
 
 | `council_pace` | ceiling | configured stage total (rounded) | observed completion | evidence / seat | method / seat | debate / round | PM |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `fast` | 15 min | 13.5 min | not validated | 4 min | 1.6 min | 1.4 min | 1.5 min |
+| `fast` | 15 min | 14.3 min | not validated | 4 min | 2 min | 1.4 min | 1.5 min |
 | `normal` (default) | 30 min | 25 min | not validated | 6 min | 3 min | 3 min | 3 min |
 | `slow` | 60 min | 58 min | not validated | 12 min | 4.25 min | 6 min | 8 min |
 
@@ -516,7 +516,7 @@ bound each worker. The configured stage allocation fits inside its ceiling, but 
 does not establish successful completion or a measured end-to-end duration.
 
 For the default, unlowered `fast` path, those lifecycle caps are split into a primary attempt plus a reserved bounded retry
-or no-search repair: evidence `220s + 20s`, method `87s + 8s`, each debate side
+or no-search repair: evidence `220s + 20s`, method `112s + 8s`, each debate side
 `70s + 15s`, and PM `75s + 15s`. The split never adds time to the table above: primary,
 timeout retry and parse repair all debit the same per-seat or per-round wall clock. Fast also
 uses a recorded stage-aware reasoning profile (`low` evidence/method/debate, `medium` PM,

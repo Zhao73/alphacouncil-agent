@@ -52,7 +52,7 @@ test("fast preserves the measured primary work while reallocating its bounded re
     grounding_ms: 20_000,
     evidence_ms: 240_000,
     evidence_repair_reserve_ms: 20_000,
-    master_ms: 95_000,
+    master_ms: 120_000,
     master_repair_reserve_ms: 8_000,
     debate_ms: 85_000,
     debate_repair_reserve_ms: 15_000,
@@ -60,7 +60,7 @@ test("fast preserves the measured primary work while reallocating its bounded re
     pm_repair_reserve_ms: 15_000,
     finalize_reserve_ms: 15_000,
   });
-  assert.equal(COUNCIL_PACE_STAGE_TOTAL(COUNCIL_PACES.fast), 810_000);
+  assert.equal(COUNCIL_PACE_STAGE_TOTAL(COUNCIL_PACES.fast), 860_000);
 });
 
 test("every pace's stages fit inside its own budget", () => {
@@ -71,8 +71,12 @@ test("every pace's stages fit inside its own budget", () => {
     const profile = COUNCIL_PACES[name];
     const stages = COUNCIL_PACE_STAGE_TOTAL(profile);
     assert.ok(stages < profile.total_ms, `${name}: stages ${stages}ms do not fit in ${profile.total_ms}ms`);
-    // Headroom for queueing, retries and the bounded parse repair, not a rounding accident.
-    assert.ok(profile.total_ms - stages >= 90_000, `${name}: only ${profile.total_ms - stages}ms of headroom`);
+    // Fast deliberately spends more of its fixed ceiling on the two real method waves after a
+    // same-day 25/26 live run; its retries remain inside the stage caps. Deeper tiers retain the
+    // original 90-second scheduling margin.
+    const minimumHeadroomMs = name === "fast" ? 40_000 : 90_000;
+    assert.ok(profile.total_ms - stages >= minimumHeadroomMs,
+      `${name}: only ${profile.total_ms - stages}ms of headroom`);
   }
 });
 

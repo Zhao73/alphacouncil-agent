@@ -18,6 +18,10 @@ Notable changes per release. Dates are UTC.
 - Malformed acquisition `attempts` values now reach the typed ledger repair gate with an exact
   field path instead of escaping as an opaque JavaScript `.map` failure; headless prompts also
   state explicitly that every acquisition attempt is an object inside an array.
+- Fast method voices now receive a 120-second shared primary/retry lifecycle. The first
+  same-day Work-gateway run completed all eight evidence seats and 25 of 26 isolated method
+  voices in 385 seconds, but one silent method worker exhausted the former 95-second lifecycle.
+  The two-wave method worst case and every later stage still fit inside the 15-minute ceiling.
 - Fast's stage allocation now reflects the first clean Work-gateway run that completed all eight
   evidence workers and all 26 isolated method voices but timed out both sides of debate round 1.
   Evidence keeps its 220-second primary attempt and the PM keeps 75 seconds; each debate side's

@@ -240,7 +240,7 @@ The run asks how deep to go before it asks which methods to seat. You never type
 
 | tier | persistence ceiling | observed complete run | evidence / seat | debate / round / side |
 | --- | --- | --- | --- | --- |
-| `fast` | 15 min (13.5 configured) | not validated | 4 min | 85 s |
+| `fast` | 15 min (14.3 configured) | not validated | 4 min | 85 s |
 | `normal` (default) | 30 min (25 configured) | not validated | 6 min | 180 s |
 | `slow` | 60 min (58 configured) | not validated | 12 min | 6 min |
 

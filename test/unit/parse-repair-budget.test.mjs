@@ -24,7 +24,7 @@ test("parse repair budgets scale across every fast, normal and slow stage", () =
   const expected = {
     // Derived from each stage cap, so this table moves with the tiers. It was last recomputed
     // when fast and normal were rebalanced onto their measured stage floors.
-    fast: { evidence_ms: 160_000, master_ms: 63_333, debate_ms: 56_666, pm_ms: 60_000 },
+    fast: { evidence_ms: 160_000, master_ms: 80_000, debate_ms: 56_666, pm_ms: 60_000 },
     normal: { evidence_ms: 240_000, master_ms: 120_000, debate_ms: 120_000, pm_ms: 120_000 },
     slow: { evidence_ms: 240_000, master_ms: 170_000, debate_ms: 240_000, pm_ms: 240_000 },
   };
@@ -93,7 +93,7 @@ test("fast primary, retry and repair share one immutable stage lifecycle", () =>
   const run = fullRun("fast");
   const expectedPrimary = {
     evidence: 220_000,
-    methods: 87_000,
+    methods: 112_000,
     debate_round_1: 70_000,
     portfolio_manager: 75_000,
   };

@@ -428,7 +428,7 @@ export const LIMITS = Object.freeze({
  * instead of three, and twelve minutes per evidence seat instead of six.
  */
 export const COUNCIL_PACES = Object.freeze({
-  // `fast` is a configured fifteen-minute ceiling with a 13.5-minute stage allocation.
+  // `fast` is a configured fifteen-minute ceiling with a 14m20s stage allocation.
   // It is not a measured completion claim: observed completion remains unvalidated until a
   // representative host run produces a timing ledger that passes the terminal contract.
   fast: Object.freeze({
@@ -440,7 +440,11 @@ export const COUNCIL_PACES = Object.freeze({
     // complete evidence packet. Keep this inside the 240-second seat lifecycle rather than
     // handing a late packet whatever few milliseconds happen to remain.
     evidence_repair_reserve_ms: 20 * 1000,
-    master_ms: 95 * 1000,
+    // The first same-day Work-gateway run completed 25/26 voices, while one silent worker used
+    // the full 82-second primary window and the bounded retry. Extending the shared lifecycle
+    // to two minutes gives the primary worker 107 seconds after repair/settlement reserves and
+    // still keeps the two-wave serial worst case inside the 15-minute total.
+    master_ms: 120 * 1000,
     master_repair_reserve_ms: 8 * 1000,
     master_waves: 2,
     verifier_ms: 0,

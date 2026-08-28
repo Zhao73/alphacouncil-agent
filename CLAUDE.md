@@ -72,7 +72,8 @@ No research, run directory or worker may start before that receipt exists. Data-
   rejected and names the tier that would allow it.
 - A tier sets the total AND every per-stage cap together, because the per-stage caps are what
   bound each worker. `slow` gives each evidence seat 12 minutes instead of 6 and each debate
-  round 6 minutes per side instead of 3 minutes; `fast` gives 4.7 minutes and 45 seconds. That
+  round 6 minutes per side instead of 3 minutes; `fast` gives each evidence seat 4 minutes,
+  each method seat 2 minutes, and each debate side 85 seconds per round. That
   is where the depth difference lives — raising `total_timeout_ms` alone buys idle time, and
   lowering it alone starves the later stages into `incomplete`. Every tier's configured stages
   fit inside its ceiling; that arithmetic is not a measured completion claim.

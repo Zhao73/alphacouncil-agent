@@ -68,7 +68,7 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
 
    ```
    本次分析要跑多深？（默认 2）
-     1. 快速   持久化上限 15 分钟；配置分段约 13 分钟；完整完成实测：尚未验证  每证据席 4.7 分钟，每轮辩论每侧 45 秒
+     1. 快速   持久化上限 15 分钟；配置分段约 14 分钟；完整完成实测：尚未验证  每证据席 4 分钟，每方法席 2 分钟，每轮辩论每侧 85 秒
      2. 标准   持久化上限 30 分钟；配置分段约 25 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 180 秒   ← 默认
      3. 深入   持久化上限 60 分钟；配置分段约 58 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
    三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM，只是每席能想多久不同。
@@ -134,7 +134,8 @@ master-selection contract.
    Pass `total_timeout_ms` only to LOWER the tier's budget; above it the call is rejected.
    Tell the user which pace ran and what it bought: the tier raises every per-stage cap, so
    `slow` gives each evidence seat 12 minutes instead of 6 and each debate round 6 minutes per
-   side instead of 3; `fast` gives 4.7 minutes and 45 seconds. All three paces are the same
+   side instead of 3; `fast` gives each evidence seat 4 minutes, each method seat 2 minutes,
+   and each debate side 85 seconds per round. All three paces are the same
    `full_v2` contract. `normal` remains the default. No tier has a successful-completion time
    claim until representative live terminal runs validate it; configured arithmetic is not a
    measured speed result.
