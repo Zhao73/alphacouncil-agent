@@ -530,7 +530,8 @@ export function buildCompanyDossier(run, sourceManifest = null) {
       evidence_roles: Object.keys(OPERATING_COMPANY_COVERAGE),
       downstream_roles: ["bull_researcher", "bear_researcher", "portfolio_manager"],
       read_mode: "role_scoped_verified_consumption",
-      method_read_mode: "full_artifact_by_path_and_hash",
+      method_read_mode: "verified_decision_projection_bound_to_full_dossier",
+      method_projection_contract: COMPANY_DOSSIER_DECISION_PROJECTION_ID,
       decision_read_mode: "verified_decision_projection_bound_to_full_dossier",
       decision_projection_contract: COMPANY_DOSSIER_DECISION_PROJECTION_ID,
       decision_projection_max_bytes: COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES,
@@ -618,24 +619,55 @@ export function companyDossierPromptBlock(run, { consumer = "full" } = {}) {
       ko: `서버가 동결된 회사 자료를 다시 검증했습니다. 복구된 전체 object에서 company_dossier_hash_ack를 ${ref.content_hash}로 그대로 유지하고 자료를 다시 읽거나 분석하지 마십시오.`,
     });
   }
+  if (consumer === "method_projection") {
+    const manifests = run.packets.map(packetManifest);
+    const ackContract = JSON.stringify(Object.fromEntries(
+      companyDossierPacketAckTemplate(run, { includePacketHash: false })
+        .map(({ task, ...ack }) => [task, ack]),
+    ));
+    return localized(run.language, {
+      zh: [
+        "## 统一公司资料包（服务端验证的方法投影）",
+        `内容哈希：${ref.content_hash}`,
+        "服务端已在启动本方法视角前重读并校验完整冻结资料包，并从校验后的磁盘内容生成下方有界投影。只使用该投影；不要打开任何运行产物，也不要重新处理包含原始采集记录和时间序列的多 MB 审计文件。",
+        "投影保留全部决策论断及其引用来源、52 项覆盖结果、每项冻结采集结论与数据、完整指标、明确缺口、逐包哈希和完整资料包哈希。不得用模型记忆或外部资料补足投影之外的信息。",
+        `输出必须原样带回 \`company_dossier_hash_ack\`: \`${ref.content_hash}\`。哈希缺失或不一致会使该席位失败。`,
+        `还必须逐包返回 \`evidence_packet_acks\`，本轮共 ${manifests.length} 包（其中核心包固定 8 个）。每个 task 必须恰好出现一次；不要手抄 packet_hash，服务器会在验证 status、source_ids 与 note 后绑定冻结清单中的精确哈希。`,
+        "status 只能是 used / reviewed_not_relevant / unavailable：used 必须列出本包实际使用且同时出现在顶层 source_ids 的来源；reviewed_not_relevant 必须写明本方法为何未使用；unavailable 只能用于本包确实没有任何可用论断时，并写明原因。",
+        `逐包回执模板：${ackContract}`,
+      ].join("\n"),
+      en: [
+        "## Shared company dossier (server-verified method projection)",
+        `Content hash: ${ref.content_hash}`,
+        "The server re-read and re-hashed the complete frozen dossier immediately before launching this method lens, then generated the bounded projection in the Evidence JSON below from those verified disk bytes. Use only that projection; do not open any run artifact or reprocess the multi-megabyte audit file containing raw acquisition records and time series.",
+        "The projection retains every decision claim and its referenced sources, all 52 coverage outcomes, every frozen acquisition disposition and its data, complete packet metrics, explicit gaps, packet hashes, and the full dossier hash. Never fill anything outside the projection from model memory or external information.",
+        `Return \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`; a missing or different hash fails this worker.`,
+        `Also return \`evidence_packet_acks\` for all ${manifests.length} packets (exactly eight are core packets). Every task must occur exactly once. Do not transcribe packet_hash; after validating status, source_ids, and note, the server binds the exact hash from the frozen manifest.`,
+        "Status is only used / reviewed_not_relevant / unavailable. used requires packet-local source IDs that also appear in top-level source_ids; reviewed_not_relevant requires a method-specific reason; unavailable is allowed only when the packet contains no usable claim and requires a reason.",
+        `Per-packet acknowledgement template: ${ackContract}`,
+      ].join("\n"),
+      ja: `サーバーは完全な凍結済み会社資料（${ref.content_hash}）を再検証し、その検証済み内容から以下の限定的なメソッド投影を生成しました。この投影だけを使い、複数 MB の監査ファイルを再処理しないでください。company_dossier_hash_ack に同じハッシュを返し、全${manifests.length}件の evidence_packet_acks を task ごとに一度だけ返してください。テンプレート: ${ackContract}`,
+      ko: `서버가 완전한 동결 회사 자료(${ref.content_hash})를 다시 검증하고 그 내용에서 아래의 제한된 방법론 투영을 생성했습니다. 이 투영만 사용하고 수 MB 감사 파일을 다시 처리하지 마십시오. company_dossier_hash_ack에 같은 해시를 반환하고 ${manifests.length}개 evidence_packet_acks를 task별로 정확히 한 번 반환하십시오. 템플릿: ${ackContract}`,
+    });
+  }
   if (consumer === "decision_projection") {
     return localized(run.language, {
       zh: [
         "## 统一公司资料包（服务端验证的决策投影）",
         `内容哈希：${ref.content_hash}`,
-        "服务端已在启动本席位前重新读取并校验完整冻结资料包，并从校验后的磁盘内容生成有界、服务端验证的决策投影，注入下方 Evidence JSON。辩论和组合经理必须只使用该投影；不要打开任何运行产物，也不要再次打开或处理包含原始采集记录和时间序列的多 MB 审计文件。",
+        "服务端已在启动本席位前重新读取并校验完整冻结资料包，并从校验后的磁盘内容生成有界、服务端验证的决策投影，注入下方 Evidence JSON。辩论和组合经理必须只使用该投影；不要打开任何运行产物，也不得粘贴或附加 Evidence JSON 或其他证据/资料包产物。",
         "该投影保留全部决策论断及其引用来源、52 项覆盖结果、每项已冻结的采集结论与数据、完整指标、明确数据缺口、逐包哈希和完整资料包哈希；未被决策证据引用的原始传输内容只保留在审计资料包中。不得用模型记忆或外部资料补足投影之外的信息。",
         `输出必须原样带回 \`company_dossier_hash_ack\`: \`${ref.content_hash}\`。哈希缺失或不一致会使该席位失败。`,
       ].join("\n"),
       en: [
         "## Shared company dossier (server-verified decision projection)",
         `Content hash: ${ref.content_hash}`,
-        "The server re-read and re-hashed the complete frozen dossier immediately before launching this worker, then generated the bounded, server-verified decision projection in the Evidence JSON below from those verified disk bytes. Debate and portfolio-manager workers must use that projection; do not open any run artifact or reopen and reprocess the multi-megabyte audit file containing raw acquisition records and time series.",
+        "The server re-read and re-hashed the complete frozen dossier immediately before launching this worker, then generated the bounded, server-verified decision projection in the Evidence JSON below from those verified disk bytes. Debate and portfolio-manager workers must use that projection. Do not open any run artifact, and do not paste or append Evidence JSON or another evidence/dossier artifact.",
         "The projection retains every decision claim and its referenced sources, all 52 coverage outcomes, every frozen acquisition disposition and its data, complete packet metrics, explicit gaps, packet hashes, and the full dossier hash. Raw transport content not referenced by decision evidence remains only in the audit dossier. Never fill anything outside the projection from model memory or external information.",
         `Return \`company_dossier_hash_ack\` exactly as \`${ref.content_hash}\`; a missing or different hash fails this worker.`,
       ].join("\n"),
-      ja: `完全な監査用会社資料（${ref.content_hash}）は、実行直前にサーバーが再読込・再ハッシュし、その検証済みディスク内容から以下の限定的な意思決定投影を生成しました。この Evidence JSON だけを使用し、他の実行成果物や複数 MB の生の取得記録・時系列ファイルを再処理しないでください。投影には全ての意思決定クレームと参照元、52 項目の結果、凍結済み取得結果とデータ、完全な packet 指標、明示的 gap、packet hash と資料全体の hash が含まれます。company_dossier_hash_ack に同じハッシュを返してください。`,
-      ko: `전체 감사용 회사 자료(${ref.content_hash})는 실행 직전에 서버가 다시 읽고 해시를 검증했으며, 검증된 디스크 내용에서 아래 제한형 의사결정 투영을 생성했습니다. 이 Evidence JSON만 사용하고 다른 실행 산출물이나 수 MB의 원시 수집 기록·시계열 파일을 다시 처리하지 마십시오. 투영에는 모든 의사결정 주장과 참조 출처, 52개 결과, 동결된 수집 결론과 데이터, 전체 packet 지표, 명시적 공백, packet hash와 전체 자료 hash가 포함됩니다. company_dossier_hash_ack에 같은 해시를 반환하십시오.`,
+      ja: `完全な監査用会社資料（${ref.content_hash}）は、実行直前にサーバーが再読込・再ハッシュし、その検証済みディスク内容から以下の限定的な意思決定投影を生成しました。この Evidence JSON だけを使用し、他の実行成果物を開かず、Evidence JSON やその他の証拠・資料成果物を貼り付けたり追加したりしないでください。投影には全ての意思決定クレームと参照元、52 項目の結果、凍結済み取得結果とデータ、完全な packet 指標、明示的 gap、packet hash と資料全体の hash が含まれます。company_dossier_hash_ack に同じハッシュを返してください。`,
+      ko: `전체 감사용 회사 자료(${ref.content_hash})는 실행 직전에 서버가 다시 읽고 해시를 검증했으며, 검증된 디스크 내용에서 아래 제한형 의사결정 투영을 생성했습니다. 이 Evidence JSON만 사용하고 다른 실행 산출물을 열거나 Evidence JSON 또는 다른 증거·자료 산출물을 붙여 넣거나 추가하지 마십시오. 투영에는 모든 의사결정 주장과 참조 출처, 52개 결과, 동결된 수집 결론과 데이터, 전체 packet 지표, 명시적 공백, packet hash와 전체 자료 hash가 포함됩니다. company_dossier_hash_ack에 같은 해시를 반환하십시오.`,
     });
   }
   const manifests = run.packets.map(packetManifest);
@@ -961,6 +993,29 @@ export function companyDossierDecisionProjection(run) {
   return projection;
 }
 
+/**
+ * Exact citation scope exposed by the bounded decision projection.
+ *
+ * The frozen dossier may contain transport-only or otherwise unreferenced source records. A
+ * downstream worker cannot truthfully cite those records because they were deliberately omitted
+ * from its bounded prompt. Keep the task-local and aggregate views derived from the same verified
+ * projection so prompt text, structured-output schemas, and acknowledgement validation agree.
+ */
+export function companyDossierDecisionProjectionSourceScope(run, projection = null) {
+  const bounded = projection || companyDossierDecisionProjection(run);
+  if (!bounded) return { source_ids: [], by_task: {} };
+  const byTask = {};
+  const all = new Set();
+  for (const packet of bounded.packets || []) {
+    const ids = [...new Set((packet.sources || [])
+      .map((source) => source?.id)
+      .filter((id) => typeof id === "string" && id.trim()))].sort();
+    byTask[packet.task] = ids;
+    for (const id of ids) all.add(id);
+  }
+  return { source_ids: [...all].sort(), by_task: byTask };
+}
+
 export function assertCompanyDossierAck(packet, run, label, { client = false } = {}) {
   if (!requiresOperatingCompanyDossier(run)) return packet;
   verifyCompanyDossierArtifact(run, { client });
@@ -980,13 +1035,16 @@ export function assertCompanyDossierAck(packet, run, label, { client = false } =
 }
 
 /**
- * Prove that a method worker opened every packet in the frozen dossier, not merely the file.
- * A single dossier hash proves integrity; this ledger proves per-packet disposition and binds
- * every `used` declaration to packet-local sources that the method actually cited.
+ * Validate a method worker's declared disposition for every packet in the frozen dossier.
+ * A single dossier hash proves snapshot integrity; this ledger binds every `used` declaration
+ * to packet-local sources that the method actually cited. It does not claim to observe the
+ * model's private attention or prove that every byte affected its reasoning.
  */
 export function assertCompanyDossierPacketAcks(packet, run, label, { client = false } = {}) {
   if (!requiresOperatingCompanyDossier(run)) return [];
   const dossier = verifyCompanyDossierArtifact(run, { client });
+  const projection = companyDossierDecisionProjection(run);
+  const projectionScope = companyDossierDecisionProjectionSourceScope(run, projection);
   const supplied = packet?.evidence_packet_acks;
   const problems = [];
   if (!Array.isArray(supplied)) {
@@ -1008,7 +1066,12 @@ export function assertCompanyDossierPacketAcks(packet, run, label, { client = fa
     if (!expectedTasks.has(task)) problems.push({ task, reason: "unexpected_ack" });
   }
   const topLevelSourceIds = new Set(Array.isArray(packet?.source_ids) ? packet.source_ids : []);
-  const packetByTask = new Map((dossier.packets || []).map((entry) => [entry.task, entry]));
+  const projectedPacketByTask = new Map((projection?.packets || []).map((entry) => [entry.task, entry]));
+  const projectedSourceIds = new Set(projectionScope.source_ids);
+  const outsideProjection = [...topLevelSourceIds].filter((id) => !projectedSourceIds.has(id));
+  if (outsideProjection.length) {
+    problems.push({ reason: "top_level_source_outside_projection", source_ids: outsideProjection });
+  }
   const normalized = [];
   for (const manifest of dossier.packet_manifest || []) {
     const row = byTask.get(manifest.task);
@@ -1035,10 +1098,11 @@ export function assertCompanyDossierPacketAcks(packet, run, label, { client = fa
     if (!EVIDENCE_PACKET_ACK_STATUSES.includes(status)) {
       problems.push({ task: manifest.task, reason: "invalid_ack_status", status: status || null });
     }
-    const evidencePacket = packetByTask.get(manifest.task) || {};
-    const localSourceIds = new Set((evidencePacket.sources || []).map((source) => source?.id).filter(Boolean));
+    const evidencePacket = projectedPacketByTask.get(manifest.task) || {};
+    const localSourceIds = new Set(projectionScope.by_task[manifest.task] || []);
     const outsidePacket = sourceIds.filter((id) => !localSourceIds.has(id));
     const outsideMethod = sourceIds.filter((id) => !topLevelSourceIds.has(id));
+    const citedFromDisposedPacket = [...topLevelSourceIds].filter((id) => localSourceIds.has(id));
     if (status === "used") {
       if (!sourceIds.length) problems.push({ task: manifest.task, reason: "used_without_source_ids" });
       if (outsidePacket.length) problems.push({ task: manifest.task, reason: "used_source_outside_packet", source_ids: outsidePacket });
@@ -1046,9 +1110,21 @@ export function assertCompanyDossierPacketAcks(packet, run, label, { client = fa
     } else if (status === "reviewed_not_relevant") {
       if (!note) problems.push({ task: manifest.task, reason: "reviewed_not_relevant_without_note" });
       if (sourceIds.length) problems.push({ task: manifest.task, reason: "reviewed_not_relevant_with_source_ids" });
+      if (citedFromDisposedPacket.length) problems.push({
+        task: manifest.task,
+        reason: "top_level_source_conflicts_with_packet_disposition",
+        status,
+        source_ids: citedFromDisposedPacket,
+      });
     } else if (status === "unavailable") {
       if (!note) problems.push({ task: manifest.task, reason: "unavailable_without_note" });
       if (sourceIds.length) problems.push({ task: manifest.task, reason: "unavailable_with_source_ids" });
+      if (citedFromDisposedPacket.length) problems.push({
+        task: manifest.task,
+        reason: "top_level_source_conflicts_with_packet_disposition",
+        status,
+        source_ids: citedFromDisposedPacket,
+      });
       const usable = (evidencePacket.claims || []).length > 0 && (evidencePacket.sources || []).length > 0;
       if (usable) problems.push({ task: manifest.task, reason: "unavailable_but_packet_has_usable_evidence" });
     }

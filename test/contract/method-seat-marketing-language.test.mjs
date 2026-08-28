@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
+import { selectorCard } from "../../mcp/lib/master-catalog.mjs";
 import { repoFile } from "../helpers/paths.mjs";
 
 const publicFiles = [
@@ -60,6 +62,40 @@ test("public selector and launch copy do not market method seats as human expert
       .replace(/不是\s*26\s*个(?:独立训练|独立)模型/gu, "");
     for (const pattern of banned) {
       assert.doesNotMatch(text, pattern, `${relativePath} violates ${pattern}`);
+    }
+  }
+
+  const mastersRoot = repoFile("knowledge/solo-test/masters");
+  for (const entry of readdirSync(mastersRoot, { withFileTypes: true }).filter((item) => item.isDirectory())) {
+    const manifest = JSON.parse(readFileSync(join(mastersRoot, entry.name, "manifest.json"), "utf8"));
+    assert.equal(manifest.identity.maturity, "operator_lens", `${entry.name} maturity drifted`);
+    const identities = Object.values(manifest.selection.identity);
+    for (const identity of identities) {
+      assert.doesNotMatch(identity, /method model|方法模型|メソッドモデル|방법론 모델/iu, `${entry.name} overstates maturity`);
+    }
+    assert.match(identities.join("\n"), /provisional project-derived method lens/iu, `${entry.name} omits provisional identity`);
+  }
+});
+
+test("compatibility selector cards disclose the provisional non-person identity in all public languages", () => {
+  const mastersRoot = repoFile("knowledge/solo-test/masters");
+  const locales = [
+    ["English", /project-derived provisional method lens.*not the named person's words or current view/iu],
+    ["中文", /项目派生的临时方法视角.*不代表具名人物本人言论或当前观点/iu],
+    ["日本語", /プロジェクト派生の暫定メソッド視点.*本人の発言や現在の見解ではありません/iu],
+    ["한국어", /프로젝트에서 파생된 임시 방법론 관점.*본인의 발언이나 현재 견해가 아닙니다/iu],
+  ];
+  for (const entry of readdirSync(mastersRoot, { withFileTypes: true }).filter((item) => item.isDirectory())) {
+    const manifest = JSON.parse(readFileSync(join(mastersRoot, entry.name, "manifest.json"), "utf8"));
+    const persona = {
+      id: entry.name,
+      title: manifest.title || { en: entry.name, zh: entry.name },
+      philosophy_tags: manifest.philosophy_tags || [],
+    };
+    for (const [language, disclosure] of locales) {
+      const card = selectorCard(persona, language);
+      assert.match(card.identity, disclosure, `${entry.name}:${language} omits the non-person disclosure`);
+      assert.doesNotMatch(card.identity, /method model|方法模型|メソッドモデル|방법론 모델/iu);
     }
   }
 });

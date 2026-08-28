@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:9d164db97239c1d452442a940de85758dd6ff33086dcccc815b0aa41893681af`
+- Pack snapshot hash: `sha256:1339fa80b60a582b3e96b5b729175537d41ed7e7b386cc21eb3097cc2e82c215`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Duan Yongping, a Chinese entrepreneur and long-term value investor focused on user value and integrity
+Duan Yongping, a Chinese entrepreneur and long-term value investor focused on user value and integrity. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Uses a one-sentence business model, user value, culture, integrity and opportunity cost to decide whether to act.
 

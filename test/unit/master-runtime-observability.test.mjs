@@ -36,6 +36,13 @@ const methodVoicePacket = () => ({
   confidence: "medium",
 });
 
+const projectionFor = (run) => ({
+  packets: (run.packets || []).map((packet) => ({
+    task: packet.task,
+    sources: packet.sources || [],
+  })),
+});
+
 function captureMethodVoiceSchemaError(packet) {
   let failure;
   try {
@@ -65,7 +72,9 @@ test("run-specific method schema locks identity, decision, dossier and packet ta
     source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
     evidence_source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
   };
-  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen, {
+    projection: projectionFor(run),
+  });
   assert.equal(schema.properties.master.const, "master_fisher");
   assert.equal(schema.properties.acknowledged_stance.const, "cautious");
   assert.deepEqual(schema.properties.position_intent.enum, ["would_hold", "would_watch"]);
@@ -89,7 +98,9 @@ test("non-company method schema agrees with the null-hash and empty-ack prompt c
     entry_tool: "run_council",
   };
   const frozen = { master: "master_bogle", stance: "out_of_scope", source_ids: [], evidence_source_ids: [] };
-  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen, {
+    projection: projectionFor(run),
+  });
   assert.deepEqual(schema.properties.company_dossier_hash_ack, { type: "null" });
   assert.equal(schema.properties.evidence_packet_acks.type, "array");
   assert.equal(schema.properties.evidence_packet_acks.maxItems, 0);
@@ -125,7 +136,9 @@ test("oversized source enums fall back to the same fail-closed runtime source va
     source_ids: [sources[0].id],
     evidence_source_ids: [sources[0].id],
   };
-  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen, {
+    projection: projectionFor(run),
+  });
   assert.equal(Object.hasOwn(schema.properties.source_ids.items, "enum"), false);
   assert.equal(schema.properties.source_ids.items.maxLength, 512);
   assert.equal(Object.hasOwn(
@@ -156,7 +169,9 @@ test("one large enum over the native 15k character sub-limit also falls back", (
     source_ids: [sources[0].id],
     evidence_source_ids: [sources[0].id],
   };
-  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen);
+  const schema = buildMethodVoiceHeadlessOutputSchema(run, frozen.master, frozen, {
+    projection: projectionFor(run),
+  });
   assert.equal(Object.hasOwn(schema.properties.source_ids.items, "enum"), false);
   assert.ok(JSON.stringify(schema).length < 100_000);
 });

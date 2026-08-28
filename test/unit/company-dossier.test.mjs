@@ -8,6 +8,7 @@ import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import {
   COMPANY_DOSSIER_DECISION_PROJECTION_MAX_BYTES,
   OPERATING_COMPANY_COVERAGE,
+  assertCompanyDossierPacketAcks,
   buildCompanyDossier,
   companyCoverageInstruction,
   companyDossierDecisionProjection,
@@ -16,6 +17,8 @@ import {
   expectedCoverageItems,
   requiresOperatingCompanyDossier,
 } from "../../mcp/lib/company-dossier.mjs";
+import { buildMethodVoiceHeadlessOutputSchema } from "../../mcp/lib/orchestrator.mjs";
+import { methodVoiceAllowedSourceIds } from "../../mcp/lib/packets.mjs";
 
 const AS_OF = "2026-08-03";
 
@@ -261,9 +264,81 @@ test("the debate projection is derived from the verified dossier without droppin
     const decisionPrompt = companyDossierPromptBlock(run, { consumer: "decision_projection" });
     assert.match(decisionPrompt, /server-verified decision projection/iu);
     assert.doesNotMatch(decisionPrompt, new RegExp(run.company_dossier.path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "u"));
+    const methodPrompt = companyDossierPromptBlock(run, { consumer: "method_projection" });
+    assert.match(methodPrompt, /server-verified method projection/iu);
+    assert.match(methodPrompt, new RegExp(frozen.dossier.content_hash, "u"));
+    assert.doesNotMatch(methodPrompt, /Read the JSON file in full|company_dossier\.json/iu);
     const repairPrompt = companyDossierPromptBlock(run, { consumer: "hash_ack_only" });
     assert.match(repairPrompt, new RegExp(frozen.dossier.content_hash, "u"));
     assert.doesNotMatch(repairPrompt, /decision projection|Read the JSON file in full|company_dossier\.json/iu);
+  } finally {
+    rmSync(frozen.dir, { recursive: true, force: true });
+  }
+});
+
+test("method source scope and packet acknowledgements reject sources omitted from the projection", () => {
+  const market = coveredPacket("market_data");
+  const unused = source("market_data", 99);
+  market.sources.push(unused);
+  const run = companyRun(DEFAULT_TASKS.map((task) => (
+    task === market.task ? market : coveredPacket(task)
+  )));
+  run.grounding.source_acquisition_plan = { policy_id: "company_source_acquisition_v1" };
+  const frozen = freezeCompanyDossier(run);
+  try {
+    const projection = companyDossierDecisionProjection(run);
+    const projectedMarket = projection.packets.find((packet) => packet.task === market.task);
+    assert.ok(projectedMarket.sources.some((item) => item.id === "market_data:S1"));
+    assert.ok(!projectedMarket.sources.some((item) => item.id === unused.id),
+      "an unreferenced raw transport source must stay outside the worker projection");
+
+    const frozenOpinion = {
+      master: "master_buffett",
+      stance: "cautious",
+      source_ids: ["market_data:S1", unused.id],
+      evidence_source_ids: ["market_data:S1", unused.id],
+    };
+    const allowed = methodVoiceAllowedSourceIds(run, frozenOpinion);
+    assert.ok(allowed.includes("market_data:S1"));
+    assert.ok(!allowed.includes(unused.id),
+      "deterministic provenance or a raw dossier record cannot widen the rendered citation scope");
+
+    const schema = buildMethodVoiceHeadlessOutputSchema(run, frozenOpinion.master, frozenOpinion);
+    assert.ok(!schema.properties.source_ids.items.enum.includes(unused.id));
+    assert.ok(!schema.properties.evidence_packet_acks.properties.market_data
+      .properties.source_ids.items.enum.includes(unused.id));
+
+    const ackRows = frozen.dossier.packet_manifest.map((manifest) => ({
+      task: manifest.task,
+      status: "reviewed_not_relevant",
+      source_ids: [],
+      note: "The bounded fixture packet was reviewed but not used by this method.",
+    }));
+    const rawOnlyPacket = {
+      source_ids: [unused.id],
+      evidence_packet_acks: ackRows.map((row) => row.task === "market_data"
+        ? { ...row, status: "used", source_ids: [unused.id], note: "Used the raw-only source." }
+        : row),
+    };
+    assert.throws(
+      () => assertCompanyDossierPacketAcks(rawOnlyPacket, run, "raw-only source fixture"),
+      (error) => error?.data?.reason === "COMPANY_DOSSIER_PACKET_ACK_MISMATCH"
+        && error.data.problems.some((problem) => problem.reason === "top_level_source_outside_projection")
+        && error.data.problems.some((problem) => problem.reason === "used_source_outside_packet"),
+    );
+
+    const dispositionConflict = {
+      source_ids: ["market_data:S1"],
+      evidence_packet_acks: ackRows,
+    };
+    assert.throws(
+      () => assertCompanyDossierPacketAcks(dispositionConflict, run, "disposition conflict fixture"),
+      (error) => error?.data?.reason === "COMPANY_DOSSIER_PACKET_ACK_MISMATCH"
+        && error.data.problems.some((problem) => (
+          problem.task === "market_data"
+          && problem.reason === "top_level_source_conflicts_with_packet_disposition"
+        )),
+    );
   } finally {
     rmSync(frozen.dir, { recursive: true, force: true });
   }

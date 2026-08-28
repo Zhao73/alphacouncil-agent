@@ -33,7 +33,10 @@ function strippedMethodReference(text, methodId) {
   const withoutProvenance = text.replace(METHOD_POLICY_BLOCK, (whole, opening, json, closing) => {
     policyBlocks += 1;
     return `${opening}${JSON.stringify(stripPolicyProvenance(JSON.parse(json)), null, 2)}${closing}`;
-  });
+  }).replace(
+    /\. This is a project-derived provisional method lens, not the named person's words or current view\./gu,
+    "",
+  );
   assert.equal(policyBlocks, 1, `${methodId}: expected one exact provisional decision-policy block`);
   return withoutProvenance.split(/\r?\n/u)
     .filter((line) => !/sha256:[a-f0-9]{64}/u.test(line))
@@ -133,7 +136,7 @@ test("AI machine simulations change identity only and keep the n-eff disclosure 
   });
 });
 
-test("generated method references change only provenance blocks and bound identity hashes", () => {
+test("generated method references change only provenance blocks, the exact non-person disclosure, and bound identity hashes", () => {
   const relativeRoot = "skills/alphacouncil-method-lenses/references";
   const methods = readdirSync(repoFile(`${relativeRoot}/methods`))
     .filter((name) => name.endsWith(".md"))

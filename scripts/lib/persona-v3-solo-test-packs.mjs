@@ -526,14 +526,14 @@ function buildDocuments({ seat, blueprint, rawTools, packVersion, formulaManifes
       source_cutoff: SOURCE_DATE,
     },
     selection: {
-      // What a seat IS, not its review history. "Not the person's own words" stays because it
-      // guards against impersonation; the review-status clause is gone because the owner signed
-      // off on these attributions and a warning repeated for every seat stops being a warning.
+      // What a seat IS, not a maturity level it has not earned. The selection surface must agree
+      // with `maturity=operator_lens`: these are project-derived provisional method lenses, not
+      // validated method models and never the named person's own words or current view.
       identity: {
-        en: `${publicTitle.en}; a method model, not the person's own words`,
-        zh: `${publicTitle.zh}；方法模型，非本人言论`,
-        ja: `${publicTitle.en}。メソッドモデルであり、本人の発言や現在の見解ではない。`,
-        ko: `${publicTitle.en}. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.`,
+        en: `${publicTitle.en}; a provisional project-derived method lens, not the person's own words or current view`,
+        zh: `${publicTitle.zh}；项目派生的临时方法视角，非本人言论或当前观点`,
+        ja: `${publicTitle.en}。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。`,
+        ko: `${publicTitle.en}. 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.`,
       },
       method: {
         en: seat.method_scope.planning_hypothesis,

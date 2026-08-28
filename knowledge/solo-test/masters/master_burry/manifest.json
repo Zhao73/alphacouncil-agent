@@ -124,10 +124,10 @@
       "zh": "一手文件研究、资本结构、会计取证与结构性错价。"
     },
     "identity": {
-      "en": "Michael Burry Lens; a method model, not the person's own words",
-      "ja": "Michael Burry Lens。メソッドモデルであり、本人の発言や現在の見解ではない。",
-      "ko": "Michael Burry Lens. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "迈克尔·伯里视角；方法模型，非本人言论"
+      "en": "Michael Burry Lens; a provisional project-derived method lens, not the person's own words or current view",
+      "ja": "Michael Burry Lens。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。",
+      "ko": "Michael Burry Lens. 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "迈克尔·伯里视角；项目派生的临时方法视角，非本人言论或当前观点"
     },
     "method": {
       "en": "Start from primary documents and capital structure to find structural, mechanically verifiable mispricing and test whether the position can survive being early.",

@@ -28,6 +28,7 @@ import { canonicalJson } from "./personas-v3/canonical.mjs";
 import {
   assertCompanyDossierAck,
   assertCompanyDossierPacketAcks,
+  companyDossierDecisionProjectionSourceScope,
   normalizeCompanyCoverageItems,
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
@@ -860,8 +861,22 @@ function boundedPacketSourceIds(packet, claimLimit, sourceLimit) {
   return selected;
 }
 
-/** Evidence IDs actually exposed to a dedicated method voice, plus frozen fact lineage. */
-export function methodVoiceAllowedSourceIds(run, frozenOpinion) {
+/** Evidence IDs actually exposed to a dedicated method voice. */
+export function methodVoiceAllowedSourceIds(run, frozenOpinion, { projection = null } = {}) {
+  // An operating-company worker receives the bounded, verified dossier projection. The full
+  // dossier can contain transport-only sources, while the deterministic fact producer can carry
+  // typed provenance IDs that were never rendered into the voice prompt. Neither is citable by
+  // that worker. Use only the exact projection source set in this mode.
+  if (requiresOperatingCompanyDossier(run)) {
+    const allowed = sourceIdList(
+      companyDossierDecisionProjectionSourceScope(run, projection).source_ids,
+    );
+    assertSourceIdsResolve(run, allowed, `${frozenOpinion?.master || "method voice"} allowed projected evidence`, {
+      allowEmpty: frozenOpinion?.stance === "out_of_scope",
+      domain: "evidence",
+    });
+    return allowed;
+  }
   const quick = run?.council_mode === "quick";
   const packetIds = (run?.packets || []).flatMap((packet) => (
     quick

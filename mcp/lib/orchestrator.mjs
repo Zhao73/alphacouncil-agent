@@ -44,6 +44,8 @@ import {
   buildCompanyDossier,
   companyEvidencePacketHash,
   companyCoverageInstruction,
+  companyDossierDecisionProjection,
+  companyDossierDecisionProjectionSourceScope,
   companyDossierCoverageStatus,
   companyDossierPromptBlock,
   requiresOperatingCompanyDossier,
@@ -79,6 +81,41 @@ const WORKER_ATTEMPT_KIND = Object.freeze({
   timeout_retry: Object.freeze({ attempt_kind: "timeout_retry" }),
   parse_repair: Object.freeze({ attempt_kind: "parse_repair" }),
 });
+const VISIBLE_PHASE_RANK = Object.freeze({
+  visible_planned: 0,
+  visible_evidence: 1,
+  visible_verification: 2,
+  visible_methods: 3,
+  visible_debate: 4,
+  complete: 5,
+  needs_verification: 5,
+  incomplete: 5,
+});
+
+function visiblePhaseAtOrAfter(currentPhase, minimumPhase) {
+  if (!Object.hasOwn(VISIBLE_PHASE_RANK, currentPhase)) {
+    throw invalidParams(`Visible run has an unknown phase: ${String(currentPhase)}.`, {
+      reason: "VISIBLE_PHASE_UNKNOWN",
+      phase: currentPhase ?? null,
+      remedy: "Do not rewrite or replay this run with an older runtime; inspect or migrate the persisted state first.",
+    });
+  }
+  if (!Object.hasOwn(VISIBLE_PHASE_RANK, minimumPhase)) {
+    throw invalidParams(`Visible run recovery requested an unknown minimum phase: ${String(minimumPhase)}.`, {
+      reason: "VISIBLE_PHASE_UNKNOWN",
+      phase: minimumPhase ?? null,
+    });
+  }
+  const currentRank = VISIBLE_PHASE_RANK[currentPhase];
+  const minimumRank = VISIBLE_PHASE_RANK[minimumPhase];
+  return currentRank >= minimumRank;
+}
+
+function advanceVisiblePhase(run, minimumPhase) {
+  if (visiblePhaseAtOrAfter(run.phase, minimumPhase)) return false;
+  run.phase = minimumPhase;
+  return true;
+}
 
 /**
  * Freeze the reader-facing assurance labels beside the deterministic seat result.
@@ -280,16 +317,27 @@ function schemaLargeEnumStringsFit(value) {
 }
 
 /** Build one OpenAI-compatible schema from the already-frozen method context. */
-export function buildMethodVoiceHeadlessOutputSchema(run, masterId, frozenOpinion) {
-  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion);
-  const allowed = new Set(allowedSourceIds);
+export function buildMethodVoiceHeadlessOutputSchema(run, masterId, frozenOpinion, {
+  projection = null,
+} = {}) {
   const dossierRequired = requiresOperatingCompanyDossier(run);
+  const boundedProjection = dossierRequired
+    ? (projection || companyDossierDecisionProjection(run))
+    : null;
+  const projectionScope = dossierRequired
+    ? companyDossierDecisionProjectionSourceScope(run, boundedProjection)
+    : null;
+  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion, {
+    projection: boundedProjection,
+  });
   const prosePattern = firstPersonPattern(run.language);
   const build = (enumerateSources) => {
-    const packetAckProperties = Object.fromEntries((run.packets || []).map((packet) => {
-      const packetSourceIds = (packet.sources || [])
-        .map((source) => source?.id)
-        .filter((id) => allowed.has(id));
+    const packetAckProperties = Object.fromEntries((dossierRequired
+      ? (boundedProjection?.packets || [])
+      : (run.packets || [])).map((packet) => {
+      const packetSourceIds = dossierRequired
+        ? (projectionScope?.by_task?.[packet.task] || [])
+        : (packet.sources || []).map((source) => source?.id).filter(Boolean);
       return [packet.task, {
         type: "object",
         properties: {
@@ -970,11 +1018,32 @@ function bindVisibleMastersToCompanyDossier(run) {
   return plan;
 }
 
-function refreshVisibleDownstreamPromptFiles(run) {
+function refreshedVisiblePromptFileInstruction(run, kind) {
+  if (kind === "method") {
+    return localized(run.language, {
+      en: "SERVER-REFRESHED METHOD INPUT: this prompt file was regenerated from every upstream stage currently persisted by the server. It becomes executable only when the server-side evidence and verification prerequisites permit record_master_opinion; immediately before launch, re-read the latest copy. Launch from that file without pasting or appending Evidence JSON or any evidence, dossier, verification, method, or run artifact.",
+      zh: "服务端已刷新方法席输入：这份提示文件由服务端依据当前已持久化的全部上游阶段重新生成。只有服务端的证据与核验前置门允许 record_master_opinion 时才可执行；启动前必须重新读取最新副本。只能从该文件启动；不得粘贴或附加 Evidence JSON，或任何证据、资料包、核验、方法席及运行产物。",
+      ja: "サーバー更新済みメソッド入力：このプロンプトファイルは、サーバーに現在保存済みの全上流ステージから再生成されました。サーバー側の証拠・検証前提条件が record_master_opinion を許可した場合にのみ実行でき、起動直前に最新のコピーを再読込する必要があります。そのファイルだけから起動し、Evidence JSON や証拠・資料・検証・メソッド・実行成果物を貼り付けたり追加したりしないでください。",
+      ko: "서버 갱신 방법론 입력: 이 프롬프트 파일은 서버에 현재 저장된 모든 상위 단계에서 다시 생성되었습니다. 서버의 증거·검증 선행 조건이 record_master_opinion을 허용할 때만 실행할 수 있으며, 실행 직전에 최신 사본을 다시 읽어야 합니다. 그 파일만으로 실행하고 Evidence JSON이나 증거·자료·검증·방법론·실행 산출물을 붙여 넣거나 추가하지 마십시오.",
+    });
+  }
+  return localized(run.language, {
+    en: "SERVER-REFRESHED DEBATE INPUT: this prompt file was regenerated from every upstream stage currently persisted by the server. It becomes executable only when the server-side evidence, verification, and method prerequisites permit the requested debate or portfolio-manager record; immediately before launch, re-read the latest copy. Do not paste or append Evidence JSON or any evidence, dossier, verification, method, or run artifact; append only the exact prior-round Bull/Bear packets and Q&A bindings required for the current round.",
+    zh: "服务端已刷新辩论输入：这份提示文件由服务端依据当前已持久化的全部上游阶段重新生成。只有服务端的证据、核验与方法席前置门允许记录所请求的辩论席或组合经理时才可执行；启动前必须重新读取最新副本。不得粘贴或附加 Evidence JSON，或任何证据、资料包、核验、方法席及运行产物；只能按当前轮次要求附加精确的上一轮 Bull/Bear 包与问答绑定。",
+    ja: "サーバー更新済み討論入力：このプロンプトファイルは、サーバーに現在保存済みの全上流ステージから再生成されました。サーバー側の証拠・検証・メソッド前提条件が、要求された討論または PM の記録を許可した場合にのみ実行でき、起動直前に最新のコピーを再読込する必要があります。Evidence JSON や証拠・資料・検証・メソッド・実行成果物は追加せず、現在のラウンドで要求される正確な前ラウンド Bull/Bear packet と Q&A binding だけを追加してください。",
+    ko: "서버 갱신 토론 입력: 이 프롬프트 파일은 서버에 현재 저장된 모든 상위 단계에서 다시 생성되었습니다. 서버의 증거·검증·방법론 선행 조건이 요청된 토론 또는 포트폴리오 관리자 기록을 허용할 때만 실행할 수 있으며, 실행 직전에 최신 사본을 다시 읽어야 합니다. Evidence JSON이나 증거·자료·검증·방법론·실행 산출물을 붙이지 말고 현재 라운드에 필요한 정확한 이전 Bull/Bear 패킷과 Q&A 바인딩만 추가하십시오.",
+  });
+}
+
+function refreshVisibleDownstreamPromptFiles(run, {
+  verifiers = true,
+  masters = true,
+  debate = true,
+} = {}) {
   const dir = join(runPath(run.run_id), "prompts");
   if (!existsSync(dir)) return [];
   const refreshed = [];
-  if (tripleVerificationRequired(run)) {
+  if (verifiers && tripleVerificationRequired(run)) {
     for (const verifier of REQUIRED_VERIFIER_IDS) {
       const input = join(runPath(run.run_id), `verification.${verifier}.input.json`);
       writeJson(input, buildVerifierBatchInput(run, verifier), { mode: 0o600 });
@@ -983,23 +1052,44 @@ function refreshVisibleDownstreamPromptFiles(run) {
       refreshed.push(file);
     }
   }
-  if (!requiresOperatingCompanyDossier(run) || !run?.company_dossier?.content_hash) return refreshed;
+  // An operating-company downstream prompt is executable only after its canonical dossier has
+  // frozen. A fund/index has no such artifact, so its completed evidence packets are the barrier
+  // and must still refresh every downstream prompt instead of returning early here.
+  if (requiresOperatingCompanyDossier(run) && !run?.company_dossier?.content_hash) return refreshed;
   const frozenById = new Map((run.master_opinions || []).map((opinion) => [opinion.master, opinion]));
-  for (const id of selectedMasters(run)) {
-    const file = join(dir, `master.${id}.prompt.md`);
-    if (!existsSync(file)) continue;
-    const frozen = frozenById.get(id);
-    if (!frozen) continue;
-    const prompt = masterVoicePrompt(id, run, frozen);
-    writeFileSync(file, `${prompt.trimEnd()}\n`, { encoding: "utf8", mode: 0o600 });
-    refreshed.push(file);
+  const decisionById = new Map((run.master_decisions || []).map((decision) => [decision.persona_id, decision]));
+  if (masters) {
+    for (const id of selectedMasters(run)) {
+      const file = join(dir, `master.${id}.prompt.md`);
+      if (!existsSync(file)) continue;
+      const frozen = frozenById.get(id);
+      const v3Voice = frozen?.engine === "v3_method_runtime"
+        || run.master_runtime_provenance?.[id]?.engine === "v3_method_runtime";
+      const basePrompt = v3Voice && frozen
+        ? masterVoicePrompt(id, run, frozen)
+        : [
+          masterPrompt(id, run),
+          decisionById.has(id)
+            ? deterministicVerdictBlock(decisionById.get(id), isChineseLanguage(run.language))
+            : "",
+        ].filter(Boolean).join("\n\n");
+      const prompt = [basePrompt, refreshedVisiblePromptFileInstruction(run, "method")]
+        .filter(Boolean).join("\n\n");
+      writeFileSync(file, `${prompt.trimEnd()}\n`, { encoding: "utf8", mode: 0o600 });
+      refreshed.push(file);
+    }
   }
-  for (const role of DEBATE_ROLES) {
-    const file = join(dir, `debate.${role}.prompt.md`);
-    if (!existsSync(file)) continue;
-    const prompt = debatePrompt(role, run);
-    writeFileSync(file, `${prompt.trimEnd()}\n`, { encoding: "utf8", mode: 0o600 });
-    refreshed.push(file);
+  if (debate) {
+    for (const role of DEBATE_ROLES) {
+      const file = join(dir, `debate.${role}.prompt.md`);
+      if (!existsSync(file)) continue;
+      const prompt = [
+        debatePrompt(role, run),
+        refreshedVisiblePromptFileInstruction(run, "debate"),
+      ].filter(Boolean).join("\n\n");
+      writeFileSync(file, `${prompt.trimEnd()}\n`, { encoding: "utf8", mode: 0o600 });
+      refreshed.push(file);
+    }
   }
   return refreshed;
 }
@@ -1474,7 +1564,7 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       debatePrompt(role, run, { planning: true }),
       "",
       localized(run.language, {
-        en: "The main thread must paste the completed Evidence JSON before running this visible agent.", zh: "主线程必须先粘贴已完成的 Evidence JSON，再运行这个可见代理。", ja: "メインスレッドは、この可視エージェントを実行する前に完成済みの Evidence JSON を貼り付ける必要があります。", ko: "메인 스레드는 이 표시형 에이전트를 실행하기 전에 완료된 Evidence JSON을 붙여 넣어야 합니다.",
+        en: "After the evidence and verification barrier, the main thread MUST re-read this agent's refreshed prompt_file immediately before launch. That file is the complete verified evidence base; do not paste or append Evidence JSON or any evidence/dossier artifact.", zh: "证据与核验门通过后，主线程必须在启动前重新读取本代理已刷新的 prompt_file。该文件就是完整的已验证证据输入；不得再粘贴或附加 Evidence JSON 或任何 evidence/dossier 产物。", ja: "証拠・検証ゲートの後、起動直前にこのエージェントの更新済み prompt_file を必ず再読込してください。そのファイルが完全な検証済み証拠入力です。Evidence JSON や evidence/dossier 成果物を貼り付けたり追加したりしないでください。", ko: "증거·검증 관문이 끝난 뒤 실행 직전에 이 에이전트의 갱신된 prompt_file을 반드시 다시 읽으십시오. 그 파일이 전체 검증 증거 입력이며 Evidence JSON이나 evidence/dossier 산출물을 붙여 넣거나 추가하지 마십시오.",
       }),
       role === "bear_researcher" ? localized(run.language, { en: "The main thread must also paste Bull argument JSON.", zh: "主线程还必须粘贴 Bull argument JSON。", ja: "メインスレッドは Bull argument JSON も貼り付ける必要があります。", ko: "메인 스레드는 Bull argument JSON도 붙여 넣어야 합니다." }) : "",
       role === "portfolio_manager" ? localized(run.language, { en: "The main thread must also paste Bull and Bear argument JSON.", zh: "主线程还必须粘贴 Bull 和 Bear argument JSON。", ja: "メインスレッドは Bull と Bear の argument JSON も貼り付ける必要があります。", ko: "메인 스레드는 Bull 및 Bear argument JSON도 붙여 넣어야 합니다." }) : "",
@@ -1516,10 +1606,10 @@ export function visibleAgentSpecs(run, userPrompt = "") {
       decision ? deterministicVerdictBlock(decision, zh) : "",
       "",
       localized(run.language, {
-        en: "The main thread must paste the completed Evidence JSON first. Masters run after the evidence stage and before the debate.",
-        zh: "主线程必须先粘贴已完成的 Evidence JSON，再运行这个大师议席；大师在证据之后、辩论之前运行。",
-        ja: "メインスレッドは先に完成済みの Evidence JSON を貼り付ける必要があります。メソッド席は証拠段階の後、討論の前に実行します。",
-        ko: "메인 스레드는 먼저 완료된 Evidence JSON을 붙여 넣어야 합니다. 방법론 좌석은 증거 단계 이후, 토론 이전에 실행합니다.",
+        en: "Run this method seat after the evidence and verification barrier and before debate. Immediately before launch, re-read its refreshed prompt_file; do not paste or append Evidence JSON or any evidence/dossier artifact.",
+        zh: "在证据与核验门之后、辩论之前运行本方法席。启动前立即重新读取其已刷新的 prompt_file；不得粘贴或附加 Evidence JSON 或任何 evidence/dossier 产物。",
+        ja: "証拠・検証ゲートの後、討論の前にこのメソッド席を実行します。起動直前に更新済み prompt_file を再読込し、Evidence JSON や evidence/dossier 成果物を貼り付けたり追加したりしないでください。",
+        ko: "증거·검증 관문 이후 토론 전에 이 방법론 좌석을 실행합니다. 실행 직전에 갱신된 prompt_file을 다시 읽고 Evidence JSON이나 evidence/dossier 산출물을 붙여 넣거나 추가하지 마십시오.",
       }),
     ].filter(Boolean).join("\n"),
     output_contract: localized(run.language, {
@@ -1640,10 +1730,10 @@ export function visibleAgentSpecs(run, userPrompt = "") {
         prompt_template: [
           masterVoicePrompt(item.id, run, frozenOpinion),
           localized(run.language, {
-            en: "The main thread MUST append the completed Evidence JSON before launching this visible worker. Use it only to explain or challenge analyst interpretation; never change the frozen stance or add a fact.",
-            zh: "主线程必须在启动这个可见方法席前附上已完成的 Evidence JSON。它只能用于解释或质疑分析师解读；不得改变冻结立场，也不得新增事实。",
-            ja: "メインスレッドは、この可視メソッド席を起動する前に完成済み Evidence JSON を追加してください。分析担当の解釈を説明・検討する目的だけに使い、凍結済みスタンスの変更や事実追加は禁止です。",
-            ko: "메인 스레드는 이 표시형 방법론 좌석을 시작하기 전에 완료된 Evidence JSON을 추가해야 합니다. 분석가 해석을 설명·검토하는 데만 사용하고 동결된 입장을 바꾸거나 사실을 추가하지 마십시오.",
+            en: "After the evidence and verification barrier, the main thread MUST re-read this worker's refreshed prompt_file immediately before launch. Do not paste or append Evidence JSON or any evidence/dossier artifact. Use only that refreshed prompt to explain or challenge analyst interpretation; never change the frozen stance or add a fact.",
+            zh: "证据与核验门通过后，主线程必须在启动前重新读取本方法席已刷新的 prompt_file。不得粘贴或附加 Evidence JSON 或任何 evidence/dossier 产物。只能依据该刷新提示解释或质疑分析师解读；不得改变冻结立场，也不得新增事实。",
+            ja: "証拠・検証ゲートの後、起動直前にこのワーカーの更新済み prompt_file を必ず再読込してください。Evidence JSON や evidence/dossier 成果物を貼り付けたり追加したりせず、その更新済みプロンプトだけで分析解釈を説明・検討し、凍結済みスタンスの変更や事実追加は禁止です。",
+            ko: "증거·검증 관문이 끝난 뒤 실행 직전에 이 작업자의 갱신된 prompt_file을 반드시 다시 읽으십시오. Evidence JSON이나 evidence/dossier 산출물을 붙여 넣거나 추가하지 말고 그 갱신된 프롬프트만으로 분석가 해석을 설명·검토하며 동결된 입장을 바꾸거나 사실을 추가하지 마십시오.",
           }),
         ].join("\n\n"),
         output_contract: localized(run.language, {
@@ -1948,8 +2038,30 @@ export function recordMasterOpinion(args) {
   writeJson(join(dir, `${args.master}.json`), opinion);
   saveRun(run);
   writeJson(join(dir, "evidence.json"), run);
-  appendEvent(run, "master_opinion_recorded", { master: args.master, stance: opinion.stance, overridden });
-  return { run, opinion, overridden, recorded: run.master_opinions.length, expected: allowed.length };
+  const methodBarrierComplete = allowed.every((id) => run.master_status?.[id]?.status === "completed");
+  const refreshed = methodBarrierComplete
+    ? refreshVisibleDownstreamPromptFiles(run, {
+      verifiers: false,
+      masters: false,
+      debate: true,
+    })
+    : [];
+  appendEvent(run, "master_opinion_recorded", {
+    master: args.master,
+    stance: opinion.stance,
+    overridden,
+    method_barrier_complete: methodBarrierComplete,
+    refreshed_prompt_count: refreshed.length,
+  });
+  return {
+    run,
+    opinion,
+    overridden,
+    recorded: run.master_opinions.length,
+    expected: allowed.length,
+    method_barrier_complete: methodBarrierComplete,
+    refreshed_prompt_count: refreshed.length,
+  };
 }
 
 export function visibleStatusAfterPacket(run) {
@@ -4787,8 +4899,15 @@ export async function runHeadlessMasters(run, args = {}) {
 
     const workerStartedAt = Date.now();
     let workerAttempt = 1;
+    // A method voice is a no-search generation over an already frozen decision. Live Work
+    // evidence showed that reserving a few seconds for a fresh cold process only shortened the
+    // useful primary and could not complete the replacement. Reserve-based timeout retry stays
+    // available as a profile mechanism, but the current profiles deliberately give the full
+    // lifecycle to one primary; parse/language repair may use time left by an early completion.
+    const timeoutRetryEnabled = stageRetryAllowed(args)
+      && stageRepairReserveMs(run, "methods") > 0;
     const primaryBudgetMs = stagePrimaryAttemptBudget(run, "methods", timeoutMs, {
-      reserveRepair: stageRetryAllowed(args),
+      reserveRepair: timeoutRetryEnabled,
     });
     let result = await execute(prompt, primaryBudgetMs, workerAttempt);
     // A timed-out voice worker gets at most one fresh, budget-bounded attempt. Silence is not
@@ -4796,7 +4915,7 @@ export async function runHeadlessMasters(run, args = {}) {
     // failures have separate repair paths below and do not earn this timeout retry.
     const lifecycleRemainingMs = stageLifecycleRemainingMs(timeoutMs, workerStartedAt);
     if (!result.ok && result.timedOut
-      && stageRetryAllowed(args) && lifecycleRemainingMs > 0
+      && timeoutRetryEnabled && lifecycleRemainingMs > 0
       && remainingCouncilBudget(run, lifecycleRemainingMs) > 0) {
       workerAttempt = 2;
       appendEvent(run, "master_retry", {
@@ -6208,13 +6327,83 @@ export function recordVerifierBatch(args) {
         submitted_hash: sha256(normalized),
       });
     }
+    const frozenRows = Array.isArray(existing.results) ? existing.results : [];
+    const recordedRows = (run.verifier_verdicts || []).filter((row) => row.verifier === args.verifier);
+    const stateMatchesFrozenBatch = sha256(recordedRows) === sha256(frozenRows)
+      && run.verifier_status?.[args.verifier]?.status === "completed";
+    const persistedAudit = verificationAuditStatus(run);
+    const expectedPhase = persistedAudit.status !== "needs_verification"
+      ? "visible_methods"
+      : "visible_verification";
+    const derivedStateMatchesAudit = run.verification_policy?.status === persistedAudit.status
+      && visiblePhaseAtOrAfter(run.phase, expectedPhase);
+    let recoveredRunState = false;
+    if (!stateMatchesFrozenBatch || !derivedStateMatchesAudit) {
+      // The batch file is the immutable commit point for this verifier. A process can die after
+      // that atomic write but before evidence.json records the same rows and completed status,
+      // or after those rows save but before the derived policy/phase save. Rehydrate only from
+      // the hash-equal frozen file; conflicting replays were rejected above.
+      if (!stateMatchesFrozenBatch) {
+        run.verifier_verdicts = [
+          ...(run.verifier_verdicts || []).filter((row) => row.verifier !== args.verifier),
+          ...frozenRows,
+        ];
+        const priorStatus = run.verifier_status?.[args.verifier] || {};
+        updateVerifierStatus(run, args.verifier, "completed", {
+          output: outputPath,
+          result_count: frozenRows.length,
+          ...(args.thread_id || priorStatus.thread_id
+            ? { thread_id: args.thread_id || priorStatus.thread_id }
+            : {}),
+          ...(args.thread_title || priorStatus.thread_title
+            ? { thread_title: args.thread_title || priorStatus.thread_title }
+            : {}),
+          completed_at: priorStatus.completed_at || new Date().toISOString(),
+          recovered_from_frozen_batch: true,
+        });
+      }
+      const recoveredAudit = verificationAuditStatus(run);
+      run.verification_policy.status = recoveredAudit.status;
+      const phaseBeforeRecovery = run.phase;
+      const minimumRecoveredPhase = recoveredAudit.status !== "needs_verification"
+        ? "visible_methods"
+        : "visible_verification";
+      const phaseAdvanced = advanceVisiblePhase(run, minimumRecoveredPhase);
+      saveRun(run);
+      writeStatus(run);
+      appendEvent(run, "verifier_batch_state_recovered", {
+        verifier: args.verifier,
+        result_count: frozenRows.length,
+        audit_status: recoveredAudit.status,
+        frozen_batch_restored: !stateMatchesFrozenBatch,
+        derived_state_restored: !derivedStateMatchesAudit,
+        phase_before_recovery: phaseBeforeRecovery,
+        phase_after_recovery: run.phase,
+        phase_advanced: phaseAdvanced,
+      });
+      writeAllAgentsMarkdown(run, existingDebate(dir));
+      recoveredRunState = true;
+    }
+    const audit = verificationAuditStatus(run);
+    // A replay is also the crash-recovery seam: if the verifier result was persisted before
+    // downstream prompt regeneration completed, replaying the same frozen batch repairs those
+    // files without accepting different verifier content.
+    const refreshed = audit.coverage_complete
+      ? refreshVisibleDownstreamPromptFiles(run, {
+        verifiers: false,
+        masters: true,
+        debate: false,
+      })
+      : [];
     return {
       run,
       verifier: args.verifier,
       recorded: normalized.results.length,
       expected: run.verification_policy.material_claim_count,
       idempotent_replay: true,
-      audit: verificationAuditStatus(run),
+      audit,
+      refreshed_prompt_count: refreshed.length,
+      recovered_run_state: recoveredRunState,
     };
   }
   writeJson(outputPath, normalized, { mode: 0o600 });
@@ -6235,12 +6424,20 @@ export function recordVerifierBatch(args) {
   run.status = "running";
   saveRun(run);
   writeStatus(run);
+  const refreshed = audit.coverage_complete
+    ? refreshVisibleDownstreamPromptFiles(run, {
+      verifiers: false,
+      masters: true,
+      debate: false,
+    })
+    : [];
   appendEvent(run, "verifier_batch_recorded", {
     verifier: args.verifier,
     result_count: normalized.results.length,
     recorded_verdict_count: audit.recorded_verdict_count,
     expected_verdict_count: audit.expected_verdict_count,
     audit_status: audit.status,
+    refreshed_prompt_count: refreshed.length,
   });
   writeAllAgentsMarkdown(run, existingDebate(dir));
   return {
@@ -6250,6 +6447,8 @@ export function recordVerifierBatch(args) {
     expected: run.verification_policy.material_claim_count,
     idempotent_replay: false,
     audit,
+    refreshed_prompt_count: refreshed.length,
+    recovered_run_state: false,
   };
 }
 

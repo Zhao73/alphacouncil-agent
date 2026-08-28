@@ -308,6 +308,18 @@ visible-host recorder/synchronous tools that hosted ChatGPT cannot safely superv
 separate 26-method catalog still comes from `begin_council_selection` and must be displayed
 and confirmed for every real run.
 
+The live-tested local path reuses the owner's file-backed ChatGPT login. All headless workers
+share the owner's one `CODEX_HOME` so OAuth refresh state is never copied or forked; this does
+not claim that concurrent refreshes are lock-free. File-backed static API-key login and
+environment API credentials use the same shared or inherited path, but require their own host
+smoke before a release claim. Keyring-backed login is not yet certified with
+`--ignore-user-config`. Each worker gets a temporary `HOME`/`USERPROFILE`, and the invocation
+disables plugins, apps, nested agents, tool suggestions, and every non-system Skill found under
+the shared Codex home. This keeps user web-routing Skills and recursive AlphaCouncil
+installations out of leaf prompts while retaining the owner's login. The temporary user home is
+removed after normal settlement; a failed removal is reported and retried on a late child close.
+This is local single-owner worker isolation, not OAuth or tenant isolation for a public service.
+
 ChatGPT needs an HTTPS endpoint. Prefer OpenAI's Secure MCP Tunnel when the account has the
 required tunnel permission. For a short private test, a Cloudflare Quick Tunnel can expose
 localhost while preserving Host-header protection:

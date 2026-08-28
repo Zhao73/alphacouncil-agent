@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:1ac7972260c054274685b99d1f6f2d6166883f5303d1129a48f66fd5a2e16f50`
+- Pack snapshot hash: `sha256:919f3b2e25eab349f34e960f99e8b47d5a89321d942552d919024b65448a4e99`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-John C. Bogle, Vanguard's founder and the advocate of low-cost index investing
+John C. Bogle, Vanguard's founder and the advocate of low-cost index investing. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Decomposes a basket's long-run expected return into dividend yield, earnings growth and the change in valuation, then subtracts the cost of holding it.
 

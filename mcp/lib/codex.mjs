@@ -4,22 +4,29 @@ import {
   closeSync,
   existsSync,
   fstatSync,
+  lstatSync,
   mkdtempSync,
   mkdirSync,
   openSync,
   readSync,
   readdirSync,
+  realpathSync,
   rmSync,
   statSync,
   unlinkSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { homedir, tmpdir } from "node:os";
+import { join, sep } from "node:path";
 import { CODEX_CMD, DATA_DIR, LIMITS } from "./constants.mjs";
 import { MAX_WORKER_JSON_CHARS } from "./bounded-json.mjs";
 import { appendLimited } from "./text.mjs";
 
 const OUTPUT_DIAGNOSTIC_BYTES = 4096;
+const MAX_DISABLED_USER_SKILLS = 128;
+const MAX_DISABLED_SKILLS_CONFIG_CHARS = 6 * 1024;
+const MAX_SKILL_SCAN_DEPTH = 6;
+const MAX_SKILL_DIRECTORIES_PER_ROOT = 2000;
+const MAX_WINDOWS_COMMAND_CHARS = 7800;
 // parseJsonTransport limits JavaScript characters, while this layer sees UTF-8 bytes. A valid
 // CJK-heavy payload may use three bytes per character (and supplementary Unicode four), so the
 // pre-read ceiling must preserve every payload the downstream character contract can accept.
@@ -284,9 +291,20 @@ export function quoteCmdArg(value) {
 export function codexInvocation(args, platform = process.platform, env = process.env) {
   const fullArgs = [...args, "-"];
   if (platform === "win32") {
+    if (fullArgs.some((arg) => /[%\r\n]/u.test(String(arg)))) {
+      throw new Error("Windows Codex arguments cannot contain percent signs or line breaks");
+    }
+    const commandLine = [env.ALPHACOUNCIL_AGENT_CODEX_CMD || CODEX_CMD, ...fullArgs]
+      .map(quoteCmdArg)
+      .join(" ");
+    if (commandLine.length > MAX_WINDOWS_COMMAND_CHARS) {
+      throw new Error(
+        `Windows Codex command line is ${commandLine.length} characters; maximum is ${MAX_WINDOWS_COMMAND_CHARS}`,
+      );
+    }
     return {
       command: env.ComSpec || "cmd.exe",
-      args: ["/d", "/s", "/c", [env.ALPHACOUNCIL_AGENT_CODEX_CMD || CODEX_CMD, ...fullArgs].map(quoteCmdArg).join(" ")],
+      args: ["/d", "/s", "/c", commandLine],
       options: { detached: false, windowsHide: true },
     };
   }
@@ -314,22 +332,159 @@ export function stopChild(child, force = false) {
 }
 
 /**
+ * Discover user-authored skills without following plugin caches or the built-in system skills.
+ *
+ * A leaf worker needs the caller's CODEX_HOME so concurrent ChatGPT OAuth workers share one
+ * refresh state. That same directory may contain personal Skills, so disable those explicitly
+ * instead of copying credentials to a second CODEX_HOME. Symlinked skill folders are resolved
+ * to the canonical SKILL.md path shown in Codex's prompt inventory.
+ */
+export function discoverNonSystemCodexSkills(codexHome, options = {}) {
+  const maxDepth = options.maxDepth ?? MAX_SKILL_SCAN_DEPTH;
+  const maxDirectories = options.maxDirectories ?? MAX_SKILL_DIRECTORIES_PER_ROOT;
+  const maxSkills = options.maxSkills ?? MAX_DISABLED_USER_SKILLS;
+  for (const [label, value] of Object.entries({ maxDepth, maxDirectories, maxSkills })) {
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(`${label} must be a non-negative integer`);
+    }
+  }
+  const root = join(codexHome, "skills");
+  const found = [];
+  const visited = new Set();
+  let directoriesScanned = 0;
+  let canonicalRoot;
+  try {
+    canonicalRoot = realpathSync(root);
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return [];
+    throw new Error(`leaf Codex skill root could not be resolved: ${error.message || error}`);
+  }
+  let canonicalSystemRoot = null;
+  const systemRoot = join(root, ".system");
+  try {
+    const systemRootStat = lstatSync(systemRoot);
+    if (systemRootStat.isSymbolicLink() || !systemRootStat.isDirectory()) {
+      throw new Error("the .system entry must be a real directory");
+    }
+    canonicalSystemRoot = realpathSync(systemRoot);
+    const expectedSystemRoot = join(canonicalRoot, ".system");
+    if (canonicalSystemRoot !== expectedSystemRoot) {
+      throw new Error("the .system directory resolved outside its trusted subtree");
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") {
+      throw new Error(`leaf Codex system-skill root could not be resolved: ${error.message || error}`);
+    }
+  }
+
+  function isSystemPath(path) {
+    return canonicalSystemRoot !== null
+      && (path === canonicalSystemRoot || path.startsWith(`${canonicalSystemRoot}${sep}`));
+  }
+
+  function visit(directory, depth = 0, isRoot = false) {
+    let resolvedDirectory;
+    try {
+      resolvedDirectory = realpathSync(directory);
+    } catch (error) {
+      if (isRoot && (error?.code === "ENOENT" || error?.code === "ENOTDIR")) return;
+      throw new Error(`leaf Codex skill directory could not be resolved: ${error.message || error}`);
+    }
+    if (isSystemPath(resolvedDirectory)) return;
+    if (visited.has(resolvedDirectory)) return;
+    if (depth > maxDepth) {
+      throw new Error(`leaf Codex skill scan exceeded maximum depth ${maxDepth}`);
+    }
+    visited.add(resolvedDirectory);
+    directoriesScanned += 1;
+    if (directoriesScanned > maxDirectories) {
+      throw new Error(`leaf Codex skill scan exceeded maximum directory count ${maxDirectories}`);
+    }
+
+    let entries;
+    try {
+      entries = readdirSync(resolvedDirectory, { withFileTypes: true });
+    } catch (error) {
+      throw new Error(`leaf Codex skill directory could not be read: ${error.message || error}`);
+    }
+    for (const entry of entries) {
+      if (isRoot && entry.name === ".system") continue;
+      const path = join(resolvedDirectory, entry.name);
+      if (entry.isFile() && entry.name === "SKILL.md") {
+        found.push(path);
+        if (found.length > maxSkills) {
+          throw new Error(`leaf Codex isolation found more than ${maxSkills} user skills`);
+        }
+        continue;
+      }
+      let isDirectory = entry.isDirectory();
+      if (!isDirectory && entry.isSymbolicLink()) {
+        try {
+          isDirectory = statSync(path).isDirectory();
+        } catch (error) {
+          throw new Error(`leaf Codex skill symlink could not be inspected: ${error.message || error}`);
+        }
+      }
+      if (isDirectory) visit(path, depth + 1);
+    }
+  }
+
+  visit(canonicalRoot, 0, true);
+  return [...new Set(found)].sort();
+}
+
+export function resolveCodexHome(env = process.env, nativeHome = homedir()) {
+  return optionalWorkerSetting(env.CODEX_HOME) || join(nativeHome, ".codex");
+}
+
+export function disabledSkillsConfig(paths = []) {
+  if (!Array.isArray(paths) || paths.some((path) => typeof path !== "string" || !path)) {
+    throw new Error("disabled Codex skill paths must be non-empty strings");
+  }
+  const unique = [...new Set(paths)].sort();
+  if (unique.length > MAX_DISABLED_USER_SKILLS) {
+    throw new Error(
+      `leaf Codex isolation found ${unique.length} user skills; maximum is ${MAX_DISABLED_USER_SKILLS}`,
+    );
+  }
+  if (!unique.length) return null;
+  const value = `skills.config=[${unique
+    .map((path) => `{path=${JSON.stringify(path)},enabled=false}`)
+    .join(",")}]`;
+  if (value.length > MAX_DISABLED_SKILLS_CONFIG_CHARS) {
+    throw new Error(
+      `leaf Codex disabled-skill config is ${value.length} characters; maximum is ${MAX_DISABLED_SKILLS_CONFIG_CHARS}`,
+    );
+  }
+  return value;
+}
+
+/**
  * Build one isolated leaf-worker invocation.
  *
  * Native `--search` is the worker's evidence channel. User config is deliberately ignored:
  * otherwise every globally enabled plugin/MCP server is inherited and a leaf can call a
  * second Codex-backed search bridge, creating recursive workers and multi-minute nested
- * timeouts. Authentication still comes from CODEX_HOME according to the Codex CLI contract.
+ * timeouts. Plugins and apps are disabled at the CLI feature layer, while `runCodex` isolates
+ * the user's HOME skill roots and supplies per-skill disable overrides for personal Skills in
+ * the shared CODEX_HOME.
  */
 export function codexWorkerArgs(
   outFile,
   dataDir = DATA_DIR,
-  { search = true, outputSchema = null, model = null, reasoningEffort = null } = {},
+  {
+    search = true,
+    outputSchema = null,
+    model = null,
+    reasoningEffort = null,
+    disabledSkillPaths = [],
+  } = {},
 ) {
   const workerConfig = codexWorkerConfig({
     ALPHACOUNCIL_AGENT_CODEX_MODEL: model || "",
     ALPHACOUNCIL_AGENT_CODEX_REASONING_EFFORT: reasoningEffort || "",
   });
+  const skillConfig = disabledSkillsConfig(disabledSkillPaths);
   return [
     ...(search ? ["--search"] : []),
     "-s",
@@ -340,6 +495,15 @@ export function codexWorkerArgs(
     ...(workerConfig.reasoning_effort
       ? ["-c", `model_reasoning_effort=${workerConfig.reasoning_effort}`]
       : []),
+    "--disable",
+    "plugins",
+    "--disable",
+    "apps",
+    "--disable",
+    "tool_suggest",
+    "--disable",
+    "multi_agent",
+    ...(skillConfig ? ["-c", skillConfig] : []),
     "exec",
     "--ignore-user-config",
     "--ephemeral",
@@ -376,16 +540,66 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         : {}),
     });
     mkdirSync(workerDataDir, { recursive: true });
-    // Some Codex builds still start installed MCP plugins even with --ignore-user-config.
-    // A nested AlphaCouncil server must never scan or recover the parent run. Isolate only
-    // plugin runtime data; authentication still comes from the caller's CODEX_HOME and the
-    // worker's output/cwd remain in workerDataDir.
+    // `--ignore-user-config` does not suppress filesystem Skills. Keep the caller's CODEX_HOME
+    // so all concurrent ChatGPT OAuth workers share one refresh state, but move HOME and
+    // USERPROFILE so ~/.agents Skills cannot reach the child. Installed plugins are disabled by
+    // codexWorkerArgs, and personal CODEX_HOME Skills are disabled with exact config entries.
     const ownsLeafRuntimeDir = !runtime.leafRuntimeDir;
-    const leafRuntimeDir = runtime.leafRuntimeDir
-      || mkdtempSync(join(runtime.leafRuntimeRoot || tmpdir(), "alphacouncil-leaf-"));
+    let leafRuntimeDir = runtime.leafRuntimeDir || null;
+    let leafUserHome;
+    const sourceCodexHome = runtime.sourceCodexHome
+      || resolveCodexHome(runtimeEnv, runtime.nativeHome || homedir());
+    let disabledSkillPaths;
+    const cleanupOwnedLeaf = () => {
+      if (!ownsLeafRuntimeDir || !leafRuntimeDir) return true;
+      try {
+        rmSync(leafRuntimeDir, { recursive: true, force: true });
+        return !existsSync(leafRuntimeDir);
+      } catch {
+        return false;
+      }
+    };
+    try {
+      leafRuntimeDir = leafRuntimeDir
+        || mkdtempSync(join(runtime.leafRuntimeRoot || tmpdir(), "alphacouncil-leaf-"));
+      leafUserHome = join(leafRuntimeDir, "home");
+      mkdirSync(leafUserHome, { recursive: true });
+      disabledSkillPaths = runtime.disabledSkillPaths
+        || discoverNonSystemCodexSkills(sourceCodexHome);
+      // Validate the command-line envelope during setup so a pathological skill inventory
+      // fails before spawn and the owned leaf directory is still removed.
+      disabledSkillsConfig(disabledSkillPaths);
+    } catch (error) {
+      const leafCleanupSucceeded = cleanupOwnedLeaf();
+      resolvePromise({
+        ok: false,
+        code: null,
+        text: "",
+        stderr: `leaf Codex isolation setup failed: ${error.message || error}`,
+        stdout: "",
+        outFile: null,
+        timedOut: false,
+        isolation_setup_error: true,
+        ...(!leafCleanupSucceeded ? { leaf_cleanup_pending: true } : {}),
+        timing: {
+          started_at: null,
+          finished_at: null,
+          elapsed_ms: 0,
+          timed_out: false,
+          forced_settle: false,
+          pid: null,
+          outcome: "not_started",
+          duration_scope: "local_child_spawn_to_settlement_wall_time",
+        },
+      });
+      return;
+    }
     const childEnv = {
       ...runtimeEnv,
       ALPHACOUNCIL_AGENT_DATA_DIR: leafRuntimeDir,
+      CODEX_HOME: sourceCodexHome,
+      HOME: leafUserHome,
+      USERPROFILE: leafUserHome,
     };
     const outFile = join(workerDataDir, `codex-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
     const args = codexWorkerArgs(outFile, workerDataDir, {
@@ -393,8 +607,8 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       outputSchema: runtime.outputSchema || null,
       model: workerConfig.model,
       reasoningEffort: workerConfig.reasoning_effort,
+      disabledSkillPaths,
     });
-    const invocation = codexInvocation(args, process.platform, childEnv);
     const spawnWorker = runtime.spawn || spawn;
     const stopWorker = runtime.stopChild || stopChild;
     const killGraceMs = Number.isFinite(runtime.sigkillGraceMs)
@@ -402,6 +616,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       : LIMITS.SIGKILL_GRACE_MS;
     let child;
     try {
+      const invocation = codexInvocation(args, process.platform, childEnv);
       child = spawnWorker(invocation.command, invocation.args, {
         cwd: workerDataDir,
         stdio: ["pipe", "pipe", "pipe"],
@@ -412,9 +627,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       // A synchronous ENOENT/EACCES never crossed a process boundary. Resolve it as a
       // not_started attempt after cleanup so every caller receives the same result envelope.
       try { unlinkSync(outFile); } catch {}
-      if (ownsLeafRuntimeDir) {
-        try { rmSync(leafRuntimeDir, { recursive: true, force: true }); } catch {}
-      }
+      const leafCleanupSucceeded = cleanupOwnedLeaf();
       resolvePromise({
         ok: false,
         code: null,
@@ -424,6 +637,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         outFile,
         timedOut: false,
         spawn_error: true,
+        ...(!leafCleanupSucceeded ? { leaf_cleanup_pending: true } : {}),
         timing: {
           started_at: null,
           finished_at: null,
@@ -485,11 +699,10 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       } catch {
         // Codex may never have created it (spawn error, immediate timeout).
       }
-      if (ownsLeafRuntimeDir) {
-        try { rmSync(leafRuntimeDir, { recursive: true, force: true }); } catch {}
-      }
+      const leafCleanupSucceeded = cleanupOwnedLeaf();
       resolvePromise({
         ...value,
+        ...(!leafCleanupSucceeded ? { leaf_cleanup_pending: true } : {}),
         timing: {
           started_at: startedAt,
           finished_at: finishedAt,
@@ -545,6 +758,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
     child.on("close", (code) => {
       if (settled) {
         try { unlinkSync(outFile); } catch {}
+        cleanupOwnedLeaf();
         return;
       }
       let output = { text: "", output_bytes: 0, output_too_large: false };

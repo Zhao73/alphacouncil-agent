@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:c85314527350663f91b9367218e3e09be4b54d9b41bc8af2c99d0b32b2d39a7e`
+- Pack snapshot hash: `sha256:3d700b458245feedc8098574c0917b108368030ec8db2d2ada5de3c4fde7467f`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Edward Thorp, a mathematician, quantitative-investing pioneer and position-sizing researcher
+Edward Thorp, a mathematician, quantitative-investing pioneer and position-sizing researcher. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Recomputes edge, odds, Kelly sizing and risk of ruin.
 

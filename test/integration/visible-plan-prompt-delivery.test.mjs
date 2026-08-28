@@ -19,6 +19,7 @@ import { startServer, structured } from "../helpers/rpc-client.mjs";
 let dataDir;
 let smallServer;
 let tinyBudgetServer;
+const AS_OF = "2026-08-28";
 
 before(async () => {
   dataDir = makeDataDir();
@@ -62,11 +63,13 @@ async function plan(server, {
   }));
   return structured(await server.callTool("plan_visible_run", {
     symbol,
+    as_of: AS_OF,
     language: "en",
     prompt,
     run_id: runId,
     tasks,
     grounding: {
+      gathered_at: `${AS_OF}T12:00:00Z`,
       facts_unavailable: true,
       instrument: {
         symbol,
@@ -79,6 +82,74 @@ async function plan(server, {
     },
     selection_receipt: confirmed.selection_receipt,
   }));
+}
+
+function source(id, title, url) {
+  return { id, title, url, published_at: AS_OF, retrieved_at: AS_OF };
+}
+
+function nonCompanyEvidencePacket(task) {
+  const packet = {
+    summary: `${task} completed a bounded fund-lookthrough fixture with explicit source lineage.`,
+    claims: [{
+      claim: `${task} records one material fund-lookthrough observation for the downstream prompt lifecycle.`,
+      claim_type: "event_or_observation",
+      evidence: "The dated fixture source directly supports the bounded observation.",
+      confidence: "medium",
+      source_ids: ["S1"],
+    }],
+    metrics: { fixture_value: 1 },
+    sources: [source("S1", `${task} fund fixture source`, `https://example.com/fund/${task}`)],
+    open_questions: [],
+    coverage_items: expectedCoverageItems(task).map((id) => ({
+      id,
+      status: "covered",
+      source_ids: ["S1"],
+      note: "The dated fixture source covers this optional contract item.",
+    })),
+    confidence: "medium",
+    information_richness: "B",
+  };
+  if (task === "news_industry_management") {
+    const regulatorUrl = "https://regulator.example/fund-filing";
+    const issuerUrl = "https://issuer.example/fund-news";
+    const regulator = {
+      title: "Regulator fund fixture filing",
+      published_at: AS_OF,
+      url: regulatorUrl,
+      source_id: "S1",
+    };
+    const issuer = {
+      title: "Issuer fund fixture release",
+      published_at: AS_OF,
+      url: issuerUrl,
+      source_id: "S2",
+    };
+    packet.sources = [
+      source("S1", regulator.title, regulatorUrl),
+      source("S2", issuer.title, issuerUrl),
+    ];
+    packet.official_source_coverage = {
+      status: "complete",
+      regulator: {
+        status: "complete",
+        entry_url: "https://regulator.example/fund-filings",
+        checked_through: AS_OF,
+        latest_dated_item: regulator,
+        dated_items_checked: [regulator],
+        gap: null,
+      },
+      issuer: {
+        status: "complete",
+        entry_url: "https://issuer.example/fund-newsroom",
+        checked_through: AS_OF,
+        latest_dated_item: issuer,
+        dated_items_checked: [issuer],
+        gap: null,
+      },
+    };
+  }
+  return packet;
 }
 
 const allAgents = (planned) => [
@@ -133,7 +204,14 @@ test("an operating-company full plan keeps all prompts file-backed until the dos
   for (const agent of planned.debate_agents) {
     const written = readFileSync(agent.prompt_file, "utf8");
     assert.match(written, /operating_company_dossier_planning_placeholder_v1/u);
+    assert.match(written, /re-read this agent's refreshed prompt_file/iu);
+    assert.doesNotMatch(written, /(?:must|should) (?:paste|append) the completed Evidence JSON/iu);
     assert.doesNotMatch(written, /evidence\.json|company_dossier\.json|\/runs\//iu);
+  }
+  for (const agent of planned.master_agents) {
+    const written = readFileSync(agent.prompt_file, "utf8");
+    assert.match(written, /re-read this (?:worker's|method seat's) refreshed prompt_file/iu);
+    assert.doesNotMatch(written, /(?:must|should) (?:paste|append) the completed Evidence JSON/iu);
   }
 });
 
@@ -150,6 +228,40 @@ test("a small non-company plan still returns prompt copies inline as well as on 
   for (const agent of allAgents(planned)) {
     const written = readFileSync(agent.prompt_file, "utf8").replace(/\n$/, "");
     assert.equal(promptOf(agent), written, `${agent.role} inline copy must match the file`);
+  }
+});
+
+test("a non-company evidence barrier regenerates method, debate, and PM prompt files", async () => {
+  const planned = await plan(smallServer, {
+    symbol: "SPY",
+    runId: `PROMPT-FUND-REFRESH-${process.pid}`,
+    masters: ["master_buffett"],
+    tasks: ["market_data"],
+    researchModel: "fund_lookthrough",
+  });
+  const downstream = [...planned.master_agents, ...planned.debate_agents];
+  const before = new Map(downstream.map((agent) => [
+    agent.role,
+    readFileSync(agent.prompt_file, "utf8"),
+  ]));
+
+  for (const task of DEFAULT_TASKS) {
+    structured(await smallServer.callTool("record_visible_packet", {
+      run_id: planned.run.run_id,
+      task,
+      thread_id: `thread-${planned.run.run_id}-${task}`,
+      thread_title: `AlphaCouncil Agent SPY ${task} evidence thread`,
+      packet: nonCompanyEvidencePacket(task),
+    }));
+  }
+
+  for (const agent of downstream) {
+    const afterBarrier = readFileSync(agent.prompt_file, "utf8");
+    assert.notEqual(afterBarrier, before.get(agent.role), `${agent.role} must refresh after all fund packets`);
+    assert.match(afterBarrier, /market_data:S1/u, `${agent.role} must receive the completed packet evidence`);
+    assert.match(afterBarrier, /SERVER-REFRESHED (?:METHOD|DEBATE) INPUT/u, `${agent.role} lifecycle marker`);
+    assert.match(afterBarrier, /(?:Do not|without) past(?:e|ing) or append(?:ing)? Evidence JSON/iu,
+      `${agent.role} must forbid manual evidence artifact stitching`);
   }
 });
 

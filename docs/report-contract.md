@@ -360,19 +360,20 @@ artifact and all 52 coverage rows. An all-scope run freezes the three supplement
 the same revision, so the dossier contains eight packets for `core` and eleven for `all`. Every
 mandatory downstream consumer is bound to that exact revision and hash:
 
-- for a confirmed `all` selection, all 26 active method seats read the full dossier; for another
-  valid selection, every selected method seat does the same;
-- Bull and Bear in every required debate round receive a server-generated decision projection;
-  and
-- the portfolio manager receives that same projection contract.
+- for a confirmed `all` selection, all 26 active method seats receive a server-generated,
+  packet-complete decision projection; for another valid selection, every selected method seat
+  receives the same contract;
+- Bull and Bear in every required debate round receive that decision projection; and
+- the portfolio manager receives the same projection contract.
 
 Before each consumer prompt is created, the runtime re-reads and re-hashes the complete artifact.
-Method seats then receive the full path because their contract must account for every frozen
-packet. Debate and PM workers instead receive `operating_company_dossier_decision_projection_v1`: a bounded
-projection with every packet claim, every source referenced by a claim, coverage row or
+Every method, debate and PM worker receives
+`operating_company_dossier_decision_projection_v1`: a bounded projection with every packet claim,
+every source referenced by a claim, coverage row or
 acquisition disposition, all 52 coverage outcomes, frozen acquisition dispositions, complete packet metrics,
 explicit gaps, per-packet content hashes and the full dossier hash. Raw acquisition payloads and
-large time-series bodies remain in the audit artifact and are not reopened on every debate turn.
+large time-series bodies remain in the audit artifact and are not reopened by each of the 26
+method workers or on every debate turn.
 Successful acquisition attempts retain their deduplicated `attempt_source_ids`, even when the
 full successful-attempt prose is omitted; unavailable routes retain the full bounded attempt
 record. The projection is derived only from the just-verified disk artifact, has its own deterministic
@@ -392,9 +393,11 @@ does not proceed past the relevant evidence, method, debate or PM barrier. A cha
 source creates a new dossier revision and invalidates acknowledgements to the old hash; it is
 never silently appended behind a previously frozen decision.
 
-The acknowledgement proves which snapshot was delivered and bound to the output. It does not,
-by itself, prove that a model reasoned over every byte. Material figures and conclusions still
-need scoped source IDs, and the report must preserve the dossier's explicit gaps and conflicts.
+The acknowledgement records which full-dossier revision the output declared and binds accepted
+packet dispositions to that frozen manifest. It does not separately acknowledge the bounded
+`projection_hash`, prove transport delivery, or prove that a model reasoned over every byte.
+Material figures and conclusions still need source IDs from the exact projection exposed to that
+worker, and the report must preserve the dossier's explicit gaps and conflicts.
 
 ### Deterministic-method input boundary
 
@@ -405,9 +408,9 @@ lineage. They do not parse arbitrary dossier prose, raw documents or an analyst'
 claim. Binding the dossier hash into a method execution record proves snapshot identity; it
 does not prove that every dossier field affected the frozen stance.
 
-The isolated method explanation worker may read the full dossier after the deterministic
-stance is frozen, but it may only explain or challenge the evidence and may not change that
-stance or invent a typed fact. A dossier fact that has no valid typed-fact adapter remains
+After the deterministic stance is frozen, the isolated method explanation worker receives the
+server-verified packet-complete decision projection. It may only explain or challenge the
+evidence and may not change that stance or invent a typed fact. A dossier fact that has no valid typed-fact adapter remains
 visible to the explanation, Bull/Bear and PM, while the deterministic method records it as an
 unavailable input or returns `out_of_scope` when its own critical contract requires it. A real
 `full-evidence-input-v1` claim requires the separate case wrapper, typed fact pack, source,
@@ -515,10 +518,13 @@ The tier moves every per-stage cap together with the total, because the per-stag
 bound each worker. The configured stage allocation fits inside its ceiling, but that arithmetic
 does not establish successful completion or a measured end-to-end duration.
 
-For the default, unlowered `fast` path, those lifecycle caps are split into a primary attempt plus a reserved bounded retry
-or no-search repair: evidence `220s + 20s`, method `112s + 8s`, each debate side
-`70s + 15s`, and PM `75s + 15s`. The split never adds time to the table above: primary,
-timeout retry and parse repair all debit the same per-seat or per-round wall clock. Fast also
+For the default, unlowered `fast` path, evidence uses `220s + 20s`, each debate side uses
+`70s + 15s`, and PM uses `75s + 15s` for a primary plus a bounded timeout/format-repair
+reserve. A method voice instead gets a `120s primary with no cold timeout retry`: live Work
+evidence showed that a fresh process could not finish in the former eight-second reserve, so
+an early successful primary may spend only its remaining lifecycle on no-search format repair.
+These attempts and repairs never add time to the table above: all debit the same per-seat or
+per-round wall clock. Fast also
 uses a recorded stage-aware reasoning profile (`low` evidence/method/debate, `medium` PM,
 `none` repair). It does not reduce the evidence, method, debate or report contracts. The
 `gpt-5.6-sol` profile rejects unsupported effort values before worker launch.

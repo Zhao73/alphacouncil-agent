@@ -32,15 +32,55 @@ test("windows invocation goes through cmd.exe so codex.cmd resolves", () => {
   assert.ok(invocation.args[3].endsWith(" -"), "prompt must still be read from stdin");
 });
 
+test("windows invocation fails closed before cmd expansion or the 8191-character boundary", () => {
+  assert.throws(
+    () => codexInvocation(["exec", "-C", "C:\\Users\\%USERNAME%\\alpha"], "win32", {}),
+    /cannot contain percent signs/u,
+  );
+  assert.throws(
+    () => codexInvocation(["exec", "x".repeat(7800)], "win32", {}),
+    /command line is .* maximum is 7800/u,
+  );
+});
+
+test("Codex home resolution ignores conflicting shell HOME unless CODEX_HOME is explicit", () => {
+  assert.equal(
+    codexWorker.resolveCodexHome(
+      { HOME: "/c/Users/MSYS", USERPROFILE: "C:\\Users\\Native" },
+      "/native/home",
+    ),
+    "/native/home/.codex",
+  );
+  assert.equal(
+    codexWorker.resolveCodexHome(
+      { CODEX_HOME: "/explicit/codex", HOME: "/wrong/home" },
+      "/native/home",
+    ),
+    "/explicit/codex",
+  );
+});
+
 test("leaf Codex workers ignore user plugins while retaining native web search", () => {
   assert.equal(typeof codexWorker.codexWorkerArgs, "function");
-  const args = codexWorker.codexWorkerArgs("/tmp/worker-output.json", "/tmp/alpha-data");
+  const skillPath = "/tmp/user-skill/SKILL.md";
+  const args = codexWorker.codexWorkerArgs("/tmp/worker-output.json", "/tmp/alpha-data", {
+    disabledSkillPaths: [skillPath],
+  });
   assert.ok(args.includes("--search"), "native live web search must remain available");
   assert.ok(args.includes("--ignore-user-config"), "global plugins and MCP servers must not reach leaf workers");
   assert.equal(args.filter((arg) => arg === "--ignore-user-config").length, 1);
   assert.ok(
     args.indexOf("--ignore-user-config") > args.indexOf("exec"),
     "--ignore-user-config is an exec-only flag and must follow the exec subcommand",
+  );
+  for (const feature of ["plugins", "apps", "tool_suggest", "multi_agent"]) {
+    const index = args.indexOf(feature);
+    assert.ok(index > 0 && args[index - 1] === "--disable", `${feature} must be disabled`);
+    assert.ok(index < args.indexOf("exec"), `${feature} is a global feature flag`);
+  }
+  assert.ok(
+    args.includes(`skills.config=[{path=${JSON.stringify(skillPath)},enabled=false}]`),
+    "personal skills in the shared auth home must be disabled explicitly",
   );
 });
 
@@ -77,7 +117,7 @@ test("leaf workers can pin an auditable model and reasoning effort", () => {
     model: config.model,
     reasoningEffort: config.reasoning_effort,
   });
-  assert.deepEqual(args.slice(args.indexOf("-m"), args.indexOf("exec")), [
+  assert.deepEqual(args.slice(args.indexOf("-m"), args.indexOf("-m") + 4), [
     "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=max",
   ]);
 });

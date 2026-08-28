@@ -18,8 +18,8 @@ test("public fast-pace contracts stay aligned with the executable budget", () =>
   assert.equal(configuredMinutes, "14.3");
   assert.equal(selectorMinutes, 14);
   assert.equal(methodMinutes, 2);
-  assert.equal(primarySeconds, 112);
-  assert.equal(reserveSeconds, 8);
+  assert.equal(primarySeconds, 120);
+  assert.equal(reserveSeconds, 0);
 
   const skill = read("skills/alphacouncil-agent/SKILL.md");
   assert.match(skill, /method 2\/3\/4\.25 minutes per seat/u);
@@ -27,7 +27,7 @@ test("public fast-pace contracts stay aligned with the executable budget", () =>
 
   const contract = read("docs/report-contract.md");
   assert.ok(contract.includes(`| \`fast\` | 15 min | ${configuredMinutes} min | not validated | 4 min | ${methodMinutes} min | 1.4 min | 1.5 min |`));
-  assert.ok(contract.includes(`method \`${primarySeconds}s + ${reserveSeconds}s\``));
+  assert.ok(contract.includes(`\`${primarySeconds}s primary with no cold timeout retry\``));
 
   const install = read("docs/INSTALL.md");
   assert.match(install, new RegExp(`are ${selectorMinutes}, 25 and 58 minutes; observed successful completion remains unvalidated`, "u"));

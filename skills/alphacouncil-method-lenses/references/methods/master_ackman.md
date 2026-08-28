@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:1705fd189a171169771c1feb6493eac23f94f813646a0a81e710dffa7e819b66`
+- Pack snapshot hash: `sha256:0ac391005c9f6fa399b0ab1a9aec3e25b322e06894101bb4a7c5307bcc045013`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Bill Ackman, Pershing Square founder and concentrated activist investor
+Bill Ackman, Pershing Square founder and concentrated activist investor. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Looks for a value gap, governance or capital-allocation levers, and an executable catalyst path.
 

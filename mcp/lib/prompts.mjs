@@ -10,6 +10,7 @@ import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/
 import { intentsForStance } from "./voice.mjs";
 import {
   companyDossierDecisionProjection,
+  companyDossierDecisionProjectionSourceScope,
   companyDossierPacketAckTemplate,
   companyDossierPromptBlock,
   requiresOperatingCompanyDossier,
@@ -398,9 +399,15 @@ export function masterPrompt(masterId, run) {
  * One isolated worker per selected physical v3 method, after its structured decision is
  * frozen. The worker may explain and challenge the evidence, but it cannot vote again.
  */
-export function methodVoiceOutputContract(masterId, run, frozenOpinion) {
+export function methodVoiceOutputContract(masterId, run, frozenOpinion, {
+  projection = null,
+} = {}) {
   const language = run.language || "English";
-  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion);
+  if (requiresOperatingCompanyDossier(run) && !projection
+    && run.entry_tool === "plan_visible_run" && !run?.company_dossier?.content_hash) {
+    return "PLANNING-ONLY METHOD OUTPUT PLACEHOLDER: this copy is not executable. After the evidence and verification barrier, re-read the refreshed prompt_file for the exact projection-bound source list, packet acknowledgements, and JSON output contract.";
+  }
+  const allowedSourceIds = methodVoiceAllowedSourceIds(run, frozenOpinion, { projection });
   const stance = frozenOpinion?.stance || "out_of_scope";
   const confidence = ["high", "medium", "low"].includes(frozenOpinion?.confidence)
     ? frozenOpinion.confidence
@@ -456,7 +463,31 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
   if (!persona || persona.kind !== "master") throw new Error(`unknown master persona: ${masterId}`);
   const language = run.language || "English";
   const values = { symbol: run.symbol, as_of: run.as_of, language };
-  const evidence = JSON.stringify(run.council_mode === "quick" ? compactQuickEvidence(run) : compactEvidence(run));
+  const operatingCompanyDossierRequired = run.council_mode !== "quick"
+    && requiresOperatingCompanyDossier(run);
+  const frozenDossierReady = Boolean(
+    run?.company_dossier?.path && run?.company_dossier?.content_hash,
+  );
+  // Visible-host planning deliberately creates method templates before evidence exists. Keep
+  // that phase side-effect free, then refresh the templates after the evidence barrier freezes
+  // the dossier. Every non-planning consumer still fails closed on a missing artifact.
+  if (operatingCompanyDossierRequired && !frozenDossierReady && run.entry_tool !== "plan_visible_run") {
+    companyDossierDecisionProjection(run);
+  }
+  const operatingCompanyProjection = operatingCompanyDossierRequired && frozenDossierReady
+    ? companyDossierDecisionProjection(run)
+    : null;
+  const frozenEvidenceSourceIds = frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [];
+  const projectedSourceIds = operatingCompanyProjection
+    ? new Set(companyDossierDecisionProjectionSourceScope(run, operatingCompanyProjection).source_ids)
+    : null;
+  const voiceEvidenceSourceIds = projectedSourceIds
+    ? frozenEvidenceSourceIds.filter((id) => projectedSourceIds.has(id))
+    : frozenEvidenceSourceIds;
+  const evidence = JSON.stringify(
+    operatingCompanyProjection
+      || (run.council_mode === "quick" ? compactQuickEvidence(run) : compactEvidence(run)),
+  );
   return [
     `You are the dedicated, isolated method-seat explanation worker for ${personaTitle(persona, language)} (${masterId}) in the ${run.symbol} council.`,
     `Write every reader-facing field in ${language}. Keep stable IDs, tickers and source IDs unchanged.`,
@@ -474,13 +505,18 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
       native_decision: frozenOpinion?.native_decision,
       disqualifiers_triggered: frozenOpinion?.disqualifiers_triggered || [],
       what_would_change_my_mind: frozenOpinion?.what_would_change_my_mind || [],
-      evidence_source_ids: frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [],
+      evidence_source_ids: voiceEvidenceSourceIds,
+      ...(projectedSourceIds
+        ? { deterministic_input_provenance_source_count: frozenEvidenceSourceIds.length }
+        : {}),
       method_source_ids: frozenOpinion?.method_source_ids || [],
       deterministic_core_hash: frozenOpinion?.deterministic_core_hash || null,
       frozen_decision_hash: frozenOpinion?.frozen_decision_hash || null,
     })}`,
     `Method instructions (for explanation only):\n${render(personaPrompt(persona, language), values)}`,
-    companyDossierPromptBlock(run),
+    companyDossierPromptBlock(run, {
+      consumer: operatingCompanyProjection ? "method_projection" : "full",
+    }),
     hardVerificationPromptBlock(run, masterId),
     [
       "MANDATORY VOICE MODE: every one of the five `voice` fields must speak directly in the first person as the METHOD -- \"I look for X; I see Y; therefore I would Z\". A neutral third-person summary such as \"Buffett would...\" is invalid.",
@@ -500,7 +536,17 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
       ].join(" ")
       : "",
     `\`position_intent\` MUST be one of: ${intentsForStance(frozenOpinion?.stance).join(" | ")}. Those are the only intents the frozen stance admits; anything else is rejected without changing run state.`,
-    methodVoiceOutputContract(masterId, run, frozenOpinion),
+    methodVoiceOutputContract(masterId, run, frozenOpinion, {
+      projection: operatingCompanyProjection,
+    }),
+    operatingCompanyProjection
+      ? localized(language, {
+        en: "This refreshed prompt file is the complete evidence base for this worker. Do not paste or append Evidence JSON or any evidence, dossier, or run artifact.",
+        zh: "这份已刷新的提示文件就是本方法席的完整证据输入。不得再粘贴或附加 Evidence JSON 或任何证据、资料包或运行产物。",
+        ja: "この更新済みプロンプトファイルが、このワーカーの完全な証拠入力です。Evidence JSON や証拠・資料・実行成果物を貼り付けたり追加したりしないでください。",
+        ko: "이 갱신된 프롬프트 파일이 이 작업자의 전체 증거 입력입니다. Evidence JSON이나 증거·자료·실행 산출물을 붙여 넣거나 추가하지 마십시오.",
+      })
+      : "",
     paceShapingInstruction(run.council_pace, masterId, isChineseLanguage(language)),
     `Bounded shared evidence JSON: ${evidence}`,
   ].filter(Boolean).join("\n\n");

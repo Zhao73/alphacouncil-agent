@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:46446a98ae2b3e04cf96634923acb975ea0109a1cd833a44fe19f6adcded9999`
+- Pack snapshot hash: `sha256:7b2e1df3b5dba68dca224ac14185d2d963f87bba53ea22a33121d3b786e77773`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-George Soros, an investor known for reflexivity and global macro trading
+George Soros, an investor known for reflexivity and global macro trading. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Looks for feedback loops among prices, credit, policy and participant behavior, including their reversal trigger.
 

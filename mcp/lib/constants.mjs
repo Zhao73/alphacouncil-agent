@@ -440,12 +440,12 @@ export const COUNCIL_PACES = Object.freeze({
     // complete evidence packet. Keep this inside the 240-second seat lifecycle rather than
     // handing a late packet whatever few milliseconds happen to remain.
     evidence_repair_reserve_ms: 20 * 1000,
-    // The first same-day Work-gateway run completed 25/26 voices, while one silent worker used
-    // the full 82-second primary window and the bounded retry. Extending the shared lifecycle
-    // to two minutes gives the primary worker 107 seconds after repair/settlement reserves and
-    // still keeps the two-wave serial worst case inside the 15-minute total.
+    // Live Work-gateway runs completed 25/26 voices, but one silent worker consumed the old
+    // primary window and then received a cold retry too short to finish. Give one primary the
+    // complete two-minute lifecycle instead; a successful primary may still use whatever time
+    // remains for format repair. The two-wave serial worst case stays inside the 15-minute total.
     master_ms: 120 * 1000,
-    master_repair_reserve_ms: 8 * 1000,
+    master_repair_reserve_ms: 0,
     master_waves: 2,
     verifier_ms: 0,
     debate_ms: 85 * 1000,

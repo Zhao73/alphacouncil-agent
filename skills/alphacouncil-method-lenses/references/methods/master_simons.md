@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:d25f498e943c1237bdf68aaf391344e6b54aa90b98e9cc72c93ed5061085ef4b`
+- Pack snapshot hash: `sha256:f55b4fd230ddce714134cac88cc88802dc9f2dafa69ae7fe981953726e2fe3b6`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Jim Simons, a mathematician and quantitative-investing pioneer at Renaissance Technologies
+Jim Simons, a mathematician and quantitative-investing pioneer at Renaissance Technologies. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Prioritizes sample size, out-of-sample stability, multiple testing, turnover and trading costs.
 

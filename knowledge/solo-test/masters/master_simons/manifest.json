@@ -121,10 +121,10 @@
       "zh": "系统化信号、统计套利、组合研究与执行成本。"
     },
     "identity": {
-      "en": "Simons Lens; a method model, not the person's own words",
-      "ja": "Simons Lens。メソッドモデルであり、本人の発言や現在の見解ではない。",
-      "ko": "Simons Lens. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "西蒙斯视角；方法模型，非本人言论"
+      "en": "Simons Lens; a provisional project-derived method lens, not the person's own words or current view",
+      "ja": "Simons Lens。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。",
+      "ko": "Simons Lens. 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "西蒙斯视角；项目派生的临时方法视角，非本人言论或当前观点"
     },
     "method": {
       "en": "Admit only statistically testable signals that survive leakage controls, multiple testing, out-of-sample evaluation, turnover and trading costs.",

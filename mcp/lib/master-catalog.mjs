@@ -125,6 +125,19 @@ function langKey(language) {
   return "en";
 }
 
+function disclosedIdentity(identity, key) {
+  if (key === "zh") {
+    return `${identity}。这是项目派生的临时方法视角，不代表具名人物本人言论或当前观点。`;
+  }
+  if (key === "ja") {
+    return `${identity}。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではありません。`;
+  }
+  if (key === "ko") {
+    return `${identity}. 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아닙니다.`;
+  }
+  return `${identity}. This is a project-derived provisional method lens, not the named person's words or current view.`;
+}
+
 export function selectorCard(persona, language = "English") {
   const key = langKey(language);
   const fallbackTags = (persona?.philosophy_tags || persona?.tags || []).join(", ") || persona?.id || "method lens";
@@ -133,12 +146,12 @@ export function selectorCard(persona, language = "English") {
     const title = persona?.title?.en || persona?.id;
     card = key === "ja"
       ? [
-        `${title}。プロジェクト派生で、人による方法帰属の審査を受けていない暫定メソッド視点。本人の発言や現在の見解ではない。`,
+        `${title}の方法視点`,
         MASTER_SELECTOR_METHOD_LOCALES[persona.id][key],
         `適用領域（安定タグ）：${fallbackTags}`,
       ]
       : [
-        `${title}. 프로젝트에서 파생되었고 방법 귀속에 대한 인적 심사를 거치지 않은 임시 방법론 관점이다. 본인의 발언이나 현재 견해가 아니다.`,
+        `${title} 방법론 관점`,
         MASTER_SELECTOR_METHOD_LOCALES[persona.id][key],
         `적합 영역(안정 태그): ${fallbackTags}`,
       ];
@@ -150,7 +163,7 @@ export function selectorCard(persona, language = "English") {
       : key === "ko"
         ? [`${persona?.title?.en || persona?.id} 방법론 관점`, `중점 점검: ${fallbackTags}`, "문서화된 방법 범위의 질문에 적용"]
         : [`${persona?.title?.en || persona?.id} method lens`, `Focuses on: ${fallbackTags}.`, "Questions within the method's documented scope"]);
-  return { identity, method, best_for: bestFor };
+  return { identity: disclosedIdentity(identity, key), method, best_for: bestFor };
 }
 
 export function knownSelectorCardIds() {

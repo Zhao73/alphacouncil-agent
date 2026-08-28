@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:cc3b4e18789e1b805a78db9dcca6a522ae0490ec7c816698507217848beb4be5`
+- Pack snapshot hash: `sha256:e2695c5f874b707c1bc0c3bbbc79db54620520edf7a385a9094868171f4be03b`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Seth Klarman, a Baupost investor associated with capital-preservation value investing
+Seth Klarman, a Baupost investor associated with capital-preservation value investing. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Evaluates cash optionality, downside asset protection, catalysts and distressed recoveries.
 

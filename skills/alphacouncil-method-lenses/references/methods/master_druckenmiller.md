@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:08fb4dfab19fbfa88995b406d97058ba73c493d5d72388ecc9bd51ba651d9d38`
+- Pack snapshot hash: `sha256:6b57063fde227a5f79ae266f28c98ea7c4fa962f320cba834a9c192ed45f77a1`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Stanley Druckenmiller, an investor known for concentrated positioning around macro inflections
+Stanley Druckenmiller, an investor known for concentrated positioning around macro inflections. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Combines liquidity, revisions, price confirmation and 12-to-18-month inflections into asymmetric setups.
 

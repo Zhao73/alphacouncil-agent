@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:79f270de5ad76f060e3dee86f1364aaae579d3b2541462814afecbcc5a75d0c2`
+- Pack snapshot hash: `sha256:c2fe6e700778740c307b0799e6f3375283dd09b13d8d385879df136973e90341`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Cathie Wood, ARK Invest founder and disruptive-innovation thematic investor
+Cathie Wood, ARK Invest founder and disruptive-innovation thematic investor. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Connects technology cost curves, adoption, market size, company revenue, unit economics and five-year scenarios.
 

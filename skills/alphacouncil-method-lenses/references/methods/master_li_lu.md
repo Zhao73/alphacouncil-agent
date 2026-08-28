@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:fcf7bf9e69f118881dd25e37ff94455ee71f984606777fcb4aba98a2ab66232d`
+- Pack snapshot hash: `sha256:7beb40419a2bd7b32087c3751a747b4b963ce4bcd97a3427c44d5730ffc9f1ed`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Li Lu, founder of Himalaya Capital and a long-term value investor
+Li Lu, founder of Himalaya Capital and a long-term value investor. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Focuses on ten-year certainty, management integrity, civilization trends and permanent loss.
 

@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:5988e2da88dbef1d71cc0fb11c7dd283afa57a0edb9ad5166630f5cdfe32b14d`
+- Pack snapshot hash: `sha256:7f3384d5e5b1920e00854944f22f8429abc85a118d29c8871fe54414b2429145`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Benjamin Graham, a security-analysis pioneer and foundational value-investing thinker
+Benjamin Graham, a security-analysis pioneer and foundational value-investing thinker. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Builds an asset or earnings floor first, then requires a sufficient discount to that floor.
 

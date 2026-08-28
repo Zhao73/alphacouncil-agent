@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:5b4bd3b73bcc8d1b95123dc4d89d3cc6fff150018776c988a9516ec15070f8d8`
+- Pack snapshot hash: `sha256:535515885a862c7ec243291e02e9b11ac146a6ba92ac14baef1e44f5afc302ca`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Warren Buffett, Berkshire's long-time leader and a leading business-owner investor
+Warren Buffett, Berkshire's long-time leader and a leading business-owner investor. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Judges circle of competence, moat, owner earnings and capital allocation before considering price.
 

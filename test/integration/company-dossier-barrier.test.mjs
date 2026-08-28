@@ -324,6 +324,22 @@ test("operating-company dossier materializes only after the eight-packet barrier
     packet: evidencePacket(finalTask),
   }));
 
+  const refreshedMethod = planned.master_agents.find((agent) => agent.role === SELECTED_MASTER);
+  assert.ok(refreshedMethod?.prompt_file);
+  const refreshedMethodPrompt = readFileSync(refreshedMethod.prompt_file, "utf8");
+  assert.match(refreshedMethodPrompt, /server-verified method projection/iu);
+  assert.match(refreshedMethodPrompt, /complete evidence base/iu);
+  assert.doesNotMatch(refreshedMethodPrompt, /(?:must|should) (?:paste|append) the completed Evidence JSON/iu);
+  assert.doesNotMatch(refreshedMethodPrompt, /evidence\.json|company_dossier\.json|\/runs\//iu);
+
+  for (const agent of planned.debate_agents) {
+    const refreshedDebatePrompt = readFileSync(agent.prompt_file, "utf8");
+    assert.match(refreshedDebatePrompt, /server-verified decision projection/iu);
+    assert.match(refreshedDebatePrompt, /do not paste or append Evidence JSON/iu);
+    assert.doesNotMatch(refreshedDebatePrompt, /(?:must|should) (?:paste|append) the completed Evidence JSON/iu);
+    assert.doesNotMatch(refreshedDebatePrompt, /evidence\.json|company_dossier\.json|\/runs\//iu);
+  }
+
   const persisted = JSON.parse(readFileSync(evidencePath, "utf8"));
   const dossier = JSON.parse(readFileSync(dossierPath, "utf8"));
   assert.equal(persisted.packets.length, DEFAULT_TASKS.length);

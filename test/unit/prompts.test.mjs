@@ -169,6 +169,35 @@ test("operating-company debate cannot fall back when the frozen dossier is missi
   assert.doesNotMatch(planned, /evidence\.json|company_dossier\.json|\/runs\//iu);
 });
 
+test("operating-company method voices fail closed after planning when the frozen dossier is missing", async () => {
+  const { masterVoicePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "MISSING-METHOD-DOSSIER",
+    symbol: "ACME",
+    as_of: "2026-08-27",
+    language: "English",
+    council_mode: "full",
+    dry_run: false,
+    entry_tool: "analyze_symbol",
+    decision_requested: true,
+    tasks: [], packets: [], masters: ["master_buffett"], master_opinions: [],
+    grounding: { instrument: { research_model: "operating_company" } },
+  };
+  const frozen = { stance: "out_of_scope", verdict: "fixture", summary: "fixture" };
+  assert.throws(
+    () => masterVoicePrompt("master_buffett", run, frozen),
+    (error) => error?.data?.reason === "COMPANY_DOSSIER_ARTIFACT_INTEGRITY_FAILURE",
+  );
+
+  const planned = masterVoicePrompt("master_buffett", {
+    ...run,
+    execution_mode: "visible_host_threads",
+    entry_tool: "plan_visible_run",
+  }, frozen);
+  assert.match(planned, /main|method|evidence/iu);
+  assert.doesNotMatch(planned, /company_dossier\.json|\/runs\//iu);
+});
+
 test("a method voice receives frozen decision causality and hard verification corrections", async () => {
   const { masterVoicePrompt } = await import("../../mcp/lib/prompts.mjs");
   const run = {

@@ -42,4 +42,7 @@ test("Work gateway uses official stateless Streamable HTTP and a bounded chat su
   assert.match(guide, /not the 26\s+provisional method seats/u);
   assert.match(guide, /OAuth 2\.1\/PKCE/u);
   assert.match(guide, /not suitable for publication/u);
+  assert.match(guide, /share one\s+`CODEX_HOME`/u);
+  assert.match(guide, /never copied or forked/u);
+  assert.match(guide, /not user\s+authentication or tenant isolation for a public service/u);
 });

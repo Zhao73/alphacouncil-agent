@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:9c7b0c2e6dca7ffb1049c9b5adca0d3f2640c97f044265cc90a56824bfe3422c`
+- Pack snapshot hash: `sha256:7ce1510a655926c07f8f7ae7776a88ffb6327874a679df1f411f9ff692e21d1b`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Mohnish Pabrai, Pabrai Funds founder and Dhandho value investor
+Mohnish Pabrai, Pabrai Funds founder and Dhandho value investor. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Looks for low permanent-loss risk, high uncertainty, discrete catalysts and strongly asymmetric odds.
 

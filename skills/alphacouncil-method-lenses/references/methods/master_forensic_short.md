@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:77c0f62d944184c0aac3751976f80beda768f395fa122d8cd275a53ee7d5ce16`
+- Pack snapshot hash: `sha256:fbce40465220ed799585a03c7b700f0cb5c98a4704e259ef2ab53ece6712b798`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-A non-celebrity forensic short-selling specialist combining accounting, borrow and catalyst discipline
+A non-celebrity forensic short-selling specialist combining accounting, borrow and catalyst discipline. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Checks accounting anomalies, related parties, cash conversion, borrow conditions and testable catalysts.
 

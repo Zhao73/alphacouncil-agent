@@ -120,10 +120,10 @@
       "zh": "期权定价、波动率曲面、期权敏感度与相对价值。"
     },
     "identity": {
-      "en": "Natenberg Lens (Volatility Pricing); a method model, not the person's own words",
-      "ja": "Natenberg Lens (Volatility Pricing)。メソッドモデルであり、本人の発言や現在の見解ではない。",
-      "ko": "Natenberg Lens (Volatility Pricing). 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "纳坦伯格视角（波动率定价）；方法模型，非本人言论"
+      "en": "Natenberg Lens (Volatility Pricing); a provisional project-derived method lens, not the person's own words or current view",
+      "ja": "Natenberg Lens (Volatility Pricing)。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。",
+      "ko": "Natenberg Lens (Volatility Pricing). 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "纳坦伯格视角（波动率定价）；项目派生的临时方法视角，非本人言论或当前观点"
     },
     "method": {
       "en": "Evaluate option relative value through implied volatility, skew, term structure, Greeks, payoff structure and executable market-making constraints.",

@@ -123,10 +123,10 @@
       "zh": "全球宏观、流动性、盈利拐点与集中持仓。"
     },
     "identity": {
-      "en": "Druckenmiller Lens; a method model, not the person's own words",
-      "ja": "Druckenmiller Lens。メソッドモデルであり、本人の発言や現在の見解ではない。",
-      "ko": "Druckenmiller Lens. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "德鲁肯米勒视角；方法模型，非本人言论"
+      "en": "Druckenmiller Lens; a provisional project-derived method lens, not the person's own words or current view",
+      "ja": "Druckenmiller Lens。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。",
+      "ko": "Druckenmiller Lens. 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "德鲁肯米勒视角；项目派生的临时方法视角，非本人言论或当前观点"
     },
     "method": {
       "en": "Identify liquid macro and company inflections through liquidity, earnings revisions, price confirmation and asymmetric risk over a forward horizon.",

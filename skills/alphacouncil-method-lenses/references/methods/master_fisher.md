@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:afeb178b265ba3e5ff78fb412537becfcb8b4339286c2174fd0c083b66c3de6b`
+- Pack snapshot hash: `sha256:4619e0cfdd7e5cd29ea6470815fcfb97c22aa2a79ef38749a6bbc824c66214bf`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Phil Fisher, an investor and author known for scuttlebutt research and long-term growth quality
+Phil Fisher, an investor and author known for scuttlebutt research and long-term growth quality. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Triangulates customers, suppliers, competitors, research productivity and sales organization.
 

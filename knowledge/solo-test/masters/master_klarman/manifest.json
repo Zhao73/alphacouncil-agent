@@ -124,10 +124,10 @@
       "zh": "资本保全、困境价值、复杂证券与催化剂驱动价值。"
     },
     "identity": {
-      "en": "Klarman Lens; a method model, not the person's own words",
-      "ja": "Klarman Lens。メソッドモデルであり、本人の発言や現在の見解ではない。",
-      "ko": "Klarman Lens. 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "克拉曼视角；方法模型，非本人言论"
+      "en": "Klarman Lens; a provisional project-derived method lens, not the person's own words or current view",
+      "ja": "Klarman Lens。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。",
+      "ko": "Klarman Lens. 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "克拉曼视角；项目派生的临时方法视角，非本人言论或当前观点"
     },
     "method": {
       "en": "Seek absolute return with capital preservation through downside asset protection, cash optionality, catalysts and conservative recovery analysis.",

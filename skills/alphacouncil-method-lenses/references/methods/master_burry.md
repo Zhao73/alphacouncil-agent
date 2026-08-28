@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:f1c47a8bb2747f493e0aaef95979894854612b7ad965b354e049dafbf880f611`
+- Pack snapshot hash: `sha256:f2ad37b46d32d3b2d1ddd4b5861d4b3900b2f66502d3d8ffe92d7c86df24cecd`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Michael Burry, Scion founder and a contrarian investor known for primary-document research
+Michael Burry, Scion founder and a contrarian investor known for primary-document research. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Searches filings, capital structure, accounting choices, carry and mechanical mispricing for non-consensus setups.
 

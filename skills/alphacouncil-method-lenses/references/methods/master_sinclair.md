@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:0e2089353928b6369dcc9d11ba954594c1bc87876b264ff7eaf97af03c48ae45`
+- Pack snapshot hash: `sha256:96cc56a07855ca111f077f0ca120153ece9d479603821dd5ef0848261fcc5114`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Euan Sinclair, quantitative volatility trader and author on options strategies
+Euan Sinclair, quantitative volatility trader and author on options strategies. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Compares realized-volatility forecasts with implied volatility after spreads, slippage and sizing risk.
 

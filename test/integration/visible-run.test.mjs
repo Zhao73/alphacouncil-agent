@@ -25,6 +25,7 @@ const reviseRunId = `SELFTEST-REVISE-${process.pid}`;
 const finalizedRunId = `SELFTEST-FINALIZED-${process.pid}`;
 const reorderedFinalizationRunId = `SELFTEST-FINALIZED-REORDERED-${process.pid}`;
 const invalidFinalizationTargetRunId = `SELFTEST-FINALIZED-INVALID-TARGET-${process.pid}`;
+const methodLifecycleDisagreement = "METHOD-LIFECYCLE-DISAGREEMENT: the fund-flow inference exceeds the frozen evidence.";
 const recorded = {};
 
 const bullQuestions = [
@@ -394,7 +395,14 @@ before(async () => {
     agent.role,
     readFileSync(agent.prompt_file, "utf8"),
   ]));
-  recorded.master = structured(await recordMaster(completeRunId));
+  const bullPromptFile = recorded.plan.debate_agents
+    .find((agent) => agent.role === "bull_researcher").prompt_file;
+  recorded.preMethodBarrierBullPrompt = readFileSync(bullPromptFile, "utf8");
+  recorded.master = structured(await recordMaster(
+    completeRunId,
+    methodVoicePacket(completeRunId, { disagreements: [methodLifecycleDisagreement] }),
+  ));
+  recorded.postMethodBarrierBullPrompt = readFileSync(bullPromptFile, "utf8");
   // Round 2 cannot start until both Round-1 sides exist.
   recorded.outOfOrder = await recordRound(completeRunId, "bull_researcher", 2);
   await recordRound(completeRunId, "bull_researcher", 1);
@@ -665,6 +673,12 @@ test("a declined out-of-scope v3 seat still returns an independent first-person 
     assert.match(recorded.postBarrierPrompts[role], new RegExp(recorded.completeDossier.content_hash), `${role} prompt hash`);
     assert.match(recorded.postBarrierPrompts[role], /company_dossier_hash_ack/, `${role} prompt ack field`);
   }
+  assert.equal(recorded.master.method_barrier_complete, true);
+  assert.equal(recorded.master.refreshed_prompt_count, 3);
+  assert.notEqual(recorded.postMethodBarrierBullPrompt, recorded.preMethodBarrierBullPrompt,
+    "the final method voice must regenerate downstream debate prompts");
+  assert.match(recorded.postMethodBarrierBullPrompt, new RegExp(methodLifecycleDisagreement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(recorded.postMethodBarrierBullPrompt, /SERVER-REFRESHED DEBATE INPUT/u);
 });
 
 test("round ordering, exact questions, and conflicting replay fail closed", () => {

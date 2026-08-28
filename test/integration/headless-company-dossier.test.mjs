@@ -58,8 +58,10 @@ const lineJson = (prefix) => {
   const line = prompt.split("\\n").find((item) => item.startsWith(prefix));
   return line ? JSON.parse(line.slice(prefix.length)) : [];
 };
-const evidenceLine = prompt.split("\\n").find((item) => item.startsWith("Evidence JSON: "));
-const promptEvidence = evidenceLine ? JSON.parse(evidenceLine.slice("Evidence JSON: ".length)) : null;
+const evidencePrefixes = ["Evidence JSON: ", "Bounded shared evidence JSON: "];
+const evidenceLine = prompt.split("\\n").find((item) => evidencePrefixes.some((prefix) => item.startsWith(prefix)));
+const evidencePrefix = evidenceLine ? evidencePrefixes.find((prefix) => evidenceLine.startsWith(prefix)) : null;
+const promptEvidence = evidenceLine ? JSON.parse(evidenceLine.slice(evidencePrefix.length)) : null;
 
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   role,
@@ -69,6 +71,7 @@ appendFileSync(${JSON.stringify(log)}, JSON.stringify({
   dossier_hash: dossierHash,
   requires_full_dossier_read: /Read the JSON file in full before answering/iu.test(prompt),
   uses_server_verified_projection: /server-verified decision projection/iu.test(prompt),
+  uses_server_verified_method_projection: /server-verified method projection/iu.test(prompt),
   has_dossier_path: /company_dossier\\.json/iu.test(prompt),
   has_evidence_path: /evidence\\.json/iu.test(prompt),
   projection_contract: promptEvidence?.projection_contract || null,
@@ -426,9 +429,13 @@ test("headless operating-company full council freezes one dossier after typed gr
   const methodWorkers = downstreamWorkers.filter((entry) => entry.master);
   const decisionWorkers = downstreamWorkers.filter((entry) => !entry.master);
   assert.ok(methodWorkers.every((entry) => entry.outputSchema));
-  assert.ok(methodWorkers.every((entry) => entry.requires_full_dossier_read === true));
+  assert.ok(methodWorkers.every((entry) => entry.requires_full_dossier_read === false));
   assert.ok(methodWorkers.every((entry) => entry.uses_server_verified_projection === false));
-  assert.ok(methodWorkers.every((entry) => entry.has_dossier_path === true));
+  assert.ok(methodWorkers.every((entry) => entry.uses_server_verified_method_projection === true));
+  assert.ok(methodWorkers.every((entry) => entry.has_dossier_path === false));
+  assert.ok(methodWorkers.every((entry) => entry.has_evidence_path === false));
+  assert.ok(methodWorkers.every((entry) => entry.projection_contract === "operating_company_dossier_decision_projection_v1"));
+  assert.ok(methodWorkers.every((entry) => entry.projection_route_count === 52));
   assert.equal(decisionWorkers.length, 7, "six debate sides and one PM use the decision projection");
   assert.ok(decisionWorkers.every((entry) => entry.requires_full_dossier_read === false));
   assert.ok(decisionWorkers.every((entry) => entry.uses_server_verified_projection === true));

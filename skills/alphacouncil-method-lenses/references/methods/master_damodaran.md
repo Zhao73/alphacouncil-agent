@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:51d92197907c4ae0a3106a121bdcb65c81b6048a2786d304e5b565bd7ff313ac`
+- Pack snapshot hash: `sha256:c889a3b7564a4ee912e9e601a6f3d9d4a5339d244ff9fc505f7e8c1fa9570fc1`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Aswath Damodaran, NYU Stern professor and valuation researcher
+Aswath Damodaran, NYU Stern professor and valuation researcher. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Translates a business story into growth, margins, reinvestment, risk and cash flow to produce a value range.
 

@@ -6,22 +6,32 @@ Notable changes per release. Dates are UTC.
 
 ### Fixed
 
-- Operating-company Bull/Bear and portfolio-manager workers no longer reopen the multi-megabyte
+- Leaf `codex exec` workers now share the caller's one authenticated `CODEX_HOME` while using an
+  isolated temporary user home. `--ignore-user-config` skips `config.toml` but still discovers
+  filesystem Skills; a live Work-gateway run showed an earnings worker spending its entire
+  evidence lifecycle reading an unrelated global web-routing Skill. The runtime now disables
+  plugins, apps, tool suggestions, nested agents, and every non-system Skill under the shared
+  Codex home without copying ChatGPT OAuth refresh credentials. The temporary user home is
+  removed after settlement.
+- Operating-company method, Bull/Bear and portfolio-manager workers no longer reopen the multi-megabyte
   raw audit dossier on every turn. The server still re-reads and re-hashes the complete frozen
   artifact before each worker, then injects a bounded decision projection containing every
   packet claim; every source referenced by claims, metrics, coverage rows, acquisition outcomes
   or unavailable attempts, including source-only provenance from successful acquisition attempts;
   all 52 coverage outcomes; frozen acquisition data; explicit gaps and
-  packet/dossier hashes. Selected method seats keep
-  the mandatory full-dossier read and per-packet acknowledgements. Failed debate attempts are no
+  packet/dossier hashes. Selected method seats keep mandatory per-packet acknowledgements over
+  that projection. Failed debate attempts are no
   longer counted as completed rounds in terminal status.
 - Malformed acquisition `attempts` values now reach the typed ledger repair gate with an exact
   field path instead of escaping as an opaque JavaScript `.map` failure; headless prompts also
   state explicitly that every acquisition attempt is an object inside an array.
-- Fast method voices now receive a 120-second shared primary/retry lifecycle. The first
-  same-day Work-gateway run completed all eight evidence seats and 25 of 26 isolated method
-  voices in 385 seconds, but one silent method worker exhausted the former 95-second lifecycle.
-  The two-wave method worst case and every later stage still fit inside the 15-minute ceiling.
+- Fast method voices now give one primary the complete 120-second lifecycle. Live Work-gateway
+  runs reached all eight evidence seats and 25 of 26 isolated method voices, but the remaining
+  silent worker exhausted the shortened primary and then could not finish in a cold ten-second
+  retry. A primary that completes early may still use its remaining lifecycle for no-search
+  format repair; timeout no longer launches a replacement that cannot finish. The two-wave
+  method worst case and every later stage still fit inside the 15-minute ceiling. Successful
+  26/26 end-to-end completion remains unvalidated pending the next live run.
 - Fast's stage allocation now reflects the first clean Work-gateway run that completed all eight
   evidence workers and all 26 isolated method voices but timed out both sides of debate round 1.
   Evidence keeps its 220-second primary attempt and the PM keeps 75 seconds; each debate side's

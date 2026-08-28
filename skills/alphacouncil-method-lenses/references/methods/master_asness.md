@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:9996ea9ef55886d354ef8839bd899b24d01eae576bbe67d8420635ac0b09fe4f`
+- Pack snapshot hash: `sha256:a0df9a72e1d8fb55ee249ed797f9272a7160c5c1e39dc091633f8f3265b40d0a`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Cliff Asness, AQR co-founder and systematic factor-investing researcher
+Cliff Asness, AQR co-founder and systematic factor-investing researcher. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Decomposes value, momentum, quality, beta, sector exposure and crowding to test whether alpha is only a factor.
 

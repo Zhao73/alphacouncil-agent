@@ -80,7 +80,7 @@ portfolio-manager report.
 | 🐂🐻 **Adversarial by design** | Full runs a three-round bull/bear cross-exam. The exact `slow + all methods + all analysts` path must first pass `source_fidelity`, independent `rederivation`, and `refuter` over every material claim; zero verifier verdicts means `needs_verification`, never `complete`. Quick explicitly does not claim adversarial verification. |
 | ⏱️ **You pick the depth: 15, 30 or 60 minutes** | The run asks before it starts and shows the persistence ceiling, configured stage budget and live-verification status for each tier — you never type a speed. These are deadlines, not measured completion promises. Method seats and analyst breadth are separate choices: `core` runs 8 analysts, `all` runs exactly 11. |
 | 🔍 **Auditable; gaps stay visible** | Material claims must map to source IDs. A screen rule with missing inputs is `skipped`, never a pass. An undated headline is excluded, not shown as recent. The system can still be wrong, so outputs retain sources and diagnostics for review. |
-| 📚 **One hash-bound company record, role-sized inputs** | A full operating-company run accounts for the fixed 52-item core roster and freezes `company_dossier.json`. Every selected method reads the full artifact; each Bull/Bear round and the PM receives a server-verified decision projection with all decision claims, linked sources, coverage outcomes and gaps. Every worker acknowledges the same revalidated hash, and each method returns a task/hash/status receipt for all selected packets: 8 in `core`, 11 in `all`. Critical missing data stops the decision instead of disappearing inside a summary. |
+| 📚 **One hash-bound company record, role-sized inputs** | A full operating-company run accounts for the fixed 52-item core roster and freezes `company_dossier.json`. Before every method, Bull/Bear and PM worker, the server revalidates the full artifact and supplies a bounded, packet-complete decision projection with all decision claims, linked sources, coverage outcomes and gaps. Raw acquisition records and large time series are not reopened by each of the 26 methods. Every worker acknowledges the same hash, and each method returns a task/hash/status receipt for all selected packets: 8 in `core`, 11 in `all`. Critical missing data stops the decision instead of disappearing inside a summary. |
 | 🧭 **Company, ETF and index routing** | The symbol is classified before research. Companies use issuer financials; ETFs use dated holdings look-through; indices use aggregate methodology. QQQ/SPY are never treated as companies with their own revenue or EPS. |
 | 💰 **Entry price bands, not one number** | Three conditional bands with what each depends on. "The cycle position is undetermined" changes what the bands are conditional on; it does not excuse leaving them out. |
 | 🔑 **34 tools, explicit key boundaries, zero runtime dependencies** | The first US/Taiwan/market data check needs no data-vendor key. DART and EDINET coverage use optional free keys; council workers require an authenticated host/model. `node mcp/server.mjs` has no runtime package dependencies. |
@@ -204,8 +204,12 @@ must not replace it with a shorter manual recap.
 
 For a full operating-company decision, the directory also contains `company_dossier.json`:
 the 8 core packets plus any 3 all-scope packets, the fixed 52-item core coverage ledger, source/claim lineage,
-typed facts and one canonical hash. Compact prompt evidence is only an index; downstream seats
-must read and acknowledge this same complete artifact before their output is accepted.
+typed facts and one canonical hash. The complete artifact remains the audit source. Before each
+downstream method, debate, or portfolio-manager prompt is generated, the server re-reads and
+re-hashes that artifact and derives a bounded, source-scoped decision projection from its verified
+bytes. Downstream seats acknowledge the canonical dossier revision and use only that projection;
+they do not reopen or receive the multi-megabyte artifact. These transport checks prove artifact
+integrity and receipt consistency, not that a model paid attention to every field.
 
 ### Slash commands (Claude Code, OpenCode, and Grok Build)
 

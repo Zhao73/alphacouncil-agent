@@ -1269,7 +1269,13 @@ export async function handleToolCall(id, params) {
     const result = recordMasterOpinion(args);
     sendResult(id, jsonContent(
       `Recorded master opinion ${args.master} (${result.opinion.stance}) for ${result.run.symbol}: ${result.recorded}/${result.expected} master seats in.`,
-      recordAck(result.run, { opinion: result.opinion, recorded: result.recorded, expected: result.expected }),
+      recordAck(result.run, {
+        opinion: result.opinion,
+        recorded: result.recorded,
+        expected: result.expected,
+        method_barrier_complete: result.method_barrier_complete,
+        refreshed_prompt_count: result.refreshed_prompt_count,
+      }),
     ));
     return;
   }
@@ -1292,6 +1298,8 @@ export async function handleToolCall(id, params) {
         expected: result.expected,
         verifier_audit: result.audit,
         idempotent_replay: result.idempotent_replay === true,
+        refreshed_prompt_count: result.refreshed_prompt_count,
+        recovered_run_state: result.recovered_run_state === true,
       }),
     ));
     return;

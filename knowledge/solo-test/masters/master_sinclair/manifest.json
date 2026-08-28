@@ -119,10 +119,10 @@
       "zh": "波动率预测、期权执行、优势度量与仓位管理。"
     },
     "identity": {
-      "en": "Sinclair Lens (Volatility Trading and Execution); a method model, not the person's own words",
-      "ja": "Sinclair Lens (Volatility Trading and Execution)。メソッドモデルであり、本人の発言や現在の見解ではない。",
-      "ko": "Sinclair Lens (Volatility Trading and Execution). 방법론 모델이며, 본인의 발언이나 현재 견해가 아니다.",
-      "zh": "辛克莱视角（波动率交易与执行）；方法模型，非本人言论"
+      "en": "Sinclair Lens (Volatility Trading and Execution); a provisional project-derived method lens, not the person's own words or current view",
+      "ja": "Sinclair Lens (Volatility Trading and Execution)。プロジェクト派生の暫定メソッド視点であり、本人の発言や現在の見解ではない。",
+      "ko": "Sinclair Lens (Volatility Trading and Execution). 프로젝트에서 파생된 임시 방법론 관점이며, 본인의 발언이나 현재 견해가 아니다.",
+      "zh": "辛克莱视角（波动率交易与执行）；项目派生的临时方法视角，非本人言论或当前观点"
     },
     "method": {
       "en": "Forecast realized volatility, compare it with implied volatility, subtract spreads and slippage, and size only a robust executable edge.",

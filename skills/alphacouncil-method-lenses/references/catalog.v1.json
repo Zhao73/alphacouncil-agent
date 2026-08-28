@@ -45,7 +45,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:5b4bd3b73bcc8d1b95123dc4d89d3cc6fff150018776c988a9516ec15070f8d8",
+      "pack_snapshot_hash": "sha256:535515885a862c7ec243291e02e9b11ac146a6ba92ac14baef1e44f5afc302ca",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -60,7 +60,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:82fa38354fc68af3c051801c6c9eee02dad41eb8ae28fbd5eb37da829512454f",
       "reference_path": "methods/master_buffett.md",
-      "reference_hash": "sha256:dd22655dbe15544e4deeb7f022e2b9b02fbb014f876709fa123b263047f5b6a2"
+      "reference_hash": "sha256:eb05765d7ab1147124c1c3eba68e8f879484d0e538909a52240bbb8cd71e3c98"
     },
     {
       "method_id": "master_graham",
@@ -71,7 +71,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:5988e2da88dbef1d71cc0fb11c7dd283afa57a0edb9ad5166630f5cdfe32b14d",
+      "pack_snapshot_hash": "sha256:7f3384d5e5b1920e00854944f22f8429abc85a118d29c8871fe54414b2429145",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -86,7 +86,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:3ae70d26b39746c2468b39bcb926e8c631397c64a7a7dd7c41f9752eb86b32ef",
       "reference_path": "methods/master_graham.md",
-      "reference_hash": "sha256:d94824c94b3a68220d78a5612039ba1a2d5ce32ec607a055ef136be12b949444"
+      "reference_hash": "sha256:11e53dff4431c53b41183ee0cea20c3e3fbe55032119ac9d221d2d8b5e0118d3"
     },
     {
       "method_id": "master_simons",
@@ -97,7 +97,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:d25f498e943c1237bdf68aaf391344e6b54aa90b98e9cc72c93ed5061085ef4b",
+      "pack_snapshot_hash": "sha256:f55b4fd230ddce714134cac88cc88802dc9f2dafa69ae7fe981953726e2fe3b6",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -112,7 +112,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:216b08f4710dbecc8981eed862e227c458382ebf6c496b833501a1c4d1e18869",
       "reference_path": "methods/master_simons.md",
-      "reference_hash": "sha256:7599261e5873c5223af1e6457814abc8c74bdc2cadd6cf1d4dbd54281ab097a1"
+      "reference_hash": "sha256:d6ebafb6e01431f55d0454403de78bb253d0d5ff050767ff5c6045a65cc48e91"
     },
     {
       "method_id": "master_soros",
@@ -123,7 +123,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:46446a98ae2b3e04cf96634923acb975ea0109a1cd833a44fe19f6adcded9999",
+      "pack_snapshot_hash": "sha256:7b2e1df3b5dba68dca224ac14185d2d963f87bba53ea22a33121d3b786e77773",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -138,7 +138,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:9049bd90bf16c3d612994f9441bcd101b4d46803a57dc13c1d4d535c476f54bc",
       "reference_path": "methods/master_soros.md",
-      "reference_hash": "sha256:f5633bbf294fdb5eb26762f738cec8dc4ad352387d64dee9b68bf648c007ea33"
+      "reference_hash": "sha256:2902f1cbf37ca97a6d71adecc77078aa257cd5a6dda223b3ea0a74f3429bb2b9"
     },
     {
       "method_id": "master_cathie_wood",
@@ -149,7 +149,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:79f270de5ad76f060e3dee86f1364aaae579d3b2541462814afecbcc5a75d0c2",
+      "pack_snapshot_hash": "sha256:c2fe6e700778740c307b0799e6f3375283dd09b13d8d385879df136973e90341",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -164,7 +164,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:8ebc9a7922a52a1cc5b0fe6f9dfe62dda46653fe5c89d3c168ec7716112a9ba8",
       "reference_path": "methods/master_cathie_wood.md",
-      "reference_hash": "sha256:cce7467a2137dbdd53b975997b285d318a00399f3dea7387b3f5faf2277c260f"
+      "reference_hash": "sha256:01698538641894bd953345124a92fdd95efb707225d4ae79fb87cfc2af9cd6bd"
     },
     {
       "method_id": "master_druckenmiller",
@@ -175,7 +175,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:08fb4dfab19fbfa88995b406d97058ba73c493d5d72388ecc9bd51ba651d9d38",
+      "pack_snapshot_hash": "sha256:6b57063fde227a5f79ae266f28c98ea7c4fa962f320cba834a9c192ed45f77a1",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -190,7 +190,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:b7ec758bb5e5d1370df946de74439e6afe6b79df3a3d3d9dc9726b3036c4597b",
       "reference_path": "methods/master_druckenmiller.md",
-      "reference_hash": "sha256:05c3ba4714455e358abe11486ef59fd8dc5d9d26de2be00b14b5e7e084bb1d2b"
+      "reference_hash": "sha256:54b5b724f658fac8bd3fed21d85f40924ab13d5d2c494dac8e40e2cee7981668"
     },
     {
       "method_id": "master_fisher",
@@ -201,7 +201,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:afeb178b265ba3e5ff78fb412537becfcb8b4339286c2174fd0c083b66c3de6b",
+      "pack_snapshot_hash": "sha256:4619e0cfdd7e5cd29ea6470815fcfb97c22aa2a79ef38749a6bbc824c66214bf",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -216,7 +216,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:ee8cbbe0ce3dc08feba857f4831325fc20c1fea79ea34551e82aa255e236aba8",
       "reference_path": "methods/master_fisher.md",
-      "reference_hash": "sha256:9f565cdaa879eaa54616bf03d8a1494f3049c297b5b0bda452487adfa56a38d7"
+      "reference_hash": "sha256:493b992c7b971e8bbda6febf89637fd139fce0dee4a111b199a0895bb8fa83d2"
     },
     {
       "method_id": "master_munger",
@@ -227,7 +227,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:d64d77494f3309664c3c6ae6a12665af510329860c1dae31817ef9bc9243cef4",
+      "pack_snapshot_hash": "sha256:1e40ff203f78506edc88af13b9e518777b260e4b1eab1d3792554b4adcd2c97e",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -242,7 +242,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:39681ccb91ebe5b21802304f57a91d8b467d6320a74cb010816e401a624a6124",
       "reference_path": "methods/master_munger.md",
-      "reference_hash": "sha256:09c714de6f777406fe5e1d705ae46d97a6213c3b95e15425c87d25c40584b771"
+      "reference_hash": "sha256:7c5bb747e424e4ea3c756a2a7ad61696e6aa82b89b7e2c8e308d242143676193"
     },
     {
       "method_id": "master_thorp",
@@ -253,7 +253,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:c85314527350663f91b9367218e3e09be4b54d9b41bc8af2c99d0b32b2d39a7e",
+      "pack_snapshot_hash": "sha256:3d700b458245feedc8098574c0917b108368030ec8db2d2ada5de3c4fde7467f",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -289,7 +289,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:5a73192dc30968f50d56e16742eb6d8a55274dd2212b8f17e245883624a8f205",
       "reference_path": "methods/master_thorp.md",
-      "reference_hash": "sha256:66bbe205001884ffee957b12037a48817a3a8c89ba44bda5884544e9d072c079"
+      "reference_hash": "sha256:7163d651e60d8424f66d963e37a7a1327a4998adbad6be958142482900186915"
     },
     {
       "method_id": "master_asness",
@@ -300,7 +300,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:9996ea9ef55886d354ef8839bd899b24d01eae576bbe67d8420635ac0b09fe4f",
+      "pack_snapshot_hash": "sha256:a0df9a72e1d8fb55ee249ed797f9272a7160c5c1e39dc091633f8f3265b40d0a",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -315,7 +315,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:4afcea72880955465416ebb54a5dc4f20626a68b2109a4c61e7c7f8ecadc71a9",
       "reference_path": "methods/master_asness.md",
-      "reference_hash": "sha256:673827c1d8a55a58e58113373e5d2a3c1eed3e551d241bac8093d067c520d132"
+      "reference_hash": "sha256:9824a6e8661da09ac6a449a1a3ea575fcf0d39f1d12e73ce2b00a3da43ee7ec2"
     },
     {
       "method_id": "master_dalio",
@@ -326,7 +326,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:9092c816023df9fe41dd6d0bffc3f6640c19e31bbb1602d8978d0f74faa41ce6",
+      "pack_snapshot_hash": "sha256:0cfc3c576ce5a86c237ef7ce5709110af7689d5b0817c084e2fcab19175b1abf",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -341,7 +341,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:2ffe44038cfa26fad6dc5a2cdeeb12bbe64592e18f2ca5bfad960a569b976951",
       "reference_path": "methods/master_dalio.md",
-      "reference_hash": "sha256:df54638c9e17181bf5d7d54eba8984f67084edfd496c16154c0bf10560a16412"
+      "reference_hash": "sha256:2983cf9610f80d4f35aa901966717a1c0b471c69ad62d59e5b08b021d2fc990d"
     },
     {
       "method_id": "master_duan_yongping",
@@ -352,7 +352,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:9d164db97239c1d452442a940de85758dd6ff33086dcccc815b0aa41893681af",
+      "pack_snapshot_hash": "sha256:1339fa80b60a582b3e96b5b729175537d41ed7e7b386cc21eb3097cc2e82c215",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -367,7 +367,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:d3af498610fb99ae1e7ef3d9edcc0d5e01b54043d4f9d9fae929c7556e85f3ef",
       "reference_path": "methods/master_duan_yongping.md",
-      "reference_hash": "sha256:ef53b629d2978922583975a867bc5a9e9f822c1b1c83538ec937d773ecffc14c"
+      "reference_hash": "sha256:1b0c8a72ab25d614921c159e3c6297c4f55e6e7e8a8d09806df5e17038c6fa8b"
     },
     {
       "method_id": "master_jhunjhunwala",
@@ -378,7 +378,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:a8386610eab3b7132adbba9f1e28a3fe159f252fca6338148b568040e0254df0",
+      "pack_snapshot_hash": "sha256:6e8090a13b1bf341e231e505a1ea2b8490c711e000a0a9ecca6e9fbbd17ef01e",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -393,7 +393,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:bdbd8cc2ffa25c23894c3e2a423e09e5b465c4901bad293d65f0192861fd88d8",
       "reference_path": "methods/master_jhunjhunwala.md",
-      "reference_hash": "sha256:472241b51d487b4b455f679888cbf9f4cc2bb6858f988bc12429bd9e83ee5080"
+      "reference_hash": "sha256:3bfcc18d04ceb4b62ca4dd8c3f9e0b9e7dff2fd6d09dc8e7abd460f419d15320"
     },
     {
       "method_id": "master_lynch",
@@ -404,7 +404,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:b60187eb5e3c4f4d74b4e5ba4ff3b6ce9a8be419f5d4b9f6711e21f931d08baf",
+      "pack_snapshot_hash": "sha256:63738fffe21c1e687abe68321c54c9cf0b6484bb98dde780c0cd22c54c2a89f6",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -419,7 +419,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:5f332116682020e0cf07bbf0b57d0e9f3688c301934d09fea46079dccdd0cb3c",
       "reference_path": "methods/master_lynch.md",
-      "reference_hash": "sha256:9dfbcab625c3f38ee5262f5d7a98ae2c0e4cc3205b836f775549076cfc2b103d"
+      "reference_hash": "sha256:a802305959cbf664996e938a44f3f0a8b5e506f42b80236c72c1221b6e4676c5"
     },
     {
       "method_id": "master_forensic_short",
@@ -430,7 +430,7 @@
       "kind": "composite_professional_method",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:77c0f62d944184c0aac3751976f80beda768f395fa122d8cd275a53ee7d5ce16",
+      "pack_snapshot_hash": "sha256:fbce40465220ed799585a03c7b700f0cb5c98a4704e259ef2ab53ece6712b798",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -445,7 +445,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:9f88266bde35c00e758d25b78ef94d5d33631b90da090cca2caf94e1d135576e",
       "reference_path": "methods/master_forensic_short.md",
-      "reference_hash": "sha256:a88a06963187a0e19bf2aa33d4198f193c0e486b16a49f907c4ec1ea506a74d6"
+      "reference_hash": "sha256:db16d0b66f26d50ea8c0ee826b352dc0676db99f001c44bc0a499f7090f1e934"
     },
     {
       "method_id": "master_li_lu",
@@ -456,7 +456,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:fcf7bf9e69f118881dd25e37ff94455ee71f984606777fcb4aba98a2ab66232d",
+      "pack_snapshot_hash": "sha256:7beb40419a2bd7b32087c3751a747b4b963ce4bcd97a3427c44d5730ffc9f1ed",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -471,7 +471,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:48737be5804175890c1027dc24cb54a45ef62c3d06588a234bf5926b0fcd829f",
       "reference_path": "methods/master_li_lu.md",
-      "reference_hash": "sha256:50bbc18eee60106273ffe6a1d91c47826fa181aebe21f4421fa55fe158c7746b"
+      "reference_hash": "sha256:c326f97f35724b1b3e984eaefcf7df8ed8a76ad66be8a789e67b8cd9655fb22e"
     },
     {
       "method_id": "master_marks",
@@ -482,7 +482,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:ed277990461b8deb2bf98923180c3a61927c9f2f6d656c5bd88455632131c64d",
+      "pack_snapshot_hash": "sha256:c8be190485f1fc25b796deb73cf65cf6ac317e9d10d1f3d59eb61cc30eb5f025",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -497,7 +497,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:fe55e7fe0368d8c590b960b3971a3ca0b0bef0319ca0e5018727d28574d6c752",
       "reference_path": "methods/master_marks.md",
-      "reference_hash": "sha256:86eefa06a59172cddb57e46409a931b6e5ba15ef99f97056b9d73c94e307caf6"
+      "reference_hash": "sha256:45ef5d8d774142d1a20594c850c6b424d4ebf9ef98f35b52434bfcb3232b2856"
     },
     {
       "method_id": "master_burry",
@@ -508,7 +508,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:f1c47a8bb2747f493e0aaef95979894854612b7ad965b354e049dafbf880f611",
+      "pack_snapshot_hash": "sha256:f2ad37b46d32d3b2d1ddd4b5861d4b3900b2f66502d3d8ffe92d7c86df24cecd",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -523,7 +523,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:92252f96fe3c38b8b0ea6687eb495cda27f875dcaa5939066856db2d6ecea709",
       "reference_path": "methods/master_burry.md",
-      "reference_hash": "sha256:772ab17d54ea74486fcb9c6e88617abe1a240bc0722952f394f27d6e636d401f"
+      "reference_hash": "sha256:ca2959e11ea5fb99ec174c3b926c202babd29faa6e6f5c125968588633aa49a5"
     },
     {
       "method_id": "master_klarman",
@@ -534,7 +534,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:cc3b4e18789e1b805a78db9dcca6a522ae0490ec7c816698507217848beb4be5",
+      "pack_snapshot_hash": "sha256:e2695c5f874b707c1bc0c3bbbc79db54620520edf7a385a9094868171f4be03b",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -549,7 +549,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:b85f5d4ac85840e8818dd6d2877648387ce38213e63f5de3e3378a812076833b",
       "reference_path": "methods/master_klarman.md",
-      "reference_hash": "sha256:2674e1559e24ddf6530165814144f70ff48fd1402f7127d331029fc6a050b088"
+      "reference_hash": "sha256:395c46ad249620f214eb4bd03c82f8cb6aa84874f175fc9dda4ec1a6a099010a"
     },
     {
       "method_id": "master_pabrai",
@@ -560,7 +560,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:9c7b0c2e6dca7ffb1049c9b5adca0d3f2640c97f044265cc90a56824bfe3422c",
+      "pack_snapshot_hash": "sha256:7ce1510a655926c07f8f7ae7776a88ffb6327874a679df1f411f9ff692e21d1b",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -575,7 +575,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:59f6ab982c3c86c4c8b594fb7c4d329e58ff383bf5dd8cb6d79c76f4e7638cb1",
       "reference_path": "methods/master_pabrai.md",
-      "reference_hash": "sha256:b9ff3b19492b955ed46fdbacdd19a0d0c493c7c11ec119ddb236adcd8a1f4aa7"
+      "reference_hash": "sha256:f5c699192c41d2b4ac68de6ea6daaba25707a24599224a2041721792aad81277"
     },
     {
       "method_id": "master_ackman",
@@ -586,7 +586,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:1705fd189a171169771c1feb6493eac23f94f813646a0a81e710dffa7e819b66",
+      "pack_snapshot_hash": "sha256:0ac391005c9f6fa399b0ab1a9aec3e25b322e06894101bb4a7c5307bcc045013",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -601,7 +601,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:f6d54e1045cbdbd88a247e779b76fef0b85ac3869e3a95d4725e9d3404e10031",
       "reference_path": "methods/master_ackman.md",
-      "reference_hash": "sha256:9be6fb81cc35e63906cdc18a26baa3cc8c6833acfc9e7fe5cd6cd7f42c06c26f"
+      "reference_hash": "sha256:8cd6dfee8aee78236e86703bce59aad31f561311c74979d3d8d77348fb42c69f"
     },
     {
       "method_id": "master_damodaran",
@@ -612,7 +612,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:51d92197907c4ae0a3106a121bdcb65c81b6048a2786d304e5b565bd7ff313ac",
+      "pack_snapshot_hash": "sha256:c889a3b7564a4ee912e9e601a6f3d9d4a5339d244ff9fc505f7e8c1fa9570fc1",
       "source_candidate_count": 4,
       "source_machine_verdict_counts": {
         "supported": 4,
@@ -627,7 +627,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:c090acca2c9ac73f7d2bd646c2d9b3f64610c81569e29dbc5bbfd38db1a5f947",
       "reference_path": "methods/master_damodaran.md",
-      "reference_hash": "sha256:d7ba2aa4e6268c0440ac44f5c252ca09a24e233d771abeeef8fc3986fe9642a2"
+      "reference_hash": "sha256:7674a67ea7b943327d439151e6ce1c4d3355ed859e78c3c24e65e6e947ae3f40"
     },
     {
       "method_id": "master_taleb",
@@ -638,7 +638,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:52a9c03104321218984b54779e9ebfa0308349c9ca0478c881e2a4aa988a8ec8",
+      "pack_snapshot_hash": "sha256:8e1723713fb6042de25990ab18420c5a65dfa967523210ba5560bf4e5e38ac02",
       "source_candidate_count": 4,
       "source_machine_verdict_counts": {
         "supported": 2,
@@ -653,7 +653,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:e10ee5340e414d231f137cc77e680e24c87b9af0eafe62db3ad7abdeba7c3a2d",
       "reference_path": "methods/master_taleb.md",
-      "reference_hash": "sha256:6964bf981ead544e9e0cce9d8e84fa70ba514048f847ff3ae7cd9c600d0558a4"
+      "reference_hash": "sha256:45b6c4bc62679ae14f3141cf9789c129d61d6ccbfec3f2c2b980b0fee3248a50"
     },
     {
       "method_id": "master_natenberg",
@@ -664,7 +664,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:0941b8434bbd31905c7c115d9d3b44cf28cc64dde9f83ab7ead616758186c27d",
+      "pack_snapshot_hash": "sha256:79518ba6a6f31a3ba71a8392897500e2a633b845a3c37819a7337661f647e64b",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -700,7 +700,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:441faf3c35b77a69f77a53a047e9018867912029ed97cd74040cbc9f88cf846a",
       "reference_path": "methods/master_natenberg.md",
-      "reference_hash": "sha256:6745cdce9bff8a31bfc9aeabc85b02ca11820961fed41b313c9ea4d9a7937931"
+      "reference_hash": "sha256:236204ce479ea2ce6045bddfc07ecdd5dfb350471922a358ac5c95325e5dfcbc"
     },
     {
       "method_id": "master_sinclair",
@@ -711,7 +711,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:0e2089353928b6369dcc9d11ba954594c1bc87876b264ff7eaf97af03c48ae45",
+      "pack_snapshot_hash": "sha256:96cc56a07855ca111f077f0ca120153ece9d479603821dd5ef0848261fcc5114",
       "source_candidate_count": 1,
       "source_machine_verdict_counts": {
         "supported": 1,
@@ -747,7 +747,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:6ee0ca2b375934205d36b47dfb2fc41a50d48112937a408ea5f89581c2ea1cc8",
       "reference_path": "methods/master_sinclair.md",
-      "reference_hash": "sha256:804e29d9af192f85f2de6a41a67dcf7bae6f74a52b1cfcbd836ec632e79488d6"
+      "reference_hash": "sha256:5a4b0010938dc59889a9cf1f3fb771d774ff7896b9a4aaa898db60bac3aa5b9f"
     },
     {
       "method_id": "master_bogle",
@@ -758,7 +758,7 @@
       "kind": "named_public_method_reference",
       "reference_status": "method_reference_provisional",
       "runtime_maturity": "operator_lens",
-      "pack_snapshot_hash": "sha256:1ac7972260c054274685b99d1f6f2d6166883f5303d1129a48f66fd5a2e16f50",
+      "pack_snapshot_hash": "sha256:919f3b2e25eab349f34e960f99e8b47d5a89321d942552d919024b65448a4e99",
       "source_candidate_count": 0,
       "source_machine_verdict_counts": {
         "supported": 0,
@@ -773,7 +773,7 @@
       "disclosure_ack": "alphacouncil.first_person_public_method_simulation.v1",
       "voice_profile_hash": "sha256:ac38219863a6e0d89ce2847c42c511a2ed970580447953467f473ed7bb3e83fc",
       "reference_path": "methods/master_bogle.md",
-      "reference_hash": "sha256:0c71b8475b1e3a1daed83c6c1ec3b44742159afe13063026617758dc26d635a3"
+      "reference_hash": "sha256:cdd4f3c888c397dcabf5958de17514f05abef0545fb39774f72059ed8868b21a"
     }
   ]
 }

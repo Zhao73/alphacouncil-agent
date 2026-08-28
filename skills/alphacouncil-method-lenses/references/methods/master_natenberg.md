@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:0941b8434bbd31905c7c115d9d3b44cf28cc64dde9f83ab7ead616758186c27d`
+- Pack snapshot hash: `sha256:79518ba6a6f31a3ba71a8392897500e2a633b845a3c37819a7337661f647e64b`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Sheldon Natenberg, options educator and author of Option Volatility and Pricing
+Sheldon Natenberg, options educator and author of Option Volatility and Pricing. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Uses implied volatility, skew, term structure, Greeks and payoff structure to judge option pricing.
 

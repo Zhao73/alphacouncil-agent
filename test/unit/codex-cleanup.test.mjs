@@ -3,8 +3,12 @@ import assert from "node:assert/strict";
 import {
   closeSync,
   existsSync,
+  mkdirSync,
   openSync,
+  readFileSync,
+  realpathSync,
   readdirSync,
+  symlinkSync,
   truncateSync,
   writeFileSync,
   writeSync,
@@ -16,6 +20,8 @@ import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { startServer } from "../helpers/rpc-client.mjs";
 import {
   MAX_WORKER_OUTPUT_BYTES,
+  disabledSkillsConfig,
+  discoverNonSystemCodexSkills,
   mapLimit,
   readWorkerOutputBounded,
   runCodex,
@@ -324,8 +330,13 @@ test("runCodex does not reject valid CJK text merely because UTF-8 uses more byt
   }
 });
 
-test("leaf workers isolate nested plugin data from the parent run and remove the temp directory", async () => {
+test("leaf workers share one auth home while isolating plugin data and user skills", async () => {
   const dir = makeDataDir();
+  const sourceCodexHome = join(dir, "source-codex-home");
+  const authFixture = JSON.stringify({ auth_mode: "fixture-only-shared" });
+  mkdirSync(sourceCodexHome, { recursive: true });
+  writeFileSync(join(sourceCodexHome, "auth.json"), authFixture);
+  const disabledSkillPath = join(sourceCodexHome, "skills", "fixture", "SKILL.md");
   class ClosingChild extends EventEmitter {
     constructor() {
       super();
@@ -337,13 +348,29 @@ test("leaf workers isolate nested plugin data from the parent run and remove the
   }
   let outFile;
   let leafRuntimeDir;
+  let leafUserHome;
   try {
     const result = await runCodex("fixture", 1000, ({ output }) => { outFile = output; }, () => {}, {
       dataDir: dir,
-      spawn: (_command, _args, options) => {
+      sourceCodexHome,
+      disabledSkillPaths: [disabledSkillPath],
+      spawn: (_command, args, options) => {
         leafRuntimeDir = options.env.ALPHACOUNCIL_AGENT_DATA_DIR;
+        leafUserHome = options.env.HOME;
         assert.notEqual(leafRuntimeDir, dir);
         assert.equal(existsSync(leafRuntimeDir), true);
+        assert.equal(options.env.CODEX_HOME, sourceCodexHome);
+        assert.equal(leafUserHome, join(leafRuntimeDir, "home"));
+        assert.equal(options.env.USERPROFILE, leafUserHome);
+        assert.equal(existsSync(join(leafRuntimeDir, "codex-home")), false);
+        assert.equal(readFileSync(join(sourceCodexHome, "auth.json"), "utf8"), authFixture);
+        assert.deepEqual(args.slice(args.indexOf("--disable"), args.indexOf("exec")), [
+          "--disable", "plugins",
+          "--disable", "apps",
+          "--disable", "tool_suggest",
+          "--disable", "multi_agent",
+          "-c", `skills.config=[{path=${JSON.stringify(disabledSkillPath)},enabled=false}]`,
+        ]);
         const child = new ClosingChild();
         queueMicrotask(() => {
           writeFileSync(outFile, JSON.stringify({ ok: true }));
@@ -354,6 +381,174 @@ test("leaf workers isolate nested plugin data from the parent run and remove the
     });
     assert.equal(result.ok, true);
     assert.equal(existsSync(leafRuntimeDir), false, "owned leaf plugin data must be removed after settlement");
+    assert.equal(existsSync(leafUserHome), false, "temporary skill-discovery home must be removed after settlement");
+    assert.equal(
+      readFileSync(join(sourceCodexHome, "auth.json"), "utf8"),
+      authFixture,
+      "shared credentials must remain in the owner's Codex home",
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill isolation disables personal skills but preserves Codex system skills", () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const personalSkill = join(codexHome, "skills", "personal", "SKILL.md");
+  const systemSkill = join(codexHome, "skills", ".system", "builtin", "SKILL.md");
+  try {
+    mkdirSync(join(codexHome, "skills", "personal"), { recursive: true });
+    mkdirSync(join(codexHome, "skills", ".system", "builtin"), { recursive: true });
+    writeFileSync(personalSkill, "personal");
+    writeFileSync(systemSkill, "system");
+
+    const canonicalPersonalSkill = realpathSync(personalSkill);
+    assert.deepEqual(discoverNonSystemCodexSkills(codexHome), [canonicalPersonalSkill]);
+    assert.equal(
+      disabledSkillsConfig([canonicalPersonalSkill]),
+      `skills.config=[{path=${JSON.stringify(canonicalPersonalSkill)},enabled=false}]`,
+    );
+    assert.throws(
+      () => disabledSkillsConfig(Array.from({ length: 129 }, (_, index) => `/tmp/s${index}/SKILL.md`)),
+      /maximum is 128/u,
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery fails closed at depth, directory and skill-count limits", () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const root = join(codexHome, "skills");
+  try {
+    mkdirSync(join(root, "a", "b"), { recursive: true });
+    writeFileSync(join(root, "a", "SKILL.md"), "a");
+    writeFileSync(join(root, "a", "b", "SKILL.md"), "b");
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome, { maxDepth: 1 }),
+      /maximum depth 1/u,
+    );
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome, { maxDirectories: 2 }),
+      /maximum directory count 2/u,
+    );
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome, { maxSkills: 1 }),
+      /more than 1 user skills/u,
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery reports an existing unreadable directory shape", () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  try {
+    mkdirSync(codexHome, { recursive: true });
+    writeFileSync(join(codexHome, "skills"), "not a directory");
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome),
+      /skill directory could not be read/u,
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery resolves symlinks, skips system aliases and breaks cycles", {
+  skip: process.platform === "win32",
+}, () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const root = join(codexHome, "skills");
+  const personal = join(root, "personal");
+  const system = join(root, ".system", "builtin");
+  try {
+    mkdirSync(personal, { recursive: true });
+    mkdirSync(system, { recursive: true });
+    writeFileSync(join(personal, "SKILL.md"), "personal");
+    writeFileSync(join(system, "SKILL.md"), "system");
+    symlinkSync(root, join(personal, "cycle"), "dir");
+    symlinkSync(join(root, ".system"), join(root, "system-alias"), "dir");
+    assert.deepEqual(discoverNonSystemCodexSkills(codexHome), [realpathSync(join(personal, "SKILL.md"))]);
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery rejects a dangling user-skill symlink", {
+  skip: process.platform === "win32",
+}, () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const root = join(codexHome, "skills");
+  try {
+    mkdirSync(root, { recursive: true });
+    symlinkSync(join(dir, "missing"), join(root, "dangling"), "dir");
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome),
+      /skill symlink could not be inspected/u,
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery rejects a .system symlink to the skills root", {
+  skip: process.platform === "win32",
+}, () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const root = join(codexHome, "skills");
+  try {
+    mkdirSync(join(root, "personal"), { recursive: true });
+    writeFileSync(join(root, "personal", "SKILL.md"), "personal");
+    symlinkSync(root, join(root, ".system"), "dir");
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome),
+      /\.system entry must be a real directory/u,
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery rejects a .system symlink to a personal subtree", {
+  skip: process.platform === "win32",
+}, () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const root = join(codexHome, "skills");
+  const personal = join(root, "personal");
+  try {
+    mkdirSync(personal, { recursive: true });
+    writeFileSync(join(personal, "SKILL.md"), "personal");
+    symlinkSync(personal, join(root, ".system"), "dir");
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome),
+      /\.system entry must be a real directory/u,
+    );
+  } finally {
+    removeDataDir(dir);
+  }
+});
+
+test("leaf skill discovery rejects a .system symlink to the parent", {
+  skip: process.platform === "win32",
+}, () => {
+  const dir = makeDataDir();
+  const codexHome = join(dir, "codex-home");
+  const root = join(codexHome, "skills");
+  try {
+    mkdirSync(root, { recursive: true });
+    symlinkSync(codexHome, join(root, ".system"), "dir");
+    assert.throws(
+      () => discoverNonSystemCodexSkills(codexHome),
+      /\.system entry must be a real directory/u,
+    );
   } finally {
     removeDataDir(dir);
   }

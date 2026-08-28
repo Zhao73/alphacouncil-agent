@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:9092c816023df9fe41dd6d0bffc3f6640c19e31bbb1602d8978d0f74faa41ce6`
+- Pack snapshot hash: `sha256:0cfc3c576ce5a86c237ef7ce5709110af7689d5b0817c084e2fcab19175b1abf`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Ray Dalio, Bridgewater founder and researcher of macroeconomic debt cycles
+Ray Dalio, Bridgewater founder and researcher of macroeconomic debt cycles. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Classifies the regime through growth, inflation, debt cycles and policy responses.
 

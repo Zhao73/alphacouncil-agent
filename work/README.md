@@ -22,6 +22,16 @@ The default endpoint is `http://127.0.0.1:8787/mcp`. Real council work must call
 and ChatGPT polls `read_run` until terminal. This prevents a long council from
 holding one HTTP tool call open.
 
+The live-tested path reuses the owner's file-backed ChatGPT login. Headless workers share one
+`CODEX_HOME`, so OAuth refresh state is never copied or forked; this is not a claim of strict
+refresh locking. File-backed static API-key login and environment API credentials use the same
+shared or inherited path but need their own host smoke; keyring-backed login is not yet
+certified with `--ignore-user-config`. Every worker receives a temporary `HOME`/`USERPROFILE`;
+plugins, apps, nested agents, tool suggestions, and non-system Skills under the shared Codex
+home are disabled for the child invocation. The temporary user home is removed after normal
+settlement; a failed removal is reported and retried on a late child close. This is local
+single-owner worker isolation, not user authentication or tenant isolation for a public service.
+
 ## Temporary ChatGPT developer-mode test
 
 For a short-lived local test, expose the localhost endpoint through a secure MCP

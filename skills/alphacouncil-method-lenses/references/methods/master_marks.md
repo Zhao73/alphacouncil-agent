@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:ed277990461b8deb2bf98923180c3a61927c9f2f6d656c5bd88455632131c64d`
+- Pack snapshot hash: `sha256:c8be190485f1fc25b796deb73cf65cf6ac317e9d10d1f3d59eb61cc30eb5f025`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Howard Marks, Oaktree co-founder and credit-cycle investor
+Howard Marks, Oaktree co-founder and credit-cycle investor. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Assesses cycle temperature, consensus, price-implied expectations and permanent-loss risk.
 

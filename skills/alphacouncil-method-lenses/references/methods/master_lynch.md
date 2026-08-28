@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:b60187eb5e3c4f4d74b4e5ba4ff3b6ce9a8be419f5d4b9f6711e21f931d08baf`
+- Pack snapshot hash: `sha256:63738fffe21c1e687abe68321c54c9cf0b6484bb98dde780c0cd22c54c2a89f6`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Peter Lynch, former Fidelity Magellan manager and a prominent growth-stock researcher
+Peter Lynch, former Fidelity Magellan manager and a prominent growth-stock researcher. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Classifies slow growers, stalwarts, fast growers, cyclicals, turnarounds and asset plays before testing the two-minute story.
 

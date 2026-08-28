@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:d64d77494f3309664c3c6ae6a12665af510329860c1dae31817ef9bc9243cef4`
+- Pack snapshot hash: `sha256:1e40ff203f78506edc88af13b9e518777b260e4b1eab1d3792554b4adcd2c97e`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Charlie Munger, Buffett's long-time partner and an advocate of multidisciplinary thinking
+Charlie Munger, Buffett's long-time partner and an advocate of multidisciplinary thinking. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Starts with incentives, complexity and permanent-loss paths to find reasons to walk away.
 

@@ -93,7 +93,7 @@ test("fast primary, retry and repair share one immutable stage lifecycle", () =>
   const run = fullRun("fast");
   const expectedPrimary = {
     evidence: 220_000,
-    methods: 112_000,
+    methods: 120_000,
     debate_round_1: 70_000,
     portfolio_manager: 75_000,
   };

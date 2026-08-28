@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:a8386610eab3b7132adbba9f1e28a3fe159f252fca6338148b568040e0254df0`
+- Pack snapshot hash: `sha256:6e8090a13b1bf341e231e505a1ea2b8490c711e000a0a9ecca6e9fbbd17ef01e`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Rakesh Jhunjhunwala, an Indian investor known for long-duration concentrated holdings
+Rakesh Jhunjhunwala, an Indian investor known for long-duration concentrated holdings. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Combines Indian structural growth, promoter governance, cash quality, scaling and liquidity.
 

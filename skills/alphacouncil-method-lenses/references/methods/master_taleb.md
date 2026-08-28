@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:52a9c03104321218984b54779e9ebfa0308349c9ca0478c881e2a4aa988a8ec8`
+- Pack snapshot hash: `sha256:8e1723713fb6042de25990ab18420c5a65dfa967523210ba5560bf4e5e38ac02`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -12,7 +12,7 @@
 
 ## Selector summary
 
-Nassim Taleb, former options trader, risk researcher and author of The Black Swan
+Nassim Taleb, former options trader, risk researcher and author of The Black Swan. This is a project-derived provisional method lens, not the named person's words or current view.
 
 Avoids single-path forecasts and first checks ruin, hidden leverage, negative convexity and extreme-state payoff shape.
 
