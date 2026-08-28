@@ -16,9 +16,15 @@ appendFileSync(${JSON.stringify(launchLog)}, JSON.stringify({ pid: process.pid, 
 for await (const chunk of process.stdin) void chunk;
 await new Promise((resolve) => setTimeout(resolve, 2_000));
 `);
-  chmodSync(driver, 0o755);
+  let command = driver;
+  if (process.platform === "win32") {
+    command = join(dataDir, "stall-codex.cmd");
+    writeFileSync(command, `@"${process.execPath}" "${driver}" %*\r\n`);
+  } else {
+    chmodSync(driver, 0o755);
+  }
   process.env.ALPHACOUNCIL_AGENT_DATA_DIR = dataDir;
-  process.env.ALPHACOUNCIL_AGENT_CODEX_CMD = driver;
+  process.env.ALPHACOUNCIL_AGENT_CODEX_CMD = command;
 
   try {
     const [{ runDebateRole }, { runPath }] = await Promise.all([
