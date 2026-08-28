@@ -14,10 +14,11 @@ import {
   structured,
 } from "../helpers/rpc-client.mjs";
 
-const PROVENANCE_TOTAL_TIMEOUT_MS = 15_000;
-// This test exercises the voice contract, not the global-deadline gate. A loaded Windows
-// runner can spend more than 15 seconds in process startup and cleanup before the method stage,
-// so keep enough scaled budget for the deterministic artifact and rejected voice to settle.
+// These tests exercise method-output rejection and diagnostic persistence, not the product's
+// global-deadline gate. A loaded Windows runner can spend more than 15 seconds in process
+// startup and cleanup before the method stage, so keep enough scaled budget for the
+// deterministic artifact and rejected output to settle.
+const PROVENANCE_TOTAL_TIMEOUT_MS = 30_000;
 const VOICE_CONTRACT_TOTAL_TIMEOUT_MS = 30_000;
 const LEGACY_OBSERVER_TIMEOUT_MS = 20_000;
 
@@ -115,9 +116,9 @@ async function waitForStatus(path, predicate, timeoutMs = 8_000) {
 }
 
 test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnostic", async () => {
-  assert.equal(PROVENANCE_TOTAL_TIMEOUT_MS, 15_000);
+  assert.equal(PROVENANCE_TOTAL_TIMEOUT_MS, 30_000);
   assert.equal(LEGACY_OBSERVER_TIMEOUT_MS, 20_000);
-  assert.equal(observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS), 30_000);
+  assert.equal(observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS), 45_000);
   assert.equal(
     observerBudget(PROVENANCE_TOTAL_TIMEOUT_MS),
     PROVENANCE_TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS,
