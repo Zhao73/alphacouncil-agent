@@ -581,7 +581,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
   }
 });
 
-test("default fast call chain applies the candidate stage profile and reserves the PM repair slice", {
+test("default fast call chain gives debate and PM one complete primary lifecycle", {
   timeout: 90_000,
 }, async () => {
   const dataDir = makeDataDir();
@@ -639,10 +639,13 @@ test("default fast call chain applies the candidate stage profile and reserves t
     assert.equal(firstByStage("debate_round_1").worker_reasoning_effort, "low");
     const pm = firstByStage("portfolio_manager");
     assert.equal(pm.worker_reasoning_effort, "medium");
-    assert.ok(pm.budget_ms > 60_000 && pm.budget_ms <= 70_000,
-      `PM timer ${pm.budget_ms}ms must fit the 75s primary envelope plus 5s settlement grace`);
-    assert.ok(firstByStage("debate_round_1").budget_ms <= 65_000,
-      "debate timer must fit the 70s primary envelope plus 5s settlement grace");
+    assert.ok(pm.budget_ms > 80_000 && pm.budget_ms <= 85_000,
+      `PM timer ${pm.budget_ms}ms must fit the full 90s lifecycle plus settlement grace`);
+    assert.ok(firstByStage("debate_round_1").budget_ms > 75_000
+      && firstByStage("debate_round_1").budget_ms <= 80_000,
+      "debate timer must fit the full 85s lifecycle plus settlement grace");
+    assert.equal(events.some((event) => event.type === "agent_retry"), false,
+      "a successful fast primary must not spend a cold timeout retry");
   } finally {
     await server.close();
     removeDataDir(dataDir);

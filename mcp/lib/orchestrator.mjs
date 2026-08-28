@@ -1368,6 +1368,15 @@ function stageRepairReserveMs(run, stage) {
   return 0;
 }
 
+/** Keep the existing retry policy outside fast while preventing sub-grace cold restarts there. */
+export function stageTimeoutRetryEnabled(run, stage, retryRequested) {
+  if (retryRequested !== true) return false;
+  if (run?.council_mode === "full" && run?.council_pace === "fast") {
+    return stageRepairReserveMs(run, stage) > 0;
+  }
+  return true;
+}
+
 /**
  * Keep a reviewed repair slice inside the existing fast-stage cap. Tiny caller-lowered test
  * budgets stay untouched, and an explicit caller cap still disables retries at the call site.
@@ -5281,8 +5290,9 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   updateAgent(run, role, "running", { started_at: new Date().toISOString(), round: context.round, attempts: 1 });
   const workerStartedAt = Date.now();
   const stage = debateWorkerStage(role, context.round);
+  const timeoutRetryEnabled = stageTimeoutRetryEnabled(run, stage, context.retryOnTimeout);
   const primaryBudgetMs = stagePrimaryAttemptBudget(run, stage, timeoutMs, {
-    reserveRepair: context.reserveRepair ?? (context.retryOnTimeout === true),
+    reserveRepair: timeoutRetryEnabled && (context.reserveRepair ?? true),
   });
   const attemptWindow = (requestedMs) => stageAttemptWindow(run, {
     stageBudgetMs: timeoutMs,
@@ -5464,7 +5474,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
   const lifecycleRemainingMs = stageLifecycleRemainingMs(timeoutMs, workerStartedAt);
   const retryWindow = attemptWindow(lifecycleRemainingMs);
   if (!result.ok && result.timedOut
-    && context.retryOnTimeout === true && retryWindow.timeout_ms > 0
+    && timeoutRetryEnabled && retryWindow.timeout_ms > 0
     && remainingCouncilBudget(run, lifecycleRemainingMs) > 0) {
     attemptCount = 2;
     appendEvent(run, "agent_retry", {

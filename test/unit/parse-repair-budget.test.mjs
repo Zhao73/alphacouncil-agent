@@ -7,6 +7,7 @@ import {
   stageAttemptWindow,
   stageLifecycleRemainingMs,
   stagePrimaryAttemptBudget,
+  stageTimeoutRetryEnabled,
 } from "../../mcp/lib/orchestrator.mjs";
 
 const NOW = Date.parse("2026-08-03T08:00:00.000Z");
@@ -89,13 +90,13 @@ test("stage elapsed time and a lowered total deadline both reduce the repair bud
   }), 0);
 });
 
-test("fast primary, retry and repair share one immutable stage lifecycle", () => {
+test("fast primary consumes one immutable stage lifecycle", () => {
   const run = fullRun("fast");
   const expectedPrimary = {
     evidence: 240_000,
     methods: 120_000,
-    debate_round_1: 70_000,
-    portfolio_manager: 75_000,
+    debate_round_1: 85_000,
+    portfolio_manager: 90_000,
   };
   const stageCaps = {
     evidence: COUNCIL_PACES.fast.evidence_ms,
@@ -111,6 +112,15 @@ test("fast primary, retry and repair share one immutable stage lifecycle", () =>
     assert.equal(primaryMs + retryMs, stageCapMs, `${stage} retry cannot double its lifecycle`);
     assert.equal(stageLifecycleRemainingMs(stageCapMs, NOW, NOW + stageCapMs + 1), 0);
   }
+});
+
+test("fast debate and PM disable cold timeout retries when no reserve exists", () => {
+  const fast = fullRun("fast");
+  for (const stage of ["debate_round_1", "debate_round_2", "debate_round_3", "portfolio_manager"]) {
+    assert.equal(stageTimeoutRetryEnabled(fast, stage, true), false, stage);
+  }
+  assert.equal(stageTimeoutRetryEnabled(fast, "debate_round_1", false), false);
+  assert.equal(stageTimeoutRetryEnabled(fullRun("normal"), "debate_round_1", true), true);
 });
 
 test("non-fast and explicitly non-retrying callers retain their existing primary cap", () => {

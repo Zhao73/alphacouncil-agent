@@ -56,12 +56,18 @@ test("the runtime skill carries the limits the tool payloads carry", () => {
   assert.match(skill, /skipped screen rule is a gap/i);
 });
 
-test("the report contract mirrors the fast evidence primary and repair split", async () => {
+test("the report contract mirrors the fast single-lifecycle stage budgets", async () => {
   const { COUNCIL_PACES } = await import("../../mcp/lib/constants.mjs");
   const contract = read("docs/report-contract.md");
   assert.equal(COUNCIL_PACES.fast.evidence_ms, 240_000);
   assert.equal(COUNCIL_PACES.fast.evidence_repair_reserve_ms, 0);
-  assert.match(contract, /evidence uses `240s \+ 0s`/u);
+  assert.equal(COUNCIL_PACES.fast.debate_repair_reserve_ms, 0);
+  assert.equal(COUNCIL_PACES.fast.pm_repair_reserve_ms, 0);
+  assert.equal(COUNCIL_PACES.fast.master_repair_reserve_ms, 0);
+  assert.match(
+    contract,
+    /one complete `240s`, `85s`, `90s`, and `120s` lifecycle respectively, with no cold timeout retry/u,
+  );
   assert.doesNotMatch(contract, /evidence uses `220s \+ 20s`/u);
 });
 

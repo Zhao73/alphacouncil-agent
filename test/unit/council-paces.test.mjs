@@ -55,9 +55,9 @@ test("fast preserves the measured primary work while reserving only useful repai
     master_ms: 120_000,
     master_repair_reserve_ms: 0,
     debate_ms: 85_000,
-    debate_repair_reserve_ms: 15_000,
+    debate_repair_reserve_ms: 0,
     pm_ms: 90_000,
-    pm_repair_reserve_ms: 15_000,
+    pm_repair_reserve_ms: 0,
     finalize_reserve_ms: 15_000,
   });
   assert.equal(COUNCIL_PACE_STAGE_TOTAL(COUNCIL_PACES.fast), 860_000);

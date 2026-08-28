@@ -450,9 +450,13 @@ export const COUNCIL_PACES = Object.freeze({
     master_waves: 2,
     verifier_ms: 0,
     debate_ms: 85 * 1000,
-    debate_repair_reserve_ms: 15 * 1000,
+    // A live AAPL fast run completed one round, then killed the round-2 bear at the 65s
+    // primary wall and spent the remaining 16s on a cold replacement that produced nothing.
+    // Give debate and PM one complete lifecycle, as evidence and methods already do. An early
+    // schema/language/Q&A failure may still use the time left for no-search transport repair.
+    debate_repair_reserve_ms: 0,
     pm_ms: 90 * 1000,
-    pm_repair_reserve_ms: 15 * 1000,
+    pm_repair_reserve_ms: 0,
     finalize_reserve_ms: 15 * 1000,
   }),
   // `normal` is a thirty-minute ceiling with a twenty-five-minute configured stage allocation.

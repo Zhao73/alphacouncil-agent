@@ -27,7 +27,9 @@ test("public fast-pace contracts stay aligned with the executable budget", () =>
 
   const contract = read("docs/report-contract.md");
   assert.ok(contract.includes(`| \`fast\` | 15 min | ${configuredMinutes} min | not validated | 4 min | ${methodMinutes} min | 1.4 min | 1.5 min |`));
-  assert.ok(contract.includes(`\`${primarySeconds}s primary with no cold timeout retry\``));
+  assert.ok(contract.includes(
+    `one complete \`240s\`, \`85s\`, \`90s\`, and \`${primarySeconds}s\` lifecycle respectively, with no cold timeout retry`,
+  ));
 
   const install = read("docs/INSTALL.md");
   assert.match(install, new RegExp(`are ${selectorMinutes}, 25 and 58 minutes; observed successful completion remains unvalidated`, "u"));

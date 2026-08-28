@@ -518,11 +518,11 @@ The tier moves every per-stage cap together with the total, because the per-stag
 bound each worker. The configured stage allocation fits inside its ceiling, but that arithmetic
 does not establish successful completion or a measured end-to-end duration.
 
-For the default, unlowered `fast` path, evidence uses `240s + 0s`, each debate side uses
-`70s + 15s`, and PM uses `75s + 15s` for a primary plus a bounded timeout/format-repair
-reserve. A method voice instead gets a `120s primary with no cold timeout retry`: live Work
-evidence showed that a fresh process could not finish in the former eight-second reserve, so
-an early successful primary may spend only its remaining lifecycle on no-search format repair.
+For the default, unlowered `fast` path, evidence, each debate side, PM, and each method voice get
+one complete `240s`, `85s`, `90s`, and `120s` lifecycle respectively, with no cold timeout retry.
+Live runs showed that a fresh process could not finish in a short reserve after the useful primary
+was killed. An early successful primary may still spend its remaining lifecycle on no-search
+format, language, ledger, or exact-Q&A repair.
 These attempts and repairs never add time to the table above: all debit the same per-seat or
 per-round wall clock. Fast also
 uses a recorded stage-aware reasoning profile (`low` evidence/method/debate, `medium` PM,
