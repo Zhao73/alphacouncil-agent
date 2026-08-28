@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -372,13 +372,24 @@ export function codexInvocation(args, platform = process.platform, env = process
   };
 }
 
-export function stopChild(child, force = false) {
+export function stopChild(child, force = false, {
+  platform = process.platform,
+  killWindowsTree = (args) => spawnSync("taskkill", args, {
+    stdio: "ignore",
+    windowsHide: true,
+    timeout: 5_000,
+  }),
+} = {}) {
   if (!child.pid) return;
-  if (process.platform === "win32") {
+  if (platform === "win32") {
     const args = ["/pid", String(child.pid), "/t"];
     if (force) args.push("/f");
-    const killer = spawn("taskkill", args, { stdio: "ignore", windowsHide: true });
-    killer.on("error", () => child.kill(force ? "SIGKILL" : "SIGTERM"));
+    try {
+      const result = killWindowsTree(args);
+      if (result?.error || result?.status !== 0) child.kill(force ? "SIGKILL" : "SIGTERM");
+    } catch {
+      child.kill(force ? "SIGKILL" : "SIGTERM");
+    }
     return;
   }
   try {

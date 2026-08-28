@@ -462,3 +462,9 @@ pre-test failure in pull-request run
 tarball install exhausted its existing 120-second process ceiling before the source phase began.
 The CLI now permits exactly one Windows-only retry of that `ETIMEDOUT`, and the retry starts the
 entire parity check in a fresh temporary root. Other errors remain immediately fatal.
+
+Candidate `fc5c7386d725e0833b1e11761ded6df2c69a4013` then exposed the remaining shutdown
+race in push run [`33164652799`](https://github.com/Zhao73/alphacouncil-agent/actions/runs/33164652799):
+all product assertions passed, but `fast-no-cold-retry` could not remove an executing `.cmd` shim
+after the asynchronous `taskkill` request. Windows worker shutdown now invokes bounded synchronous
+`taskkill /t` settlement, with the existing direct-child signal retained as the failure fallback.
