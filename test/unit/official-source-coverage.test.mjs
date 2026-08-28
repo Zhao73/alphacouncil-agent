@@ -279,6 +279,47 @@ test("deterministic SEC grounding materializes the canonical regulator source be
   assert.doesNotThrow(() => assertOfficialSourceCoverage(packet, { task: TASK, asOfDate: AS_OF, grounding }));
 });
 
+test("grounded regulator completion retains a gap still owned by unavailable dossier coverage", () => {
+  const input = inputPacket();
+  const gap = "The filing timeline was found, but the latest primary filing body could not be read.";
+  input.official_source_coverage.status = "incomplete";
+  input.official_source_coverage.regulator.status = "incomplete";
+  input.official_source_coverage.regulator.checked_through = null;
+  input.official_source_coverage.regulator.gap = gap;
+  input.coverage_items = [{
+    id: "news.regulator_timeline",
+    status: "unavailable",
+    source_ids: [],
+    note: "",
+    attempted: "Opened the latest filing URL from the SEC submissions feed.",
+    attempted_urls: [regulatorItem.url],
+    gap,
+  }];
+
+  const packet = normalized(input);
+  assert.ok(packet.open_questions.includes(gap));
+  applyGroundedRegulatorCoverage(packet, { task: TASK, asOfDate: AS_OF, grounding });
+
+  assert.equal(packet.official_source_coverage.regulator.status, "complete");
+  assert.ok(packet.open_questions.includes(gap));
+});
+
+test("grounded regulator completion removes its retired unshared gap", () => {
+  const input = inputPacket();
+  const gap = "The regulator surface had not yet been reconciled with deterministic grounding.";
+  input.official_source_coverage.status = "incomplete";
+  input.official_source_coverage.regulator.status = "incomplete";
+  input.official_source_coverage.regulator.checked_through = null;
+  input.official_source_coverage.regulator.gap = gap;
+
+  const packet = normalized(input);
+  assert.ok(packet.open_questions.includes(gap));
+  applyGroundedRegulatorCoverage(packet, { task: TASK, asOfDate: AS_OF, grounding });
+
+  assert.equal(packet.official_source_coverage.regulator.status, "complete");
+  assert.ok(!packet.open_questions.includes(gap));
+});
+
 test("official coverage can never certify a cutoff after its actual retrieval day", () => {
   const future = "2099-01-01";
   const input = inputPacket();

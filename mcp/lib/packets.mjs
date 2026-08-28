@@ -432,6 +432,17 @@ function coverageGapQuestions(coverage) {
     .filter(Boolean);
 }
 
+function packetRequiredGapQuestions(packet) {
+  const coverageItemGaps = (Array.isArray(packet?.coverage_items) ? packet.coverage_items : [])
+    .filter((item) => item?.status === "unavailable")
+    .map((item) => typeof item?.gap === "string" ? item.gap.trim() : "")
+    .filter(Boolean);
+  return new Set([
+    ...coverageGapQuestions(packet?.official_source_coverage),
+    ...coverageItemGaps,
+  ]);
+}
+
 function coverageSourceIds(coverage) {
   if (!objectRecord(coverage)) return [];
   return sourceIdList([coverage.regulator, coverage.issuer].flatMap((surface) => {
@@ -528,7 +539,15 @@ export function applyGroundedRegulatorCoverage(packet, {
   };
   coverage.status = coverage.issuer.status === "complete" ? "complete" : "incomplete";
   if (priorGap && Array.isArray(packet.open_questions)) {
-    packet.open_questions = packet.open_questions.filter((question) => question !== priorGap);
+    // Completing the server-owned SEC surface retires only that surface's question. The same
+    // byte-identical gap may still be owned by an unavailable company-coverage row (for
+    // example, the filing timeline is known but the primary Form 4 body could not be read), or
+    // by the issuer surface. Removing it in that case makes an otherwise valid packet fail the
+    // dossier contract and wastes the remaining lifecycle on a model repair that cannot add
+    // any evidence. Preserve every gap that another current contract surface still requires.
+    if (!packetRequiredGapQuestions(packet).has(priorGap)) {
+      packet.open_questions = packet.open_questions.filter((question) => question !== priorGap);
+    }
   }
   return packet;
 }
