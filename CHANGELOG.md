@@ -4,6 +4,8 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-08-28
+
 ### Fixed
 
 - Leaf `codex exec` workers now share the caller's one authenticated `CODEX_HOME` while using an
@@ -153,8 +155,6 @@ Notable changes per release. Dates are UTC.
 - Added frozen capability, voice-provenance and catalog-derived evidence-quality labels for
   each method seat. The final bench exposes their basis and catalog hash, and distinguishes
   model-free deterministic output, worker-failure fallback, missing inputs and no-producer facts.
-
-## [1.5.0] — 2026-08-26
 
 ### Security
 
