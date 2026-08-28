@@ -26,11 +26,11 @@ import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId,
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
-import { codexAttemptConfig, codexReasoningPolicyStage, codexRunConfig, mapLimit, runCodex, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
+import { codexAttemptConfig, codexReasoningPolicyStage, codexRunConfig, mapLimit, runCodex, workerActivitySummary, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
-import { gatherGrounding } from "./grounding.mjs";
+import { fastValuationGroundingProjection, gatherGrounding } from "./grounding.mjs";
 import { councilOptions } from "./council-options.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { loadFactProducerCatalog, seatCoverage } from "./personas-v3/fact-producer-catalog.mjs";
@@ -54,6 +54,7 @@ import {
   assertCompanySourceAcquisition,
   buildCompanySourceAcquisitionPlan,
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+  fastValuationSourceAcquisitionPlan,
   secPrimaryDocumentRepairPromptBlock,
   sourceAcquisitionPromptBlock,
 } from "./company-source-acquisition.mjs";
@@ -412,12 +413,15 @@ export function buildMethodVoiceHeadlessOutputSchema(run, masterId, frozenOpinio
 export const FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES = 32 * 1024;
 export const FAST_QUANT_USER_OBJECTIVE_MAX_BYTES = 8 * 1024;
 export const FAST_QUANT_USER_OBJECTIVE_RESERVE_BYTES = FAST_QUANT_USER_OBJECTIVE_MAX_BYTES + 128;
+export const FAST_VALUATION_HEADLESS_PROMPT_MAX_BYTES = 32 * 1024;
+export const FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES = 8 * 1024;
+export const FAST_VALUATION_USER_OBJECTIVE_RESERVE_BYTES = FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES + 128;
 
 export function headlessEvidenceEnvelopeInstruction(kind) {
   return [
     "NATIVE SEGMENTED STRUCTURED-OUTPUT ENVELOPE (mandatory): return the exact outer fields required by segmented_evidence_v1; do not return the evidence packet as one monolithic string.",
     `The decoded fields together represent the one complete ${kind} required above. Set transport exactly to segmented_evidence_v1.`,
-    "Serialize claims, metrics, sources, and open_questions separately into their matching *_json strings as compact single-line JSON.",
+    "Serialize claims, metrics, sources, and open_questions separately into their matching *_json strings as compact single-line JSON. Every claims_json row is exactly {claim,evidence,confidence,source_ids}: claim and evidence are non-empty reader-language strings, confidence is high|medium|low, and source_ids is a JSON array of cited source IDs.",
     "Serialize coverage_items, acquisition_ledger, and official_source_coverage into their matching *_json strings; use the literal string null when that top-level field is not applicable or absent under the packet contract. In particular, macro_regime, market_narrative, and social_pulse must set coverage_items_json and acquisition_ledger_json to the literal string null because those supplemental seats own no company dossier routes.",
     "Do not confuse the two coverage shapes: every coverage_items_json row uses id, status, source_ids, note, attempted, attempted_urls, and gap. note, attempted, and gap are plain strings (never arrays or objects); attempted_urls is an array of HTTP URLs. acquisition_ledger_json items separately use coverage_id, outcome, source_ids, attempts, and data/reason. Every acquisition `attempts` value MUST be a JSON array of objects, never a prose string; each attempt object uses stage, locator_type, locator, result, source_ids, and note.",
     "Put summary, confidence, and information_richness directly in the outer object. Do not emit an empty or intermediate envelope. Silently discard drafts before answering; never append a correction or a second JSON root inside any segment.",
@@ -430,35 +434,48 @@ export function buildHeadlessEvidencePrompt(task, run, userPrompt = "") {
     companyCoverageInstruction(task, run),
     headlessEvidenceEnvelopeInstruction(`${task} evidence packet`),
   ].filter(Boolean).join("\n\n");
-  const fastQuant = task === "quant_factor" && String(run?.council_pace || "").toLowerCase() === "fast";
-  if (fastQuant) {
+  const fastPace = String(run?.council_pace || "").toLowerCase() === "fast";
+  const fastConfig = fastPace && task === "quant_factor" ? {
+    label: "fast quant",
+    reasonPrefix: "FAST_QUANT",
+    promptMaxBytes: FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES,
+    objectiveMaxBytes: FAST_QUANT_USER_OBJECTIVE_MAX_BYTES,
+    objectiveReserveBytes: FAST_QUANT_USER_OBJECTIVE_RESERVE_BYTES,
+  } : fastPace && task === "valuation_long_short" ? {
+    label: "fast valuation",
+    reasonPrefix: "FAST_VALUATION",
+    promptMaxBytes: FAST_VALUATION_HEADLESS_PROMPT_MAX_BYTES,
+    objectiveMaxBytes: FAST_VALUATION_USER_OBJECTIVE_MAX_BYTES,
+    objectiveReserveBytes: FAST_VALUATION_USER_OBJECTIVE_RESERVE_BYTES,
+  } : null;
+  if (fastConfig) {
     const objectiveBytes = Buffer.byteLength(String(userPrompt || ""), "utf8");
-    if (objectiveBytes > FAST_QUANT_USER_OBJECTIVE_MAX_BYTES) {
-      throw invalidParams(`fast quant user objective is ${objectiveBytes} bytes; limit is ${FAST_QUANT_USER_OBJECTIVE_MAX_BYTES}`, {
-        reason: "FAST_QUANT_USER_OBJECTIVE_TOO_LARGE",
+    if (objectiveBytes > fastConfig.objectiveMaxBytes) {
+      throw invalidParams(`${fastConfig.label} user objective is ${objectiveBytes} bytes; limit is ${fastConfig.objectiveMaxBytes}`, {
+        reason: `${fastConfig.reasonPrefix}_USER_OBJECTIVE_TOO_LARGE`,
         bytes: objectiveBytes,
-        max_bytes: FAST_QUANT_USER_OBJECTIVE_MAX_BYTES,
+        max_bytes: fastConfig.objectiveMaxBytes,
       });
     }
     const fixedBytes = Buffer.byteLength(assemble(""), "utf8");
-    const fixedLimit = FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES - FAST_QUANT_USER_OBJECTIVE_RESERVE_BYTES;
+    const fixedLimit = fastConfig.promptMaxBytes - fastConfig.objectiveReserveBytes;
     if (fixedBytes > fixedLimit) {
-      throw invalidParams(`fast quant fixed prompt is ${fixedBytes} bytes; limit is ${fixedLimit}`, {
-        reason: "FAST_QUANT_FIXED_PROMPT_TOO_LARGE",
+      throw invalidParams(`${fastConfig.label} fixed prompt is ${fixedBytes} bytes; limit is ${fixedLimit}`, {
+        reason: `${fastConfig.reasonPrefix}_FIXED_PROMPT_TOO_LARGE`,
         bytes: fixedBytes,
         max_bytes: fixedLimit,
-        reserved_user_objective_bytes: FAST_QUANT_USER_OBJECTIVE_MAX_BYTES,
+        reserved_user_objective_bytes: fastConfig.objectiveMaxBytes,
       });
     }
   }
   const prompt = assemble(userPrompt);
-  if (fastQuant) {
+  if (fastConfig) {
     const bytes = Buffer.byteLength(prompt, "utf8");
-    if (bytes > FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES) {
-      throw invalidParams(`fast quant headless prompt is ${bytes} bytes; limit is ${FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES}`, {
-        reason: "FAST_QUANT_PROMPT_TOO_LARGE",
+    if (bytes > fastConfig.promptMaxBytes) {
+      throw invalidParams(`${fastConfig.label} headless prompt is ${bytes} bytes; limit is ${fastConfig.promptMaxBytes}`, {
+        reason: `${fastConfig.reasonPrefix}_PROMPT_TOO_LARGE`,
         bytes,
-        max_bytes: FAST_QUANT_HEADLESS_PROMPT_MAX_BYTES,
+        max_bytes: fastConfig.promptMaxBytes,
       });
     }
   }
@@ -1522,6 +1539,11 @@ export function visibleRun(args) {
   // make a truthful queue-to-persistence SLA claim. Only analyze_symbol gets the enforced
   // thirty-minute full-council deadline.
   const timing = visibleCouncilTiming(args);
+  const grounding = materializeFastValuationGrounding({
+    grounding: args.grounding,
+    tasks,
+    councilPace: timing.council_pace,
+  });
   const run = {
     run_id: id,
     symbol,
@@ -1566,7 +1588,7 @@ export function visibleRun(args) {
     verifier_verdicts: [],
     // Deterministic facts injected into every analyst prompt, so search explains and
     // challenges established numbers rather than re-deriving them from nothing.
-    grounding: args.grounding && typeof args.grounding === "object" ? args.grounding : null,
+    grounding,
     seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
   };
   writeStatus(run);
@@ -2982,7 +3004,10 @@ function acquisitionLedgerRepairPrompt({ packet, run, task, symbol, asOfDate, la
     "For a reported actual with several disclosed metrics, use data.observations rows with metric/value/unit/period/scope. For a single actual, value/unit/period/scope is also valid. A proxy uses value/unit/period/formula/inputs or derived observations with formula/inputs. A model puts finite ordered low/base/high under data.range. Preserve proxy and model labels; never convert them to actual.",
     "If coverage_items says covered because the domain has real sourced evidence but the exact scalar/model is incomplete, keep the shared source_ids and complete attempted ladder, set only that acquisition row to unavailable with a concrete reason, and do not alter coverage_items. The exact target need not have a succeeded attempt because it remains unavailable. This preserves evidence without publishing an unsupported value.",
     "Use public_market_data exactly for an already-cited non-official public market-data page. It is a supplemental stage, not market_official, and it cannot replace any required_terminal_stage. Do not use market_data_provider or the task id market_data as a stage name.",
-    sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
+    sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language, {
+      fastQuant: task === "quant_factor" && run?.council_pace === "fast",
+      fastValuation: task === "valuation_long_short" && run?.council_pace === "fast",
+    }),
     schemaRepairIssuePrompt(error),
     `Validated evidence packet subset whose non-ledger fields are frozen:\n${subset}`,
   ].join("\n\n");
@@ -3042,7 +3067,11 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
   const exitLabel = Number.isInteger(result?.code) ? `exit code ${result.code}` : "worker error";
   const parseMessage = cleanLog(parseError?.message || parseError || "subagent did not return valid JSON", 1_000);
   const schemaErrors = boundedSchemaRepairIssues(parseError);
-  const reason = outputContractFailed ? parseMessage : (timedOut ? `timeout after ${timeoutMs}ms` : exitLabel);
+  const reason = outputContractFailed
+    ? parseMessage
+    : failureKind === "tool_policy_violation"
+      ? "fast valuation used prohibited shell execution"
+      : (timedOut ? `timeout after ${timeoutMs}ms` : exitLabel);
   const rawOutput = String(result?.text || "");
   const positionMatch = outputContractFailed ? /\bposition\s+(\d+)\b/i.exec(parseMessage) : null;
   const parsePosition = positionMatch ? Number(positionMatch[1]) : null;
@@ -3056,6 +3085,7 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     open_questions: [copy.inspect],
     confidence: "low",
   }, task, symbol, asOfDate, "");
+  const policyViolation = failureKind === "tool_policy_violation";
   const diagnostic = {
     schema_version: 1,
     task,
@@ -3066,9 +3096,12 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
     timeout_ms: timeoutMs,
     exit_code: Number.isInteger(result?.code) ? result.code : null,
     reason,
-    diagnostic_excerpt: cleanLog(outputContractFailed
-      ? (rawOutput || result?.stderr || result?.stdout || reason)
-      : (result?.stderr || result?.stdout || rawOutput || reason)),
+    ...(result?.activity_summary ? { worker_activity_summary: result.activity_summary } : {}),
+    diagnostic_excerpt: policyViolation
+      ? reason
+      : cleanLog(outputContractFailed
+        ? (rawOutput || result?.stderr || result?.stdout || reason)
+        : (result?.stderr || result?.stdout || rawOutput || reason)),
     ...(result?.output_too_large === true ? {
       output_too_large: true,
       output_bytes: Number.isSafeInteger(result.output_bytes) ? result.output_bytes : null,
@@ -3077,8 +3110,10 @@ export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeo
         ? result.output_fingerprint_sha256
         : null,
       output_hash_scope: typeof result.output_hash_scope === "string" ? result.output_hash_scope : null,
-      output_prefix: String(result.output_prefix || "").slice(0, 4 * 1024),
-      output_tail: String(result.output_tail || "").slice(-4 * 1024),
+      ...(!policyViolation ? {
+        output_prefix: String(result.output_prefix || "").slice(0, 4 * 1024),
+        output_tail: String(result.output_tail || "").slice(-4 * 1024),
+      } : {}),
     } : {}),
     ...(outputContractFailed ? {
       ...(parseFailed ? { parse_error: parseMessage } : { reader_language_error: parseMessage }),
@@ -3238,7 +3273,7 @@ function evidenceOutputFailureKind(error) {
   return kind === "reader_language_mismatch" ? kind : "parse_failed";
 }
 
-export { workerExecutionFailureKind } from "./codex.mjs";
+export { workerActivitySummary, workerExecutionFailureKind } from "./codex.mjs";
 
 function repairableOutputFailure(failureKind) {
   return [
@@ -3535,6 +3570,27 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
 }
 
 /**
+ * Persist the exact server-computed fast-valuation projection beside the grounding that
+ * produced it. The worker sees the same object and the acceptance gate later compares its
+ * returned model values against this frozen copy. Keeping it in the run makes the binding
+ * auditable and prevents a prompt-only calculation hash from becoming decorative metadata.
+ */
+export function materializeFastValuationGrounding({ grounding, tasks = [], councilPace = null } = {}) {
+  if (!grounding || typeof grounding !== "object" || Array.isArray(grounding)) return null;
+  if (String(councilPace || "").toLowerCase() !== "fast"
+    || !Array.isArray(tasks)
+    || !tasks.includes("valuation_long_short")) return grounding;
+  const frozenGrounding = {
+    ...grounding,
+    source_acquisition_plan: fastValuationSourceAcquisitionPlan(grounding.source_acquisition_plan),
+  };
+  return {
+    ...frozenGrounding,
+    fast_valuation_projection: fastValuationGroundingProjection(frozenGrounding),
+  };
+}
+
+/**
  * Persist a minimal receipt-bound lifecycle before a background MCP call is accepted.
  *
  * Grounding can perform several network requests. Without this envelope, `analyze_symbol`
@@ -3555,6 +3611,11 @@ export function queueHeadlessRun(args) {
   const frozen = frozenMasterSelection(args);
   const startedAt = new Date().toISOString();
   const timing = councilTiming(args, startedAt);
+  const grounding = materializeFastValuationGrounding({
+    grounding: args.grounding,
+    tasks,
+    councilPace: timing.council_pace,
+  });
   // Resolve every operator setting before allocating persistent state. Invalid fast-profile
   // overrides must fail without leaving an apparently queued run behind.
   const workerExecutionConfig = codexRunConfig(process.env, { councilPace: timing.council_pace });
@@ -3587,7 +3648,7 @@ export function queueHeadlessRun(args) {
     master_opinions: [],
     master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
     verifier_verdicts: [],
-    grounding: args.grounding && typeof args.grounding === "object" ? args.grounding : null,
+    grounding,
     seat_weight_overrides: (args.seat_weights && typeof args.seat_weights === "object") ? args.seat_weights : {},
   };
   saveRun(run);
@@ -3633,7 +3694,7 @@ export async function collectEvidence(args) {
     defaultConcurrency,
     Math.min(LIMITS.CONCURRENCY_MAX, Number.isFinite(requestedConcurrency) ? requestedConcurrency : defaultConcurrency),
   );
-  const grounding = await groundingForHeadlessRun({
+  const gatheredGrounding = await groundingForHeadlessRun({
     symbol,
     asOf: asOfDate,
     grounding: args.grounding,
@@ -3642,6 +3703,11 @@ export async function collectEvidence(args) {
       timing,
       timing.council_mode === "quick" ? LIMITS.QUICK_GROUNDING_MS : councilPaceProfile(timing.council_pace).grounding_ms,
     ),
+  });
+  const grounding = materializeFastValuationGrounding({
+    grounding: gatheredGrounding,
+    tasks,
+    councilPace: timing.council_pace,
   });
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
@@ -3812,9 +3878,52 @@ export async function collectEvidence(args) {
         sigkillGraceMs: attemptWindow.settlement_grace_ms,
         absoluteDeadlineMs: attemptWindow.absolute_deadline_ms,
       });
-      return { ...result, budget_ms: result.timing?.worker_timeout_ms ?? allowedMs };
+      const activity = workerActivitySummary(result);
+      const activityRow = {
+        attempt,
+        attempt_kind: attemptKind,
+        search_enabled: search,
+        ...activity,
+      };
+      const priorActivity = Array.isArray(taskState(run, task)?.worker_activity_summaries)
+        ? taskState(run, task).worker_activity_summaries
+        : [];
+      updateTask(run, task, "running", {
+        attempts: attempt,
+        worker_activity_summaries: [...priorActivity, activityRow],
+      });
+      appendEvent(run, "worker_activity_summary", { task, ...activityRow });
+      const toolPolicyViolation = result.ok
+        && task === "valuation_long_short"
+        && run.council_pace === "fast"
+        && (activity.shell_execution_detected || activity.audit_complete !== true);
+      if (toolPolicyViolation) {
+        const policyReason = activity.shell_execution_detected
+          ? "shell_execution"
+          : "structured_activity_audit_unavailable";
+        appendEvent(run, "worker_tool_policy_violation", {
+          task,
+          attempt,
+          attempt_kind: attemptKind,
+          policy_reason: policyReason,
+          shell_execution_count: activity.shell_execution_count,
+        });
+      }
+      return {
+        ...result,
+        activity_summary: activity,
+        budget_ms: result.timing?.worker_timeout_ms ?? allowedMs,
+        ...(toolPolicyViolation ? {
+          ok: false,
+          tool_policy_violation: true,
+          stderr: activity.shell_execution_detected
+            ? "fast valuation tool policy violation: shell execution detected"
+            : "fast valuation tool policy violation: structured activity audit unavailable",
+        } : {}),
+      };
     };
     const commitFailure = ({ failedResult, budgetMs, attempts, failureKind, parseError, retryDiagnostic }) => {
+      const effectiveFailureKind = failureKind || workerExecutionFailureKind(failedResult);
       const failure = workerFailureArtifacts({
         task,
         symbol,
@@ -3822,7 +3931,7 @@ export async function collectEvidence(args) {
         language,
         timeoutMs: budgetMs,
         result: failedResult,
-        failureKind,
+        failureKind: effectiveFailureKind,
         parseError,
       });
       const diagnosticPath = join(dir, `${task}.failure.json`);
@@ -3838,8 +3947,8 @@ export async function collectEvidence(args) {
         ...(retryDiagnostic ? { retry_diagnostic: retryDiagnostic } : {}),
         attempts,
         deadline_exhausted: failedResult.deadline_exhausted === true,
-        error: ["parse_failed", "reader_language_mismatch"].includes(failureKind)
-          ? failureKind
+        error: ["parse_failed", "reader_language_mismatch", "tool_policy_violation"].includes(effectiveFailureKind)
+          ? effectiveFailureKind
           : (failedResult.deadline_exhausted ? "global_deadline" : failedResult.timedOut ? "timeout" : `exit code ${failedResult.code}`),
       });
       return failure.packet;
@@ -3950,7 +4059,10 @@ export async function collectEvidence(args) {
           evidenceRepairSchemaContract(task),
           secPrimaryDocumentRepairPromptBlock(run.grounding),
           companyCoverageInstruction(task, run),
-          sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language),
+          sourceAcquisitionPromptBlock(run.grounding?.source_acquisition_plan, task, language, {
+            fastQuant: task === "quant_factor" && run?.council_pace === "fast",
+            fastValuation: task === "valuation_long_short" && run?.council_pace === "fast",
+          }),
           schemaRepairIssuePrompt(firstParseError),
           `Write every reader-facing value in ${language}. Translation is permitted only to repair the language mismatch; do not alter facts, numbers, dates, source IDs or uncertainty.`,
           `Malformed worker output:\n${String(result.text || "").slice(0, LIMITS.PARSE_REPAIR_INPUT_CHARS)}`,

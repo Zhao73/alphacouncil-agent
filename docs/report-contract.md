@@ -518,7 +518,7 @@ The tier moves every per-stage cap together with the total, because the per-stag
 bound each worker. The configured stage allocation fits inside its ceiling, but that arithmetic
 does not establish successful completion or a measured end-to-end duration.
 
-For the default, unlowered `fast` path, evidence uses `220s + 20s`, each debate side uses
+For the default, unlowered `fast` path, evidence uses `240s + 0s`, each debate side uses
 `70s + 15s`, and PM uses `75s + 15s` for a primary plus a bounded timeout/format-repair
 reserve. A method voice instead gets a `120s primary with no cold timeout retry`: live Work
 evidence showed that a fresh process could not finish in the former eight-second reserve, so

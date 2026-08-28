@@ -56,6 +56,15 @@ test("the runtime skill carries the limits the tool payloads carry", () => {
   assert.match(skill, /skipped screen rule is a gap/i);
 });
 
+test("the report contract mirrors the fast evidence primary and repair split", async () => {
+  const { COUNCIL_PACES } = await import("../../mcp/lib/constants.mjs");
+  const contract = read("docs/report-contract.md");
+  assert.equal(COUNCIL_PACES.fast.evidence_ms, 240_000);
+  assert.equal(COUNCIL_PACES.fast.evidence_repair_reserve_ms, 0);
+  assert.match(contract, /evidence uses `240s \+ 0s`/u);
+  assert.doesNotMatch(contract, /evidence uses `220s \+ 20s`/u);
+});
+
 // The master bench and the verifier pass were described only inside the Claude Code
 // section, so on Codex and OpenCode the council ran evidence -> debate -> PM and the
 // twenty-one lenses never executed at all. Same plugin, materially different product.

@@ -283,6 +283,10 @@ if (task) {
     }
   }
 }
+process.stdout.write(JSON.stringify({
+  type: "item.completed",
+  item: { id: "fixture-message", type: "agent_message", text: "fixture completed" },
+}) + "\\n");
 writeFileSync(output, JSON.stringify(packet));
 `);
   if (process.platform !== "win32") {

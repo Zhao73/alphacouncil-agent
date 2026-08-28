@@ -8,6 +8,8 @@ import {
   COMPANY_SOURCE_ACQUISITION_POLICY_ID,
   FAST_QUANT_MAX_QUERY_LOCATORS,
   FAST_QUANT_MAX_URL_LOCATORS,
+  FAST_VALUATION_MAX_QUERY_LOCATORS,
+  FAST_VALUATION_MAX_URL_LOCATORS,
   acquireCompanyStarterEvidence,
   buildCompanySourceAcquisitionPlan,
   canonicalizeCompanySourceAcquisitionPacket,
@@ -1605,6 +1607,407 @@ test("fast quant server gate binds frozen locators, limits, and official domains
   };
   assert.ok(companySourceAcquisitionIssues(singularSource.packet, singularSource.run)
     .some((issue) => issue.keyword === "source_id_shape"));
+});
+
+function fastValuationBoundFixture() {
+  const quoteUrl = "https://query1.finance.yahoo.com/v8/finance/chart/AAPL?range=1d&interval=1d";
+  const factsUrl = "https://data.sec.gov/api/xbrl/companyfacts/CIK0000320193.json";
+  const plan = buildCompanySourceAcquisitionPlan({
+    symbol: "AAPL",
+    asOf: "2026-08-28",
+    profile: {
+      ...profile({ cik: "0000320193", name: "Apple Inc." }),
+      exchanges: ["NASDAQ"],
+    },
+  });
+  const routes = plan.tasks.valuation_long_short;
+  const items = routes.map((route) => ({
+    coverage_id: route.coverage_id,
+    outcome: "not_applicable",
+    source_ids: [],
+    attempts: [],
+    reason: "Fixture route is outside this binding assertion.",
+  }));
+  const coverageItems = routes.map((route) => ({
+    id: route.coverage_id,
+    status: "not_applicable",
+    source_ids: [],
+    note: "Fixture route is outside this binding assertion.",
+    attempted: "",
+    attempted_urls: [],
+    gap: "",
+  }));
+  const target = routes.findIndex((route) => route.coverage_id === "valuation.dcf_reverse_dcf");
+  const targetRoute = routes[target];
+  const sourceIds = ["valuation_long_short:S1", "valuation_long_short:S2"];
+  const calculationHash = "sha256:fixture-fast-valuation-grid";
+  const requiredMetricsAck = {
+    calculation_hash: calculationHash,
+    current_price_to_owner_earnings_multiple: 40.678316,
+    reverse_dcf_implied_growth: 0.073,
+    scenario_value_per_share: { bear: 77.553655, base: 121.720593, bull: 182.625514 },
+    scenario_implied_return_pct: { bear: -75.346921, base: -61.306951, bull: -41.946241 },
+  };
+  const bindServerRoute = (coverageId, outcome, data) => {
+    const index = routes.findIndex((route) => route.coverage_id === coverageId);
+    const route = routes[index];
+    const derived = route.stages.find((stage) => stage.stage === "derived_proxy").locators[0];
+    items[index] = {
+      coverage_id: coverageId,
+      outcome,
+      source_ids: sourceIds,
+      attempts: [
+        {
+          stage: "derived_proxy",
+          locator_type: derived.locator_type,
+          locator: derived.locator,
+          result: "succeeded",
+          source_ids: sourceIds,
+          note: "Used the server-computed sensitivity grid.",
+        },
+      ],
+      data: { ...data, calculation_hash: calculationHash },
+    };
+    coverageItems[index] = {
+      id: coverageId,
+      status: "covered",
+      source_ids: sourceIds,
+      note: "Server-modeled valuation sensitivity, not a forecast.",
+      attempted: "Used the frozen server-derived projection route.",
+      attempted_urls: [quoteUrl, factsUrl],
+      gap: "",
+    };
+  };
+  bindServerRoute("valuation.trading_multiples", "recomputed_proxy", {
+    value: requiredMetricsAck.current_price_to_owner_earnings_multiple,
+    unit: "price / estimated owner earnings per share",
+    period: "2026-08-28 quote over FY2025 denominator",
+    formula: "quote price / estimated owner earnings per aligned diluted share",
+    inputs: [
+      { name: "quote_price", value: 314.58, source_ids: sourceIds },
+      { name: "owner_earnings", value: 116_036_700_000, source_ids: sourceIds },
+    ],
+  });
+  bindServerRoute("valuation.dcf_reverse_dcf", "recomputed_proxy", {
+    value: requiredMetricsAck.reverse_dcf_implied_growth,
+    unit: "decimal annual growth",
+    period: "five-year illustrative owner-earnings model",
+    formula: "server bisection over the frozen owner-earnings DCF",
+    inputs: [
+      { name: "quote_price", value: 314.58, source_ids: sourceIds },
+      { name: "owner_earnings", value: 116_036_700_000, source_ids: sourceIds },
+    ],
+  });
+  bindServerRoute("valuation.bear_base_bull", "modeled_estimate", {
+    range: {
+      low: requiredMetricsAck.scenario_value_per_share.bear,
+      base: requiredMetricsAck.scenario_value_per_share.base,
+      high: requiredMetricsAck.scenario_value_per_share.bull,
+    },
+    unit: "USD per share",
+    period: "five-year illustrative owner-earnings sensitivity",
+    formula: "server-frozen owner-earnings DCF scenario grid",
+    inputs: [
+      { name: "bear_growth", value: 0 },
+      { name: "base_growth", value: 0.04 },
+      { name: "bull_growth", value: 0.07 },
+    ],
+    assumptions: ["Illustrative sensitivity, not issuer guidance or a target price."],
+  });
+  bindServerRoute("valuation.long_short_asymmetry", "modeled_estimate", {
+    range: {
+      low: requiredMetricsAck.scenario_implied_return_pct.bear,
+      base: requiredMetricsAck.scenario_implied_return_pct.base,
+      high: requiredMetricsAck.scenario_implied_return_pct.bull,
+    },
+    unit: "percent versus frozen quote",
+    period: "five-year illustrative owner-earnings sensitivity",
+    formula: "(scenario value per share / frozen quote - 1) * 100",
+    inputs: [
+      { name: "quote_price", value: 314.58 },
+      { name: "bear_value", value: requiredMetricsAck.scenario_value_per_share.bear },
+      { name: "base_value", value: requiredMetricsAck.scenario_value_per_share.base },
+      { name: "bull_value", value: requiredMetricsAck.scenario_value_per_share.bull },
+    ],
+    assumptions: ["Illustrative model spread, not an expected or promised return."],
+  });
+  const requiredLedgerBindings = Object.fromEntries(items
+    .filter((item) => [
+      "valuation.trading_multiples",
+      "valuation.dcf_reverse_dcf",
+      "valuation.bear_base_bull",
+      "valuation.long_short_asymmetry",
+    ].includes(item.coverage_id))
+    .map((item) => [item.coverage_id, {
+      outcome: item.outcome,
+      data: structuredClone(item.data),
+    }]));
+  const packet = {
+    task: "valuation_long_short",
+    as_of: "2026-08-28",
+    summary: "Illustrative reverse DCF only; no point target or profit promise.",
+    claims: [{
+      claim: "The frozen illustrative model implies a five-year growth threshold.",
+      evidence: "Server bisection uses the frozen quote and estimated owner earnings.",
+      source_ids: sourceIds,
+    }],
+    metrics: {
+      server_valuation_sensitivity_ack: structuredClone(requiredMetricsAck),
+    },
+    sources: [
+      { id: sourceIds[0], title: "Delayed quote", url: quoteUrl },
+      { id: sourceIds[1], title: "SEC Companyfacts", url: factsUrl },
+    ],
+    open_questions: [],
+    coverage_items: coverageItems,
+    acquisition_ledger: {
+      policy_id: COMPANY_SOURCE_ACQUISITION_POLICY_ID,
+      task: "valuation_long_short",
+      items,
+    },
+  };
+  const run = {
+    council_mode: "full",
+    council_pace: "fast",
+    dry_run: false,
+    decision_requested: true,
+    entry_tool: "analyze_symbol",
+    as_of: "2026-08-28",
+    grounding: {
+      instrument: { research_model: "operating_company" },
+      quote: { price: 314.58, currency: "USD", source_url: quoteUrl },
+      fundamentals: { cik: "0000320193" },
+      filer: {
+        cik: "0000320193",
+        submissions_url: "https://data.sec.gov/submissions/CIK0000320193.json",
+        recent_filings: [],
+      },
+      typed_fact_pack: { facts: [] },
+      source_acquisition_plan: plan,
+      fast_valuation_projection: {
+        schema_version: 1,
+        projection_id: "fast_valuation_grounding_v1",
+        server_valuation_sensitivity: {
+          status: "illustrative_server_model_not_forecast",
+          calculation_hash: calculationHash,
+          required_metrics_ack: structuredClone(requiredMetricsAck),
+          required_ledger_bindings: requiredLedgerBindings,
+        },
+      },
+    },
+  };
+  return { packet, run, plan, routes, target, targetRoute, sourceIds, calculationHash, requiredMetricsAck };
+}
+
+test("fast valuation binds frozen locators and sources instead of trusting the prompt ledger", () => {
+  const valid = fastValuationBoundFixture();
+  assert.deepEqual(companySourceAcquisitionIssues(valid.packet, valid.run), []);
+  assert.equal(FAST_VALUATION_MAX_QUERY_LOCATORS, 12);
+  assert.equal(FAST_VALUATION_MAX_URL_LOCATORS, 6);
+
+  const invented = structuredClone(valid);
+  invented.packet.acquisition_ledger.items[invented.target].attempts[0].locator = "derive:invented_valuation";
+  assert.ok(companySourceAcquisitionIssues(invented.packet, invented.run).some((issue) => issue.keyword === "frozen_locator"));
+
+  const laundered = structuredClone(valid);
+  laundered.packet.sources[0].url = "https://example.com/invented-model";
+  assert.ok(companySourceAcquisitionIssues(laundered.packet, laundered.run).some((issue) => issue.keyword === "frozen_source_binding"));
+
+  const unofficial = structuredClone(valid);
+  const regulator = unofficial.targetRoute.stages.find((stage) => stage.stage === "regulator_filing");
+  const query = regulator.locators.find((locator) => locator.locator_type === "query");
+  unofficial.packet.sources.push({ id: "valuation_long_short:S3", url: "https://example.com/not-a-regulator" });
+  unofficial.packet.acquisition_ledger.items[unofficial.target].attempts.push({
+    stage: "regulator_filing",
+    locator_type: query.locator_type,
+    locator: query.locator,
+    result: "succeeded",
+    source_ids: ["valuation_long_short:S3"],
+    note: "Spoofed query result.",
+  });
+  assert.ok(companySourceAcquisitionIssues(unofficial.packet, unofficial.run).some((issue) => issue.keyword === "frozen_source_binding"));
+
+  const over = structuredClone(valid);
+  for (const [routeIndex, route] of over.routes.entries()) {
+    for (const stage of route.stages) {
+      for (const locator of stage.locators.filter((row) => row.locator_type === "query")) {
+        over.packet.acquisition_ledger.items[routeIndex].attempts.push({
+          stage: stage.stage,
+          locator_type: locator.locator_type,
+          locator: locator.locator,
+          result: "not_found",
+          source_ids: [],
+          note: "Bounded query fixture.",
+        });
+      }
+    }
+  }
+  assert.ok(companySourceAcquisitionIssues(over.packet, over.run).some((issue) => issue.keyword === "max_query_locators"));
+
+  const overUrls = structuredClone(valid);
+  const urlAttempts = [];
+  for (const [routeIndex, route] of overUrls.routes.entries()) {
+    const regulator = route.stages.find((stage) => stage.stage === "regulator_filing")?.locators
+      .find((locator) => locator.locator_type === "url");
+    if (regulator) urlAttempts.push({ routeIndex, stage: "regulator_filing", locator: regulator });
+  }
+  // Six distinct routes exhaust the cap. A repeated seventh frozen URL remains an attempt,
+  // so it must trip both the per-route uniqueness gate and the global URL ceiling.
+  if (urlAttempts[0]) urlAttempts.push(structuredClone(urlAttempts[0]));
+  assert.equal(urlAttempts.length, 7);
+  for (const attempt of urlAttempts) {
+    overUrls.packet.acquisition_ledger.items[attempt.routeIndex].attempts.push({
+      stage: attempt.stage,
+      locator_type: attempt.locator.locator_type,
+      locator: attempt.locator.locator,
+      result: "not_found",
+      source_ids: [],
+      note: "Bounded URL-limit fixture.",
+    });
+  }
+  assert.ok(companySourceAcquisitionIssues(overUrls.packet, overUrls.run).some((issue) => issue.keyword === "max_url_locators"));
+
+  const tamperedAck = structuredClone(valid);
+  tamperedAck.packet.metrics.server_valuation_sensitivity_ack.reverse_dcf_implied_growth = 0.99;
+  assert.ok(companySourceAcquisitionIssues(tamperedAck.packet, tamperedAck.run)
+    .some((issue) => issue.keyword === "server_valuation_ack_value"));
+
+  const stringifiedNumbers = structuredClone(valid);
+  stringifiedNumbers.packet.metrics.server_valuation_sensitivity_ack.reverse_dcf_implied_growth = "0.073";
+  stringifiedNumbers.packet.acquisition_ledger.items[stringifiedNumbers.target].data.value = "0.073";
+  const stringifiedIssues = companySourceAcquisitionIssues(stringifiedNumbers.packet, stringifiedNumbers.run);
+  assert.ok(stringifiedIssues.some((issue) => issue.keyword === "server_valuation_ack_value"));
+  assert.ok(stringifiedIssues.some((issue) => issue.keyword === "server_valuation_value_binding"));
+
+  const tamperedGrid = structuredClone(valid);
+  const scenarioIndex = tamperedGrid.routes.findIndex((route) => route.coverage_id === "valuation.bear_base_bull");
+  tamperedGrid.packet.acquisition_ledger.items[scenarioIndex].data.range.base += 1;
+  assert.ok(companySourceAcquisitionIssues(tamperedGrid.packet, tamperedGrid.run)
+    .some((issue) => issue.keyword === "server_valuation_range_binding"));
+
+  const tamperedHash = structuredClone(valid);
+  tamperedHash.packet.acquisition_ledger.items[tamperedHash.target].data.calculation_hash = "sha256:wrong";
+  assert.ok(companySourceAcquisitionIssues(tamperedHash.packet, tamperedHash.run)
+    .some((issue) => issue.keyword === "server_valuation_hash_binding"));
+
+  for (const [field, value] of [
+    ["formula", "99 + prompt_injection"],
+    ["period", "FY2099"],
+    ["unit", "invented unit"],
+  ]) {
+    const changed = structuredClone(valid);
+    changed.packet.acquisition_ledger.items[changed.target].data[field] = value;
+    assert.ok(companySourceAcquisitionIssues(changed.packet, changed.run)
+      .some((issue) => issue.keyword.startsWith("server_valuation_semantic")), field);
+  }
+  const changedInput = structuredClone(valid);
+  changedInput.packet.acquisition_ledger.items[changedInput.target].data.inputs[0].value = 999;
+  assert.ok(companySourceAcquisitionIssues(changedInput.packet, changedInput.run)
+    .some((issue) => issue.keyword.startsWith("server_valuation_semantic")));
+
+  const numericReaderClaim = structuredClone(valid);
+  numericReaderClaim.packet.summary = "Bull value is 999 and implied growth is 99%.";
+  numericReaderClaim.packet.claims[0].claim = "The bull case is 999.";
+  assert.ok(companySourceAcquisitionIssues(numericReaderClaim.packet, numericReaderClaim.run)
+    .some((issue) => issue.keyword === "server_valuation_reader_number"));
+
+  for (const summary of [
+    "Bull value is ９９９.",
+    "Bull value is 9e2.",
+    "Bull value is 0x3e7.",
+  ]) {
+    const encodedReaderClaim = structuredClone(valid);
+    encodedReaderClaim.packet.summary = summary;
+    assert.ok(companySourceAcquisitionIssues(encodedReaderClaim.packet, encodedReaderClaim.run)
+      .some((issue) => issue.keyword === "server_valuation_reader_number"), summary);
+  }
+
+  const extraMetric = structuredClone(valid);
+  extraMetric.packet.metrics.invented_bull_value = { value: 999 };
+  assert.ok(companySourceAcquisitionIssues(extraMetric.packet, extraMetric.run)
+    .some((issue) => issue.keyword === "server_valuation_extra_metric"));
+
+  const unreadFiling = structuredClone(valid);
+  const filingUrl = "https://www.sec.gov/Archives/edgar/data/320193/000032019326000079/aapl-20260926.htm";
+  unreadFiling.run.grounding.filer.recent_filings = [{
+    form: "10-K",
+    filing_date: "2026-10-30",
+    accession: "0000320193-26-000079",
+    primary_document_url: filingUrl,
+  }];
+  unreadFiling.packet.sources.push({ id: "valuation_long_short:S3", title: "Unread filing locator", url: filingUrl });
+  unreadFiling.packet.acquisition_ledger.items[unreadFiling.target].attempts[0].source_ids.push("valuation_long_short:S3");
+  assert.ok(companySourceAcquisitionIssues(unreadFiling.packet, unreadFiling.run)
+    .some((issue) => issue.keyword === "frozen_source_binding"));
+
+  const launderedQueryFiling = structuredClone(valid);
+  const queryRegulatorStage = launderedQueryFiling.targetRoute.stages.find((stage) => stage.stage === "regulator_filing");
+  const regulatorQuery = queryRegulatorStage.locators.find((locator) => locator.locator_type === "query");
+  const queryFilingUrl = "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm";
+  launderedQueryFiling.packet.sources.push({
+    id: "valuation_long_short:S3",
+    title: "Worker-asserted unread filing",
+    url: queryFilingUrl,
+    published_at: "2025-10-31",
+  });
+  launderedQueryFiling.packet.acquisition_ledger.items[launderedQueryFiling.target].attempts.push({
+    stage: "regulator_filing",
+    locator_type: regulatorQuery.locator_type,
+    locator: regulatorQuery.locator,
+    result: "succeeded",
+    source_ids: ["valuation_long_short:S3"],
+    note: "Worker claimed the query opened this filing.",
+  });
+  assert.ok(companySourceAcquisitionIssues(launderedQueryFiling.packet, launderedQueryFiling.run)
+    .some((issue) => issue.keyword === "frozen_source_binding"));
+
+  const allUnavailable = fastValuationBoundFixture();
+  allUnavailable.run.grounding.fast_valuation_projection.server_valuation_sensitivity = {
+    status: "unavailable",
+    reason: "fixture intentionally has no aligned server model",
+  };
+  allUnavailable.packet.claims = [];
+  allUnavailable.packet.metrics = {};
+  allUnavailable.packet.sources = [];
+  allUnavailable.packet.open_questions = [];
+  let attemptCount = 0;
+  for (const [index, route] of allUnavailable.routes.entries()) {
+    const attempts = route.required_terminal_stages.map((stageName) => {
+      const stage = route.stages.find((candidate) => candidate.stage === stageName);
+      const locator = stage.locators.find((candidate) => (
+        stageName === "regulator_filing" ? candidate.locator_type === "url" : true
+      ));
+      return {
+        stage: stageName,
+        locator_type: locator.locator_type,
+        locator: locator.locator,
+        result: "not_found",
+        source_ids: [],
+        note: "Frozen bounded route returned no publishable field.",
+      };
+    });
+    attemptCount += attempts.length;
+    const reason = `${route.coverage_id} remained unavailable after every frozen terminal stage.`;
+    allUnavailable.packet.acquisition_ledger.items[index] = {
+      coverage_id: route.coverage_id,
+      outcome: "unavailable",
+      source_ids: [],
+      attempts,
+      reason,
+    };
+    allUnavailable.packet.coverage_items[index] = {
+      id: route.coverage_id,
+      status: "unavailable",
+      source_ids: [],
+      note: reason,
+      attempted: "Executed all four frozen terminal stages.",
+      attempted_urls: attempts.filter((attempt) => attempt.locator_type === "url").map((attempt) => attempt.locator),
+      gap: reason,
+    };
+    allUnavailable.packet.open_questions.push(reason);
+  }
+  assert.equal(attemptCount, 24);
+  assert.deepEqual(companySourceAcquisitionIssues(allUnavailable.packet, allUnavailable.run), []);
 });
 
 test("fast quant rejects invented IV rank and binds expected move across ledger, metrics, claims, source, and time", () => {

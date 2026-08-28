@@ -8,6 +8,7 @@ import {
   masterAttemptFailureDiagnostic,
   debateTransportAttemptDiagnostic,
   outputFailureKind,
+  workerActivitySummary,
   workerExecutionFailureKind,
 } from "../../mcp/lib/orchestrator.mjs";
 import { assertSourceIdsResolve } from "../../mcp/lib/packets.mjs";
@@ -191,6 +192,44 @@ test("worker execution diagnostics classify schema rejection without persisting 
   assert.equal(diagnostic.stderr_chars, stderr.length);
   assert.match(diagnostic.stderr_sha256, /^sha256:[a-f0-9]{64}$/u);
   assert.doesNotMatch(JSON.stringify(diagnostic), /SENSITIVE|Invalid schema/u);
+});
+
+test("fast valuation can audit and reject native shell-tool activity without storing commands", () => {
+  const result = {
+    ok: true,
+    code: 0,
+    stdout: [
+      { type: "thread.started", thread_id: "fixture" },
+      { type: "item.started", item: { id: "cmd-1", type: "command_execution", command: "/bin/zsh -lc private-command" } },
+      { type: "item.completed", item: { id: "cmd-1", type: "command_execution", command: "/bin/zsh -lc private-command", status: "completed" } },
+      { type: "item.completed", item: { id: "search-1", type: "web_search", query: "AAPL filing" } },
+      { type: "item.completed", item: { id: "search-2", type: "web_search", query: "AAPL peers" } },
+    ].map((event) => JSON.stringify(event)).join("\n"),
+    stderr: "",
+  };
+  const summary = workerActivitySummary(result);
+  assert.equal(summary.shell_execution_count, 1);
+  assert.equal(summary.shell_execution_detected, true);
+  assert.equal(summary.web_search_count, 2);
+  assert.equal(summary.audit_complete, true);
+  assert.match(summary.trace_sha256, /^sha256:[a-f0-9]{64}$/u);
+  assert.doesNotMatch(JSON.stringify(summary), /private-command|AAPL peers/u);
+  assert.equal(workerExecutionFailureKind({ ...result, tool_policy_violation: true }), "tool_policy_violation");
+
+  const promptOnly = workerActivitySummary({
+    stdout: JSON.stringify({
+      type: "item.completed",
+      item: { id: "message-1", type: "agent_message", text: "Do not invoke exec or shell." },
+    }),
+    stderr: "",
+  });
+  assert.equal(promptOnly.shell_execution_count, 0);
+  assert.equal(promptOnly.shell_execution_detected, false);
+  assert.equal(promptOnly.audit_complete, true);
+
+  const unstructured = workerActivitySummary({ stdout: "\u001b[31mtool: exec\u001b[0m\n", stderr: "" });
+  assert.equal(unstructured.shell_execution_count, 0);
+  assert.equal(unstructured.audit_complete, false);
 });
 
 test("source provenance failures are not classified as parse failures", () => {

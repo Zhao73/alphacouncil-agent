@@ -207,6 +207,7 @@ export function codexRunConfig(env = process.env, { councilPace = null } = {}) {
 
 /** Classify process failures before callers reduce every provider rejection to exit code 1. */
 export function workerExecutionFailureKind(result = {}) {
+  if (result.tool_policy_violation === true) return "tool_policy_violation";
   if (result.deadline_exhausted) return "global_deadline";
   if (result.timedOut) return "timeout";
   const stderr = String(result.stderr || "");
@@ -218,6 +219,62 @@ export function workerExecutionFailureKind(result = {}) {
     return "context_length_exceeded";
   }
   return `exit_code_${Number.isInteger(result.code) ? result.code : "unknown"}`;
+}
+
+/**
+ * Reduce native `codex exec --json` events to auditable tool counts without persisting
+ * commands, prompts, search queries, or model output. Item IDs deduplicate started/completed
+ * events; prose that merely says "exec" can no longer become a tool-policy signal.
+ */
+export function workerActivitySummary(result = {}) {
+  const stdout = String(result.stdout || "");
+  const stderr = String(result.stderr || "");
+  const trace = [stdout, stderr].filter(Boolean).join("\n");
+  const lines = stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+  const shellItems = new Set();
+  const webSearchItems = new Set();
+  const eventTypes = new Set();
+  let eventCount = 0;
+  let traceParseErrorCount = 0;
+  for (let index = 0; index < lines.length; index += 1) {
+    let event;
+    try {
+      event = JSON.parse(lines[index]);
+    } catch {
+      traceParseErrorCount += 1;
+      continue;
+    }
+    if (!event || typeof event !== "object" || Array.isArray(event) || typeof event.type !== "string") {
+      traceParseErrorCount += 1;
+      continue;
+    }
+    eventCount += 1;
+    eventTypes.add(event.type);
+    const item = event.item;
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const key = typeof item.id === "string" && item.id
+      ? item.id
+      : `event-${index}`;
+    if (item.type === "command_execution") shellItems.add(key);
+    if (item.type === "web_search") webSearchItems.add(key);
+  }
+  const traceAvailable = Boolean(stdout.trim());
+  const auditComplete = traceAvailable && eventCount > 0 && traceParseErrorCount === 0;
+  return {
+    schema_version: 1,
+    trace_format: "codex_exec_jsonl_v1",
+    trace_available: traceAvailable,
+    audit_complete: auditComplete,
+    event_count: eventCount,
+    trace_parse_error_count: traceParseErrorCount,
+    event_types: [...eventTypes].sort(),
+    shell_execution_count: shellItems.size,
+    shell_execution_detected: shellItems.size > 0,
+    web_search_count: webSearchItems.size,
+    stdout_bytes: Buffer.byteLength(stdout, "utf8"),
+    stderr_bytes: Buffer.byteLength(stderr, "utf8"),
+    trace_sha256: trace ? `sha256:${createHash("sha256").update(trace).digest("hex")}` : null,
+  };
 }
 
 /** Return only the provider-authored retry timestamp, never the surrounding stderr body. */
@@ -505,6 +562,7 @@ export function codexWorkerArgs(
     "multi_agent",
     ...(skillConfig ? ["-c", skillConfig] : []),
     "exec",
+    "--json",
     "--ignore-user-config",
     "--ephemeral",
     "--skip-git-repo-check",

@@ -18,6 +18,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `quant_factor` | analyst | yes | default | standard | Quant Factor Analyst | momentum, volatility, short-interest, options | original |
 | `quant_factor_fast` | analyst | no | - | fast | Fast Quant Factor Analyst | momentum, volatility, short-interest, options, bounded | original |
 | `valuation_long_short` | analyst | yes | default | standard | Valuation & Long/Short Analyst | valuation, thesis, position-sizing | original |
+| `valuation_long_short_fast` | analyst | no | - | fast | Fast Valuation & Long/Short Analyst | valuation, thesis, bounded, no-exec | original |
 | `news_industry_management` | analyst | yes | default | fast | News & Industry Analyst | news, industry, management | original |
 | `market_narrative` | analyst | yes | full | fast | Market Narrative Analyst | narrative, positioning, macro-context | original |
 | `social_pulse` | analyst | yes | full | fast | Retail Sentiment and Crowding Analyst | sentiment, crowding, social | original |
@@ -58,7 +59,7 @@ To add a role, add one file. It appears in the tool schema automatically.
 | `rederivation` | verifier | yes | verify | fast | Rederivation Verifier | independent-confirmation, cross-check | original |
 | `refuter` | verifier | yes | verify | fast | Refuter | adversarial, disconfirming-search | original |
 
-Totals: 11 evidence analysts, 3 debate roles, 26 masters, 48 files.
+Totals: 11 evidence analysts, 3 debate roles, 26 masters, 49 files.
 
 ## Provenance
 

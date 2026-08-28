@@ -57,6 +57,40 @@ test("a timed-out worker keeps internal traces out of the evidence packet", () =
   assert.match(diagnostic.diagnostic_excerpt, /codex-search-bridge/);
 });
 
+test("a fast-valuation tool-policy failure persists only counts and hashes, never commands", () => {
+  const { packet, diagnostic } = orchestrator.workerFailureArtifacts({
+    task: "valuation_long_short",
+    symbol: "AAPL",
+    asOfDate: "2026-08-28",
+    language: "English",
+    timeoutMs: 240_000,
+    failureKind: "tool_policy_violation",
+    result: {
+      ok: false,
+      timedOut: false,
+      code: 0,
+      stdout: JSON.stringify({
+        type: "item.completed",
+        item: { id: "cmd-1", type: "command_execution", command: "/bin/zsh -lc private-command" },
+      }),
+      stderr: "private-command failed",
+      text: "private model output",
+      activity_summary: {
+        schema_version: 1,
+        audit_complete: true,
+        shell_execution_count: 1,
+        shell_execution_detected: true,
+        trace_sha256: `sha256:${"a".repeat(64)}`,
+      },
+    },
+  });
+  assert.deepEqual(packet.claims, []);
+  assert.equal(diagnostic.reason, "fast valuation used prohibited shell execution");
+  assert.equal(diagnostic.diagnostic_excerpt, diagnostic.reason);
+  assert.equal(diagnostic.worker_activity_summary.shell_execution_count, 1);
+  assert.doesNotMatch(JSON.stringify(diagnostic), /private-command|private model output/u);
+});
+
 test("a code-zero JSON parse failure is diagnostic material, not investment evidence", () => {
   const malformed = '{"summary":"first-object"}{"summary":"second-object"}';
   const parseError = new SyntaxError("Unexpected non-whitespace character after JSON at position 26");
