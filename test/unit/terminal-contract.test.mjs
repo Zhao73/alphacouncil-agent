@@ -174,7 +174,7 @@ test("every structural gap is incomplete and carries a concrete missing entry", 
   }
 });
 
-test("full rejects substitute execution while quick reports it as degraded", () => {
+test("a frozen sourced view survives a mute voice worker as a disclosed degraded run", () => {
   const fullRun = completeRun({
     master_status: {
       master_buffett: { master: "master_buffett", status: "completed", voice_status: "deterministic_fallback" },
@@ -187,10 +187,10 @@ test("full rejects substitute execution while quick reports it as degraded", () 
     }],
   });
   const full = terminalContractState(fullRun, { manager: completeManager() });
-  assert.equal(full.terminal, "incomplete");
-  assert.ok(full.missing.some((item) => item.stage === "methods"
+  assert.equal(full.terminal, "degraded");
+  assert.deepEqual(full.missing, []);
+  assert.ok(full.notes.some((item) => item.stage === "methods"
     && item.reason === "deterministic_fallback"));
-  assert.deepEqual(full.notes, []);
 
   const quickRun = {
     ...fullRun,

@@ -218,6 +218,13 @@ export function workerExecutionFailureKind(result = {}) {
   if (/context_length_exceeded|maximum context length/iu.test(stderr)) {
     return "context_length_exceeded";
   }
+  // A dedicated process can die before writing any candidate packet. Keep this distinct from
+  // an exit that emitted malformed or contract-violating output: only the truly mute case may
+  // retain an already frozen deterministic method view as a disclosed fallback.
+  if (!String(result.text || "").trim() && !String(result.stdout || "").trim()
+    && Number.isInteger(result.code) && result.code !== 0) {
+    return "process_exit_without_output";
+  }
   return `exit_code_${Number.isInteger(result.code) ? result.code : "unknown"}`;
 }
 

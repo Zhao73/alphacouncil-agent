@@ -70,6 +70,7 @@ test("run-specific method schema locks identity, decision, dossier and packet ta
   const frozen = {
     master: "master_fisher",
     stance: "cautious",
+    confidence: "medium",
     source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
     evidence_source_ids: ["market_data:S1", "earnings_deep_dive:S1"],
   };
@@ -80,6 +81,7 @@ test("run-specific method schema locks identity, decision, dossier and packet ta
   assert.equal(schema.properties.acknowledged_stance.const, "cautious");
   assert.deepEqual(schema.properties.position_intent.enum, ["would_hold", "would_watch"]);
   assert.equal(schema.properties.company_dossier_hash_ack.const, run.company_dossier.content_hash);
+  assert.deepEqual(schema.properties.confidence, { type: "string", const: "medium" });
   assert.deepEqual(schema.properties.evidence_packet_acks.required, ["market_data", "earnings_deep_dive"]);
   assert.equal(schema.properties.evidence_packet_acks.additionalProperties, false);
   assert.deepEqual(
@@ -192,6 +194,23 @@ test("worker execution diagnostics classify schema rejection without persisting 
   assert.equal(diagnostic.stderr_chars, stderr.length);
   assert.match(diagnostic.stderr_sha256, /^sha256:[a-f0-9]{64}$/u);
   assert.doesNotMatch(JSON.stringify(diagnostic), /SENSITIVE|Invalid schema/u);
+});
+
+test("only an exit with no candidate output is classified as a mute process failure", () => {
+  assert.equal(workerExecutionFailureKind({
+    ok: false,
+    code: 23,
+    text: "",
+    stdout: "",
+    stderr: "worker exited before writing its packet",
+  }), "process_exit_without_output");
+  assert.equal(workerExecutionFailureKind({
+    ok: false,
+    code: 23,
+    text: "",
+    stdout: "{malformed candidate",
+    stderr: "worker exited after writing output",
+  }), "exit_code_23");
 });
 
 test("fast valuation can audit and reject native shell-tool activity without storing commands", () => {

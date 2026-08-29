@@ -105,10 +105,16 @@ Fast keeps the full contract but uses an auditable stage-aware reasoning profile
 lifecycle budget per primary/retry/repair chain; retries cannot silently double a seat's cap.
 
 When an instrument classification and typed-fact coverage are already available, the selector also
-shows an eight-family **advisory method match** derived from all 26 physical pack manifests. It is
-only a prefill: every pack remains selectable, no run starts without explicit confirmation, and a
-missing classification produces no guessed default. The output represents AI-generated method
-simulations—not human experts, independent models, or a promise of profit. See
+shows an eight-family **advisory method match** derived from all 26 physical pack manifests. An
+explicit objective and holding horizon additionally calibrate the match and separate directional,
+non-voting risk, and context-only contributions; `out_of_scope` is never a negative vote. For a
+one-year directional request, the PM maps sourced base-case total return to one published rating
+rubric instead of counting conservative method seats; the server binds the frozen price/currency
+and recomputes that return from a same-currency target plus income. An `out_of_scope` seat remains visible in
+the method bench but is structurally absent from the PM rating path. It is only a prefill: every pack remains
+selectable, no run starts without explicit confirmation, and a missing classification produces no
+guessed default. The output represents AI-generated method simulations—not human experts,
+independent models, or a promise of profit. See
 [method-panel recommendation and seat evidence](docs/reference/method-panel-evidence.md).
 
 Only the slow run with all methods and all evidence workers enables the additional verification path; the other full tiers do not claim that extra check.

@@ -24,7 +24,7 @@ import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, sourceManifest, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
-import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractUnvalidatedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, rawRecordText } from "./packets.mjs";
+import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, bindMachineCheckedRatingBasisMarkdown, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractUnvalidatedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, pmRatingAdjustmentContexts, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
 import { codexAttemptConfig, codexReasoningPolicyStage, codexRunConfig, mapLimit, runCodex, workerActivitySummary, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
@@ -38,6 +38,13 @@ import { provenanceSummary } from "./personas-v3/seat-fidelity.mjs";
 import { labelFor } from "./personas-v3/seat-labels.mjs";
 import { intentsForStance, VOICE_FIELDS } from "./voice.mjs";
 import { managerDecisionNestedSourceIds, renderStructuredManagerReport } from "./manager-report.mjs";
+import {
+  assertPmRatingReferenceAvailable,
+  assertPmRatingBasis,
+  pmRatingReferenceGaps,
+  pmRatingReferenceCurrency,
+  pmRatingReferencePrice,
+} from "./pm-rating-rubric.mjs";
 import {
   assertCompanyCoveragePacket,
   assertCompanyDossierAck,
@@ -63,9 +70,11 @@ import {
 import { recordCompanyAcquisitionObservations } from "./company-observations.mjs";
 import {
   REQUIRED_VERIFIER_IDS,
+  assertVerificationFindingsAck,
   buildVerifierBatchInput,
   buildVerifierClaimChunks,
   buildVerifierHeadlessOutputSchema,
+  hardVerificationFindings,
   initializeVerificationPolicy,
   normalizeVerifierBatch,
   normalizeVerifierHeadlessTransport,
@@ -171,6 +180,32 @@ function masterLabelStatus(opinion) {
     evidence_quality: opinion.evidence_quality,
     evidence_quality_basis: opinion.evidence_quality_basis,
     voice_status: opinion.voice_status,
+  };
+}
+
+function frozenMethodVoiceAuthority(frozenOpinion, voice) {
+  const uniqueIds = (value) => [...new Set((Array.isArray(value) ? value : [])
+    .filter((id) => typeof id === "string" && id))];
+  const frozenSourceIds = uniqueIds(frozenOpinion?.source_ids);
+  const deterministicEvidenceSourceIds = Array.isArray(frozenOpinion?.evidence_source_ids)
+    ? uniqueIds(frozenOpinion.evidence_source_ids)
+    : frozenSourceIds;
+  const voiceSourceIds = uniqueIds(voice?.source_ids);
+  const confidence = ["high", "medium", "low"].includes(frozenOpinion?.confidence)
+    ? frozenOpinion.confidence
+    : "low";
+  return {
+    // Voice citations can explain the frozen result, but they cannot become new causal evidence
+    // for that result. Keep the display union separate from the deterministic evidence ledger.
+    source_ids: [...new Set([
+      ...frozenSourceIds,
+      ...deterministicEvidenceSourceIds,
+      ...voiceSourceIds,
+    ])],
+    evidence_source_ids: deterministicEvidenceSourceIds,
+    voice_source_ids: voiceSourceIds,
+    // The voice worker explains a frozen decision; it does not get a second confidence vote.
+    confidence,
   };
 }
 
@@ -392,7 +427,12 @@ export function buildMethodVoiceHeadlessOutputSchema(run, masterId, frozenOpinio
         requireOne: dossierRequired || frozenOpinion?.stance !== "out_of_scope",
         enumerate: enumerateSources,
       }),
-      confidence: { enum: ["high", "medium", "low"] },
+      confidence: {
+        type: "string",
+        const: ["high", "medium", "low"].includes(frozenOpinion?.confidence)
+          ? frozenOpinion.confidence
+          : "low",
+      },
     },
     required: [
       "transport", "master", "acknowledged_stance", "voice_mode", "disclosure_ack",
@@ -642,11 +682,16 @@ export function terminalContractState(run = {}, { manager = null, finalizeStatus
   const notes = substituteExecutionNotes(run);
   const packets = new Map((run.packets || []).map((packet) => [packet?.task, packet]));
 
-  // Full is the strict contract: a cached, compressed, deterministic or otherwise substituted
-  // stage is missing rather than successful. Quick keeps the explicitly disclosed degraded path.
+  // Full remains strict about missing evidence, cache substitution, deterministic-only seats and
+  // report compression. A sourced decision that was frozen before a voice worker went mute is a
+  // disclosed degraded method statement rather than a missing opinion; it can support a decision
+  // without being mislabelled as a complete model-voice run.
   if (run.council_mode === "full") {
-    missing.push(...notes);
-    notes.length = 0;
+    const disclosedFallbacks = notes.filter((item) => (
+      item.stage === "methods" && item.reason === "deterministic_fallback"
+    ));
+    missing.push(...notes.filter((item) => !disclosedFallbacks.includes(item)));
+    notes.splice(0, notes.length, ...disclosedFallbacks);
   }
 
   for (const task of run.tasks || []) {
@@ -1543,8 +1588,6 @@ export function visibleRun(args) {
   const tasks = plannedTasks(args);
   const language = resolveLanguage(args);
   const frozen = frozenMasterSelection(args);
-  const dir = runPath(id);
-  mkdirSync(dir, { recursive: true });
   const startedAt = new Date().toISOString();
   // External host threads are outside this MCP process, so the plugin cannot stop them or
   // make a truthful queue-to-persistence SLA claim. Only analyze_symbol gets the enforced
@@ -1555,6 +1598,13 @@ export function visibleRun(args) {
     tasks,
     councilPace: timing.council_pace,
   });
+  assertPmRatingReferenceAvailable({
+    decision_context: frozen.selection.decision_context || null,
+    dry_run: false,
+    grounding,
+  }, { stage: "visible_plan" });
+  const dir = runPath(id);
+  mkdirSync(dir, { recursive: true });
   const run = {
     run_id: id,
     symbol,
@@ -1592,10 +1642,11 @@ export function visibleRun(args) {
     // roster lookup, is the run truth and every seat is part of the completeness gate.
     masters: frozen.masters,
     master_selection: frozen.selection,
+    decision_context: frozen.selection.decision_context || null,
     master_opinions: [],
     master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
-    // Verifier outcomes, keyed to the seat that cited the claim. These drive the
-    // down-weighting in weights.mjs.
+    // Verifier outcomes, keyed to the seat that cited the claim. They drive explicit evidence
+    // corrections and may support a sourced one-notch PM downgrade; no automatic vote is cast.
     verifier_verdicts: [],
     // Deterministic facts injected into every analyst prompt, so search explains and
     // challenges established numbers rather than re-deriving them from nothing.
@@ -2061,9 +2112,7 @@ export function recordMasterOpinion(args) {
       what_would_change_my_mind: voice.what_would_change_my_mind.length
         ? voice.what_would_change_my_mind
         : frozenOpinion.what_would_change_my_mind,
-      source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
-      evidence_source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
-      confidence: voice.confidence,
+      ...frozenMethodVoiceAuthority(frozenOpinion, voice),
       company_dossier_hash_ack: voice.company_dossier_hash_ack,
       evidence_packet_acks: voice.evidence_packet_acks,
       thread_id: args.thread_id,
@@ -2560,9 +2609,41 @@ function recordVisiblePortfolioManager(run, args) {
   assertPriceLevelContinuity(validated.price_levels, { required: run.council_mode === "full" });
   assertCompanyDossierAck(validated, run, "visible portfolio_manager", { client: true });
   const source_ids = assertSourceIdsResolve(run, validated.source_ids, "portfolio_manager");
+  const ratingBasisRequired = run?.decision_context?.rating_basis_required === true;
+  const rating_basis = ratingBasisRequired || validated.rating_basis !== undefined
+    ? assertPmRatingBasis(validated, {
+      adjustmentContexts: pmRatingAdjustmentContexts(run),
+      referencePrice: pmRatingReferencePrice(run),
+      referenceCurrency: pmRatingReferenceCurrency(run),
+    })
+    : undefined;
+  if (rating_basis) {
+    assertSourceIdsResolve(run, rating_basis.source_ids, "portfolio_manager rating basis");
+  }
+  assertSourceIdsResolve(run, managerDecisionNestedSourceIds({
+    ...validated,
+    source_ids,
+    ...(rating_basis ? { rating_basis } : {}),
+  }), "visible portfolio_manager nested decision sources");
+  const verificationFindingsAckRequired = tripleVerificationRequired(run)
+    || hardVerificationFindings(run).length > 0;
+  const verification_findings_ack = verificationFindingsAckRequired
+    || validated.verification_findings_ack !== undefined
+    ? assertVerificationFindingsAck(validated, run, "visible portfolio_manager")
+    : undefined;
   const normalizedPacket = normalizeDebate({
     ...validated,
     source_ids,
+    ...(rating_basis ? { rating_basis } : {}),
+    ...(verification_findings_ack ? { verification_findings_ack } : {}),
+    ...(rating_basis ? {
+      report_markdown: bindMachineCheckedRatingBasisMarkdown(
+        validated.report_markdown,
+        rating_basis,
+        validated.rating,
+        run.language,
+      ),
+    } : {}),
     thread_id: args.thread_id,
     thread_title: args.thread_title,
     execution_mode: "visible_host_threads",
@@ -2946,6 +3027,16 @@ function schemaRepairIssuePrompt(errorOrIssues) {
   ].join("\n");
 }
 
+function pmRatingRepairContract(run, role) {
+  if (role !== "portfolio_manager" || run?.decision_context?.rating_basis_required !== true) return "";
+  return [
+    "RATING BASIS REPAIR IS REQUIRED. Preserve the investment analysis and repair the packet to pm_rating_rubric_v2.",
+    `rating_basis must contain exactly: rubric_id=pm_rating_rubric_v2; horizon_months=12; return_formula_id=price_target_plus_income_v1; price_currency=${JSON.stringify(pmRatingReferenceCurrency(run))}; reference_price=${JSON.stringify(pmRatingReferencePrice(run))}; numeric base_case_price_target; income_return_pct; base_case_total_return_pct; raw_rating; risk_adjustment=none|downgrade_one_notch; final_rating; adjustment_reason; non-empty source_ids; adjustment_source_ids; adjustment_context_ids.`,
+    "The server recomputes base_case_total_return_pct as ((base_case_price_target / reference_price) - 1) * 100 + income_return_pct, then raw_rating: Buy >=20; Overweight >=10 and <20; Hold >-10 and <10; Underweight >-20 and <=-10; Sell <=-20. Top-level rating must equal final_rating.",
+    "With risk_adjustment=none, final_rating equals raw_rating, adjustment_reason is null, adjustment_source_ids and adjustment_context_ids are empty. A downgrade may move exactly one notch and must cite both source IDs and server-supplied eligible adjustment context IDs; every adjustment source must appear in rating_basis.source_ids and in a cited context. Never upgrade or move more than one notch.",
+  ].join(" ");
+}
+
 const EVIDENCE_REPAIR_SCHEMA_CONTRACT = [
   "Evidence schema: summary=non-empty string; claims=array; metrics=object; sources=array; open_questions=array of non-empty reader-language strings (never objects); confidence=high|medium|low.",
   "Every claim requires non-empty claim and evidence strings, confidence (high|medium|low), and source_ids containing at least one non-empty source id.",
@@ -3270,6 +3361,9 @@ function debateReaderText(packet) {
   const machine = new Set([
     "role", "symbol", "as_of", "decision_available", "rating", "winner", "source_ids", "confidence",
     "thread_id", "execution_mode", "raw_text", "round", "debate_rounds",
+    "rubric_id", "horizon_months", "return_formula_id", "price_currency", "reference_price",
+    "base_case_price_target", "income_return_pct", "base_case_total_return_pct", "raw_rating",
+    "risk_adjustment", "final_rating", "adjustment_source_ids", "adjustment_context_ids",
   ]);
   return readerStrings(packet, machine).join("\n");
 }
@@ -3713,6 +3807,7 @@ export function queueHeadlessRun(args) {
     packets: [],
     masters: frozen.masters,
     master_selection: frozen.selection,
+    decision_context: frozen.selection.decision_context || null,
     master_opinions: [],
     master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
     verifier_verdicts: [],
@@ -3805,6 +3900,7 @@ export async function collectEvidence(args) {
     packets: [],
     masters: frozen.masters,
     master_selection: frozen.selection,
+    decision_context: frozen.selection.decision_context || null,
     master_opinions: [],
     master_status: Object.fromEntries(frozen.masters.map((master) => [master, { master, status: "pending" }])),
     verifier_verdicts: [],
@@ -3829,6 +3925,51 @@ export async function collectEvidence(args) {
   writeJson(join(dir, "evidence.json"), run);
   writeSourceManifest(run);
   writeAllAgentsMarkdown(run);
+
+  const missingRatingReference = pmRatingReferenceGaps(run);
+  if (missingRatingReference.length) {
+    const completedAt = new Date().toISOString();
+    run.task_status = Object.fromEntries(Object.entries(run.task_status).map(([task, state]) => [task, {
+      ...state,
+      status: "skipped",
+      error: "pm_rating_reference_unavailable",
+      completed_at: completedAt,
+      updated_at: completedAt,
+    }]));
+    run.agent_status = Object.fromEntries(Object.entries(run.agent_status).map(([role, state]) => [role, {
+      ...state,
+      status: "skipped",
+      error: "pm_rating_reference_unavailable",
+      ...(role === "portfolio_manager" ? { absence_reason: "skipped_upstream_gate" } : {}),
+      completed_at: completedAt,
+      updated_at: completedAt,
+    }]));
+    run.master_status = Object.fromEntries(Object.entries(run.master_status).map(([master, state]) => [master, {
+      ...state,
+      status: "skipped",
+      error: "pm_rating_reference_unavailable",
+      completed_at: completedAt,
+      updated_at: completedAt,
+    }]));
+    run.status = "incomplete";
+    run.phase = "incomplete";
+    run.completed_at = completedAt;
+    run.terminal_reason = "pm_rating_reference_unavailable";
+    run.pm_rating_reference = {
+      status: "unavailable",
+      missing_fields: missingRatingReference,
+      downstream_model_calls_started: false,
+    };
+    writeStatus(run);
+    appendEvent(run, "pm_rating_reference_unavailable", {
+      missing_fields: missingRatingReference,
+      downstream_model_calls_skipped: true,
+    });
+    writeJson(join(dir, "evidence.json"), run);
+    writeSourceManifest(run);
+    writeAllAgentsMarkdown(run);
+    return run;
+  }
 
   const commitPacket = (packet) => {
     packetsByTask.set(packet.task, packet);
@@ -4741,6 +4882,7 @@ const MUTE_WORKER_FAILURES = new Set([
   "usage_limit_exhausted",
   "context_length_exceeded",
   "output_schema_rejected",
+  "process_exit_without_output",
   "unexpected_error",
 ]);
 
@@ -4784,15 +4926,23 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
       error: new Error(cleanLog(outcome.raw || outcome.error || "method worker failed", 1_000)),
       stage: outcome.failure_stage || "worker_execution",
     });
-    writeJson(diagnosticPath, { ...diagnostic, public_summary: publicSummary }, { mode: 0o600 });
-    // Quick mode may preserve an already frozen deterministic stance after a mute worker
-    // failure, clearly labelled as a fallback. Full mode never uses this path: any missing
-    // claim-ready model voice remains a missing seat and stops before debate/PM. Contract,
-    // provenance and reader-language violations are not mute failures in either mode and are
-    // always kept as visible failures.
-    if (run.council_mode === "quick"
-      && outcome.frozenOpinion
-      && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error")) {
+    const fallbackEligible = Boolean(outcome.frozenOpinion)
+      && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error");
+    const fallbackSummary = fallbackEligible ? localized(run.language, {
+      en: "The dedicated voice worker did not complete; the previously frozen deterministic method view is retained, labelled as a fallback, and is not a quotation from the named person.",
+      zh: "专属陈词 worker 未完成；系统保留此前已冻结的确定性方法观点，并明确标记为 fallback，不是具名人物本人引语。",
+      ja: "専用発言ワーカーは完了しませんでした。先に凍結された決定論的メソッド見解をフォールバックとして明示し、実在人物の引用ではない形で保持します。",
+      ko: "전용 발언 워커가 완료되지 않아 앞서 동결된 결정론적 방법론 견해를 fallback으로 명시해 유지하며, 이는 이름이 붙은 실제 인물의 인용이 아닙니다.",
+    }) : null;
+    writeJson(diagnosticPath, {
+      ...diagnostic,
+      public_summary: fallbackSummary || publicSummary,
+    }, { mode: 0o600 });
+    // A mute voice worker cannot erase an already frozen, sourced method decision. Preserve that
+    // deterministic view in both quick and full runs, clearly labelled as a fallback, so a
+    // process timeout does not become “no deliverable opinion”. Contract, provenance and
+    // reader-language violations are not mute failures and remain visible hard failures.
+    if (fallbackEligible) {
       const fallback = {
         ...outcome.frozenOpinion,
         deterministic_summary: outcome.frozenOpinion.summary,
@@ -4805,7 +4955,7 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
           failure_kind: outcome.error || "unexpected_error",
           failure_stage: outcome.failure_stage || "worker_execution",
           diagnostic: diagnosticPath,
-          public_summary: publicSummary,
+          public_summary: fallbackSummary,
           language: run.language,
           execution_mode: "deterministic_only",
           ...(Number.isInteger(outcome.attempts) ? { attempts: outcome.attempts } : {}),
@@ -5123,9 +5273,7 @@ export async function runHeadlessMasters(run, args = {}) {
           what_would_change_my_mind: voice.what_would_change_my_mind.length
             ? voice.what_would_change_my_mind
             : frozenOpinion.what_would_change_my_mind,
-          source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
-          evidence_source_ids: [...new Set([...(frozenOpinion.source_ids || []), ...voice.source_ids])],
-          confidence: voice.confidence,
+          ...frozenMethodVoiceAuthority(frozenOpinion, voice),
           company_dossier_hash_ack: voice.company_dossier_hash_ack,
           evidence_packet_acks: voice.evidence_packet_acks,
           dedicated_worker: { status: "completed", pid, language: run.language, execution_mode: "codex_exec" },
@@ -5281,9 +5429,17 @@ export async function runHeadlessMasters(run, args = {}) {
       if (!result.ok) {
         return {
           id,
-          error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`,
+          // A process failure during repair does not erase the semantic failure already
+          // observed in the primary output. Keeping the first contract/language kind prevents
+          // a repair timeout from being reclassified as an eligible mute-worker fallback.
+          error: firstFailureKind,
           raw: cleanLog(result.stderr || "method repair failed"),
+          attempts: 2,
+          retry_diagnostic: retryDiagnostic,
+          failure_stage: firstFailureKind === "reader_language_mismatch"
+            ? "worker_output_language" : "worker_output_contract",
           schema_errors: firstSchemaErrors,
+          diagnostic: firstDiagnostic,
         };
       }
       try {
@@ -5346,8 +5502,14 @@ export async function runHeadlessMasters(run, args = {}) {
             }
             return {
               id,
-              error: result.deadline_exhausted ? "global_deadline" : result.timedOut ? "timeout" : `exit code ${result.code}`,
+              // The second packet was already known to violate the reader-language contract.
+              // A mute language-only repair cannot turn that semantic failure into fallback.
+              error: secondFailureKind,
               raw: cleanLog(result.stderr || "method language repair failed"),
+              attempts: 3,
+              retry_diagnostic: secondDiagnosticPath,
+              failure_stage: "worker_output_language",
+              diagnostic: secondDiagnostic,
             };
           }
         }
@@ -5360,8 +5522,9 @@ export async function runHeadlessMasters(run, args = {}) {
       }
     }
     })();
-    // Carry the frozen decision to the commit helper. Only quick mode may turn an eligible mute
-    // worker failure into a labelled deterministic fallback; full mode records the seat missing.
+    // Carry the frozen decision to the commit helper. An eligible primary mute failure may retain
+    // it as a disclosed fallback in plugin-managed quick or full; semantic repair failures above
+    // preserve their original kind and therefore remain hard failures.
     return commitHeadlessMasterOutcome(run, { ...outcome, frozenOpinion }, { dir, byId, selected });
   }, (error, { id, engine }) => commitHeadlessMasterOutcome(run, {
     id,
@@ -5435,12 +5598,21 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       // The base decision source_ids already passed assertSourceIdsResolve in debateFromCodex.
       // Validate optional per-price-band IDs too before any model prose reaches the report.
       assertSourceIdsResolve(run, managerDecisionNestedSourceIds(candidate), `${role} structured decision`);
+      const structuredReport = renderStructuredManagerReport(run, candidate, {
+        bull: context.bull,
+        bear: context.bear,
+      });
       return normalizeDebate({
         ...candidate,
-        report_markdown: renderStructuredManagerReport(run, candidate, {
-          bull: context.bull,
-          bear: context.bear,
-        }),
+        report_markdown: candidate.rating_basis
+          ? bindMachineCheckedRatingBasisMarkdown(
+            structuredReport,
+            candidate.rating_basis,
+            candidate.rating,
+            run.language,
+            { serverRendered: true },
+          )
+          : structuredReport,
       }, role, run, candidate.raw_text || "");
     } catch (error) {
       const reason = String(error?.data?.reason || "WORKER_OUTPUT_REJECTED");
@@ -5645,6 +5817,7 @@ export async function runDebateRole(run, role, context, timeoutMs) {
           : role === "portfolio_manager"
             ? `portfolio_manager.report_markdown is mandatory and must contain every authored report section. Required headings: ${requiredReportSectionAliases(run).map((section) => section.suggested_heading).join("; ")}.`
           : "",
+        pmRatingRepairContract(run, role),
         companyDossierPromptBlock(run, { consumer: "hash_ack_only" }),
         hardVerificationPromptBlock(run, role, { structuredDecisionOnly: structuredManagerDecision }),
         schemaRepairIssuePrompt(packet.schema_errors),
@@ -5853,7 +6026,9 @@ async function synthesizeQuickDecision(run, args, timeoutMs, outputMode) {
 /**
  * Whether the recorded method bench is substantial enough to debate on.
  *
- * Full mode is all-or-nothing: any missing claim-ready method voice stops before debate and PM.
+ * Full mode is all-or-nothing for genuinely missing/invalid seats: any missing claim-ready
+ * method result stops before debate and PM. A sourced deterministic_fallback is a recorded
+ * degraded result, not a missing seat.
  * Quick mode may continue with a near-complete larger bench so a bounded fallback can still
  * produce a clearly incomplete decision record, while a materially unconsulted bench stops.
  *
@@ -6346,7 +6521,13 @@ export async function analyzeSymbol(args) {
   const run = await collectEvidence(args);
   let gate = completenessStatus(run);
   if (gate.missing_evidence.length > 0) {
-    const debate = finalizeBeforeDebate(run, args, "evidence_gate_failed");
+    const debate = finalizeBeforeDebate(
+      run,
+      args,
+      run.terminal_reason === "pm_rating_reference_unavailable"
+        ? "pm_rating_reference_unavailable"
+        : "evidence_gate_failed",
+    );
     return {
       run,
       debate,
@@ -6543,7 +6724,12 @@ export function recordVerifierVerdict(args) {
   saveRun(run);
   writeJson(join(runPath(run.run_id), "evidence.json"), run);
   appendEvent(run, "verifier_verdict", { verifier: args.verifier, seat: args.seat, verdict: args.verdict });
-  return { run_id: run.run_id, recorded: run.verifier_verdicts.length, weights: resolveSeatWeights(run, run.seat_weight_overrides) };
+  return {
+    run_id: run.run_id,
+    recorded: run.verifier_verdicts.length,
+    rating_effect: "no_automatic_change",
+    legacy_diagnostic_weights: resolveSeatWeights(run, run.seat_weight_overrides),
+  };
 }
 
 export function recordVerifierBatch(args) {
@@ -6706,7 +6892,7 @@ export function recordVerifierBatch(args) {
   };
 }
 
-/** Current weighting for a run, for the PM prompt and for the report. */
+/** Deprecated diagnostic-only weighting; PM prompts and reports do not consume it. */
 export function seatWeights(run) {
   return resolveSeatWeights(run, run.seat_weight_overrides || {});
 }

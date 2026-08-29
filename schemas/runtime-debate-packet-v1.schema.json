@@ -40,6 +40,69 @@
       }
     },
     "confidence": { "enum": ["high", "medium", "low"] },
+    "rating_basis": {
+      "type": "object",
+      "required": [
+        "rubric_id",
+        "horizon_months",
+        "return_formula_id",
+        "price_currency",
+        "reference_price",
+        "base_case_price_target",
+        "income_return_pct",
+        "base_case_total_return_pct",
+        "raw_rating",
+        "risk_adjustment",
+        "final_rating",
+        "adjustment_reason",
+        "source_ids",
+        "adjustment_source_ids",
+        "adjustment_context_ids"
+      ],
+      "properties": {
+        "rubric_id": { "const": "pm_rating_rubric_v2" },
+        "horizon_months": { "const": 12 },
+        "return_formula_id": { "const": "price_target_plus_income_v1" },
+        "price_currency": { "type": "string", "pattern": "\\S", "maxLength": 32 },
+        "reference_price": { "type": "number", "exclusiveMinimum": 0 },
+        "base_case_price_target": { "type": "number", "minimum": 0 },
+        "income_return_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "base_case_total_return_pct": { "type": "number", "minimum": -100, "maximum": 1000 },
+        "raw_rating": { "enum": ["Buy", "Overweight", "Hold", "Underweight", "Sell"] },
+        "risk_adjustment": { "enum": ["none", "downgrade_one_notch"] },
+        "final_rating": { "enum": ["Buy", "Overweight", "Hold", "Underweight", "Sell"] },
+        "adjustment_reason": { "type": ["string", "null"] },
+        "source_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 512,
+            "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
+          }
+        },
+        "adjustment_source_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 512,
+            "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
+          }
+        },
+        "adjustment_context_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "maxLength": 512,
+            "pattern": "^[^\\s\\x00-\\x1F\\x7F]+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "questions": { "type": "array", "items": { "type": "string", "pattern": "\\S" } },
     "questions_answered": {
       "type": "array",

@@ -14,7 +14,7 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.5.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
+Package/plugin version `1.6.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
 `latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
 PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
 `method_model` seats. Human review of the authored formulas, the live four-code-host
@@ -41,9 +41,15 @@ a terminal fail-closed `incomplete` run and name every missing/skipped seat. The
 guarantees terminal persistence, not successful completion when data providers, search or
 model transport deteriorates.
 
-Full requires a real `model_voice` result for every selected method. A timeout, transport
-failure, dry-run voice or deterministic substitute is an incomplete method stage and stops
-before Bull/Bear and PM. Only quick may retain an explicitly disclosed degraded substitute.
+In a plugin-managed headless full run, a mute process-level voice failure after a sourced
+deterministic stance has been frozen retains that stance as an explicitly disclosed
+`deterministic_fallback`. This fixes the missing-deliverable failure without treating the
+substitute as a successful voice: downstream synthesis may continue, but the terminal run is
+`degraded`, never `complete`. Contract, provenance, language or action-intent violations still
+fail the seat and stop before Bull/Bear and PM. A global deadline may persist the fallback but
+still terminates `incomplete` when no downstream budget remains. Visible-host full remains
+stricter because the plugin does not own its worker lifecycle: every returned method worker
+must supply a real `model_voice` before the host starts debate.
 
 This 30-minute enforcement belongs only to plugin-managed headless `analyze_symbol`. A
 visible-host full run is scheduled by the external host, so the plugin cannot force-stop its

@@ -20,6 +20,7 @@ import { safeSymbol } from "./run-store.mjs";
 import { cleanupSelectionStore } from "./selection-cleanup.mjs";
 import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.mjs";
 import { recommendMethodPanel } from "./method-panel-recommendation.mjs";
+import { PM_RATING_HORIZON_MONTHS, PM_RATING_RUBRIC_ID } from "./pm-rating-rubric.mjs";
 
 const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
@@ -28,13 +29,20 @@ const LEGACY_SELECTION_HASH_VERSION = 1;
 const PACE_SELECTION_HASH_VERSION = 2;
 const ANALYST_SELECTION_HASH_VERSION = 3;
 const RECOMMENDATION_SELECTION_HASH_VERSION = 4;
+const CALIBRATED_SELECTION_HASH_VERSION = 5;
 const SUPPORTED_SELECTION_HASH_VERSIONS = Object.freeze([
   LEGACY_SELECTION_HASH_VERSION,
   PACE_SELECTION_HASH_VERSION,
   ANALYST_SELECTION_HASH_VERSION,
   RECOMMENDATION_SELECTION_HASH_VERSION,
+  CALIBRATED_SELECTION_HASH_VERSION,
 ]);
 const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(["中文", "English", "日本語", "한국어"]);
+const METHOD_RISK_ROLES = Object.freeze(new Set([
+  "risk_overlay",
+  "portfolio_overlay",
+  "evidence_challenger",
+]));
 
 function digest(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -42,6 +50,133 @@ function digest(value) {
 
 function sameJson(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function decisionCalibrationFromPrompt(args, prompt) {
+  const hasObjective = args.objective !== undefined && args.objective !== null;
+  const hasHorizon = args.holding_horizon !== undefined && args.holding_horizon !== null;
+  if (hasObjective || hasHorizon) {
+    if (!hasObjective || !hasHorizon) {
+      throw invalidParams("objective and holding_horizon must be provided together.", {
+        reason: "METHOD_PANEL_CALIBRATION_INCOMPLETE",
+      });
+    }
+    if (args.objective !== "directional_rating" || args.holding_horizon !== "1_year") {
+      throw invalidParams("This release supports calibrated execution only for directional_rating with a 1_year holding horizon.", {
+        reason: "METHOD_PANEL_DECISION_CONTEXT_UNSUPPORTED",
+        supported_pairs: [{ objective: "directional_rating", holding_horizon: "1_year" }],
+        supplied: { objective: args.objective, holding_horizon: args.holding_horizon },
+      });
+    }
+    return {
+      objective: args.objective,
+      holding_horizon: args.holding_horizon,
+      source: "explicit",
+    };
+  }
+
+  // Prompt inference is deliberately narrow. It activates only when both a directional decision
+  // and a concrete one-year horizon are explicit in the same request; every other objective or
+  // horizon remains an explicit API choice instead of being guessed from investment prose.
+  const directionalProhibited = /(?:不要|请勿|無需|无需|不需要|不作|不给)[^。！？\n]{0,16}(?:买卖|買賣|买入|買入|卖出|賣出|投资判断|投資判斷|交易建议|交易建議)|(?:do\s+not|don't|no)\s+(?:give|provide|make)?[^.!?\n]{0,20}(?:buy|sell|trade|investment)\s+(?:rating|recommendation|advice)|(?:売買|投資)判断(?:は|を)[^。\n]{0,12}(?:しない|不要)|(?:매수|매도|투자)\s*(?:의견|판단|추천)[^.!?\n]{0,12}(?:하지\s*마|제외)/iu.test(prompt);
+  const directional = !directionalProhibited
+    && /(?:值得(?:买|買)|是否(?:买|買)|要不要(?:买|買)|该不该(?:买|買|卖|賣)|买入|買入|买还是不买|强烈买入|worth\s+(?:buying|a\s+buy)|should\s+(?:i|we)\s+(?:buy|sell)|(?:is|does)\s+[^.!?\n]{0,40}\s+a\s+buy|buy\s*\/\s*hold\s*\/\s*sell|買う価値|買うべき|買いですか|매수할\s*가치|사야\s*(?:하나|할까)|매수해도)/iu.test(prompt);
+  const oneYear = /(?:一\s*年(?:以内|持有|期|間)?|12\s*(?:个|個)?\s*(?:月|months?)|one[-\s]?year|1[-\s]?year|一年間|1年間|1\s*년|일\s*년)/iu.test(prompt);
+  if (!directional || !oneYear) return null;
+  return {
+    objective: "directional_rating",
+    holding_horizon: "1_year",
+    source: "prompt_inference",
+  };
+}
+
+function decisionContext(recommendation, source) {
+  if (recommendation?.schema_version !== 3) return null;
+  const ratingBasisRequired = recommendation.objective === "directional_rating"
+    && recommendation.holding_horizon === "1_year";
+  return {
+    schema_version: 1,
+    objective: recommendation.objective,
+    holding_horizon: recommendation.holding_horizon,
+    source,
+    rating_basis_required: ratingBasisRequired,
+    rating_rubric_id: ratingBasisRequired ? PM_RATING_RUBRIC_ID : null,
+    rating_horizon_months: ratingBasisRequired ? PM_RATING_HORIZON_MONTHS : null,
+  };
+}
+
+function methodPanelContext(recommendation) {
+  if (recommendation?.schema_version !== 3) return null;
+  return {
+    schema_version: 1,
+    calibration_version: recommendation.calibration_version,
+    objective: recommendation.objective,
+    holding_horizon: recommendation.holding_horizon,
+    capability_manifest_hash: recommendation.capability_manifest_hash,
+    calibration_manifest_hash: recommendation.calibration_manifest_hash,
+    recommendation_hash: recommendation.recommendation_hash,
+    directional_rating_evaluable: recommendation.directional_rating_evaluable,
+    directional_rating_master_ids: [...recommendation.directional_rating_master_ids],
+    risk_coverage_master_ids: [...recommendation.risk_coverage_master_ids],
+    context_only_master_ids: [...recommendation.context_only_master_ids],
+    decisions: recommendation.decisions.map((entry) => ({
+      master_id: entry.master_id,
+      decision: entry.decision,
+      roles: [...entry.roles],
+      objective_fit: entry.objective_fit,
+      horizon_fit: entry.horizon_fit,
+      rating_contribution: entry.rating_contribution,
+    })),
+  };
+}
+
+function decisionContextHash(context, panelContext) {
+  if (!context || !panelContext) return null;
+  return `sha256:${digest({
+    hash_domain: "alphacouncil.selection-decision-context.v1",
+    decision_context: context,
+    method_panel_context: panelContext,
+  })}`;
+}
+
+function selectedMethodPanelContext(record) {
+  const context = record.method_panel_context;
+  if (!context) return null;
+  const selected = new Set(record.selected_master_ids || []);
+  const decisions = context.decisions.filter((entry) => selected.has(entry.master_id));
+  const directionalRatingMasterIds = decisions
+    .filter((entry) => entry.rating_contribution === "primary")
+    .map((entry) => entry.master_id);
+  const riskCoverageMasterIds = decisions
+    .filter((entry) => entry.rating_contribution !== "primary"
+      && entry.roles.some((role) => METHOD_RISK_ROLES.has(role)))
+    .map((entry) => entry.master_id);
+  const grouped = new Set([...directionalRatingMasterIds, ...riskCoverageMasterIds]);
+  const contextOnlyMasterIds = decisions
+    .filter((entry) => !grouped.has(entry.master_id))
+    .map((entry) => entry.master_id);
+  return {
+    ...context,
+    directional_rating_evaluable: context.objective === "directional_rating"
+      ? directionalRatingMasterIds.length > 0 : null,
+    directional_rating_master_ids: directionalRatingMasterIds,
+    risk_coverage_master_ids: riskCoverageMasterIds,
+    context_only_master_ids: contextOnlyMasterIds,
+    decisions,
+  };
+}
+
+function selectionIntentPayload({ symbol, language, prompt, councilMode, decision }) {
+  return {
+    symbol,
+    language,
+    prompt,
+    council_mode: councilMode,
+    ...(decision ? {
+      objective: decision.objective,
+      holding_horizon: decision.holding_horizon,
+    } : {}),
+  };
 }
 
 function selectionHashVersion(record) {
@@ -59,10 +194,10 @@ function selectionHashVersion(record) {
 }
 
 /**
- * Rebuild a v4 recommendation from its three declared inputs before trusting the stored decision
- * vector. The user-supplied hash detects a changed recommendation at confirmation; this check also
- * detects an on-disk mutation that leaves the displayed hash untouched, both before confirmation
- * and again before the one-use receipt is consumed.
+ * Rebuild a v4/v5 recommendation from its declared inputs before trusting the stored decision
+ * vector. The user-supplied hash detects a changed recommendation/context at confirmation; this
+ * check also detects an on-disk mutation that leaves the displayed hash untouched, both before
+ * confirmation and again before the one-use receipt is consumed.
  */
 function assertMethodPanelRecommendationIntegrity(record) {
   if (selectionHashVersion(record) < RECOMMENDATION_SELECTION_HASH_VERSION) return;
@@ -75,11 +210,24 @@ function assertMethodPanelRecommendationIntegrity(record) {
       catalog_hash: record.catalog_hash,
       instrument_classification: stored.instrument_classification,
       typed_fact_coverage: stored.typed_fact_coverage,
+      ...(stored.schema_version === 3 ? {
+        objective: stored.objective,
+        holding_horizon: stored.holding_horizon,
+      } : {}),
     });
     if (!sameJson(stored, recomputed)) mismatched.push("method_panel_recommendation");
-    if (!recomputed.recommendation_hash
+    if ((selectionHashVersion(record) === RECOMMENDATION_SELECTION_HASH_VERSION
+      && !recomputed.recommendation_hash)
       || record.recommendation_hash !== recomputed.recommendation_hash) {
       mismatched.push("recommendation_hash");
+    }
+    if (selectionHashVersion(record) >= CALIBRATED_SELECTION_HASH_VERSION) {
+      const recomputedDecisionContext = decisionContext(recomputed, record.decision_context?.source);
+      const recomputedPanelContext = methodPanelContext(recomputed);
+      const recomputedContextHash = decisionContextHash(recomputedDecisionContext, recomputedPanelContext);
+      if (!sameJson(record.decision_context, recomputedDecisionContext)) mismatched.push("decision_context");
+      if (!sameJson(record.method_panel_context, recomputedPanelContext)) mismatched.push("method_panel_context");
+      if (record.decision_context_hash !== recomputedContextHash) mismatched.push("decision_context_hash");
     }
   }
   if (mismatched.length) {
@@ -120,7 +268,9 @@ function receiptSelectionHash(receipt) {
     selected_analyst_ids: receipt.selected_analyst_ids,
   };
   if (version === ANALYST_SELECTION_HASH_VERSION) return digest(analystPayload);
-  return digest({ ...analystPayload, recommendation_hash: receipt.recommendation_hash });
+  const recommendationPayload = { ...analystPayload, recommendation_hash: receipt.recommendation_hash };
+  if (version === RECOMMENDATION_SELECTION_HASH_VERSION) return digest(recommendationPayload);
+  return digest({ ...recommendationPayload, decision_context_hash: receipt.decision_context_hash });
 }
 
 function selectedMasterPackHashes(record, ids = record.selected_master_ids) {
@@ -151,6 +301,8 @@ function stableReceiptId(record, resolved, councilPace, analystSelection) {
     selected_analyst_ids: analystSelection.ids,
     ...(hashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION
       ? { recommendation_hash: record.recommendation_hash } : {}),
+    ...(hashVersion >= CALIBRATED_SELECTION_HASH_VERSION
+      ? { decision_context_hash: record.decision_context_hash } : {}),
   }).slice(0, 32);
   // Preserve the UUID grammar required by the lock layer: deterministic v5 nibble and RFC 4122
   // variant, while the remaining 122 bits still come from the confirmation digest.
@@ -181,6 +333,9 @@ function confirmedReceiptRecord(record) {
     } : {}),
     ...(hashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION ? {
       recommendation_hash: record.recommendation_hash,
+    } : {}),
+    ...(hashVersion >= CALIBRATED_SELECTION_HASH_VERSION ? {
+      decision_context_hash: record.decision_context_hash,
     } : {}),
     created_at: record.confirmed_at,
     expires_at: record.expires_at,
@@ -436,14 +591,23 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const language = selectionLanguage({ language: args.language, prompt });
   const mode = councilMode(args.council_mode);
   const catalog = catalogSnapshot(language);
+  const calibration = decisionCalibrationFromPrompt(args, prompt);
   const methodPanelRecommendation = recommendMethodPanel({
     catalog_hash: catalog.catalog_hash,
     instrument_classification: args.instrument_classification,
     typed_fact_coverage: args.typed_fact_coverage,
+    ...(calibration ? {
+      objective: calibration.objective,
+      holding_horizon: calibration.holding_horizon,
+    } : {}),
   });
   const recommendationHash = methodPanelRecommendation.recommendation_hash;
-  const hashVersion = recommendationHash
-    ? RECOMMENDATION_SELECTION_HASH_VERSION : ANALYST_SELECTION_HASH_VERSION;
+  const boundDecisionContext = decisionContext(methodPanelRecommendation, calibration?.source || null);
+  const boundMethodPanelContext = methodPanelContext(methodPanelRecommendation);
+  const boundDecisionContextHash = decisionContextHash(boundDecisionContext, boundMethodPanelContext);
+  const hashVersion = boundDecisionContextHash
+    ? CALIBRATED_SELECTION_HASH_VERSION
+    : recommendationHash ? RECOMMENDATION_SELECTION_HASH_VERSION : ANALYST_SELECTION_HASH_VERSION;
   const preselected = args.preselected_master_ids === undefined
     ? []
     : normalizeExplicit(args.preselected_master_ids, catalog.all_master_ids);
@@ -453,6 +617,13 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const selectionId = `SEL-${randomUUID()}`;
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(now + LIMITS.SELECTION_TTL_MS).toISOString();
+  const intentPayload = selectionIntentPayload({
+    symbol,
+    language,
+    prompt,
+    councilMode: mode,
+    decision: boundDecisionContext,
+  });
   const record = {
     schema_version: 1,
     selection_hash_version: hashVersion,
@@ -463,12 +634,15 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     prompt,
     host: typeof args.host === "string" ? args.host : "unknown",
     council_mode: mode,
-    request_hash: digest({ symbol, language, prompt, council_mode: mode, host: args.host || "unknown" }),
-    intent_hash: digest({ symbol, language, prompt, council_mode: mode }),
+    request_hash: digest({ ...intentPayload, host: args.host || "unknown" }),
+    intent_hash: digest(intentPayload),
     catalog_hash: catalog.catalog_hash,
     catalog,
     method_panel_recommendation: methodPanelRecommendation,
     recommendation_hash: recommendationHash,
+    decision_context: boundDecisionContext,
+    method_panel_context: boundMethodPanelContext,
+    decision_context_hash: boundDecisionContextHash,
     selected_master_ids: [],
     preselected_master_ids: preselected,
     selection_mode: null,
@@ -494,10 +668,14 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     symbol,
     language,
     council_mode: mode,
+    selection_hash_version: hashVersion,
     catalog_hash: catalog.catalog_hash,
     intent_hash: record.intent_hash,
     method_panel_recommendation: methodPanelRecommendation,
     recommendation_hash: recommendationHash,
+    decision_context: boundDecisionContext,
+    method_panel_context: boundMethodPanelContext,
+    decision_context_hash: boundDecisionContextHash,
     expires_at: expiresAt,
     minimum: 1,
     maximum: mode === "quick" ? QUICK_MASTER_MAX : catalog.count,
@@ -719,6 +897,25 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
       expected_recommendation_hash: null,
     });
   }
+  if (selectionHashVersion(record) >= CALIBRATED_SELECTION_HASH_VERSION) {
+    if (args.decision_context_hash === undefined || args.decision_context_hash === null) {
+      throw invalidParams("decision_context_hash is required after calibrated objective/horizon context was displayed.", {
+        reason: "METHOD_PANEL_DECISION_CONTEXT_REQUIRED",
+        expected_decision_context_hash: record.decision_context_hash,
+      });
+    }
+    if (args.decision_context_hash !== record.decision_context_hash) {
+      throw invalidParams("The calibrated objective/horizon context changed or was not the one displayed.", {
+        reason: "METHOD_PANEL_DECISION_CONTEXT_MISMATCH",
+        expected_decision_context_hash: record.decision_context_hash,
+      });
+    }
+  } else if (args.decision_context_hash !== undefined && args.decision_context_hash !== null) {
+    throw invalidParams("No calibrated decision context exists for this selection.", {
+      reason: "METHOD_PANEL_DECISION_CONTEXT_MISMATCH",
+      expected_decision_context_hash: null,
+    });
+  }
   // The pace is the second decision taken at this gate. Quick has no pace to take, and an
   // unrecognised name is rejected rather than quietly run at some other depth -- a user who
   // asked for fifteen minutes must not silently get an hour, or the reverse.
@@ -823,6 +1020,9 @@ function confirmationResult(record) {
     catalog_hash: record.catalog_hash,
     intent_hash: record.intent_hash,
     recommendation_hash: record.recommendation_hash || null,
+    decision_context: record.decision_context || null,
+    method_panel_context: selectedMethodPanelContext(record),
+    decision_context_hash: record.decision_context_hash || null,
     selection_mode: record.selection_mode,
     selected_master_ids: record.selected_master_ids,
     selected_master_pack_hashes: selectedMasterPackHashes(record),
@@ -983,6 +1183,10 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
     && selectionRecordHashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION) {
     recordBindings.push(["recommendation_hash", receipt.recommendation_hash, selection.recommendation_hash]);
   }
+  if (receiptHashVersion >= CALIBRATED_SELECTION_HASH_VERSION
+    && selectionRecordHashVersion >= CALIBRATED_SELECTION_HASH_VERSION) {
+    recordBindings.push(["decision_context_hash", receipt.decision_context_hash, selection.decision_context_hash]);
+  }
   const mismatchedBindings = recordBindings
     .filter(([, receiptValue, selectionValue, present = true]) => !present || !sameJson(receiptValue, selectionValue))
     .map(([field]) => field);
@@ -1070,7 +1274,13 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
       requested_mode: mode,
     });
   }
-  const intentHash = digest({ symbol, language, prompt, council_mode: mode });
+  const intentHash = digest(selectionIntentPayload({
+    symbol,
+    language,
+    prompt,
+    councilMode: mode,
+    decision: selection.decision_context || null,
+  }));
   if (receipt.intent_hash !== intentHash || selection.intent_hash !== intentHash) {
     // Say which field moved. The receipt binds symbol, language, prompt and mode verbatim, so a
     // single reworded character invalidates it -- and without this the caller cannot tell a
@@ -1079,7 +1289,10 @@ function consumeCouncilSelectionUnlocked(args = {}, options = {}) {
       reason: "MASTER_SELECTION_INTENT_MISMATCH",
       expected_intent_hash: receipt.intent_hash || selection.intent_hash || null,
       submitted_intent_hash: intentHash,
-      bound_fields: ["symbol", "language", "prompt", "council_mode"],
+      bound_fields: [
+        "symbol", "language", "prompt", "council_mode",
+        ...(selection.decision_context ? ["objective", "holding_horizon"] : []),
+      ],
       submitted: { symbol, language, council_mode: mode, prompt_length: prompt.length },
       remedy: "Re-send the exact symbol, prompt, language and council_mode used in begin_council_selection, or start a new selection.",
     });
@@ -1171,6 +1384,12 @@ function consumedResult(selection, receipt) {
     intent_hash: selection.intent_hash,
     recommendation_hash: hashVersion >= RECOMMENDATION_SELECTION_HASH_VERSION
       ? selection.recommendation_hash : null,
+    decision_context: hashVersion >= CALIBRATED_SELECTION_HASH_VERSION
+      ? selection.decision_context : null,
+    method_panel_context: hashVersion >= CALIBRATED_SELECTION_HASH_VERSION
+      ? selectedMethodPanelContext(selection) : null,
+    decision_context_hash: hashVersion >= CALIBRATED_SELECTION_HASH_VERSION
+      ? selection.decision_context_hash : null,
     selection_mode: selection.selection_mode,
     council_mode: selection.council_mode || "full",
     // The pace approved at the gate must survive consumption, or the run silently falls back to

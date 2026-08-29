@@ -32,6 +32,50 @@ import {
 } from "./run-store.mjs";
 import { personaTitle, registry } from "./personas/registry.mjs";
 import { hardVerificationFindings } from "./verification.mjs";
+import { internalError } from "./errors.mjs";
+import {
+  protectedRatingAuthorityOccurrences,
+  sanitizeReaderInline,
+  sanitizeUntrustedMarkdown,
+  serverRatingAuthorityHeadingCount,
+} from "./reader-prose.mjs";
+
+function assertRatingAuthorityBoundary(markdown, expected, artifact) {
+  const counts = protectedRatingAuthorityOccurrences(markdown);
+  const authorityHeadingCount = serverRatingAuthorityHeadingCount(markdown);
+  if (counts.heading_count === expected
+    && counts.authority_count === expected
+    && authorityHeadingCount === expected) return markdown;
+  throw internalError(`${artifact} violated the server-owned rating-authority uniqueness boundary`, {
+    reason: "SERVER_RATING_AUTHORITY_UNIQUENESS_FAILURE",
+    artifact,
+    expected,
+    ...counts,
+    authority_heading_count: authorityHeadingCount,
+  });
+}
+
+function assertReaderArtifactAuthorityBoundary(markdown, expected, artifact) {
+  const authorityHeadingCount = serverRatingAuthorityHeadingCount(markdown);
+  if (authorityHeadingCount === expected) return markdown;
+  throw internalError(`${artifact} exposed an untrusted server-rating authority heading`, {
+    reason: "SERVER_RATING_AUTHORITY_UNIQUENESS_FAILURE",
+    artifact,
+    expected,
+    authority_heading_count: authorityHeadingCount,
+  });
+}
+
+function readerInline(value) {
+  return sanitizeReaderInline(value);
+}
+
+function readerBullets(items) {
+  if (!Array.isArray(items) || items.length === 0) return "- None";
+  return items.map((item) => `- ${readerInline(
+    typeof item === "string" ? item : JSON.stringify(item),
+  )}`).join("\n");
+}
 
 function seatFidelityDisclosure(opinion, title) {
   if (!opinion?.threshold_provenance) return [];
@@ -51,27 +95,27 @@ export function renderPacketMarkdown(packet, index = 0, language = packet?.langu
   }[key];
   const claims = packet.claims.length
     ? packet.claims.map((claim, claimIndex) => [
-      `${claimIndex + 1}. ${claim.claim || ""}`,
-      `   - ${label.evidence}: ${claim.evidence || ""}`,
+      `${claimIndex + 1}. ${readerInline(claim.claim || "")}`,
+      `   - ${label.evidence}: ${readerInline(claim.evidence || "")}`,
       `   - ${label.confidence}: ${claim.confidence || "low"}`,
-      `   - ${label.sources}: ${(claim.source_ids || []).join(", ") || label.none}`,
+      `   - ${label.sources}: ${(claim.source_ids || []).map(readerInline).join(", ") || label.none}`,
     ].join("\n")).join("\n")
     : `${label.none}.`;
   const sources = packet.sources.length
-    ? packet.sources.map((source) => `- ${source.id || "S?"}: ${source.title || ""} (${source.published_at || "unknown"}) ${source.url || ""}`).join("\n")
+    ? packet.sources.map((source) => `- ${readerInline(source.id || "S?")}: ${readerInline(source.title || "")} (${readerInline(source.published_at || "unknown")}) ${readerInline(source.url || "")}`).join("\n")
     : `- ${label.none}`;
-  return [
+  const markdown = [
     `## ${label.title} ${index + 1}: ${packet.task}`,
     "",
     `- ${label.symbol}: ${packet.symbol}`,
     `- ${label.asOf}: ${packet.as_of}`,
-    packet.thread_id ? `- Visible thread ID: ${packet.thread_id}` : "",
-    packet.thread_title ? `- Visible thread title: ${packet.thread_title}` : "",
+    packet.thread_id ? `- Visible thread ID: ${readerInline(packet.thread_id)}` : "",
+    packet.thread_title ? `- Visible thread title: ${readerInline(packet.thread_title)}` : "",
     `- ${label.confidence}: ${packet.confidence}`,
     `- ${label.richness}: ${packet.information_richness || "unrated"}`,
     "",
     `### ${label.summary}`,
-    packet.summary || "",
+    readerInline(packet.summary || ""),
     "",
     `### ${label.claims}`,
     claims,
@@ -83,11 +127,12 @@ export function renderPacketMarkdown(packet, index = 0, language = packet?.langu
     sources,
     "",
     `### ${label.questions}`,
-    bullets(packet.open_questions),
+    readerBullets(packet.open_questions),
     "",
     `### ${label.raw}`,
     fence(packet.raw_text || "", "text"),
   ].join("\n");
+  return assertReaderArtifactAuthorityBoundary(markdown, 0, `evidence_packet_${index + 1}`);
 }
 
 /**
@@ -108,22 +153,22 @@ export function renderMasterMarkdown(opinion, lang) {
     ja: { statement: "メソッド席の最終見解（本人の発言・引用ではありません）", stance: "スタンス", capability: "能力ステータス", evidenceQuality: "証拠品質", voiceStatus: "発言ステータス", verdict: "凍結済み判定", confidence: "信頼度", worker: "見解の生成元", summary: "メソッド席の説明", findings: "主な所見", disagreements: "分析担当との相違", disqualifiers: "発動した除外条件", change: "判断が変わる条件", sources: "出典", packetAcks: "証拠パケット別の読取確認" },
     ko: { statement: "방법론 좌석 최종 발언(본인의 실제 발언이나 인용이 아님)", stance: "입장", capability: "역량 상태", evidenceQuality: "근거 품질", voiceStatus: "발언 상태", verdict: "동결된 판단", confidence: "신뢰도", worker: "발언 출처", summary: "방법론 좌석 설명", findings: "핵심 발견", disagreements: "분석가와의 이견", disqualifiers: "발동된 제외 조건", change: "판단 변경 조건", sources: "출처", packetAcks: "증거 패킷별 읽기 확인" },
   }[languageKey(lang)];
-  return [
+  const markdown = [
     `## ${title}`,
     "",
     ...fidelityDisclosure,
     ...(fidelityDisclosure.length ? [""] : []),
     voiceDisclaimer(lang),
     "",
-    `- ID: ${opinion.master}`,
+    `- ID: ${readerInline(opinion.master)}`,
     `- ${labels.stance}: ${opinion.stance || "unknown"}`,
     `- ${labels.capability}: ${seatCapability(opinion)}`,
     `- ${labels.evidenceQuality}: ${opinion.evidence_quality || "not_evaluable"}`,
     `- ${labels.voiceStatus}: ${opinion.voice_status || "not_recorded"}`,
-    `- ${labels.verdict}: ${opinion.verdict || ""}`,
+    `- ${labels.verdict}: ${readerInline(opinion.verdict || "")}`,
     `- ${labels.confidence}: ${opinion.confidence || "low"}`,
     `- ${labels.worker}: ${opinion.dedicated_worker?.status || opinion.voice_status || "not_recorded"}${opinion.dedicated_worker?.pid ? ` (pid ${opinion.dedicated_worker.pid})` : ""}`,
-    opinion.thread_id ? `- Visible thread ID: ${opinion.thread_id}` : "",
+    opinion.thread_id ? `- Visible thread ID: ${readerInline(opinion.thread_id)}` : "",
     "",
     `### ${labels.statement}`,
     // When the statement was composed from the five voice fields, render those fields as
@@ -136,36 +181,37 @@ export function renderMasterMarkdown(opinion, lang) {
       ? VOICE_FIELDS
         .map((field) => [field, String(opinion.voice[field] ?? "").trim()])
         .filter(([, text]) => text)
-        .map(([field, text]) => `**${voiceFieldLabel(field, lang)}**: ${text}`)
-      : [opinion.voice_statement || opinion.summary || ""]),
+        .map(([field, text]) => `**${voiceFieldLabel(field, lang)}**: ${readerInline(text)}`)
+      : [readerInline(opinion.voice_statement || opinion.summary || "")]),
     "",
     `### ${labels.summary}`,
-    opinion.deterministic_summary || opinion.summary || "",
+    readerInline(opinion.deterministic_summary || opinion.summary || ""),
     "",
     `### ${labels.findings}`,
-    bullets(opinion.key_findings),
+    readerBullets(opinion.key_findings),
     "",
     `### ${labels.disagreements}`,
-    bullets(opinion.disagreements),
+    readerBullets(opinion.disagreements),
     "",
     `### ${labels.disqualifiers}`,
-    bullets(opinion.disqualifiers_triggered),
+    readerBullets(opinion.disqualifiers_triggered),
     "",
     `### ${labels.change}`,
-    bullets(opinion.what_would_change_my_mind),
+    readerBullets(opinion.what_would_change_my_mind),
     "",
     `### ${labels.sources}`,
-    (opinion.source_ids || []).length ? (opinion.source_ids || []).map((id) => `- ${id}`).join("\n") : "- None",
+    (opinion.source_ids || []).length ? (opinion.source_ids || []).map((id) => `- ${readerInline(id)}`).join("\n") : "- None",
     ...(Array.isArray(opinion.evidence_packet_acks) ? [
       "",
       `### ${labels.packetAcks}`,
       "| task | packet_hash | status | source_ids | note |",
       "|---|---|---|---|---|",
       ...opinion.evidence_packet_acks.map((ack) => (
-        `| ${ack.task} | ${ack.packet_hash} | ${ack.status} | ${(ack.source_ids || []).join(", ") || "—"} | ${String(ack.note || "").replace(/\|/gu, "\\|")} |`
+        `| ${readerInline(ack.task)} | ${readerInline(ack.packet_hash)} | ${readerInline(ack.status)} | ${(ack.source_ids || []).map(readerInline).join(", ") || "—"} | ${readerInline(ack.note).replace(/\|/gu, "\\|")} |`
       )),
     ] : []),
   ].filter((line) => line !== "").join("\n");
+  return assertReaderArtifactAuthorityBoundary(markdown, 0, `method_seat_${opinion.master || "unknown"}`);
 }
 
 /** Reader-facing labels for the method-seat section, one entry per supported run language. */
@@ -540,19 +586,19 @@ export function renderDebateRounds(rounds, language = "English") {
   const blocks = rounds.map((round) => [
     `#### ${label.round} ${round.round}`,
     "",
-    round.summary || "",
+    readerInline(round.summary || ""),
     "",
     `##### ${label.long}`,
-    bullets(round.long_thesis),
+    readerBullets(round.long_thesis),
     "",
     `##### ${label.short}`,
-    bullets(round.short_thesis),
+    readerBullets(round.short_thesis),
     "",
     `##### ${label.questions}`,
-    bullets(round.questions),
+    readerBullets(round.questions),
     "",
     `##### ${label.answered}`,
-    bullets(round.questions_answered),
+    readerBullets(round.questions_answered),
     "",
     `##### ${label.raw}`,
     fence(round.raw_text || "", "text"),
@@ -569,50 +615,63 @@ export function renderDebateMarkdown(agent, language = agent?.language) {
     ja: { rating: "評価", winner: "優勢側", verdict: "判断", confidence: "信頼度", summary: "要約", long: "強気論拠", short: "弱気論拠", valuation: "評価レンジ", catalysts: "カタリスト", risks: "リスク", position: "ポジション", invalidation: "無効化条件", sources: "出典 ID", report: "レポート本文", raw: "ワーカーの生応答（監査専用）", none: "なし" },
     ko: { rating: "등급", winner: "우세 측", verdict: "판단", confidence: "신뢰도", summary: "요약", long: "강세 논거", short: "약세 논거", valuation: "가치평가 범위", catalysts: "촉매", risks: "위험", position: "포지션", invalidation: "무효화 조건", sources: "출처 ID", report: "보고서 본문", raw: "원본 워커 응답(감사 전용)", none: "없음" },
   }[key];
-  return [
+  const reportRaw = String(agent.report_markdown || "");
+  const reportAuthority = protectedRatingAuthorityOccurrences(reportRaw);
+  const trustedRatingReport = agent.role === "portfolio_manager"
+    && agent.rating_basis && typeof agent.rating_basis === "object"
+    && reportAuthority.heading_count === 1
+    && reportAuthority.authority_count === 1
+    && serverRatingAuthorityHeadingCount(reportRaw) === 1;
+  const reportMarkdown = trustedRatingReport ? reportRaw : sanitizeUntrustedMarkdown(reportRaw);
+  const markdown = [
     `## ${agent.role}`,
     "",
     `- ${label.rating}: ${agent.rating}`,
     `- ${label.winner}: ${agent.winner}`,
-    `- ${label.verdict}: ${agent.verdict}`,
+    `- ${label.verdict}: ${readerInline(agent.verdict)}`,
     `- ${label.confidence}: ${agent.confidence}`,
-    agent.thread_id ? `- Visible thread ID: ${agent.thread_id}` : "",
-    agent.thread_title ? `- Visible thread title: ${agent.thread_title}` : "",
+    agent.thread_id ? `- Visible thread ID: ${readerInline(agent.thread_id)}` : "",
+    agent.thread_title ? `- Visible thread title: ${readerInline(agent.thread_title)}` : "",
     "",
     `### ${label.summary}`,
-    agent.summary || "",
+    readerInline(agent.summary || ""),
     "",
     `### ${label.long}`,
-    bullets(agent.long_thesis),
+    readerBullets(agent.long_thesis),
     "",
     `### ${label.short}`,
-    bullets(agent.short_thesis),
+    readerBullets(agent.short_thesis),
     "",
     `### ${label.valuation}`,
-    agent.valuation_range || label.none,
+    readerInline(agent.valuation_range || label.none),
     "",
     `### ${label.catalysts}`,
-    bullets(agent.catalysts),
+    readerBullets(agent.catalysts),
     "",
     `### ${label.risks}`,
-    bullets(agent.risks),
+    readerBullets(agent.risks),
     "",
     `### ${label.position}`,
-    agent.position || label.none,
+    readerInline(agent.position || label.none),
     "",
     `### ${label.invalidation}`,
-    bullets(agent.invalidation),
+    readerBullets(agent.invalidation),
     "",
     `### ${label.sources}`,
-    bullets(agent.source_ids),
+    readerBullets(agent.source_ids),
     "",
     `### ${label.report}`,
-    agent.report_markdown || "",
+    reportMarkdown,
     "",
     renderDebateRounds(agent.debate_rounds, language),
     `### ${label.raw}`,
     fence(agent.raw_text || "", "text"),
   ].filter(Boolean).join("\n");
+  return assertReaderArtifactAuthorityBoundary(
+    markdown,
+    trustedRatingReport ? 1 : 0,
+    `debate_${agent.role || "unknown"}`,
+  );
 }
 
 export function writeAllAgentsMarkdown(run, debate = {}) {
@@ -1122,7 +1181,8 @@ export function finalReportMarkdown(run, manager) {
       run.language
     )
   );
-  return `${report.trimEnd()}\n\n${handoffMethodTail(run, handoffCopy(run.language))}`;
+  const markdown = `${report.trimEnd()}\n\n${handoffMethodTail(run, handoffCopy(run.language))}`;
+  return assertRatingAuthorityBoundary(markdown, manager?.rating_basis ? 1 : 0, "final_report");
 }
 
 export function writeArtifactIndex(run, debate = {}) {
@@ -1637,7 +1697,7 @@ export function userResponseMarkdown(run, manager) {
   const elapsed = run.started_at
     ? Math.max(0, Date.parse(run.completed_at || new Date().toISOString()) - Date.parse(run.started_at))
     : localizedDisplayValue("unknown", run.language);
-  return [
+  const markdown = [
     `# ${run.symbol} ${copy.title}`,
     "",
     `## ${copy.status}`,
@@ -1697,6 +1757,7 @@ export function userResponseMarkdown(run, manager) {
     "",
     masterTail,
   ].join("\n");
+  return assertRatingAuthorityBoundary(markdown, 0, "user_response");
 }
 
 export function writeUserResponse(run, manager, renderedMarkdown) {

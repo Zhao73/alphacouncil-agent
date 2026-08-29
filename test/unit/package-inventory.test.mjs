@@ -20,6 +20,8 @@ test("package inventory re-derives the server closure and keeps build-only perso
     "mcp/server.mjs",
     "mcp/lib/rpc.mjs",
     "mcp/lib/orchestrator.mjs",
+    "mcp/lib/method-panel-recommendation.mjs",
+    "mcp/lib/pm-rating-rubric.mjs",
     "mcp/lib/personas-v2/bridge.mjs",
     "mcp/lib/personas-v3/runtime.mjs",
   ]) assert.ok(closure.files.includes(required), required);
@@ -48,6 +50,10 @@ test("real npm pack inventory classifies every path and preserves required trees
     .filter((entry) => ["build-only", "unknown"].includes(entry.category))
     .every((entry) => /(?:direct static JS callers:|zero static JS importers)/u.test(entry.evidence)));
   const paths = new Set(report.entries.map((entry) => entry.path));
+  assert.equal(
+    report.entries.find((entry) => entry.path === "data/method-panel-calibration.v2.json")?.category,
+    "runtime-required",
+  );
   for (const forbidden of WP2_FORBIDDEN_PACKAGE_PATHS) assert.ok(!paths.has(forbidden), forbidden);
   for (const tree of WP2_REQUIRED_PACKAGE_TREES) {
     assert.ok(report.entries.some((entry) => entry.path.startsWith(tree.prefix)), tree.prefix);

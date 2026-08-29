@@ -41,6 +41,11 @@ const role = /You are the bull_researcher|Role: bull_researcher|你站在多头�
   : master || task || "unknown";
 appendFileSync(${JSON.stringify(log)}, JSON.stringify({ role, parseRepair, languageRepair, search: args.includes("--search") }) + "\\n");
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+if (${JSON.stringify(failureTarget)} === "master_repair_timeout" && parseRepair && !languageRepair) {
+  await sleep(6_000);
+}
+
 let packet;
 if (task) {
   const source = {
@@ -89,6 +94,7 @@ if (task) {
   const frozen = frozenLine ? JSON.parse(frozenLine.slice("Frozen method result JSON: ".length)) : null;
   const stance = frozen?.stance || /required acknowledged stance:\\s*([^;]+)/u.exec(prompt)?.[1]?.trim() || "out_of_scope";
   const wrong = ${JSON.stringify(failureTarget)} === "master"
+    || (${JSON.stringify(failureTarget)} === "master_repair_timeout" && !parseRepair)
     || (${JSON.stringify(failureTarget)} === "master_recover" && !languageRepair);
   packet = wrong
     ? {
@@ -234,6 +240,25 @@ test("a final language-only repair can recover a contract-valid method voice wit
     assert.equal(launches.length, 3);
     assert.deepEqual(launches.map((item) => item.languageRepair), [false, false, true]);
     assert.ok(launches.every((item) => !item.search));
+  } finally {
+    await fixture.server.close();
+    removeDataDir(fixture.dataDir);
+  }
+});
+
+test("a mute repair preserves the primary reader-language failure instead of creating a fallback", async () => {
+  const fixture = await runChineseFullFailure("master_repair_timeout");
+  try {
+    const { fake, result } = fixture;
+    const seat = result.run.master_status.master_buffett;
+    assert.equal(result.run.status, "incomplete");
+    assert.equal(seat.status, "failed");
+    assert.equal(seat.error, "reader_language_mismatch");
+    assert.notEqual(seat.voice_status, "deterministic_fallback");
+    assert.deepEqual(result.run.master_opinions, []);
+    const launches = readJsonl(fake.log).filter((item) => item.role === "master_buffett");
+    assert.equal(launches.length, 2);
+    assert.deepEqual(launches.map((item) => item.parseRepair), [false, true]);
   } finally {
     await fixture.server.close();
     removeDataDir(fixture.dataDir);

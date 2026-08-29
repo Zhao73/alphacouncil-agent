@@ -86,10 +86,14 @@ Before giving a final investment answer, all gates below must be satisfied:
 
 A run is deliverable only after it reaches a documented terminal status:
 `complete`, `degraded`, `incomplete`, `needs_verification`, `needs_revision`, or `failed`.
-`complete` also requires the applicable report quality to pass. `degraded` is a quick-only
-terminal result and must retain its system-owned degraded ledger, pass `quick_v1` report
-quality, and be presented as degraded rather than complete. Every other non-complete terminal
-status is returned with its exact missing/failed gates and saved directory; do not keep
-polling a terminal run or create a replacement run silently.
+`complete` also requires the applicable report quality to pass. `degraded` has two bounded
+meanings: quick may use its documented minimum-coverage rule, while plugin-managed headless full
+may use `deterministic_fallback` only when all structural stages completed and a sourced
+frozen method view survived a mute voice-worker failure. Both retain the
+system-owned degraded ledger and pass their mode-appropriate report contract. Contract,
+provenance, language or action failures are not fallback-eligible. Visible-host full still
+requires every returned real method voice. Present every degraded run as degraded rather than
+complete. Every other non-complete terminal status is returned with its exact missing/failed
+gates and saved directory; do not keep polling a terminal run or create a replacement silently.
 
 For code changes, run `npm run check` before claiming the plugin is ready.

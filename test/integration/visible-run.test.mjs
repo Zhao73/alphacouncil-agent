@@ -2,7 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
+import { ALL_ANALYST_TASKS, DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import {
   COMPANY_DOSSIER_CONTRACT_ID,
   expectedCoverageItems,
@@ -10,6 +10,7 @@ import {
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { confirmMasterSelection, startServer, structured } from "../helpers/rpc-client.mjs";
 import { completeReport } from "../helpers/fixtures.mjs";
+import { hardVerificationFindings, materialEvidenceClaims } from "../../mcp/lib/verification.mjs";
 
 let dataDir;
 let server;
@@ -47,6 +48,16 @@ const analystLog = DEFAULT_TASKS.map((task) => [
 const fullCouncilReport = completeReport.replace(
   /### market_data\nThe market_data analyst produced a visible packet\. This section names the planned analyst explicitly and records the evidence handoff\./,
   analystLog,
+);
+
+const allAnalystLog = ALL_ANALYST_TASKS.map((task) => [
+  `### ${task}`,
+  `The ${task} analyst produced a visible packet. This section names the planned analyst explicitly and records the evidence handoff.`,
+].join("\n")).join("\n\n");
+
+const allAnalystFullCouncilReport = completeReport.replace(
+  /### market_data\nThe market_data analyst produced a visible packet\. This section names the planned analyst explicitly and records the evidence handoff\./,
+  allAnalystLog,
 );
 
 function source(id, title, url) {
@@ -156,16 +167,17 @@ function debatePacket(role, round, extra = {}) {
   };
 }
 
-async function selectionReceipt(symbol) {
+async function selectionReceipt(symbol, options = {}) {
   const selection = await confirmMasterSelection(server, {
     symbol,
     language: "English",
     selected_master_ids: [selectedMaster],
+    ...options,
   });
   return selection.selection_receipt;
 }
 
-async function plan(runId, tasks = DEFAULT_TASKS) {
+async function plan(runId, tasks = DEFAULT_TASKS, selectionOptions = {}) {
   return server.callTool("plan_visible_run", {
     symbol: "NOK",
     as_of: AS_OF,
@@ -183,8 +195,12 @@ async function plan(runId, tasks = DEFAULT_TASKS) {
         exchange: "NYSE",
         currency: "USD",
       },
+      ...(selectionOptions.objective === "directional_rating"
+        && selectionOptions.holding_horizon === "1_year"
+        ? { quote: { price: 100, currency: "USD" } }
+        : {}),
     },
-    selection_receipt: await selectionReceipt("NOK"),
+    selection_receipt: await selectionReceipt("NOK", selectionOptions),
   });
 }
 
@@ -198,8 +214,8 @@ async function recordEvidence(runId, task = "market_data", packet = evidencePack
   });
 }
 
-async function recordAllEvidence(runId, { skip = [] } = {}) {
-  for (const task of DEFAULT_TASKS) {
+async function recordAllEvidence(runId, { skip = [], tasks = DEFAULT_TASKS } = {}) {
+  for (const task of tasks) {
     if (!skip.includes(task)) structured(await recordEvidence(runId, task));
   }
   return JSON.parse(readFileSync(join(dataDir, "runs", runId, "company_dossier.json"), "utf8"));
@@ -218,14 +234,14 @@ function companyDossierHash(runId) {
   return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")).content_hash : `sha256:${"0".repeat(64)}`;
 }
 
-function frozenStance(runId) {
-  const opinion = persistedRun(runId).master_opinions.find((item) => item.master === selectedMaster);
-  assert.ok(opinion, `${selectedMaster} must have a frozen deterministic opinion`);
+function frozenStance(runId, master = selectedMaster) {
+  const opinion = persistedRun(runId).master_opinions.find((item) => item.master === master);
+  assert.ok(opinion, `${master} must have a frozen deterministic opinion`);
   return opinion.stance;
 }
 
-function methodVoicePacket(runId, extra = {}) {
-  const stance = frozenStance(runId);
+function methodVoicePacket(runId, extra = {}, master = selectedMaster) {
+  const stance = frozenStance(runId, master);
   const positionIntent = {
     constructive: "would_buy",
     cautious: "would_hold",
@@ -237,7 +253,7 @@ function methodVoicePacket(runId, extra = {}) {
     ? dossier(runId)
     : null;
   return {
-    master: selectedMaster,
+    master,
     acknowledged_stance: stance,
     voice_mode: "first_person_public_method_simulation_v1",
     disclosure_ack: "alphacouncil.first_person_public_method_simulation.v1",
@@ -286,11 +302,81 @@ function continuousPriceLevels() {
   ];
 }
 
-async function recordMaster(runId, packet = methodVoicePacket(runId)) {
+function verifierBatchPacket(verifier, run, { hardFinding = false } = {}) {
+  const sources = new Map((run.packets || []).flatMap((packet) => (
+    (packet.sources || []).map((item) => [item.id, item])
+  )));
+  return {
+    verifier,
+    run_id: run.run_id,
+    results: materialEvidenceClaims(run).map((claim, index) => {
+      if (verifier === "source_fidelity") {
+        return {
+          claim_id: claim.claim_id,
+          verdict: "supported",
+          note: "Every cited fixture URL directly supports the complete bounded claim.",
+          checked_urls: claim.source_ids.map((id) => sources.get(id)?.url).filter(Boolean),
+          queries: [],
+          excerpt: "The dated fixture evidence directly supports the bounded observation.",
+          rederivation: "",
+        };
+      }
+      if (verifier === "rederivation") {
+        return {
+          claim_id: claim.claim_id,
+          verdict: "agree",
+          note: "An independent fixture calculation reproduced the bounded observation.",
+          checked_urls: [`https://independent.example/rederive/${encodeURIComponent(claim.claim_id)}`],
+          queries: [`independently rederive ${claim.claim_id}`],
+          excerpt: "",
+          rederivation: "The independently located fixture inputs reproduce the recorded result.",
+        };
+      }
+      const refuted = hardFinding && index === 0;
+      return {
+        claim_id: claim.claim_id,
+        verdict: refuted ? "refuted" : "stands",
+        note: refuted
+          ? "The counter-source directly contradicts this bounded fixture claim."
+          : "A concrete search for contrary fixture evidence found no contradiction.",
+        checked_urls: refuted
+          ? [`https://counter.example/refute/${encodeURIComponent(claim.claim_id)}`]
+          : [],
+        queries: [`contradict disconfirm supersede ${claim.claim_id}`],
+        excerpt: "",
+        rederivation: "",
+      };
+    }),
+  };
+}
+
+function portfolioManagerPacket(runId, extra = {}) {
+  return {
+    verdict: "The portfolio manager reaches a balanced conclusion after the complete audited debate.",
+    rating: "Hold",
+    winner: "balanced",
+    summary: "The final decision weighs both completed sides, all exact questions, and the recorded evidence.",
+    long_thesis: ["The sourced operating fixture supports the conditional long case."],
+    short_thesis: ["The sourced risk fixture limits confidence in the long case."],
+    valuation_range: "The bounded fixture supports only a conditional valuation range.",
+    catalysts: ["A dated primary-source update would test the decision."],
+    risks: ["Contradictory primary evidence remains the principal risk."],
+    position: "Keep exposure bounded until the next primary-source update.",
+    invalidation: ["A contradictory primary filing invalidates the decision."],
+    source_ids: ["market_data:S1"],
+    confidence: "medium",
+    price_levels: continuousPriceLevels(),
+    report_markdown: fullCouncilReport,
+    company_dossier_hash_ack: companyDossierHash(runId),
+    ...extra,
+  };
+}
+
+async function recordMaster(runId, packet = methodVoicePacket(runId), master = packet?.master || selectedMaster) {
   return server.callTool("record_master_opinion", {
     run_id: runId,
-    master: selectedMaster,
-    thread_id: `thread-${runId}-master`,
+    master,
+    thread_id: `thread-${runId}-${master}`,
     packet,
   });
 }
@@ -323,24 +409,7 @@ async function recordPm(runId) {
     role: "portfolio_manager",
     thread_id: `thread-${runId}-pm`,
     thread_title: "AlphaCouncil Agent NOK portfolio manager decision",
-    packet: {
-      verdict: "The portfolio manager reaches a balanced conclusion after the complete audited debate.",
-      rating: "Hold",
-      winner: "balanced",
-      summary: "The final decision weighs both completed sides, all exact questions, and the recorded evidence.",
-      long_thesis: ["The sourced operating fixture supports the conditional long case."],
-      short_thesis: ["The sourced risk fixture limits confidence in the long case."],
-      valuation_range: "The bounded fixture supports only a conditional valuation range.",
-      catalysts: ["A dated primary-source update would test the decision."],
-      risks: ["Contradictory primary evidence remains the principal risk."],
-      position: "Keep exposure bounded until the next primary-source update.",
-      invalidation: ["A contradictory primary filing invalidates the decision."],
-      source_ids: ["market_data:S1"],
-      confidence: "medium",
-      price_levels: continuousPriceLevels(),
-      report_markdown: fullCouncilReport,
-      company_dossier_hash_ack: dossier(runId).content_hash,
-    },
+    packet: portfolioManagerPacket(runId),
   });
 }
 
@@ -675,9 +744,9 @@ test("a declined out-of-scope v3 seat still returns an independent first-person 
   }
   assert.equal(recorded.master.method_barrier_complete, true);
   assert.equal(recorded.master.refreshed_prompt_count, 3);
-  assert.notEqual(recorded.postMethodBarrierBullPrompt, recorded.preMethodBarrierBullPrompt,
-    "the final method voice must regenerate downstream debate prompts");
-  assert.match(recorded.postMethodBarrierBullPrompt, new RegExp(methodLifecycleDisagreement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.equal(recorded.postMethodBarrierBullPrompt, recorded.preMethodBarrierBullPrompt,
+    "an out-of-scope seat has zero direction and must not alter the Bull prompt");
+  assert.doesNotMatch(recorded.postMethodBarrierBullPrompt, new RegExp(methodLifecycleDisagreement.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.match(recorded.postMethodBarrierBullPrompt, /SERVER-REFRESHED DEBATE INPUT/u);
 });
 
@@ -842,6 +911,201 @@ test("a portfolio manager report that passed stays frozen", () => {
   assert.equal(recorded.pmReplay.idempotent_replay, true);
 });
 
+test("a calibrated visible plan rejects missing quote inputs before creating a run and remains retryable", async () => {
+  const runId = `SELFTEST-CALIBRATED-REFERENCE-BARRIER-${process.pid}`;
+  const selection = await selectionReceipt("NOK", {
+    objective: "directional_rating",
+    holding_horizon: "1_year",
+  });
+  const grounding = {
+    gathered_at: `${AS_OF}T12:00:00Z`,
+    facts_unavailable: true,
+    instrument: {
+      symbol: "NOK",
+      name: "Nokia calibrated reference-barrier fixture",
+      instrument_type: "equity",
+      research_model: "operating_company",
+      exchange: "NYSE",
+      currency: "USD",
+    },
+  };
+  const request = {
+    symbol: "NOK",
+    as_of: AS_OF,
+    language: "English",
+    run_id: runId,
+    tasks: DEFAULT_TASKS,
+    grounding,
+    selection_receipt: selection,
+  };
+  const runDir = join(dataDir, "runs", runId);
+
+  const missingQuote = await server.callTool("plan_visible_run", request);
+  assert.equal(missingQuote.error?.data?.reason, "PM_RATING_REFERENCE_REQUIRED");
+  assert.deepEqual(
+    [...missingQuote.error.data.missing_fields].sort(),
+    ["grounding.quote.currency", "grounding.quote.price"],
+  );
+  assert.equal(missingQuote.error.data.downstream_model_calls_started, false);
+  assert.equal(existsSync(runDir), false, "a rejected plan must not create run or prompt/spec artifacts");
+
+  const missingCurrency = await server.callTool("plan_visible_run", {
+    ...request,
+    grounding: { ...grounding, quote: { price: 100 } },
+  });
+  assert.equal(missingCurrency.error?.data?.reason, "PM_RATING_REFERENCE_REQUIRED");
+  assert.deepEqual(missingCurrency.error.data.missing_fields, ["grounding.quote.currency"]);
+  assert.equal(existsSync(runDir), false, "a second rejected attempt must still leave no run artifacts");
+
+  const accepted = structured(await server.callTool("plan_visible_run", {
+    ...request,
+    grounding: { ...grounding, quote: { price: 100, currency: "USD" } },
+  }));
+  assert.equal(accepted.run.run_id, runId);
+  assert.equal(accepted.run.decision_context.rating_basis_required, true);
+  assert.ok(accepted.evidence_agents.length > 0);
+  assert.ok(accepted.master_agents.length > 0);
+  assert.ok(accepted.debate_agents.length > 0);
+  assert.equal(existsSync(join(runDir, "evidence.json")), true);
+});
+
+test("a slow-all visible PM must acknowledge every hard verifier finding exactly once before persistence", { timeout: 120_000 }, async () => {
+  const symbol = "NOK";
+  const runId = `SELFTEST-VISIBLE-HARD-FINDING-ACK-${process.pid}`;
+  const selection = await confirmMasterSelection(server, {
+    symbol,
+    language: "English",
+    select_all: true,
+    analyst_scope: "all",
+    council_pace: "slow",
+  });
+  const planned = structured(await server.callTool("plan_visible_run", {
+    symbol,
+    as_of: AS_OF,
+    language: "English",
+    run_id: runId,
+    grounding: {
+      gathered_at: `${AS_OF}T12:00:00Z`,
+      facts_unavailable: true,
+      instrument: {
+        symbol,
+        name: "Nokia hard-finding acknowledgement fixture",
+        instrument_type: "equity",
+        research_model: "operating_company",
+        exchange: "NYSE",
+        currency: "USD",
+      },
+    },
+    selection_receipt: selection.selection_receipt,
+  }));
+  assert.deepEqual(planned.run.tasks, ALL_ANALYST_TASKS);
+  assert.equal(planned.master_agents.length, 26);
+
+  await recordAllEvidence(runId, { tasks: ALL_ANALYST_TASKS });
+  let run = persistedRun(runId);
+  for (const verifier of ["source_fidelity", "rederivation", "refuter"]) {
+    const recordedBatch = structured(await server.callTool("record_verifier_batch", {
+      run_id: runId,
+      verifier,
+      thread_id: `thread-${runId}-${verifier}`,
+      thread_title: `AlphaCouncil Agent ${symbol} ${verifier}`,
+      packet: verifierBatchPacket(verifier, run, { hardFinding: verifier === "refuter" }),
+    }));
+    assert.equal(recordedBatch.verifier_audit.coverage_complete, verifier === "refuter");
+    run = persistedRun(runId);
+  }
+
+  const findings = hardVerificationFindings(run);
+  assert.equal(findings.length, 1, JSON.stringify(findings));
+  for (const agent of planned.master_agents) {
+    structured(await recordMaster(
+      runId,
+      methodVoicePacket(runId, {}, agent.role),
+      agent.role,
+    ));
+  }
+  await recordFullDebate(runId);
+
+  const correctAck = findings.map((finding) => ({
+    finding_id: finding.finding_id,
+    disposition: "excluded",
+    note: "The contradicted fixture claim is excluded from valuation and the final decision.",
+  }));
+  const basePacket = portfolioManagerPacket(runId, {
+    report_markdown: allAnalystFullCouncilReport,
+  });
+  const evidencePath = join(dataDir, "runs", runId, "evidence.json");
+  const decisionPath = join(dataDir, "runs", runId, "decision.json");
+  const managerPath = join(dataDir, "runs", runId, "manager_synthesis.json");
+  const frozenEvidence = readFileSync(evidencePath, "utf8");
+  const rejectedPackets = [
+    {
+      label: "missing",
+      packet: basePacket,
+      assertDiagnostic(data) {
+        assert.deepEqual(data.missing_finding_ids, findings.map((row) => row.finding_id));
+      },
+    },
+    {
+      label: "duplicate",
+      packet: { ...basePacket, verification_findings_ack: [...correctAck, correctAck[0]] },
+      assertDiagnostic(data) {
+        assert.deepEqual(data.duplicate_finding_ids, [findings[0].finding_id]);
+      },
+    },
+    {
+      label: "invalid",
+      packet: {
+        ...basePacket,
+        verification_findings_ack: correctAck.map((row, index) => (
+          index === 0 ? { ...row, disposition: "ignored" } : row
+        )),
+      },
+      assertDiagnostic(data) {
+        assert.ok(data.invalid.some((row) => (
+          row.finding_id === findings[0].finding_id && row.reason === "invalid_disposition"
+        )));
+      },
+    },
+  ];
+
+  for (const { label, packet, assertDiagnostic } of rejectedPackets) {
+    const rejected = await server.callTool("record_visible_decision", {
+      run_id: runId,
+      role: "portfolio_manager",
+      thread_id: `thread-${runId}-pm-${label}`,
+      packet,
+    });
+    assert.equal(rejected.error?.data?.reason, "VERIFICATION_FINDINGS_ACK_MISMATCH", JSON.stringify(rejected));
+    assertDiagnostic(rejected.error.data);
+    assert.equal(readFileSync(evidencePath, "utf8"), frozenEvidence, `${label} rejection must not mutate the run`);
+    assert.equal(existsSync(decisionPath), false, `${label} rejection must not write decision.json`);
+    assert.equal(existsSync(managerPath), false, `${label} rejection must not write manager_synthesis.json`);
+  }
+
+  const accepted = structured(await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm-correct`,
+    packet: { ...basePacket, verification_findings_ack: correctAck },
+  }));
+  assert.equal(accepted.status, "complete");
+  assert.deepEqual(
+    accepted.decision.verification_findings_ack.map((row) => row.finding_id),
+    findings.map((row) => row.finding_id),
+  );
+  assert.ok(accepted.decision.verification_findings_ack.every((row) => (
+    row.disposition === "excluded"
+      && row.acknowledgement_note === correctAck[0].note
+      && row.verdict === "refuted"
+  )));
+  const persistedDecision = JSON.parse(readFileSync(decisionPath, "utf8"));
+  assert.deepEqual(
+    persistedDecision.verification_findings_ack,
+    accepted.decision.verification_findings_ack,
+  );
+});
+
 test("a portfolio manager packet with no report body is rejected at submission, not after assembly", async () => {
   // On a real run the first PM submission carried no `report_markdown` at all. It was accepted,
   // the report was assembled from the summary fallback, and the author learned about 21 missing
@@ -913,6 +1177,145 @@ test("a portfolio manager packet with no report body is rejected at submission, 
   assert.equal(accepted.report_quality, "passed");
   assert.equal(accepted.status, "complete");
   assert.notEqual(accepted.idempotent_replay, true);
+});
+
+test("a calibrated visible PM rejects forged rating-basis and adjustment source IDs", async () => {
+  const runId = `SELFTEST-PM-RATING-SOURCE-${process.pid}`;
+  await plan(runId, DEFAULT_TASKS, {
+    objective: "directional_rating",
+    holding_horizon: "1_year",
+  });
+  await recordAllEvidence(runId);
+  structured(await recordMaster(runId));
+  await recordFullDebate(runId);
+
+  const rejected = await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm`,
+    packet: {
+      ...debatePacket("portfolio_manager", 1, {
+        rating: "Buy",
+        winner: "balanced",
+      }),
+      rating_basis: {
+        rubric_id: "pm_rating_rubric_v2",
+        horizon_months: 12,
+        return_formula_id: "price_target_plus_income_v1",
+        price_currency: "USD",
+        reference_price: 100,
+        base_case_price_target: 124,
+        income_return_pct: 0,
+        base_case_total_return_pct: 24,
+        raw_rating: "Buy",
+        risk_adjustment: "none",
+        final_rating: "Buy",
+        adjustment_reason: null,
+        source_ids: ["market_data:S1", "market_data:FORGED"],
+        adjustment_source_ids: [],
+        adjustment_context_ids: [],
+      },
+      price_levels: continuousPriceLevels(),
+      report_markdown: fullCouncilReport,
+      company_dossier_hash_ack: dossier(runId).content_hash,
+    },
+  });
+  assert.equal(rejected.error?.data?.reason, "SOURCE_PROVENANCE_MISMATCH");
+  assert.deepEqual(rejected.error?.data?.unknown_source_ids, ["market_data:FORGED"]);
+  assert.ok(!existsSync(join(dataDir, "runs", runId, "decision.json")));
+
+  const causalRejection = await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm-cause`,
+    packet: {
+      ...debatePacket("portfolio_manager", 1, { rating: "Overweight", winner: "balanced" }),
+      rating_basis: {
+        rubric_id: "pm_rating_rubric_v2",
+        horizon_months: 12,
+        return_formula_id: "price_target_plus_income_v1",
+        price_currency: "USD",
+        reference_price: 100,
+        base_case_price_target: 124,
+        income_return_pct: 0,
+        base_case_total_return_pct: 24,
+        raw_rating: "Buy",
+        risk_adjustment: "downgrade_one_notch",
+        final_rating: "Overweight",
+        adjustment_reason: "The out-of-scope method lacked one input.",
+        source_ids: ["market_data:S1"],
+        adjustment_source_ids: ["market_data:S1"],
+        adjustment_context_ids: ["method_context_1"],
+      },
+      price_levels: continuousPriceLevels(),
+      report_markdown: fullCouncilReport,
+      company_dossier_hash_ack: dossier(runId).content_hash,
+    },
+  });
+  assert.equal(causalRejection.error?.data?.reason, "PM_RATING_BASIS_MISMATCH");
+  assert.ok(causalRejection.error.data.problems.some((problem) => (
+    problem.code === "downgrade_context_ids_not_eligible"
+  )));
+  assert.ok(!existsSync(join(dataDir, "runs", runId, "decision.json")));
+
+  const validRatingBasis = {
+    rubric_id: "pm_rating_rubric_v2",
+    horizon_months: 12,
+    return_formula_id: "price_target_plus_income_v1",
+    price_currency: "USD",
+    reference_price: 100,
+    base_case_price_target: 124,
+    income_return_pct: 0,
+    base_case_total_return_pct: 24,
+    raw_rating: "Buy",
+    risk_adjustment: "none",
+    final_rating: "Buy",
+    adjustment_reason: null,
+    source_ids: ["market_data:S1"],
+    adjustment_source_ids: [],
+    adjustment_context_ids: [],
+  };
+  const crossCurrencyRejection = await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm-cross-currency`,
+    packet: portfolioManagerPacket(runId, {
+      rating: "Buy",
+      winner: "bull",
+      rating_basis: validRatingBasis,
+      price_levels: continuousPriceLevels().map((row) => ({ ...row, currency: "JPY" })),
+    }),
+  });
+  assert.equal(crossCurrencyRejection.error?.data?.reason, "PM_PRICE_LEVEL_CURRENCY_MISMATCH");
+  assert.equal(crossCurrencyRejection.error.data.expected_currency, "USD");
+  assert.ok(crossCurrencyRejection.error.data.problems.some((problem) => (
+    problem.reason === "price_level_rating_currency_mismatch"
+      && problem.expected_currency === "USD"
+  )));
+  assert.ok(!existsSync(join(dataDir, "runs", runId, "decision.json")));
+
+  const accepted = structured(await server.callTool("record_visible_decision", {
+    run_id: runId,
+    role: "portfolio_manager",
+    thread_id: `thread-${runId}-pm-valid`,
+    packet: portfolioManagerPacket(runId, {
+      rating: "Buy",
+      winner: "bull",
+      rating_basis: validRatingBasis,
+      price_levels: continuousPriceLevels(),
+    }),
+  }));
+  assert.equal(accepted.status, "complete");
+  assert.equal(accepted.decision.rating, "Buy");
+  assert.deepEqual(accepted.decision.rating_basis, validRatingBasis);
+  assert.ok(accepted.decision.price_levels.every((row) => row.currency === "USD"));
+  const persistedDecision = JSON.parse(readFileSync(
+    join(dataDir, "runs", runId, "decision.json"),
+    "utf8",
+  ));
+  assert.deepEqual(persistedDecision.rating_basis, validRatingBasis);
+  assert.ok(persistedDecision.price_levels.every((row) => row.currency === "USD"));
+  assert.match(readFileSync(join(dataDir, "runs", runId, "final_report.md"), "utf8"), /Server-Validated Rating Basis/u);
 });
 
 test("visible runtime schemas reject hollow evidence and forged downstream provenance before persistence", async () => {

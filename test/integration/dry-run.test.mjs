@@ -182,12 +182,15 @@ test("status.json keeps a dry-run structurally incomplete despite passing report
   assert.equal(status.debate_rounds_required, 3);
   assert.equal(status.debate_rounds_completed, 0);
   assert.deepEqual(status.missing, [
-    { stage: "methods", id: "master_buffett", reason: "deterministic_fallback" },
     { stage: "debate", id: "round_1", reason: "round_not_completed" },
     { stage: "debate", id: "round_2", reason: "round_not_completed" },
     { stage: "debate", id: "round_3", reason: "round_not_completed" },
     { stage: "portfolio_manager", id: "portfolio_manager", reason: "skipped_upstream_gate" },
   ]);
+  assert.deepEqual(status.notes, [
+    { stage: "methods", id: "master_buffett", reason: "deterministic_fallback" },
+  ]);
+  assert.equal(status.stage_outcomes.methods.status, "degraded");
   assert.ok(status.terminal_projection_passes >= 1 && status.terminal_projection_passes <= 3);
   assert.equal(status.stage_outcomes.portfolio_manager.status, "not_started");
   assert.equal(status.stage_outcomes.portfolio_manager.absence_reason, "skipped_upstream_gate");

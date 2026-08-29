@@ -4,6 +4,67 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-08-29
+
+### Added
+
+- One-year directional councils now bind a versioned decision context and
+  `pm_rating_rubric_v2` to the selection receipt. The server binds the frozen reference price
+  and currency, recomputes sourced 12-month base-case total return from a same-currency target
+  plus income, maps it to Buy / Overweight / Hold / Underweight / Sell, and validates the
+  complete machine-readable rating basis before persistence.
+- Calibrated method selection now displays the role, objective fit, horizon fit and rating
+  contribution for all 26 physical packs, including text-only MCP fallbacks, and binds that
+  complete vector into the v5 confirmation receipt.
+
+### Changed
+
+- Primary method judgments reach the PM once through Bull/Bear; supporting methods can provide
+  only an identity-neutral, non-voting risk projection. Ordinary seat counts and weights no
+  longer bias the rating, and a sourced risk adjustment may move the return-derived rating down
+  by at most one notch—never upward or across multiple bands. Every downgrade must also cite a
+  server-owned eligible cause context; `out_of_scope` creates none.
+- `out_of_scope` remains a visible method conclusion with zero directional weight, but is now
+  structurally excluded from both advocate and PM rating paths. Public calibrated execution is
+  limited to the one-year directional pair until another objective has a defined PM contract.
+- The provisional PersonaPack boundary is unchanged: 26 `operator_lens` packs remain at 0.9.4
+  with `production_eligible=false` and no validated `method_model` seats.
+
+### Fixed
+
+- A sourced deterministic method result is no longer silently replaced by “no deliverable” when
+  its dedicated explanation worker is mute. Plugin-managed quick/full runs retain a clearly
+  labelled deterministic fallback; full reports the run as degraded, while contract,
+  provenance, language and action-safety failures still fail closed.
+- Multilingual one-year intent inference now recognizes explicit buy/sell requests while
+  rejecting negated requests such as “do not give a rating”. Abstaining method voices also reject
+  canonical ratings and explicit trading actions across English, Chinese, Japanese and Korean,
+  including equivalent buy/sell/hold, ownership, allocation and exit language hidden in findings,
+  disagreements, change-of-mind arrays or packet acknowledgements. Ordinary research phrases such
+  as short interest, a short operating history or a long lookback remain valid non-directional text.
+- A real calibrated run with no positive frozen quote or currency now stops before any analyst,
+  method or debate worker is launched. PM price levels must use the same frozen currency as the
+  rating basis, and visible-host PM decisions must acknowledge every hard verifier finding just
+  as the headless path does.
+
+### Security
+
+- PM rating and adjustment source IDs are checked against the frozen source manifest on initial,
+  repaired and visible-host transports. Model-authored adjustment prose is flattened and escaped
+  before the server-owned authority block. HTML comments/headings, inline Markdown, escaped text,
+  links, entities and invisible formatting can no longer forge a second server-validated rating
+  heading or authority sentence.
+- Reader-visible validation now compares raw-HTML and boundary-escaped literal projections, so
+  angle-bracket and comment payloads cannot disappear during validation and reappear after
+  publication. Evidence, debate and method-seat Markdown renderers flatten model-owned inline
+  fields, disable raw HTML/images and demote semantic or confusable server-rating authority
+  headings while retaining ordinary Japanese, accented-Latin and mathematical headings.
+
+### Release engineering
+
+- Tagged releases now install and test the private ChatGPT Work gateway alongside the root source
+  and packaged-host checks before npm publication.
+
 ## [1.5.0] — 2026-08-28
 
 ### Fixed

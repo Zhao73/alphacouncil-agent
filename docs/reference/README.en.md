@@ -446,7 +446,7 @@ flowchart TD
     A6 --> EV
     EV -.->|"read as interpretation,<br/>not as fact"| MS
     EV --> VF{{"Verifiers<br/>fidelity · re-derive · refute"}}
-    VF -->|"failed checks<br/>down-weight the seat"| PM
+    VF -->|"explicit corrections<br/>no automatic vote"| PM
     MS --> BULL["🐂 Bull"]
     MS --> BEAR["🐻 Bear"]
     EV --> BULL

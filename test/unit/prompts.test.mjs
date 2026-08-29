@@ -141,6 +141,269 @@ test("full headless portfolio-manager prompt ends with the compact decision cont
     "the compact transport contract must be the final output-form instruction");
 });
 
+test("one-year synthesis routes method direction through Bull/Bear once and gives PM only non-voting method risk", async () => {
+  const { debatePrompt, masterPrompt, masterVoicePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "RATING-V2-PROMPT",
+    symbol: "INTC",
+    as_of: "2026-08-30",
+    language: "English",
+    council_mode: "full",
+    tasks: ["market_data"],
+    grounding: { quote: { price: 100, currency: "USD" } },
+    packets: [{ task: "market_data", sources: [{ id: "market_data:S1" }] }],
+    masters: ["master_buffett", "master_taleb"],
+    decision_context: {
+      objective: "directional_rating",
+      holding_horizon: "1_year",
+      rating_basis_required: true,
+      rating_rubric_id: "pm_rating_rubric_v2",
+    },
+    master_selection: {
+      method_panel_context: {
+        schema_version: 1,
+        decisions: [
+          { master_id: "master_buffett", roles: ["directional_core"], rating_contribution: "primary" },
+          { master_id: "master_taleb", roles: ["risk_overlay"], rating_contribution: "none" },
+        ],
+      },
+    },
+    master_opinions: [
+      {
+        master: "master_buffett",
+        stance: "constructive",
+        verdict: "directional fixture",
+        key_findings: ["Primary direction fixture."],
+        disagreements: [],
+        disqualifiers_triggered: [],
+        evidence_source_ids: ["market_data:S1"],
+        confidence: "medium",
+      },
+      {
+        master: "master_taleb",
+        stance: "opposed",
+        verdict: "raw Taleb stance must not reach PM",
+        key_findings: ["Tail-risk coverage fixture."],
+        disagreements: [],
+        disqualifiers_triggered: ["tail_veto"],
+        what_would_change_my_mind: ["Convexity improves."],
+        evidence_source_ids: ["market_data:S1"],
+        confidence: "medium",
+      },
+    ],
+  };
+  const bull = {
+    role: "bull_researcher",
+    verdict: "Bull case",
+    rating: "Buy",
+    winner: "bull",
+    summary: "Bull summary",
+    source_ids: ["market_data:S1"],
+  };
+  const bear = {
+    role: "bear_researcher",
+    verdict: "Bear case",
+    rating: "Sell",
+    winner: "bear",
+    summary: "Bear summary",
+    source_ids: ["market_data:S1"],
+  };
+
+  const advocate = debatePrompt("bull_researcher", run, { round: 1 });
+  const bearPrompt = debatePrompt("bear_researcher", run, { round: 1 });
+  const manager = debatePrompt("portfolio_manager", run, {
+    bull,
+    bear,
+    structuredDecisionOnly: true,
+  });
+  const methodPrompt = masterPrompt("master_buffett", run);
+  const methodVoice = masterVoicePrompt("master_buffett", run, run.master_opinions[0]);
+  for (const prompt of [advocate, bearPrompt, manager, methodPrompt, methodVoice]) {
+    assert.match(prompt, /Frozen decision context JSON/u);
+    assert.match(prompt, /"objective":"directional_rating"/u);
+    assert.match(prompt, /"holding_horizon":"1_year"/u);
+  }
+  for (const upstream of [advocate, bearPrompt, methodPrompt, methodVoice]) {
+    assert.doesNotMatch(upstream, /This run must use `pm_rating_rubric_v2`/u);
+    assert.doesNotMatch(upstream, /base_case_total_return_pct/u);
+  }
+  assert.match(advocate, /Master seat opinions JSON/u);
+  assert.match(advocate, /"rating_contribution":"primary"/u);
+  assert.doesNotMatch(advocate, /raw Taleb stance must not reach PM|Tail-risk coverage fixture|tail_veto/u);
+
+  assert.doesNotMatch(manager, /Master seat opinions JSON/u);
+  assert.doesNotMatch(manager, /raw Taleb stance must not reach PM/u);
+  assert.doesNotMatch(manager, /Seat weights follow|Resolved Seat-Weight Audit|effective_weight/u);
+  assert.doesNotMatch(manager, /"rating":"Buy"|"rating":"Sell"/u);
+  assert.match(manager, /method_risk_context JSON/u);
+  assert.match(manager, /"directional_vote_allowed":false/u);
+  assert.match(manager, /"rating_adjustment_eligible":true/u);
+  assert.match(manager, /tail_veto/u);
+  assert.doesNotMatch(manager, /"master":"master_taleb"/u);
+  assert.match(manager, /pm_rating_rubric_v2/u);
+  assert.match(manager, /price_target_plus_income_v1/u);
+  assert.match(manager, /frozen reference price is 100 "USD"/u);
+  assert.match(manager, /price_currency/u);
+  assert.match(manager, /base_case_total_return_pct/u);
+  assert.match(manager, /adjustment_source_ids/u);
+});
+
+test("out-of-scope method context is excluded structurally from the PM rating path", async () => {
+  const { debatePrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "OOS-RISK-CONTEXT",
+    symbol: "INTC",
+    as_of: "2026-08-30",
+    language: "English",
+    council_mode: "full",
+    tasks: [],
+    packets: [],
+    masters: ["master_graham"],
+    decision_context: {
+      objective: "directional_rating",
+      holding_horizon: "1_year",
+      rating_basis_required: true,
+      rating_rubric_id: "pm_rating_rubric_v2",
+    },
+    master_selection: {
+      method_panel_context: {
+        schema_version: 1,
+        decisions: [{
+          master_id: "master_graham",
+          roles: ["directional_core", "valuation_anchor"],
+          rating_contribution: "primary",
+        }],
+      },
+    },
+    master_opinions: [{
+      master: "master_graham",
+      stance: "out_of_scope",
+      disqualifiers_triggered: ["missing_margin_of_safety"],
+      missing_required_fact_types: ["valuation.intrinsic_value"],
+      what_would_change_my_mind: ["Provide a sourced intrinsic-value range."],
+      evidence_quality: "not_evaluable",
+      evidence_quality_basis: [{
+        fact_id: "valuation.intrinsic_value",
+        producer_id: "fixture:valuation",
+        derivation: "estimated",
+        confidence: 0.4,
+      }],
+      evidence_source_ids: ["market_data:S1"],
+    }],
+  };
+  const prompt = debatePrompt("portfolio_manager", run, { structuredDecisionOnly: true });
+  assert.doesNotMatch(prompt, /method_risk_context JSON/u);
+  assert.doesNotMatch(prompt, /method_context_1|valuation\.intrinsic_value/u);
+  assert.doesNotMatch(prompt, /\[object Object\]|master_graham|missing_margin_of_safety|fixture:valuation/u);
+});
+
+test("mixed method risk contexts expose only in-scope eligible causes", async () => {
+  const { compactMethodRiskContext, pmRatingAdjustmentContexts } = await import("../../mcp/lib/packets.mjs");
+  const run = {
+    master_selection: {
+      method_panel_context: {
+        schema_version: 1,
+        decisions: [
+          { master_id: "master_graham", roles: ["risk_overlay"], rating_contribution: "supporting" },
+          { master_id: "master_taleb", roles: ["risk_overlay"], rating_contribution: "supporting" },
+        ],
+      },
+    },
+    master_opinions: [
+      {
+        master: "master_graham",
+        stance: "out_of_scope",
+        disqualifiers_triggered: ["missing_margin_of_safety"],
+        evidence_quality: "not_evaluable",
+        evidence_source_ids: ["market_data:S1"],
+      },
+      {
+        master: "master_taleb",
+        stance: "opposed",
+        disqualifiers_triggered: ["tail_veto"],
+        evidence_quality: "mixed",
+        // The explanation worker may cite another packet when describing the frozen result,
+        // but that citation must not become a server-eligible downgrade cause.
+        source_ids: ["risk:S2", "news:S3"],
+        evidence_source_ids: ["risk:S2"],
+        voice_source_ids: ["news:S3"],
+      },
+    ],
+  };
+  const riskContexts = compactMethodRiskContext(run);
+  assert.deepEqual(riskContexts.map((context) => context.context_id), ["method_context_2"]);
+  assert.deepEqual(riskContexts[0].source_ids, ["risk:S2"]);
+  assert.deepEqual(pmRatingAdjustmentContexts(run), [{
+    context_id: "method_context_2",
+    context_type: "method_risk",
+    source_ids: ["risk:S2"],
+  }]);
+});
+
+test("hard verifier findings become source-bound PM adjustment causes", async () => {
+  const { pmRatingAdjustmentContexts } = await import("../../mcp/lib/packets.mjs");
+  const run = {
+    packets: [{
+      task: "market_data",
+      claims: [{
+        claim: "The cited market observation is material.",
+        confidence: "medium",
+        source_ids: ["S1"],
+      }],
+      sources: [{ id: "S1", url: "https://example.com/market" }],
+    }],
+    verifier_verdicts: [{
+      verifier: "source_fidelity",
+      task: "market_data",
+      claim_id: "market_data:C1",
+      verdict: "contradicted",
+      claim: "The cited market observation is material.",
+      note: "The source does not support the claim as written.",
+    }],
+  };
+  assert.deepEqual(pmRatingAdjustmentContexts(run), [{
+    context_id: "verification:source_fidelity:market_data:C1",
+    context_type: "hard_verification_finding",
+    source_ids: ["market_data:S1"],
+  }]);
+});
+
+test("calibrated non-directional prompts receive the frozen objective without the one-year rubric", async () => {
+  const { debatePrompt, masterPrompt } = await import("../../mcp/lib/prompts.mjs");
+  const run = {
+    run_id: "NON-DIRECTIONAL-CONTEXT",
+    symbol: "INTC",
+    as_of: "2026-08-30",
+    language: "English",
+    council_mode: "full",
+    tasks: [],
+    packets: [],
+    masters: ["master_buffett"],
+    master_opinions: [],
+    decision_context: {
+      schema_version: 1,
+      objective: "valuation",
+      holding_horizon: "3_5_years",
+      source: "explicit_request",
+      rating_basis_required: false,
+      rating_rubric_id: null,
+      rating_horizon_months: null,
+    },
+  };
+
+  const advocate = debatePrompt("bull_researcher", run, { round: 1 });
+  const manager = debatePrompt("portfolio_manager", run, { structuredDecisionOnly: true });
+  const method = masterPrompt("master_buffett", run);
+  for (const prompt of [advocate, manager, method]) {
+    assert.match(prompt, /Frozen decision context JSON/u);
+    assert.match(prompt, /"objective":"valuation"/u);
+    assert.match(prompt, /"holding_horizon":"3_5_years"/u);
+    assert.match(prompt, /not a 12-month return-band rating/u);
+  }
+  assert.doesNotMatch(manager, /This run must use `pm_rating_rubric_v2`/u);
+  assert.doesNotMatch(manager, /base_case_total_return_pct/u);
+});
+
 test("operating-company debate cannot fall back when the frozen dossier is missing", async () => {
   const { debatePrompt } = await import("../../mcp/lib/prompts.mjs");
   const run = {

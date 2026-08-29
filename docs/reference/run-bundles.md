@@ -34,7 +34,7 @@ The original publication manifest is preserved for audit and can contain source-
 
 The strict layer currently checks:
 
-1. a clean v1.5.0 runtime bound to the exact `v1.5.0` tag tree, with the run started after that release commit;
+1. a clean v1.6.0 runtime bound to the exact `v1.6.0` tag tree, with the run started after that release commit;
 2. a complete hash-linked, time-monotonic event ledger and a positive running/completed interval for every selected method seat;
 3. a separately persisted, completed method voice for every selected seat, including the exact frozen stance acknowledgement, five voice fields, source IDs, company-dossier hash and every selected analyst-packet acknowledgement;
 4. a structured decision, disqualifier or invalidation reason for every `out_of_scope` result; character length, trigram similarity and one-run stance distribution are retained only as uncalibrated monitoring signals and never decide fidelity, seat merging or release;

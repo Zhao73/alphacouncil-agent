@@ -28,11 +28,13 @@ const RUNTIME_FINGERPRINT_FILES = Object.freeze([
   "mcp/lib/manager-report.mjs",
   "mcp/lib/markdown.mjs",
   "mcp/lib/method-panel-recommendation.mjs",
+  "mcp/lib/pm-rating-rubric.mjs",
   "mcp/lib/method-seat-evidence.mjs",
   "mcp/lib/method-vocabulary-contract.mjs",
   "mcp/lib/orchestrator.mjs",
   "mcp/lib/packets.mjs",
   "mcp/lib/prompts.mjs",
+  "mcp/lib/reader-prose.mjs",
   "mcp/lib/runtime-validation.mjs",
   "mcp/lib/rpc.mjs",
   "mcp/lib/timing-ledger.mjs",
@@ -46,6 +48,8 @@ const RUNTIME_FINGERPRINT_FILES = Object.freeze([
   "schemas/runtime-evidence-packet-v1.schema.json",
   "schemas/runtime-headless-portfolio-manager-decision-v1.schema.json",
   "schemas/runtime-method-voice-v1.schema.json",
+  "schemas/runtime-debate-packet-v1.schema.json",
+  "data/method-panel-calibration.v2.json",
 ]);
 
 function criticalRuntimeSourceHash() {

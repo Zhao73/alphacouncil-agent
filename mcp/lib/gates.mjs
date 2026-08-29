@@ -39,10 +39,10 @@ export function withVerificationBanner(markdown, gate, language) {
       .join("\n");
     const more = Math.max(0, (verifier.non_clean || []).length - 24);
     const banner = localized(language, {
-      zh: `\n\n---\n\n## 三重核验发现\n\n**状态：completed_with_findings。** 三类 verifier 已逐条覆盖全部重大论断；以下结果会降低对应证据席权重，但不会被误写成验证器缺失：\n\n${findings}${more ? `\n- 另有 ${more} 条，见验证工件。` : ""}\n`,
-      en: `\n\n---\n\n## Triple-Verification Findings\n\n**Status: completed_with_findings.** All three verifiers covered every material claim. These findings reduce the originating evidence seat's weight; they are not mislabeled as missing verification:\n\n${findings}${more ? `\n- ${more} more; see the verification artifacts.` : ""}\n`,
-      ja: `\n\n---\n\n## 三重検証の所見\n\n**状態：completed_with_findings。** 3つの verifier は全重要主張を網羅しました。以下の所見は該当する証拠席の重みを下げますが、検証未実施とは扱いません：\n\n${findings}${more ? `\n- ほか ${more} 件は検証成果物を参照。` : ""}\n`,
-      ko: `\n\n---\n\n## 삼중 검증 결과\n\n**상태: completed_with_findings.** 세 verifier가 모든 중요 주장을 다뤘습니다. 다음 결과는 해당 증거 좌석의 가중치를 낮추지만 검증 누락으로 표시하지 않습니다:\n\n${findings}${more ? `\n- 추가 ${more}건은 검증 산출물을 참조하십시오.` : ""}\n`,
+      zh: `\n\n---\n\n## 三重核验发现\n\n**状态：completed_with_findings。** 三类 verifier 已逐条覆盖全部重大论断；以下结果必须在最终论证中明确纠正，必要时可按 pm_rating_rubric_v2 触发有来源的一档下调，但不会自动计作负票或机械改变评级：\n\n${findings}${more ? `\n- 另有 ${more} 条，见验证工件。` : ""}\n`,
+      en: `\n\n---\n\n## Triple-Verification Findings\n\n**Status: completed_with_findings.** All three verifiers covered every material claim. These findings require explicit correction in the final reasoning and may justify one sourced downgrade under pm_rating_rubric_v2, but they are not automatic negative votes or mechanical rating changes:\n\n${findings}${more ? `\n- ${more} more; see the verification artifacts.` : ""}\n`,
+      ja: `\n\n---\n\n## 三重検証の所見\n\n**状態：completed_with_findings。** 3つの verifier は全重要主張を網羅しました。以下の所見は最終判断で明示的に訂正し、必要なら pm_rating_rubric_v2 に基づく出典付き一段階引き下げの根拠にできますが、自動的な弱気票や機械的な評価変更ではありません：\n\n${findings}${more ? `\n- ほか ${more} 件は検証成果物を参照。` : ""}\n`,
+      ko: `\n\n---\n\n## 삼중 검증 결과\n\n**상태: completed_with_findings.** 세 verifier가 모든 중요 주장을 다뤘습니다. 다음 결과는 최종 논리에서 명시적으로 교정해야 하며 필요하면 pm_rating_rubric_v2에 따른 출처 기반 한 단계 하향 근거가 될 수 있지만, 자동 부정표나 기계적 등급 변경은 아닙니다:\n\n${findings}${more ? `\n- 추가 ${more}건은 검증 산출물을 참조하십시오.` : ""}\n`,
     });
     return `${text}${banner}`;
   }

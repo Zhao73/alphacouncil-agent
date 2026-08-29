@@ -140,25 +140,53 @@ test("CLAUDE.md names the roles that actually exist", async () => {
   assert.deepEqual(ghosts, [], `CLAUDE.md dispatches roles that no longer exist: ${ghosts.join(", ")}`);
 });
 
-// CLAUDE.md and AGENTS.md are executable host instructions. A stale Claude-only rule once
-// allowed a full run with two missing method voices to reach debate and PM even though the
-// runtime gate had already become all-or-nothing. Keep both hosts aligned with that gate.
-test("full method-voice failure stops every host before debate and PM", () => {
+// CLAUDE.md and AGENTS.md are executable host instructions. Keep both aligned with the
+// headless fallback boundary: mute process failures may retain a frozen sourced decision,
+// while semantic contract failures remain fail-closed and visible-host workers stay strict.
+test("method-voice fallback and hard-failure boundaries stay aligned across host authorities", () => {
   const authorities = {
     "CLAUDE.md": read("CLAUDE.md"),
     "AGENTS.md": read("AGENTS.md"),
   };
 
   for (const [name, text] of Object.entries(authorities)) {
-    assert.match(text,
-      /(?:every selected method[\s\S]{0,100}real `model_voice`|real `model_voice`[\s\S]{0,100}every selected method)/i,
-      `${name} must require every selected full-run method voice`);
-    assert.match(text, /(?:timeout|times out)[\s\S]{0,240}stop(?:s)?\s+before Bull\/Bear and PM/i,
-      `${name} must stop before debate and PM when a selected method voice fails`);
+    assert.match(text, /plugin-managed headless full[\s\S]{0,260}`deterministic_fallback`/i,
+      `${name} must retain a sourced deterministic result after a mute headless voice failure`);
+    assert.match(text, /`deterministic_fallback`[\s\S]{0,260}`degraded`[\s\S]{0,80}never `complete`/i,
+      `${name} must disclose fallback as degraded rather than complete`);
+    assert.match(text, /(?:contract|provenance)[\s\S]{0,180}stop(?:s)?\s+before Bull\/Bear and PM/i,
+      `${name} must keep semantic failures fail-closed before debate and PM`);
+    assert.match(text, /Visible-host full[\s\S]{0,260}real `model_voice`/i,
+      `${name} must retain the visible-host voice barrier`);
   }
   assert.doesNotMatch(authorities["CLAUDE.md"],
     /Whether the debate and PM run at all[\s\S]{0,300}near-complete bench/i,
     "Claude Code must not retain the superseded full-run quorum rule");
+});
+
+test("runtime governance and installation docs permit only the bounded full fallback", () => {
+  const surfaces = {
+    "runtime skill": read("skills/alphacouncil-agent/SKILL.md"),
+    "governance skill": read("skills/agent-skills-governance/SKILL.md"),
+    "report contract": read("docs/report-contract.md"),
+    "install guide": read("docs/INSTALL.md"),
+  };
+  for (const [name, text] of Object.entries(surfaces)) {
+    assert.match(text, /headless full[\s\S]{0,320}`deterministic_fallback`/i,
+      `${name} must document the bounded plugin-managed full fallback`);
+    assert.match(text, /visible-host full[\s\S]{0,180}(?:real method voice|real `model_voice`)/i,
+      `${name} must keep visible-host full strict`);
+  }
+  for (const [name, text] of Object.entries({
+    "governance skill": surfaces["governance skill"],
+    "report contract": surfaces["report contract"],
+  })) {
+    assert.match(text, /(?:contract|provenance)[\s\S]{0,180}(?:not fallback|not mute|incomplete)/i,
+      `${name} must keep semantic failures out of the fallback path`);
+  }
+  assert.doesNotMatch(surfaces["governance skill"], /`degraded` is a quick-only terminal result/i);
+  assert.doesNotMatch(surfaces["report contract"], /`degraded` is a quick-only terminal result/i);
+  assert.doesNotMatch(surfaces["install guide"], /`degraded` is quick-only evidence\/debate coverage/i);
 });
 
 // Three of the four hosts read generated agent files, and none of them were in the npm

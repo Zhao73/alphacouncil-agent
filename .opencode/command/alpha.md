@@ -60,7 +60,8 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
    intended `council_mode` (`full` by default; exactly `quick` for quick mode). If
    the request explicitly names masters, also pass those stable IDs as
    `preselected_master_ids`; if it named a speed, pass `council_pace`. Both highlight a choice
-   without confirming it.
+   without confirming it. For an unambiguous buy/hold/sell request with an explicit one-year
+   horizon, also pass `objective:"directional_rating"` and `holding_horizon:"1_year"` together.
 2. **Ask how deep to go first**, from the returned `pace_options`. It is a three-option
    question and the catalog is long, so it goes above the catalog. Show the persistence ceiling,
    per-stage budget and `observed_completion_status`; never relabel configured budgets as an
@@ -77,7 +78,9 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
    Quick returns an empty menu and rejects the field; say so rather than offering a tier.
 3. Show **every returned master individually, in the returned order and with its stable
    number**. Each row must include `identity`, `method`, `best_for` and `maturity`; a school
-   name or a count is not a substitute for the individual catalog.
+   name or a count is not a substitute for the individual catalog. Show the advisory grouping
+   into directional contributors, non-voting risk coverage and context-only methods; the latter
+   two are not votes.
 4. Ask for one submission covering both the tier and the seats. In full mode accept one number from `1..N`, combinations,
    ranges, stable IDs/names, or `all`. In quick mode the same complete returned catalog is
    displayed, but the submission must contain **1..4 seats** and `all` / `select_all` is
@@ -90,8 +93,9 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
    second confirmation.
 6. Call `confirm_master_selection` with the returned `selection_id`, `catalog_hash`,
    `display_ack: true`, the answered `council_pace` (omit to accept `normal`), and exactly one
-   of `selected_master_ids`, `select_all: true`, or `selection`. Retain the returned
-   one-use `selection_receipt`. The pace binds into it: an execution call may repeat the confirmed tier
+   of `selected_master_ids`, `select_all: true`, or `selection`. Echo any returned
+   `recommendation_hash` and `decision_context_hash` unchanged. Retain the returned one-use `selection_receipt`.
+   The pace binds into it: an execution call may repeat the confirmed tier
    but never change it, so a user who approved 15 minutes cannot end up running an hour.
 7. Only now call `plan_visible_run` (full only), `collect_evidence` (full only), or
    `analyze_symbol`, passing that `selection_receipt` and the same symbol, prompt, language
@@ -115,13 +119,22 @@ master-selection contract.
    `get_quote`, `get_options_chain`, `get_macro_snapshot`, `get_news`. Search is for
    explanation and for what is not yet filed.
 4. Every selected master must report before the run is complete. `out_of_scope` is a
-   conclusion, not an abstention.
-5. Give price bands with the condition attached to each. "The cycle position is undetermined"
+   conclusion with zero directional contribution, not a negative vote. In plugin-managed
+   headless execution, a mute voice worker after a sourced deterministic stance was frozen is
+   retained as a labelled `deterministic_fallback`; full can then be `degraded`, never falsely
+   `complete`. Contract or provenance failures still fail closed.
+   Only primary non-`out_of_scope` method judgments enter Bull/Bear, exactly once. Risk and
+   context methods reach PM once as non-voting veto/risk/gap context; `out_of_scope` stays in
+   the method bench and is excluded from PM rating inputs. Never count seats or average stances.
+5. For a calibrated one-year directional run, require a positive frozen quote and currency before
+   launching any seat. Every price band must use that same currency, and the PM must acknowledge
+   every hard verifier finding exactly once.
+6. Give price bands with the condition attached to each. "The cycle position is undetermined"
    changes what the bands depend on; it does not excuse leaving them out.
-6. Full mode fails closed at the evidence barrier. If any mandatory evidence role still
+7. Full mode fails closed at the evidence barrier. If any mandatory evidence role still
    fails after its bounded parse repair, do not spend more model calls on masters, bull/bear
    or PM. Persist an `incomplete` run naming the failed evidence and skipped downstream roles.
-7. For the hard runtime contract, call plugin-managed headless `analyze_symbol` once with
+8. For the hard runtime contract, call plugin-managed headless `analyze_symbol` once with
    `council_mode:"full"`, `wait_for_completion:false`, the full-mode receipt, and
    `council_pace` when the arguments asked for a speed: `fast` for 15 minutes, `slow` (or
    `deep`) for 60, omitted for the 30-minute default. Poll the same durable `run_id` to
@@ -139,9 +152,9 @@ master-selection contract.
    `full_v2` contract. `normal` remains the default. No tier has a successful-completion time
    claim until representative live terminal runs validate it; configured arithmetic is not a
    measured speed result.
-8. `plan_visible_run` is owned by the external host. The plugin cannot force-stop its Task
+9. `plan_visible_run` is owned by the external host. The plugin cannot force-stop its Task
    agents, so visible-host full must not be advertised as meeting the 30-minute deadline.
-9. The terminal full handoff must include the system price snapshot (or explicit unavailable
+10. The terminal full handoff must include the system price snapshot (or explicit unavailable
    gap), every selected stable master ID/stance/voice-worker explanation or failure, and all
    eight analyst statuses and summaries. A method-seat explanation is a recorded provisional
    lens output, never a quotation, endorsement or current statement by the named person.

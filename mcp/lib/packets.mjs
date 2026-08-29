@@ -33,7 +33,95 @@ import {
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
 import { normalizeCompanySourceAcquisitionLedger } from "./company-source-acquisition.mjs";
-import { assertVerificationFindingsAck } from "./verification.mjs";
+import {
+  allEvidenceClaims,
+  assertVerificationFindingsAck,
+  hardVerificationFindings,
+} from "./verification.mjs";
+import {
+  assertPmRatingBasis,
+  pmRatingReferenceCurrency,
+  pmRatingReferencePrice,
+} from "./pm-rating-rubric.mjs";
+import { managerDecisionNestedSourceIds } from "./manager-report.mjs";
+import {
+  containsProtectedRatingAuthority,
+  protectedRatingAuthorityOccurrences,
+  readerVisibleTextCandidates,
+  sanitizeReaderInline,
+  sanitizeUntrustedMarkdown,
+} from "./reader-prose.mjs";
+
+export function bindMachineCheckedRatingBasisMarkdown(markdown, ratingBasis, rating, language, {
+  serverRendered = false,
+} = {}) {
+  if (!ratingBasis || typeof markdown !== "string") return markdown;
+  const copy = localized(language, {
+    zh: {
+      heading: "服务端校验的评级依据",
+      authority: "以下字段已经过服务端契约校验；若后续模型撰写正文与之冲突，以本节为准，冲突正文不具权威性。",
+      rating: "最终评级", horizon: "期限（月）", formula: "回报公式", reference: "冻结参考价", target: "基准情景目标价", income: "收益回报", base: "基准情景总回报", raw: "收益档位原始评级",
+      adjustment: "风险调整", sources: "评级依据来源", adjustmentSources: "调整来源", adjustmentContexts: "调整上下文",
+    },
+    en: {
+      heading: "Server-Validated Rating Basis",
+      authority: "These fields passed the server contract. If later model-authored prose conflicts with them, this section governs and the conflicting prose is non-authoritative.",
+      rating: "Final rating", horizon: "Horizon (months)", formula: "Return formula", reference: "Frozen reference price", target: "Base-case price target", income: "Income return", base: "Base-case total return", raw: "Raw return-band rating",
+      adjustment: "Risk adjustment", sources: "Rating-basis sources", adjustmentSources: "Adjustment sources", adjustmentContexts: "Adjustment contexts",
+    },
+    ja: {
+      heading: "サーバー検証済み評価根拠", authority: "以下の項目はサーバー契約で検証済みです。後続のモデル作成本文と矛盾する場合は本節を正とします。",
+      rating: "最終評価", horizon: "期間（月）", formula: "収益率の式", reference: "凍結基準価格", target: "ベースケース目標価格", income: "インカム収益率", base: "ベースケース総収益率", raw: "収益帯の基礎評価",
+      adjustment: "リスク調整", sources: "評価根拠の出典", adjustmentSources: "調整根拠", adjustmentContexts: "調整コンテキスト",
+    },
+    ko: {
+      heading: "서버 검증 등급 근거", authority: "다음 필드는 서버 계약 검증을 통과했습니다. 뒤의 모델 작성 본문과 충돌하면 이 절이 우선합니다.",
+      rating: "최종 등급", horizon: "기간(개월)", formula: "수익률 공식", reference: "동결 기준가격", target: "기본 시나리오 목표가격", income: "인컴 수익률", base: "기본 시나리오 총수익률", raw: "수익률 구간 원등급",
+      adjustment: "위험 조정", sources: "등급 근거 출처", adjustmentSources: "조정 출처", adjustmentContexts: "조정 컨텍스트",
+    },
+  });
+  const forgedAuthority = protectedRatingAuthorityOccurrences(markdown);
+  if (containsProtectedRatingAuthority(markdown)) {
+    throw invalidParams("portfolio_manager attempted to author a server-owned rating authority claim", {
+      reason: "PM_SERVER_RATING_AUTHORITY_SPOOF",
+      ...forgedAuthority,
+      authority_claim_detected: true,
+    });
+  }
+  // Raw HTML and pre-encoded entities are model-controlled. Escape them before retaining the
+  // authored Markdown structure, so a hidden span, quoted `>` or unterminated comment cannot
+  // change which words/headings the reader sees after the server-owned block is prepended.
+  const safeMarkdown = serverRendered ? markdown : sanitizeUntrustedMarkdown(markdown);
+  const ids = (values) => (values || [])
+    .map((id) => `\`${sanitizeReaderInline(id).replaceAll("`", "")}\``).join(", ") || "none";
+  // adjustment_reason is model-authored. Flatten it before placing it inside the trusted
+  // authority block so a newline, heading or fenced block cannot forge a second server section.
+  const adjustmentReasonRaw = clip(ratingBasis.adjustment_reason, 500);
+  if (containsProtectedRatingAuthority(adjustmentReasonRaw)) {
+    throw invalidParams("portfolio_manager attempted to place a server-owned authority claim inside rating adjustment prose", {
+      reason: "PM_RATING_ADJUSTMENT_AUTHORITY_SPOOF",
+    });
+  }
+  const adjustmentReason = sanitizeReaderInline(adjustmentReasonRaw);
+  const adjustment = ratingBasis.risk_adjustment === "downgrade_one_notch"
+    ? `${ratingBasis.risk_adjustment} — ${adjustmentReason} (${copy.adjustmentSources}: ${ids(ratingBasis.adjustment_source_ids)}; ${copy.adjustmentContexts}: ${ids(ratingBasis.adjustment_context_ids)})`
+    : ratingBasis.risk_adjustment;
+  const block = [
+    `## ${copy.heading}`,
+    copy.authority,
+    `- ${copy.rating}: ${rating}`,
+    `- ${copy.horizon}: ${ratingBasis.horizon_months}`,
+    `- ${copy.formula}: ${ratingBasis.return_formula_id}`,
+    `- ${copy.reference}: ${ratingBasis.reference_price} ${ratingBasis.price_currency}`,
+    `- ${copy.target}: ${ratingBasis.base_case_price_target} ${ratingBasis.price_currency}`,
+    `- ${copy.income}: ${ratingBasis.income_return_pct}%`,
+    `- ${copy.base}: ${ratingBasis.base_case_total_return_pct}%`,
+    `- ${copy.raw}: ${ratingBasis.raw_rating}`,
+    `- ${copy.adjustment}: ${adjustment}`,
+    `- ${copy.sources}: ${ids(ratingBasis.source_ids)}`,
+  ].join("\n");
+  return `${block}\n\n${safeMarkdown}`;
+}
 
 export function rawRecordText(packet) {
   if (typeof packet?.raw_text === "string" && packet.raw_text.trim()) return packet.raw_text;
@@ -982,11 +1070,14 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "", {
     return bindSameDayDynamicObservation({
       ...(source && typeof source === "object" ? source : {}),
       id,
+      ...(typeof source?.title === "string" ? { title: sanitizeStatementMarkdown(source.title) } : {}),
     }, asOfDate, observationTime);
   }) : [];
   const claims = Array.isArray(packet?.claims) ? packet.claims.map((claim) => {
     const normalized = {
       ...(claim && typeof claim === "object" ? claim : {}),
+      ...(typeof claim?.claim === "string" ? { claim: sanitizeStatementMarkdown(claim.claim) } : {}),
+      ...(typeof claim?.evidence === "string" ? { evidence: sanitizeStatementMarkdown(claim.evidence) } : {}),
       source_ids: Array.isArray(claim?.source_ids)
         ? claim.source_ids.map((id) => sourceIdMap.get(String(id)) || scopedSourceId(task, id)).filter(Boolean)
         : [],
@@ -1008,11 +1099,11 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "", {
     task,
     symbol,
     as_of: asOfDate,
-    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
+    summary: sanitizeStatementMarkdown(typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES)),
     claims,
     metrics: packet?.metrics && typeof packet.metrics === "object" ? packet.metrics : {},
     sources,
-    open_questions: openQuestions,
+    open_questions: openQuestions.map(sanitizeStatementMarkdown).filter(Boolean),
     ...(coverageItems.length ? { coverage_items: coverageItems } : {}),
     ...(acquisitionLedger !== undefined ? { acquisition_ledger: acquisitionLedger } : {}),
     ...(officialSourceCoverage !== undefined ? { official_source_coverage: officialSourceCoverage } : {}),
@@ -1021,13 +1112,13 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "", {
     // a rich-but-contradictory task can be A/low, a sparse-but-decisive one C/high.
     information_richness: ["A", "B", "C"].includes(packet?.information_richness) ? packet.information_richness : "unrated",
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
-    thread_title: typeof packet?.thread_title === "string" ? packet.thread_title : undefined,
+    thread_title: typeof packet?.thread_title === "string" ? sanitizeStatementMarkdown(packet.thread_title) : undefined,
     execution_mode: typeof packet?.execution_mode === "string" ? packet.execution_mode : undefined,
     raw_text: raw,
   };
 }
 
-export function assertPriceLevelContinuity(rows, { required = false } = {}) {
+export function assertPriceLevelContinuity(rows, { required = false, expectedCurrency = null } = {}) {
   if (!Array.isArray(rows) || rows.length === 0) {
     if (required) throw invalidParams("portfolio_manager omitted structured price levels", {
       reason: "PRICE_LEVELS_REQUIRED",
@@ -1044,6 +1135,20 @@ export function assertPriceLevelContinuity(rows, { required = false } = {}) {
   }));
   const currencies = new Set(normalized.map((row) => row.currency).filter(Boolean));
   if (currencies.size !== 1) problems.push({ reason: "price_level_currency_mismatch", currencies: [...currencies] });
+  const expectedPriceCurrency = typeof expectedCurrency === "string" && /\S/u.test(expectedCurrency)
+    ? expectedCurrency
+    : null;
+  const crossCurrencyRows = expectedPriceCurrency
+    ? normalized.filter((row) => row.currency !== expectedPriceCurrency)
+      .map((row) => ({ index: row._index, currency: row.currency || null }))
+    : [];
+  if (crossCurrencyRows.length) {
+    problems.push({
+      reason: "price_level_rating_currency_mismatch",
+      expected_currency: expectedPriceCurrency,
+      mismatched_price_levels: crossCurrencyRows,
+    });
+  }
   for (const row of normalized) {
     if (row.lower_bound !== null && (!Number.isFinite(row.lower_bound) || row.lower_bound < 0)) {
       problems.push({ index: row._index, reason: "invalid_lower_bound" });
@@ -1085,7 +1190,10 @@ export function assertPriceLevelContinuity(rows, { required = false } = {}) {
   }
   if (problems.length) {
     throw invalidParams("Structured price levels must continuously cover every price with one explicit action.", {
-      reason: "PRICE_LEVEL_CONTINUITY_MISMATCH",
+      reason: crossCurrencyRows.length
+        ? "PM_PRICE_LEVEL_CURRENCY_MISMATCH"
+        : "PRICE_LEVEL_CONTINUITY_MISMATCH",
+      ...(crossCurrencyRows.length ? { expected_currency: expectedPriceCurrency } : {}),
       problems,
     });
   }
@@ -1094,22 +1202,51 @@ export function assertPriceLevelContinuity(rows, { required = false } = {}) {
 
 export function normalizeDebate(packet, role, run, raw = "") {
   const decisionAvailable = packet?.decision_available !== false;
+  const prose = (value, fallback = "") => sanitizeStatementMarkdown(
+    typeof value === "string" ? value : fallback,
+  );
+  const proseList = (value) => (Array.isArray(value)
+    ? value.filter((item) => typeof item === "string").map(sanitizeStatementMarkdown).filter(Boolean)
+    : []);
+  const questionAnswers = (value) => (Array.isArray(value) ? value : [])
+    .filter((item) => item && typeof item === "object" && !Array.isArray(item))
+    .map((item) => ({
+      ...item,
+      ...(typeof item.question === "string" ? { question: sanitizeStatementMarkdown(item.question) } : {}),
+      ...(typeof item.answer === "string" ? { answer: sanitizeStatementMarkdown(item.answer) } : {}),
+    }));
+  const debateRounds = (Array.isArray(packet?.debate_rounds) ? packet.debate_rounds : [])
+    .filter((round) => round && typeof round === "object" && !Array.isArray(round))
+    .map((round) => ({
+      ...round,
+      summary: prose(round.summary),
+      long_thesis: proseList(round.long_thesis),
+      short_thesis: proseList(round.short_thesis),
+      questions: proseList(round.questions),
+      questions_answered: questionAnswers(round.questions_answered),
+    }));
+  const reportRaw = typeof packet?.report_markdown === "string" ? packet.report_markdown : "";
+  const reportAuthority = protectedRatingAuthorityOccurrences(reportRaw);
+  const trustedBoundReport = role === "portfolio_manager"
+    && packet?.rating_basis && typeof packet.rating_basis === "object"
+    && reportAuthority.heading_count === 1
+    && reportAuthority.authority_count === 1;
   return {
     role,
     symbol: run.symbol,
     as_of: run.as_of,
-    verdict: typeof packet?.verdict === "string" ? packet.verdict : "",
+    verdict: prose(packet?.verdict),
     decision_available: decisionAvailable,
     rating: decisionAvailable ? (RATINGS.includes(packet?.rating) ? packet.rating : "Hold") : null,
     winner: ["bull", "bear", "balanced", "unknown"].includes(packet?.winner) ? packet.winner : "unknown",
-    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
-    long_thesis: Array.isArray(packet?.long_thesis) ? packet.long_thesis : [],
-    short_thesis: Array.isArray(packet?.short_thesis) ? packet.short_thesis : [],
-    valuation_range: typeof packet?.valuation_range === "string" ? packet.valuation_range : "",
-    catalysts: Array.isArray(packet?.catalysts) ? packet.catalysts : [],
-    risks: Array.isArray(packet?.risks) ? packet.risks : [],
-    position: typeof packet?.position === "string" ? packet.position : "",
-    invalidation: Array.isArray(packet?.invalidation) ? packet.invalidation : [],
+    summary: prose(packet?.summary, raw.slice(0, LIMITS.CLEAN_LOG_BYTES)),
+    long_thesis: proseList(packet?.long_thesis),
+    short_thesis: proseList(packet?.short_thesis),
+    valuation_range: prose(packet?.valuation_range),
+    catalysts: proseList(packet?.catalysts),
+    risks: proseList(packet?.risks),
+    position: prose(packet?.position),
+    invalidation: proseList(packet?.invalidation),
     source_ids: Array.isArray(packet?.source_ids) ? packet.source_ids : [],
     // An unavailable decision has no decision confidence. Persist `low` as the conservative
     // machine-readable value; renderers may display it as unavailable, but must never expose
@@ -1117,28 +1254,33 @@ export function normalizeDebate(packet, role, run, raw = "") {
     confidence: decisionAvailable && ["high", "medium", "low"].includes(packet?.confidence)
       ? packet.confidence
       : "low",
-    questions: Array.isArray(packet?.questions) ? packet.questions : [],
-    questions_answered: Array.isArray(packet?.questions_answered) ? packet.questions_answered : [],
-    debate_rounds: Array.isArray(packet?.debate_rounds) ? packet.debate_rounds : [],
+    questions: proseList(packet?.questions),
+    questions_answered: questionAnswers(packet?.questions_answered),
+    debate_rounds: debateRounds,
     // Optional compact full-PM fields. Headless full renders these deterministically after the
     // small decision packet validates; quick and visible contracts may simply leave them empty.
     price_levels: assertPriceLevelContinuity(packet?.price_levels, {
       required: role === "portfolio_manager" && Array.isArray(packet?.price_levels),
+      expectedCurrency: role === "portfolio_manager" ? packet?.rating_basis?.price_currency : null,
     }),
     horizon_views: packet?.horizon_views && typeof packet.horizon_views === "object" && !Array.isArray(packet.horizon_views)
       ? packet.horizon_views
       : {},
-    data_gaps: Array.isArray(packet?.data_gaps) ? packet.data_gaps : [],
+    data_gaps: proseList(packet?.data_gaps),
     verification_findings_ack: Array.isArray(packet?.verification_findings_ack)
       ? packet.verification_findings_ack
+      : undefined,
+    rating_basis: packet?.rating_basis && typeof packet.rating_basis === "object"
+      && !Array.isArray(packet.rating_basis)
+      ? packet.rating_basis
       : undefined,
     company_dossier_hash_ack: typeof packet?.company_dossier_hash_ack === "string"
       ? packet.company_dossier_hash_ack
       : undefined,
-    report_markdown: typeof packet?.report_markdown === "string" ? packet.report_markdown : "",
+    report_markdown: trustedBoundReport ? reportRaw : sanitizeUntrustedMarkdown(reportRaw),
     failure_kind: typeof packet?.failure_kind === "string" ? packet.failure_kind : undefined,
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
-    thread_title: typeof packet?.thread_title === "string" ? packet.thread_title : undefined,
+    thread_title: typeof packet?.thread_title === "string" ? sanitizeStatementMarkdown(packet.thread_title) : undefined,
     execution_mode: typeof packet?.execution_mode === "string" ? packet.execution_mode : undefined,
     raw_text: raw,
   };
@@ -1393,12 +1535,12 @@ export function compactQuickEvidence(run) {
 }
 
 /** Remove artifact-only payloads before a debate packet is sent to another model call. */
-export function compactDebateContext(packet) {
+export function compactDebateContext(packet, { includeRating = true } = {}) {
   if (!packet) return null;
   return {
     role: packet.role,
     verdict: clip(packet.verdict || "", 1_200),
-    rating: packet.rating,
+    ...(includeRating ? { rating: packet.rating } : {}),
     winner: packet.winner,
     summary: clip(packet.summary || "", 1_200),
     long_thesis: (packet.long_thesis || []).slice(0, 8).map((item) => clip(item, 600)),
@@ -1457,17 +1599,59 @@ export function debateFromCodex(result, role, run, fallbackPrompt, {
       : extractWorkerJson(result.text, kind);
     assertCompanyDossierAck(parsed, run, role);
     const source_ids = assertSourceIdsResolve(run, parsed.source_ids, role);
+    const ratingBasisRequired = role === "portfolio_manager"
+      && run?.decision_context?.rating_basis_required === true;
+    const rating_basis = role === "portfolio_manager"
+      && (ratingBasisRequired || parsed?.rating_basis !== undefined)
+      ? assertPmRatingBasis(parsed, {
+        adjustmentContexts: pmRatingAdjustmentContexts(run),
+        referencePrice: pmRatingReferencePrice(run),
+        referenceCurrency: pmRatingReferenceCurrency(run),
+      })
+      : undefined;
+    if (rating_basis) {
+      assertSourceIdsResolve(run, rating_basis.source_ids, `${role} rating basis`);
+    }
+    if (role === "portfolio_manager") {
+      assertSourceIdsResolve(run, managerDecisionNestedSourceIds({
+        ...parsed,
+        source_ids,
+        ...(rating_basis ? { rating_basis } : {}),
+      }), `${role} nested decision sources`);
+    }
     const verification_findings_ack = role === "portfolio_manager" && managerDecisionOnly
       ? assertVerificationFindingsAck(parsed, run, role)
       : undefined;
     return normalizeDebate({
       ...parsed,
       source_ids,
+      ...(rating_basis ? { rating_basis } : {}),
       ...(verification_findings_ack ? { verification_findings_ack } : {}),
+      ...(!managerDecisionOnly && rating_basis ? {
+        report_markdown: bindMachineCheckedRatingBasisMarkdown(
+          parsed.report_markdown,
+          rating_basis,
+          parsed.rating,
+          run.language,
+        ),
+      } : {}),
     }, role, run, result.text);
   } catch (error) {
     const failure = debateFailurePacket(role, run, "parse_failed");
-    const schemaErrors = Array.isArray(error?.data?.errors) ? error.data.errors.slice(0, 12) : [];
+    const validatorErrors = Array.isArray(error?.data?.errors) ? error.data.errors : [];
+    const contractProblems = Array.isArray(error?.data?.problems)
+      ? error.data.problems.map((problem) => ({
+        path: typeof problem?.path === "string" ? problem.path : "/rating_basis",
+        keyword: typeof problem?.code === "string" ? problem.code : "contract",
+        message: [
+          problem?.code || "contract mismatch",
+          Object.hasOwn(problem || {}, "expected") ? `expected=${JSON.stringify(problem.expected)}` : "",
+          Object.hasOwn(problem || {}, "actual") ? `actual=${JSON.stringify(problem.actual)}` : "",
+        ].filter(Boolean).join("; "),
+      }))
+      : [];
+    const allSchemaErrors = validatorErrors.length ? validatorErrors : contractProblems;
+    const schemaErrors = allSchemaErrors.slice(0, 12);
     const reason = String(error?.data?.reason || "WORKER_OUTPUT_REJECTED");
     const safeReason = /^[A-Z0-9_]{1,96}$/u.test(reason) ? reason : "WORKER_OUTPUT_REJECTED";
     const outputContractDiagnostic = {
@@ -1479,7 +1663,7 @@ export function debateFromCodex(result, role, run, fallbackPrompt, {
         ? { schema_kind: cleanLog(error.data.kind, 80) }
         : {}),
       ...(schemaErrors.length ? {
-        schema_error_count: error.data.errors.length,
+        schema_error_count: allSchemaErrors.length,
         schema_errors: schemaErrors,
       } : {}),
     };
@@ -1767,27 +1951,57 @@ export function coerceStance(value, masterId = "") {
  * outside what I can judge" is a conclusion, not an abstention.
  */
 export function normalizeMasterOpinion(packet, masterId, run, raw = "") {
-  const list = (value) => (Array.isArray(value) ? value.filter((x) => typeof x === "string") : []);
+  const stringList = (value) => (Array.isArray(value) ? value.filter((x) => typeof x === "string") : []);
+  const proseList = (value) => stringList(value).map(sanitizeStatementMarkdown).filter(Boolean);
   const stance = coerceStance(packet?.stance, masterId);
-  const source_ids = assertSourceIdsResolve(run, list(packet?.source_ids), masterId, {
+  const source_ids = assertSourceIdsResolve(run, stringList(packet?.source_ids), masterId, {
     allowEmpty: stance === "out_of_scope",
   });
-  return {
+  const normalized = {
     master: masterId,
     symbol: run.symbol,
     as_of: run.as_of,
-    verdict: typeof packet?.verdict === "string" ? packet.verdict : "",
+    verdict: sanitizeStatementMarkdown(typeof packet?.verdict === "string" ? packet.verdict : ""),
     stance,
-    summary: typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES),
-    key_findings: list(packet?.key_findings),
-    disagreements: list(packet?.disagreements),
-    disqualifiers_triggered: list(packet?.disqualifiers_triggered),
-    what_would_change_my_mind: list(packet?.what_would_change_my_mind),
+    summary: sanitizeStatementMarkdown(typeof packet?.summary === "string" ? packet.summary : raw.slice(0, LIMITS.CLEAN_LOG_BYTES)),
+    key_findings: proseList(packet?.key_findings),
+    disagreements: proseList(packet?.disagreements),
+    disqualifiers_triggered: proseList(packet?.disqualifiers_triggered),
+    what_would_change_my_mind: proseList(packet?.what_would_change_my_mind),
     source_ids,
     confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : "low",
     thread_id: typeof packet?.thread_id === "string" ? packet.thread_id : undefined,
     raw_text: raw,
   };
+  const readerEntries = [
+    { field: "verdict", path: "/verdict", value: normalized.verdict },
+    { field: "summary", path: "/summary", value: normalized.summary },
+    ...["key_findings", "disagreements", "disqualifiers_triggered", "what_would_change_my_mind"]
+      .flatMap((field) => normalized[field].map((value, index) => ({
+        field, path: `/${field}/${index}`, value,
+      }))),
+  ];
+  const authorityEntries = readerEntries.filter((entry) => containsProtectedRatingAuthority(entry.value));
+  if (authorityEntries.length) {
+    throw invalidParams(`method worker attempted to author server-owned rating authority prose for ${masterId}`, {
+      reason: "METHOD_VOICE_SERVER_RATING_AUTHORITY_SPOOF",
+      owner: masterId,
+      invalid_fields: [...new Set(authorityEntries.map((entry) => entry.field))],
+      invalid_paths: authorityEntries.map((entry) => entry.path),
+    });
+  }
+  if (stance === "out_of_scope") {
+    const directionalEntries = readerEntries.filter((entry) => containsDirectionalAbstentionToken(entry.value));
+    if (directionalEntries.length) {
+      throw invalidParams(`method worker added directional prose to an abstaining seat ${masterId}`, {
+        reason: "METHOD_VOICE_DIRECTIONAL_ABSTENTION",
+        owner: masterId,
+        invalid_fields: [...new Set(directionalEntries.map((entry) => entry.field))],
+        invalid_paths: directionalEntries.map((entry) => entry.path),
+      });
+    }
+  }
+  return normalized;
 }
 
 /**
@@ -1804,38 +2018,121 @@ export function normalizeMasterOpinion(packet, masterId, run, raw = "") {
  * than at each render site, so a new renderer cannot reintroduce the hole.
  */
 export function sanitizeStatementMarkdown(value) {
-  return String(value ?? "")
-    .replace(/\r\n?/gu, "\n")
-    .split("\n")
-    .map((line) => line
-      .replace(/^(\s*)(#{1,6})(\s)/u, "$1\\$2$3")
-      .replace(/^(\s*)(={3,}|-{3,}|\*{3,}|_{3,})\s*$/u, "$1\\$2"))
-    .join("\n")
-    .replace(/\n{2,}/gu, "\n")
-    .trim();
+  return sanitizeReaderInline(value);
 }
 
 const DIRECTIONAL_ABSTENTION_PATTERNS = Object.freeze([
-  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does|intend\s+to|plan\s+to|choose\s+to|refuse\s+to|decline\s+to|am\s+going\s+to)\s+(?:not\s+)?)?(?:buy|sell|overweight|underweight|accumulate|trim)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to)\s+)?(?:not\s+)?add\s+to\s+(?:the\s+)?(?:position|exposure|allocation)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does)\s+)?(?:not\s+)?(?:recommend(?:s|ed|ing)?|consider(?:s|ed|ing)?)\s+(?:not\s+)?(?:buying|selling|accumulating|trimming|overweighting|underweighting|adding\s+to\s+(?:the\s+)?(?:position|exposure|allocation))\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does|intend\s+to|plan\s+to|choose\s+to|refuse\s+to|decline\s+to|am\s+going\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:buy|sell|overweight|underweight|accumulate|trim)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:purchase|acquire|own|hold|retain|liquidate|divest|unload|dispose\s+of|invest\s+(?:in|into))\b[^.!?\n]{0,40}\b(?:stock|shares?|security|name|position|exposure|allocation|company)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:cash\s+out|de-?risk|stay\s+away|take\s+profits?|exit|enter|initiate|open|close)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:take|establish|build)\s+(?:a\s+|the\s+)?(?:stake|position|exposure)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might)\s+)?(?:deploy|allocate|commit)\s+(?:capital|funds?)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to)\s+)?(?:not\s+)?(?:add\s+to|reduce|increase|cut|pare)\s+(?:the\s+)?(?:position|exposure|allocation|stake)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might)\s+)?(?:be|become|remain)\s+(?:a\s+)?(?:buyer|seller|owner)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does)\s+)?(?:not\s+)?(?:recommend(?:s|ed|ing)?|consider(?:s|ed|ing)?)\s+(?:not\s+)?(?:buying|selling|holding|owning|investing|purchasing|acquiring|accumulating|trimming|overweighting|underweighting|adding\s+to|reducing|building|establishing|taking|opening|closing|exiting|entering|liquidating|divesting|unloading|allocating|deploying)\b|\b(?:i|we)\s+(?:prefer|favor)\s+(?:owning|ownership)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might)\s+)?(?:recommend|advise|advocate|favor|favour|suggest|consider)\b[^.!?\n]{0,40}\b(?:(?:buying|selling|holding|owning|investing|purchasing|acquiring|accumulating|trimming|overweighting|underweighting|liquidating|divesting|unloading)\b|(?:adding\s+to|reducing|building|establishing|taking|opening|initiating|closing|exiting|entering)\s+(?:a\s+|the\s+|this\s+|my\s+|our\s+)?(?:stake|position|exposure|allocation|stock|shares?|security|name)\b|(?:allocating|deploying|committing)\s+(?:capital|funds?)\b)/iu,
+  /\b(?:i\s+am|we\s+are)\s+(?:(?:clearly|decidedly|strongly|moderately|slightly)\s+)?(?:bullish|bearish)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|may|might|intend\s+to|plan\s+to)\s+)?(?:go|stay|remain|turn)\s+(?:long|short)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|may|might)\s+)?take\s+(?:a\s+)?(?:long|short)\s+position\b/iu,
+  /\b(?:my\s+(?:conclusion|rating)|in\s+my\s+view\s+(?:the\s+)?rating|this\s+method(?:'s)?\s+rating)\s*(?::|is|remains|would\s+be)\s*(?:a\s+)?(?:buy|sell|hold|overweight|underweight)\b|\b(?:i\s+conclude|i\s+rate|this\s+method\s+(?:rates?|says?|calls?))\b[^.!?\n]{0,80}\b(?:buy|sell|hold|overweight|underweight)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|may|might|intend\s+to|plan\s+to)\s+)?(?:not\s+)?hold\s+(?:the\s+|this\s+)?(?:stock|shares?|security|name|position|exposure|allocation)\b/iu,
+  /\b(?:i|we)\s+(?:(?:would|will|should|could|can|may|might|intend\s+to|plan\s+to)\s+)?(?:not\s+)?(?:avoid\s+(?:the\s+|this\s+)?(?:stock|security|name|shares?)|pass\s+on\s+(?:it|the\s+stock|this\s+stock|the\s+name|this\s+name)|build\s+(?:a\s+|the\s+)?stake|favor\s+ownership|cut\s+(?:the\s+)?(?:position|exposure|allocation)|pare\s+(?:the\s+)?(?:position|exposure|allocation))\b/iu,
+  /\b(?:i|we)\s+(?:assign|set|give)\s+(?:the\s+)?(?:rating\s+(?:to|at)\s+)?(?:buy|sell|hold|overweight|underweight)\b|\b(?:i|we)\s+(?:(?:would|will|should|could|can|may|might)\s+)?go\s+(?:overweight|underweight)\b/iu,
   // A disagreement field is expected to say things such as "我不同意把增长当作买入理由".
   // Treating any trade word within thirty characters of 我 as this seat's own action made that
   // safe analytical objection indistinguishable from "我会在资料补齐后买入". Exclude the two
   // explicit disagreement constructions while retaining the bounded action search; the frozen
   // position_intent independently keeps the stance from being widened through the enum field.
-  /(?:我|我们|本席|本方法)(?!(?:不同意|反对))[^。！？：:\n]{0,30}?(?:买入|卖出|加仓|减仓|增持|减持)/u,
-  /(?:私|私は|当席|本席)[^。！？\n]{0,40}?(?:買います|買う|買い増(?:す|し|した|せ)?|売ります|売る|売り)/u,
-  /(?:저는|나는|우리는|본\s*좌석은)[^.!?\n]{0,40}?(?:추가\s*매수|매수|매도)/u,
+  /(?:我|我们|本席|本方法)(?!(?:不同意|反对|不认可|不接受))[^。！？：:\n]{0,40}?(?:买入|卖出|加仓|减仓|增持|减持|持有|建仓|清仓|抄底|配置|购入|买进|卖掉|回避|放弃|退出|离场|入场|止盈|获利了结|继续持仓)/u,
+  /(?:我|我们|本席|本方法)(?:明确|目前|仍然|整体)?(?:看多|看空|偏多|偏空|做多|做空|超配|低配)/u,
+  /(?:私|私は|当席|本席|本方法)[^。！？\n]{0,50}?(?:買います|買う|買い増(?:す|し|した|せ)?|売ります|売る|売り|購入|保有|売却|見送|回避|投資|所有|手放|撤退|ポジションを取)/u,
+  /(?:私|私は|当席|本席)[^。！？\n]{0,20}?(?:強気(?:です|だ)|弱気(?:です|だ)|ロング(?:です|だ|にする)|ショート(?:です|だ|にする))/u,
+  /(?:저는|나는|우리는|본\s*좌석은|본\s*방법은)[^.!?\n]{0,50}?(?:추가\s*매수|매수|매도|매입|보유|진입|청산|회피|투자|소유|처분|비중을\s*(?:늘|줄))/u,
+  /(?:저는|나는|우리는|본\s*좌석은)[^.!?\n]{0,20}?(?:강세(?:입니다|라고\s*봅니다)|약세(?:입니다|라고\s*봅니다)|롱\s*포지션|숏\s*포지션)/u,
+  /(?:나의|제|저의|본\s*방법의)?(?:\s*)(?:결론|등급|평가)(?:은|는|이|가|:)?\s*(?:매수|매도|보유|비중\s*확대|비중\s*축소)/u,
+  /(?:我的|本方法的?)(?:结论|评级|判断)(?:是|为|：|:)?(?:买入|卖出|持有|增持|减持)|(?:在我看来|我认为)(?:本方法|该股|这只股票)?(?:的)?(?:评级|结论)(?:是|为|：|:)?(?:买入|卖出|持有|增持|减持)/u,
+  /(?:私の|本(?:メソッド|方法)の)(?:結論|評価)(?:は|:|：)?(?:買い|売り|中立|オーバーウェイト|アンダーウェイト)/u,
 ]);
 
-function containsDirectionalAbstentionToken(value) {
+function neutralizeNonDirectionalEvidence(value) {
+  return String(value || "")
+    .replace(/\bneither\s+(?:bullish\s+nor\s+bearish|bearish\s+nor\s+bullish)\b/giu, "directionally neutral")
+    .replace(/\bnot\s+(?:bullish\s+(?:or|nor)\s+bearish|bearish\s+(?:or|nor)\s+bullish)\b/giu, "directionally neutral")
+    .replace(/\b(?:i|we)\s+(?:do|would|will)\s+not\s+(?:exit|enter)\b[^.!?\n]{0,24}\b(?:or|nor)\s+(?:enter|exit)\b/giu, "remain unpositioned")
+    .replace(/\b(?:analysts?|brokers?|consensus|sell[-\s]?side|buy[-\s]?side|third[-\s]?part(?:y|ies)|the\s+market)\b[^.!?\n]{0,64}\b(?:buy(?:ing)?|sell(?:ing)?|hold(?:ing)?|overweight|underweight|bullish|bearish)\b/giu, "external view")
+    .replace(/\b(?:i|we)\s+(?:disagree\s+with|reject|dispute|oppose|do\s+not\s+(?:accept|treat))\b[^.!?\n]{0,100}/giu, "analytical objection")
+    .replace(/\b(?:buy|sell)[-\s]+side\b|\b(?:buy|sell|hold)\s+(?:signal|recommendation)\b/giu, "market evidence")
+    .replace(/\bshort[-\s]+(?:interest|selling|seller(?:s)?|squeeze|borrow(?:ing)?|covering|volume|ratio|sale(?:s)?)\b/giu, "market evidence")
+    .replace(/\b(?:long|short)[-\s]+(?:term|duration|dated)\b|\bshort[-\s]+list(?:s|ed|ing)?\b/giu, "non-directional")
+    .replace(/\blong\s+(?:cash\s+conversion\s+cycle|lead\s+time|operating\s+cycle|history)\b/giu, "non-directional")
+    .replace(/\bshort\s+(?:operating\s+history|track\s+record|lead\s+time|cash\s+cycle)\b/giu, "non-directional")
+    .replace(/\b(?:hold|holding)\s+period\b/giu, "investment horizon")
+    .replace(/(?:既不|不)(?:看多|偏多)(?:也|又)(?:不)?(?:看空|偏空)|(?:既不|不)(?:看空|偏空)(?:也|又)(?:不)?(?:看多|偏多)/gu, "方向中性")
+    .replace(/(?:我|我们)(?:不同意|反对|不认可|不接受|不把|不认为)[^。！？\n]{0,100}(?:买入|卖出|持有|增持|减持|看多|看空)[^。！？\n]*/gu, "分析异议")
+    .replace(/(?:分析师|机构|券商|市场|一致预期)[^。！？\n]{0,64}(?:买入|卖出|持有|增持|减持|看多|看空)/gu, "外部观点")
+    .replace(/(?:机构|基金|股东|内部人|管理层|投资者)[^。！？\n]{0,32}(?:持有|持仓|持股)|(?:持有期|持仓期|持股比例|持股数据)/gu, "持仓数据")
+    .replace(/(?:強気|弱気)でも(?:弱気|強気)でも(?:ありません|ない|ありませんでした)/gu, "方向中立")
+    .replace(/(?:アナリスト|証券会社|市場|コンセンサス)[^。！？\n]{0,64}(?:買い|売り|保有|強気|弱気)/gu, "外部見解")
+    .replace(/空売り(?:比率|残高|データ|需要|コスト|統計|情報)|保有(?:期間|比率|データ)/gu, "市場データ")
+    // A paired long/short phrase is research context when the same bounded phrase ends in a
+    // strategy/research noun. Match intervening grammar (両方の, についての, リスク) rather
+    // than enumerating separators; a later standalone stance remains outside this replacement.
+    .replace(/(?:ロング|ショート)[^。！？\n]{0,40}(?:ショート|ロング)[^。！？\n]{0,40}(?:戦略|研究|ファンド|運用|分析|データ|比較|仮説|検証|証拠|検討|調査|候補|差分|論点|精査)/giu, "市場中立")
+    .replace(/(?:ロング|ショート)[・\s-]*ターム/gu, "期間")
+    .replace(/(?:강세|약세)도\s*(?:약세|강세)도\s*(?:아닙니다|아니다|아니었습니다)/gu, "방향 중립")
+    .replace(/(?:애널리스트|증권사|시장|컨센서스)[^.!?\n]{0,64}(?:매수|매도|보유|강세|약세)/gu, "외부 견해")
+    .replace(/공매도\s*(?:비율|잔고|데이터|수요|비용|통계|정보)|보유\s*(?:기간|비율|데이터|현황)/gu, "시장 데이터")
+    .replace(/(?:롱|숏)[^.!?\n]{0,40}(?:숏|롱)[^.!?\n]{0,40}(?:전략|연구|펀드|운용|분석|데이터|비교|가설|검증|근거|검토|조사|후보|차이)/giu, "시장 중립")
+    .replace(/(?:롱|숏)[\s-]*텀/gu, "기간");
+}
+
+function containsDirectActionClause(value) {
   const text = String(value || "");
-  return DIRECTIONAL_ABSTENTION_PATTERNS.some((pattern) => pattern.test(text));
+  // Imperative or headline-style action prose has no first-person marker, so it needs a
+  // separate structural gate from the first-person voice patterns above. Require an investable
+  // object for ambiguous English verbs; this keeps ordinary uses such as "open questions" and
+  // "build a model" available to an abstaining research seat.
+  const englishActionObject = /\b(?:build(?:ing)?|establish(?:ing)?|tak(?:e|ing)|open(?:ing)?|initiat(?:e|ing)|enter(?:ing)?|clos(?:e|ing)|exit(?:ing)?|liquidat(?:e|ing)|divest(?:ing)?|unload(?:ing)?|dispos(?:e|ing)\s+of|own(?:ing)?|hold(?:ing)?|retain(?:ing)?|maintain(?:ing)?|keep(?:ing)?|purchas(?:e|ing)|acquir(?:e|ing)|buy(?:ing)?|sell(?:ing)?|long(?:ing)?|short(?:ing)?|accumulat(?:e|ing)|overweight(?:ing)?|underweight(?:ing)?|avoid(?:ing)?|add(?:ing)?\s+to|reduc(?:e|ing)|trim(?:ming)?|increas(?:e|ing)|cut(?:ting)?|par(?:e|ing))\s+(?:a\s+|the\s+|this\s+|these\s+|my\s+|our\s+)?(?:(?:long|short)\s+)?(?:stake|position|exposure|allocation|stock|shares?|security|name)\b/iu;
+  const englishCapitalAction = /\b(?:deploy|allocate|commit)\s+(?:the\s+|this\s+|my\s+|our\s+)?(?:capital|funds?)\b|\b(?:stay\s+away\s+from|pass\s+on|cash\s+out\s+of|de-?risk)\s+(?:the\s+|this\s+)?(?:stock|shares?|security|name|position|stake|exposure)\b|\b(?:go|stay|remain|turn)\s+(?:decidedly\s+|clearly\s+|strongly\s+)?(?:long|short)\b/iu;
+  const chineseAction = /(?:(?:应该|應該|应当|應當|应|應|建议|建議|考虑|考慮|宜)\s*)?(?:继续|繼續)?(?:持有|持仓|持倉|加仓|加倉|减仓|減倉|建仓|建倉|清仓|清倉|平仓|平倉|退出|撤退|离场|離場|入场|入場|购入|購入|买进|買進|卖掉|賣掉|抛售|拋售|回避|配置)|(?:降低|提高|增加|减少|減少|维持|維持)\s*(?:仓位|倉位|头寸|頭寸)/u;
+  const japaneseAction = /(?:保有を続ける|持ち続ける|手仕舞い(?:する|す)?|(?:保有|購入|売却|撤退|回避|維持)(?:する|す)?|見送る|ポジション(?:を取る|に入る|を閉じる|を解消する|を維持(?:する|す)?|を縮小(?:する|す)?|を拡大(?:する|す)?))\s*(?:べき|ことを推奨)|(?:株|株式|銘柄|ポジション)を[^。！？\n]{0,12}(?:買って|売って|売却|保有して|手放して)(?:ください|下さい|しましょう)/u;
+  const koreanAction = /(?:(?:포지션|지분|비중)(?:을|에)\s*)?(?:(?:진입|청산|보유|매입|회피|처분|유지)\s*(?:해야|합시다|하세요|할\s*것을\s*권고)|(?:늘려|줄여)\s*야)|(?:주식|종목|포지션)(?:을|를)\s*(?:사세요|팔아야|보유하세요|처분하세요|유지해야)|계속\s*들고\s*가세요|비중을\s*(?:확대|축소)하세요/u;
+  return englishActionObject.test(text)
+    || englishCapitalAction.test(text)
+    || chineseAction.test(text)
+    || japaneseAction.test(text)
+    || koreanAction.test(text);
+}
+
+function containsDirectionalStanceText(value) {
+  // OOS is a structural zero-direction state. Canonical ratings are rejected wherever they
+  // appear in the seat's own prose, while explicit third-party/objection and market-data
+  // constructions are neutralized first. Long/short is recognized only as a stance/action,
+  // never merely because a method needs a long history or a position has a long settlement.
+  const text = neutralizeNonDirectionalEvidence(value);
+  return /\b(?:bullish|bearish)\b|(?:看多|看空|偏多|偏空|做多|做空)|(?:強気|弱気|ロング|ショート)|(?:강세|약세|롱|숏)/iu.test(text)
+    || /\b(?:buy|sell|hold|overweight|underweight)\b/iu.test(text)
+    || /\b(?:action|recommendation|conclusion)\s*(?::|is|would\s+be)\s*(?:to\s+)?(?:own|invest|build|establish|take|open|close|exit|enter|liquidate|divest|unload|allocate|deploy|avoid|pass|stay\s+away|cash\s+out|de-?risk)\b/iu.test(text)
+    || /(?:买入|卖出|增持|减持|值得买|这只股票[^。！？\n]{0,12}(?:持有|超配|低配)|(?:结论|评级|判断|建议|行动建议)(?:是|为|：|:)?(?:应当|应该|应)?(?:买入|卖出|持有|增持|减持|建仓|清仓|退出|回避|配置)|(?:应当|应该|应)(?:建仓|清仓|退出|回避|配置))/u.test(text)
+    || /(?:買い|売り|オーバーウェイト|アンダーウェイト|この株[^。！？\n]{0,12}保有|(?:結論|評価|判断|推奨|行動)(?:は|:|：)?(?:買い|売り|保有|購入|売却|見送|回避)|ポジションを(?:取る|持つ|閉じる|解消)(?:べき|ことを推奨)?)/u.test(text)
+    || /(?:매수|매도|비중\s*확대|비중\s*축소|이\s*주식[^.!?\n]{0,16}보유|(?:결론|등급|평가|권고|행동)(?:은|는|이|가|:)?(?:매수|매도|보유|매입|진입|청산|회피))/u.test(text)
+    || /\b(?:i\s+am|we\s+are)\s+(?:decidedly\s+|clearly\s+|strongly\s+)?(?:long|short)\b|\b(?:(?:my|this|the)\s+(?:method|seat|stance|conclusion))\s+(?:is|remain(?:s)?|stay(?:s)?|turn(?:s)?|lean(?:s)?|look(?:s)?|read(?:s)?)\s+(?:decidedly\s+|clearly\s+|strongly\s+)?(?:long|short)\b/iu.test(text)
+    || /\b(?:i|we)\b[^.!?\n]{0,48}\b(?:take|open|establish|maintain)\s+(?:a\s+)?(?:long|short)\s+(?:position|stance|exposure)\b/iu.test(text)
+    || /\b(?:my|our|this|the)\s+(?:position|stance|bias|exposure|book)\s+(?:is|remains|stays|looks)\s+(?:long|short)\b/iu.test(text);
+}
+
+function containsDirectionalAbstentionToken(value) {
+  return readerVisibleTextCandidates(value).some((text) => {
+    const decisionText = neutralizeNonDirectionalEvidence(text);
+    return DIRECTIONAL_ABSTENTION_PATTERNS.some((pattern) => pattern.test(decisionText))
+      || containsDirectionalStanceText(decisionText)
+      || containsDirectActionClause(decisionText);
+  });
 }
 
 export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw = "") {
   // Every one of these is rendered into the system-owned bench, so all of them are escaped.
-  const list = (value) => (Array.isArray(value)
+  const proseList = (value) => (Array.isArray(value)
     ? value.map(sanitizeStatementMarkdown).filter(Boolean)
+    : []);
+  const stringList = (value) => (Array.isArray(value)
+    ? value.filter((item) => typeof item === "string")
     : []);
   if (packet?.master !== masterId) {
     throw invalidParams(`dedicated method worker returned the wrong master id for ${masterId}`, {
@@ -1864,6 +2161,13 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
   const voice = Object.fromEntries(VOICE_FIELDS
     .map((field) => [field, sanitizeStatementMarkdown(packet?.voice?.[field])])
     .filter(([, text]) => text));
+  const proseArrays = Object.fromEntries([
+    "key_findings",
+    "disagreements",
+    "what_would_change_my_mind",
+  ].map((field) => [field, proseList(packet?.[field])]));
+  const evidencePacketAcks = assertCompanyDossierPacketAcks(packet, run, `master voice ${masterId}`)
+    .map((ack) => ({ ...ack, note: sanitizeStatementMarkdown(ack.note) }));
   const missingVoiceFields = VOICE_FIELDS.filter((field) => !voice[field]);
   if (missingVoiceFields.length) {
     throw invalidParams(`dedicated method worker omitted required first-person voice fields for ${masterId}: ${missingVoiceFields.join(", ")}`, {
@@ -1871,6 +2175,61 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
       owner: masterId,
       missing_fields: missingVoiceFields,
     });
+  }
+  const authorityEntries = [
+    ...VOICE_FIELDS.map((field) => ({ field, path: `/voice/${field}`, value: voice[field] })),
+    ...Object.entries(proseArrays).flatMap(([field, values]) => values.map((value, index) => ({
+      field,
+      path: `/${field}/${index}`,
+      value,
+    }))),
+    ...evidencePacketAcks.map((ack, index) => ({
+      field: "evidence_packet_acks",
+      path: `/evidence_packet_acks/${index}/note`,
+      value: ack.note,
+    })),
+  ].filter((entry) => containsProtectedRatingAuthority(entry.value));
+  if (authorityEntries.length) {
+    throw invalidParams(`dedicated method worker attempted to author server-owned rating authority prose for ${masterId}`, {
+      reason: "METHOD_VOICE_SERVER_RATING_AUTHORITY_SPOOF",
+      owner: masterId,
+      invalid_fields: [...new Set(authorityEntries.map((entry) => entry.field))],
+      invalid_paths: authorityEntries.map((entry) => entry.path),
+    });
+  }
+  // Reject directional abstention text before checking voice style. An out-of-scope worker
+  // must not evade the zero-direction contract merely by phrasing its view as "this method is
+  // bearish" instead of using a first-person construction.
+  if (frozenOpinion?.stance === "out_of_scope") {
+    const directionalEntries = [
+      ...VOICE_FIELDS.flatMap((field) => (
+        containsDirectionalAbstentionToken(voice[field])
+          ? [{ field, path: `/voice/${field}` }]
+          : []
+      )),
+      ...Object.entries(proseArrays).flatMap(([field, values]) => values.flatMap((value, index) => (
+        containsDirectionalAbstentionToken(value)
+          ? [{ field, path: `/${field}/${index}` }]
+          : []
+      ))),
+      ...evidencePacketAcks.flatMap((ack, index) => (
+        containsDirectionalAbstentionToken(ack.note)
+          ? [{ field: "evidence_packet_acks", path: `/evidence_packet_acks/${index}/note` }]
+          : []
+      )),
+    ];
+    if (directionalEntries.length) {
+      const directionalFields = [...new Set(directionalEntries.map((entry) => entry.field))];
+      const directionalPaths = directionalEntries.map((entry) => entry.path);
+      throw invalidParams(`dedicated method worker added directional prose to an abstaining seat ${masterId}: ${directionalPaths.join(", ")}`, {
+        reason: "METHOD_VOICE_DIRECTIONAL_ABSTENTION",
+        owner: masterId,
+        // Preserve the coarse field list for existing clients while making every rejected array
+        // item and voice field independently auditable through an exact JSON Pointer.
+        invalid_fields: directionalFields,
+        invalid_paths: directionalPaths,
+      });
+    }
   }
   // Target-language validation runs immediately after normalization. This gate asks the
   // orthogonal question: did the worker use first person at all? Keeping the checks separate
@@ -1882,17 +2241,6 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
       owner: masterId,
       invalid_fields: thirdPersonFields,
     });
-  }
-  if (frozenOpinion?.stance === "out_of_scope") {
-    const directionalFields = VOICE_FIELDS
-      .filter((field) => containsDirectionalAbstentionToken(voice[field]));
-    if (directionalFields.length) {
-      throw invalidParams(`dedicated method worker added directional prose to an abstaining seat ${masterId}: ${directionalFields.join(", ")}`, {
-        reason: "METHOD_VOICE_DIRECTIONAL_ABSTENTION",
-        owner: masterId,
-        invalid_fields: directionalFields,
-      });
-    }
   }
   const statement = composeVoiceStatement(voice, run.language);
 
@@ -1916,7 +2264,7 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
     );
   }
 
-  const workerSourceIds = list(packet?.source_ids);
+  const workerSourceIds = stringList(packet?.source_ids);
   const frozenEvidenceSourceIds = sourceIdList(
     frozenOpinion?.evidence_source_ids || frozenOpinion?.source_ids || [],
   );
@@ -1949,7 +2297,9 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
       allowed_source_ids: allowedSourceIds,
     });
   }
-  const evidencePacketAcks = assertCompanyDossierPacketAcks(packet, run, `master voice ${masterId}`);
+  const frozenConfidence = ["high", "medium", "low"].includes(frozenOpinion?.confidence)
+    ? frozenOpinion.confidence
+    : "low";
 
   return {
     master: masterId,
@@ -1962,11 +2312,13 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
     position_intent: requested,
     voice: Object.keys(voice).length ? voice : null,
     statement,
-    key_findings: list(packet?.key_findings),
-    disagreements: list(packet?.disagreements),
-    what_would_change_my_mind: list(packet?.what_would_change_my_mind),
+    key_findings: proseArrays.key_findings,
+    disagreements: proseArrays.disagreements,
+    what_would_change_my_mind: proseArrays.what_would_change_my_mind,
     source_ids: workerSourceIds,
-    confidence: ["high", "medium", "low"].includes(packet?.confidence) ? packet.confidence : frozenOpinion.confidence || "low",
+    // Confidence belongs to the deterministic decision. The voice worker can explain the view,
+    // but cannot strengthen or weaken the signal that downstream advocates receive.
+    confidence: frozenConfidence,
     company_dossier_hash_ack: typeof packet?.company_dossier_hash_ack === "string"
       ? packet.company_dossier_hash_ack
       : undefined,
@@ -1978,13 +2330,137 @@ export function normalizeMasterVoice(packet, masterId, run, frozenOpinion, raw =
 
 /** Compact master opinions for injection into the debate prompt. */
 export function compactMasterOpinions(run) {
-  return (run.master_opinions || []).map((opinion) => ({
-    master: opinion.master,
-    stance: opinion.stance,
-    verdict: opinion.verdict,
-    key_findings: opinion.key_findings,
-    disagreements: opinion.disagreements,
-    disqualifiers_triggered: opinion.disqualifiers_triggered,
-    confidence: opinion.confidence,
-  }));
+  const panelContext = run?.master_selection?.method_panel_context;
+  const calibrated = panelContext?.schema_version === 1;
+  const decisions = new Map((panelContext?.decisions || [])
+    .map((decision) => [decision.master_id, decision]));
+  return (run.master_opinions || []).flatMap((opinion) => {
+    const decision = decisions.get(opinion.master);
+    const contribution = opinion.stance === "out_of_scope"
+      ? "none"
+      : decision?.rating_contribution || (calibrated ? "none" : "primary");
+    // Calibrated supporting/context methods have exactly one downstream route: the PM's
+    // non-directional risk context. Sending them to Bull/Bear as well would let the same finding
+    // influence the rating twice. Out-of-scope methods never enter a directional advocate path.
+    if (opinion.stance === "out_of_scope" || (calibrated && contribution !== "primary")) return [];
+    return [{
+      roles: decision?.roles || [],
+      rating_contribution: contribution,
+      master: opinion.master,
+      stance: opinion.stance,
+      verdict: opinion.verdict,
+      key_findings: opinion.key_findings,
+      disagreements: opinion.disagreements,
+      disqualifiers_triggered: opinion.disqualifiers_triggered,
+      confidence: opinion.confidence,
+    }];
+  });
+}
+
+/**
+ * Preserve non-directional method risk without letting the PM count a method stance twice.
+ *
+ * Directional method reasoning reaches the PM once, through Bull/Bear. Supporting and context
+ * lenses can still carry a hard veto or an invalidation condition that neither advocate should
+ * be allowed to erase. Out-of-scope seats stay solely in the separately rendered method bench:
+ * excluding them from the PM prompt makes zero rating influence structural instead of relying on
+ * model compliance. This projection deliberately contains no stance, verdict, action intent,
+ * seat weight, share or vote count.
+ */
+export function compactMethodRiskContext(run) {
+  const panelContext = run?.master_selection?.method_panel_context;
+  // Legacy runs already send method opinions through Bull/Bear. Without a bound calibrated
+  // taxonomy, adding the same opinions here would expose them to the PM a second time.
+  if (panelContext?.schema_version !== 1) return [];
+  const decisions = new Map((panelContext.decisions || [])
+    .map((decision) => [decision.master_id, decision]));
+  const compactBasis = (value) => (Array.isArray(value) ? value.slice(0, 12).flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const basis = {
+      fact_id: typeof item.fact_id === "string" ? item.fact_id : null,
+      producer_id: typeof item.producer_id === "string" ? item.producer_id : null,
+      derivation: typeof item.derivation === "string" ? item.derivation : null,
+      confidence: typeof item.confidence === "number" && Number.isFinite(item.confidence)
+        ? item.confidence : null,
+    };
+    return Object.values(basis).some((entry) => entry !== null) ? [basis] : [];
+  }) : []);
+  return (run?.master_opinions || []).flatMap((opinion, opinionIndex) => {
+    const decision = decisions.get(opinion.master);
+    if (!decision) return [];
+    if (opinion.stance === "out_of_scope") return [];
+    const contribution = decision?.rating_contribution || "none";
+    if (contribution === "primary") return [];
+    const riskFindings = [
+      ...(opinion.disqualifiers_triggered || []),
+      ...(opinion.common_projection?.veto_ids || []),
+    ].filter((value) => typeof value === "string" && value.trim());
+    const reopenConditions = (opinion.what_would_change_my_mind || [])
+      .filter((value) => typeof value === "string" && value.trim());
+    const dataGaps = (opinion.missing_required_fact_types || [])
+      .filter((value) => typeof value === "string" && value.trim());
+    const evidenceQualityBasis = compactBasis(opinion.evidence_quality_basis);
+    if (!riskFindings.length && !reopenConditions.length && !dataGaps.length
+      && !evidenceQualityBasis.length && !opinion.evidence_quality) return [];
+    // `source_ids` may include citations added by the explanation worker. Only the frozen
+    // deterministic evidence ledger can authorize a PM rating adjustment.
+    const deterministicSourceIds = Array.isArray(opinion.evidence_source_ids)
+      ? opinion.evidence_source_ids
+      : opinion.source_ids || [];
+    const sourceIds = deterministicSourceIds.slice(0, 20);
+    const ratingAdjustmentEligible = sourceIds.length > 0 && (
+      riskFindings.length > 0 || ["estimated_only", "mixed"].includes(opinion.evidence_quality)
+    );
+    return [{
+      context_id: `method_context_${opinionIndex + 1}`,
+      coverage_roles: decision?.roles || [],
+      rating_contribution: contribution,
+      directional_vote_allowed: false,
+      scope_status: "in_scope",
+      rating_adjustment_eligible: ratingAdjustmentEligible,
+      risk_or_veto_ids: [...new Set(riskFindings)].slice(0, 12),
+      data_gaps: [...new Set(dataGaps)].slice(0, 12),
+      reopen_conditions: [...new Set(reopenConditions)].slice(0, 8).map((item) => clip(item, 500)),
+      evidence_quality: opinion.evidence_quality || null,
+      evidence_quality_basis: evidenceQualityBasis,
+      source_ids: sourceIds,
+    }];
+  });
+}
+
+/**
+ * Server-owned causal ledger for the PM's optional one-notch downside adjustment.
+ *
+ * A source ID proves where a fact came from, not why a second penalty is warranted. Requiring a
+ * stable context ID prevents arbitrary prose (or an out-of-scope method) from turning any valid
+ * citation into a downgrade. Base-case evidence without one of these contexts belongs in the
+ * return estimate itself.
+ */
+export function pmRatingAdjustmentContexts(run) {
+  const methodContexts = compactMethodRiskContext(run)
+    .filter((context) => context.rating_adjustment_eligible === true)
+    .map((context) => ({
+      context_id: context.context_id,
+      context_type: "method_risk",
+      source_ids: [...new Set(context.source_ids || [])],
+    }));
+  const claims = new Map(allEvidenceClaims(run).map((claim) => [claim.claim_id, claim]));
+  const verificationContexts = hardVerificationFindings(run).flatMap((finding) => {
+    const claim = claims.get(finding.claim_id);
+    const sourceIds = [...new Set((claim?.source_ids || []).map((id, index) => (
+      scopedSourceId(claim.task, id, index)
+    )))];
+    if (!sourceIds.length) return [];
+    return [{
+      context_id: `verification:${finding.finding_id}`,
+      context_type: "hard_verification_finding",
+      source_ids: sourceIds,
+    }];
+  });
+  const seen = new Set();
+  return [...methodContexts, ...verificationContexts].filter((context) => {
+    if (!context.context_id || seen.has(context.context_id) || !context.source_ids.length) return false;
+    seen.add(context.context_id);
+    return true;
+  });
 }

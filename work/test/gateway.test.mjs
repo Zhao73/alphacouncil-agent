@@ -27,7 +27,7 @@ test("Work surface exposes 26 chat-safe tools with complete metadata", async () 
     assert.deepEqual(await health.json(), {
       status: "ok",
       service: "alphacouncil-agent-chatgpt-work",
-      version: "1.5.0",
+      version: "1.6.0",
       tools: 26,
     });
 
