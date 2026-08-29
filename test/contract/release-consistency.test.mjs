@@ -115,10 +115,12 @@ test("the Work gateway manifest and lockfile cannot drift from the release versi
   writeJson(root, "work/package.json", { name: "@alphacouncil/chatgpt-work-gateway", version: "1.4.9" });
   writeJson(root, "work/package-lock.json", { version: "1.4.9", packages: { "": { version: "1.4.9" } } });
   const errors = check(root).errors.filter(({ code }) => code === "VERSION_MISMATCH");
+  const workLock = join("work", "package-lock.json");
+  const workPackage = join("work", "package.json");
   assert.deepEqual(errors.map(({ location }) => location), [
-    "work/package-lock.json:packages..version",
-    "work/package-lock.json:version",
-    "work/package.json:version",
+    `${workLock}:packages..version`,
+    `${workLock}:version`,
+    `${workPackage}:version`,
   ]);
 });
 
