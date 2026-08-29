@@ -32,6 +32,7 @@ import { acquireRunLock } from "./run-locks.mjs";
 import { diagnoseCouncilRuns } from "./council-diagnostics.mjs";
 import { recoverInterruptedBackgroundRuns } from "./background-recovery.mjs";
 import { buildCompanySourceAcquisitionPlan, getCompanySourceMap } from "./company-source-acquisition.mjs";
+import { assertPmRatingReferenceAvailable } from "./pm-rating-rubric.mjs";
 
 const responseContext = new AsyncLocalStorage();
 
@@ -88,13 +89,24 @@ export function recordAck(run, extra = {}) {
 function renderSelectionCatalog(data) {
   const copy = (messages) => localized(data.language, messages);
   const labels = copy({
-    en: { identity: "Identity", method: "Method", bestFor: "Best for", maturity: "Maturity", pack: "Pack format", preselected: "preselected", recommended: "advisory method match" },
-    zh: { identity: "身份", method: "方法", bestFor: "适合", maturity: "成熟度", pack: "物理格式", preselected: "已预选", recommended: "方法模拟建议" },
-    ja: { identity: "人物像", method: "手法", bestFor: "適した対象", maturity: "成熟度", pack: "パック形式", preselected: "事前選択済み", recommended: "参考メソッド候補" },
-    ko: { identity: "정체성", method: "방법", bestFor: "적합 대상", maturity: "성숙도", pack: "팩 형식", preselected: "사전 선택", recommended: "참고 방법 후보" },
+    en: { identity: "Identity", method: "Method", bestFor: "Best for", maturity: "Maturity", pack: "Pack format", contribution: "Calibrated contribution", preselected: "preselected", recommended: "advisory method match" },
+    zh: { identity: "身份", method: "方法", bestFor: "适合", maturity: "成熟度", pack: "物理格式", contribution: "校准贡献", preselected: "已预选", recommended: "方法模拟建议" },
+    ja: { identity: "人物像", method: "手法", bestFor: "適した対象", maturity: "成熟度", pack: "パック形式", contribution: "調整済み寄与", preselected: "事前選択済み", recommended: "参考メソッド候補" },
+    ko: { identity: "정체성", method: "방법", bestFor: "적합 대상", maturity: "성숙도", pack: "팩 형식", contribution: "보정 기여", preselected: "사전 선택", recommended: "참고 방법 후보" },
   });
   const preselected = new Set(data.preselected_master_ids || []);
   const recommended = new Set(data.method_panel_recommendation?.included_master_ids || []);
+  const calibratedDecisions = (data.method_panel_recommendation?.decisions || [])
+    .filter((decision) => decision?.rating_contribution)
+    .map((decision) => ({
+      master_id: decision.master_id,
+      decision: decision.decision,
+      roles: decision.roles,
+      objective_fit: decision.objective_fit,
+      horizon_fit: decision.horizon_fit,
+      rating_contribution: decision.rating_contribution,
+    }));
+  const calibratedById = new Map(calibratedDecisions.map((decision) => [decision.master_id, decision]));
   // Some MCP hosts expose only text content even when the server also returns
   // structuredContent. Keep the selection handshake usable on those hosts by
   // mirroring the exact, non-secret session identifiers in a stable text block.
@@ -108,15 +120,26 @@ function renderSelectionCatalog(data) {
     council_mode: data.council_mode,
     analyst_options: data.analyst_options?.map((option) => ({ scope: option.scope, count: option.count })),
     ...(data.recommendation_hash ? { recommendation_hash: data.recommendation_hash } : {}),
+    ...(data.decision_context_hash ? {
+      decision_context_hash: data.decision_context_hash,
+      decision_context: data.decision_context,
+      method_panel_decisions: calibratedDecisions,
+    } : {}),
   })}`;
-  const cards = data.masters.map((master) => [
-    `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? ` [${labels.preselected}]` : ""}${recommended.has(master.id) ? ` [${labels.recommended}]` : ""}`,
-    `${labels.identity}: ${master.identity}`,
-    `${labels.method}: ${master.method}`,
-    `${labels.bestFor}: ${master.best_for}`,
-    `${labels.maturity}: ${master.maturity_label} (${master.maturity})`,
-    `${labels.pack}: ${master.pack_format} (${master.admission_level})`,
-  ].join("\n   ")).join("\n\n");
+  const cards = data.masters.map((master) => {
+    const calibrated = calibratedById.get(master.id);
+    return [
+      `${master.index}. ${master.title} [${master.id}]${preselected.has(master.id) ? ` [${labels.preselected}]` : ""}${recommended.has(master.id) ? ` [${labels.recommended}]` : ""}`,
+      `${labels.identity}: ${master.identity}`,
+      `${labels.method}: ${master.method}`,
+      `${labels.bestFor}: ${master.best_for}`,
+      `${labels.maturity}: ${master.maturity_label} (${master.maturity})`,
+      `${labels.pack}: ${master.pack_format} (${master.admission_level})`,
+      calibrated
+        ? `${labels.contribution}: ${calibrated.rating_contribution}; roles=${calibrated.roles.join(",")}; objective_fit=${calibrated.objective_fit}; horizon_fit=${calibrated.horizon_fit}; advisory=${calibrated.decision}`
+        : "",
+    ].filter(Boolean).join("\n   ");
+  }).join("\n\n");
   const recommendedIds = data.method_panel_recommendation?.included_master_ids || [];
   const unfilledFamilies = data.method_panel_recommendation?.unfilled_families || [];
   const recommendationNotice = data.method_panel_recommendation?.status === "recommended"
@@ -139,6 +162,14 @@ function renderSelectionCatalog(data) {
       ja: "銘柄分類がないため参考パネルは生成されませんでした。全カタログから明示的に選択してください。既定の8席は推測していません。",
       ko: "종목 분류가 없어 참고 패널을 만들지 않았습니다. 전체 카탈로그에서 명시적으로 선택하십시오. 기본 8개 좌석을 추측하지 않았습니다.",
     });
+  const calibrationNotice = data.decision_context
+    ? copy({
+      en: `Calibrated decision context: objective=${data.decision_context.objective}, horizon=${data.decision_context.holding_horizon}, source=${data.decision_context.source}. Directional contributors: ${data.method_panel_recommendation.directional_rating_master_ids.join(", ") || "none"}; risk coverage: ${data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || "none"}; context only: ${data.method_panel_recommendation.context_only_master_ids.join(", ") || "none"}. Risk/context methods are not directional votes. Return decision_context_hash unchanged at confirmation.`,
+      zh: `已校准决策上下文：目标=${data.decision_context.objective}，期限=${data.decision_context.holding_horizon}，来源=${data.decision_context.source}。方向贡献：${data.method_panel_recommendation.directional_rating_master_ids.join("、") || "无"}；风险覆盖：${data.method_panel_recommendation.risk_coverage_master_ids.join("、") || "无"}；仅上下文：${data.method_panel_recommendation.context_only_master_ids.join("、") || "无"}。风险/上下文方法不计作方向票。确认时须原样回传 decision_context_hash。`,
+      ja: `調整済み判断コンテキスト：目的=${data.decision_context.objective}、期間=${data.decision_context.holding_horizon}、由来=${data.decision_context.source}。方向寄与：${data.method_panel_recommendation.directional_rating_master_ids.join(", ") || "なし"}、リスク補完：${data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || "なし"}、文脈のみ：${data.method_panel_recommendation.context_only_master_ids.join(", ") || "なし"}。リスク/文脈メソッドは方向票ではありません。確認時に decision_context_hash をそのまま返してください。`,
+      ko: `보정된 결정 컨텍스트: 목표=${data.decision_context.objective}, 기간=${data.decision_context.holding_horizon}, 출처=${data.decision_context.source}. 방향 기여: ${data.method_panel_recommendation.directional_rating_master_ids.join(", ") || "없음"}; 위험 보완: ${data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || "없음"}; 컨텍스트 전용: ${data.method_panel_recommendation.context_only_master_ids.join(", ") || "없음"}. 위험/컨텍스트 방법은 방향 투표가 아닙니다. 확인 시 decision_context_hash를 그대로 반환하십시오.`,
+    })
+    : "";
   const quick = data.council_mode === "quick";
   const analystChoice = quick
     ? copy({
@@ -176,6 +207,7 @@ function renderSelectionCatalog(data) {
     fallbackContext,
     "",
     recommendationNotice,
+    ...(calibrationNotice ? ["", calibrationNotice] : []),
     "",
     cards,
     "",
@@ -271,6 +303,29 @@ export function compactDecision(decision) {
   for (const field of COMPACT_DECISION_LISTS) {
     if (!Array.isArray(decision[field])) continue;
     compact[field] = decision[field].slice(0, 12).map((item) => boundedCompactText(item, 800));
+  }
+  if (decision.rating_basis && typeof decision.rating_basis === "object"
+    && !Array.isArray(decision.rating_basis)) {
+    const basis = decision.rating_basis;
+    compact.rating_basis = {
+      rubric_id: basis.rubric_id,
+      horizon_months: basis.horizon_months,
+      return_formula_id: basis.return_formula_id,
+      price_currency: basis.price_currency,
+      reference_price: basis.reference_price,
+      base_case_price_target: basis.base_case_price_target,
+      income_return_pct: basis.income_return_pct,
+      base_case_total_return_pct: basis.base_case_total_return_pct,
+      raw_rating: basis.raw_rating,
+      risk_adjustment: basis.risk_adjustment,
+      final_rating: basis.final_rating,
+      adjustment_reason: boundedCompactText(basis.adjustment_reason, 800),
+      source_ids: Array.isArray(basis.source_ids) ? basis.source_ids.slice(0, 20) : [],
+      adjustment_source_ids: Array.isArray(basis.adjustment_source_ids)
+        ? basis.adjustment_source_ids.slice(0, 20) : [],
+      adjustment_context_ids: Array.isArray(basis.adjustment_context_ids)
+        ? basis.adjustment_context_ids.slice(0, 20) : [],
+    };
   }
   return compact;
 }
@@ -674,6 +729,13 @@ export function tools() {
   const analystIds = registry().ids("analyst");
   const debateIds = registry().ids("debate");
   const masterIds = registry().ids("master");
+  // Only this pair has a fully defined reader-facing PM output contract in the current release.
+  // The broader internal calibration taxonomy remains available to offline recommendation tests,
+  // but must not be exposed as executable council modes until their output contracts exist.
+  const calibrationOptions = Object.freeze({
+    objectives: Object.freeze(["directional_rating"]),
+    holding_horizons: Object.freeze(["1_year"]),
+  });
   const common = {
     symbol: { type: "string", description: "Exchange ticker. US, HK, JP, KR, CN and TW symbols all work, e.g. AAPL, 0700.HK, 7203.T, 005930.KS, 600519.SS." },
     as_of: { type: "string", description: "Analysis date YYYY-MM-DD. Defaults to today." },
@@ -703,7 +765,7 @@ export function tools() {
     },
     output_mode: { type: "string", enum: OUTPUT_MODES, default: "public_equity", description: "Final synthesis target shape." },
     selection_receipt: { type: "string", description: "One-run receipt returned by confirm_master_selection. Required for every council run and consumed exactly once." },
-    seat_weights: { type: "object", description: "Override the declared weight of any seat, e.g. {\"master_buffett\": 2, \"master_soros\": 0}. Weights are an editable prior, not an optimum: a return backtest of LLM judgment would be invalidated by look-ahead bias." },
+    seat_weights: { type: "object", description: "Deprecated compatibility metadata. It may be persisted for audit but does not alter the PM rating rubric, count method votes, or override objective/horizon contribution classes." },
     visibility_required: { type: "boolean", default: false, description: "When true, headless MCP execution is rejected; use host-visible agents/threads and record their outputs." },
   };
   return [
@@ -731,6 +793,16 @@ export function tools() {
           type: "string",
           enum: ANALYST_SCOPES,
           description: "Prefill only. core means the eight mandatory evidence seats; all means all eleven analyst seats. The user still submits the scope at confirmation.",
+        },
+        objective: {
+          type: "string",
+          enum: calibrationOptions.objectives,
+          description: "Optional method-panel decision objective. Must be sent together with holding_horizon. Use directional_rating when the user asks whether to buy/hold/sell; it calibrates method roles but never pre-authorizes a rating.",
+        },
+        holding_horizon: {
+          type: "string",
+          enum: calibrationOptions.holding_horizons,
+          description: "Optional decision horizon paired with objective. For a one-year holding request use 1_year. An unambiguous one-year directional prompt may be inferred and will be returned as prompt_inference for confirmation.",
         },
         instrument_classification: {
           type: "object",
@@ -761,6 +833,11 @@ export function tools() {
           type: "string",
           pattern: "^sha256:[a-f0-9]{64}$",
           description: "Required only when begin_council_selection returned a non-null advisory recommendation_hash. It acknowledges the exact 26-decision recommendation displayed; it does not select seats.",
+        },
+        decision_context_hash: {
+          type: "string",
+          pattern: "^sha256:[a-f0-9]{64}$",
+          description: "Required when begin_council_selection returned a calibrated decision_context_hash. It acknowledges the exact objective, horizon, PM rubric requirement, and method contribution classes displayed, including fail-closed panels with no recommendation_hash.",
         },
         selected_master_ids: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", enum: masterIds } },
         select_all: { type: "boolean", const: true },
@@ -1009,7 +1086,7 @@ export function tools() {
       properties: { id: { type: "string", description: "Numeric X post id." } },
       required: ["id"],
     }, { readOnlyHint: true, destructiveHint: false, openWorldHint: true }),
-    tool("record_verifier_verdict", "Record one Stage 2b verifier outcome against the seat that cited the claim. Verdicts that failed verification (contradicted, disagree, refuted) automatically reduce that seat's weight in the portfolio-manager synthesis; cannot_confirm and source_unreachable reduce it less. A seat is down-weighted, never silently erased.", {
+    tool("record_verifier_verdict", "Record one Stage 2b verifier outcome against the seat that cited the claim. Non-clean findings must be explicitly corrected in the portfolio-manager synthesis and may support a sourced one-notch downside adjustment under pm_rating_rubric_v2. They do not create automatic negative votes or mechanically change the final rating; legacy diagnostic weights remain audit metadata only.", {
       type: "object",
       properties: {
         run_id: { type: "string" },
@@ -1147,6 +1224,11 @@ export async function handleToolCall(id, params) {
       analyst_scope: data.analyst_scope,
       selected_analyst_count: data.selected_analyst_count,
       ...(data.recommendation_hash ? { recommendation_hash: data.recommendation_hash } : {}),
+      ...(data.decision_context_hash ? {
+        decision_context_hash: data.decision_context_hash,
+        decision_context: data.decision_context,
+        method_panel_context: data.method_panel_context,
+      } : {}),
     })}`;
     const confirmation = localized(data.language, {
       en: `Confirmed ${data.selected_count} method seat(s) and ${data.selected_analyst_count} analyst seat(s) (${data.analyst_scope}) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
@@ -1159,7 +1241,22 @@ export async function handleToolCall(id, params) {
   }
   if (name === "plan_visible_run") {
     const result = await withSelectedRun(args, "plan_visible_run", async (runArgs) => {
-      const run = runArgs.existing_run || visibleRun(runArgs);
+      let run = runArgs.existing_run;
+      if (!run) {
+        const grounding = runArgs.grounding && typeof runArgs.grounding === "object"
+          ? runArgs.grounding
+          : await gatherGrounding({ symbol: runArgs.symbol, asOf: councilAsOf(runArgs.as_of), language: resolveLanguage(runArgs) })
+            .catch((error) => ({
+              error: String(error?.message || error),
+              facts_unavailable: true,
+              source_acquisition_plan: buildCompanySourceAcquisitionPlan({
+                symbol: safeSymbol(runArgs.symbol),
+                asOf: councilAsOf(runArgs.as_of),
+                profile: {},
+              }),
+            }));
+        run = visibleRun({ ...runArgs, grounding });
+      }
       if (run.visible_finalization) {
         const handoffPath = join(runPath(run.run_id), "user_response.md");
         return jsonContent(
@@ -1192,6 +1289,7 @@ export async function handleToolCall(id, params) {
           }));
         saveRun(run);
       }
+      assertPmRatingReferenceAvailable(run, { stage: "visible_plan" });
       const specs = visibleAgentSpecs(run, runArgs.prompt || "");
       // Planning settles every seat whose method cannot reach this security, writing those
       // opinions directly. They have to be persisted here or the completeness gate would keep
@@ -1281,9 +1379,8 @@ export async function handleToolCall(id, params) {
   }
   if (name === "record_verifier_verdict") {
     const result = recordVerifierVerdict(args);
-    const seat = result.weights.seats.find((s) => s.seat === args.seat);
     sendResult(id, jsonContent(
-      `Recorded ${args.verifier} -> ${args.verdict} for ${args.seat}. Effective weight now ${seat ? seat.effective_weight : "n/a"}.`,
+      `Recorded ${args.verifier} -> ${args.verdict} for ${args.seat}. The finding must be handled explicitly; no automatic vote or rating change was applied.`,
       result,
     ));
     return;

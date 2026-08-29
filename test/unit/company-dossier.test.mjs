@@ -19,7 +19,8 @@ import {
   requiresOperatingCompanyDossier,
 } from "../../mcp/lib/company-dossier.mjs";
 import { buildMethodVoiceHeadlessOutputSchema } from "../../mcp/lib/orchestrator.mjs";
-import { methodVoiceAllowedSourceIds } from "../../mcp/lib/packets.mjs";
+import { methodVoiceAllowedSourceIds, normalizeMasterVoice } from "../../mcp/lib/packets.mjs";
+import { FIRST_PERSON_DISCLOSURE_ACK, FIRST_PERSON_VOICE_MODE } from "../../mcp/lib/voice.mjs";
 
 const AS_OF = "2026-08-03";
 
@@ -177,6 +178,57 @@ function freezeCompanyDossier(run) {
   run.company_dossier = { path, content_hash: dossier.content_hash };
   return { dir, dossier };
 }
+
+test("out-of-scope packet acknowledgement notes are part of the zero-direction reader gate", () => {
+  const run = companyRun();
+  const frozenDossier = freezeCompanyDossier(run);
+  try {
+    const master = "master_buffett";
+    const frozenOpinion = {
+      master,
+      stance: "out_of_scope",
+      confidence: "low",
+      source_ids: ["market_data:S1"],
+      evidence_source_ids: ["market_data:S1"],
+      method_source_ids: [],
+    };
+    const evidence_packet_acks = frozenDossier.dossier.packet_manifest.map((manifest, index) => ({
+      task: manifest.task,
+      status: manifest.task === "market_data" ? "used" : "reviewed_not_relevant",
+      source_ids: manifest.task === "market_data" ? ["market_data:S1"] : [],
+      note: index === 1
+        ? "I would b**u**y shares after reading this packet."
+        : "I reviewed this bounded packet without using it for a directional conclusion.",
+    }));
+    assert.throws(
+      () => normalizeMasterVoice({
+        master,
+        acknowledged_stance: "out_of_scope",
+        voice_mode: FIRST_PERSON_VOICE_MODE,
+        disclosure_ack: FIRST_PERSON_DISCLOSURE_ACK,
+        position_intent: "inputs_unavailable",
+        voice: {
+          what_i_see: "I see a bounded record with a missing method-critical input.",
+          how_my_method_reads_it: "I can test the evidence quality but cannot compute the method threshold.",
+          would_i_act: "I issue no scored vote while that input is unavailable.",
+          what_changes_my_mind: "I revisit the record when the missing input arrives.",
+          where_i_disagree: "I reject turning an incomplete calculation into a directional inference.",
+        },
+        key_findings: [],
+        disagreements: [],
+        what_would_change_my_mind: [],
+        source_ids: ["market_data:S1"],
+        company_dossier_hash_ack: frozenDossier.dossier.content_hash,
+        evidence_packet_acks,
+      }, master, run, frozenOpinion),
+      (error) => error?.data?.reason === "METHOD_VOICE_DIRECTIONAL_ABSTENTION"
+        && error.data.invalid_fields.includes("evidence_packet_acks")
+        && error.data.invalid_paths.includes("/evidence_packet_acks/1/note"),
+    );
+  } finally {
+    rmSync(frozenDossier.dir, { recursive: true, force: true });
+  }
+});
 
 test("the operating-company registry owns 52 unique items across the eight mandatory roles", () => {
   assert.deepEqual(Object.keys(OPERATING_COMPANY_COVERAGE), DEFAULT_TASKS);

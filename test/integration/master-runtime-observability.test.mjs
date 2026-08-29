@@ -22,7 +22,13 @@ const PROVENANCE_TOTAL_TIMEOUT_MS = 30_000;
 const VOICE_CONTRACT_TOTAL_TIMEOUT_MS = 30_000;
 const LEGACY_OBSERVER_TIMEOUT_MS = 20_000;
 
-function observabilityCodex(dataDir, { forgedMaster = null, directionalMaster = null, delays = {} } = {}) {
+function observabilityCodex(dataDir, {
+  forgedMaster = null,
+  directionalMaster = null,
+  processExitWithoutOutputMaster = null,
+  processExitWithOutputMaster = null,
+  delays = {},
+} = {}) {
   const driver = join(dataDir, "fake-master-observability.mjs");
   const log = join(dataDir, "master-observability.jsonl");
   writeFileSync(driver, `#!/usr/bin/env node
@@ -64,6 +70,11 @@ if (task) {
   };
 } else if (master) {
   await sleep((${JSON.stringify(delays)})[master] || 20);
+  if (master === ${JSON.stringify(processExitWithoutOutputMaster)}) process.exit(23);
+  if (master === ${JSON.stringify(processExitWithOutputMaster)}) {
+    process.stdout.write("{malformed candidate output");
+    process.exit(23);
+  }
   const frozenLine = prompt.split("\\n").find((line) => line.startsWith("Frozen method result JSON: "));
   const frozen = frozenLine ? JSON.parse(frozenLine.slice("Frozen method result JSON: ".length)) : null;
   const stance = frozen?.stance || /required acknowledged stance:\\s*([^;]+)/u.exec(prompt)?.[1]?.trim() || "out_of_scope";
@@ -232,12 +243,12 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
   }
 });
 
-test("a stalled full-mode voice worker fails the seat and stops before debate", async () => {
+test("a stalled full-mode voice worker retains the frozen sourced view and opens debate", async () => {
   const TOTAL_TIMEOUT_MS = 80_000;
   assert.equal(observerBudget(TOTAL_TIMEOUT_MS), 95_000);
   assert.equal(observerBudget(TOTAL_TIMEOUT_MS), TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS);
-  // Full is the strict product contract: a frozen deterministic opinion cannot stand in for an
-  // actual method voice, and downstream debate must not hide that missing execution.
+  // A mute process failure cannot erase a frozen sourced method opinion. The substitute remains
+  // visibly degraded, while semantic contract/provenance failures above still fail closed.
   const dataDir = makeDataDir();
   // Preserve the semantic ordering under slow CI scheduling: the fake worker must
   // outlive its worker timeout, while the full run still has ample time to persist
@@ -263,16 +274,21 @@ test("a stalled full-mode voice worker fails the seat and stops before debate", 
 
     const seat = result.run.master_status.master_buffett;
     assert.equal(result.run.status, "incomplete");
-    assert.equal(seat.status, "failed");
-    assert.equal(seat.error, "timeout");
-    assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.json")), false);
-    assert.deepEqual(result.run.master_opinions, []);
-    for (const role of ["bull_researcher", "bear_researcher", "portfolio_manager"]) {
-      assert.equal(result.run.agent_status[role].status, "skipped", `${role} must not execute`);
+    assert.equal(seat.status, "completed");
+    assert.equal(seat.voice_status, "deterministic_fallback");
+    assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.json")), true);
+    assert.equal(result.run.master_opinions.length, 1);
+    assert.equal(result.run.master_opinions[0].voice_status, "deterministic_fallback");
+    assert.equal(result.run.master_opinions[0].dedicated_worker.status, "failed");
+    assert.equal(result.run.master_opinions[0].dedicated_worker.failure_kind, "timeout");
+    for (const role of ["bull_researcher", "bear_researcher"]) {
+      assert.notEqual(result.run.agent_status[role].status, "skipped", `${role} must pass the method barrier`);
     }
     assert.equal(existsSync(join(dataDir, "runs", runId, "master_buffett.failure.json")), true);
     const events = readFileSync(join(dataDir, "runs", runId, "events.jsonl"), "utf8")
       .trim().split("\n").map((line) => JSON.parse(line));
+    assert.ok(events.some((event) => event.type === "master_deterministic_fallback"
+      && event.master === "master_buffett" && event.reason === "timeout"));
     const attemptStart = events.find((event) => event.type === "worker_attempt_started"
       && event.stage === "methods" && event.attempt_kind === "primary");
     const attemptFinish = events.find((event) => event.type === "worker_attempt_finished"
@@ -287,6 +303,49 @@ test("a stalled full-mode voice worker fails the seat and stops before debate", 
   } finally {
     await server.close();
     removeDataDir(dataDir);
+  }
+});
+
+test("a process exit falls back only when the dedicated voice emitted no candidate output", async () => {
+  for (const [mode, fakeOptions] of [
+    ["without-output", { processExitWithoutOutputMaster: "master_buffett" }],
+    ["with-output", { processExitWithOutputMaster: "master_buffett" }],
+  ]) {
+    const dataDir = makeDataDir();
+    const fake = observabilityCodex(dataDir, fakeOptions);
+    const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver } });
+    try {
+      await server.request("initialize", {});
+      const selection = await confirmMasterSelection(server, {
+        symbol: "QQQ", selected_master_ids: ["master_buffett"],
+      });
+      const runId = `MASTER-PROCESS-EXIT-${mode.toUpperCase()}-${process.pid}`;
+      const result = structured(await server.callTool("analyze_symbol", {
+        symbol: "QQQ", run_id: runId, as_of: "2026-08-03",
+        tasks: ["market_data"], wait_for_completion: true,
+        grounding: {
+          instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
+          facts_unavailable: true, unavailable: ["fixture"],
+        },
+        selection_receipt: selection.selection_receipt,
+        timeout_ms: 5_000, total_timeout_ms: 30_000,
+      }, { timeoutMs: observerBudget(30_000) }));
+      const seat = result.run.master_status.master_buffett;
+      if (mode === "without-output") {
+        assert.equal(seat.status, "completed");
+        assert.equal(seat.voice_status, "deterministic_fallback");
+        assert.equal(result.run.master_opinions[0].dedicated_worker.failure_kind, "process_exit_without_output");
+        assert.notEqual(result.run.agent_status.bull_researcher.status, "skipped");
+      } else {
+        assert.equal(seat.status, "failed");
+        assert.equal(seat.error, "exit_code_23");
+        assert.deepEqual(result.run.master_opinions, []);
+        assert.equal(result.run.agent_status.bull_researcher.status, "skipped");
+      }
+    } finally {
+      await server.close();
+      removeDataDir(dataDir);
+    }
   }
 });
 

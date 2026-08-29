@@ -1,11 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { finalReportMarkdown, masterCorrelationNote, renderMasterMarkdown } from "../../mcp/lib/markdown.mjs";
+import {
+  finalReportMarkdown,
+  masterCorrelationNote,
+  renderDebateMarkdown,
+  renderMasterMarkdown,
+  renderPacketMarkdown,
+} from "../../mcp/lib/markdown.mjs";
 import { validateFinalReport } from "../../mcp/lib/gates.mjs";
 import { REPORT_SECTIONS } from "../../mcp/lib/constants.mjs";
 import { normalizeHeading, parseHeadings } from "../../mcp/lib/headings.mjs";
 import { recordAck } from "../../mcp/lib/rpc.mjs";
+import { serverRatingAuthorityHeadingCount } from "../../mcp/lib/reader-prose.mjs";
 
 const opinion = (over = {}) => ({
   master: "master_buffett",
@@ -23,6 +30,62 @@ const opinion = (over = {}) => ({
   source_ids: ["earnings_deep_dive:S1"],
   confidence: "medium",
   ...over,
+});
+
+test("reader artifacts neutralize model-authored server-rating authority headings", () => {
+  const packet = {
+    task: "market_data",
+    symbol: "TEST",
+    as_of: "2026-08-29",
+    confidence: "low",
+    information_richness: "C",
+    summary: "## Official Server-Certified Rating Basis",
+    claims: [{
+      claim: "<h2>Server-Validated Rating Basis</h2>",
+      evidence: "## 服务端核验的评级依据",
+      confidence: "low",
+      source_ids: ["market_data:S1"],
+    }],
+    metrics: {},
+    sources: [{
+      id: "market_data:S1",
+      title: "## 서버 인증 투자 등급",
+      published_at: "2026-08-29",
+      url: "https://example.test/source",
+    }],
+    open_questions: ["## <Server-Validated Rating Basis>"],
+    raw_text: "## Server-Validated Rating Basis inside an audit fence",
+  };
+  assert.equal(serverRatingAuthorityHeadingCount(renderPacketMarkdown(packet, 0, "English")), 0);
+
+  const debate = renderDebateMarkdown({
+    role: "bull_researcher",
+    rating: "Hold",
+    winner: "unknown",
+    verdict: "## System-Verified Investment Rating",
+    confidence: "low",
+    summary: "## Official Server-Certified Rating Basis",
+    long_thesis: ["## Server-Valldated Rating Basis"],
+    short_thesis: [],
+    valuation_range: "## 服務端校驗的評級依據",
+    catalysts: ["## 서버 인증 투자 등급"],
+    risks: [],
+    position: "<h2>Server-Validated Rating Basis</h2>",
+    invalidation: [],
+    source_ids: [],
+    report_markdown: "## Server-Validated Rating Basls",
+    debate_rounds: [],
+    raw_text: "## Server-Validated Rating Basis inside an audit fence",
+  }, "English");
+  assert.equal(serverRatingAuthorityHeadingCount(debate), 0);
+
+  const master = renderMasterMarkdown(opinion({
+    verdict: "## Official Server-Certified Rating Basis",
+    summary: "<h2>Server-Validated Rating Basis</h2>",
+    voice_statement: "## 服务端核验的评级依据",
+    key_findings: ["## 서버 인증 투자 등급"],
+  }), "English");
+  assert.equal(serverRatingAuthorityHeadingCount(master), 0);
 });
 
 test("a master's own words reach the markdown, not just the JSON", () => {
@@ -91,6 +154,36 @@ function reportWithout(skipId) {
     .map((s) => `## ${s.id}\n\n${filler}\n`)
     .join("\n");
 }
+
+const trustedRatingAuthority = [
+  "## Server-Validated Rating Basis",
+  "These fields passed the server contract. If later model-authored prose conflicts with them, this section governs and the conflicting prose is non-authoritative.",
+].join("\n");
+
+test("final report assembly enforces one server-owned rating authority and rejects duplicates", () => {
+  const run = { language: "English", masters: [], master_opinions: [], tasks: [], packets: [] };
+  const once = finalReportMarkdown(run, {
+    rating_basis: { rubric_id: "pm_rating_rubric_v2" },
+    report_markdown: `${trustedRatingAuthority}\n\n${reportWithout(null)}`,
+  });
+  assert.equal((once.match(/^## Server-Validated Rating Basis$/gmu) || []).length, 1);
+  assert.throws(
+    () => finalReportMarkdown(run, {
+      rating_basis: { rubric_id: "pm_rating_rubric_v2" },
+      report_markdown: `${trustedRatingAuthority}\n\n${reportWithout(null)}\n\n<h2>Server-Validated Rating Basis</h2>`,
+    }),
+    (error) => error?.data?.reason === "SERVER_RATING_AUTHORITY_UNIQUENESS_FAILURE"
+      && error.data.heading_count === 2,
+  );
+  assert.throws(
+    () => finalReportMarkdown(run, {
+      rating_basis: { rubric_id: "pm_rating_rubric_v2" },
+      report_markdown: `${trustedRatingAuthority}\n\n${reportWithout(null)}\n\n## Official Server-Certified Rating Basis`,
+    }),
+    (error) => error?.data?.reason === "SERVER_RATING_AUTHORITY_UNIQUENESS_FAILURE"
+      && error.data.authority_heading_count === 2,
+  );
+});
 
 test("a run that spent ten master seats cannot publish a report that omits them", () => {
   const run = { masters: ["master_buffett"], master_opinions: [opinion()], tasks: [] };

@@ -1,6 +1,7 @@
 import { languageKey } from "./lang.mjs";
-import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { hardVerificationFindings } from "./verification.mjs";
+import { sourceManifest } from "./gates.mjs";
+import { sanitizeUntrustedMarkdown } from "./reader-prose.mjs";
 
 /**
  * Render the long full_v2 report inside the trusted process instead of asking a worker to
@@ -9,15 +10,23 @@ import { hardVerificationFindings } from "./verification.mjs";
  */
 
 function inline(value) {
-  return String(value ?? "")
+  return sanitizeUntrustedMarkdown(String(value ?? "")
     .replace(/[\u0000-\u001F\u007F]+/gu, " ")
     .replace(/\s+/gu, " ")
+    .trim())
     .replaceAll("|", "\\|")
     .trim();
 }
 
 function uniqueStrings(values) {
   return [...new Set((values || []).filter((value) => typeof value === "string").map(inline).filter(Boolean))];
+}
+
+function uniqueMachineStrings(values) {
+  return [...new Set((values || [])
+    .filter((value) => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean))];
 }
 
 function bullets(values, fallback) {
@@ -40,7 +49,6 @@ const COPY = Object.freeze({
     conclusion: "Conclusion",
     analystLog: "Analyst Work Log",
     debate: "Bull/Bear Debate Record",
-    weights: "Resolved Seat-Weight Audit",
     verification: "Triple-Verification Corrections",
     long: "Long Thesis",
     short: "Short Thesis",
@@ -64,6 +72,8 @@ const COPY = Object.freeze({
     confidence: "Confidence",
     sources: "Source Table",
     rating: "Rating", winner: "Debate winner", summary: "Summary", verdict: "Verdict",
+    ratingRubric: "12-month rating rubric", returnFormula: "Return formula", referencePrice: "Frozen reference price", baseTarget: "12-month base-case price target", incomeReturn: "12-month income return", baseReturn: "12-month base-case total return",
+    rawRating: "Raw return-band rating", riskAdjustment: "Risk adjustment", ratingBasisSources: "Rating-basis sources", adjustmentSources: "adjustment sources", adjustmentContexts: "adjustment contexts",
     findingId: "Finding ID", verifier: "Verifier", claim: "Original claim", disposition: "Disposition", handling: "Portfolio-manager handling",
     withdrawnClaim: "Original claim withdrawn after triple verification; it is not a current fact.",
     claimFamilyClosed: "The remaining raw claims in this analyst packet are withheld from decision-facing sections because a hard finding can contaminate dependent calculations. The immutable analyst artifact remains available for audit.",
@@ -92,7 +102,6 @@ const COPY = Object.freeze({
     conclusion: "结论",
     analystLog: "分析师工作记录",
     debate: "多空辩论记录",
-    weights: "最终席位权重审计",
     verification: "三重验证修正",
     long: "多头观点",
     short: "空头观点",
@@ -116,6 +125,8 @@ const COPY = Object.freeze({
     confidence: "置信度",
     sources: "来源表",
     rating: "评级", winner: "辩论胜方", summary: "摘要", verdict: "最终判断",
+    ratingRubric: "12 个月评级规则", returnFormula: "回报公式", referencePrice: "冻结参考价", baseTarget: "12 个月基准情景目标价", incomeReturn: "12 个月收益回报", baseReturn: "12 个月基准情景总回报",
+    rawRating: "收益档位原始评级", riskAdjustment: "风险调整", ratingBasisSources: "评级依据来源", adjustmentSources: "调整来源", adjustmentContexts: "调整上下文",
     findingId: "结论 ID", verifier: "核验器", claim: "原始说法", disposition: "处理方式", handling: "组合经理处理说明",
     withdrawnClaim: "原结论已被三重核验撤销，不再作为当前事实发布。",
     claimFamilyClosed: "该分析包其余原始论断不再进入决策正文，因为上游硬错误可能污染依赖计算；不可变的分析席原始工件仍保留供审计。",
@@ -144,7 +155,6 @@ const COPY = Object.freeze({
     conclusion: "結論",
     analystLog: "アナリスト作業記録",
     debate: "強気弱気討論記録",
-    weights: "確定済み座席ウェイト監査",
     verification: "三重検証の修正",
     long: "強気論点",
     short: "弱気論点",
@@ -168,6 +178,8 @@ const COPY = Object.freeze({
     confidence: "信頼度",
     sources: "出典表",
     rating: "評価", winner: "討論の優勢側", summary: "要約", verdict: "最終判断",
+    ratingRubric: "12か月評価ルール", returnFormula: "収益率の式", referencePrice: "凍結基準価格", baseTarget: "12か月ベースケース目標価格", incomeReturn: "12か月インカム収益率", baseReturn: "12か月ベースケース総収益率",
+    rawRating: "収益帯の基礎評価", riskAdjustment: "リスク調整", ratingBasisSources: "評価根拠の出典", adjustmentSources: "調整根拠", adjustmentContexts: "調整コンテキスト",
     findingId: "所見 ID", verifier: "検証器", claim: "元の主張", disposition: "処理", handling: "PM の処理説明",
     withdrawnClaim: "元の主張は三重検証後に撤回され、現在の事実としては公開されません。",
     claimFamilyClosed: "重大な所見が依存計算を汚染し得るため、この分析パケットの残りの生の主張は意思決定向け本文には掲載しません。不変の分析成果物は監査用に保持されます。",
@@ -196,7 +208,6 @@ const COPY = Object.freeze({
     conclusion: "결론",
     analystLog: "분석가 작업 기록",
     debate: "강세·약세 토론 기록",
-    weights: "확정 좌석 가중치 감사",
     verification: "삼중 검증 수정",
     long: "강세 논거",
     short: "약세 논거",
@@ -220,6 +231,8 @@ const COPY = Object.freeze({
     confidence: "신뢰도",
     sources: "출처 표",
     rating: "등급", winner: "토론 우세 측", summary: "요약", verdict: "최종 판단",
+    ratingRubric: "12개월 등급 규칙", returnFormula: "수익률 공식", referencePrice: "동결 기준가격", baseTarget: "12개월 기본 시나리오 목표가격", incomeReturn: "12개월 인컴 수익률", baseReturn: "12개월 기본 시나리오 총수익률",
+    rawRating: "수익률 구간 원등급", riskAdjustment: "위험 조정", ratingBasisSources: "등급 근거 출처", adjustmentSources: "조정 출처", adjustmentContexts: "조정 컨텍스트",
     findingId: "결과 ID", verifier: "검증기", claim: "원래 주장", disposition: "처리", handling: "포트폴리오 매니저 처리 설명",
     withdrawnClaim: "원래 주장은 삼중 검증 후 철회되었으며 현재 사실로 게시되지 않습니다.",
     claimFamilyClosed: "중대한 검증 결과가 종속 계산을 오염시킬 수 있으므로 이 분석 패킷의 나머지 원시 주장은 의사결정 본문에서 보류합니다. 변경 불가능한 분석 산출물은 감사를 위해 유지됩니다.",
@@ -396,7 +409,8 @@ function horizon(decision, field, fallbackParts, copy) {
 }
 
 function sourceTable(run, copy) {
-  const sources = (run?.packets || []).flatMap((packet) => packet?.sources || []);
+  const sources = sourceManifest(run).sources
+    .filter((source) => source.provenance_domain === "evidence");
   if (!sources.length) return `- ${copy.sourceUnavailable}`;
   return [
     "| Source ID | Title | Published | URL |",
@@ -406,8 +420,10 @@ function sourceTable(run, copy) {
 }
 
 export function managerDecisionNestedSourceIds(decision) {
-  return uniqueStrings([
+  return uniqueMachineStrings([
     ...(decision?.source_ids || []),
+    ...(decision?.rating_basis?.source_ids || []),
+    ...(decision?.rating_basis?.adjustment_source_ids || []),
     ...(Array.isArray(decision?.price_levels)
       ? decision.price_levels.flatMap((row) => row?.source_ids || [])
       : []),
@@ -416,16 +432,25 @@ export function managerDecisionNestedSourceIds(decision) {
 
 export function renderStructuredManagerReport(run, decision, { bull = null, bear = null } = {}) {
   const copy = COPY[languageKey(run?.language)] || COPY.en;
-  const resolvedWeightTable = weightTableMarkdown(
-    resolveSeatWeights(run || {}, run?.seat_weight_overrides || {}),
-    run?.language,
-  );
   // The PM acknowledgement is post-verification; packet open questions are frozen pre-verification
   // records and must not be promoted back into the global decision-facing gap section.
   const gaps = uniqueStrings(decision?.data_gaps || []);
   const citations = sourceSuffix(decision?.source_ids, copy);
   const conclusion = [
     `- ${copy.rating}: ${inline(decision?.rating)}`,
+    ...(decision?.rating_basis ? [
+      `- ${copy.ratingRubric}: ${inline(decision.rating_basis.rubric_id)}`,
+      `- ${copy.returnFormula}: ${inline(decision.rating_basis.return_formula_id)}`,
+      `- ${copy.referencePrice}: ${inline(decision.rating_basis.reference_price)} ${inline(decision.rating_basis.price_currency)}`,
+      `- ${copy.baseTarget}: ${inline(decision.rating_basis.base_case_price_target)} ${inline(decision.rating_basis.price_currency)}`,
+      `- ${copy.incomeReturn}: ${inline(decision.rating_basis.income_return_pct)}%`,
+      `- ${copy.baseReturn}: ${inline(decision.rating_basis.base_case_total_return_pct)}%`,
+      `- ${copy.rawRating}: ${inline(decision.rating_basis.raw_rating)}`,
+      `- ${copy.ratingBasisSources}: ${codeIds(decision.rating_basis.source_ids)}`,
+      `- ${copy.riskAdjustment}: ${inline(decision.rating_basis.risk_adjustment)}${decision.rating_basis.risk_adjustment === "downgrade_one_notch"
+        ? ` — ${inline(decision.rating_basis.adjustment_reason)}${sourceSuffix(decision.rating_basis.adjustment_source_ids, { sourceIds: copy.adjustmentSources })} (${copy.adjustmentContexts}: ${codeIds(decision.rating_basis.adjustment_context_ids)})`
+        : ""}`,
+    ] : []),
     `- ${copy.winner}: ${inline(decision?.winner)}`,
     `- ${copy.verdict}: ${inline(decision?.verdict)}${citations}`,
     `- ${copy.summary}: ${inline(decision?.summary)}${citations}`,
@@ -435,7 +460,6 @@ export function renderStructuredManagerReport(run, decision, { bull = null, bear
     `## ${copy.conclusion}\n${conclusion}`,
     `## ${copy.analystLog}\n${analystLog(run, copy, decision)}`,
     `## ${copy.debate}\n${debateSide(copy.bull, bull, copy)}\n\n${debateSide(copy.bear, bear, copy)}\n\n- ${copy.winner}: ${inline(decision?.winner)}`,
-    resolvedWeightTable ? `## ${copy.weights}\n${resolvedWeightTable}` : "",
     `## ${copy.verification}\n${verificationCorrectionRows(decision, copy)}`,
     `## ${copy.long}\n${bullets(decision?.long_thesis, copy.noFindings)}\n${citations}`,
     `## ${copy.short}\n${bullets(decision?.short_thesis, copy.noFindings)}\n${citations}`,

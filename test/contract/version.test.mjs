@@ -34,6 +34,7 @@ test("runtime build identity binds the version to the critical executable source
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/method-panel-recommendation.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/method-seat-evidence.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/method-vocabulary-contract.mjs"));
+  assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/reader-prose.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("mcp/lib/rpc.mjs"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("schemas/runtime-headless-portfolio-manager-decision-v1.schema.json"));
   assert.ok(RUNTIME_BUILD_IDENTITY.critical_source_files.includes("scripts/lib/run-bundle.mjs"));
@@ -48,7 +49,7 @@ test("the current runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its 
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "1.5.0");
+  assert.equal(expected, "1.6.0");
   assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "latest");
   assert.equal(profile.channel, "solo_test");

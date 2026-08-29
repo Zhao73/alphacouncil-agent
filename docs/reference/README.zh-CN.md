@@ -351,7 +351,7 @@ flowchart TD
     A6 --> EV
     EV -.->|"interpretation,<br/>not fact"| MS
     EV --> VF{{"Verifiers"}}
-    VF -->|"failed checks<br/>down-weight the seat"| PM
+    VF -->|"explicit corrections<br/>no automatic vote"| PM
     MS --> BULL["Bull"]
     MS --> BEAR["Bear"]
     EV --> BULL

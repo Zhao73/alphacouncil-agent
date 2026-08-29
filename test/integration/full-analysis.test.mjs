@@ -516,9 +516,9 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.ok(manager.debate_rounds.every((round) => round.bull && round.bear));
     assert.match(manager.report_markdown, /## Analyst Work Log/);
     assert.match(manager.report_markdown, /#### Round 3/);
-    assert.match(manager.report_markdown, /## Resolved Seat-Weight Audit/);
-    assert.match(manager.report_markdown, /\| Seat \| Stance \| Declared \| Verification \| Effective \| Share \| Why adjusted \|/);
-    assert.match(manager.report_markdown, /\| master_buffett \|/);
+    assert.doesNotMatch(manager.report_markdown, /## Resolved Seat-Weight Audit/);
+    assert.match(finalReport, /## Master Bench/);
+    assert.match(finalReport, /`master_buffett`/);
     const upperPriceRow = manager.report_markdown.split("\n").find((line) => line.includes("| Do not touch |"));
     assert.ok(upperPriceRow?.includes("conditional valuation"));
     assert.ok(upperPriceRow?.includes("(sources: `market_data:S1`)"),

@@ -69,6 +69,7 @@ async function confirm(opened) {
     selection_id: opened.selection_id,
     catalog_hash: opened.catalog_hash,
     recommendation_hash: opened.recommendation_hash,
+    ...(opened.decision_context_hash ? { decision_context_hash: opened.decision_context_hash } : {}),
     display_ack: true,
     selected_master_ids: [opened.method_panel_recommendation.included_master_ids[0]],
     analyst_scope: "core",
@@ -123,4 +124,44 @@ test("receipt consumption re-verifies the advisory decision vector before creati
     selection_receipt: confirmed.selection_receipt,
   });
   assert.ok(accepted.result, "a failed integrity check must not consume the restored receipt");
+});
+
+test("v5 confirmation rejects a calibrated contribution-context mutation even when recommendation hash is null", async () => {
+  const prompt = "看看 NBIS 值得买吗，一年持有";
+  const opened = structured(await server.callTool("begin_council_selection", {
+    symbol: "NBIS",
+    language: "zh-CN",
+    host: "codex",
+    council_mode: "full",
+    prompt,
+  }));
+  assert.equal(opened.selection_hash_version, 5);
+  assert.equal(opened.recommendation_hash, null);
+  const file = selectionFile(opened.selection_id);
+  const original = readFileSync(file, "utf8");
+  const record = JSON.parse(original);
+  record.method_panel_context.decisions[0].rating_contribution = "primary";
+  writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
+
+  const rejected = await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    decision_context_hash: opened.decision_context_hash,
+    display_ack: true,
+    selected_master_ids: [opened.masters[0].id],
+    analyst_scope: "core",
+  });
+  assert.equal(rejected.error?.data?.reason, "METHOD_PANEL_RECOMMENDATION_RECORD_MISMATCH");
+  assert.ok(rejected.error?.data?.mismatched_fields.includes("method_panel_context"));
+
+  writeFileSync(file, original);
+  const accepted = structured(await server.callTool("confirm_master_selection", {
+    selection_id: opened.selection_id,
+    catalog_hash: opened.catalog_hash,
+    decision_context_hash: opened.decision_context_hash,
+    display_ack: true,
+    selected_master_ids: [opened.masters[0].id],
+    analyst_scope: "core",
+  }));
+  assert.equal(accepted.selection_hash_version, 5);
 });

@@ -48,8 +48,12 @@ jobs:
           fi
       - name: Install exact dependencies
         run: npm ci
+      - name: Install exact ChatGPT Work gateway dependencies
+        run: npm ci --prefix work
       - name: Run source checks
         run: npm run check
+      - name: Run ChatGPT Work gateway tests
+        run: npm run work:test
       - name: Run packaged-host checks
         run: npm run test:package
       - name: Publish package through OIDC

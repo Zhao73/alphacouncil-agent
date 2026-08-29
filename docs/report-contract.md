@@ -428,7 +428,10 @@ runs:
   only from applicable critical producer routes in the hash-bound producer catalog;
 - `voice_status`: `deterministic_only`, `deterministic_fallback`, `model_voice`, or
   `voice_contract_failure`. `deterministic_only` means no model voice was required;
-  `deterministic_fallback` means a planned voice worker failed or was deliberately skipped.
+  `deterministic_fallback` means a sourced deterministic method result was frozen before a
+  plugin-managed headless voice worker became mute because of timeout, deadline, provider usage,
+  context length, schema launch, or another process-level failure. The result remains available
+  as a plainly labelled fallback and is not represented as model-authored prose.
 
 The first two labels and their sorted `evidence_quality_basis` are frozen with the
 deterministic opinion and survive every later voice outcome. `status.json` records the exact
@@ -436,6 +439,52 @@ deterministic opinion and survive every later voice outcome. `status.json` recor
 directional language. Such output is not repaired or replaced: the worker fails with
 `voice_contract_failure`, no opinion is published, and the report shows only the localized
 contract-failure notice under the fixed "No computable stance" section.
+
+For a plugin-managed headless run, a `deterministic_fallback` is a disclosed degradation, not a
+missing opinion: a full run that otherwise completes terminalizes as `degraded`, while quick
+retains its normal degraded-coverage rules. Source-provenance mismatches, reader-language
+failures, parse/contract failures and unsafe action-language failures are not eligible for this
+fallback and remain fail-closed. Visible-host method workers remain mandatory because the plugin
+does not own or observe their process lifecycle closely enough to classify a silent failure as a
+bounded mute-worker outcome.
+
+## Decision context and one-year rating rubric
+
+A calibrated v5 selection receipt freezes `objective`, `holding_horizon`, whether a PM rating
+basis is required, and every method's contribution class. The same decision context is injected
+into method, Bull/Bear and PM prompts; it is framing metadata, not an investment source.
+
+Only `objective=directional_rating` with `holding_horizon=1_year` activates
+`pm_rating_rubric_v2`. The PM must copy the frozen reference price and currency, provide a
+same-currency 12-month base-case target plus income-return percentage, and cite frozen sources.
+Before any real analyst or visible host thread starts, the orchestrator requires that positive
+frozen price and its currency; otherwise the run stops without a rating or downstream model call.
+The server recomputes total return as
+`((base_case_price_target / reference_price) - 1) * 100 + income_return_pct`, rejects a
+reference/currency mismatch or a return outside `-100%..1000%`, and owns the exact rating mapping:
+
+| Base-case total return | Raw rating |
+|---:|---|
+| `>= +20%` | Buy |
+| `>= +10%` and `< +20%` | Overweight |
+| `> -10%` and `< +10%` | Hold |
+| `> -20%` and `<= -10%` | Underweight |
+| `<= -20%` | Sell |
+
+The PM may apply at most one downside notch, and only with an explicit reason and frozen source
+IDs for downside asymmetry, evidence quality, a hard veto, or a hard verification finding. The
+downgrade must cite a server-owned `adjustment_context_ids` entry and every adjustment source must
+belong to a cited context; `out_of_scope` creates no eligible context. The PM may never upgrade or
+apply a multi-notch penalty. Top-level `rating` must equal the validated final rating. Missing
+evidence, an `out_of_scope` method, or an execution failure cannot be manufactured into Hold.
+Every structured `price_levels` row must use the same frozen currency, and both headless and
+visible-host PM submissions must account exactly once for every hard verifier finding.
+
+Primary, non-`out_of_scope` method judgments enter Bull/Bear once. Supporting/risk/context
+methods reach the PM only through a non-voting projection of server-classified vetoes, risk,
+missing facts, evidence quality and reopen conditions. An `out_of_scope` seat remains visible in
+the method bench but is excluded from that PM projection. The PM receives neither a seat-weight
+table nor the raw method ratings, so one conservative method cannot be counted twice.
 
 ## full_v2 Contract
 
@@ -549,8 +598,10 @@ The execution topology is:
    URLs and recomputes from another source, and `refuter` performs a recorded adverse search.
    Exact claim-by-verifier coverage is mandatory. A zero count or any missing, duplicate,
    unexpected or malformed row terminalizes as `needs_verification` and skips every downstream
-   worker. Allowed unresolved/adverse verdicts produce `completed_with_findings`, remain visible,
-   and lower the originating evidence seat's weight rather than pretending the verifier was absent;
+   worker. Allowed unresolved/adverse verdicts produce `completed_with_findings` and remain
+   visible. The PM must acknowledge explicit corrections and may use a sourced finding for the
+   single downside notch allowed by `pm_rating_rubric_v2`; no verifier creates an automatic
+   negative vote or mechanical rating change. Legacy diagnostic weights remain audit metadata;
 3. after the evidence and applicable verification barriers, every selected physical v3 method runs its deterministic
    policy and freezes a stance, then receives one isolated voice worker that can explain but
    cannot change that stance;
@@ -664,15 +715,20 @@ Terminal analysis statuses are:
 complete | degraded | incomplete | needs_verification | needs_revision | failed
 ```
 
-`degraded` is a quick-only terminal result. It is permitted only when at least two of the
+`degraded` has two bounded terminal meanings. Quick may use it only when at least two of the
 four evidence roles completed, every failed role has a sanitized packet/diagnostic, at least
-one bull/bear side completed, the PM completed, and every selected method was recorded. Both
-debate sides failing, PM failure, fewer than two successful evidence roles, or a missing
-master makes the run `incomplete`.
+one bull/bear side completed, the PM completed, and every selected method was recorded. A
+plugin-managed headless full run may use it only when all mandatory evidence, all three debate
+rounds and the PM completed and every selected sourced method result was recorded, but one or
+more mute voice workers were retained as `deterministic_fallback`. A contract, provenance,
+reader-language or action-intent failure is not mute and makes the method stage incomplete.
+Visible-host full still requires every returned real method voice. Both debate sides failing,
+PM failure, insufficient quick evidence, or a genuinely missing master makes the run
+`incomplete`.
 
 A degraded report contains exactly one system-owned, idempotent degraded execution ledger
-naming each affected task/side and its cause. `report_quality.json` repeats the degraded
-evidence/debate arrays. A structurally valid report can therefore have
+naming each affected task, side or method fallback and its cause. `report_quality.json`
+repeats the degraded evidence/debate/method notes. A structurally valid report can therefore have
 `report_quality=passed` while the run remains `degraded`; never present that as complete.
 `needs_verification` or `needs_revision` may be the top-level terminal status while degraded
 coverage remains visible in the independent ledger/status fields.

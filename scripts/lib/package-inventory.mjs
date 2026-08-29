@@ -49,6 +49,7 @@ export const WP2_REQUIRED_PACKAGE_TREES = Object.freeze([
 const RUNTIME_DATA_FILES = new Set([
   "package.json",
   "data/build-profile.v1.json",
+  "data/method-panel-calibration.v2.json",
   "data/industry-map.json",
   "data/social-handles.json",
   "schemas/headless-evidence-envelope-v1.schema.json",

@@ -29,7 +29,7 @@ test("doctor runs and reports on every area it covers", () => {
     assert.match(result.stdout, /Formal PersonaPack v3 production GA is not passed/, "doctor must not imply formal GA");
     assert.match(result.stdout, /mcp\/server\.mjs present/, "doctor must verify the entry point");
     assert.match(result.stdout, /static four-host contract/, "doctor must validate the static host contract");
-    assert.match(result.stdout, /live E2E not run/, "doctor must not imply a live host execution");
+    assert.match(result.stdout, /live host E2E status:\s*not_run/, "doctor must not imply a live host execution");
   } finally {
     removeDataDir(dataDir);
   }

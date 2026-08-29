@@ -32,6 +32,9 @@ export const EVIDENCE_STANDARD_VERSION = 1;
 export const RUN_BUNDLE_SCHEMA = "alphacouncil_run_bundle_v1";
 
 const PACKAGE_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const CURRENT_PACKAGE_VERSION = JSON.parse(
+  readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8"),
+).version;
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
 const MAX_BUNDLE_BYTES = 128 * 1024 * 1024;
 const MAX_BUNDLE_ENTRIES = 4_096;
@@ -791,7 +794,12 @@ function releaseBlockers(runtime, startedAt, packageRoot) {
   const blockers = [];
   if (!runtime || typeof runtime !== "object") return [issue("runtime_provenance_missing", "run has no runtime build identity")];
   if (runtime.contract_id !== "alphacouncil_runtime_build_v1") blockers.push(issue("runtime_provenance_contract_invalid", "runtime provenance contract is not alphacouncil_runtime_build_v1"));
-  if (runtime.package_version !== "1.5.0") blockers.push(issue("release_version_not_v1_5_0", `run package version is ${String(runtime.package_version)}, not 1.5.0`));
+  if (runtime.package_version !== CURRENT_PACKAGE_VERSION) {
+    blockers.push(issue(
+      "release_version_not_current",
+      `run package version is ${String(runtime.package_version)}, not ${CURRENT_PACKAGE_VERSION}`,
+    ));
+  }
   if (runtime.git_tracked_tree_dirty !== false) blockers.push(issue("runtime_tree_not_clean", "run was not produced from a recorded clean tracked tree"));
   if (!/^[a-f0-9]{40}$/u.test(runtime.git_commit || "")) blockers.push(issue("runtime_commit_missing", "run has no exact 40-character git commit"));
   if (!/^[a-f0-9]{64}$/u.test(runtime.critical_source_sha256 || "")) blockers.push(issue("runtime_source_hash_missing", "run has no critical source hash"));
@@ -809,7 +817,7 @@ function releaseBlockers(runtime, startedAt, packageRoot) {
     blockers.push(issue("runtime_source_file_inventory_invalid", "runtime critical source file inventory is missing or unsafe"));
   }
 
-  const tag = `v${runtime.package_version || "1.5.0"}`;
+  const tag = `v${runtime.package_version || CURRENT_PACKAGE_VERSION}`;
   try {
     const tagCommit = gitOutput(["rev-parse", `${tag}^{commit}`], packageRoot);
     if (runtime.git_commit !== tagCommit) blockers.push(issue("runtime_commit_not_release_tag", `runtime commit does not equal ${tag}`));

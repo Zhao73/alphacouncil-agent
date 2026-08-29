@@ -135,9 +135,17 @@ export async function confirmMasterSelection(server, {
   // execution time -- the receipt binds it and execution may no longer change it.
   council_pace,
   analyst_scope = council_mode === "quick" ? null : "core",
+  objective,
+  holding_horizon,
+  instrument_classification,
+  typed_fact_coverage,
 } = {}) {
   const opened = structured(await server.callTool("begin_council_selection", {
     symbol, language, prompt, host, council_mode,
+    ...(objective ? { objective } : {}),
+    ...(holding_horizon ? { holding_horizon } : {}),
+    ...(instrument_classification ? { instrument_classification } : {}),
+    ...(typed_fact_coverage ? { typed_fact_coverage } : {}),
   }));
   const choice = selection !== undefined
     ? { selection }
@@ -148,6 +156,8 @@ export async function confirmMasterSelection(server, {
     selection_id: opened.selection_id,
     catalog_hash: opened.catalog_hash,
     display_ack: true,
+    ...(opened.recommendation_hash ? { recommendation_hash: opened.recommendation_hash } : {}),
+    ...(opened.decision_context_hash ? { decision_context_hash: opened.decision_context_hash } : {}),
     ...choice,
     ...(council_pace ? { council_pace } : {}),
     ...(analyst_scope ? { analyst_scope } : {}),

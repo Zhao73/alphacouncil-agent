@@ -52,7 +52,7 @@
 2. **它反驳的是同一件事吗？** 论断说「Q2 毛利率 45%」，你找到的是「行业竞争加剧」——这不构成反驳，这是无关的负面情绪。
 3. **量级够吗？** 一个影响 0.3% 收入的问题，不足以推翻一个关于整体趋势的论断。
 
-**给 stands 不丢人。** 认真找过反面证据而没找到，是一个有价值的、可复现的结论。为了显得尽责而编一个 weakened，比给 stands 有害得多——它会毫无理由地降低那个席位的权重，而权重是会影响最终评级的。
+**给 stands 不丢人。** 认真找过反面证据而没找到，是一个有价值的、可复现的结论。为了显得尽责而编一个 weakened，比给 stands 有害得多——它会制造一条并不存在的反证，污染最终论证，并可能被错误地用作有来源的一档风险下调依据。verifier 不自动投负票，也不机械改变评级。
 
 ## 记录你的检索
 
@@ -92,7 +92,7 @@ Three self-checks, to be run before every refuted or weakened verdict:
 2. **Does it rebut the same thing?** The claim says "Q2 gross margin 45%" and you found "competition is intensifying" -- that is not a rebuttal, it is unrelated negative sentiment.
 3. **Is the magnitude sufficient?** A problem affecting 0.3% of revenue does not overturn a claim about the overall trend.
 
-**A verdict of stands is not a failure.** Having searched properly for counter-evidence and found none is a valuable, reproducible result. Manufacturing a weakened to look diligent is far worse than stands -- it lowers that seat's weight for no reason, and weight moves the final rating.
+**A verdict of stands is not a failure.** Having searched properly for counter-evidence and found none is a valuable, reproducible result. Manufacturing a weakened to look diligent is far worse than stands: it fabricates counter-evidence, contaminates the final reasoning, and may be misused as support for a sourced one-notch risk downgrade. A verifier does not cast an automatic negative vote or mechanically change the rating.
 
 ## Record your searches
 

@@ -45,6 +45,14 @@ const VERSION_JSON_SPECS = Object.freeze([
     fields: Object.freeze([["version"], ["packages", "", "version"]]),
   }),
   Object.freeze({
+    file: join("work", "package.json"),
+    fields: Object.freeze([["version"]]),
+  }),
+  Object.freeze({
+    file: join("work", "package-lock.json"),
+    fields: Object.freeze([["version"], ["packages", "", "version"]]),
+  }),
+  Object.freeze({
     file: "server.json",
     fields: Object.freeze([["version"], ["packages", 0, "version"]]),
   }),

@@ -26,7 +26,7 @@ test("release workflow parses and satisfies the two-job OIDC contract", () => {
     node: "24",
     setupNode: "v7",
     npmMinimum: "11.5.1",
-    packageVersion: "1.5.0",
+    packageVersion: "1.6.0",
     t3: "static_guard_rehearsal",
     publish: "not_run",
     githubRelease: "not_run",
@@ -63,9 +63,9 @@ test("workflow gate rejects weakened OIDC permissions and npm token fallback", (
 
 test("workflow gate rejects reordered checks and a release job detached from publish", () => {
   const sourceStep = "      - name: Run source checks\n        run: npm run check\n";
-  const packageStep = "      - name: Run packaged-host checks\n        run: npm run test:package\n";
-  const reordered = workflowText().replace(`${sourceStep}${packageStep}`, `${packageStep}${sourceStep}`);
-  assert.ok(validateReleaseWorkflow(reordered).some((error) => error.includes("reviewed checkout/setup/guard/install/T1/T2/publish order")));
+  const workStep = "      - name: Run ChatGPT Work gateway tests\n        run: npm run work:test\n";
+  const reordered = workflowText().replace(`${sourceStep}${workStep}`, `${workStep}${sourceStep}`);
+  assert.ok(validateReleaseWorkflow(reordered).some((error) => error.includes("reviewed checkout/setup/guard/install/source/work/package/publish order")));
 
   const detached = workflowText().replace("    needs: publish\n", "");
   assert.ok(validateReleaseWorkflow(detached).some((error) => error.includes("need the successful publish job")));

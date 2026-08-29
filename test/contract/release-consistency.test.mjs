@@ -41,6 +41,8 @@ function fixture({ version = "1.5.0", unreleased = "- Pending source work.\n" } 
 
   writeJson(root, "package.json", { name: "alphacouncil-agent", version });
   writeJson(root, "package-lock.json", { version, packages: { "": { version } } });
+  writeJson(root, "work/package.json", { name: "@alphacouncil/chatgpt-work-gateway", version });
+  writeJson(root, "work/package-lock.json", { version, packages: { "": { version } } });
   writeJson(root, ".claude-plugin/plugin.json", {
     name: "alphacouncil-agent",
     version,
@@ -105,6 +107,18 @@ test("a manifest version change or missing version aggregates as VERSION_MISMATC
   assert.deepEqual(errors.map(({ file }) => file), [
     join(".claude-plugin", "plugin.json"),
     join(".codex-plugin", "plugin.json"),
+  ]);
+});
+
+test("the Work gateway manifest and lockfile cannot drift from the release version", () => {
+  const root = fixture();
+  writeJson(root, "work/package.json", { name: "@alphacouncil/chatgpt-work-gateway", version: "1.4.9" });
+  writeJson(root, "work/package-lock.json", { version: "1.4.9", packages: { "": { version: "1.4.9" } } });
+  const errors = check(root).errors.filter(({ code }) => code === "VERSION_MISMATCH");
+  assert.deepEqual(errors.map(({ location }) => location), [
+    "work/package-lock.json:packages..version",
+    "work/package-lock.json:version",
+    "work/package.json:version",
   ]);
 });
 

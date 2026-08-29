@@ -245,7 +245,9 @@ export function validateReleaseWorkflow(text) {
     "Verify release consistency",
     "Verify tag is on main",
     "Install exact dependencies",
+    "Install exact ChatGPT Work gateway dependencies",
     "Run source checks",
+    "Run ChatGPT Work gateway tests",
     "Run packaged-host checks",
     "Publish package through OIDC",
   ];
@@ -253,7 +255,7 @@ export function validateReleaseWorkflow(text) {
     errors,
     Array.isArray(publish?.steps)
       && JSON.stringify(publish.steps.map((step) => step?.name)) === JSON.stringify(expectedPublishSteps),
-    "publish steps must keep the reviewed checkout/setup/guard/install/T1/T2/publish order",
+    "publish steps must keep the reviewed checkout/setup/guard/install/source/work/package/publish order",
   );
 
   const checkout = stepByName(publish, expectedPublishSteps[0]);
@@ -262,9 +264,11 @@ export function validateReleaseWorkflow(text) {
   const consistency = stepByName(publish, expectedPublishSteps[3]);
   const mainGuard = stepByName(publish, expectedPublishSteps[4]);
   const install = stepByName(publish, expectedPublishSteps[5]);
-  const sourceCheck = stepByName(publish, expectedPublishSteps[6]);
-  const packageCheck = stepByName(publish, expectedPublishSteps[7]);
-  const publishStep = stepByName(publish, expectedPublishSteps[8]);
+  const workInstall = stepByName(publish, expectedPublishSteps[6]);
+  const sourceCheck = stepByName(publish, expectedPublishSteps[7]);
+  const workCheck = stepByName(publish, expectedPublishSteps[8]);
+  const packageCheck = stepByName(publish, expectedPublishSteps[9]);
+  const publishStep = stepByName(publish, expectedPublishSteps[10]);
 
   requireCondition(errors, checkout?.uses === "actions/checkout@v7", "release checkout action must use the reviewed current major v7");
   requireCondition(errors, setup?.uses === "actions/setup-node@v7", "release setup-node action must use the reviewed current major v7");
@@ -316,7 +320,9 @@ export function validateReleaseWorkflow(text) {
   requireCondition(errors, mainGuardRun.includes('git rev-parse --is-shallow-repository'), "main ancestry guard must inspect shallow checkout state");
   requireCondition(errors, mainGuardRun.includes(unshallowFetch), "main ancestry guard must support an unshallow fallback");
   requireCondition(errors, exactRun(install) === "npm ci", "release install must be exactly npm ci");
+  requireCondition(errors, exactRun(workInstall) === "npm ci --prefix work", "release Work install must be exactly npm ci --prefix work");
   requireCondition(errors, exactRun(sourceCheck) === "npm run check", "release T1 step must run npm run check");
+  requireCondition(errors, exactRun(workCheck) === "npm run work:test", "release Work step must run npm run work:test");
   requireCondition(errors, exactRun(packageCheck) === "npm run test:package", "release T2 step must run npm run test:package");
   requireCondition(errors, publishStep?.env?.RELEASE_TAG === "${{ github.ref_name }}", "release publish must bind github.ref_name for dist-tag selection");
   requireCondition(

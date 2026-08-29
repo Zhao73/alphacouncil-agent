@@ -125,7 +125,7 @@ function fixture() {
   ];
   const runtime = {
     ...RUNTIME_BUILD_IDENTITY,
-    package_version: "1.5.0",
+    package_version: "1.6.0",
     git_commit: null,
     git_tracked_tree_dirty: true,
     observed_at: "2026-08-26T00:00:00.000Z",

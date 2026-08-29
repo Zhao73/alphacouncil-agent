@@ -156,8 +156,9 @@ eight-seat core or eleven-seat all-analyst roster and the three-round `full_v2` 
 
 - all receipt-bound evidence workers start in one parallel wave;
 - after the fail-closed evidence barrier, each selected physical v3 method freezes its
-  deterministic stance and gets one isolated voice worker that cannot alter it; any missing
-  real method voice stops full before debate and PM rather than becoming a successful fallback;
+  deterministic stance and gets one isolated voice worker that cannot alter it; a mute voice
+  process in plugin-managed headless full retains that sourced stance as a disclosed
+  `deterministic_fallback`, while semantic contract failures stop before debate and PM;
 - Bull and Bear start in parallel within each of three rounds, with a barrier between rounds
   and exact Round-2-question to Round-3-answer binding;
 - the PM and deterministic report persistence use the same global clock.
@@ -213,8 +214,11 @@ Headless quick returns a durable `run_id` immediately by default. Poll that same
 complete | degraded | incomplete | needs_verification | needs_revision | failed
 ```
 
-`degraded` is quick-only evidence/debate coverage, not an alias for complete. The report and
-handoff retain a system-owned ledger naming every degraded task or debate side and its cause.
+Quick may use `degraded` for its bounded evidence/debate coverage rule. Plugin-managed
+headless full may also use `degraded` when every structural stage completed but a sourced
+frozen method view survived a mute voice worker as `deterministic_fallback`; visible-host full
+still requires every returned real method voice. The report and handoff retain a system-owned
+ledger naming every degraded task, debate side or method fallback and its cause.
 `report_quality=passed` only means the mode-appropriate report structure passed; it does not
 upgrade a degraded run or make quick equivalent to full.
 

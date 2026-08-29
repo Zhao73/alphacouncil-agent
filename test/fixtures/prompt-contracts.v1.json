@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "contract_id": "alphacouncil-prompt-contract-v1",
-  "contract_revision": "2026-08-03.6",
-  "golden_sha256": "6d896914f902e7cdd9d4453e009af8f4aaef91f2fcf22c168b7718fad7676930",
+  "contract_revision": "2026-08-30.1",
+  "golden_sha256": "fe6fe351ae62e881ae0a7a9d65bf021db296083eb7d61573398519b9bc93c7aa",
   "change_policy": {
     "breaking": [
       "structured output schema",

@@ -1,0 +1,216 @@
+{
+  "schema_version": 2,
+  "contract_id": "alphacouncil_method_panel_calibration_v2",
+  "objectives": [
+    "directional_rating",
+    "general_risk_coverage",
+    "valuation",
+    "position_sizing",
+    "portfolio_construction",
+    "relative_value",
+    "special_situation",
+    "long_horizon_ownership"
+  ],
+  "holding_horizons": [
+    "1_4_weeks",
+    "3_6_months",
+    "1_year",
+    "3_5_years",
+    "10_years_plus",
+    "indefinite",
+    "horizon_agnostic"
+  ],
+  "roles": [
+    "directional_core",
+    "valuation_anchor",
+    "risk_overlay",
+    "portfolio_overlay",
+    "instrument_specialist",
+    "event_specialist",
+    "evidence_challenger"
+  ],
+  "methods": [
+    {
+      "master_id": "master_buffett",
+      "roles": ["directional_core", "valuation_anchor"],
+      "primary_intents": ["long_horizon_ownership", "valuation"],
+      "supporting_intents": ["directional_rating", "general_risk_coverage"],
+      "horizons": ["3_5_years", "10_years_plus", "indefinite"]
+    },
+    {
+      "master_id": "master_graham",
+      "roles": ["directional_core", "valuation_anchor", "risk_overlay"],
+      "primary_intents": ["directional_rating", "valuation"],
+      "supporting_intents": ["general_risk_coverage", "special_situation"],
+      "horizons": ["3_6_months", "1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_simons",
+      "roles": ["directional_core", "portfolio_overlay", "evidence_challenger"],
+      "primary_intents": ["position_sizing", "relative_value"],
+      "supporting_intents": ["directional_rating", "portfolio_construction"],
+      "horizons": ["1_4_weeks", "3_6_months", "1_year"]
+    },
+    {
+      "master_id": "master_soros",
+      "roles": ["directional_core", "risk_overlay"],
+      "primary_intents": ["directional_rating", "special_situation"],
+      "supporting_intents": ["general_risk_coverage"],
+      "horizons": ["1_4_weeks", "3_6_months", "1_year"]
+    },
+    {
+      "master_id": "master_cathie_wood",
+      "roles": ["directional_core", "valuation_anchor"],
+      "primary_intents": ["long_horizon_ownership", "valuation"],
+      "supporting_intents": ["directional_rating"],
+      "horizons": ["3_5_years", "10_years_plus"]
+    },
+    {
+      "master_id": "master_druckenmiller",
+      "roles": ["directional_core", "portfolio_overlay"],
+      "primary_intents": ["directional_rating", "position_sizing"],
+      "supporting_intents": ["general_risk_coverage", "special_situation"],
+      "horizons": ["3_6_months", "1_year"]
+    },
+    {
+      "master_id": "master_fisher",
+      "roles": ["directional_core", "evidence_challenger"],
+      "primary_intents": ["long_horizon_ownership"],
+      "supporting_intents": ["directional_rating", "general_risk_coverage"],
+      "horizons": ["3_5_years", "10_years_plus", "indefinite"]
+    },
+    {
+      "master_id": "master_munger",
+      "roles": ["valuation_anchor", "risk_overlay", "evidence_challenger"],
+      "primary_intents": ["general_risk_coverage", "long_horizon_ownership"],
+      "supporting_intents": ["directional_rating", "valuation"],
+      "horizons": ["horizon_agnostic"]
+    },
+    {
+      "master_id": "master_thorp",
+      "roles": ["risk_overlay", "portfolio_overlay", "instrument_specialist"],
+      "primary_intents": ["position_sizing", "relative_value"],
+      "supporting_intents": ["directional_rating", "general_risk_coverage", "special_situation"],
+      "horizons": ["horizon_agnostic"]
+    },
+    {
+      "master_id": "master_asness",
+      "roles": ["directional_core", "portfolio_overlay", "evidence_challenger"],
+      "primary_intents": ["directional_rating", "portfolio_construction", "relative_value"],
+      "supporting_intents": ["general_risk_coverage", "position_sizing"],
+      "horizons": ["3_6_months", "1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_dalio",
+      "roles": ["risk_overlay", "portfolio_overlay"],
+      "primary_intents": ["general_risk_coverage", "portfolio_construction"],
+      "supporting_intents": ["directional_rating"],
+      "horizons": ["3_6_months", "1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_duan_yongping",
+      "roles": ["directional_core", "valuation_anchor"],
+      "primary_intents": ["long_horizon_ownership", "valuation"],
+      "supporting_intents": ["directional_rating", "general_risk_coverage"],
+      "horizons": ["10_years_plus", "indefinite"]
+    },
+    {
+      "master_id": "master_jhunjhunwala",
+      "roles": ["directional_core", "evidence_challenger"],
+      "primary_intents": ["directional_rating", "long_horizon_ownership"],
+      "supporting_intents": ["general_risk_coverage", "valuation"],
+      "horizons": ["3_5_years", "10_years_plus"]
+    },
+    {
+      "master_id": "master_lynch",
+      "roles": ["directional_core", "valuation_anchor"],
+      "primary_intents": ["directional_rating", "long_horizon_ownership"],
+      "supporting_intents": ["special_situation", "valuation"],
+      "horizons": ["3_6_months", "1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_forensic_short",
+      "roles": ["directional_core", "risk_overlay", "event_specialist", "evidence_challenger"],
+      "primary_intents": ["directional_rating", "general_risk_coverage", "special_situation"],
+      "supporting_intents": ["relative_value"],
+      "horizons": ["1_4_weeks", "3_6_months", "1_year"]
+    },
+    {
+      "master_id": "master_li_lu",
+      "roles": ["directional_core", "valuation_anchor", "risk_overlay"],
+      "primary_intents": ["long_horizon_ownership", "valuation"],
+      "supporting_intents": ["directional_rating", "general_risk_coverage"],
+      "horizons": ["10_years_plus", "indefinite"]
+    },
+    {
+      "master_id": "master_marks",
+      "roles": ["valuation_anchor", "risk_overlay", "portfolio_overlay"],
+      "primary_intents": ["general_risk_coverage", "portfolio_construction", "valuation"],
+      "supporting_intents": ["directional_rating", "special_situation"],
+      "horizons": ["3_6_months", "1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_burry",
+      "roles": ["directional_core", "event_specialist", "evidence_challenger"],
+      "primary_intents": ["directional_rating", "relative_value", "special_situation"],
+      "supporting_intents": ["general_risk_coverage", "valuation"],
+      "horizons": ["3_6_months", "1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_klarman",
+      "roles": ["directional_core", "valuation_anchor", "risk_overlay"],
+      "primary_intents": ["general_risk_coverage", "special_situation", "valuation"],
+      "supporting_intents": ["directional_rating", "long_horizon_ownership"],
+      "horizons": ["1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_pabrai",
+      "roles": ["directional_core", "valuation_anchor", "event_specialist"],
+      "primary_intents": ["directional_rating", "special_situation", "valuation"],
+      "supporting_intents": ["general_risk_coverage", "long_horizon_ownership"],
+      "horizons": ["1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_ackman",
+      "roles": ["directional_core", "valuation_anchor", "event_specialist"],
+      "primary_intents": ["directional_rating", "special_situation", "valuation"],
+      "supporting_intents": ["general_risk_coverage"],
+      "horizons": ["1_year", "3_5_years"]
+    },
+    {
+      "master_id": "master_damodaran",
+      "roles": ["valuation_anchor", "evidence_challenger"],
+      "primary_intents": ["valuation"],
+      "supporting_intents": ["directional_rating", "general_risk_coverage", "long_horizon_ownership"],
+      "horizons": ["horizon_agnostic"]
+    },
+    {
+      "master_id": "master_taleb",
+      "roles": ["risk_overlay", "portfolio_overlay", "instrument_specialist", "evidence_challenger"],
+      "primary_intents": ["general_risk_coverage", "position_sizing", "portfolio_construction"],
+      "supporting_intents": ["relative_value"],
+      "horizons": ["horizon_agnostic"]
+    },
+    {
+      "master_id": "master_natenberg",
+      "roles": ["risk_overlay", "instrument_specialist"],
+      "primary_intents": ["position_sizing", "relative_value"],
+      "supporting_intents": ["general_risk_coverage"],
+      "horizons": ["1_4_weeks", "3_6_months"]
+    },
+    {
+      "master_id": "master_sinclair",
+      "roles": ["risk_overlay", "portfolio_overlay", "instrument_specialist"],
+      "primary_intents": ["position_sizing", "relative_value"],
+      "supporting_intents": ["general_risk_coverage"],
+      "horizons": ["1_4_weeks", "3_6_months", "1_year"]
+    },
+    {
+      "master_id": "master_bogle",
+      "roles": ["valuation_anchor", "portfolio_overlay", "instrument_specialist"],
+      "primary_intents": ["portfolio_construction", "long_horizon_ownership"],
+      "supporting_intents": ["general_risk_coverage", "valuation"],
+      "horizons": ["10_years_plus", "indefinite"]
+    }
+  ]
+}

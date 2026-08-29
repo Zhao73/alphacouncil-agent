@@ -49,17 +49,25 @@ after Stage 0.
   `plan_visible_run` and jump directly to a PM decision. `plan_visible_run` rejects quick.
 - Completeness is mode-aware. Full is complete only when all planned evidence, selected
   methods (including deterministic `out_of_scope` decisions), all required debate rounds and
-  the PM are recorded. Quick may terminate `degraded` only under its explicit coverage rule
-  and system-owned degraded ledger; otherwise missing mandatory work is `incomplete` or
-  `failed`. Never relabel `degraded`, `incomplete`, `needs_revision` or `failed` as `complete`.
+  the PM are recorded. Plugin-managed headless full may terminate `degraded` when every
+  structural stage is present but a mute voice worker left an explicitly labelled
+  `deterministic_fallback`; contract, provenance, language or action failures remain
+  `incomplete`. Quick may terminate `degraded` only under its explicit coverage rule and
+  system-owned degraded ledger. Never relabel `degraded`, `incomplete`, `needs_revision` or
+  `failed` as `complete`.
 
 ## Preflight Interaction
 
 Infer these fields rather than asking separate startup questions:
 
 - language: user's apparent language
-- goal: entry/actionability judgment
-- horizon: include short-term 1-4 weeks, medium-term 3-6 months, and long-term 12 months in the final report
+- objective: use `directional_rating` for an unambiguous buy/hold/sell or “worth buying”
+  request; otherwise choose the matching supported objective only when the request is explicit
+- holding horizon: map an explicit period to the supported enum; “hold for one year” is `1_year`
+
+Pass `objective` and `holding_horizon` together or omit both. Never guess one without the other.
+The runtime may narrowly infer the exact `directional_rating + 1_year` pair from an unambiguous
+original prompt, but the returned `decision_context.source` and hash remain authoritative.
 
 Every council judgment still has one mandatory preflight: the per-run master selection in
 Stage 0. This applies to both full and quick council modes. It is not an optional preference
@@ -114,11 +122,14 @@ Then take this run's method selection and the separate analyst-scope choice:
    the calling `host`, and the intended `council_mode` (`full` by default). If the request
    explicitly names masters, resolve their stable IDs and pass them as
    `preselected_master_ids`; if it named a speed, pass `council_pace`. Both are prefills that
-   highlight only and never confirm.
+   highlight only and never confirm. When objective and horizon are unambiguous, pass the
+   supported `objective` and `holding_horizon` together.
 2. Display the `pace_options` menu with both numbers per tier, then **every returned master
    individually in the returned order**. Preserve the stable number and show `identity`,
    `method`, `best_for` and `maturity` for every row. A school summary, preset or seat count
-   does not satisfy this step.
+   does not satisfy this step. Also display the returned advisory panel and decision context:
+   name directional contributors, non-voting risk coverage and context-only methods, and state
+   that the latter two are not directional votes.
 3. Take one submission covering all three decisions. Explicitly show `core = 8` and `all = 11`
    for the analyst scope. The universal method fallback is a numbered text reply: one index in
    `1..N`, any comma/space-separated combination, ranges such as `1-4` or `1..4`, or stable
@@ -141,6 +152,7 @@ Then take this run's method selection and the separate analyst-scope choice:
    - `selected_master_ids: [...]` for a native multi-select;
    - `select_all: true` for all in full mode only;
    - `selection: "1,4-6"` (or another supported text selection) for the fallback.
+   If Stage 0 returned `recommendation_hash` or `decision_context_hash`, echo each one unchanged.
 6. Retain the returned one-use, mode-bound `selection_receipt`. Only after that may the host call
    `plan_visible_run`, `collect_evidence` or `analyze_symbol`, and each call must include the
    receipt plus the same symbol, prompt, language and `council_mode`. Never also pass `masters`
@@ -168,7 +180,11 @@ Use this contract when full runs through headless `analyze_symbol`:
   If both the original voice and normal no-search transport repair remain in the wrong reader
   language, one final no-search language-only translation pass may preserve the same stance,
   figures, source IDs, dossier hash, and packet acknowledgements; any further mismatch fails closed.
-  A missing voice result remains visible and prevents a false complete bench.
+  A mute process-level voice failure after a sourced deterministic stance was frozen retains
+  that frozen view as `deterministic_fallback`; it never becomes “no deliverable opinion” and a
+  full run can finish only as disclosed `degraded`, not `complete`. Contract, provenance,
+  reader-language, parse and unsafe-action failures remain hard failures.
+  Visible-host full remains strict and requires every returned real method voice.
 - On an operating-company run, every method voice must return the exact shared dossier hash and
   one `evidence_packet_acks` row per frozen packet. The eight core rows are mandatory in every
   full run; all-scope runs also acknowledge the three supplemental packets. Each row is exactly
@@ -186,8 +202,9 @@ Use this contract when full runs through headless `analyze_symbol`:
   the terminal state `needs_verification`; the runtime must not run methods/debate/PM or write
   `complete`. A complete batch may legitimately find `partial`, `cannot_confirm`, contradiction,
   refutation, or an independently retrieved same-source rederivation: those become visible
-  `completed_with_findings` results and reduce or qualify the originating evidence seat instead
-  of being relabelled as a missing verifier.
+  `completed_with_findings` results. They require explicit PM correction/acknowledgement and may
+  support the one sourced downside notch under `pm_rating_rubric_v2`; they never create an
+  automatic vote, weight change or rating.
 - Every selected physical v3 seat gets an isolated explanation worker, including
   `out_of_scope`. Require `voice_mode=first_person_public_method_simulation_v1`, the exact
   disclosure ack, a stance-compatible `position_intent`, and all five strong first-person
@@ -337,7 +354,10 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
    - There is no silent default roster. At least one method or `all` is confirmed per run.
    - A master whose method cannot judge this name returns `stance: "out_of_scope"`. That is a conclusion, not an abstention, and it carries zero weight rather than being coerced into a view.
    - **The run is `incomplete` until every selected master has reported.** A bench nobody consulted is worse than no bench: the reader believes the verdict survived every lens when it survived none.
-   - Feed the masters' disagreements into the bull and bear prompts. Their disagreement is the point; a bench that agrees with the analysts has added nothing.
+   - Feed only primary, non-`out_of_scope` method judgments into Bull and Bear once. Supporting,
+     risk and context-only methods reach the PM once through the non-voting risk projection;
+     `out_of_scope` stays visible in the method bench but is excluded from PM rating inputs.
+     Never count raw stances, ratings or seats.
 5. **Mandatory triple verifier for `slow + all methods + all analysts`.** After all 11 packets
    are frozen, run `source_fidelity`, `rederivation`, and `refuter` independently over the exact
    same complete material-claim ledger. Record one claim-complete result from each via
@@ -347,7 +367,7 @@ Default to the full workflow. Do not downgrade to a lite/smoke/visible-only summ
      run `needs_verification` and blocks every method, debate, and PM write. It can never be
      published as `complete`. Allowed adverse or unresolved verdicts are findings, not missing
      execution: exact coverage becomes `completed_with_findings`, is shown in the report, and
-     down-weights the originating evidence seat.
+     requires an explicit correction or sourced PM risk adjustment without any automatic vote.
    - `rederivation` must not receive the original URLs; it searches independently. `refuter`
      records a concrete negative query for every claim. `source_fidelity` opens a cited URL and
      records an excerpt for every supported claim.
@@ -490,7 +510,7 @@ Build the frozen material-claim ledger from every non-low source-backed claim (o
 - `rederivation`: receive no original URLs, independently search and recompute every claim, and return one allowed verdict plus query, different URL, and derivation when confirmed or contradicted.
 - `refuter`: run at least one concrete disconfirming/newer-evidence query for every claim and return one allowed verdict with its search record.
 
-Record each complete result with `record_verifier_batch(run_id, verifier, packet)`. Each batch must contain every frozen `claim_id` exactly once; missing, duplicate, unexpected, or malformed coverage fails the audit. Allowed unresolved or adverse verdicts are preserved as `completed_with_findings`, visibly reduce the originating evidence seat's weight, and do not masquerade as a missing verifier. Do not mutate or re-dispatch the frozen analyst packets from this stage. Continue to method seats only after all three batches achieve exact coverage. If no verifier verdict is recorded, or if the exact expected count/coverage does not pass, call `finalize_visible_run`; the terminal status must be `needs_verification`, never `complete`. Verifiers also obey the leaf-worker rule.
+Record each complete result with `record_verifier_batch(run_id, verifier, packet)`. Each batch must contain every frozen `claim_id` exactly once; missing, duplicate, unexpected, or malformed coverage fails the audit. Allowed unresolved or adverse verdicts are preserved as `completed_with_findings`; they require explicit correction and may support a sourced one-notch downside adjustment, but never create an automatic vote, weight change or rating. Do not mutate or re-dispatch the frozen analyst packets from this stage. Continue to method seats only after all three batches achieve exact coverage. If no verifier verdict is recorded, or if the exact expected count/coverage does not pass, call `finalize_visible_run`; the terminal status must be `needs_verification`, never `complete`. Verifiers also obey the leaf-worker rule.
 
 ### Stage 2c - Selected master methods
 
@@ -561,6 +581,20 @@ Debate agents return:
   "report_markdown": "string"
 }
 ```
+
+When the frozen context is exactly `objective=directional_rating` and
+`holding_horizon=1_year`, the portfolio-manager packet must additionally return the complete
+`rating_basis` required by its refreshed prompt: `rubric_id=pm_rating_rubric_v2`,
+`horizon_months=12`, `return_formula_id=price_target_plus_income_v1`, the exact frozen
+`price_currency` and `reference_price`, numeric `base_case_price_target`, `income_return_pct`,
+`base_case_total_return_pct`, `raw_rating`,
+`risk_adjustment`, `final_rating`, `adjustment_reason`, non-empty frozen `source_ids`,
+`adjustment_source_ids`, and `adjustment_context_ids`. The server recomputes total return and the raw band and
+permits only a one-notch downgrade linked to a server-owned eligible cause context and its frozen
+sources; `out_of_scope` creates no eligible cause. Other objective/horizon pairs must not invent
+this 12-month rubric. A real calibrated run must have a positive frozen quote and currency before
+any seat launches; all `price_levels` rows use that same currency, and every hard verifier finding
+must be acknowledged exactly once on both headless and visible-host PM paths.
 
 ## Boundaries
 

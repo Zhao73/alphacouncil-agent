@@ -106,7 +106,8 @@ function evidencePacket(task) {
   return packet;
 }
 
-function methodVoicePacket(master, stance, dossier = null) {
+function methodVoicePacket(master, stance, dossier = null, sourceId = "market_data:S1") {
+  const sourceTask = sourceId.split(":", 1)[0];
   return {
     master,
     acknowledged_stance: stance,
@@ -128,11 +129,11 @@ function methodVoicePacket(master, stance, dossier = null) {
     key_findings: ["All eight evidence seats contributed to the frozen operating-company dossier."],
     disagreements: ["A deterministic decline is not a directional vote."],
     what_would_change_my_mind: ["A source-bound typed company fact could reopen the method gate."],
-    source_ids: ["market_data:S1"],
+    source_ids: [sourceId],
     confidence: "low",
     company_dossier_hash_ack: companyDossierHash,
-    evidence_packet_acks: (dossier?.packet_manifest || []).map((manifest) => manifest.task === "market_data"
-      ? { task: manifest.task, packet_hash: manifest.packet_hash, status: "used", source_ids: ["market_data:S1"], note: "This method used the market packet." }
+    evidence_packet_acks: (dossier?.packet_manifest || []).map((manifest) => manifest.task === sourceTask
+      ? { task: manifest.task, packet_hash: manifest.packet_hash, status: "used", source_ids: [sourceId], note: "This method used the cited packet." }
       : { task: manifest.task, packet_hash: manifest.packet_hash, status: "reviewed_not_relevant", source_ids: [], note: "This method reviewed the packet but did not use it." }),
   };
 }
@@ -234,11 +235,17 @@ test("each declined v3 seat completes only after its own first-person voice retu
     const frozen = beforeRecord.master_opinions.find((opinion) => opinion.master === master);
     assert.ok(frozen, `${master} must have a frozen deterministic record before voice generation`);
     const threadId = `thread-${master}`;
+    const voiceSourceId = index === 0 ? "news_industry_management:S2" : "market_data:S1";
     const recorded = structured(await server.callTool("record_master_opinion", {
       run_id: runId,
       master,
       thread_id: threadId,
-      packet: methodVoicePacket(master, frozen.stance, JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8"))),
+      packet: methodVoicePacket(
+        master,
+        frozen.stance,
+        JSON.parse(readFileSync(join(runDir, "company_dossier.json"), "utf8")),
+        voiceSourceId,
+      ),
     }));
     assert.equal(recorded.opinion.stance, "out_of_scope");
     assert.equal(recorded.opinion.voice_status, "model_voice");
@@ -248,7 +255,18 @@ test("each declined v3 seat completes only after its own first-person voice retu
     assert.equal(recorded.opinion.capability_status, frozen.capability_status);
     assert.equal(recorded.opinion.evidence_quality, frozen.evidence_quality);
     assert.deepEqual(recorded.opinion.evidence_quality_basis, frozen.evidence_quality_basis);
+    const frozenEvidenceSourceIds = Array.isArray(frozen.evidence_source_ids)
+      ? frozen.evidence_source_ids
+      : frozen.source_ids || [];
+    assert.deepEqual(recorded.opinion.voice_source_ids, [voiceSourceId]);
+    assert.ok(recorded.opinion.source_ids.includes(voiceSourceId));
+    assert.deepEqual(recorded.opinion.evidence_source_ids, frozenEvidenceSourceIds);
+    assert.equal(recorded.opinion.confidence, frozen.confidence);
     const persisted = JSON.parse(readFileSync(join(runDir, "evidence.json"), "utf8"));
+    const persistedOpinion = persisted.master_opinions.find((opinion) => opinion.master === master);
+    assert.deepEqual(persistedOpinion.voice_source_ids, [voiceSourceId]);
+    assert.deepEqual(persistedOpinion.evidence_source_ids, frozenEvidenceSourceIds);
+    assert.equal(persistedOpinion.confidence, frozen.confidence);
     assert.equal(persisted.master_status[master].status, "completed");
     assert.equal(persisted.master_status[master].voice_required, true);
     assert.equal(persisted.master_status[master].voice_status, "model_voice");

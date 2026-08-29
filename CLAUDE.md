@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.5.0`; verify npm/GitHub/installed-host state separately
+The declared package/plugin version is `1.6.0`; verify npm/GitHub/installed-host state separately
 before claiming which build is the current published default.
 The packaged tree contains 26 physical v3 packs and 52 executable method tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
@@ -107,12 +107,14 @@ No research, run directory or worker may start before that receipt exists. Data-
 - Run Bull and Bear in parallel within Round 1, wait for both, then repeat for Round 2 and
   Round 3. Preserve the exact Round-2-question to Round-3-answer binding. Start the PM only
   after both Round-3 sides pass.
-- Every selected method seat must return a real `model_voice` result for a full run. If even
-  one selected voice times out, fails transport or validation, returns empty, or falls back to
-  a dry-run/deterministic substitute, stop before Bull/Bear and PM. Name every absent seat in
-  `missing_masters`, persist the standard failure artifacts, and terminate `incomplete`. Only
-  explicit quick mode may continue with a disclosed near-complete bench; that never upgrades
-  the run to complete.
+- In plugin-managed headless full, a mute process-level voice failure after a sourced
+  deterministic stance has been frozen retains that result as `deterministic_fallback`. This is a
+  disclosed degradation, not a successful voice: downstream synthesis may continue, but the
+  terminal run is `degraded`, never `complete`. A global expiry can preserve the fallback yet
+  still terminates `incomplete` when no downstream budget remains. Contract, provenance,
+  language and action-intent failures remain hard failures that stop before Bull/Bear and PM.
+  Visible-host full remains stricter because the plugin cannot own the returned worker
+  lifecycle: every returned method worker must provide a real `model_voice` before debate.
 - On global expiry, stop new downstream work and persist a terminal fail-closed `incomplete`
   run naming every timed-out, failed and skipped role. The ceiling guarantees a terminal
   artifact, not that external search/model/data services will let all seats succeed.
@@ -264,7 +266,9 @@ stable master ID with frozen stance and isolated-worker explanation/status, and 
 system-owned price snapshot with currency/time/source or an explicit unavailable-data gap.
 Tell the user the terminal status, report contract, elapsed/deadline state and file locations.
 System-owned labels and failure text support `zh-CN`, `en`, `ja` and `ko`; propagate the
-request language to every worker. `degraded` is a real quick-only terminal state, never a
+request language to every worker. `degraded` is a real bounded terminal state: quick may use
+its minimum-coverage rule, and plugin-managed headless full may use it only for disclosed
+`deterministic_fallback` method voices after all structural stages complete. It is never a
 synonym for complete.
 
 Never hide missing data. If a source is unavailable, say so in `open_questions` and in the final report's data-gap section. If no critical data is missing, explicitly state that no critical data gaps were found.

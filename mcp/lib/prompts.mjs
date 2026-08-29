@@ -1,9 +1,8 @@
 import { join } from "node:path";
 import { isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
-import { compactDebateContext, compactEvidence, compactMasterOpinions, compactQuickEvidence, methodVoiceAllowedSourceIds } from "./packets.mjs";
+import { compactDebateContext, compactEvidence, compactMasterOpinions, compactMethodRiskContext, compactQuickEvidence, methodVoiceAllowedSourceIds, pmRatingAdjustmentContexts } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
-import { resolveSeatWeights, weightTableMarkdown } from "./weights.mjs";
 import { groundingBlock } from "./grounding.mjs";
 import { isFundOrIndex } from "./instruments.mjs";
 import { personaPrompt, personaTitle, registry, selectRoster } from "./personas/registry.mjs";
@@ -17,6 +16,11 @@ import {
 } from "./company-dossier.mjs";
 import { sourceAcquisitionPromptBlock } from "./company-source-acquisition.mjs";
 import { compactHardVerificationFindings } from "./verification.mjs";
+import {
+  PM_RATING_RETURN_FORMULA_ID,
+  pmRatingReferenceCurrency,
+  pmRatingReferencePrice,
+} from "./pm-rating-rubric.mjs";
 
 /**
  * Prompt text lives in personas/, not here.
@@ -225,6 +229,47 @@ export function hardVerificationPromptBlock(run, role, { structuredDecisionOnly 
   ].join("\n");
 }
 
+/**
+ * Bind every judgment worker to the objective and horizon frozen at selection time.
+ *
+ * This is decision framing, not investment evidence: it may shape which question a seat
+ * answers, but it never supplies a fact or a source ID. Keeping it outside compactEvidence
+ * also prevents callers from accidentally treating run metadata as a sourced company claim.
+ */
+function decisionContextPromptBlock(run) {
+  const context = run?.decision_context;
+  if (!context || typeof context !== "object") return "";
+  const payload = {
+    schema_version: context.schema_version ?? 1,
+    objective: context.objective,
+    holding_horizon: context.holding_horizon,
+    source: context.source ?? null,
+    rating_basis_required: context.rating_basis_required === true,
+    rating_rubric_id: context.rating_rubric_id ?? null,
+    rating_horizon_months: context.rating_horizon_months ?? null,
+  };
+  const directionalOneYear = payload.objective === "directional_rating"
+    && payload.holding_horizon === "1_year";
+  return localized(run.language || "English", {
+    zh: [
+      `冻结决策上下文 JSON：${JSON.stringify(payload)}`,
+      "所有方法判断、多空论证、估值口径、风险与最终综合都必须回答这个目标和持有期。该上下文不是投资证据，不能替代任何冻结来源 ID。",
+      directionalOneYear
+        ? "这是 1 年方向评级任务；最终组合经理评级适用 pm_rating_rubric_v2。上游角色只需按同一框架提供论证，只有组合经理返回 rating_basis。"
+        : "这不是 pm_rating_rubric_v2 的 1 年方向评级任务；不得套用该收益率档位。若输出合同仍要求顶层 rating，它只表示相对本轮目标与期限的总体投资立场，必须明确说明它不是 12 个月收益率档位评级。",
+    ].join("\n"),
+    en: [
+      `Frozen decision context JSON: ${JSON.stringify(payload)}`,
+      "Every method judgment, bull/bear case, valuation frame, risk assessment and final synthesis must answer this objective and holding horizon. This context is not investment evidence and cannot replace any frozen source ID.",
+      directionalOneYear
+        ? "The final portfolio-manager rating for this one-year directional task is governed by pm_rating_rubric_v2. Upstream roles frame their cases consistently; only the portfolio manager returns rating_basis."
+        : "This is not a pm_rating_rubric_v2 one-year directional-rating task; do not apply those return bands. If the output contract still requires a top-level rating, it is only an objective- and horizon-relative overall investment stance, and must be described explicitly as not a 12-month return-band rating.",
+    ].join("\n"),
+    ja: `凍結済み判断コンテキスト JSON：${JSON.stringify(payload)}\nすべての判断はこの目的と保有期間に合わせてください。これは投資証拠ではなく、凍結済み source ID の代わりにはなりません。${directionalOneYear ? "1年方向評価には、以下の pm_rating_rubric_v2 を適用します。" : "1年方向評価ではないため pm_rating_rubric_v2 の収益率区分を適用しません。必須の最上位 rating は、この目的と期間に対する総合姿勢に限ります。"}`,
+    ko: `동결된 결정 컨텍스트 JSON: ${JSON.stringify(payload)}\n모든 판단은 이 목표와 보유 기간에 맞춰야 합니다. 이는 투자 근거가 아니며 동결된 source ID를 대신할 수 없습니다. ${directionalOneYear ? "1년 방향 등급에는 아래 pm_rating_rubric_v2를 적용합니다." : "1년 방향 등급이 아니므로 pm_rating_rubric_v2 수익률 구간을 적용하지 않습니다. 필수 최상위 rating은 이 목표와 기간에 대한 종합적 투자 입장만 뜻합니다."}`,
+  });
+}
+
 export function debatePrompt(role, run, context = {}) {
   const quick = run.council_mode === "quick";
   const operatingDossierRequired = !quick && requiresOperatingCompanyDossier(run);
@@ -304,13 +349,13 @@ export function debatePrompt(role, run, context = {}) {
         ? [
           "最终输出改用 HEADLESS_STRUCTURED_PM_DECISION_V1。只返回紧凑的结构化决策 JSON；不要返回 `report_markdown`，也不要在任何 JSON 字符串里嵌入 Markdown 报告。服务端会从已冻结的证据、三轮辩论和本决策确定性渲染完整 full_v2 报告。",
           "保留 debate packet 的必需字段：verdict、rating、winner、summary、long_thesis、short_thesis、valuation_range、catalysts、risks、position、invalidation、source_ids、confidence。每个来源 ID 必须来自提供的已冻结证据。",
-          "另请返回：`price_levels`（3–8 项；每项含非空 label、range、lower_bound、upper_bound、currency、meaning、action、basis，以及至少一个 source_ids）。lower_bound/upper_bound 用数值，开放端用 null；全部档位按数值必须从下方开放端连续覆盖到上方开放端，不得留空档或重叠，因此像 120–160 没动作这样的区间会被拒绝。另含 `horizon_views`（short_term、medium_term、long_term 三个非空字符串）、`data_gaps`（至少一个非空字符串；若无关键缺口，明确写出未发现关键数据缺口）、`verification_findings_ack`（逐条处理三重验证硬结论）以及提示中要求的 `company_dossier_hash_ack`。`data_gaps` 只能写公司或投资证据缺口；提示内嵌的 Evidence JSON 就是完整冻结输入，不得把内部文件路径、文件系统可见性、工具权限或执行环境写成投资数据缺口。",
+          "另请返回：`price_levels`（3–8 项；每项含非空 label、range、lower_bound、upper_bound、currency、meaning、action、basis，以及至少一个 source_ids）。lower_bound/upper_bound 用数值，开放端用 null；全部档位按数值必须从下方开放端连续覆盖到上方开放端，不得留空档或重叠，因此像 120–160 没动作这样的区间会被拒绝。另含 `horizon_views`（short_term、medium_term、long_term 三个非空字符串）、`data_gaps`（至少一个非空字符串；若无关键缺口，明确写出未发现关键数据缺口）、`verification_findings_ack`（逐条处理三重验证硬结论）、下文要求时的 `rating_basis`，以及提示中要求的 `company_dossier_hash_ack`。`data_gaps` 只能写公司或投资证据缺口；提示内嵌的 Evidence JSON 就是完整冻结输入，不得把内部文件路径、文件系统可见性、工具权限或执行环境写成投资数据缺口。",
           "这是本 prompt 对输出形式的最后约束；前文要求撰写长报告的说明由服务端渲染器履行。只输出一个 JSON 对象。",
         ].join("\n")
         : [
           "Final output uses HEADLESS_STRUCTURED_PM_DECISION_V1. Return only compact structured-decision JSON. Do not return `report_markdown`, and do not embed a Markdown report inside any JSON string. The server deterministically renders the complete full_v2 report from the frozen evidence, three debate rounds, and this decision.",
           "Keep the required debate-packet fields: verdict, rating, winner, summary, long_thesis, short_thesis, valuation_range, catalysts, risks, position, invalidation, source_ids, and confidence. Every source ID must come from the supplied frozen evidence.",
-          "Also return `price_levels` (3-8 items, each with non-empty label, range, lower_bound, upper_bound, currency, meaning, action, basis, and at least one source_ids entry). Bounds are numbers with null only for an open end; the bands must continuously cover the price line from the open lower end to the open upper end with no gap or overlap, so an actionless interval such as 120-160 is rejected. Also return `horizon_views` (non-empty short_term, medium_term, and long_term strings), `data_gaps` (at least one non-empty string), `verification_findings_ack` (claim-by-claim handling of every hard triple-verification finding), and the prompt-required `company_dossier_hash_ack`. data_gaps may contain only company or investment-evidence gaps. The inline Evidence JSON is the complete frozen input; never list internal file paths, filesystem visibility, tool permissions, or the execution environment as an investment data gap.",
+          "Also return `price_levels` (3-8 items, each with non-empty label, range, lower_bound, upper_bound, currency, meaning, action, basis, and at least one source_ids entry). Bounds are numbers with null only for an open end; the bands must continuously cover the price line from the open lower end to the open upper end with no gap or overlap, so an actionless interval such as 120-160 is rejected. Also return `horizon_views` (non-empty short_term, medium_term, and long_term strings), `data_gaps` (at least one non-empty string), `verification_findings_ack` (claim-by-claim handling of every hard triple-verification finding), `rating_basis` when required below, and the prompt-required `company_dossier_hash_ack`. data_gaps may contain only company or investment-evidence gaps. The inline Evidence JSON is the complete frozen input; never list internal file paths, filesystem visibility, tool permissions, or the execution environment as an investment data gap.",
           "This is the final output-form instruction in the prompt; the server renderer satisfies earlier instructions to author a long report. Return exactly one JSON object.",
         ].join("\n"))
     : "";
@@ -320,6 +365,7 @@ export function debatePrompt(role, run, context = {}) {
     // separated by blank lines in the final prompt. Preserve that exactly.
     ...base.split("\n"),
     roleText,
+    decisionContextPromptBlock(run),
     dossierProjection
       ? companyDossierPromptBlock(run, { consumer: "decision_projection" })
       : planningDossierPlaceholder
@@ -339,21 +385,42 @@ export function debatePrompt(role, run, context = {}) {
     context.otherCaseR1 ? `Opponent prior-round case JSON: ${JSON.stringify(compactDebateContext(context.otherCaseR1))}` : "",
     context.questionsYouAsked ? `Your round 2 questions to preserve JSON: ${JSON.stringify(context.questionsYouAsked)}` : "",
     context.questionsForYou ? `Questions you must answer JSON: ${JSON.stringify(context.questionsForYou)}` : "",
-    // The masters ran before the debate; the bull and bear must argue with their
-    // disagreements rather than restate the evidence unopposed.
-    (run.master_opinions || []).length
-      ? `Master seat opinions JSON (read the disagreements; you must engage with them, not ignore them): ${JSON.stringify(compactMasterOpinions(run))}`
+    // Directional master results enter the synthesis chain once: methods -> Bull/Bear -> PM.
+    // The PM gets a non-voting risk projection below, never the raw stances again.
+    role !== "portfolio_manager" && compactMasterOpinions(run).length
+      ? [
+        "Master seat opinions JSON (read the disagreements; you must engage with them, not ignore them): "
+          + JSON.stringify(compactMasterOpinions(run)),
+        chinese
+          ? "此数组只包含 rating_contribution=primary 且非 out_of_scope 的方法结果；supporting、none 与 out_of_scope 已从方向通道移除，并通过单独的非投票风险通道最多影响 PM 一次。cautious 是未达到该方法行动门槛，不是负票；opposed 不自动等于 Sell。"
+          : "This array contains only rating_contribution=primary methods that are not out_of_scope. supporting, none and out_of_scope methods are removed from the directional path and may reach the PM at most once through a separate non-voting risk channel. cautious means the method's action threshold was not met, not a negative vote; opposed does not automatically mean Sell.",
+      ].join("\n")
       : "",
-    context.bull ? `Bull argument JSON: ${JSON.stringify(compactDebateContext(context.bull))}` : "",
-    context.bear ? `Bear argument JSON: ${JSON.stringify(compactDebateContext(context.bear))}` : "",
-    // The PM must reproduce the weighting rather than average the seats silently.
-    role === "portfolio_manager"
+    context.bull ? `Bull argument JSON: ${JSON.stringify(compactDebateContext(context.bull, { includeRating: role !== "portfolio_manager" }))}` : "",
+    context.bear ? `Bear argument JSON: ${JSON.stringify(compactDebateContext(context.bear, { includeRating: role !== "portfolio_manager" }))}` : "",
+    role === "portfolio_manager" && compactMethodRiskContext(run).length
       ? [
         chinese
-          ? "各席位权重如下。你的最终裁决必须按这个权重加权，并且必须在报告里原样复现这张表（含核验调整原因）。权重为 0 的席位（自述超出判断范围）不计入。若你的结论与高权重席位相反，必须明确说明为什么。"
-          : "Seat weights follow. Weight your verdict by them, and reproduce this table verbatim in the report, including the adjustment reasons. Seats at weight 0 declared themselves out of scope and do not count. If your conclusion opposes a high-weight seat, say explicitly why.",
-        weightTableMarkdown(resolveSeatWeights(run, run.seat_weight_overrides || {}), language),
-      ].filter(Boolean).join("\n\n")
+          ? "以下 method_risk_context 是去身份的非方向风险投影，不是投票、席位计数或评级。只能用来检查 veto、风险、失效条件和数据缺口；不得从中反推方法身份/立场或重复计算已经进入多空论证的方向影响。rating_adjustment_eligible=false 的条目只能影响完整性、置信度、数据缺口和重新开放条件，绝不能改变评级或触发风险下调。"
+          : "The method_risk_context below is an identity-neutral, non-directional risk projection, not votes, a seat count, or ratings. Use it only for vetoes, risks, invalidation conditions and data gaps; never infer method identity/stance from it or count directional influence already carried by Bull/Bear. An entry with rating_adjustment_eligible=false may affect only completeness, confidence, data gaps and reopen conditions; it must never change the rating or trigger a risk downgrade.",
+        `method_risk_context JSON: ${JSON.stringify(compactMethodRiskContext(run))}`,
+      ].join("\n")
+      : "",
+    role === "portfolio_manager" && run?.decision_context?.rating_basis_required === true
+      ? localized(language, {
+        zh: [
+          `本轮最终评级必须使用 \`pm_rating_rubric_v2\`。冻结参考价是 ${JSON.stringify(pmRatingReferencePrice(run))} ${JSON.stringify(pmRatingReferenceCurrency(run))}；只能使用 \`${PM_RATING_RETURN_FORMULA_ID}\`，按 ((同币种 12 个月基准情景目标价 / 冻结参考价) - 1) * 100 + 12 个月收益回报百分比，由服务端重算基准情景总回报。Buy >= +20%；Overweight >= +10% 且 < +20%；Hold > -10% 且 < +10%；Underweight > -20% 且 <= -10%；Sell <= -20%。边界精确归属：+20=Buy、+10=Overweight、-10=Underweight、-20=Sell。Sell 表示退出长仓，不自动表示做空。Hold 表示不新增资本，不是拒绝研究。`,
+          `服务端允许的风险调整因果上下文 JSON：${JSON.stringify(pmRatingAdjustmentContexts(run))}`,
+          "必须返回 `rating_basis`：rubric_id=`pm_rating_rubric_v2`、horizon_months=12、return_formula_id=`price_target_plus_income_v1`、price_currency 和 reference_price（两者必须等于上述冻结值）、base_case_price_target、income_return_pct、base_case_total_return_pct、raw_rating、risk_adjustment（none 或 downgrade_one_notch）、final_rating、adjustment_reason、source_ids（至少一个冻结来源 ID）、adjustment_source_ids 和 adjustment_context_ids。服务端重算总回报与 raw_rating；顶层 rating 必须等于 final_rating。只允许因上述服务端上下文中的下行非对称、证据质量、硬 veto 或硬核验发现下调恰好一档；不得上调或跨两档下调。无调整时 adjustment_reason 必须为 null，两个 adjustment 数组必须为空；下调时必须引用至少一个允许的 context_id，且每个调整来源都必须同时在 source_ids 与所引用上下文内。上下文数组为空时不得下调。",
+        ].join("\n"),
+        en: [
+          `This run must use \`pm_rating_rubric_v2\`. The frozen reference price is ${JSON.stringify(pmRatingReferencePrice(run))} ${JSON.stringify(pmRatingReferenceCurrency(run))}. Use only \`${PM_RATING_RETURN_FORMULA_ID}\`: ((same-currency 12-month base-case price target / frozen reference price) - 1) * 100 + 12-month income return percentage. The server recomputes total return. Buy >= +20%; Overweight >= +10% and < +20%; Hold > -10% and < +10%; Underweight > -20% and <= -10%; Sell <= -20%. Exact boundaries are +20=Buy, +10=Overweight, -10=Underweight, and -20=Sell. Sell means exit a long position, not an automatic short. Hold means no new capital, not refusal to research.`,
+          `Server-eligible rating-adjustment contexts JSON: ${JSON.stringify(pmRatingAdjustmentContexts(run))}`,
+          "Return `rating_basis` with rubric_id=`pm_rating_rubric_v2`, horizon_months=12, return_formula_id=`price_target_plus_income_v1`, price_currency and reference_price exactly equal to the frozen values above, numeric base_case_price_target, income_return_pct, base_case_total_return_pct, raw_rating, risk_adjustment (`none` or `downgrade_one_notch`), final_rating, adjustment_reason, at least one frozen source ID in source_ids, adjustment_source_ids, and adjustment_context_ids. The server recomputes total return and raw_rating, and top-level rating must equal final_rating. Only a downside asymmetry, evidence-quality limit, hard veto, or hard verification finding in the server-owned context list may downgrade exactly one notch; upgrades and multi-notch downgrades are forbidden. With no adjustment, adjustment_reason must be null and both adjustment arrays must be empty. A downgrade must cite at least one eligible context_id, and every adjustment source must appear both in source_ids and in a cited context. An empty context list forbids a downgrade.",
+        ].join("\n"),
+        ja: `\`pm_rating_rubric_v2\` を使用してください。凍結基準価格は ${JSON.stringify(pmRatingReferencePrice(run))} ${JSON.stringify(pmRatingReferenceCurrency(run))} です。\`${PM_RATING_RETURN_FORMULA_ID}\` と price_currency、reference_price、base_case_price_target、income_return_pct、base_case_total_return_pct を返し、サーバーが同一通貨の総収益率と評価帯を再計算します。Buy は +20%以上、Overweight は +10%以上+20%未満、Hold は -10%超+10%未満、Underweight は -20%超-10%以下、Sell は -20%以下です。サーバー許可済み調整コンテキスト JSON：${JSON.stringify(pmRatingAdjustmentContexts(run))}。\`rating_basis\` には rubric_id、horizon_months、return_formula_id、price_currency、reference_price、base_case_price_target、income_return_pct、base_case_total_return_pct、raw_rating、risk_adjustment、final_rating、adjustment_reason、source_ids、adjustment_source_ids、adjustment_context_ids をすべて含めてください。price_currency と reference_price は凍結値に一致し、price_levels も同じ通貨を使い、最上位 rating は final_rating と一致しなければなりません。調整なしでは adjustment_reason は null、両 adjustment 配列は空です。引き下げは許可済み context_id とその出典を引用した一段階だけで、引き上げ・二段階以上の引き下げ・空のコンテキストからの引き下げは禁止です。`,
+        ko: `\`pm_rating_rubric_v2\`를 사용하십시오. 동결 기준가격은 ${JSON.stringify(pmRatingReferencePrice(run))} ${JSON.stringify(pmRatingReferenceCurrency(run))}입니다. \`${PM_RATING_RETURN_FORMULA_ID}\`, price_currency, reference_price, base_case_price_target, income_return_pct, base_case_total_return_pct를 반환하면 서버가 동일 통화 총수익률과 등급 구간을 다시 계산합니다. Buy는 +20% 이상, Overweight는 +10% 이상 +20% 미만, Hold는 -10% 초과 +10% 미만, Underweight는 -20% 초과 -10% 이하, Sell은 -20% 이하입니다. 서버 허용 조정 컨텍스트 JSON: ${JSON.stringify(pmRatingAdjustmentContexts(run))}. \`rating_basis\`에는 rubric_id, horizon_months, return_formula_id, price_currency, reference_price, base_case_price_target, income_return_pct, base_case_total_return_pct, raw_rating, risk_adjustment, final_rating, adjustment_reason, source_ids, adjustment_source_ids, adjustment_context_ids를 모두 포함하십시오. price_currency와 reference_price는 동결값과 같아야 하고 price_levels도 같은 통화를 사용해야 하며 최상위 rating은 final_rating과 일치해야 합니다. 조정이 없으면 adjustment_reason은 null이고 두 adjustment 배열은 비어 있어야 합니다. 하향은 허용된 context_id와 그 출처를 인용한 정확히 한 단계만 가능하며, 상향·두 단계 이상 하향·빈 컨텍스트에서의 하향은 금지됩니다.`,
+      })
       : "",
     role === "portfolio_manager" && !quick ? outputModeInstruction(context.outputMode || "chat", language) : "",
     // The tier's shaping is the final word on form. Quick has its own shaping already.
@@ -398,6 +465,7 @@ export function masterPrompt(masterId, run) {
     render(personaPrompt(reg.get("_master_base"), language), values),
     `Master: ${personaTitle(persona, language)} (${persona.id})`,
     render(personaPrompt(persona, language), values),
+    decisionContextPromptBlock(run),
     `Walk-away conditions you must check explicitly: ${(persona.disqualifiers || []).join(" | ")}`,
     companyDossierPromptBlock(run),
     grounded,
@@ -504,6 +572,7 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
     "This is a first-person simulation of a project-derived provisional public-method lens, not the named person's identity, current statement, endorsement, quotation, holding, or private information.",
     "The structured method decision below is already frozen. You MUST NOT change, soften, strengthen or reinterpret its stance. Explain why that frozen result follows, identify the highest-information facts or missing facts, state any disagreement with analyst interpretation, and say what evidence would change the method result. Do not browse or add facts.",
     "Scoring and hard vetoes are independent decision branches. When `decision_reason` is `veto`, say that the named veto independently overrides the score; never say that the score triggered the veto. When it is not `veto`, do not invent a veto.",
+    decisionContextPromptBlock(run),
     `Frozen method result JSON: ${JSON.stringify({
       master: masterId,
       stance: frozenOpinion?.stance,

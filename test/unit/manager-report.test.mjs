@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 import { renderStructuredManagerReport } from "../../mcp/lib/manager-report.mjs";
 import { assertRuntimeWorkerPayload, RUNTIME_WORKER_SCHEMA_IDS } from "../../mcp/lib/runtime-validation.mjs";
-import { resolveSeatWeights, weightTableMarkdown } from "../../mcp/lib/weights.mjs";
 
 function structuredDecision() {
   return {
@@ -20,6 +19,23 @@ function structuredDecision() {
     invalidation: ["Exit if the verified milestones fail."],
     source_ids: ["market_data:S1"],
     confidence: "medium",
+    rating_basis: {
+      rubric_id: "pm_rating_rubric_v2",
+      horizon_months: 12,
+      return_formula_id: "price_target_plus_income_v1",
+      price_currency: "USD",
+      reference_price: 100,
+      base_case_price_target: 100,
+      income_return_pct: 0,
+      base_case_total_return_pct: 0,
+      raw_rating: "Hold",
+      risk_adjustment: "none",
+      final_rating: "Hold",
+      adjustment_reason: null,
+      source_ids: ["market_data:S1"],
+      adjustment_source_ids: [],
+      adjustment_context_ids: [],
+    },
     price_levels: [
       {
         label: "Do not touch",
@@ -128,7 +144,7 @@ for (const [name, mutate] of invalidStructuredDecisions) {
   });
 }
 
-test("deterministic report keeps every price-row source ID and the exact resolved weight audit", () => {
+test("deterministic report keeps every price-row source ID and exposes the machine-checked rating basis", () => {
   const run = reportRun();
   const decision = structuredDecision();
   const report = renderStructuredManagerReport(run, decision);
@@ -143,11 +159,34 @@ test("deterministic report keeps every price-row source ID and the exact resolve
     );
   }
 
-  const resolved = resolveSeatWeights(run, run.seat_weight_overrides);
-  const expectedTable = weightTableMarkdown(resolved, run.language);
-  assert.ok(report.includes(`## Resolved Seat-Weight Audit\n${expectedTable}`));
-  assert.match(expectedTable, /market_data.*contradicted/u);
-  assert.match(expectedTable, /master_buffett.*2 \(override\)/u);
+  assert.match(report, /12-month rating rubric: pm_rating_rubric_v2/u);
+  assert.match(report, /Return formula: price_target_plus_income_v1/u);
+  assert.match(report, /Frozen reference price: 100 USD/u);
+  assert.match(report, /12-month base-case price target: 100 USD/u);
+  assert.match(report, /12-month income return: 0%/u);
+  assert.match(report, /12-month base-case total return: 0%/u);
+  assert.match(report, /Raw return-band rating: Hold/u);
+  assert.match(report, /Rating-basis sources: `market_data:S1`/u);
+  assert.match(report, /Risk adjustment: none/u);
+  assert.doesNotMatch(report, /Risk adjustment: none\s+—/u);
+  assert.doesNotMatch(report, /Resolved Seat-Weight Audit/u);
+});
+
+test("source table includes grounding evidence that may legally support the rating basis", () => {
+  const run = reportRun();
+  run.grounding = {
+    typed_fact_sources: [{
+      id: "grounding:reference_price",
+      title: "Frozen reference price",
+      published_at: "2026-08-29",
+      url: "https://example.com/reference-price",
+    }],
+  };
+  const decision = structuredDecision();
+  decision.source_ids = ["grounding:reference_price"];
+  decision.rating_basis.source_ids = ["grounding:reference_price"];
+  const report = renderStructuredManagerReport(run, decision);
+  assert.match(report, /\| grounding:reference_price \| Frozen reference price \|/u);
 });
 
 test("deterministic report exposes hard verifier findings and the PM disposition", () => {
