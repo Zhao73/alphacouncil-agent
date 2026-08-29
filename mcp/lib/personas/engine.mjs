@@ -10,8 +10,12 @@
 import { compiledPersonaPacks } from "../personas-v3/registry.mjs";
 import { buildFactPack } from "../personas-v3/typed-facts.mjs";
 import { adaptGroundingToTypedFacts } from "../personas-v3/grounding-adapter.mjs";
-import { buildAnonymousPreDecision, freezeAnonymousDecision, technicalIdReadableMap } from "../personas-v3/runtime.mjs";
-import { executeDeterministicPersonaPolicy } from "../personas-v3/deterministic-executor.mjs";
+import {
+  buildAnonymousPreDecision,
+  executeDeterministicPersonaPolicy,
+  freezeAnonymousDecision,
+  technicalIdReadableMap,
+} from "../personas-v3/runtime.mjs";
 import { languageKey, localized } from "../lang.mjs";
 import { displayMasterLabel } from "../markdown.mjs";
 import { factsInCondition, voiceFromDecision, voiceFromDecline } from "../voice-from-decision.mjs";
@@ -146,7 +150,8 @@ function planV3Seat(run, id, pack) {
     // without such a veto reaches the same clean abstention it always did -- reporting that as
     // a blocked policy would turn "there was nothing to compute with" into "the system
     // failed", which is the confusion this whole pass exists to remove.
-    if (preDecision?.eligibility?.status === "insufficient_grounding" && error?.code === "MISSING_TOOL_INPUT") {
+    if (preDecision?.eligibility?.status === "insufficient_grounding"
+      && ["INSUFFICIENT_GROUNDING", "MISSING_TOOL_INPUT"].includes(error?.code)) {
       const frozenDecision = freezeAnonymousDecision(preDecision);
       return {
         id,

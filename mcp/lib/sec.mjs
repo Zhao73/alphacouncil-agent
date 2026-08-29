@@ -429,8 +429,8 @@ const spanDays = (entry) =>
 /**
  * Is this entry an annual figure?
  *
- * A 10-K carries quarterly and stub periods alongside the annual ones. Keying only on the
- * end date treated each as its own year: Lumentum's 2015 produced ten "years" from one
+ * An annual filing carries quarterly and stub periods alongside the annual ones. Keying only
+ * on the end date treated each as its own year: Lumentum's 2015 produced ten "years" from one
  * fiscal year -- nine quarters and stubs plus the real 363-day period. Every multi-year rule
  * then averaged quarterly income against annual equity, silently.
  *
@@ -438,6 +438,18 @@ const spanDays = (entry) =>
  */
 const ANNUAL_MIN_DAYS = 300;
 const ANNUAL_MAX_DAYS = 400;
+// Company Facts uses the filing form, not the issuer's domicile, to distinguish annual
+// observations. Foreign private issuers normally report annually on 20-F, while eligible
+// Canadian issuers may use 40-F. Amendments remain annual evidence and the latest filing for
+// a fiscal year wins below. Current reports such as 6-K are deliberately excluded.
+const ANNUAL_REPORT_FORMS = new Set([
+  "10-K",
+  "10-K/A",
+  "20-F",
+  "20-F/A",
+  "40-F",
+  "40-F/A",
+]);
 const isAnnual = (entry) => {
   const days = spanDays(entry);
   // Instant facts have no duration: shares outstanding, equity, total assets.
@@ -460,7 +472,12 @@ const fiscalYear = (entry) => Number(String(entry.end).slice(0, 4));
  * Aliases are ordered by preference, so an earlier alias wins where both cover a year.
  */
 export function annualSeries(facts, tags, { asOf = null, unit = "USD" } = {}) {
-  const cutoff = asOf ? new Date(asOf).getTime() : null;
+  const cutoff = asOf === null || asOf === undefined
+    ? null
+    : Date.parse(String(asOf));
+  if (cutoff !== null && !Number.isFinite(cutoff)) {
+    throw invalidParams(`annualSeries asOf is not a date: ${JSON.stringify(asOf)}`);
+  }
   const byYear = new Map();
   let usedTags = [];
 
@@ -470,10 +487,15 @@ export function annualSeries(facts, tags, { asOf = null, unit = "USD" } = {}) {
     let contributed = false;
 
     for (const entry of entries) {
-      if (entry.form !== "10-K" || !entry.end || !Number.isFinite(entry.val)) continue;
+      const endAt = Date.parse(String(entry.end || ""));
+      const filedAt = Date.parse(String(entry.filed || ""));
+      if (!ANNUAL_REPORT_FORMS.has(entry.form)
+        || !Number.isFinite(endAt)
+        || !Number.isFinite(filedAt)
+        || !Number.isFinite(entry.val)) continue;
       if (!isAnnual(entry)) continue;
       // Look-ahead guard: a filing is only usable once it was actually filed.
-      if (cutoff && new Date(entry.filed).getTime() > cutoff) continue;
+      if (cutoff !== null && filedAt > cutoff) continue;
 
       const year = fiscalYear(entry);
       const prior = byYear.get(year);

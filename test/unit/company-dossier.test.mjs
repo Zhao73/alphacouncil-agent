@@ -15,6 +15,7 @@ import {
   companyDossierPromptBlock,
   companyDossierCoverageStatus,
   expectedCoverageItems,
+  reconcileCompanyDossierPacketAckDisposition,
   requiresOperatingCompanyDossier,
 } from "../../mcp/lib/company-dossier.mjs";
 import { buildMethodVoiceHeadlessOutputSchema } from "../../mcp/lib/orchestrator.mjs";
@@ -338,6 +339,55 @@ test("method source scope and packet acknowledgements reject sources omitted fro
           problem.task === "market_data"
           && problem.reason === "top_level_source_conflicts_with_packet_disposition"
         )),
+    );
+
+    const reconciled = reconcileCompanyDossierPacketAckDisposition(
+      dispositionConflict,
+      run,
+      "disposition conflict fixture",
+    );
+    assert.equal(
+      dispositionConflict.evidence_packet_acks.find((ack) => ack.task === "market_data").status,
+      "reviewed_not_relevant",
+      "the worker packet must remain an immutable audit input");
+    assert.deepEqual(reconciled.reconciliations, [{
+      task: "market_data",
+      from_status: "reviewed_not_relevant",
+      to_status: "used",
+      source_ids: ["market_data:S1"],
+    }]);
+    const reconciledMarketAck = reconciled.packet.evidence_packet_acks
+      .find((ack) => ack.task === "market_data");
+    assert.deepEqual(reconciledMarketAck, {
+      ...ackRows.find((ack) => ack.task === "market_data"),
+      status: "used",
+      source_ids: ["market_data:S1"],
+      note: "This packet's source was used in the top-level citations; the server deterministically aligned the redundant acknowledgement fields.",
+    });
+    assert.deepEqual(
+      reconciled.packet.evidence_packet_acks.filter((ack) => ack.task !== "market_data"),
+      dispositionConflict.evidence_packet_acks.filter((ack) => ack.task !== "market_data"),
+      "every non-target acknowledgement must remain unchanged",
+    );
+    assert.deepEqual(reconciled.packet.source_ids, dispositionConflict.source_ids,
+      "top-level citations must not be widened by reconciliation");
+    assert.equal(reconciled.packet_acks.length, DEFAULT_TASKS.length);
+
+    const unavailableConflict = {
+      source_ids: ["market_data:S1"],
+      evidence_packet_acks: ackRows.map((row) => row.task === "market_data"
+        ? { ...row, status: "unavailable", note: "This packet was declared unavailable." }
+        : row),
+    };
+    assert.throws(
+      () => reconcileCompanyDossierPacketAckDisposition(
+        unavailableConflict,
+        run,
+        "unavailable conflict fixture",
+      ),
+      (error) => error?.data?.reason === "COMPANY_DOSSIER_PACKET_ACK_MISMATCH"
+        && error.data.problems.some((problem) => problem.reason === "unavailable_but_packet_has_usable_evidence"),
+      "unavailable or mixed acknowledgement failures must remain fail-closed",
     );
   } finally {
     rmSync(frozen.dir, { recursive: true, force: true });

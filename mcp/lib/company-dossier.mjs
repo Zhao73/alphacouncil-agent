@@ -1198,3 +1198,63 @@ export function assertCompanyDossierPacketAcks(packet, run, label, { client = fa
     ? invalidParams(`${label} did not acknowledge every frozen evidence packet`, data)
     : internalError(`${label} did not acknowledge every frozen evidence packet`, data));
 }
+
+/**
+ * Reconcile the one mechanically provable method-voice acknowledgement drift.
+ *
+ * A top-level source ID is the worker's declaration that it used that packet's evidence. If
+ * the same worker labels only that packet `reviewed_not_relevant`, the two redundant fields
+ * disagree even though the evidence choice itself is unambiguous. Repair only that exact
+ * contradiction from the already-cited packet-local IDs, then run the complete validator
+ * again. Every other acknowledgement, source, fact, stance, and prose field remains byte-for-
+ * byte equivalent at the JSON value level; mixed or ambiguous failures still fail closed.
+ */
+export function reconcileCompanyDossierPacketAckDisposition(packet, run, label) {
+  try {
+    return {
+      packet,
+      packet_acks: assertCompanyDossierPacketAcks(packet, run, label),
+      reconciliations: [],
+    };
+  } catch (error) {
+    const problems = Array.isArray(error?.data?.problems) ? error.data.problems : [];
+    const repairable = error?.data?.reason === "COMPANY_DOSSIER_PACKET_ACK_MISMATCH"
+      && problems.length > 0
+      && problems.every((problem) => (
+        problem?.reason === "top_level_source_conflicts_with_packet_disposition"
+        && problem?.status === "reviewed_not_relevant"
+        && typeof problem?.task === "string"
+        && Array.isArray(problem?.source_ids)
+        && problem.source_ids.length > 0
+        && problem.source_ids.every((sourceId) => typeof sourceId === "string" && sourceId)
+      ));
+    if (!repairable) throw error;
+
+    const repaired = jsonClone(packet);
+    const byTask = new Map((repaired.evidence_packet_acks || []).map((ack) => [ack?.task, ack]));
+    for (const problem of problems) {
+      const acknowledgement = byTask.get(problem.task);
+      if (!acknowledgement || acknowledgement.status !== "reviewed_not_relevant"
+        || (acknowledgement.source_ids || []).length !== 0) throw error;
+      acknowledgement.status = "used";
+      acknowledgement.source_ids = [...new Set(problem.source_ids)];
+      acknowledgement.note = localized(run.language, {
+        zh: "该包来源已用于顶层引用；服务器已确定性对齐这组重复回执字段。",
+        en: "This packet's source was used in the top-level citations; the server deterministically aligned the redundant acknowledgement fields.",
+        ja: "このパケットの情報源はトップレベルの引用で使用されており、サーバーが重複する確認フィールドを決定論的に整合させました。",
+        ko: "이 패킷의 출처는 최상위 인용에 사용되었으며 서버가 중복 확인 필드를 결정론적으로 정렬했습니다.",
+      });
+    }
+
+    return {
+      packet: repaired,
+      packet_acks: assertCompanyDossierPacketAcks(repaired, run, label),
+      reconciliations: problems.map((problem) => ({
+        task: problem.task,
+        from_status: "reviewed_not_relevant",
+        to_status: "used",
+        source_ids: [...new Set(problem.source_ids)],
+      })),
+    };
+  }
+}

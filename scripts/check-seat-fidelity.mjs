@@ -10,7 +10,7 @@ import { renderMasterMarkdown } from "../mcp/lib/markdown.mjs";
 import { normalizeMasterVoice } from "../mcp/lib/packets.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats } from "../mcp/lib/personas/engine.mjs";
 import { canonicalValue, sha256 } from "../mcp/lib/personas-v3/canonical.mjs";
-import { executeDeterministicPersonaPolicy } from "../mcp/lib/personas-v3/deterministic-executor.mjs";
+import { executeDeterministicPersonaPolicy } from "../mcp/lib/personas-v3/runtime.mjs";
 import { loadFactProducerCatalog } from "../mcp/lib/personas-v3/fact-producer-catalog.mjs";
 import { loadCompiledPersonaPacks } from "../mcp/lib/personas-v3/registry.mjs";
 import { buildAnonymousPreDecision, technicalIdReadableMap } from "../mcp/lib/personas-v3/runtime.mjs";

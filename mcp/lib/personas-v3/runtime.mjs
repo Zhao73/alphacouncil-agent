@@ -7,6 +7,7 @@
  */
 
 import { canonicalValue, sha256 } from "./canonical.mjs";
+import { executeDeterministicPolicyResult } from "./deterministic-executor.mjs";
 import { deterministicToolSchemaHashes } from "./tool-schema-hashes.mjs";
 import { validateTypedFact } from "./typed-facts.mjs";
 
@@ -373,6 +374,9 @@ function deterministicCorePayload(preDecision) {
 
 function expectedExecutionGate(eligibility) {
   return {
+    // The generic callback layer receives only fully grounded inputs. A partially grounded
+    // seat may still run the separately verified deterministic policy executor, but it may not
+    // substitute an arbitrary callback result for that authored policy.
     anonymous_decision_allowed: eligibility.status === "ready",
     narrative_layer_allowed: false,
     late_voice_allowed: false,
@@ -498,17 +502,20 @@ function frozenHashPayload(frozenDecision) {
   };
 }
 
-/** Freeze a structured decision. Ineligible inputs accept no externally supplied decision. */
-export function freezeAnonymousDecision(preDecision, structuredDecision = null) {
+function freezeAnonymousDecisionInternal(preDecision, structuredDecision = null, {
+  allowPartialDeterministicPolicy = false,
+} = {}) {
   verifyAnonymousPreDecision(preDecision);
-  const eligible = preDecision.eligibility.status === "ready";
-  if (!eligible && structuredDecision !== null && structuredDecision !== undefined) {
+  const decisionAllowed = preDecision.eligibility.status === "ready"
+    || (allowPartialDeterministicPolicy
+      && preDecision.eligibility.status === "insufficient_grounding");
+  if (!decisionAllowed && structuredDecision !== null && structuredDecision !== undefined) {
     fail("an ineligible pre-decision cannot accept a decision-layer result");
   }
-  if (eligible && !isObject(structuredDecision)) {
+  if (decisionAllowed && !isObject(structuredDecision)) {
     fail("an eligible pre-decision requires a structured decision object");
   }
-  const decisionResult = eligible
+  const decisionResult = decisionAllowed
     ? canonicalCopy(structuredDecision, "structuredDecision")
     : deterministicRefusal(preDecision);
   const forbiddenPath = findForbiddenKey(decisionResult, PRE_FREEZE_PROSE_KEYS);
@@ -516,7 +523,7 @@ export function freezeAnonymousDecision(preDecision, structuredDecision = null) 
   const structured = canonicalCopy({
     schema_version: 1,
     native_decision_schema: preDecision.native_decision_schema,
-    status: eligible ? "decided" : preDecision.eligibility.status,
+    status: decisionAllowed ? "decided" : preDecision.eligibility.status,
     result: decisionResult,
   }, "structured decision envelope");
   const draft = {
@@ -535,6 +542,80 @@ export function freezeAnonymousDecision(preDecision, structuredDecision = null) 
     ...draft,
     frozen_decision_hash: sha256(frozenHashPayload(draft)),
   }, "frozen decision"));
+}
+
+/** Freeze a generic anonymous decision. Ineligible or partial inputs accept no callback result. */
+export function freezeAnonymousDecision(preDecision, structuredDecision = null) {
+  return freezeAnonymousDecisionInternal(preDecision, structuredDecision);
+}
+
+function assertPartialDeterministicPolicyResult(preDecision, result) {
+  if (preDecision.eligibility.status !== "insufficient_grounding") return;
+  const policy = preDecision.anonymous_method_contract?.decision_policy;
+  const reasonCode = Array.isArray(result?.reason_codes) && result.reason_codes.length === 1
+    ? result.reason_codes[0]
+    : null;
+  let mapping = null;
+  if (result?.reason === "veto" && reasonCode) {
+    const authored = (policy?.hard_vetoes || []).find((record) => record.veto_id === reasonCode);
+    const evaluation = (result?.vetoes_evaluated || []).find((record) => (
+      record.veto_id === reasonCode && record.computable === true && record.value === true
+    ));
+    const triggered = (result?.vetoes_triggered || []).some((record) => (
+      record.veto_id === reasonCode && record.computable === true && record.value === true
+    ));
+    if (authored && evaluation && triggered) mapping = authored.on_trigger;
+  } else if (result?.reason === "eligibility" && reasonCode) {
+    const authored = (policy?.eligibility?.all || [])
+      .find((record) => record.condition_id === reasonCode);
+    const evaluation = (result?.eligibility?.checks || []).find((record) => (
+      record.condition_id === reasonCode && record.computable === true && record.value === false
+    ));
+    if (authored && evaluation) mapping = authored.on_false;
+  }
+  if (!mapping) {
+    fail("partial deterministic policy result is not a fully computable eligibility rejection or hard veto");
+  }
+  if (result.outcome !== mapping.common_stance
+    || result.stance !== mapping.common_stance
+    || result.common_projection?.stance !== mapping.common_stance
+    || result.native_decision?.state !== mapping.native_state) {
+    fail("partial deterministic policy result contradicts its authored decision mapping");
+  }
+}
+
+/**
+ * Freeze the hash-bound output of the deterministic policy interpreter for a partial seat.
+ * The dedicated path prevents a generic callback from using partial evidence to manufacture
+ * a stance while still allowing an authored, fully deterministic eligibility/veto result.
+ */
+function freezeDeterministicPolicyDecision(preDecision, structuredDecision) {
+  verifyAnonymousPreDecision(preDecision);
+  if (!isObject(structuredDecision)) fail("deterministic policy execution requires a structured result");
+  const canonical = canonicalCopy(structuredDecision, "structuredDecision");
+  const { policy_execution_hash: actualHash, ...resultWithoutHash } = canonical;
+  requireHash(actualHash, "structuredDecision.policy_execution_hash");
+  const expectedHash = sha256({
+    deterministic_core_hash: preDecision.deterministic_core_hash,
+    result: resultWithoutHash,
+  });
+  if (actualHash !== expectedHash) fail("structuredDecision policy_execution_hash is invalid");
+  assertPartialDeterministicPolicyResult(preDecision, canonical);
+  return freezeAnonymousDecisionInternal(preDecision, canonical, {
+    allowPartialDeterministicPolicy: true,
+  });
+}
+
+/** Execute and freeze the only admitted deterministic policy path for partial typed facts. */
+export function executeDeterministicPersonaPolicy(preDecision) {
+  const structuredDecision = executeDeterministicPolicyResult(preDecision);
+  const frozenDecision = freezeDeterministicPolicyDecision(preDecision, structuredDecision);
+  return deepFreeze(canonicalValue({
+    decision_layer_called: true,
+    executor: "persona_v3_deterministic_dsl_v1_1",
+    policy_execution_hash: structuredDecision.policy_execution_hash,
+    frozen_decision: frozenDecision,
+  }));
 }
 
 export function assertFrozenDecisionIntegrity(frozenDecision) {
@@ -557,16 +638,13 @@ export function assertFrozenDecisionIntegrity(frozenDecision) {
 }
 
 /**
- * Dispatch a decision the seat can still reach.
- *
- * `out_of_scope` -- none of the required facts present -- never calls the layer, because there
- * is no method left to run. `insufficient_grounding` does: the policy's own vetoes and
- * `on_missing` rules are how a method states what an absent input means, and refusing to
- * execute them reported the runtime's own gate instead of the method's answer.
+ * Dispatch the generic anonymous decision callback only for a fully grounded seat.
+ * Partially grounded authored policies use the dedicated deterministic interpreter instead;
+ * that path verifies its execution hash before freezing and cannot be replaced by this callback.
  */
 export async function runAnonymousDecisionLayer(preDecision, decisionLayer) {
   verifyAnonymousPreDecision(preDecision);
-  if (preDecision.eligibility.status === "out_of_scope") {
+  if (!preDecision.execution_gate.anonymous_decision_allowed) {
     return deepFreeze({
       decision_layer_called: false,
       frozen_decision: freezeAnonymousDecision(preDecision),

@@ -15,7 +15,7 @@ import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path
 import { fileURLToPath } from "node:url";
 
 import { canonicalValue, sha256 } from "../../mcp/lib/personas-v3/canonical.mjs";
-import { executeDeterministicPersonaPolicy } from "../../mcp/lib/personas-v3/deterministic-executor.mjs";
+import { executeDeterministicPersonaPolicy } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { loadCompiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
 import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";

@@ -16,7 +16,7 @@
  */
 
 import { localized } from "./lang.mjs";
-import { defaultIntentForStance, withheldVoteIntent } from "./voice.mjs";
+import { defaultIntentForStance, intentLabel, withheldVoteIntent } from "./voice.mjs";
 
 const MAX_ITEMS = 4;
 
@@ -198,7 +198,7 @@ export function voiceFromDecision({ result, policy, factPack, readableIds, langu
   return {
     what_i_see: whatISee,
     how_my_method_reads_it: howItReads,
-    would_i_act: copy.intent(defaultIntentForStance(stance)),
+    would_i_act: copy.intent(intentLabel(defaultIntentForStance(stance), language)),
     what_changes_my_mind: changes.length ? copy.changes(changes.join("; ")) : copy.noChanges,
     where_i_disagree: copy.disagree,
   };
@@ -212,7 +212,7 @@ export function voiceFromDecline({ eligibility, language = "English" } = {}) {
   return {
     what_i_see: present ? copy.readFacts(present) : copy.noFacts,
     how_my_method_reads_it: copy.declineWhat(missing),
-    would_i_act: copy.intent(withheldVoteIntent(eligibility?.reason)),
+    would_i_act: copy.intent(intentLabel(withheldVoteIntent(eligibility?.reason), language)),
     what_changes_my_mind: missing ? copy.changes(missing) : copy.noChanges,
     where_i_disagree: copy.declineWhy,
   };

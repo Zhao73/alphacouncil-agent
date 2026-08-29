@@ -172,15 +172,19 @@ test("partial required facts return insufficient_grounding with an exact coverag
   });
   let called = false;
   const result = await runAnonymousDecisionLayer(preDecision, () => { called = true; });
-  // Partial grounding now DISPATCHES. A method states what an absent input means through its
-  // own vetoes and `on_missing` rules, and refusing to execute reported this gate in place of
-  // the method's answer. The coverage vector below is what still has to be exact -- a seat
-  // that runs on a quarter of its facts must say so.
-  assert.equal(called, true);
+  // The generic callback stays closed on partial evidence. The deterministic policy executor
+  // has its own hash-verified freeze path for authored eligibility and hard-veto outcomes.
+  assert.equal(called, false);
   assert.equal(preDecision.eligibility.status, "insufficient_grounding");
+  assert.equal(preDecision.execution_gate.anonymous_decision_allowed, false);
   assert.deepEqual(preDecision.eligibility.coverage, { present: 1, required: 4, ratio: 0.25 });
   assert.deepEqual(preDecision.eligibility.missing_required_fact_types, required.slice(1));
   assert.equal(result.frozen_decision.structured_decision.result.eligibility.coverage.ratio, 0.25);
+  assert.equal(result.frozen_decision.structured_decision.status, "insufficient_grounding");
+  assert.throws(
+    () => freezeAnonymousDecision(preDecision, { outcome: "own" }),
+    /ineligible pre-decision cannot accept/,
+  );
 });
 
 test("no required fact at all is still a hard stop that never dispatches", async () => {

@@ -91,8 +91,8 @@ test("a withheld vote says whether the method ruled itself out or its inputs nev
     },
     language: "English",
   });
-  assert.match(gap.would_i_act, /inputs_unavailable/u);
-  assert.doesNotMatch(gap.would_i_act, /not_in_my_circle/u);
+  assert.match(gap.would_i_act, /wait for the missing inputs/u);
+  assert.doesNotMatch(gap.would_i_act, /inputs_unavailable|not_in_my_circle/u);
 
   // A method that looked and ruled itself out keeps the circle language.
   const judged = voiceFromDecline({
@@ -103,7 +103,34 @@ test("a withheld vote says whether the method ruled itself out or its inputs nev
     },
     language: "English",
   });
-  assert.match(judged.would_i_act, /not_in_my_circle/u);
+  assert.match(judged.would_i_act, /outside my circle of competence/u);
+  assert.doesNotMatch(judged.would_i_act, /not_in_my_circle/u);
+});
+
+test("deterministic action fields localize machine intent codes", () => {
+  const decision = voiceFromDecision({
+    result: {
+      common_projection: { stance: "opposed", score_ratio: null },
+      computations: { trace: [] },
+      score: { hits: [], misses: [], uncomputable: [] },
+      vetoes_triggered: [{ veto_id: "graham_no_asset_floor" }],
+    },
+    policy: { scoring: { rules: [] }, hard_vetoes: [], eligibility: { all: [] } },
+    factPack: { facts: [] },
+    language: "中文",
+  });
+  assert.match(decision.would_i_act, /会放弃/u);
+  assert.doesNotMatch(decision.would_i_act, /would_pass/u);
+
+  const decline = voiceFromDecline({
+    eligibility: {
+      reason: "missing_required_fact_types",
+      missing_required_fact_types: ["financial.free_cash_flow_5y"],
+    },
+    language: "中文",
+  });
+  assert.match(decline.would_i_act, /等待缺失资料补齐/u);
+  assert.doesNotMatch(decline.would_i_act, /inputs_unavailable/u);
 });
 
 test("every locale composes real sentences rather than falling back to English", () => {

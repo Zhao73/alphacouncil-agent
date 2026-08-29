@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { canonicalValue, sha256 } from "../../mcp/lib/personas-v3/canonical.mjs";
-import { executeDeterministicPersonaPolicy } from "../../mcp/lib/personas-v3/deterministic-executor.mjs";
+import { executeDeterministicPersonaPolicy } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { adaptGroundingToTypedFacts } from "../../mcp/lib/personas-v3/grounding-adapter.mjs";
 import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs";
 import { planSoloTestFormulaCompilation } from "../../scripts/lib/persona-v3-solo-formula-pipeline.mjs";

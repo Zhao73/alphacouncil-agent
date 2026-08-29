@@ -6,10 +6,13 @@ import {
   PersonaV3PolicyError,
   PROVISIONAL_DERIVED_PROXY_ASSURANCE,
   deterministicToolSchemaHashes,
-  executeDeterministicPersonaPolicy,
   validateDeterministicPolicyArtifacts,
 } from "../../mcp/lib/personas-v3/deterministic-executor.mjs";
-import { buildAnonymousPreDecision, assertFrozenDecisionIntegrity } from "../../mcp/lib/personas-v3/runtime.mjs";
+import {
+  assertFrozenDecisionIntegrity,
+  buildAnonymousPreDecision,
+  executeDeterministicPersonaPolicy,
+} from "../../mcp/lib/personas-v3/runtime.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 
 const AS_OF = "2026-07-27";
@@ -200,7 +203,7 @@ function pack({ policy, tools, pipeline, requiredFactTypes = REQUIRED, optionalF
       computation: { dsl_version: "1.1", pipeline },
       decision: {
         eligibility: requiredFactTypes.length ? requiredFactTypes : optionalFactTypes,
-        hard_vetoes: ["leverage.ruin"],
+        hard_vetoes: policy.hard_vetoes.map((record) => record.veto_id),
         native_output: "owner_method_native_v1",
         common_projection: "master_projection_v1",
         abstention_policy: "fail_closed",
@@ -294,6 +297,28 @@ test("an eligibility miss deterministically abstains before scoring", () => {
   assert.equal(result.score, null);
 });
 
+test("a later false eligibility check is not hidden by an earlier uncomputable check", () => {
+  const value = artifacts();
+  value.policy.eligibility.all.unshift({
+    condition_id: "signal.available",
+    condition: { op: "gt", left: { fact_id: "finance.other_signal" }, right: { literal: 0 } },
+    source_ids: ["source:primary"],
+    on_false: { native_state: "business_not_explainable", common_stance: "out_of_scope" },
+    on_uncomputable: { native_state: "business_evidence_missing", common_stance: "out_of_scope" },
+  });
+  const execution = executeDeterministicPersonaPolicy(preDecision({
+    packValue: pack({ ...value, optionalFactTypes: ["finance.other_signal"] }),
+    factPack: facts({ "business.understood": false }),
+  }));
+  const result = execution.frozen_decision.structured_decision.result;
+  assert.equal(result.eligibility.checks[0].computable, false);
+  assert.equal(result.eligibility.checks[1].computable, true);
+  assert.equal(result.eligibility.checks[1].value, false);
+  assert.equal(result.reason, "eligibility");
+  assert.deepEqual(result.reason_codes, [result.eligibility.checks[1].condition_id]);
+  assert.equal(result.native_decision.state, "business_not_explainable");
+});
+
 test("a hard veto overrides a perfect score", () => {
   const execution = executeDeterministicPersonaPolicy(preDecision({ factPack: facts({ "finance.debt_ratio": 3 }) }));
   const result = execution.frozen_decision.structured_decision.result;
@@ -328,6 +353,38 @@ test("an uncomputable hard veto follows its explicit fail-closed state with zero
   assert.equal(result.common_projection.confidence_score, 0);
 });
 
+test("a later computed hard veto is not hidden by an earlier uncomputable veto", () => {
+  const value = artifacts();
+  value.policy.hard_vetoes.unshift({
+    veto_id: "signal.unavailable",
+    condition: { op: "gt", left: { fact_id: "finance.other_signal" }, right: { literal: 0 } },
+    source_ids: ["source:primary"],
+    on_trigger: { native_state: "leverage_reject", common_stance: "opposed" },
+    on_uncomputable: {
+      action: "abstain",
+      decision: { native_state: "leverage_unknown", common_stance: "out_of_scope" },
+    },
+  });
+  const before = preDecision({
+    packValue: pack({
+      ...value,
+      requiredFactTypes: [...REQUIRED, "finance.other_signal"],
+    }),
+    factPack: facts({ "finance.debt_ratio": 3 }),
+  });
+  assert.equal(before.eligibility.status, "insufficient_grounding");
+  assert.deepEqual(before.eligibility.missing_required_fact_types, ["finance.other_signal"]);
+  assert.equal(before.execution_gate.anonymous_decision_allowed, false);
+  const execution = executeDeterministicPersonaPolicy(before);
+  const result = execution.frozen_decision.structured_decision.result;
+  assert.equal(result.vetoes_evaluated[0].computable, false);
+  assert.equal(result.vetoes_evaluated[1].computable, true);
+  assert.equal(result.vetoes_evaluated[1].value, true);
+  assert.equal(result.reason, "veto");
+  assert.equal(result.stance, "opposed");
+  assert.deepEqual(result.reason_codes, [result.vetoes_evaluated[1].veto_id]);
+});
+
 test("a tool configured to fail never skips a missing optional input", () => {
   const value = artifacts();
   const factPack = buildFactPack([], { asOf: AS_OF });
@@ -337,6 +394,40 @@ test("a tool configured to fail never skips a missing optional input", () => {
       factPack,
     })),
     (error) => error instanceof PersonaV3PolicyError && error.code === "MISSING_TOOL_INPUT",
+  );
+});
+
+test("an uncomputable veto cannot turn partial facts into a decisive result", () => {
+  const value = artifacts();
+  value.policy.scoring.min_coverage = 0.5;
+  const partialFacts = buildFactPack([
+    typedFact("finance.net_income", 100),
+    typedFact("finance.da", 30),
+    typedFact("finance.maintenance_capex", 20),
+    typedFact("business.understood", true),
+  ], { asOf: AS_OF });
+  const before = preDecision({ packValue: pack(value), factPack: partialFacts });
+  assert.equal(before.eligibility.status, "insufficient_grounding");
+  assert.throws(
+    () => executeDeterministicPersonaPolicy(before),
+    (error) => error instanceof PersonaV3PolicyError && error.code === "INSUFFICIENT_GROUNDING",
+  );
+});
+
+test("sufficient scoring coverage cannot turn a partial fact pack constructive", () => {
+  const value = artifacts();
+  const before = preDecision({
+    packValue: pack({
+      ...value,
+      requiredFactTypes: [...REQUIRED, "unused.required"],
+    }),
+    factPack: facts(),
+  });
+  assert.equal(before.eligibility.status, "insufficient_grounding");
+  assert.deepEqual(before.eligibility.missing_required_fact_types, ["unused.required"]);
+  assert.throws(
+    () => executeDeterministicPersonaPolicy(before),
+    (error) => error instanceof PersonaV3PolicyError && error.code === "INSUFFICIENT_GROUNDING",
   );
 });
 

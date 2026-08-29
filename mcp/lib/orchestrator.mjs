@@ -48,6 +48,7 @@ import {
   companyDossierDecisionProjectionSourceScope,
   companyDossierCoverageStatus,
   companyDossierPromptBlock,
+  reconcileCompanyDossierPacketAckDisposition,
   requiresOperatingCompanyDossier,
 } from "./company-dossier.mjs";
 import {
@@ -5085,12 +5086,24 @@ export async function runHeadlessMasters(run, args = {}) {
     };
     const parse = (result, { repairedTransport = false } = {}) => {
       if (frozenOpinion) {
-        const voicePacket = repairedTransport
+        const extractedVoicePacket = repairedTransport
           ? extractRepairedWorkerJson(result.text, "method_voice")
           : extractWorkerJson(result.text, "method_voice");
+        const reconciliation = reconcileCompanyDossierPacketAckDisposition(
+          extractedVoicePacket,
+          run,
+          `master voice ${id}`,
+        );
+        const voicePacket = reconciliation.packet;
         assertCompanyDossierAck(voicePacket, run, `master voice ${id}`);
         const voice = normalizeMasterVoice(voicePacket, id, run, frozenOpinion, result.text);
         assertMethodVoiceReaderLanguage(voice, run.language, `master voice ${id}`);
+        if (reconciliation.reconciliations.length) {
+          appendEvent(run, "master_packet_ack_reconciled", {
+            master: id,
+            reconciliations: reconciliation.reconciliations,
+          });
+        }
         return attachMasterRuntimeProvenance(run, id, {
           ...frozenOpinion,
           deterministic_summary: frozenOpinion.summary,

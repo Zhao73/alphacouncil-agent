@@ -112,6 +112,12 @@ const INTENT_LABELS = Object.freeze({
     ja: "私の能力の輪の外",
     ko: "내 능력 범위 밖",
   },
+  inputs_unavailable: {
+    en: "would wait for the missing inputs",
+    zh: "等待缺失资料补齐",
+    ja: "不足している情報が揃うまで待つ",
+    ko: "누락된 입력이 갖춰질 때까지 기다린다",
+  },
 });
 
 export function intentLabel(intent, language) {

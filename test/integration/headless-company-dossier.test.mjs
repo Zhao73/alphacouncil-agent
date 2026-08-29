@@ -216,7 +216,7 @@ if (task) {
     key_findings: ["The method remains bound to the shared frozen dossier."],
     disagreements: ["No evidence outside the frozen dossier may change this explanation."],
     what_would_change_my_mind: ["A new dated primary source would require a new dossier revision."],
-    source_ids: ["market_data:S1"],
+    source_ids: ["market_data:S1", "valuation_long_short:S1"],
     confidence: "medium",
     company_dossier_hash_ack: dossierHash,
     evidence_packet_acks: Object.fromEntries(Object.entries(ackTemplate).map(([task, ack]) => [task,
@@ -365,6 +365,12 @@ test("headless operating-company full council freezes one dossier after typed gr
   const dossier = readJson(dossierPath);
   const persisted = readJson(evidencePath);
   const status = readJson(join(dir, "status.json"));
+  assert.equal(result.run.status, "complete", JSON.stringify({
+    task_status: result.run.task_status,
+    agent_status: result.run.agent_status,
+    master_status: result.run.master_status,
+    missing: result.run.missing,
+  }, null, 2));
   const bull = readJson(join(dir, "bull_researcher.json"));
   const bear = readJson(join(dir, "bear_researcher.json"));
   const manager = readJson(join(dir, "manager_synthesis.json"));
@@ -372,11 +378,6 @@ test("headless operating-company full council freezes one dossier after typed gr
   const workers = readJsonl(fake.log);
   const dossierHash = dossier.content_hash;
 
-  assert.equal(result.run.status, "complete", JSON.stringify({
-    task_status: result.run.task_status,
-    agent_status: result.run.agent_status,
-    missing: result.run.missing,
-  }, null, 2));
   assert.equal(persisted.status, "complete");
   assert.equal(status.status, "complete");
   assert.equal(status.report_quality, "passed");
@@ -436,6 +437,7 @@ test("headless operating-company full council freezes one dossier after typed gr
   assert.ok(methodWorkers.every((entry) => entry.has_evidence_path === false));
   assert.ok(methodWorkers.every((entry) => entry.projection_contract === "operating_company_dossier_decision_projection_v1"));
   assert.ok(methodWorkers.every((entry) => entry.projection_route_count === 52));
+  assert.ok(methodWorkers.every((entry) => entry.search === false));
   assert.equal(decisionWorkers.length, 7, "six debate sides and one PM use the decision projection");
   assert.ok(decisionWorkers.every((entry) => entry.requires_full_dossier_read === false));
   assert.ok(decisionWorkers.every((entry) => entry.uses_server_verified_projection === true));
@@ -452,6 +454,19 @@ test("headless operating-company full council freezes one dossier after typed gr
   assert.ok(events.some((event) => event.type === "task_repair_succeeded"
     && event.task === "ib_event_analysis"
     && event.repair_scope === "acquisition_ledger_only"));
+  assert.ok(events.some((event) => event.type === "master_packet_ack_reconciled"
+    && event.master === SELECTED_MASTER
+    && event.reconciliations?.length === 1
+    && event.reconciliations[0].task === "valuation_long_short"
+    && event.reconciliations[0].from_status === "reviewed_not_relevant"
+    && event.reconciliations[0].to_status === "used"));
+  assert.equal(result.run.master_status[SELECTED_MASTER].attempts, 1);
+  assert.equal(result.run.master_status[SELECTED_MASTER].voice_status, "model_voice");
+  assert.equal(opinion.evidence_packet_acks.length, DEFAULT_TASKS.length);
+  assert.equal(
+    opinion.evidence_packet_acks.find((ack) => ack.task === "valuation_long_short")?.status,
+    "used",
+  );
 
   assert.ok(existsSync(join(dir, "final_report.md")));
   assert.equal(manifest.artifacts.company_dossier_json.path, dossierPath);

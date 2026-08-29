@@ -5,13 +5,15 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { councilOptions } from "../../mcp/lib/council-options.mjs";
-import { executeDeterministicPersonaPolicy } from "../../mcp/lib/personas-v3/deterministic-executor.mjs";
 import { loadSoloTestV3Pack, loadV3Pack } from "../../mcp/lib/personas-v3/loader.mjs";
 import {
   loadCompiledPersonaPacks,
   resolveRuntimePersonaBuildProfile,
 } from "../../mcp/lib/personas-v3/registry.mjs";
-import { buildAnonymousPreDecision } from "../../mcp/lib/personas-v3/runtime.mjs";
+import {
+  buildAnonymousPreDecision,
+  executeDeterministicPersonaPolicy,
+} from "../../mcp/lib/personas-v3/runtime.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 import { portableRelativePath } from "../../mcp/lib/personas-v3/canonical.mjs";
 import { MASTER_SELECTOR_BEST_FOR_LOCALES } from "../../data/master-selector-method-locales.v1.mjs";
@@ -223,4 +225,81 @@ test("an authored seat decides on a full fact pack without gaining production st
   assert.equal(pack.admission.level, "operator_lens");
   assert.equal(pack.maturity, "operator_lens");
   assert.equal(pack.build_profile, "solo_test");
+});
+
+test("Graham preserves a decisive asset-floor veto when a later earnings metric is unavailable", () => {
+  const pack = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).get("master_graham");
+  const complete = positiveFactPack(pack);
+  const facts = complete.facts
+    .filter((fact) => fact.fact_id !== "financial.free_cash_flow_5y")
+    .map((fact) => {
+      if (fact.fact_id === "financial.net_current_asset_value") return { ...fact, value: -1 };
+      if (fact.fact_id === "financial.interest_coverage") return { ...fact, value: 10 };
+      return fact;
+    });
+  const factPack = buildFactPack(facts, { asOf: AS_OF });
+  const preDecision = buildAnonymousPreDecision({
+    compiledPack: pack,
+    factPack,
+    privateEvidence: [],
+  });
+
+  assert.equal(preDecision.eligibility.status, "insufficient_grounding");
+  assert.deepEqual(preDecision.eligibility.missing_required_fact_types, ["financial.free_cash_flow_5y"]);
+  assert.equal(preDecision.execution_gate.anonymous_decision_allowed, false);
+
+  const execution = executeDeterministicPersonaPolicy(preDecision);
+  const result = execution.frozen_decision.structured_decision.result;
+  assert.equal(result.stance, "opposed");
+  assert.equal(result.reason, "veto");
+  assert.equal(result.native_decision.state, "provisional_insufficient_floor");
+  assert.equal(result.vetoes_triggered.length, 1);
+  assert.deepEqual(result.reason_codes, [result.vetoes_triggered[0].veto_id]);
+  assert.match(result.reason_codes[0], /^anon_[a-f0-9]+$/u,
+    "the anonymous deterministic layer must not leak the selected method identity");
+  assert.equal(result.native_decision.metric_status.metric_1.status, "present");
+  assert.equal(result.native_decision.metric_status.metric_2.status, "omitted_decisive_result");
+  assert.deepEqual(
+    result.native_decision.metric_status.metric_2.missing_input_ids,
+    ["fact:financial.free_cash_flow_5y"],
+  );
+  assert.equal(Object.hasOwn(result.native_decision.metrics, "metric_2"), false);
+});
+
+test("Munger preserves a computable debt veto when an unrelated required tool cannot run", () => {
+  const pack = loadCompiledPersonaPacks({ buildProfile: "solo_test" }).get("master_munger");
+  const complete = positiveFactPack(pack);
+  const facts = complete.facts
+    .filter((fact) => fact.fact_id !== "accounting.cash_conversion")
+    .map((fact) => {
+      if (fact.fact_id === "financial.leverage") return { ...fact, value: 1.8 };
+      if (fact.fact_id === "financial.interest_coverage") return { ...fact, value: -22.47 };
+      return fact;
+    });
+  const preDecision = buildAnonymousPreDecision({
+    compiledPack: pack,
+    factPack: buildFactPack(facts, { asOf: AS_OF }),
+    privateEvidence: [],
+  });
+
+  assert.equal(preDecision.eligibility.status, "insufficient_grounding");
+  assert.deepEqual(preDecision.eligibility.missing_required_fact_types, ["accounting.cash_conversion"]);
+
+  const execution = executeDeterministicPersonaPolicy(preDecision);
+  const result = execution.frozen_decision.structured_decision.result;
+  assert.equal(result.stance, "opposed");
+  assert.equal(result.reason, "veto");
+  assert.equal(result.native_decision.state, "provisional_fatal_path");
+  assert.equal(result.vetoes_triggered.length, 1);
+  assert.deepEqual(result.reason_codes, [result.vetoes_triggered[0].veto_id]);
+  assert.deepEqual(result.computations.trace.map((entry) => entry.status), [
+    "omitted_decisive_result",
+    "computed",
+  ]);
+  assert.equal(result.native_decision.metric_status.metric_1.status, "omitted_decisive_result");
+  assert.deepEqual(
+    result.native_decision.metric_status.metric_1.missing_input_ids,
+    ["fact:accounting.cash_conversion"],
+  );
+  assert.equal(result.native_decision.metric_status.metric_2.status, "present");
 });

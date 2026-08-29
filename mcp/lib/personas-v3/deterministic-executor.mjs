@@ -7,7 +7,6 @@
  */
 
 import { canonicalValue, sha256 } from "./canonical.mjs";
-import { freezeAnonymousDecision } from "./runtime.mjs";
 import { ANY_REPORTING_INTERVAL, periodWindowMatches } from "../periods.mjs";
 import {
   PROVISIONAL_DERIVED_PROXY_ASSURANCE,
@@ -517,7 +516,7 @@ function unique(values) {
   return [...new Set(values)];
 }
 
-function resolveOperand(operand, facts, outputs, outputContracts = null) {
+function resolveOperand(operand, facts, outputs, outputContracts = null, missingOutputs = null) {
   if (hasOwn(operand, "literal")) return { computable: true, value: operand.literal, missing_input_ids: [] };
   if (hasOwn(operand, "fact_id")) {
     if (!facts.has(operand.fact_id)) return { computable: false, value: null, missing_input_ids: [`fact:${operand.fact_id}`] };
@@ -531,7 +530,16 @@ function resolveOperand(operand, facts, outputs, outputContracts = null) {
     };
   }
   if (hasOwn(operand, "output_id")) {
-    if (!outputs.has(operand.output_id)) return { computable: false, value: null, missing_input_ids: [`output:${operand.output_id}`] };
+    if (!outputs.has(operand.output_id)) {
+      const upstreamMissing = missingOutputs?.get(operand.output_id);
+      return {
+        computable: false,
+        value: null,
+        missing_input_ids: upstreamMissing?.length
+          ? [...upstreamMissing]
+          : [`output:${operand.output_id}`],
+      };
+    }
     const contract = outputContracts?.get(operand.output_id);
     return {
       computable: true,
@@ -647,9 +655,16 @@ function uncomputable(op, missing, children = undefined) {
   return { op, computable: false, value: null, missing_input_ids: unique(missing), ...(children ? { children } : {}) };
 }
 
-function evaluateCondition(condition, facts, outputs, path, outputContracts = null) {
+function evaluateCondition(condition, facts, outputs, path, outputContracts = null, missingOutputs = null) {
   if (LOGICAL_CONDITIONS.has(condition.op)) {
-    const children = condition.conditions.map((child, index) => evaluateCondition(child, facts, outputs, `${path}.conditions[${index}]`, outputContracts));
+    const children = condition.conditions.map((child, index) => evaluateCondition(
+      child,
+      facts,
+      outputs,
+      `${path}.conditions[${index}]`,
+      outputContracts,
+      missingOutputs,
+    ));
     const known = children.filter((child) => child.computable);
     const missing = children.flatMap((child) => child.missing_input_ids);
     if (condition.op === "all") {
@@ -662,16 +677,23 @@ function evaluateCondition(condition, facts, outputs, path, outputContracts = nu
     return { op: "any", computable: true, value: false, missing_input_ids: [], children };
   }
   if (condition.op === "not") {
-    const child = evaluateCondition(condition.condition, facts, outputs, `${path}.condition`, outputContracts);
+    const child = evaluateCondition(
+      condition.condition,
+      facts,
+      outputs,
+      `${path}.condition`,
+      outputContracts,
+      missingOutputs,
+    );
     if (!child.computable) return uncomputable("not", child.missing_input_ids, [child]);
     return { op: "not", computable: true, value: !child.value, missing_input_ids: [], children: [child] };
   }
   if (condition.op === "exists") {
-    const result = resolveOperand(condition.value, facts, outputs, outputContracts);
+    const result = resolveOperand(condition.value, facts, outputs, outputContracts, missingOutputs);
     return { op: "exists", computable: true, value: result.computable && result.value !== null && result.value !== "", missing_input_ids: result.missing_input_ids };
   }
-  const left = resolveOperand(condition.left, facts, outputs, outputContracts);
-  const right = resolveOperand(condition.right, facts, outputs, outputContracts);
+  const left = resolveOperand(condition.left, facts, outputs, outputContracts, missingOutputs);
+  const right = resolveOperand(condition.right, facts, outputs, outputContracts, missingOutputs);
   const missing = [...left.missing_input_ids, ...right.missing_input_ids];
   if (!left.computable || !right.computable) return uncomputable(condition.op, missing);
   // Numeric-looking JavaScript values are not sufficient to make two typed artifacts
@@ -730,16 +752,25 @@ function selectBand(bands, ratio) {
   return [...bands].sort((a, b) => b.min_ratio - a.min_ratio).find((band) => ratio >= band.min_ratio);
 }
 
-function nativeMetrics(policy, facts, outputs) {
+function nativeMetrics(policy, facts, outputs, {
+  decisiveComputedResult = false,
+  outputContracts = null,
+  missingOutputs = null,
+} = {}) {
   const metrics = {};
   const status = {};
   for (const record of policy.native_output_fields) {
-    const resolved = resolveOperand(record.value, facts, outputs);
+    const resolved = resolveOperand(record.value, facts, outputs, outputContracts, missingOutputs);
     if (resolved.computable) {
       metrics[record.field] = resolved.value;
       status[record.field] = { status: "present", missing_input_ids: [] };
-    } else if (record.on_missing === "fail") {
+    } else if (record.on_missing === "fail" && !decisiveComputedResult) {
       policyFail("MISSING_NATIVE_OUTPUT", `native output ${record.field} is missing`, { field: record.field, missing_input_ids: resolved.missing_input_ids });
+    } else if (record.on_missing === "fail") {
+      // A fully computable eligibility rejection or hard veto has already frozen the answer,
+      // so an unrelated downstream metric cannot make that authored answer disappear. Keep
+      // the omission and its exact root inputs visible instead of inventing a value.
+      status[record.field] = { status: "omitted_decisive_result", missing_input_ids: resolved.missing_input_ids };
     } else if (record.on_missing === "null") {
       metrics[record.field] = null;
       status[record.field] = { status: "null_missing", missing_input_ids: resolved.missing_input_ids };
@@ -750,15 +781,6 @@ function nativeMetrics(policy, facts, outputs) {
   return { metrics, status };
 }
 
-/** True when a condition reads only typed facts and literals, so no tool has to run first. */
-function readsOnlyFacts(node) {
-  if (!node || typeof node !== "object") return true;
-  if (Object.hasOwn(node, "output_id")) return false;
-  return Object.values(node).every((value) => (
-    Array.isArray(value) ? value.every(readsOnlyFacts) : readsOnlyFacts(value)
-  ));
-}
-
 function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   const facts = new Map(preDecision.fact_pack.facts.map((fact) => [fact.fact_id, fact]));
   const outputs = new Map();
@@ -766,43 +788,39 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
     value_kind: tool.value_kind,
     unit: tool.unit,
   }]));
-
-  // A veto that reads only facts is evaluated before any tool runs.
-  //
-  // Several seats are authored with a veto that says what an ABSENT fact means -- Pabrai
-  // passing without a downside floor, Graham without an asset floor. That same fact is usually
-  // a tool input, and a tool declaring `on_missing: "fail"` aborts the whole policy before any
-  // veto is reached, so the seat reported a missing input and the author's answer never ran.
-  // Hoisting fact-only vetoes changes no arithmetic: they need nothing a tool produces, and a
-  // veto that reads a tool output still waits for it.
-  const vetoedOnFactsAlone = policy.hard_vetoes.some((record, index) => {
-    if (!readsOnlyFacts(record.condition)) return false;
-    const early = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`, outputContracts);
-    return early.computable ? Boolean(early.value) : record.on_uncomputable.action === "trigger";
-  });
+  const missingOutputs = new Map();
+  const requiredMissingTools = [];
 
   const toolById = new Map(tools.map((tool) => [tool.id, tool]));
   const toolTrace = [];
   for (const toolId of pipeline) {
     const tool = toolById.get(toolId);
     assertToolInputContracts(tool, facts, preDecision.fact_pack.as_of);
-    const resolved = tool.inputs.map((operand) => resolveOperand(operand, facts, outputs));
+    const resolved = tool.inputs.map((operand) => resolveOperand(
+      operand,
+      facts,
+      outputs,
+      outputContracts,
+      missingOutputs,
+    ));
     const missing = unique(resolved.flatMap((input) => input.missing_input_ids));
     if (missing.length) {
-      // A tool that cannot run is fatal, EXCEPT when a fact-only veto has already decided this
-      // seat. Then the arithmetic it would have fed is irrelevant to the outcome, and aborting
-      // reports a missing input in place of the answer the author wrote for exactly this case.
-      if (tool.on_missing === "fail" && !vetoedOnFactsAlone) {
-        policyFail("MISSING_TOOL_INPUT", `tool ${tool.id} is missing an input`, { tool_id: tool.id, missing_input_ids: missing });
-      }
-      toolTrace.push({
+      // Do not abort before independent tools and hard vetoes have had a chance to run. A
+      // required missing tool remains fatal unless the policy later reaches a fully computable
+      // eligibility rejection or hard veto whose truth is independent of that output.
+      missingOutputs.set(tool.output_id, missing);
+      const trace = {
         tool_id: tool.id,
         tool_version: tool.version,
         operation: tool.operation,
-        status: "skipped_missing_optional",
+        status: tool.on_missing === "fail"
+          ? "deferred_missing_required"
+          : "skipped_missing_optional",
         output_id: tool.output_id,
         missing_input_ids: missing,
-      });
+      };
+      toolTrace.push(trace);
+      if (tool.on_missing === "fail") requiredMissingTools.push(trace);
       continue;
     }
     const inputs = resolved.map((input) => input.value);
@@ -824,16 +842,22 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   const eligibilityChecks = policy.eligibility.all.map((record, index) => ({
     condition_id: record.condition_id,
     source_ids: record.source_ids,
-    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.eligibility.all[${index}].condition`, outputContracts),
+    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.eligibility.all[${index}].condition`, outputContracts, missingOutputs),
   }));
-  const eligibilityFailure = eligibilityChecks.map((check, index) => {
+  const eligibilityCandidates = eligibilityChecks.map((check, index) => {
     if (!check.computable) return { check, mapping: policy.eligibility.all[index].on_uncomputable, reason: "eligibility_uncomputable" };
     if (!check.value) return { check, mapping: policy.eligibility.all[index].on_false, reason: "eligibility" };
     return null;
-  }).find(Boolean) || null;
+  });
+  // Eligibility is an `all` condition: one proved-false check decides it even when an earlier
+  // check is unknown. Prefer that evidence over an uncomputable exit, preserving authored
+  // order among checks of the same class.
+  const eligibilityFailure = eligibilityCandidates.find((candidate) => candidate?.reason === "eligibility")
+    || eligibilityCandidates.find(Boolean)
+    || null;
 
   const vetoEvaluations = policy.hard_vetoes.map((record, index) => {
-    const evaluation = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`, outputContracts);
+    const evaluation = evaluateCondition(record.condition, facts, outputs, `decision_policy.hard_vetoes[${index}].condition`, outputContracts, missingOutputs);
     const resolution = evaluation.computable
       ? evaluation.value ? "condition_true" : "condition_false"
       : record.on_uncomputable.action === "trigger" ? "uncomputable_triggered" : "uncomputable_abstain";
@@ -846,7 +870,7 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
       ...evaluation,
     };
   });
-  const vetoDecisive = vetoEvaluations.map((evaluation, index) => {
+  const vetoCandidates = vetoEvaluations.map((evaluation, index) => {
     const record = policy.hard_vetoes[index];
     if (!evaluation.computable) {
       return {
@@ -858,7 +882,14 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
     }
     if (evaluation.value) return { evaluation, mapping: record.on_trigger, reason: "veto", narratable: true };
     return null;
-  }).find(Boolean) || null;
+  });
+  // Each hard veto is an independently sufficient stop. Prefer the first one actually proved
+  // true over an earlier veto that merely lacked an input; otherwise one missing observation
+  // can hide a later, fully evidenced rejection. Authored order is still preserved within the
+  // computed-true and uncomputable classes.
+  const vetoDecisive = vetoCandidates.find((candidate) => candidate?.reason === "veto")
+    || vetoCandidates.find(Boolean)
+    || null;
   const vetoesTriggered = vetoEvaluations.map((evaluation, index) => {
     const record = policy.hard_vetoes[index];
     if (evaluation.computable && evaluation.value) return evaluation;
@@ -871,7 +902,7 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
     points: record.points,
     coverage_weight: record.coverage_weight,
     source_ids: record.source_ids,
-    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.scoring.rules[${index}].condition`, outputContracts),
+    ...evaluateCondition(record.condition, facts, outputs, `decision_policy.scoring.rules[${index}].condition`, outputContracts, missingOutputs),
   }));
   const computableRules = evaluatedRules.filter((rule) => rule.computable);
   const hits = computableRules.filter((rule) => rule.value);
@@ -919,12 +950,38 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
     narratable = true;
   }
 
+  const decisiveComputedResult = (reason === "eligibility"
+    && eligibilityFailure?.check?.computable === true
+    && eligibilityFailure.check.value === false)
+    || (reason === "veto"
+      && vetoDecisive?.evaluation?.computable === true
+      && vetoDecisive.evaluation.value === true);
+  if (preDecision.eligibility.status === "insufficient_grounding" && !decisiveComputedResult) {
+    policyFail(
+      "INSUFFICIENT_GROUNDING",
+      "partial typed facts did not reach a fully computable eligibility rejection or hard veto",
+      { missing_required_fact_types: preDecision.eligibility.missing_required_fact_types },
+    );
+  }
+  if (requiredMissingTools.length && !decisiveComputedResult) {
+    const firstMissing = requiredMissingTools[0];
+    policyFail("MISSING_TOOL_INPUT", `tool ${firstMissing.tool_id} is missing an input`, {
+      tool_id: firstMissing.tool_id,
+      missing_input_ids: firstMissing.missing_input_ids,
+    });
+  }
+  for (const trace of requiredMissingTools) trace.status = "omitted_decisive_result";
+
   const references = policyReferences(policy, tools);
   const confidenceCoverage = reason === "score" || reason === "insufficient_grounding"
     ? coverage
     : reason === "veto_uncomputable" || reason === "eligibility_uncomputable" ? 0 : 1;
   const confidence = confidenceFor(facts, references.factIds, confidenceCoverage);
-  const native = nativeMetrics(policy, facts, outputs);
+  const native = nativeMetrics(policy, facts, outputs, {
+    decisiveComputedResult,
+    outputContracts,
+    missingOutputs,
+  });
   const publishedScore = eligibilityFailure ? null : score;
   const publishedRatio = eligibilityFailure ? null : ratio;
   const publishedCoverage = eligibilityFailure ? null : coverage;
@@ -973,8 +1030,8 @@ function executeValidatedPolicy(preDecision, policy, tools, pipeline) {
   });
 }
 
-/** Execute and freeze one ready anonymous pre-decision. */
-export function executeDeterministicPersonaPolicy(preDecision) {
+/** Execute one anonymous deterministic policy and return its hash-bound structured result. */
+export function executeDeterministicPolicyResult(preDecision) {
   if (!isObject(preDecision) || preDecision.phase !== "anonymous_pre_decision") policyFail("INVALID_PRE_DECISION", "expected an anonymous_pre_decision payload");
   // `insufficient_grounding` runs. Every tool, veto and rule declares its own `on_missing` and
   // `on_uncomputable` behaviour, and those declarations are how a method states what an absent
@@ -999,12 +1056,5 @@ export function executeDeterministicPersonaPolicy(preDecision) {
     nativeDecisionSchema: preDecision.native_decision_schema,
   });
   if (errors.length) policyFail("INVALID_POLICY_ARTIFACT", `invalid deterministic PersonaPack policy:\n- ${errors.join("\n- ")}`, { errors });
-  const structuredDecision = executeValidatedPolicy(preDecision, policy, tools, pipeline);
-  const frozenDecision = freezeAnonymousDecision(preDecision, structuredDecision);
-  return deepFreeze(canonicalValue({
-    decision_layer_called: true,
-    executor: "persona_v3_deterministic_dsl_v1_1",
-    policy_execution_hash: structuredDecision.policy_execution_hash,
-    frozen_decision: frozenDecision,
-  }));
+  return deepFreeze(executeValidatedPolicy(preDecision, policy, tools, pipeline));
 }

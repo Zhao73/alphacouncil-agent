@@ -227,6 +227,103 @@ test("annualSeries keeps annual periods and drops quarters and stubs", async () 
   assert.deepEqual(r.series.map((e) => e.val), [100, 120], "only the ~365-day 10-K periods");
 });
 
+test("annualSeries accepts domestic and foreign annual forms and rejects current reports", async () => {
+  const { annualSeries } = await import("../../mcp/lib/sec.mjs");
+  const annual = (form, year, val, filed = `${year + 1}-03-01`) => ({
+    form,
+    start: `${year}-01-01`,
+    end: `${year}-12-31`,
+    val,
+    filed,
+  });
+  const companyFacts = { facts: { "us-gaap": { X: { units: { USD: [
+    annual("10-K", 2020, 10),
+    annual("10-K/A", 2021, 11),
+    annual("20-F", 2022, 12),
+    annual("20-F/A", 2023, 13),
+    annual("40-F", 2024, 14),
+    annual("40-F/A", 2025, 15),
+    annual("6-K", 2026, 999),
+  ] } } } } };
+
+  const result = annualSeries(companyFacts, ["X"]);
+  assert.deepEqual(result.series.map((entry) => entry.form), [
+    "10-K", "10-K/A", "20-F", "20-F/A", "40-F", "40-F/A",
+  ]);
+  assert.deepEqual(result.series.map((entry) => entry.val), [10, 11, 12, 13, 14, 15]);
+});
+
+test("20-F cash-flow history reaches the screen instead of becoming a false data gap", () => {
+  const companyFacts = facts({
+    NetCashProvidedByUsedInOperatingActivities: [10, 11, 12, 13, 14],
+    PaymentsToAcquirePropertyPlantAndEquipment: [2, 2, 2, 2, 2],
+  });
+  for (const concept of Object.values(companyFacts.facts["us-gaap"])) {
+    for (const entries of Object.values(concept.units)) {
+      for (const entry of entries) entry.form = "20-F";
+    }
+  }
+
+  const fcf = rule(evaluateRules(companyFacts), "fcf_5y");
+  assert.equal(fcf.skipped, undefined);
+  assert.equal(fcf.value, 50);
+  assert.equal(fcf.years, 5);
+});
+
+test("20-F amendments supersede the original year only after the amendment is public", async () => {
+  const { annualSeries } = await import("../../mcp/lib/sec.mjs");
+  const companyFacts = { facts: { "us-gaap": { X: { units: { USD: [
+    {
+      form: "20-F",
+      start: "2024-01-01",
+      end: "2024-12-31",
+      val: 10,
+      filed: "2025-03-01",
+    },
+    {
+      form: "20-F/A",
+      start: "2024-01-01",
+      end: "2024-12-31",
+      val: 12,
+      filed: "2025-04-02",
+    },
+  ] } } } } };
+
+  assert.equal(annualSeries(companyFacts, ["X"], { asOf: "2025-03-15" }).series[0].val, 10);
+  assert.equal(annualSeries(companyFacts, ["X"], { asOf: "2025-04-02" }).series[0].val, 12);
+});
+
+test("annualSeries rejects unverifiable filing dates, invalid period ends, and invalid asOf", async () => {
+  const { annualSeries } = await import("../../mcp/lib/sec.mjs");
+  const companyFacts = { facts: { "us-gaap": { X: { units: { USD: [
+    {
+      form: "20-F",
+      start: "2024-01-01",
+      end: "2024-12-31",
+      val: 10,
+    },
+    {
+      form: "20-F",
+      start: "2024-01-01",
+      end: "2024-12-31",
+      val: 11,
+      filed: "not-a-date",
+    },
+    {
+      form: "40-F",
+      end: "not-a-date",
+      val: 12,
+      filed: "2025-03-01",
+    },
+  ] } } } } };
+
+  assert.equal(annualSeries(companyFacts, ["X"], { asOf: "2025-03-15" }), null);
+  assert.throws(
+    () => annualSeries(companyFacts, ["X"], { asOf: "not-a-date" }),
+    /annualSeries asOf is not a date/u,
+  );
+});
+
 // annualSeries returned at the first alias with data. Revenue moved to the ASC 606 tag in
 // 2022, so a company public since 2013 looked like it had four years of history -- which
 // then fired a "listed under ten years" exemption on a decade-old filer.
