@@ -4,6 +4,16 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.8.0] — 2026-09-06
+
+- Add a standalone terminal client with language, research question, model connection and method selection in one launch flow. Mouse and keyboard navigation open completed evidence, method statements, individual debate rounds and reports.
+- Persist independent research runners so the terminal can close and later attach to the same run. Cancellation records its reason and preserves research artifacts. Selection acknowledgement and one-use receipts remain mandatory.
+- Support Chinese, English, Japanese, Korean, Spanish, French, German, Brazilian Portuguese, Italian, Russian, Vietnamese and Indonesian across terminal navigation, selection summaries and catalogs, report labels and output-language validation.
+- Add model connections for the official Codex runtime, OpenAI, Anthropic and compatible APIs, with capability probes, bounded tool execution, structured outputs, shared request/token budgets, cancellation and source records. Reuse the official runtime's supported account login and offer session-only API keys or system-keychain storage where available.
+- Build native terminal archives containing fixed Node and official Codex runtimes. Keep the core npm package platform independent; build macOS, Linux and Windows archives in a separate CI workflow. Include terminal manifests and lockfiles in release-version consistency checks.
+
+Development validation includes a macOS arm64 archive starting with an empty external PATH, relocation after extraction, detached dry-run persistence and cancellation, and a small official Codex response-marker check. Native archives require separate platform CI validation. No complete live stock-research run has been accepted for this release, and the archives are unsigned. The 26 provisional PersonaPacks retain version 0.9.4 and their existing admission and rating boundaries.
+
 ## [1.7.0] — 2026-09-06
 
 - Show one concise research setup, prefill compatible previous choices, and retain fresh per-run confirmation and the full 26-method catalog.

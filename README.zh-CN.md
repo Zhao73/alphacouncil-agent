@@ -160,7 +160,8 @@ AlphaCouncil **仅供教育和研究**，不构成投资建议、买卖推荐或
 - [四宿主完整安装指南](docs/INSTALL.md)
 - [报告合同](docs/report-contract.md)与[完整示例报告](docs/examples/final_report.SOX.zh.md)
 - [路线图](docs/roadmap.md)、[安全模型](SECURITY.md)、[署名说明](docs/attribution.md)与[更新日志](CHANGELOG.md)
-- 本地界面：`npm run tui` 和 `npm run gui`
+- [独立终端客户端](terminal/README.md)：选语言 → 输入股票代码 → 选模型 → 选方法席，可点击查看证据和辩论。源码开发运行：先 `npm ci --prefix terminal`，再 `npm run terminal`。
+- 原有本地查看器：`npm run tui` 和 `npm run gui`
 
 运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/`。
 

@@ -122,6 +122,29 @@ test("runCodex force-settles after kill grace even if a broken child never close
   assert.equal(timers.length, 0);
 });
 
+test("external cancellation stops a live Codex child and a cancelled signal never spawns", async () => {
+  const controller = new AbortController();
+  const child = new EventEmitter();
+  child.pid = 424247;
+  child.stdin = { on() {}, end() {} };
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  const stops = [];
+  const running = runCodex("fixture", 5000, undefined, undefined, {
+    spawn: () => child,
+    stopChild: (_child, force) => stops.push(force === true ? "KILL" : "TERM"),
+    sigkillGraceMs: 0, signal: controller.signal,
+  });
+  controller.abort(new Error("user_cancelled"));
+  const result = await running;
+  assert.equal(result.ok, false);
+  assert.equal(result.timedOut, true);
+  assert.deepEqual(stops, ["TERM", "KILL"]);
+  await assert.rejects(runCodex("fixture", 5000, undefined, undefined, {
+    spawn() { assert.fail("cancelled worker must never spawn"); }, signal: controller.signal,
+  }), /user_cancelled/u);
+});
+
 test("runCodex re-clamps its timer after spawn so settlement fits an absolute deadline", async (t) => {
   class NeverClosingChild extends EventEmitter {
     constructor() {

@@ -301,6 +301,12 @@ test("late voice refuses a different method pack and a tampered frozen decision"
   assert.throws(() => assertFrozenDecisionIntegrity(tampered), /structured_decision_hash is invalid/);
 });
 
+test("the admitted internal late-voice pack contract remains en/zh when reader locales expand", () => {
+  for (const language of ["es", "fr", "de", "pt-BR", "it", "ru", "vi", "id"]) {
+    assert.throws(() => buildLateVoiceExplanationRequest({ language }), /language must be one of: en, zh/u);
+  }
+});
+
 test("identity leakage in method corpus or private evidence fails closed", () => {
   assert.throws(
     () => buildAnonymousPreDecision({

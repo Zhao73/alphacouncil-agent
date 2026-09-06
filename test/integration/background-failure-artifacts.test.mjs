@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import { repoRoot } from "../helpers/paths.mjs";
 
-test("an unexpected background orchestrator error still writes the standard failure package", () => {
+for (const cancelled of [false, true]) test(cancelled ? "a cancelled run writes an incomplete package and preserves completed packets" : "an unexpected background orchestrator error still writes the standard failure package", () => {
   const dataDir = makeDataDir();
   const runId = `UNHANDLED-BACKGROUND-${process.pid}`;
   const dir = join(dataDir, "runs", runId);
@@ -39,6 +39,7 @@ test("an unexpected background orchestrator error still writes the standard fail
     seat_weight_overrides: {},
   }, null, 2)}\n`);
   writeFileSync(join(dir, "status.json"), `${JSON.stringify({
+    worker_usage: { requests: 1, reported_output_tokens: 10, reserved_output_tokens: 0 },
     tasks: [{
       task: "market_data",
       status: "completed",
@@ -54,7 +55,7 @@ test("an unexpected background orchestrator error still writes the standard fail
   }, null, 2)}\n`);
   try {
     const moduleUrl = new URL("../../mcp/lib/orchestrator.mjs", import.meta.url).href;
-    const script = `import { finalizeUnhandledBackgroundFailure } from ${JSON.stringify(moduleUrl)}; finalizeUnhandledBackgroundFailure(${JSON.stringify(runId)}, "fixture", new Error("SECRET_INTERNAL_STACK"));`;
+    const script = `import { finalizeUnhandledBackgroundFailure } from ${JSON.stringify(moduleUrl)}; finalizeUnhandledBackgroundFailure(${JSON.stringify(runId)}, "fixture", new Error(${JSON.stringify(cancelled ? "user_cancelled" : "SECRET_INTERNAL_STACK")}));`;
     const child = spawnSync(process.execPath, ["--input-type=module", "--eval", script], {
       cwd: repoRoot,
       env: { ...process.env, ALPHACOUNCIL_AGENT_DATA_DIR: dataDir },
@@ -68,12 +69,19 @@ test("an unexpected background orchestrator error still writes the standard fail
     const status = JSON.parse(readFileSync(join(dir, "status.json"), "utf8"));
     assert.equal(decision.decision_available, false);
     assert.equal(decision.rating, null);
-    assert.equal(status.status, "failed");
-    assert.equal(status.phase, "failed");
+    assert.equal(status.status, cancelled ? "incomplete" : "failed");
+    assert.equal(status.phase, cancelled ? "incomplete" : "failed");
     assert.equal(status.tasks[0].status, "completed", "a newer terminal task state must survive finalization");
     assert.equal(status.masters[0].status, "skipped");
-    assert.equal(status.masters[0].error, "not_run_upstream_evidence_failure");
+    assert.equal(status.masters[0].error, cancelled ? "user_cancelled" : "not_run_upstream_evidence_failure");
     assert.equal(status.agents[0].status, "skipped");
+    assert.equal(status.worker_usage.reported_output_tokens, 10, "latest provider accounting must survive finalization");
+    if (cancelled) {
+      const run = JSON.parse(readFileSync(join(dir, "evidence.json"), "utf8"));
+      assert.equal(run.stop_reason, "user_cancelled");
+      assert.equal(run.terminal_reason, "user_cancelled");
+      assert.equal(decision.failure_reason, "user_cancelled");
+    }
     assert.doesNotMatch(readFileSync(join(dir, "final_report.md"), "utf8"), /SECRET_INTERNAL_STACK/);
   } finally {
     removeDataDir(dataDir);

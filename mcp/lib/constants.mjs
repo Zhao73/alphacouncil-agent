@@ -1,3 +1,4 @@
+import { EXTRA_RESEARCH_LOCALES, researchSectionHeading } from "./research-locales.mjs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -20,6 +21,7 @@ const RUNTIME_FINGERPRINT_FILES = Object.freeze([
   "mcp/server.mjs",
   "mcp/generated/runtime-validators.mjs",
   "mcp/lib/codex.mjs",
+  "mcp/lib/worker-execution.mjs",
   "mcp/lib/company-dossier.mjs",
   "mcp/lib/company-source-acquisition.mjs",
   "mcp/lib/constants.mjs",
@@ -218,7 +220,7 @@ export const REPORT_SECTIONS = [
   { id: "invalidation", aliases: ["反证", "invalidation", "無効化条件", "反証条件", "무효화 조건", "반증 조건"], min_body: 8 },
   { id: "confidence", aliases: ["置信", "confidence", "信頼度", "신뢰도"], min_body: 3 },
   { id: "source_table", aliases: ["来源表", "source table", "出典表", "ソース表", "출처 표"], min_body: 6 },
-];
+].map((section) => ({ ...section, aliases: [...section.aliases, ...EXTRA_RESEARCH_LOCALES.map((locale) => researchSectionHeading(locale, section.id))] }));
 
 // Quick reports are deliberately a different publication scope. Requiring the full
 // 23-section memo would force the short PM call to regenerate the same long report that

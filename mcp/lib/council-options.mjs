@@ -4,7 +4,9 @@ import { loadPacks } from "./personas-v2/loader.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { selectorCard } from "./master-catalog.mjs";
-import { languageKey, localized } from "./lang.mjs";
+import { languageKey } from "./lang.mjs";
+import { localizedReader } from "./research-locales.mjs";
+import { selectionDisplay } from "./selection-locales.mjs";
 
 /**
  * The menu a host shows before a run starts.
@@ -44,7 +46,7 @@ const estimateSelectionRange = ({ analysts = 0, allMasters = 1, verifiers = 0, d
 
 export function councilOptions({ language = "English" } = {}) {
   const locale = languageKey(language);
-  const copy = (messages) => localized(language, messages);
+  const copy = (messages) => localizedReader(language, messages);
   const reg = registry();
   const packs = loadPacks();
   const v3Packs = compiledPersonaPacks();
@@ -67,7 +69,7 @@ export function councilOptions({ language = "English" } = {}) {
 
   const analystChoices = allAnalysts.map((p) => ({
     id: p.id,
-    title: personaTitle(p, language),
+    title: selectionDisplay(locale, p.id)?.title || personaTitle(p, language),
     in_default: DEFAULT_TASKS.includes(p.id),
     covers: (p.tags || []).join(", "),
   }));
@@ -80,9 +82,10 @@ export function councilOptions({ language = "English" } = {}) {
     const v3 = v3Packs.get(id);
     const v3Selection = v3?.manifest?.selection;
     const v3Label = v3?.admitted_label;
+    const display = selectionDisplay(locale, id);
     const provisionalV3 = v3?.build_profile === "solo_test";
     const field = (value, label) => {
-      const selected = value?.[locale];
+      const selected = display?.[label] || value?.[locale];
       if (typeof selected !== "string" || !selected.trim()) {
         throw new Error(`${id}: missing ${locale} selector ${label}`);
       }
@@ -233,7 +236,7 @@ export function councilOptions({ language = "English" } = {}) {
     masters: masterChoices,
     all_master_ids: masterChoices.map((m) => m.id),
     all_masters_count: allMasters,
-    verifiers: verifiers.map((id) => ({ id, title: personaTitle(reg.get(id), language) })),
+    verifiers: verifiers.map((id) => ({ id, title: selectionDisplay(locale, id)?.title || personaTitle(reg.get(id), language) })),
     how_to_ask: copy({
       en: [
         "Show the proposed configuration first and keep the full numbered catalog expandable. Full accepts one or more methods or all; quick accepts 1-4.",

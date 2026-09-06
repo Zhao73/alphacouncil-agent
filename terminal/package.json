@@ -1,0 +1,12 @@
+{
+  "name": "@alphacouncil/terminal",
+  "version": "1.8.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": { "start": "node cli.mjs", "test": "node --test test/*.test.mjs" },
+  "dependencies": {
+    "@openai/codex": "0.146.1",
+    "string-width": "7.2.0"
+  }
+}

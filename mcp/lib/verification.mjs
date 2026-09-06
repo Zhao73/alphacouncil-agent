@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { ALL_ANALYST_TASKS, LIMITS } from "./constants.mjs";
 import { invalidParams } from "./errors.mjs";
-import { localized } from "./lang.mjs";
+import { languageKey, localized, researchLanguageInstruction } from "./lang.mjs";
+import { EXTRA_RESEARCH_LOCALES, readerText } from "./research-locales.mjs";
 import { personaPrompt, registry } from "./personas/registry.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { assertRuntimeClientPayload, assertRuntimeWorkerPayload } from "./runtime-validation.mjs";
@@ -522,9 +523,10 @@ export function verifierBatchPrompt(run, verifierId, inputPath, {
         : verifierId === "refuter"
           ? "Run at least one concrete disconfirming query for every claim. Record those queries. refuted/weakened/superseded_by_newer require the URLs checked; stands is valid only after the negative search."
           : null,
-    `Write reader-facing note/excerpt/rederivation in ${run.language}; preserve stable IDs and URLs exactly.`,
+    `Write reader-facing note/rederivation in ${run.language}; preserve exact source excerpts, stable IDs and URLs in their original form.`,
     `Verifier method instructions:\n${personaPrompt(persona, run.language)}`,
     `Return only JSON matching this shape: ${JSON.stringify(contract)}`,
+    researchLanguageInstruction(run.language),
   ].filter(Boolean).join("\n\n");
 }
 
@@ -656,6 +658,7 @@ export function readVerifierBatchInput(path) {
 
 export function verificationFailureMessage(run) {
   const status = verificationAuditStatus(run);
+  if (EXTRA_RESEARCH_LOCALES.includes(languageKey(run.language))) return `${readerText(run.language, "Required source-lineage or triple-verification checks have not passed; this run cannot be marked complete.")} ${readerText(run.language, "Coverage")}: ${status.recorded_verdict_count}/${status.expected_verdict_count}.`;
   return localized(run.language, {
     en: `Triple verification coverage did not complete: ${status.recorded_verdict_count}/${status.expected_verdict_count} verdicts recorded; ${status.missing.length} missing.`,
     zh: `三重核验覆盖未完成：已记录 ${status.recorded_verdict_count}/${status.expected_verdict_count} 条判定；缺失 ${status.missing.length} 条。`,

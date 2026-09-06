@@ -1,4 +1,4 @@
-import { languageKey } from "./lang.mjs";
+import { localizedReader, readerText } from "./research-locales.mjs";
 import { hardVerificationFindings } from "./verification.mjs";
 import { sourceManifest } from "./gates.mjs";
 import { sanitizeUntrustedMarkdown } from "./reader-prose.mjs";
@@ -387,7 +387,7 @@ function verificationCorrectionRows(decision, copy) {
   ].join("\n");
 }
 
-function priceRows(decision, copy) {
+function priceRows(decision, copy, language) {
   const supplied = Array.isArray(decision?.price_levels) ? decision.price_levels.slice(0, 8) : [];
   const fallback = [
     { label: copy.upper, range: copy.priceMissing, meaning: copy.upperMeaning, action: copy.noAction, basis: inline(decision?.valuation_range) || copy.priceMissing },
@@ -396,7 +396,7 @@ function priceRows(decision, copy) {
   ];
   const rows = supplied.length >= 3 ? supplied : fallback;
   return [
-    "| Band | Price range | What this price implies | Action | Basis |",
+    readerText(language, "| Band | Price range | What this price implies | Action | Basis |"),
     "| --- | --- | --- | --- | --- |",
     ...rows.map((row, index) => `| ${inline(row?.label) || fallback[index % 3].label} | ${inline(row?.range) || copy.priceMissing} | ${inline(row?.meaning) || copy.priceMissing} | ${inline(row?.action) || copy.noAction} | ${inline(row?.basis) || copy.priceMissing}${sourceSuffix(row?.source_ids, copy)} |`),
   ].join("\n");
@@ -413,7 +413,7 @@ function sourceTable(run, copy) {
     .filter((source) => source.provenance_domain === "evidence");
   if (!sources.length) return `- ${copy.sourceUnavailable}`;
   return [
-    "| Source ID | Title | Published | URL |",
+    readerText(run?.language, "| Source ID | Title | Published | URL |"),
     "| --- | --- | --- | --- |",
     ...sources.map((source) => `| ${inline(source?.id)} | ${inline(source?.title)} | ${inline(source?.published_at) || "unknown"} | ${inline(source?.url)} |`),
   ].join("\n");
@@ -431,7 +431,7 @@ export function managerDecisionNestedSourceIds(decision) {
 }
 
 export function renderStructuredManagerReport(run, decision, { bull = null, bear = null } = {}) {
-  const copy = COPY[languageKey(run?.language)] || COPY.en;
+  const copy = localizedReader(run?.language, COPY);
   // The PM acknowledgement is post-verification; packet open questions are frozen pre-verification
   // records and must not be promoted back into the global decision-facing gap section.
   const gaps = uniqueStrings(decision?.data_gaps || []);
@@ -471,7 +471,7 @@ export function renderStructuredManagerReport(run, decision, { bull = null, bear
     `## ${copy.shortInterest}\n${packetBody(run, "quant_factor", copy, decision)}`,
     `## ${copy.strategic}\n${packetBody(run, "ib_event_analysis", copy, decision)}`,
     `## ${copy.valuation}\n${inline(decision?.valuation_range) || copy.noSectionEvidence}${citations}\n\n${packetBody(run, "valuation_long_short", copy, decision)}`,
-    `## ${copy.price}\n${priceRows(decision, copy)}`,
+    `## ${copy.price}\n${priceRows(decision, copy, run?.language)}`,
     `## ${copy.catalysts}\n${bullets(decision?.catalysts, copy.noCatalysts)}\n${citations}`,
     `## ${copy.risks}\n${bullets(decision?.risks, copy.noRisks)}\n${citations}`,
     `## ${copy.position}\n${inline(decision?.position) || copy.noAction}${citations}`,

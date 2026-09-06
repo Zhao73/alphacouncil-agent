@@ -20,13 +20,15 @@ import { invalidParams } from "./errors.mjs";
 import { readJson, readJsonl, writeJson } from "./fsutil.mjs";
 import { registry } from "./personas/registry.mjs";
 import { assertReaderLanguage, isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
+import { localizedReader } from "./research-locales.mjs";
 import { cleanLog } from "./text.mjs";
 import { authoredReportSectionGaps, completenessStatus, masterSeatIncomplete, requiredReportSectionAliases, sourceManifest, verificationStatus } from "./gates.mjs";
 import { agentState, appendEvent, artifactPaths, existingDebate, runPath, runId, safeSymbol, saveRun, taskState, today, updateAgent, updateTask, writeSourceManifest, writeStatus } from "./run-store.mjs";
 import { publishFinalArtifacts, writeAllAgentsMarkdown, writeAnalystMarkdownFiles, writeArtifactIndex, writeFinalArtifacts } from "./markdown.mjs";
 import { applyGroundedRegulatorCoverage, assertOfficialSourceCoverage, assertPriceLevelContinuity, assertSourceIdsResolve, bindMachineCheckedRatingBasisMarkdown, debateFailurePacket, debateFromCodex, debateQnaGate, debateRoundQnaGate, dryDebate, dryPacket, extractJson, extractRepairedWorkerJson, extractUnvalidatedWorkerJson, extractWorkerJson, firstFailedDebateResult, managerFallback, mergeDebateRounds, methodVoiceAllowedSourceIds, normalizeDebate, normalizeMasterOpinion, normalizeMasterVoice, normalizePacket, pmRatingAdjustmentContexts, rawRecordText } from "./packets.mjs";
 import { assertRuntimeClientPayload } from "./runtime-validation.mjs";
-import { codexAttemptConfig, codexReasoningPolicyStage, codexRunConfig, mapLimit, runCodex, workerActivitySummary, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
+import { codexAttemptConfig, codexReasoningPolicyStage, mapLimit, workerActivitySummary, workerExecutionFailureKind, workerUsageLimitRetryHint } from "./codex.mjs";
+import { assertWorkerNotCancelled, runWorker, workerCancellationSignal, workerExecutionConfig } from "./worker-execution.mjs";
 import { debatePrompt, hardVerificationPromptBlock, masterPrompt, masterVoicePrompt, methodVoiceOutputContract, selectedMasters, taskPrompt } from "./prompts.mjs";
 import { resolveSeatWeights } from "./weights.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, ensureV3FactPack, needsMethodVoiceWorker, planMasterSeats, reconcileMasterOpinion } from "./personas/engine.mjs";
@@ -240,6 +242,10 @@ function recordWorkerAttempt(run, invocationKey, meta, timing) {
   });
 }
 
+function workerExecutionConfigForRun(timing) {
+  return workerExecutionConfig({ councilPace: timing.council_pace });
+}
+
 async function runRecordedCodexAttempt(
   run,
   invocationKey,
@@ -255,7 +261,9 @@ async function runRecordedCodexAttempt(
   const frozenStageConfig = frozenRunConfig?.stage_reasoning?.[policyStage];
   // A queued run owns its worker policy. Do not re-read a mutable process environment between
   // evidence, methods and synthesis; the attempt events must match the frozen status snapshot.
-  const workerConfig = frozenStageConfig
+  const workerConfig = frozenRunConfig?.provider && frozenRunConfig.provider !== "codex_cli"
+    ? frozenRunConfig
+    : frozenStageConfig
     ? Object.freeze({
       provider: frozenRunConfig.provider || "codex_cli",
       model: frozenRunConfig.model || null,
@@ -270,7 +278,7 @@ async function runRecordedCodexAttempt(
       stage: meta.stage,
       attemptKind: meta.attempt_kind,
     });
-  const result = await runCodex(prompt, timeoutMs, (payload) => {
+  const result = await runWorker(prompt, timeoutMs, (payload) => {
     recordWorkerAttempt(run, invocationKey, meta, {
       started_at: payload.started_at,
       pid: payload.pid,
@@ -278,8 +286,20 @@ async function runRecordedCodexAttempt(
       worker_execution_config: payload.worker_execution_config,
     });
     onStart(payload);
-  }, onHeartbeat, { ...runtime, workerConfig });
+  }, onHeartbeat, { ...runtime, workerConfig, stage: meta.stage });
   if (result.timing?.started_at) recordWorkerAttempt(run, invocationKey, meta, result.timing);
+  if (Array.isArray(result.tool_trace)) {
+    run.worker_usage = result.run_budget || run.worker_usage;
+    const traceFile = `worker-trace-${invocationKey.replace(/[^a-zA-Z0-9_-]/gu, "-")}.json`;
+    writeJson(join(runPath(run.run_id), traceFile), {
+      schema_version: 1, invocation_key: invocationKey, worker_execution_config: workerConfig,
+      actual_model: result.actual_model, actual_upstreams: result.actual_upstreams, usage: result.usage, activity_summary: result.activity_summary,
+      run_budget: result.run_budget,
+      events: result.tool_trace,
+    }, { mode: 0o600 });
+    appendEvent(run, "worker_tool_trace", { invocation_key: invocationKey, trace_file: traceFile, actual_model: result.actual_model, actual_upstreams: result.actual_upstreams, usage: result.usage, run_budget: result.run_budget });
+    writeStatus(run);
+  }
   return result;
 }
 
@@ -3195,7 +3215,7 @@ function mergeAcquisitionLedgerRepair(packet, text) {
  * but is not a sourced claim and must never enter evidence.json or downstream debate.
  */
 export function workerFailureArtifacts({ task, symbol, asOfDate, language, timeoutMs, result, failureKind, parseError }) {
-  const copy = localized(language, {
+  const copy = localizedReader(language, {
     en: {
       parse: `Evidence worker ${task} returned output that violated the JSON contract; it produced no evidence usable for an investment decision.`,
       language: `Evidence worker ${task} returned reader-facing content in the wrong language; it produced no evidence usable for an investment decision.`,
@@ -3687,6 +3707,7 @@ export function debateTransportAttemptDiagnostic({ role, round, attempt, result 
  * headless path the same fact boundary. Dry runs remain network-free by design.
  */
 export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun, timeoutMs }, gather = gatherGrounding) {
+  assertWorkerNotCancelled();
   if (grounding && typeof grounding === "object") return grounding;
   if (dryRun) return null;
   if (Number.isFinite(timeoutMs) && timeoutMs <= 0) {
@@ -3697,7 +3718,15 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
     };
   }
   let timer;
-  const controller = Number.isFinite(timeoutMs) ? new AbortController() : null;
+  const externalSignal = workerCancellationSignal();
+  const controller = Number.isFinite(timeoutMs) || externalSignal ? new AbortController() : null;
+  let rejectCancelled;
+  const cancelled = new Promise((_, reject) => { rejectCancelled = reject; });
+  const cancel = () => {
+    controller?.abort(externalSignal.reason);
+    rejectCancelled(externalSignal.reason || new Error("Research cancelled"));
+  };
+  externalSignal?.addEventListener("abort", cancel, { once: true });
   try {
     // The budget is handed DOWN so grounding can settle and return what it has. Racing it from
     // out here discarded a completed quote and a completed screen whenever one feed was slow,
@@ -3708,9 +3737,10 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
       ...(Number.isFinite(timeoutMs) ? { budgetMs: timeoutMs } : {}),
       ...(controller ? { signal: controller.signal } : {}),
     });
-    if (!Number.isFinite(timeoutMs)) return await work;
+    if (!Number.isFinite(timeoutMs)) return await Promise.race([work, cancelled]);
     return await Promise.race([
       work,
+      cancelled,
       new Promise((_, reject) => {
         timer = setTimeout(() => {
           const error = new Error(`quick grounding timed out after ${Math.round(timeoutMs)}ms`);
@@ -3720,6 +3750,7 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
       }),
     ]);
   } catch (error) {
+    assertWorkerNotCancelled();
     // A failed fact fetch is still an explicit grounding result. Keeping an object here
     // makes deterministic methods decline on missing inputs instead of taking the v1 prompt
     // fallback and filling the gap from model memory.
@@ -3731,6 +3762,7 @@ export async function groundingForHeadlessRun({ symbol, asOf, grounding, dryRun,
     };
   } finally {
     if (timer) clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", cancel);
   }
 }
 
@@ -3783,7 +3815,7 @@ export function queueHeadlessRun(args) {
   });
   // Resolve every operator setting before allocating persistent state. Invalid fast-profile
   // overrides must fail without leaving an apparently queued run behind.
-  const workerExecutionConfig = codexRunConfig(process.env, { councilPace: timing.council_pace });
+  const workerExecutionConfig = workerExecutionConfigForRun(timing);
   const dir = runPath(id);
   mkdirSync(dir, { recursive: true });
   const run = {
@@ -3846,7 +3878,7 @@ export async function collectEvidence(args) {
   const timing = councilTiming(args, startedAt);
   // Validate the complete stage policy before grounding performs network I/O or a run directory
   // is created. The same frozen object is persisted for later audit.
-  const workerExecutionConfig = codexRunConfig(process.env, { councilPace: timing.council_pace });
+  const workerExecutionConfig = workerExecutionConfigForRun(timing);
   const timeoutMs = evidenceStageTimeout(args, timing);
   const defaultConcurrency = timing.council_mode === "quick"
     ? QUICK_TASKS.length
@@ -4896,27 +4928,27 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
     const provenanceFailure = ["source_provenance_mismatch", "source_provenance_required"]
       .includes(outcome.error);
     const publicSummary = outcome.error === "voice_contract_failure"
-      ? localized(run.language, {
+      ? localizedReader(run.language, {
         en: "The dedicated method worker violated the abstention voice contract; its prose was withheld and no method-seat statement is available.",
         zh: "专属方法席 worker 违反了弃权发言合同；其陈词已撤回，没有可用的方法席发言。",
         ja: "専用メソッド席ワーカーが棄権時の発言契約に違反したため、文章を差し止め、利用可能なメソッド席発言はありません。",
         ko: "전용 방법론 좌석 워커가 기권 발언 계약을 위반해 해당 문구를 보류했으며 사용할 수 있는 방법론 좌석 발언이 없습니다.",
       })
       : outcome.error === "reader_language_mismatch"
-      ? localized(run.language, {
+      ? localizedReader(run.language, {
         en: "The dedicated method worker returned reader-facing content in the wrong language; no method-seat statement is available.",
         zh: "专属方法席 worker 返回了错误语言的读者内容；没有可用的方法席发言。",
         ja: "専用メソッド席ワーカーは指定と異なる言語の読者向け内容を返したため、利用可能なメソッド席の発言はありません。",
         ko: "전용 방법론 좌석 워커가 지정과 다른 언어의 독자용 내용을 반환해 사용할 수 있는 방법론 좌석 발언이 없습니다.",
       })
       : provenanceFailure
-        ? localized(run.language, {
+        ? localizedReader(run.language, {
           en: "The method seat failed the frozen source-provenance gate; no worker repair or method-seat statement is available.",
           zh: "该方法席未通过冻结来源追溯闸门；系统未执行 worker repair，也没有可用的方法席发言。",
           ja: "このメソッド席は凍結済み出典来歴ゲートを通過できず、ワーカー修復も利用可能な発言もありません。",
           ko: "이 방법론 좌석은 동결된 출처 추적 게이트를 통과하지 못해 워커 복구나 사용할 수 있는 발언이 없습니다.",
         })
-        : localized(run.language, {
+        : localizedReader(run.language, {
           en: "The dedicated method worker did not complete; no method-seat statement is available.",
           zh: "专属方法席 worker 未完成；没有可用的方法席发言。",
           ja: "専用メソッド席ワーカーが完了せず、利用可能なメソッド席の発言はありません。",
@@ -4931,7 +4963,7 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
     });
     const fallbackEligible = Boolean(outcome.frozenOpinion)
       && MUTE_WORKER_FAILURES.has(outcome.error || "unexpected_error");
-    const fallbackSummary = fallbackEligible ? localized(run.language, {
+    const fallbackSummary = fallbackEligible ? localizedReader(run.language, {
       en: "The dedicated voice worker did not complete; the previously frozen deterministic method view is retained, labelled as a fallback, and is not a quotation from the named person.",
       zh: "专属陈词 worker 未完成；系统保留此前已冻结的确定性方法观点，并明确标记为 fallback，不是具名人物本人引语。",
       ja: "専用発言ワーカーは完了しませんでした。先に凍結された決定論的メソッド見解をフォールバックとして明示し、実在人物の引用ではない形で保持します。",
@@ -5898,6 +5930,10 @@ export async function runDebateRole(run, role, context, timeoutMs) {
       failure_kind: packet.failure_kind,
     });
   }
+  if (Number.isInteger(context.round) && context.round >= 1 && context.round <= 3 && result.ok && !packet.failure_kind) {
+    const { raw_text, ...readablePacket } = packet;
+    writeJson(join(runPath(run.run_id), `${role}.round-${context.round}.json`), readablePacket, { mode: 0o600 });
+  }
   return { packet, result, attempts: attemptCount, attempt_diagnostics: attemptDiagnostics };
 }
 
@@ -6521,7 +6557,9 @@ export async function synthesizeDecision(run, args) {
 }
 
 export async function analyzeSymbol(args) {
+  assertWorkerNotCancelled();
   const run = await collectEvidence(args);
+  assertWorkerNotCancelled();
   let gate = completenessStatus(run);
   if (gate.missing_evidence.length > 0) {
     const debate = finalizeBeforeDebate(
@@ -6559,6 +6597,7 @@ export async function analyzeSymbol(args) {
     };
   }
   await runHeadlessVerification(run, args);
+  assertWorkerNotCancelled();
   const verificationGate = verificationStatus(run);
   if (verificationGate.verification === "needs_verification") {
     const debate = finalizeNeedsVerification(run, args, "verification_gate_failed_before_methods");
@@ -6602,6 +6641,7 @@ export async function analyzeSymbol(args) {
     };
   }
   await runHeadlessMasters(run, args);
+  assertWorkerNotCancelled();
   gate = completenessStatus(run);
   if (!methodBenchQuorumMet(run, gate) || remainingCouncilBudget(run, 1) <= 0) {
     const debate = finalizeBeforeDebate(run, args,
@@ -6650,8 +6690,11 @@ export function finalizeUnhandledBackgroundFailure(runIdValue, prompt, error) {
     run.task_status = overlay(run.task_status, latest.tasks, "task");
     run.agent_status = overlay(run.agent_status, latest.agents, "role");
     run.master_status = overlay(run.master_status, latest.masters, "master");
+    if (latest.worker_usage) run.worker_usage = latest.worker_usage;
   }
   const completedAt = new Date().toISOString();
+  const cancelled = /^(user_cancelled|runner_terminated)$/u.test(String(error?.message || ""));
+  const failureReason = cancelled ? error.message : "unexpected_orchestrator_error";
   const terminal = new Set(["completed", "degraded", "failed", "timed_out", "skipped"]);
   const failOpenStates = (states = {}, openStatus = "failed", openError = "unexpected_orchestrator_error") => Object.fromEntries(Object.entries(states).map(([id, state]) => [id,
     terminal.has(state?.status) ? state : {
@@ -6665,27 +6708,28 @@ export function finalizeUnhandledBackgroundFailure(runIdValue, prompt, error) {
   ]));
   const evidencePhase = ["queued", "evidence", "evidence_partial", "evidence_complete", "evidence_degraded"]
     .includes(run.phase);
-  run.task_status = failOpenStates(run.task_status);
+  run.task_status = failOpenStates(run.task_status, cancelled ? "skipped" : "failed", failureReason);
   run.agent_status = failOpenStates(
     run.agent_status,
     evidencePhase ? "skipped" : "failed",
-    evidencePhase ? "not_run_upstream_evidence_failure" : "unexpected_orchestrator_error",
+    cancelled ? failureReason : evidencePhase ? "not_run_upstream_evidence_failure" : "unexpected_orchestrator_error",
   );
   run.master_status = failOpenStates(
     run.master_status,
     evidencePhase ? "skipped" : "failed",
-    evidencePhase ? "not_run_upstream_evidence_failure" : "unexpected_orchestrator_error",
+    cancelled ? failureReason : evidencePhase ? "not_run_upstream_evidence_failure" : "unexpected_orchestrator_error",
   );
-  run.status = "failed";
-  run.phase = "failed";
+  run.status = cancelled ? "incomplete" : "failed";
+  run.phase = cancelled ? "incomplete" : "failed";
+  if (cancelled) { run.stop_reason = failureReason; run.terminal_reason = failureReason; }
   run.completed_at = completedAt;
   run.background_error = cleanLog(error?.message || error, 1_000) || "unexpected orchestration error";
   const manager = managerFallback(run, prompt || "");
-  manager.failure_reason = "unexpected_orchestrator_error";
+  manager.failure_reason = failureReason;
   writeJson(join(dir, "manager_synthesis.json"), manager);
   writeJson(join(dir, "decision.json"), manager);
-  appendEvent(run, "background_run_failed", {
-    error: "unexpected_orchestrator_error",
+  appendEvent(run, cancelled ? "background_run_cancelled" : "background_run_failed", {
+    error: failureReason,
     diagnostic: run.background_error,
     standard_artifacts_written: true,
   });

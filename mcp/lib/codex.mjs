@@ -17,6 +17,7 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { CODEX_CMD, DATA_DIR, LIMITS } from "./constants.mjs";
 import { MAX_WORKER_JSON_CHARS } from "./bounded-json.mjs";
 import { appendLimited } from "./text.mjs";
@@ -234,6 +235,7 @@ export function workerExecutionFailureKind(result = {}) {
  * events; prose that merely says "exec" can no longer become a tool-policy signal.
  */
 export function workerActivitySummary(result = {}) {
+  if (result.activity_summary?.trace_format === "alphacouncil_api_tools_v1") return result.activity_summary;
   const stdout = String(result.stdout || "");
   const stderr = String(result.stderr || "");
   const trace = [stdout, stderr].filter(Boolean).join("\n");
@@ -352,13 +354,23 @@ export function quoteCmdArg(value) {
   return `"${text.replace(/(\\*)"/g, "$1$1\\\"").replace(/(\\+)$/g, "$1$1")}"`;
 }
 
+export function codexCommand(env = process.env) {
+  const bundled = fileURLToPath(new URL("../../terminal/node_modules/@openai/codex/bin/codex.js", import.meta.url));
+  return env.ALPHACOUNCIL_CODEX_BIN || env.ALPHACOUNCIL_AGENT_CODEX_CMD
+    || (existsSync(bundled) ? bundled : CODEX_CMD);
+}
+
 export function codexInvocation(args, platform = process.platform, env = process.env) {
   const fullArgs = [...args, "-"];
+  const executable = codexCommand(env);
+  if (/\.[cm]?js$/iu.test(executable)) {
+    return { command: process.execPath, args: [executable, ...fullArgs], options: { detached: platform !== "win32", windowsHide: true } };
+  }
   if (platform === "win32") {
     if (fullArgs.some((arg) => /[%\r\n]/u.test(String(arg)))) {
       throw new Error("Windows Codex arguments cannot contain percent signs or line breaks");
     }
-    const commandLine = [env.ALPHACOUNCIL_AGENT_CODEX_CMD || CODEX_CMD, ...fullArgs]
+    const commandLine = [executable, ...fullArgs]
       .map(quoteCmdArg)
       .join(" ");
     if (commandLine.length > MAX_WINDOWS_COMMAND_CHARS) {
@@ -373,7 +385,7 @@ export function codexInvocation(args, platform = process.platform, env = process
     };
   }
   return {
-    command: env.ALPHACOUNCIL_AGENT_CODEX_CMD || CODEX_CMD,
+    command: executable,
     args: fullArgs,
     options: { detached: true },
   };
@@ -595,6 +607,7 @@ export function codexWorkerArgs(
 }
 
 export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = () => {}, runtime = {}) {
+  if (runtime.signal?.aborted) return Promise.reject(runtime.signal.reason || new Error("Research cancelled"));
   return new Promise((resolvePromise) => {
     const workerDataDir = runtime.dataDir || DATA_DIR;
     const runtimeEnv = { ...process.env, ...(runtime.env || {}) };
@@ -770,6 +783,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       if (timer) clearTimeout(timer);
       if (heartbeat) clearInterval(heartbeat);
       if (killTimer) clearTimeout(killTimer);
+      runtime.signal?.removeEventListener("abort", beginTimeout);
       // The caller already has the text by now. Nothing deleted this before, so every
       // analyst of every run left one file behind in DATA_DIR forever.
       try {
@@ -833,6 +847,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
       }
       killTimer = setTimeout(forceSettle, remainingKillGraceMs);
     };
+    runtime.signal?.addEventListener("abort", beginTimeout, { once: true });
     // Drain both pipes; switch to streaming logs if a progress UI needs live CLI output.
     child.stdout.on("data", (chunk) => { stdout = appendLimited(stdout, chunk.toString()); });
     child.stderr.on("data", (chunk) => { stderr = appendLimited(stderr, chunk.toString()); });
@@ -881,7 +896,7 @@ export function runCodex(prompt, timeoutMs, onStart = () => {}, onHeartbeat = ()
         timedOut,
       }, timedOut ? "timed_out" : ok ? "completed" : "failed");
     });
-    if (absoluteDeadlineMs !== null && remainingAfterSpawnMs === 0) {
+    if (runtime.signal?.aborted || (absoluteDeadlineMs !== null && remainingAfterSpawnMs === 0)) {
       // Synchronous process startup already consumed the lifecycle. Terminate and settle now;
       // adding the configured grace here would move the attempt past its absolute deadline.
       beginTimeout();

@@ -165,7 +165,8 @@ AlphaCouncil is for **education and research only**. It is not investment advice
 - [Complete four-host installation guide](docs/INSTALL.md)
 - [Report contract](docs/report-contract.md) and [complete example report](docs/examples/final_report.SOX.zh.md)
 - [Roadmap](docs/roadmap.md), [security model](SECURITY.md), [attribution](docs/attribution.md), and [changelog](CHANGELOG.md)
-- Local interfaces: `npm run tui` and `npm run gui`
+- [Standalone terminal client](terminal/README.md): language → ticker → model → methods, with clickable evidence and debate. Developer entry: `npm run terminal` after `npm ci --prefix terminal`.
+- Existing local viewers: `npm run tui` and `npm run gui`
 
 Runtime outputs are written outside the repository under `~/.alphacouncil-agent/runs/<run_id>/`.
 

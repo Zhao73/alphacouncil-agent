@@ -26,7 +26,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.7.0`; verify npm/GitHub/installed-host state separately
+The declared package/plugin version is `1.8.0`; verify npm/GitHub/installed-host state separately
 before claiming which build is the current published default.
 The packaged tree contains 26 physical v3 packs and 52 executable method tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
@@ -267,7 +267,8 @@ A full handoff must list all eight mandatory analyst statuses and summaries, eve
 stable master ID with frozen stance and isolated-worker explanation/status, and one
 system-owned price snapshot with currency/time/source or an explicit unavailable-data gap.
 Tell the user the terminal status, report contract, elapsed/deadline state and file locations.
-System-owned labels and failure text support `zh-CN`, `en`, `ja` and `ko`; propagate the
+System-owned labels and failure text support `zh-CN`, `en`, `ja`, `ko`, `es`, `fr`, `de`,
+`pt-BR`, `it`, `ru`, `vi` and `id`; propagate the
 request language to every worker. `degraded` is a real bounded terminal state: quick may use
 its minimum-coverage rule, and plugin-managed headless full may use it only for disclosed
 `deterministic_fallback` method voices after all structural stages complete. It is never a

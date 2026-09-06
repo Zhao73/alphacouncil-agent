@@ -17,6 +17,10 @@ connector in the Claude desktop app.
 
 ## Install
 
+For the standalone terminal interface, download a native archive from [GitHub Releases](https://github.com/Zhao73/alphacouncil-agent/releases), extract the complete archive, and run `./alphacouncil` (macOS/Linux) or `alphacouncil.cmd` (Windows). It includes Node and the official Codex runtime. Startup walks through language, ticker, model connection and method selection. Archives are unsigned and platform/architecture specific; see [terminal setup and authentication](../terminal/README.md).
+
+The host/plugin installation below keeps the existing MCP entry point:
+
 ```bash
 npm install -g alphacouncil-agent
 ```

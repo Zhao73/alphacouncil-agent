@@ -15,7 +15,8 @@
  * policy performed, in the report's language.
  */
 
-import { localized } from "./lang.mjs";
+import { localized, languageKey } from "./lang.mjs";
+import { EXTRA_RESEARCH_LOCALES, readerText, readerTemplate } from "./research-locales.mjs";
 import { defaultIntentForStance, intentLabel, withheldVoteIntent } from "./voice.mjs";
 
 const MAX_ITEMS = 4;
@@ -46,6 +47,26 @@ export function factsInCondition(node, into = []) {
 }
 
 function copyFor(language) {
+  if (EXTRA_RESEARCH_LOCALES.includes(languageKey(language))) {
+    const text = (value) => readerText(language, value);
+    const template = (value) => (...args) => readerTemplate(language, value, ...args);
+    return {
+      readFacts: template("I read these facts: {0}."),
+      noFacts: text("I received none of the point-in-time facts my method reads."),
+      computed: template("I computed {0}."),
+      hits: template("I find {0} of {1} scoring conditions held: {2}."),
+      misses: template("I find these conditions did not hold: {0}."),
+      noRules: text("I could not evaluate a scoring condition on what was available."),
+      veto: template("I stop before scoring because this hard veto decided the case: {0}."),
+      band: template("I place the score of {1} in the {0} band."),
+      intent: template("On this evidence I would: {0}."),
+      changes: template("I would change this reading if: {0}."),
+      noChanges: text("I have no stated condition that would move this within my method's rules."),
+      disagree: text("I am applying one method to frozen facts, not making a forecast. Where I differ from the analyst sections, the difference is my method's scope, not a correction of them."),
+      declineWhat: template("I require {0}, but the point-in-time record did not contain all of it."),
+      declineWhy: text("I abstain instead of substituting a proxy, because a number I did not compute is not my method's answer."),
+    };
+  }
   return localized(language, {
     en: {
       readFacts: (list) => `I read these facts: ${list}.`,

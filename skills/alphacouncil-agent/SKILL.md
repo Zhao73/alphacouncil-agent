@@ -84,7 +84,9 @@ Use the inferred language for the Stage 0 catalog, visible progress, agent promp
 packets, debate packets and final synthesis unless the user explicitly requests another
 language. Always pass the original user request in `prompt` and the inferred language in
 `language`. System-owned catalog/report/handoff labels and failure text are localized for
-`zh-CN`, `en`, `ja` and `ko`; stable IDs and JSON field names remain English.
+`zh-CN`, `en`, `ja`, `ko`, `es`, `fr`, `de`, `pt-BR`, `it`, `ru`, `vi` and `id`;
+stable IDs, JSON field names and machine enums remain unchanged. Preserve original source
+quotations and explain them in the selected language.
 
 ## Stage 0 — Display, confirm and receipt-gate the master selection
 

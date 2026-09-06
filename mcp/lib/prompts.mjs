@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { isChineseLanguage, localized, resolveLanguage } from "./lang.mjs";
+import { isChineseLanguage, localized, researchLanguageInstruction, resolveLanguage } from "./lang.mjs";
 import { runPath } from "./run-store.mjs";
 import { compactDebateContext, compactEvidence, compactMasterOpinions, compactMethodRiskContext, compactQuickEvidence, methodVoiceAllowedSourceIds, pmRatingAdjustmentContexts } from "./packets.mjs";
 import { outputModeInstruction } from "./output-modes.mjs";
@@ -203,6 +203,7 @@ export function taskPrompt(task, symbol, asOfDate, userPrompt = "", language = "
     sourceAcquisition,
     // Last, so it is the final word on form after the role brief and the settled facts.
     paceShapingInstruction(pace, task, chinese),
+    researchLanguageInstruction(resolvedLanguage),
   ].filter(Boolean).join("\n\n");
 }
 
@@ -430,6 +431,7 @@ export function debatePrompt(role, run, context = {}) {
     // Headless full PMs return a small decision object. Keep this last so the shared persona's
     // legacy long-report-in-JSON contract cannot override it and recreate the truncation risk.
     structuredManagerDecisionInstruction,
+    researchLanguageInstruction(language),
   ].filter(Boolean).join("\n\n");
 }
 
@@ -470,6 +472,7 @@ export function masterPrompt(masterId, run) {
     companyDossierPromptBlock(run),
     grounded,
     `${packetLabel}\nEvidence JSON: ${JSON.stringify(run.council_mode === "quick" ? compactQuickEvidence(run) : compactEvidence(run))}`,
+    researchLanguageInstruction(language),
   ].filter(Boolean).join("\n\n");
 }
 
@@ -628,6 +631,7 @@ export function masterVoicePrompt(masterId, run, frozenOpinion) {
       : "",
     paceShapingInstruction(run.council_pace, masterId, isChineseLanguage(language)),
     `Bounded shared evidence JSON: ${evidence}`,
+    researchLanguageInstruction(language),
   ].filter(Boolean).join("\n\n");
 }
 

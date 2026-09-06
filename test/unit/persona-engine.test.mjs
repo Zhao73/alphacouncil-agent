@@ -5,6 +5,8 @@ import { sha256 } from "../../mcp/lib/personas-v3/canonical.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 import { completedMasterOpinion, declinedMasterOpinion, planMasterSeats, reconcileMasterOpinion } from "../../mcp/lib/personas/engine.mjs";
 import { withTestFormulaApprovalBinding } from "../helpers/persona-v3-deterministic-tool.mjs";
+import { EXTRA_RESEARCH_LOCALES, readerText, readerTemplate } from "../../mcp/lib/research-locales.mjs";
+import { readerLanguageStatus } from "../../mcp/lib/lang.mjs";
 
 const AS_OF = "2026-07-27";
 const HASH = sha256("fixture");
@@ -179,6 +181,15 @@ test("a physical v3 seat with no typed facts declines and never reaches legacy p
   const korean = declinedMasterOpinion({ ...run, language: "한국어" }, plan.declined[0]);
   assert.match(korean.verdict, /평가할 수 없습니다/);
   assert.match(korean.summary, /서술형 판단 계층은 호출하지 않았습니다/);
+  for (const language of EXTRA_RESEARCH_LOCALES) {
+    const translated = declinedMasterOpinion({ ...run, language }, plan.declined[0]);
+    assert.equal(readerLanguageStatus(`${translated.summary} ${translated.voice_statement}`, language).status, "passed", language);
+    assert.notEqual(translated.verdict, opinion.verdict);
+    assert.equal(translated.stance, opinion.stance);
+    assert.equal(translated.frozen_decision_hash, opinion.frozen_decision_hash);
+    assert.deepEqual(translated.source_ids, opinion.source_ids);
+    assert.ok(translated.what_would_change_my_mind.every((text, index) => text === readerTemplate(language, "{0} becomes available from a point-in-time source.", plan.declined[0].preDecision.eligibility.missing_required_fact_types[index])));
+  }
 });
 
 test("an ETF deterministic decline explains look-through instead of sounding bearish", () => {
@@ -199,6 +210,10 @@ test("an ETF deterministic decline explains look-through instead of sounding bea
   assert.match(opinion.voice_statement, /QQQ 已识别为 etf/);
   assert.match(opinion.voice_statement, /持仓穿透或指数聚合证据/);
   assert.match(opinion.voice_statement, /这不是看空，也不是一张反对票/);
+  for (const language of EXTRA_RESEARCH_LOCALES) {
+    const translated = declinedMasterOpinion({ ...run, language }, plan.declined[0]);
+    assert.ok(translated.voice_statement.includes(readerTemplate(language, "{0} is classified as {1}; this method requires dated holdings or aggregate index evidence instead of treating it as an operating company.", "QQQ", "etf")));
+  }
 });
 
 test("a ready v3 seat executes the deterministic DSL without entering the legacy planner", () => {
@@ -238,6 +253,15 @@ test("a ready v3 seat executes the deterministic DSL without entering the legacy
   assert.match(japanese.summary, /言語モデルは立場を選択していない/);
   const korean = completedMasterOpinion({ symbol: "NOK", as_of: AS_OF, language: "한국어" }, plan.completed[0]);
   assert.match(korean.summary, /언어 모델은 입장을 선택하지 않았습니다/);
+  for (const language of EXTRA_RESEARCH_LOCALES) {
+    const translated = completedMasterOpinion({ symbol: "NOK", as_of: AS_OF, language }, plan.completed[0]);
+    assert.equal(readerLanguageStatus(translated.summary, language).status, "passed", language);
+    assert.ok(translated.verdict.includes(readerText(language, "Frozen verdict")));
+    assert.equal(translated.stance, opinion.stance);
+    assert.equal(translated.frozen_decision_hash, opinion.frozen_decision_hash);
+    assert.deepEqual(translated.source_ids, opinion.source_ids);
+    assert.ok(translated.key_findings.every((text) => !text.startsWith("score ")));
+  }
 });
 
 test("Taleb-style 1-of-4 optional coverage completes out_of_scope without narrative or legacy fallback", () => {
@@ -269,6 +293,13 @@ test("Taleb-style 1-of-4 optional coverage completes out_of_scope without narrat
   assert.equal(opinion.stance, "out_of_scope");
   assert.equal(opinion.decision_reason, "insufficient_grounding");
   assert.match(opinion.summary, /no language model selected/i);
+  for (const language of EXTRA_RESEARCH_LOCALES) {
+    const translated = completedMasterOpinion({ ...run, language }, plan.completed[0]);
+    assert.ok(translated.summary.includes(readerTemplate(language, "{0}% coverage; score withheld", 25)));
+    assert.equal(readerLanguageStatus(translated.voice_statement, language).status, "passed", language);
+    assert.equal(translated.stance, "out_of_scope");
+    assert.equal(translated.frozen_decision_hash, opinion.frozen_decision_hash);
+  }
 });
 
 test("the engine derives the shared typed fact pack from timestamped grounding", () => {

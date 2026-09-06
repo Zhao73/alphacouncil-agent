@@ -1,0 +1,43 @@
+name: terminal-build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'terminal/**'
+      - 'mcp/**'
+      - 'package.json'
+      - 'scripts/build-terminal.mjs'
+      - '.github/workflows/terminal-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-archive:
+    name: terminal (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+          cache: npm
+          cache-dependency-path: terminal/package-lock.json
+      - name: Install the locked terminal runtime
+        run: npm ci --prefix terminal --ignore-scripts
+      - name: Run terminal tests
+        run: npm test --prefix terminal
+      - name: Build and relocate-test the native archive without developer tools on PATH
+        run: npm run terminal:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alphacouncil-terminal-${{ runner.os }}-${{ runner.arch }}
+          path: dist/alphacouncil-terminal-*
+          if-no-files-found: error

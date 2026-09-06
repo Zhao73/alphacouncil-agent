@@ -1,3 +1,4 @@
+import { localizedReader, readerText, EXTRA_RESEARCH_LOCALES } from "./research-locales.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -43,7 +44,7 @@ import {
   pmRatingReferenceCurrency,
   pmRatingReferencePrice,
 } from "./pm-rating-rubric.mjs";
-import { managerDecisionNestedSourceIds } from "./manager-report.mjs";
+import { managerDecisionNestedSourceIds, renderStructuredManagerReport } from "./manager-report.mjs";
 import {
   containsProtectedRatingAuthority,
   protectedRatingAuthorityOccurrences,
@@ -56,7 +57,7 @@ export function bindMachineCheckedRatingBasisMarkdown(markdown, ratingBasis, rat
   serverRendered = false,
 } = {}) {
   if (!ratingBasis || typeof markdown !== "string") return markdown;
-  const copy = localized(language, {
+  const copy = localizedReader(language, {
     zh: {
       heading: "服务端校验的评级依据",
       authority: "以下字段已经过服务端契约校验；若后续模型撰写正文与之冲突，以本节为准，冲突正文不具权威性。",
@@ -1334,7 +1335,7 @@ export function debateFailurePacket(role, run, failureKind) {
     decision_available: false,
     rating: null,
     winner: "unknown",
-    summary: copy[kind],
+    summary: EXTRA_RESEARCH_LOCALES.includes(languageKey(run.language)) ? `${role}: ${readerText(run.language, "No usable debate packet was recorded.")} (${kind})` : copy[kind],
     confidence: "low",
     report_markdown: "",
     failure_kind: kind,
@@ -1683,14 +1684,14 @@ function managerFallbackStatus(run, failurePacket = null) {
   const attempts = Math.max(1, Number(failurePacket?.attempts || agentStatus?.attempts) || 1);
   if (failureKind === "parse_failed") {
     if (attempts >= 2) {
-      return localized(run.language, {
+      return localizedReader(run.language, {
         zh: "portfolio_manager 已执行 2 次，但两次输出均违反 JSON/报告契约；未产出可用决策。",
         en: "portfolio_manager ran twice, but both outputs violated the JSON/report contract; no usable decision was produced.",
         ja: "portfolio_manager は2回実行されましたが、2回とも JSON／レポート契約に違反し、利用可能な判断を生成できませんでした。正式な投資判断はありません。",
         ko: "portfolio_manager를 두 번 실행했지만 두 출력 모두 JSON/보고서 계약을 위반해 사용 가능한 결정을 생성하지 못했습니다. 공식 투자 판단을 제공할 수 없습니다.",
       });
     }
-    return localized(run.language, {
+    return localizedReader(run.language, {
       zh: "portfolio_manager 输出违反 JSON/报告契约；未产出可用决策。",
       en: "portfolio_manager output violated the JSON/report contract; no usable decision was produced.",
       ja: "portfolio_manager の出力が JSON／レポート契約に違反し、利用可能な判断を生成できませんでした。正式な投資判断はありません。",
@@ -1698,14 +1699,14 @@ function managerFallbackStatus(run, failurePacket = null) {
     });
   }
   if (failureKind) {
-    return localized(run.language, {
+    return localizedReader(run.language, {
       zh: "portfolio_manager 执行失败，未产出可用决策。",
       en: "portfolio_manager failed and produced no usable decision.",
       ja: "portfolio_manager が失敗し、利用可能な判断を生成できませんでした。正式な投資判断はありません。",
       ko: "portfolio_manager 실행이 실패해 사용 가능한 결정을 생성하지 못했습니다. 공식 투자 판단을 제공할 수 없습니다.",
     });
   }
-  return localized(run.language, {
+  return localizedReader(run.language, {
     zh: "portfolio_manager 未完成，未产出可用决策。",
     en: "portfolio_manager did not complete; no usable decision was produced.",
     ja: "portfolio_manager が完了しておらず、利用可能な判断は生成されていません。正式な投資判断はありません。",
@@ -1861,6 +1862,17 @@ export function managerFallback(run, userPrompt = "", failurePacket = null) {
   // so its own confidence is always low even when every underlying packet is high-confidence.
   const summary = { ...summarizeRun(run, userPrompt), confidence: "low" };
   const managerStatus = managerFallbackStatus(run, failurePacket);
+  if (EXTRA_RESEARCH_LOCALES.includes(languageKey(run.language))) {
+    const unavailable = readerText(run.language, "No investment rating was produced because a required research or portfolio-manager stage did not complete. Available evidence and gaps were saved; the failure was not converted into a buy or sell call.");
+    const decision = {
+      verdict: summary.final_decision, decision_available: false, rating: null, winner: "unknown", summary: managerStatus,
+      long_thesis: summary.thesis.filter((claim) => claim.confidence !== "low").slice(0, 6).map((claim) => claim.claim),
+      short_thesis: summary.open_questions.slice(0, 6), confidence: "low", data_gaps: [managerStatus, ...summary.open_questions],
+      position: unavailable, valuation_range: unavailable, invalidation: [unavailable],
+      horizon_views: { short_term: unavailable, medium_term: unavailable, long_term: unavailable },
+    };
+    return normalizeDebate({ ...decision, report_markdown: renderStructuredManagerReport(run, decision) }, "portfolio_manager", run);
+  }
   const asian = asianManagerFallback(run, summary, managerStatus);
   if (asian) {
     return normalizeDebate({
@@ -2022,6 +2034,14 @@ export function sanitizeStatementMarkdown(value) {
 }
 
 const DIRECTIONAL_ABSTENTION_PATTERNS = Object.freeze([
+  /(?<!\p{L})(?:yo|nosotros)\s+(?:(?:no|ahora|compraría|vendería|quiero|voy a|recomiendo|considero)\s+)?(?:comprar(?:ía)?|compro|vender(?:ía)?|vendo|mantendr[íi]a|sobreponderar|infraponderar|aumentar la posici[oó]n)(?!\p{L})/iu,
+  /(?<!\p{L})(?:je\s+|j[’'])(?:(?:ne|vais|voudrais|recommande de|envisage de)\s+)?(?:ach[eè]t\p{L}*|achet\p{L}*|vend\p{L}*|surpond[eé]r\p{L}*|souspond[eé]r\p{L}*|conserver les actions)(?!\p{L})/iu,
+  /(?<!\p{L})ich\s+(?:(?:würde|werde|will|kann)\s+)?(?:kauf\p{L}*|verkauf\p{L}*|übergewicht\p{L}*|untergewicht\p{L}*|halte die aktien)(?!\p{L})/iu,
+  /(?<!\p{L})eu\s+(?:(?:n[aã]o|vou|iria|recomendo)\s+)?(?:compr\p{L}*|vend\p{L}*|manteria|aumentaria a posiç[aã]o|reduziria a posiç[aã]o)(?!\p{L})/iu,
+  /(?<!\p{L})io\s+(?:(?:non|vorrei|intendo|consiglio di)\s+)?(?:compr\p{L}*|acquist\p{L}*|vend\p{L}*|manterrei|sovrappes\p{L}*|sottopes\p{L}*)(?!\p{L})/iu,
+  /(?<!\p{L})я\s+(?:(?:бы|буду|хочу|не)\s+)?(?:куп\p{L}*|покуп\p{L}*|прод\p{L}*|увелич\p{L}* позици\p{L}*|сокращ\p{L}* позици\p{L}*)(?!\p{L})/iu,
+  /(?<!\p{L})tôi\s+(?:(?:sẽ|muốn|không|định)\s+)?(?:mua|bán|tăng vị thế|giảm vị thế|nắm giữ cổ phiếu)(?!\p{L})/iu,
+  /(?<!\p{L})saya\s+(?:(?:akan|ingin|tidak|berencana)\s+)?(?:membeli|menjual|menambah posisi|mengurangi posisi|memegang saham)(?!\p{L})/iu,
   /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|do|does|intend\s+to|plan\s+to|choose\s+to|refuse\s+to|decline\s+to|am\s+going\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:buy|sell|overweight|underweight|accumulate|trim)\b/iu,
   /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:purchase|acquire|own|hold|retain|liquidate|divest|unload|dispose\s+of|invest\s+(?:in|into))\b[^.!?\n]{0,40}\b(?:stock|shares?|security|name|position|exposure|allocation|company)\b/iu,
   /\b(?:i|we)\s+(?:(?:would|will|should|could|can|must|may|might|intend\s+to|plan\s+to|want\s+to|prefer\s+to)\s+)?(?:not\s+)?(?:cash\s+out|de-?risk|stay\s+away|take\s+profits?|exit|enter|initiate|open|close)\b/iu,
@@ -2118,6 +2138,7 @@ function containsDirectionalStanceText(value) {
 }
 
 function containsDirectionalAbstentionToken(value) {
+  if (DIRECTIONAL_ABSTENTION_PATTERNS.some((pattern) => pattern.test(neutralizeNonDirectionalEvidence(String(value || "").normalize("NFKC"))))) return true;
   return readerVisibleTextCandidates(value).some((text) => {
     const decisionText = neutralizeNonDirectionalEvidence(text);
     return DIRECTIONAL_ABSTENTION_PATTERNS.some((pattern) => pattern.test(decisionText))

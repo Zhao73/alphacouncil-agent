@@ -7,13 +7,24 @@ import { repoFile, repoRoot } from "../helpers/paths.mjs";
 
 test("every orchestrator worker call crosses the one shared attempt recorder", () => {
   const source = readFileSync(repoFile("mcp/lib/orchestrator.mjs"), "utf8");
-  const directRunCodexCalls = [...source.matchAll(/\brunCodex\s*\(/gu)].length;
+  const workerSource = readFileSync(repoFile("mcp/lib/worker-execution.mjs"), "utf8");
+  const directWorkerCalls = [...source.matchAll(/\brunWorker\s*\(/gu)].length;
   const recordedCalls = [...source.matchAll(/\brunRecordedCodexAttempt\s*\(/gu)].length;
   assert.equal(
-    directRunCodexCalls,
+    directWorkerCalls,
     1,
-    "runCodex must occur only inside runRecordedCodexAttempt; six orchestration sites use the wrapper",
+    "runWorker must occur only inside runRecordedCodexAttempt; six orchestration sites use the wrapper",
   );
+  const recorder = source.match(/^async function runRecordedCodexAttempt\([\s\S]*?^\}/mu)?.[0];
+  assert.ok(recorder, "the shared attempt recorder must remain defined");
+  assert.match(recorder, /\bawait runWorker\s*\(/u);
+  assert.doesNotMatch(source, /\b(?:runCodex|runApiWorker)\s*\(/u, "orchestration cannot call an adapter directly");
+  assert.match(source, /import\s+\{[^}]*\brunWorker\b[^}]*\}\s+from\s+"\.\/worker-execution\.mjs"/u);
+  const worker = workerSource.match(/^export function runWorker\([\s\S]*?^\}/mu)?.[0];
+  assert.ok(worker, "the shared worker entry point must remain defined");
+  const adapterDispatch = /\(execution\?\.run\s*\|\|\s*runCodex\)\s*\(/gu;
+  assert.equal([...workerSource.matchAll(adapterDispatch)].length, 1, "one dispatch selects the scoped adapter or original Codex transport");
+  assert.match(worker, adapterDispatch);
   assert.ok(recordedCalls >= 7, "the shared wrapper definition plus all six existing call sites must remain observable");
   assert.match(source, /function\s+recordWorkerAttempt\b/u);
   assert.match(source, /"worker_attempt_started"/u);

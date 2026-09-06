@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import * as orchestrator from "../../mcp/lib/orchestrator.mjs";
 import { assertPriceLevelContinuity, debateFromCodex } from "../../mcp/lib/packets.mjs";
+import { assertReaderLanguage } from "../../mcp/lib/lang.mjs";
 
 const sourcedRun = {
   symbol: "QQQ",
@@ -704,5 +705,25 @@ for (const [language, script, timeoutText, parseText] of [
     });
     assert.match(malformed.packet.summary, parseText);
     assert.doesNotMatch(JSON.stringify(malformed.packet), /internal|bad json/);
+  });
+}
+
+for (const language of ["es", "fr", "de", "pt-BR", "it", "ru", "vi", "id"]) {
+  test(`${language} evidence failures localize public copy while preserving diagnostic codes`, () => {
+    for (const failureKind of ["timed_out", "parse_failed", "reader_language_mismatch"]) {
+      const { packet, diagnostic } = orchestrator.workerFailureArtifacts({
+        task: "market_data", symbol: "QQQ", asOfDate: "2026-07-28", language, timeoutMs: 1000,
+        failureKind, parseError: new Error("PRIVATE_DIAGNOSTIC_SENTINEL"),
+        result: { ok: false, timedOut: failureKind === "timed_out", code: null, text: "", stdout: "", stderr: "PRIVATE_DIAGNOSTIC_SENTINEL" },
+      });
+      assertReaderLanguage(`${packet.summary} ${packet.open_questions.join(" ")}`, language);
+      assert.match(packet.summary, /market_data/u);
+      assert.match(packet.open_questions[0], /market_data/u);
+      assert.doesNotMatch(JSON.stringify(packet), /Evidence worker|Inspect the separate|PRIVATE_DIAGNOSTIC_SENTINEL/u);
+      assert.deepEqual(packet.claims, []);
+      assert.equal(diagnostic.status, failureKind);
+      assert.equal(diagnostic.task, "market_data");
+      assert.equal(diagnostic.reason, failureKind === "timed_out" ? "timeout after 1000ms" : "PRIVATE_DIAGNOSTIC_SENTINEL");
+    }
   });
 }

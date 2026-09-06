@@ -18,6 +18,7 @@ import { fetchOptionsChain } from "./options.mjs";
 import { getMarketNarrative } from "./narrative.mjs";
 import { getSocialPulse, verifyXPost } from "./social.mjs";
 import { councilOptions } from "./council-options.mjs";
+import { selectionInterfaceCopy } from "./selection-locales.mjs";
 import { beginCouncilSelection, confirmCouncilSelection, consumeCouncilSelection, selectionRequiredError } from "./council-selection.mjs";
 import { cleanupSelectionStore } from "./selection-cleanup.mjs";
 import { companyNewsTerms, fetchFeeds, tickerNewsFeed, queryNewsFeed, filingsFeed } from "./feeds.mjs";
@@ -86,31 +87,41 @@ export function recordAck(run, extra = {}) {
   };
 }
 
+function selectionReader(language, messages, key, ...values) {
+  const copy = selectionInterfaceCopy(language);
+  if (!copy) return localized(language, messages);
+  const value = copy[key];
+  if (value === undefined) throw new Error(`Missing selection interface translation: ${key}`);
+  return typeof value === "string"
+    ? value.replace(/\{(\d+)\}/gu, (_, index) => String(values[Number(index)] ?? ""))
+    : value;
+}
+
 export function renderSelectionSummary(data) {
-  const copy = localized(data.language, {
+  const copy = selectionReader(data.language, {
     zh: { title: "本次研究配置", methods: "方法", empty: "尚无数据支持的默认组合；请从完整目录选择", previous: "沿用上次选择，等待本次确认", proposed: "建议组合，等待本次确认", horizon: "研究期限", annual: "12 个月，按预期总回报评级", other: "按你的问题与期限分析；未启用一年评级档位", evidence: "证据席", pace: "深度", ceiling: "分钟终态保存上限，非预计完成时间", calls: "基础调用数（未扣除退出方法，不含重试和额外核验）", action: "确认此配置即可开始；也可修改方法、深度和证据范围，或展开完整目录。", disclosure: "26 种临时方法视角可选；数据覆盖会在执行前复核，缺数据不等于看空。" },
     en: { title: "Research setup", methods: "Methods", empty: "No data-supported default panel yet; choose from the full catalog", previous: "Previous choices, awaiting fresh confirmation", proposed: "Suggested panel, awaiting confirmation", horizon: "Horizon", annual: "12 months, rated by expected total return", other: "Your stated objective and horizon; no one-year return rubric", evidence: "Evidence seats", pace: "Depth", ceiling: "minute terminal-persistence ceiling, not estimated completion", calls: "Base calls before abstentions; excludes retries/extra verification", action: "Confirm this setup to start, change methods/depth/evidence, or expand the full catalog.", disclosure: "All 26 provisional method lenses remain available. Data is checked before execution; missing data is not bearish." },
     ja: { title: "今回の調査設定", methods: "メソッド", empty: "データで裏付けられた初期候補はありません。全カタログから選択してください", previous: "前回の選択。今回の確認が必要です", proposed: "参考候補。確認を待っています", horizon: "調査期間", annual: "12か月、予想総収益率に基づく評価", other: "依頼された目的と期間。1年評価基準は未適用", evidence: "分析席", pace: "深さ", ceiling: "分の終端保存上限。完了予測ではありません", calls: "基本呼び出し数（見送り前、再試行・追加検証を除く）", action: "この設定を確認して開始するか、メソッド・深さ・分析範囲を変更し、全カタログを展開できます。", disclosure: "26の暫定メソッドを選択できます。実行前にデータを再確認し、欠損を弱気判断にしません。" },
     ko: { title: "이번 조사 설정", methods: "방법", empty: "데이터로 뒷받침된 기본 조합이 없습니다. 전체 목록에서 선택하십시오", previous: "이전 선택, 이번 실행의 확인 필요", proposed: "참고 조합, 확인 대기", horizon: "조사 기간", annual: "12개월, 예상 총수익률 기준 평가", other: "요청한 목표와 기간. 1년 평가 기준 미적용", evidence: "분석 좌석", pace: "깊이", ceiling: "분 종료 기록 상한이며 완료 예상 시간이 아닙니다", calls: "기본 호출 수 (보류 전, 재시도·추가 검증 제외)", action: "이 설정을 확인하여 시작하거나 방법·깊이·분석 범위를 변경하고 전체 목록을 펼칠 수 있습니다.", disclosure: "26개 잠정 방법을 선택할 수 있습니다. 실행 전 데이터를 재확인하며 결측치를 약세로 해석하지 않습니다." },
-  });
+  }, "summary");
   const ids = data.suggested_master_ids || [];
   const methods = ids.map((id) => data.masters.find((master) => master.id === id)).filter(Boolean);
   const quick = data.council_mode === "quick";
   const scope = quick ? "quick" : data.preselected_analyst_scope || "core";
   const evidence = data.analyst_options.find((option) => option.scope === scope)?.count;
   const pace = data.preselected_council_pace || data.default_council_pace;
-  const paceLabel = localized(data.language, {
+  const paceLabel = selectionReader(data.language, {
     zh: { fast: "快速", normal: "标准", slow: "深入", quick: "快速模式" },
     en: { fast: "Fast", normal: "Standard", slow: "Deep", quick: "Quick" },
     ja: { fast: "速め", normal: "標準", slow: "詳細", quick: "クイック" },
     ko: { fast: "빠르게", normal: "표준", slow: "심층", quick: "간단 모드" },
-  })[quick ? "quick" : pace];
-  const horizonLabels = localized(data.language, {
+  }, "pace")[quick ? "quick" : pace];
+  const horizonLabels = selectionReader(data.language, {
     zh: ["1–4 周", "3–6 个月", "1 年", "3–5 年", "10 年以上", "长期、无固定期限", "不设期限"],
     en: ["1–4 weeks", "3–6 months", "1 year", "3–5 years", "10+ years", "Indefinite", "Horizon agnostic"],
     ja: ["1–4週間", "3–6か月", "1年", "3–5年", "10年以上", "期限なしの長期", "期間を限定しない"],
     ko: ["1–4주", "3–6개월", "1년", "3–5년", "10년 이상", "기한 없는 장기", "기간 무관"],
-  });
+  }, "horizons");
   const horizonIndex = ["1_4_weeks", "3_6_months", "1_year", "3_5_years", "10_years_plus", "indefinite", "horizon_agnostic"].indexOf(data.decision_context?.holding_horizon);
   const horizon = data.decision_context?.rating_basis_required ? copy.annual : horizonLabels[horizonIndex] || copy.other;
   const ceiling = quick ? 10 : data.pace_options.find((option) => option.pace === pace)?.hard_ceiling_minutes;
@@ -121,30 +132,30 @@ export function renderSelectionSummary(data) {
     `- ${copy.horizon}: ${horizon}`,
     `- ${copy.evidence}: ${evidence} · ${copy.pace}: ${paceLabel} · ${ceiling} ${copy.ceiling}`,
     ...(methods.length ? [`- ${copy.calls}: ${evidence + methods.length + (quick ? 3 : 7)} (${methods.length} ${copy.methods})`] : []),
-    ...(data.suggestion_basis === "starter_pending_data" ? [localized(data.language, {
+    ...(data.suggestion_basis === "starter_pending_data" ? [selectionReader(data.language, {
       zh: "基础组合：标的类型和数据覆盖尚未核验；可直接确认或修改，执行时不适用的方法会明确退出。",
       en: "Starter panel: instrument type and data coverage are not checked yet. Confirm or change it; inapplicable methods will abstain explicitly.",
       ja: "初期候補：商品種別とデータ充足は未確認です。確認または変更でき、適用できないメソッドは明示的に見送ります。",
       ko: "기본 후보: 자산 유형과 데이터 충족 여부는 아직 확인되지 않았습니다. 확인하거나 변경할 수 있으며 부적합한 방법은 명시적으로 판단을 보류합니다.",
-    })] : []),
+    }, "starter")] : []),
     copy.disclosure,
-    quick ? localized(data.language, {
+    quick ? selectionReader(data.language, {
       zh: "确认此配置即可开始；可修改方法，或展开完整目录。需要更广的证据范围请切换完整模式。",
       en: "Confirm to start, change methods or expand the full catalog. Use full mode for broader evidence.",
       ja: "確認して開始するか、メソッドを変更し全一覧を展開できます。分析範囲を広げる場合はfullを選択してください。",
       ko: "확인 후 시작하거나 방법을 변경하고 전체 목록을 펼칠 수 있습니다. 더 넓은 분석에는 full 모드를 선택하십시오.",
-    }) : copy.action,
+    }, "quickAction") : copy.action,
   ].join("\n");
 }
 
 function renderSelectionCatalog(data) {
-  const copy = (messages) => localized(data.language, messages);
+  const copy = (messages, key, ...values) => selectionReader(data.language, messages, key, ...values);
   const labels = copy({
     en: { identity: "Identity", method: "Method", bestFor: "Best for", maturity: "Maturity", pack: "Pack format", contribution: "Calibrated contribution", preselected: "preselected", recommended: "advisory method match" },
     zh: { identity: "身份", method: "方法", bestFor: "适合", maturity: "成熟度", pack: "物理格式", contribution: "校准贡献", preselected: "已预选", recommended: "方法模拟建议" },
     ja: { identity: "人物像", method: "手法", bestFor: "適した対象", maturity: "成熟度", pack: "パック形式", contribution: "調整済み寄与", preselected: "事前選択済み", recommended: "参考メソッド候補" },
     ko: { identity: "정체성", method: "방법", bestFor: "적합 대상", maturity: "성숙도", pack: "팩 형식", contribution: "보정 기여", preselected: "사전 선택", recommended: "참고 방법 후보" },
-  });
+  }, "labels");
   const preselected = new Set(data.preselected_master_ids || []);
   const recommended = new Set(data.method_panel_recommendation?.included_master_ids || []);
   const calibratedDecisions = (data.method_panel_recommendation?.decisions || [])
@@ -200,26 +211,26 @@ function renderSelectionCatalog(data) {
         zh: `方法模拟建议面板：${recommendedIds.join("、")}。未填充方法族：${unfilledFamilies.join("、") || "无"}。这只帮助选择：完整目录仍可选，不代表真人专家；未经你明确提交不会开始研究。确认时请原样回传 recommendation_hash。`,
         ja: `参考メソッド候補：${recommendedIds.join(", ")}。未充足のメソッド群：${unfilledFamilies.join(", ") || "なし"}。選択補助に限られ、全カタログは引き続き選択可能です。実在の専門家を表すものではなく、明示的な送信なしに調査は開始しません。確認時に recommendation_hash をそのまま返してください。`,
         ko: `참고 방법 후보: ${recommendedIds.join(", ")}. 채워지지 않은 방법론 계열: ${unfilledFamilies.join(", ") || "없음"}. 선택 보조일 뿐이며 전체 카탈로그는 계속 선택할 수 있습니다. 실제 전문가를 뜻하지 않고 명시적으로 제출하기 전에는 조사가 시작되지 않습니다. 확인 시 recommendation_hash를 그대로 보내십시오.`,
-      })
+      }, "recommendation", recommendedIds.join(", "), unfilledFamilies.join(", ") || selectionInterfaceCopy(data.language)?.none)
       : copy({
         en: `No method passed the advisory coverage gate. Unfilled method families: ${unfilledFamilies.join(", ") || "none"}. The full catalog remains selectable; confirm an explicit choice with recommendation_hash.`,
         zh: `没有方法通过本次建议覆盖闸门。未填充方法族：${unfilledFamilies.join("、") || "无"}。完整目录仍可选择；请带 recommendation_hash 明确确认你的选择。`,
         ja: `参考カバレッジゲートを通過したメソッドはありません。未充足のメソッド群：${unfilledFamilies.join(", ") || "なし"}。全カタログは選択可能です。recommendation_hash を添えて明示的に確認してください。`,
         ko: `권고 커버리지 게이트를 통과한 방법론이 없습니다. 채워지지 않은 방법론 계열: ${unfilledFamilies.join(", ") || "없음"}. 전체 카탈로그는 선택할 수 있으며 recommendation_hash와 함께 명시적으로 확인해야 합니다.`,
-      })
+      }, "nonePassed", unfilledFamilies.join(", ") || selectionInterfaceCopy(data.language)?.none)
     : copy({
       en: "No advisory panel was generated because the instrument classification is missing. Choose explicitly from the full catalog; no default eight was guessed.",
       zh: "由于缺少资产分类，本次未生成方法建议面板。请从完整目录明确选择；系统没有猜测默认 8 席。",
       ja: "銘柄分類がないため参考パネルは生成されませんでした。全カタログから明示的に選択してください。既定の8席は推測していません。",
       ko: "종목 분류가 없어 참고 패널을 만들지 않았습니다. 전체 카탈로그에서 명시적으로 선택하십시오. 기본 8개 좌석을 추측하지 않았습니다.",
-    });
+    }, "missingClassification");
   const calibrationNotice = data.decision_context
     ? copy({
       en: `Calibrated decision context: objective=${data.decision_context.objective}, horizon=${data.decision_context.holding_horizon}, source=${data.decision_context.source}. Directional contributors: ${data.method_panel_recommendation.directional_rating_master_ids.join(", ") || "none"}; risk coverage: ${data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || "none"}; context only: ${data.method_panel_recommendation.context_only_master_ids.join(", ") || "none"}. Risk/context methods are not directional votes. Return decision_context_hash unchanged at confirmation.`,
       zh: `已校准决策上下文：目标=${data.decision_context.objective}，期限=${data.decision_context.holding_horizon}，来源=${data.decision_context.source}。方向贡献：${data.method_panel_recommendation.directional_rating_master_ids.join("、") || "无"}；风险覆盖：${data.method_panel_recommendation.risk_coverage_master_ids.join("、") || "无"}；仅上下文：${data.method_panel_recommendation.context_only_master_ids.join("、") || "无"}。风险/上下文方法不计作方向票。确认时须原样回传 decision_context_hash。`,
       ja: `調整済み判断コンテキスト：目的=${data.decision_context.objective}、期間=${data.decision_context.holding_horizon}、由来=${data.decision_context.source}。方向寄与：${data.method_panel_recommendation.directional_rating_master_ids.join(", ") || "なし"}、リスク補完：${data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || "なし"}、文脈のみ：${data.method_panel_recommendation.context_only_master_ids.join(", ") || "なし"}。リスク/文脈メソッドは方向票ではありません。確認時に decision_context_hash をそのまま返してください。`,
       ko: `보정된 결정 컨텍스트: 목표=${data.decision_context.objective}, 기간=${data.decision_context.holding_horizon}, 출처=${data.decision_context.source}. 방향 기여: ${data.method_panel_recommendation.directional_rating_master_ids.join(", ") || "없음"}; 위험 보완: ${data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || "없음"}; 컨텍스트 전용: ${data.method_panel_recommendation.context_only_master_ids.join(", ") || "없음"}. 위험/컨텍스트 방법은 방향 투표가 아닙니다. 확인 시 decision_context_hash를 그대로 반환하십시오.`,
-    })
+    }, "calibration", data.decision_context.objective, data.decision_context.holding_horizon, data.decision_context.source, data.method_panel_recommendation.directional_rating_master_ids.join(", ") || selectionInterfaceCopy(data.language)?.none, data.method_panel_recommendation.risk_coverage_master_ids.join(", ") || selectionInterfaceCopy(data.language)?.none, data.method_panel_recommendation.context_only_master_ids.join(", ") || selectionInterfaceCopy(data.language)?.none)
     : "";
   const quick = data.council_mode === "quick";
   const analystChoice = quick
@@ -228,33 +239,33 @@ function renderSelectionCatalog(data) {
       zh: `分析席选择：quick 固定运行 ${data.analyst_options[0].count} 席（${data.analyst_options[0].analyst_ids.join("、")}）。`,
       ja: `分析席選択：quick は ${data.analyst_options[0].count} 席固定です（${data.analyst_options[0].analyst_ids.join(", ")}）。`,
       ko: `분석가 선택: quick은 ${data.analyst_options[0].count}개 좌석으로 고정됩니다(${data.analyst_options[0].analyst_ids.join(", ")}).`,
-    })
+    }, "quickAnalyst", data.analyst_options[0].count, data.analyst_options[0].analyst_ids.join(", "))
     : copy({
       en: `Analyst selection is separate from method selection: choose core (${data.analyst_options.find((option) => option.scope === "core")?.count}) or all (${data.analyst_options.find((option) => option.scope === "all")?.count}). "All methods" does not imply "all analysts" and vice versa.`,
       zh: `分析席与方法席必须分开选择：core（${data.analyst_options.find((option) => option.scope === "core")?.count} 席）或 all（${data.analyst_options.find((option) => option.scope === "all")?.count} 席）。“全部方法席”不再等于“全部分析席”，反之亦然。`,
       ja: `分析席とメソッド席は別々に選択します：core（${data.analyst_options.find((option) => option.scope === "core")?.count}席）または all（${data.analyst_options.find((option) => option.scope === "all")?.count}席）。`,
       ko: `분석가 좌석과 방법론 좌석은 별도로 선택합니다: core(${data.analyst_options.find((option) => option.scope === "core")?.count}개) 또는 all(${data.analyst_options.find((option) => option.scope === "all")?.count}개).`,
-    });
+    }, "fullAnalyst", data.analyst_options.find((option) => option.scope === "core")?.count, data.analyst_options.find((option) => option.scope === "all")?.count);
   const instructions = quick
     ? copy({
       en: `Quick mode: choose 1 to ${data.maximum} masters. Submit numbers, ranges, or stable IDs, for example: 1 / 1,3,8 / 1-4 / master_buffett. Selecting all is not supported.`,
       zh: `Quick 模式请选择 1 至 ${data.maximum} 位大师。回复编号、范围或稳定 ID，例如：1 / 1,3,8 / 1-4 / master_buffett；不支持 all 全选。`,
       ja: `Quick モードでは1席から${data.maximum}席を選んでください。番号、範囲、stable ID（例：1 / 1,3,8 / 1-4 / master_buffett）を送信してください。all は使用できません。`,
       ko: `Quick 모드에서는 1개에서 ${data.maximum}개 마스터 좌석을 선택하십시오. 번호, 범위 또는 stable ID(예: 1 / 1,3,8 / 1-4 / master_buffett)를 제출하십시오. all은 지원하지 않습니다.`,
-    })
+    }, "quickInstructions", data.maximum)
     : copy({
       en: `Choose 1 to ${data.maximum} masters. Submit numbers, ranges, stable IDs, or all, for example: 1 / 1,3,8 / 1-5 / master_buffett / all.`,
       zh: `请选择 1 至 ${data.maximum} 位大师。回复编号、范围、稳定 ID，或 all 全选，例如：1 / 1,3,8 / 1-5 / master_buffett / all。`,
       ja: `1席から${data.maximum}席のマスターを選んでください。番号、範囲、stable ID、または all（例：1 / 1,3,8 / 1-5 / master_buffett / all）を送信してください。`,
       ko: `1개에서 ${data.maximum}개 마스터 좌석을 선택하십시오. 번호, 범위, stable ID 또는 all(예: 1 / 1,3,8 / 1-5 / master_buffett / all)을 제출하십시오.`,
-    });
+    }, "fullInstructions", data.maximum);
   return [
     copy({
       en: `Master selection (${data.masters.length} in catalog; choose up to ${data.maximum})`,
       zh: `大师选择（目录共 ${data.masters.length} 席；最多选择 ${data.maximum} 席）`,
       ja: `マスター選択（全${data.masters.length}席、最大${data.maximum}席まで）`,
       ko: `마스터 선택(전체 ${data.masters.length}개 좌석, 최대 ${data.maximum}개 선택)`,
-    }),
+    }, "heading", data.masters.length, data.maximum),
     fallbackContext,
     "",
     recommendationNotice,
@@ -270,7 +281,7 @@ function renderSelectionCatalog(data) {
       zh: "提交选择后才会开始研究。",
       ja: "選択を送信するまで調査は開始されません。",
       ko: "선택을 제출하기 전에는 조사를 시작하지 않습니다.",
-    }),
+    }, "submit"),
   ].join("\n");
 }
 
@@ -316,12 +327,12 @@ function terminalHandoffText(run, fallback) {
 }
 
 function nonterminalRunText(status, runIdValue) {
-  const copy = localized(status?.language, {
+  const copy = selectionReader(status?.language, {
     zh: { run: "AlphaCouncil 运行", state: "状态", phase: "阶段", evidence: "证据席", methods: "方法席", next: "下一步：继续用同一个 run_id 调用 read_run；终态前不要新建重复运行。" },
     en: { run: "AlphaCouncil run", state: "status", phase: "phase", evidence: "evidence seats", methods: "method seats", next: "Next: call read_run again with this same run_id; do not create a duplicate run before it reaches a terminal state." },
     ja: { run: "AlphaCouncil 実行", state: "状態", phase: "段階", evidence: "証拠席", methods: "メソッド席", next: "次の手順：同じ run_id で read_run を再度呼び出し、終端状態になる前に重複実行を作成しないでください。" },
     ko: { run: "AlphaCouncil 실행", state: "상태", phase: "단계", evidence: "근거 좌석", methods: "방법론 좌석", next: "다음: 동일한 run_id로 read_run을 다시 호출하고 종결 상태 전에는 중복 실행을 만들지 마십시오." },
-  });
+  }, "status");
   const tasks = Array.isArray(status?.tasks) ? status.tasks : [];
   const completedTasks = tasks.filter((task) => task?.status === "completed").length;
   const selectedMasters = Number.isInteger(status?.selected_master_count) ? status.selected_master_count : 0;
@@ -330,12 +341,12 @@ function nonterminalRunText(status, runIdValue) {
 }
 
 function missingTerminalHandoffText(status, runIdValue, statusPath) {
-  const copy = localized(status?.language, {
+  const copy = selectionReader(status?.language, {
     zh: `运行 ${runIdValue} 已到终态（${status?.status || "未知"}），但用户交接文件缺失，因此不会推断或补造投资评级。请检查 ${statusPath} 和失败诊断；修复缺失阶段后，通过新的席位选择启动新一轮。`,
     en: `Run ${runIdValue} is terminal (${status?.status || "unknown"}), but its user handoff is missing, so no investment rating will be inferred or invented. Review ${statusPath} and the failure diagnostics; after fixing the missing stage, start a new run with a new seat selection.`,
     ja: `実行 ${runIdValue} は終端状態（${status?.status || "不明"}）ですが、ユーザー向け引継ぎファイルがありません。投資評価を推測・補完せず、${statusPath} と失敗診断を確認してください。欠落段階を修正後、新しい席選択で新規実行を開始してください。`,
     ko: `실행 ${runIdValue}은 종결 상태(${status?.status || "알 수 없음"})이지만 사용자 인계 파일이 없습니다. 투자 등급을 추론하거나 만들어 내지 않습니다. ${statusPath}와 실패 진단을 확인하고 누락 단계를 수정한 뒤 새 좌석 선택으로 새 실행을 시작하십시오.`,
-  });
+  }, "missingHandoff", runIdValue, status?.status || "unknown", statusPath);
   return copy;
 }
 
@@ -1262,7 +1273,7 @@ export async function handleToolCall(id, params) {
   if (name === "begin_council_selection") {
     const data = beginCouncilSelection(args);
     data.display_markdown = renderSelectionSummary(data);
-    sendResult(id, jsonContent(`${data.display_markdown}\n\n<details><summary>Full method catalog / 完整方法目录</summary>\n\n${renderSelectionCatalog(data)}\n\n</details>`, data));
+    sendResult(id, jsonContent(`${data.display_markdown}\n\n<details><summary>${selectionInterfaceCopy(data.language)?.catalogTitle || localized(data.language, { en: "Full method catalog", zh: "完整方法目录", ja: "全メソッド一覧", ko: "전체 방법 목록" })}</summary>\n\n${renderSelectionCatalog(data)}\n\n</details>`, data));
     return;
   }
   if (name === "confirm_master_selection") {
@@ -1282,12 +1293,12 @@ export async function handleToolCall(id, params) {
         method_panel_context: data.method_panel_context,
       } : {}),
     })}`;
-    const confirmation = localized(data.language, {
+    const confirmation = selectionReader(data.language, {
       en: `Confirmed ${data.selected_count} method seat(s) and ${data.selected_analyst_count} analyst seat(s) (${data.analyst_scope}) for ${data.symbol}. Use the one-time selection_receipt to start this run.`,
       zh: `已为 ${data.symbol} 分别确认 ${data.selected_count} 个方法席与 ${data.selected_analyst_count} 个分析席（${data.analyst_scope}）。请使用一次性 selection_receipt 启动本轮运行。`,
       ja: `${data.symbol} についてメソッド${data.selected_count}席と分析担当${data.selected_analyst_count}席（${data.analyst_scope}）を別々に確定しました。1回限りの selection_receipt を使用してください。`,
       ko: `${data.symbol}에 대해 방법론 ${data.selected_count}개 좌석과 분석가 ${data.selected_analyst_count}개 좌석(${data.analyst_scope})을 별도로 확정했습니다. 일회용 selection_receipt를 사용하십시오.`,
-    });
+    }, "confirmation", data.selected_count, data.selected_analyst_count, data.analyst_scope, data.symbol);
     sendResult(id, jsonContent(`${fallbackContext}\n${confirmation}`, data));
     return;
   }
@@ -1751,12 +1762,12 @@ export async function handleToolCall(id, params) {
         return;
       }
       const accepted = started;
-      const acceptance = localized(accepted.language, {
+      const acceptance = selectionReader(accepted.language, {
         zh: `已启动 ${accepted.symbol} 的 AlphaCouncil 分析：${accepted.run_id}。请用同一个 run_id 调用 read_run，直到出现终态；不要在等待时新建重复运行。`,
         en: `Accepted AlphaCouncil Agent analysis for ${accepted.symbol}: ${accepted.run_id}. Poll read_run with this same run_id until status is terminal; do not create a duplicate run while waiting.`,
         ja: `${accepted.symbol} の AlphaCouncil 分析を開始しました：${accepted.run_id}。同じ run_id で read_run を呼び出して終端状態まで確認し、待機中に重複実行を作成しないでください。`,
         ko: `${accepted.symbol} AlphaCouncil 분석을 시작했습니다: ${accepted.run_id}. 동일한 run_id로 read_run을 호출해 종결 상태까지 확인하고 대기 중에는 중복 실행을 만들지 마십시오.`,
-      });
+      }, "accepted", accepted.symbol, accepted.run_id);
       sendResult(id, jsonContent(acceptance, accepted));
       return;
     }
