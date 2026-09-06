@@ -350,7 +350,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
           ...['evidence', 'methods', 'debate', 'report', 'sources'].map((kind) => {
             const items = (run.items || []).filter((item) => item.kind === (kind === 'methods' ? 'method' : kind) || kind === 'report' && item.kind === 'decision');
             const count = items.filter((item) => item.available).length;
-            const failed = items.filter((item) => ['failed', 'incomplete', 'not_produced'].includes(item.status)).length;
+            const failed = items.filter((item) => ['evidence', 'method', 'debate'].includes(item.kind) && ['failed', 'incomplete', 'not_produced'].includes(item.status)).length;
             return action(`${t(kind)}  [${'#'.repeat(Math.round(count / Math.max(1, items.length) * 10)).padEnd(10, '-')}] ${count}/${items.length}${failed ? `  ${t('failed')}: ${failed}` : ''}`, () => { state.category = kind; delete state.locations.artifacts; go('artifacts'); });
           }),
           text(''),
@@ -438,11 +438,13 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
           ...(['models', 'history', 'detail'].includes(state.page) ? [action(t('search'), search)] : []),
         ];
       const steps = { language: 1, symbol: 2, connection: 3, provider: 3, profile: 3, account: 3, models: 3, auth: 3, configuration: 4, methods: 4, review: 5 };
+      const readingRun = ['run', 'artifacts', 'stop'].includes(state.page) || state.page === 'detail' && ['run', 'artifacts'].includes(state.previous);
       const result = screen.draw({
         title: `AlphaCouncil | ${title()}${steps[state.page] ? `  ${steps[state.page]}/5` : ''}`,
         showLogo: state.page === 'language',
         cursor,
-        subtitle: [state.symbol, researchLanguage(state.language)?.name, state.connection?.name].filter(Boolean).join(' / '),
+        subtitle: [readingRun ? state.run?.status?.symbol || state.run?.runner?.symbol || state.runId : state.page === 'history' ? '' : state.symbol,
+          researchLanguage(state.language)?.name, readingRun ? state.run?.runner?.connection?.name : state.page === 'history' ? '' : state.connection?.name].filter(Boolean).join(' / '),
         rows, selected: body ? -1 : state.selected, offset: state.offset,
         footer: editing ? t('editHint') : body ? t('readHint') : t('chooseHint'),
         message: state.message,

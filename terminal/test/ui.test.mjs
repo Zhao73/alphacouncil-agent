@@ -377,3 +377,21 @@ test('login URLs remain keyboard and mouse actions during an official sign-in', 
   assert.equal(app.state.busy, false); assert.equal(app.state.page, 'account');
   app.close();
 });
+
+test('opening history identifies the saved instrument and never counts report placeholders as failed workers', () => {
+  const io = terminal();
+  const app = createTerminalApp({}, { ...io, initial: { language: 'en', symbol: 'AAPL' } }); app.start();
+  Object.assign(app.state, { page: 'run', runId: 'ACME-TEST', connection: { name: 'Draft connection' }, run: {
+    status: { symbol: 'ACME', status: 'incomplete', language: 'en' }, items: [
+      { id: 'report', kind: 'report', available: true, status: 'incomplete' },
+      { id: 'handoff', kind: 'report', available: false, status: 'incomplete' },
+      { id: 'worker', kind: 'evidence', available: false, status: 'failed' },
+    ],
+  } }); app.render();
+  const frame = stripVTControlCharacters(io.output.chunks.at(-1));
+  assert.ok(frame.includes('ACME / English')); assert.ok(!frame.includes('AAPL') && !frame.includes('Draft connection'));
+  assert.ok(!app.state.rows.find((row) => row.text.startsWith('Report  [')).text.includes('Failed'));
+  assert.ok(app.state.rows.find((row) => row.text.startsWith('Evidence  [')).text.includes('Failed: 1'));
+  assert.equal(app.state.symbol, 'AAPL', 'reading history preserves the unfinished new-research ticker');
+  app.close();
+});
