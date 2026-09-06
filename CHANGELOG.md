@@ -4,6 +4,15 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-09-06
+
+- Select models from the official Codex app-server catalog or an API model list. Label GLM documentation candidates separately from account-access results, and retain capability checks before research. Distinguish timeouts, cancellation and failed login-status checks.
+- Add connection presets for DeepSeek, Kimi, GLM, OpenRouter and OpenCode Zen/Go. Match gateway models to Chat Completions, Responses or Messages transport, and show plan-use restrictions without treating coding subscriptions as general research API access.
+- Keep terminal navigation in fixed, clickable locations. Edit and save or cancel inputs on the current page, support real cursor movement, and preserve reading position when searching, visiting history or going back. Handle split mouse escape sequences and prevent unintended click actions.
+- Show research progress and browse the saved evidence, method statements, debate rounds and complete reports from the terminal.
+
+This is the source release candidate. Final source checks, complete regression tests, native archive CI, publication and downloaded-install validation are planned and must be recorded separately before claiming they passed. No provider's paid account has been used for live research acceptance for this release. Model listing and capability probes do not establish full research completion, account entitlement to every listed model or investment performance. The 26 provisional PersonaPacks remain at 0.9.4 with the existing evidence and rating contracts. See [the v1.9.0 release notes](docs/releases/v1.9.0.md).
+
 ## [1.8.1] — 2026-09-06
 
 - Keep terminal input and its real cursor visible at 80 × 24 without scrolling the screen during typing.

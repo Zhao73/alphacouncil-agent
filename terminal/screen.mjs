@@ -49,7 +49,7 @@ export function inputDecoder(onInput) {
       if (mouse) {
         buffer = buffer.slice(mouse[0].length);
         const button = Number(mouse[1]);
-        if (mouse[4] === 'M') onInput({ key: button & 64 ? (button & 1 ? 'down' : 'up') : 'mouse', button: button & 3, x: Number(mouse[2]), y: Number(mouse[3]) });
+        if (mouse[4] === 'M' && !(button & 32)) onInput({ key: button & 64 ? (button & 1 ? 'down' : 'up') : 'mouse', button: button & 3, x: Number(mouse[2]), y: Number(mouse[3]) });
         continue;
       }
       const sequence = buffer.match(/^\x1b(?:\[|O)(?:\d+(?:;\d+)*)?([A-Z~])/);
@@ -61,14 +61,17 @@ export function inputDecoder(onInput) {
         continue;
       }
       if (buffer[0] === '\x1b') {
-        if (!flushEscape && (buffer.length === 1 || /^\x1b\[<?[\d;]*$/.test(buffer))) {
+        if (buffer.length > 1 && (/^\x1b\[<?[\d;]*$/.test(buffer) || buffer === '\x1bO')) return;
+        const unsupported = buffer.match(/^\x1b\[[0-?]*[ -/]*[@-~]/);
+        if (unsupported) { buffer = buffer.slice(unsupported[0].length); continue; }
+        if (!flushEscape && buffer.length === 1) {
           escapeTimer = setTimeout(() => consume(true), 60); return;
         }
         buffer = buffer.slice(1); onInput({ key: 'escape' }); continue;
       }
       const char = String.fromCodePoint(buffer.codePointAt(0));
       buffer = buffer.slice(char.length);
-      const key = ({ '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\b': 'backspace', '\x03': 'interrupt' })[char];
+      const key = ({ '\r': 'enter', '\n': 'enter', '\t': 'tab', '\x7f': 'backspace', '\b': 'backspace', '\x03': 'interrupt', '\x15': 'clearInput', '\x01': 'home', '\x05': 'end' })[char];
       if (key) onInput({ key });
       else if (char >= ' ') onInput({ key: 'text', text: char });
     }
@@ -104,10 +107,8 @@ export class Screen {
       this.output.write('\x1b[?25l\x1b[H\x1b[2J' + clip(smallTerminal, Math.max(1, width - 1)));
       return { visible: 0, offset: 0 };
     }
-    const wide = width >= 120 && navigation.length > 0;
-    const navWidth = wide ? 21 : 0;
-    const contentWidth = width - 4 - navWidth;
-    const headerHeight = showLogo ? 5 : 4;
+    const contentWidth = width - 4;
+    const headerHeight = (showLogo ? 5 : 4) + (navigation.length ? 2 : 0);
     const visible = height - headerHeight - 4;
     offset = Math.max(0, Math.min(offset, Math.max(0, rows.length - visible)));
     const border = '+' + '-'.repeat(width - 2) + '+';
@@ -115,23 +116,30 @@ export class Screen {
       ? [title, subtitle, 'github.com/Zhao73/alphacouncil-agent'].map((text, i) => '| ' + clip(LOGO[i], 14) + '  ' + clip(text, width - 20) + ' |')
       : ['| ' + clip(title, width - 4) + ' |', '| ' + clip(subtitle, width - 4) + ' |'];
     const frame = [border, ...heading, border];
+    if (navigation.length) {
+      let toolbar = '';
+      for (const item of navigation) {
+        const label = `[ ${item.text} ]`;
+        const start = stringWidth(toolbar);
+        if (start + stringWidth(label) > contentWidth) break;
+        toolbar += label + ' ';
+        this.hits.push({ x1: 3 + start, x2: 2 + start + stringWidth(label), y: frame.length + 1, action: item.action });
+      }
+      frame.push('| ' + clip(toolbar, contentWidth) + ' |', border);
+    }
     for (let i = 0; i < visible; i++) {
       const index = i + offset, row = rows[index];
       const isSelected = index === selected && row?.action;
       const content = clip(`${isSelected ? '> ' : '  '}${row?.text || ''}`, contentWidth);
       const highlight = isSelected && this.color ? '\x1b[7m' : '';
-      let left = '';
-      if (wide) {
-        left = clip(navigation[i]?.text || '', 20) + '|';
-        if (navigation[i]) this.hits.push({ x1: 2, x2: 21, y: i + headerHeight + 1, action: navigation[i].action });
-      }
-      frame.push('| ' + left + highlight + content + (highlight ? '\x1b[0m' : '') + ' |');
-      if (row?.action) this.hits.push({ x1: 3 + navWidth, x2: width - 2, y: i + headerHeight + 1, action: row.action, index });
+      frame.push('| ' + highlight + content + (highlight ? '\x1b[0m' : '') + ' |');
+      if (row?.action) this.hits.push({ x1: 3, x2: Math.min(width - 2, 4 + stringWidth(row.text)), y: i + headerHeight + 1, action: row.action, index });
     }
-    frame.push(border, '| ' + clip(message, width - 4) + ' |', '| ' + clip(footer, width - 4) + ' |', border);
+    const position = rows.length > visible ? ` ${offset + 1}-${Math.min(offset + visible, rows.length)}/${rows.length}` : '';
+    frame.push(border, '| ' + clip(message, width - 4 - position.length) + position + ' |', '| ' + clip(footer, width - 4) + ' |', border);
     const styled = frame.map((line, i) => this.color && (i < headerHeight || i >= frame.length - 4) ? '\x1b[36m' + line + '\x1b[0m' : line);
     const caret = cursor
-      ? `${headerHeight + 1 + Math.max(0, Math.min(cursor.row, visible - 1))};${3 + navWidth + Math.max(0, Math.min(cursor.column, contentWidth - 1))}`
+      ? `${headerHeight + 1 + Math.max(0, Math.min(cursor.row, visible - 1))};${3 + Math.max(0, Math.min(cursor.column, contentWidth - 1))}`
       : '1;1';
     this.output.write('\x1b[?25l\x1b[?7l\x1b[H' + styled.join('\r\n') + `\x1b[${caret}H\x1b[?7h` + (cursor ? '\x1b[?25h' : ''));
     return { visible, offset };

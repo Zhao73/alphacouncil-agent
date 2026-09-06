@@ -88,10 +88,10 @@ test('clicking completed evidence, methods, debate and reports opens full record
   for (const category of ['evidence', 'methods', 'debate', 'report']) {
     Object.assign(app.state, { page: 'artifacts', runId: 'ACME-TEST', run: { items }, category, selected: 0, offset: 0 });
     app.render();
-    app.handleInput({ key: 'mouse', button: 0, x: 30, y: 5 });
+    app.handleInput({ key: 'mouse', button: 0, x: 10, y: 7 });
     assert.equal(app.state.page, 'detail');
     assert.ok(app.state.detail.content.endsWith('Long recorded exchange.\n'));
-    assert.ok(app.state.rows.every((row) => stringWidth(row.text) <= io.output.columns - 27), 'wide navigation must not clip the end of a wrapped evidence line');
+    assert.ok(app.state.rows.every((row) => stringWidth(row.text) <= io.output.columns - 8), 'fixed navigation must not clip the end of a wrapped evidence line');
     app.handleInput({ key: 'pagedown' }); assert.ok(app.state.offset > 0);
     app.handleInput({ key: 'escape' }); assert.equal(app.state.page, 'artifacts');
   }
@@ -162,13 +162,15 @@ test('long Unicode input keeps the editable tail and cursor inside an 80-column 
   const app = createTerminalApp({}, io); app.start();
   app.state.page = 'account';
   app.state.draft = { provider: 'anthropic', model: '', name: '', storage: 'session', apiKey: '' };
+  app.state.advanced = true;
   app.render();
   app.state.rows.find((row) => row.text.startsWith(`${UI_TEXT[app.state.language].name}:`)).action();
   const value = '中文'.repeat(45) + 'e\u0301';
   app.handleInput({ key: 'paste', text: value });
   const frame = io.output.chunks.at(-1);
   assert.ok(frame.includes('中文e\u0301'));
-  assert.ok(frame.includes('\x1b[7;78H') && frame.endsWith('\x1b[?25h'), 'the real cursor follows the visible tail, away from the bottom edge');
+  const caret = [...frame.matchAll(/\x1b\[(\d+);(\d+)H/g)].at(-1);
+  assert.ok(Number(caret[1]) >= 7 && Number(caret[1]) < 21 && Number(caret[2]) === 78 && frame.endsWith('\x1b[?25h'), 'the real cursor follows the inline editable tail, away from the bottom edge');
   app.handleInput({ key: 'backspace' });
   assert.equal(app.state.editing.value, '中文'.repeat(45), 'backspace removes one complete grapheme');
   app.handleInput({ key: 'enter' });
@@ -188,5 +190,208 @@ test('failed official login and logout stay failures in the interface', async ()
   app.state.connection = profile; app.state.page = 'profile'; app.render();
   await app.state.rows.find((row) => row.text === UI_TEXT.en.disconnect).action();
   assert.equal(app.state.message, `${UI_TEXT.en.error}: ${UI_TEXT.en.unavailable}`);
+  app.close();
+});
+
+test('slow split mouse and application-cursor sequences never become Back or text', async () => {
+  const events = [];
+  const parser = inputDecoder((event) => events.push(event));
+  parser.write('\x1b[<0;10;');
+  await new Promise((resolve) => setTimeout(resolve, 90));
+  assert.deepEqual(events, []);
+  parser.write('8M\x1b[<32;10;8M\x1b[<0;10;8m\x1bO');
+  await new Promise((resolve) => setTimeout(resolve, 90));
+  parser.write('A');
+  assert.deepEqual(events, [{ key: 'mouse', button: 0, x: 10, y: 8 }, { key: 'up' }]);
+  parser.write('\x1b');
+  await new Promise((resolve) => setTimeout(resolve, 90));
+  assert.equal(events.at(-1).key, 'escape', 'a real Esc key still returns promptly');
+  parser.close();
+});
+
+test('history search stays inline, has clickable Cancel, and returns to the originating setup', () => {
+  const io = terminal(80, 24);
+  const app = createTerminalApp({ listConnections: () => [], listRuns: ({ query }) => query ? [] : [{ run_id: 'ACME-TEST', symbol: 'ACME', status: 'complete' }] }, { ...io, initial: { language: 'en' } });
+  app.start();
+  app.state.page = 'connection'; app.render();
+  app.handleInput({ key: 'mouse', button: 0, x: 16, y: 5 });
+  assert.equal(app.state.page, 'history');
+  app.handleInput({ key: 'mouse', button: 0, x: 10, y: 7 });
+  assert.equal(app.state.editing, null, 'a second click from the previous page cannot activate the new first row');
+  app.handleInput({ key: 'text', text: '/' });
+  app.handleInput({ key: 'text', text: 'x' });
+  assert.ok(io.output.chunks.at(-1).includes('ACME-TEST'), 'editing keeps the history list visible');
+  assert.ok(io.output.chunks.at(-1).includes('[ Save ] [ Cancel ]'));
+  // Keyboard navigation ends the old click gesture before another deliberate click.
+  app.handleInput({ key: 'escape' });
+  app.state.rows[0].action(); app.render();
+  app.handleInput({ key: 'enter' });
+  app.handleInput({ key: 'escape' });
+  assert.equal(app.state.page, 'connection');
+  app.close();
+});
+
+test('inline editing supports cursor movement, delete, clear, and graphemes', () => {
+  const io = terminal(80, 24);
+  const app = createTerminalApp({}, { ...io, initial: { language: 'en' } }); app.start();
+  app.state.page = 'symbol'; app.render(); app.state.rows[0].action();
+  app.handleInput({ key: 'paste', text: 'ABCD' });
+  app.handleInput({ key: 'left' }); app.handleInput({ key: 'backspace' });
+  app.handleInput({ key: 'paste', text: '中e\u0301' });
+  assert.equal(app.state.editing.value, 'AB中e\u0301D');
+  app.handleInput({ key: 'backspace' });
+  assert.equal(app.state.editing.value, 'AB中D');
+  app.handleInput({ key: 'home' }); app.handleInput({ key: 'delete' });
+  assert.equal(app.state.editing.value, 'B中D');
+  app.handleInput({ key: 'clearInput' }); app.handleInput({ key: 'paste', text: 'AAPL' });
+  app.handleInput({ key: 'mouse', button: 0, x: 5, y: 5 });
+  assert.equal(app.state.symbol, 'AAPL'); assert.equal(app.state.editing, null);
+  app.close();
+});
+
+test('Codex model action opens a real list with search and default, without editing or paid probing', async () => {
+  const io = terminal(); let probes = 0, listings = 0;
+  const app = createTerminalApp({ listModels: async () => { listings++; return { models: [{ id: 'fixture-one', name: 'One', default: true }, { id: 'fixture-two', name: 'Two' }] }; }, probeConnection: () => { probes++; } }, { ...io, initial: { language: 'en' } });
+  app.start(); app.state.page = 'provider'; app.render();
+  assert.ok(app.state.rows.some((row) => row.text === 'DeepSeek'));
+  assert.ok(app.state.rows.some((row) => row.text === 'OpenCode Go'));
+  app.state.rows.find((row) => row.text === 'Codex / ChatGPT').action(); app.render();
+  await app.state.rows.find((row) => row.text.startsWith('Model:')).action();
+  assert.equal(app.state.page, 'models'); assert.equal(app.state.editing, null);
+  assert.equal(listings, 1); assert.equal(probes, 0);
+  app.handleInput({ key: 'text', text: '/' }); app.handleInput({ key: 'paste', text: 'two' }); app.handleInput({ key: 'enter' });
+  assert.ok(!app.state.rows.some((row) => row.text.includes('fixture-one')));
+  app.state.rows.find((row) => row.text.includes('fixture-two')).action(); app.render();
+  assert.equal(app.state.page, 'account'); assert.equal(app.state.draft.model, 'fixture-two');
+  app.close();
+});
+
+test('a failed model listing retains retry and manual entry, and rejects unknown catalog protocols', async () => {
+  const io = terminal(); let result = { models: [], error: 'authentication_or_model_access: HTTP 401' };
+  const app = createTerminalApp({ listModels: async () => result }, { ...io, initial: { language: 'en' } });
+  app.start(); app.state.page = 'account'; app.state.draft = { provider: 'compatible', name: 'Gateway', apiKey: 'fixture', base_url: 'https://example.com/v1' }; app.render();
+  await app.state.rows.find((row) => row.text.startsWith('Model:')).action();
+  assert.equal(app.state.page, 'models'); assert.ok(app.state.modelError.includes('401'));
+  assert.ok(app.state.rows.find((row) => row.text === UI_TEXT.en.manualModel).action);
+  result = { models: [{ id: 'new-unknown', selectable: false, api_format: null }, { id: 'known', api_format: 'messages', selectable: true }] };
+  await app.state.rows.find((row) => row.text === UI_TEXT.en.refresh).action();
+  assert.equal(app.state.rows.find((row) => row.text.includes('new-unknown')).action, undefined);
+  app.state.rows.find((row) => row.text.includes('known') && !row.text.includes('unknown')).action();
+  assert.equal(app.state.draft.api_format, 'messages');
+  app.close();
+});
+
+test('Esc cancels a pending model list and a saved-profile probe without losing the saved profile', async () => {
+  for (const save of [false, true]) {
+    const io = terminal(); let signalSeen;
+    const pending = async (_, { signal }) => { signalSeen = signal; return new Promise((resolve) => signal.addEventListener('abort', () => resolve({ ok: false, models: [], error: 'Operation cancelled', error_code: 'OPERATION_CANCELLED' }), { once: true })); };
+    const profile = { id: 'saved', provider: 'codex', name: 'Codex', model: '' };
+    const app = createTerminalApp({ listModels: pending, saveConnection: async () => profile, getConnectionSecret: async () => undefined, probeConnection: pending }, { ...io, initial: { language: 'en', symbol: 'ACME' } });
+    app.start(); app.state.page = 'account'; app.state.draft = { ...profile }; app.render();
+    const operation = app.state.rows.find((row) => save ? row.text === UI_TEXT.en.save : row.text.startsWith('Model:')).action();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.ok(app.state.busy); assert.ok(io.output.chunks.at(-1).includes('[ Cancel ]'));
+    app.handleInput({ key: 'escape' }); await operation;
+    assert.equal(signalSeen.aborted, true); assert.equal(app.state.busy, false);
+    assert.ok(app.state.message.includes(UI_TEXT.en.operationCancelled));
+    if (save) { assert.equal(app.state.connection.id, 'saved'); assert.equal(app.state.page, 'profile'); assert.ok(app.state.message.includes(UI_TEXT.en.savedCheckFailed)); }
+    app.close();
+  }
+});
+
+test('artifact search, paging and return retain the originating list position', () => {
+  const io = terminal();
+  const items = Array.from({ length: 40 }, (_, index) => ({ id: `item-${index}`, kind: 'evidence', available: true, status: 'completed' }));
+  const app = createTerminalApp({ readArtifact: () => ({ content: Array.from({ length: 90 }, (_, index) => `Evidence line ${index}${index === 60 || index === 80 ? ' target' : ''}`).join('\n') }) }, { ...io, initial: { language: 'en' } });
+  app.start(); Object.assign(app.state, { page: 'artifacts', run: { items }, runId: 'ACME-TEST', category: 'evidence', selected: 35, offset: 20 }); app.render();
+  app.handleInput({ key: 'enter' }); assert.equal(app.state.page, 'detail');
+  app.handleInput({ key: 'text', text: '/' }); app.handleInput({ key: 'paste', text: 'target' }); app.handleInput({ key: 'enter' });
+  assert.equal(app.state.offset, 60);
+  app.handleInput({ key: 'text', text: 'n' }); assert.equal(app.state.matchIndex, 1);
+  app.handleInput({ key: 'escape' }); assert.equal(app.state.page, 'artifacts'); assert.equal(app.state.selected, 35); assert.equal(app.state.offset, 14);
+  app.close();
+});
+
+test('New research consumes runs and attach startup commands only once', () => {
+  for (const initial of [{ command: 'runs' }, { command: 'attach', runId: 'OLD-RUN' }]) {
+    const io = terminal();
+    const app = createTerminalApp({ listRuns: () => [], loadRun: () => ({ status: { status: 'complete' }, items: [] }) }, { ...io, initial: { ...initial, language: 'en' } });
+    app.start(); app.state.rows.find((row) => row.text.includes('English')).action(); app.render();
+    assert.equal(app.state.page, initial.runId ? 'run' : 'history');
+    const frame = stripVTControlCharacters(io.output.chunks.at(-1)).split('\r\n');
+    const x = frame[4].indexOf('[ New research ]') + 4;
+    app.handleInput({ key: 'mouse', button: 0, x, y: 5 });
+    assert.equal(app.state.page, 'language');
+    app.handleInput({ key: 'enter' }); assert.equal(app.state.page, 'symbol');
+    app.close();
+  }
+});
+
+test('resizing keeps menu selection visible and prevents hidden Start activation in small terminals', () => {
+  const io = terminal(); let launches = 0;
+  const profiles = Array.from({ length: 35 }, (_, i) => ({ id: `fixture-${i}`, provider: 'codex', name: `Profile ${i}` }));
+  const app = createTerminalApp({ listConnections: () => profiles, confirmSelection: () => { launches++; } }, { ...io, initial: { language: 'en' } }); app.start();
+  app.state.page = 'connection'; app.render();
+  for (let i = 0; i < 20; i++) app.handleInput({ key: 'down' });
+  io.output.rows = 24; io.output.emit('resize');
+  assert.ok(app.state.selected >= app.state.offset && app.state.selected < app.state.offset + app.state.visible);
+  assert.ok(io.output.chunks.at(-1).includes('Profile 20'));
+  Object.assign(app.state, { page: 'review', connection: profiles[0], selection: { masters: [] } }); app.render();
+  app.state.selected = app.state.rows.findIndex((row) => row.text === UI_TEXT.en.start);
+  io.output.columns = 60; io.output.rows = 20; io.output.emit('resize');
+  app.handleInput({ key: 'enter' }); app.handleInput({ key: 'text', text: ' ' });
+  assert.equal(launches, 0); assert.equal(app.state.busy, false);
+  app.handleInput({ key: 'interrupt' }); assert.equal(app.state.closed, true);
+});
+
+test('resizing an inline field follows its label and search matches follow new wrapping', () => {
+  const io = terminal(); const app = createTerminalApp({}, { ...io, initial: { language: 'de' } }); app.start();
+  Object.assign(app.state, { page: 'account', draft: { provider: 'compatible', name: 'OpenCode Go', base_url: 'https://opencode.ai/zen/go/v1', apiKey: '' } }); app.render();
+  app.state.rows.find((row) => row.text.startsWith('API Key:')).action(); app.handleInput({ key: 'paste', text: 'fixture-secret' });
+  io.output.columns = 80; io.output.emit('resize');
+  assert.equal(app.state.editing.index, app.state.rows.findIndex((row) => row.text.startsWith('API Key:')));
+  assert.ok(!io.output.chunks.at(-1).includes('fixture-secret'));
+  app.handleInput({ key: 'escape' });
+  Object.assign(app.state, { page: 'detail', detail: { title: 'Evidence', content: 'A'.repeat(370) + 'needle\n' + 'B'.repeat(600) }, previous: 'account', offset: 0 }); app.render();
+  app.handleInput({ key: 'text', text: '/' }); app.handleInput({ key: 'paste', text: 'needle' }); app.handleInput({ key: 'enter' });
+  const oldLine = app.state.detailMatches[0];
+  io.output.columns = 120; io.output.emit('resize');
+  assert.notEqual(app.state.detailMatches[0], oldLine);
+  assert.ok(app.state.detail.rows[app.state.detailMatches[0]].text.includes('needle'));
+  app.close();
+});
+
+test('login URLs remain keyboard and mouse actions during an official sign-in', async () => {
+  const io = terminal();
+  const app = createTerminalApp({ loginCodex: async ({ signal, onOutput }) => {
+    onOutput('Open https://example.com/authorize to sign in');
+    return new Promise((resolve) => signal.addEventListener('abort', () => resolve({ ok: false, error_code: 'OPERATION_CANCELLED', error: 'Cancelled' }), { once: true }));
+  } }, { ...io, initial: { language: 'en' } });
+  app.start(); app.state.page = 'account'; app.state.draft = { provider: 'codex', name: 'Codex' }; app.render();
+  const login = app.state.rows.find((row) => row.text === UI_TEXT.en.officialLogin).action();
+  assert.equal(app.state.page, 'auth');
+  assert.equal(typeof app.state.rows.find((row) => row.text.includes('https://')).action, 'function');
+  assert.ok(io.output.chunks.at(-1).includes('> https://example.com/authorize'));
+  app.handleInput({ key: 'down' }); assert.equal(app.state.selected, 1);
+  app.handleInput({ key: 'enter' }); await login;
+  assert.equal(app.state.busy, false); assert.equal(app.state.page, 'account');
+  app.close();
+});
+
+test('opening history identifies the saved instrument and never counts report placeholders as failed workers', () => {
+  const io = terminal();
+  const app = createTerminalApp({}, { ...io, initial: { language: 'en', symbol: 'AAPL' } }); app.start();
+  Object.assign(app.state, { page: 'run', runId: 'ACME-TEST', connection: { name: 'Draft connection' }, run: {
+    status: { symbol: 'ACME', status: 'incomplete', language: 'en' }, items: [
+      { id: 'report', kind: 'report', available: true, status: 'incomplete' },
+      { id: 'handoff', kind: 'report', available: false, status: 'incomplete' },
+      { id: 'worker', kind: 'evidence', available: false, status: 'failed' },
+    ],
+  } }); app.render();
+  const frame = stripVTControlCharacters(io.output.chunks.at(-1));
+  assert.ok(frame.includes('ACME / English')); assert.ok(!frame.includes('AAPL') && !frame.includes('Draft connection'));
+  assert.ok(!app.state.rows.find((row) => row.text.startsWith('Report  [')).text.includes('Failed'));
+  assert.ok(app.state.rows.find((row) => row.text.startsWith('Evidence  [')).text.includes('Failed: 1'));
+  assert.equal(app.state.symbol, 'AAPL', 'reading history preserves the unfinished new-research ticker');
   app.close();
 });

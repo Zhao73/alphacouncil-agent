@@ -26,7 +26,7 @@ test("release workflow parses and satisfies the two-job OIDC contract", () => {
     node: "24",
     setupNode: "v7",
     npmMinimum: "11.5.1",
-    packageVersion: "1.8.1",
+    packageVersion: "1.9.0",
     t3: "static_guard_rehearsal",
     publish: "not_run",
     githubRelease: "not_run",
