@@ -95,6 +95,32 @@ function openSelection(api, suffix, now) {
   return { opened, confirmation, prompt };
 }
 
+test("remembered choices prefill a new session without reusing consent", () => {
+  const args = { symbol: "PREFILL", language: "English", prompt: "prefill fixture", host: "test", council_mode: "full" };
+  const opened = initialModule.beginCouncilSelection(args);
+  assert.equal(opened.suggestion_basis, "starter_pending_data");
+  assert.equal(opened.suggested_master_ids.length, 8);
+  assert.equal(opened.method_panel_recommendation.status, "not_evaluable");
+  const confirmed = initialModule.confirmCouncilSelection({
+    selection_id: opened.selection_id, catalog_hash: opened.catalog_hash,
+    display_ack: true, selected_master_ids: ["master_lynch"], analyst_scope: "all", council_pace: "fast",
+  });
+  const next = initialModule.beginCouncilSelection(args);
+  assert.equal(next.preselection_source, "previous_confirmation");
+  assert.deepEqual(next.suggested_master_ids, ["master_lynch"]);
+  assert.equal(next.preselected_analyst_scope, "all");
+  assert.equal(next.preselected_council_pace, "fast");
+  assert.notEqual(next.selection_id, opened.selection_id);
+  assert.equal(next.selection_receipt, undefined);
+  assert.equal(readJson(selectionFile(next.selection_id)).status, "awaiting_user_selection");
+  assert.ok(confirmed.selection_receipt);
+  const explicit = initialModule.beginCouncilSelection({ ...args, preselected_master_ids: ["master_buffett"], council_pace: "slow", analyst_scope: "core" });
+  assert.equal(explicit.preselection_source, "request");
+  assert.deepEqual(explicit.suggested_master_ids, ["master_buffett"]);
+  assert.equal(explicit.preselected_analyst_scope, "core");
+  assert.equal(explicit.preselected_council_pace, "slow");
+});
+
 test("confirmation keeps one stable receipt id even when the first durable write fails", async () => {
   const now = Date.parse("2026-08-03T01:00:00.000Z");
   const { opened, confirmation } = openSelection(initialModule, "confirm-first", now);

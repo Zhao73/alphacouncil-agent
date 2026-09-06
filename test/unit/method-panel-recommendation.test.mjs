@@ -17,11 +17,12 @@ function manifest(masterId) {
 }
 
 const manifests = new Map(catalog.all_master_ids.map((masterId) => [masterId, manifest(masterId)]));
-const allFacts = [...new Set([...manifests.values()]
-  .flatMap((entry) => entry.capability.required_fact_types))].sort();
+const producerCatalog = JSON.parse(readFileSync(repoFile("data/typed-fact-producers.v1.json"), "utf8"));
+const allFacts = [...new Set(producerCatalog.pack_fact_coverage
+  .filter((entry) => entry.critical).map((entry) => entry.fact_id))].sort();
 const V1_ALL_FACTS_HASH = "sha256:630119afae35062f08443b1ca076318f44906ddb29fa35a438669f6a7fd50499";
-const LEGACY_V2_ALL_FACTS_HASH = "sha256:4acf11babdad33beab27d6d7a00e442aa049f9043b26474687f33684610a6aaa";
-const UNKNOWN_MARKET_PRICE_PAYLOAD_DIGEST = "5e9d5320dec85cc2d0b62e19e304823539c421393494744fde151162d5261338";
+const V170_ALL_FACTS_HASH = "sha256:3efa4636ce1efdd7fd86453a925eac0ca6d6f297ee3723e66c9856fb0c7955ae";
+const UNKNOWN_MARKET_PRICE_PAYLOAD_DIGEST = "76217d6c7ae8f51769ba02d18ffc5fd9baec33aece672728a2c4f087ec276111";
 const FUND_FACTS = Object.freeze([
   "market.price",
   "market.change_pct",
@@ -65,6 +66,15 @@ function familyMaster(result, familyId) {
   return result.family_assignments.find((assignment) => assignment.family_id === familyId)?.master_id;
 }
 
+test("manifest-optional execution dependencies cannot produce a misleading recommendation", () => {
+  for (const factId of ["financial.incremental_return_on_capital", "options.skew_25d", "financial.free_cash_flow_annual_average"]) {
+    const result = recommendation({ typed_fact_coverage: allFacts.filter((id) => id !== factId) });
+    const affected = result.decisions.filter((decision) => decision.missing_facts.includes(factId));
+    assert.ok(affected.length > 0, factId);
+    assert.ok(affected.every((decision) => decision.decision === "exclude"), factId);
+  }
+});
+
 test("the same frozen inputs produce one byte-identical eight-family recommendation and 26 reasoned decisions", () => {
   const first = recommendation();
   const second = recommendation();
@@ -73,7 +83,7 @@ test("the same frozen inputs produce one byte-identical eight-family recommendat
   assert.equal(first.schema_version, 2);
   assert.equal(first.status, "recommended");
   assert.match(first.recommendation_hash, /^sha256:[a-f0-9]{64}$/u);
-  assert.equal(first.recommendation_hash, LEGACY_V2_ALL_FACTS_HASH);
+  assert.equal(first.recommendation_hash, V170_ALL_FACTS_HASH);
   assert.notEqual(first.recommendation_hash, V1_ALL_FACTS_HASH);
   assert.equal(first.included_master_ids.length, 8);
   assert.equal(new Set(first.included_master_ids).size, 8);
@@ -85,7 +95,7 @@ test("the same frozen inputs produce one byte-identical eight-family recommendat
     "master_dalio",
     "master_burry",
     "master_klarman",
-    "master_pabrai",
+    "master_ackman",
   ]);
   assert.deepEqual(first.unfilled_families, []);
   assert.equal(first.decisions.length, 26);
@@ -284,7 +294,7 @@ test("calibration v2 produces one deterministic schema-v3 decision vector and th
   assert.equal(first.holding_horizon, "1_year");
   assert.match(first.calibration_manifest_hash, /^sha256:[a-f0-9]{64}$/u);
   assert.match(first.recommendation_hash, /^sha256:[a-f0-9]{64}$/u);
-  assert.notEqual(first.recommendation_hash, LEGACY_V2_ALL_FACTS_HASH);
+  assert.notEqual(first.recommendation_hash, V170_ALL_FACTS_HASH);
   assert.equal(first.decisions.length, 26);
 
   const groups = [
@@ -346,8 +356,8 @@ test("objective and horizon fit outrank the existing capability score before the
   );
 
   const short = calibratedRecommendation({ holding_horizon: "1_4_weeks" });
-  assert.equal(familyMaster(short, "quality_compounding"), "master_munger");
-  assert.equal(familyMaster(oneYear, "quality_compounding"), "master_buffett");
+  assert.equal(familyMaster(short, "quality_compounding"), "master_ackman");
+  assert.equal(familyMaster(oneYear, "quality_compounding"), "master_ackman");
   assert.notEqual(short.recommendation_hash, oneYear.recommendation_hash);
 });
 

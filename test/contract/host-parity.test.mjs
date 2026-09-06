@@ -50,8 +50,8 @@ test("all four shipped command surfaces impose the same ordered selection protoc
   const canonical = read("commands/alpha.md");
   const orderedMarkers = [
     "Call `begin_council_selection`",
-    "Show **every returned master individually",
-    "Ask for one submission",
+    "Show `display_markdown` first",
+    "Take one submission",
     "Call `confirm_master_selection`",
     "Only now call `plan_visible_run`",
   ];

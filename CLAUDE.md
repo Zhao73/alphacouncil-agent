@@ -25,7 +25,7 @@ non-investment test output.
 
 ## Current Build Profile
 
-The declared package/plugin version is `1.6.0`; verify npm/GitHub/installed-host state separately
+The declared package/plugin version is `1.7.0`; verify npm/GitHub/installed-host state separately
 before claiming which build is the current published default.
 The packaged tree contains 26 physical v3 packs and 52 executable method tools.
 Every seat carries the `operator_lens` admission level: `method_model` = 0,
@@ -49,12 +49,12 @@ references; it may explain a frozen deterministic result but may not replace or 
 `/alpha <ticker> quick` explicitly selects plugin-managed headless `quick_v1`. `screen`,
 `options`, `news` and `market` are data-only modes and spawn no subagents.
 
-Every full or quick council run must first call `begin_council_selection`, display each
-returned master with its stable number, identity, method and `best_for`, and obtain a
-submission. A native multi-select is optional; the common fallback accepts numbered choices,
+Every full or quick council run must first call `begin_council_selection`, display the
+`display_markdown` configuration, keep the complete returned catalog expandable with each
+stable number, identity, method and `best_for`, and obtain one submission. A native multi-select is optional; the common fallback accepts numbered choices,
 ranges and stable IDs on every host. Full also accepts `all`; quick requires 1-4 distinct
-methods and rejects `all`/`select_all`. Even if the request already names masters, show the
-complete catalog and treat those names only as a prefill. Call
+methods and rejects `all`/`select_all`. Requested and remembered choices remain prefills
+requiring fresh confirmation. Call
 `confirm_master_selection(selection_id, catalog_hash, display_ack: true, ...)`, then pass its
 one-use, mode-bound `selection_receipt` with the same symbol, prompt, language and
 `council_mode` to the execution tool. Full may use `plan_visible_run`, `collect_evidence` or
@@ -87,15 +87,15 @@ No research, run directory or worker may start before that receipt exists. Data-
 - `council_pace` changes depth, never the contract: all three tiers are `full_v2` with eight
   evidence seats, every selected method, three debate rounds and the PM. Quick rejects the field
   — it is a smaller contract, not a slower one. The tier is recorded in `status.json`.
-- The tier is ASKED at the selection gate, not typed as an argument.
+- The tier is shown and confirmed with the whole configuration at the selection gate.
   `begin_council_selection` returns `pace_options`, one row per tier carrying a
   `hard_ceiling_minutes`, a configured stage budget and `observed_completion_status`. The
   stage budget is not an expected duration; until preregistered live terminal evidence exists,
   the observed status stays `not_validated`. The answer goes to `confirm_master_selection` as
   `council_pace` and binds into the receipt, so an execution call may repeat the confirmed tier
   but never change it — a user who approved 15 minutes cannot end up running an hour. A speed
-  named in the request is a prefill exactly like a named master: it highlights the row, the menu
-  is still shown, the answer is still taken. No answer means `normal`.
+  named in the request is a prefill exactly like a named master. Display it and obtain the
+  configuration submission. Without a requested or remembered tier, show `normal`.
 - Start the eight mandatory evidence workers in one parallel wave. A failed mandatory role
   after its single bounded parse-only repair closes the evidence barrier and terminates
   `incomplete`; never refill the result from memory.
@@ -199,10 +199,11 @@ Optional analysts, on the `full` roster rather than the default:
 Quick evidence roles are the fixed four-seat subset listed above and always launch in one
 parallel wave.
 
-Master Bench: the selector's complete returned catalog is authoritative. Both modes display
-every returned lens. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
-methods run between evidence and debate. In plugin-managed headless mode, each selected v3
-seat is a frozen deterministic stance plus its own isolated voice worker; this is a
+Master Bench: the selector's complete returned catalog is authoritative and remains
+expandable from the concise configuration. Full accepts any non-empty selection or `all`; quick accepts only 1-4. Selected
+methods run between evidence and debate. In plugin-managed headless mode, a scored v3
+seat is a frozen deterministic stance plus its own isolated voice worker; frozen abstentions
+retain their deterministic explanation without another call. A dispatched voice is a
 process-isolated worker, not a persistent sidebar agent and not the real person. Quick runs
 its 1-4 seats in one parallel wave. Full/deep
 verifiers are `source_fidelity`, `rederivation`, and `refuter`; quick does not run this

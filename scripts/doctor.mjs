@@ -150,7 +150,7 @@ try {
   } else if (freshness.codex_user_prompt.status === "stale") {
     warn("Codex user /alpha prompt is stale", `replace ${freshness.codex_user_prompt.path} with commands/alpha.md`);
   } else {
-    notes.push(`Codex user /alpha prompt not installed at ${freshness.codex_user_prompt.path}; copy commands/alpha.md there when using the Codex prompt surface`);
+    notes.push(`Codex user /alpha prompt not installed at ${freshness.codex_user_prompt.path}; the installed Codex Skill is the default entry; copying commands/alpha.md is optional for the legacy prompt surface`);
   }
   notes.push("Claude Code, Codex, OpenCode and Grok live host E2E status: not_run (static repository contract only)");
 } catch (error) {

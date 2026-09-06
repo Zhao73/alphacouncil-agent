@@ -86,6 +86,57 @@ export function recordAck(run, extra = {}) {
   };
 }
 
+export function renderSelectionSummary(data) {
+  const copy = localized(data.language, {
+    zh: { title: "本次研究配置", methods: "方法", empty: "尚无数据支持的默认组合；请从完整目录选择", previous: "沿用上次选择，等待本次确认", proposed: "建议组合，等待本次确认", horizon: "研究期限", annual: "12 个月，按预期总回报评级", other: "按你的问题与期限分析；未启用一年评级档位", evidence: "证据席", pace: "深度", ceiling: "分钟终态保存上限，非预计完成时间", calls: "基础调用数（未扣除退出方法，不含重试和额外核验）", action: "确认此配置即可开始；也可修改方法、深度和证据范围，或展开完整目录。", disclosure: "26 种临时方法视角可选；数据覆盖会在执行前复核，缺数据不等于看空。" },
+    en: { title: "Research setup", methods: "Methods", empty: "No data-supported default panel yet; choose from the full catalog", previous: "Previous choices, awaiting fresh confirmation", proposed: "Suggested panel, awaiting confirmation", horizon: "Horizon", annual: "12 months, rated by expected total return", other: "Your stated objective and horizon; no one-year return rubric", evidence: "Evidence seats", pace: "Depth", ceiling: "minute terminal-persistence ceiling, not estimated completion", calls: "Base calls before abstentions; excludes retries/extra verification", action: "Confirm this setup to start, change methods/depth/evidence, or expand the full catalog.", disclosure: "All 26 provisional method lenses remain available. Data is checked before execution; missing data is not bearish." },
+    ja: { title: "今回の調査設定", methods: "メソッド", empty: "データで裏付けられた初期候補はありません。全カタログから選択してください", previous: "前回の選択。今回の確認が必要です", proposed: "参考候補。確認を待っています", horizon: "調査期間", annual: "12か月、予想総収益率に基づく評価", other: "依頼された目的と期間。1年評価基準は未適用", evidence: "分析席", pace: "深さ", ceiling: "分の終端保存上限。完了予測ではありません", calls: "基本呼び出し数（見送り前、再試行・追加検証を除く）", action: "この設定を確認して開始するか、メソッド・深さ・分析範囲を変更し、全カタログを展開できます。", disclosure: "26の暫定メソッドを選択できます。実行前にデータを再確認し、欠損を弱気判断にしません。" },
+    ko: { title: "이번 조사 설정", methods: "방법", empty: "데이터로 뒷받침된 기본 조합이 없습니다. 전체 목록에서 선택하십시오", previous: "이전 선택, 이번 실행의 확인 필요", proposed: "참고 조합, 확인 대기", horizon: "조사 기간", annual: "12개월, 예상 총수익률 기준 평가", other: "요청한 목표와 기간. 1년 평가 기준 미적용", evidence: "분석 좌석", pace: "깊이", ceiling: "분 종료 기록 상한이며 완료 예상 시간이 아닙니다", calls: "기본 호출 수 (보류 전, 재시도·추가 검증 제외)", action: "이 설정을 확인하여 시작하거나 방법·깊이·분석 범위를 변경하고 전체 목록을 펼칠 수 있습니다.", disclosure: "26개 잠정 방법을 선택할 수 있습니다. 실행 전 데이터를 재확인하며 결측치를 약세로 해석하지 않습니다." },
+  });
+  const ids = data.suggested_master_ids || [];
+  const methods = ids.map((id) => data.masters.find((master) => master.id === id)).filter(Boolean);
+  const quick = data.council_mode === "quick";
+  const scope = quick ? "quick" : data.preselected_analyst_scope || "core";
+  const evidence = data.analyst_options.find((option) => option.scope === scope)?.count;
+  const pace = data.preselected_council_pace || data.default_council_pace;
+  const paceLabel = localized(data.language, {
+    zh: { fast: "快速", normal: "标准", slow: "深入", quick: "快速模式" },
+    en: { fast: "Fast", normal: "Standard", slow: "Deep", quick: "Quick" },
+    ja: { fast: "速め", normal: "標準", slow: "詳細", quick: "クイック" },
+    ko: { fast: "빠르게", normal: "표준", slow: "심층", quick: "간단 모드" },
+  })[quick ? "quick" : pace];
+  const horizonLabels = localized(data.language, {
+    zh: ["1–4 周", "3–6 个月", "1 年", "3–5 年", "10 年以上", "长期、无固定期限", "不设期限"],
+    en: ["1–4 weeks", "3–6 months", "1 year", "3–5 years", "10+ years", "Indefinite", "Horizon agnostic"],
+    ja: ["1–4週間", "3–6か月", "1年", "3–5年", "10年以上", "期限なしの長期", "期間を限定しない"],
+    ko: ["1–4주", "3–6개월", "1년", "3–5년", "10년 이상", "기한 없는 장기", "기간 무관"],
+  });
+  const horizonIndex = ["1_4_weeks", "3_6_months", "1_year", "3_5_years", "10_years_plus", "indefinite", "horizon_agnostic"].indexOf(data.decision_context?.holding_horizon);
+  const horizon = data.decision_context?.rating_basis_required ? copy.annual : horizonLabels[horizonIndex] || copy.other;
+  const ceiling = quick ? 10 : data.pace_options.find((option) => option.pace === pace)?.hard_ceiling_minutes;
+  return [
+    `### ${data.symbol} · ${copy.title}`,
+    data.preselection_source === "previous_confirmation" ? copy.previous : copy.proposed,
+    `- ${copy.methods}: ${methods.length ? methods.map((master) => `${master.index}. ${master.title}`).join(" / ") : copy.empty}`,
+    `- ${copy.horizon}: ${horizon}`,
+    `- ${copy.evidence}: ${evidence} · ${copy.pace}: ${paceLabel} · ${ceiling} ${copy.ceiling}`,
+    ...(methods.length ? [`- ${copy.calls}: ${evidence + methods.length + (quick ? 3 : 7)} (${methods.length} ${copy.methods})`] : []),
+    ...(data.suggestion_basis === "starter_pending_data" ? [localized(data.language, {
+      zh: "基础组合：标的类型和数据覆盖尚未核验；可直接确认或修改，执行时不适用的方法会明确退出。",
+      en: "Starter panel: instrument type and data coverage are not checked yet. Confirm or change it; inapplicable methods will abstain explicitly.",
+      ja: "初期候補：商品種別とデータ充足は未確認です。確認または変更でき、適用できないメソッドは明示的に見送ります。",
+      ko: "기본 후보: 자산 유형과 데이터 충족 여부는 아직 확인되지 않았습니다. 확인하거나 변경할 수 있으며 부적합한 방법은 명시적으로 판단을 보류합니다.",
+    })] : []),
+    copy.disclosure,
+    quick ? localized(data.language, {
+      zh: "确认此配置即可开始；可修改方法，或展开完整目录。需要更广的证据范围请切换完整模式。",
+      en: "Confirm to start, change methods or expand the full catalog. Use full mode for broader evidence.",
+      ja: "確認して開始するか、メソッドを変更し全一覧を展開できます。分析範囲を広げる場合はfullを選択してください。",
+      ko: "확인 후 시작하거나 방법을 변경하고 전체 목록을 펼칠 수 있습니다. 더 넓은 분석에는 full 모드를 선택하십시오.",
+    }) : copy.action,
+  ].join("\n");
+}
+
 function renderSelectionCatalog(data) {
   const copy = (messages) => localized(data.language, messages);
   const labels = copy({
@@ -1210,7 +1261,8 @@ export async function handleToolCall(id, params) {
   const args = params?.arguments || {};
   if (name === "begin_council_selection") {
     const data = beginCouncilSelection(args);
-    sendResult(id, jsonContent(renderSelectionCatalog(data), data));
+    data.display_markdown = renderSelectionSummary(data);
+    sendResult(id, jsonContent(`${data.display_markdown}\n\n<details><summary>Full method catalog / 完整方法目录</summary>\n\n${renderSelectionCatalog(data)}\n\n</details>`, data));
     return;
   }
   if (name === "confirm_master_selection") {

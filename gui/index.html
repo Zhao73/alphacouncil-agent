@@ -10,13 +10,14 @@
     --accent: #35b891; --gold: #c9a227; --red: #d4736a;
   }
   * { box-sizing: border-box; margin: 0; }
+  [hidden] { display: none !important; }
   body { background: var(--bg); color: var(--text); font: 14px/1.65 -apple-system, "PingFang SC", "Hiragino Sans", sans-serif; height: 100vh; display: flex; overflow: hidden; }
   aside { width: 300px; min-width: 300px; border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
   aside h1 { font-size: 15px; padding: 16px 16px 8px; color: var(--accent); letter-spacing: .04em; }
   aside h1 small { color: var(--dim); font-weight: 400; margin-left: 6px; }
-  .run { padding: 10px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .run { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; padding: 10px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
   .run:hover, .run.active { background: #1b2420; }
-  .run .sym { font-weight: 600; font-size: 15px; }
+  .run .sym { display: block; font-weight: 600; font-size: 15px; }
   .run .meta { color: var(--dim); font-size: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
   .badge { padding: 0 7px; border-radius: 9px; font-size: 11px; border: 1px solid var(--line); }
   .badge.completed, .badge.complete { color: var(--accent); border-color: var(--accent); }
@@ -44,19 +45,27 @@
   #doc a { color: var(--accent); }
   #doc hr { border: 0; border-top: 1px solid var(--line); margin: 18px 0; }
   .empty { color: var(--dim); padding: 60px 0; text-align: center; }
+  #progress { max-width: 900px; padding: 14px 18px; margin-bottom: 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  #progress p { color: var(--dim); }
+  #doc details { margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+  #doc summary { color: var(--accent); cursor: pointer; font-weight: 600; }
+  #search { margin: 8px 16px 14px; width: calc(100% - 32px); background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+  @media (max-width: 700px) { body { flex-direction: column; } aside { width: 100%; min-width: 0; height: 210px; flex-shrink: 0; border-bottom: 1px solid var(--line); } main { padding: 12px 16px 40px; } .toolbar { top: -12px; } }
 </style>
 </head>
 <body>
 <aside>
   <h1>AlphaCouncil <small>运行记录</small></h1>
+  <input id="search" type="search" placeholder="搜索股票或运行记录" aria-label="搜索股票或运行记录">
   <div id="runs"></div>
 </aside>
 <main>
   <div class="toolbar" id="toolbar" hidden>
-    <select id="file"></select>
+    <select id="file" aria-label="报告文件"></select>
     <button id="refresh">刷新</button>
     <button id="auto">自动刷新: 关</button>
   </div>
+  <div id="progress" role="status" aria-live="polite" hidden></div>
   <div id="doc"><div class="empty">← 选择一次运行查看报告</div></div>
 </main>
 <script>
@@ -109,6 +118,9 @@ function renderMd(src) {
     if (/^```/.test(raw)) { closeAll(); out.push(fence ? "</code></pre>" : "<pre><code>"); fence = !fence; continue; }
     if (fence) { out.push(esc(raw)); continue; }
     const line = raw.trimEnd();
+    if (line === "<details>" || line === "</details>") { closeAll(); out.push(line); continue; }
+    const summary = line.match(/^<summary>(.*)<\/summary>$/);
+    if (summary) { closeAll(); out.push(`<summary>${inline(summary[1])}</summary>`); continue; }
     const h = line.match(/^(#{1,5})\s+(.*)/);
     if (h) { closeAll(); out.push(`<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`); continue; }
     if (/^(-{3,}|\*{3,})$/.test(line.trim())) { closeAll(); out.push("<hr>"); continue; }
@@ -137,22 +149,33 @@ function renderMd(src) {
 }
 
 async function loadRuns() {
-  const runs = await (await fetch("/api/runs")).json();
+  const allRuns = await (await fetch("/api/runs")).json();
+  const query = $("search").value.trim().toLowerCase();
+  const runs = allRuns.filter((run) => `${run.symbol} ${run.run_id}`.toLowerCase().includes(query));
   $("runs").innerHTML = runs.map((r) => `
-    <div class="run ${r.run_id === current ? "active" : ""}" data-id="${esc(r.run_id)}">
-      <div class="sym">${esc(r.symbol || "?")} <span class="badge ${esc(r.status)}">${esc(r.status)}</span></div>
-      <div class="meta">
+    <button type="button" class="run ${r.run_id === current ? "active" : ""}" data-id="${esc(r.run_id)}">
+      <span class="sym">${esc(r.symbol || "?")} <span class="badge ${esc(r.status)}">${esc(r.status)}</span></span>
+      <span class="meta">
+        <span>${esc(r.phase || "")}</span>
         <span>${esc(r.council_mode || "")}${r.council_pace ? " · " + esc(r.council_pace) : ""}</span>
         <span>${r.started_at ? new Date(r.started_at).toLocaleString() : ""}</span>
-      </div>
-    </div>`).join("") || '<div class="empty">还没有运行记录</div>';
+      </span>
+    </button>`).join("") || `<div class="empty">${query ? "未找到匹配记录" : "还没有运行记录"}</div>`;
   for (const el of document.querySelectorAll(".run")) el.onclick = () => openRun(el.dataset.id);
 }
 
-const PREFERRED = ["final_report.md", "user_response.md", "all_agents.md"];
+const PREFERRED = ["user_response.md", "final_report.md", "all_agents.md"];
 async function openRun(id, keepFile) {
   current = id;
-  const { files } = await (await fetch(`/api/runs/${encodeURIComponent(id)}/files`)).json();
+  const { files, status } = await (await fetch(`/api/runs/${encodeURIComponent(id)}/files`)).json();
+  if (current !== id) return;
+  const phases = { queued: "等待开始", grounding: "读取公开数据", evidence: "收集证据", analysts: "分析证据", masters: "方法分析", debate: "多空讨论", portfolio_manager: "汇总判断", complete: "已完成", incomplete: "未完成", failed: "运行失败" };
+  const counts = [["证据席", status?.selected_analyst_count, status?.missing_evidence_count], ["方法席", status?.selected_master_count, status?.missing_master_count]]
+    .filter(([, total, missing]) => Number.isInteger(total) && Number.isInteger(missing))
+    .map(([label, total, missing]) => `${label} ${Math.max(0, total - missing)}/${total}`);
+  const elapsed = Number.isFinite(status?.elapsed_ms) ? `已用 ${Math.round(status.elapsed_ms / 60000)} 分钟` : "";
+  $("progress").innerHTML = `<strong>${esc(phases[status?.phase] || status?.phase || status?.status || "等待状态")}</strong><p>${esc([...counts, elapsed].filter(Boolean).join(" · "))}</p>`;
+  $("progress").hidden = false;
   const mds = files.filter((f) => f.endsWith(".md"));
   mds.sort((a, b) => (PREFERRED.indexOf(a) + 99 & 127) - (PREFERRED.indexOf(b) + 99 & 127) || a.localeCompare(b));
   const keep = keepFile && mds.includes(keepFile) ? keepFile : mds[0];
@@ -164,10 +187,14 @@ async function openRun(id, keepFile) {
 async function loadFile() {
   if (!current) return;
   const name = $("file").value;
-  const text = await (await fetch(`/api/runs/${encodeURIComponent(current)}/file?name=${encodeURIComponent(name)}`)).text();
+  if (!name) { $("doc").innerHTML = '<div class="empty">研究进行中，报告将在完成后显示。可开启自动刷新。</div>'; return; }
+  const selected = current;
+  const text = await (await fetch(`/api/runs/${encodeURIComponent(selected)}/file?name=${encodeURIComponent(name)}`)).text();
+  if (current !== selected || $("file").value !== name) return;
   $("doc").innerHTML = renderMd(text) || '<div class="empty">(空文件)</div>';
 }
 $("file").onchange = loadFile;
+$("search").oninput = loadRuns;
 $("refresh").onclick = () => openRun(current, $("file").value);
 $("auto").onclick = () => {
   if (timer) { clearInterval(timer); timer = null; $("auto").textContent = "自动刷新: 关"; $("auto").classList.remove("on"); }

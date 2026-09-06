@@ -58,9 +58,11 @@ const NO_PRODUCER_ACKNOWLEDGEMENT = join(
 const POLICY_SCHEMA = join(REPO_ROOT, "schemas/persona-v3-decision-policy-v1.schema.json");
 const TEMPLATE_SCHEMA = join(REPO_ROOT, "schemas/persona-v3-seat-template-v1.schema.json");
 const AI_SIMULATION_ROOT = join(REPO_ROOT, "knowledge/ai-assisted-solo/experiments");
+// v1.7 changes the annual FCF fact and Simons abstention semantics; freeze the new semantic baseline.
+// Original byte hashes still prove artifact rebinding; n-eff and human-reference status remain unchanged.
 const AI_SIMULATION_PARENT_SNAPSHOT = Object.freeze({
   "simulation-input.json": {
-    semantic_hash: "sha256:da67a5acccc9ff743a135f598fe68c04839fbf028ed42b56e73f818129c475ce",
+    semantic_hash: "sha256:ea834b45d13f635486b302b8bea310b395d07f033bc9b2bd85834e2fcc84a1b0",
     byte_hash: "sha256:fe8a611dcdd8c0fbca8dd3129c8ec725af38600a13a7873646922d830d6cbe94",
   },
   "simulation-manifest.json": {
@@ -88,7 +90,7 @@ const AI_SIMULATION_PARENT_SNAPSHOT = Object.freeze({
     byte_hash: "sha256:f8e3a485bd3ad8f46e280980128fb9ffbaf53ede03c49b0cf1b6ff178b6861cf",
   },
   "runs/d26.json": {
-    semantic_hash: "sha256:98e9852c18f9a9c8d525eaac066bdb63348ff2851d88bd24801e445e3e9f6221",
+    semantic_hash: "sha256:c522ece9998c55b3dc63f8ad952296cd189334c58ea8312dca4f1ffab9a0568c",
     byte_hash: "sha256:24a59794dc4fa95c8d7e0d594238bb52bedd9c6015055a73ed8bfa54a708d7d3",
   },
   "runs/e-d13.json": {
@@ -96,11 +98,11 @@ const AI_SIMULATION_PARENT_SNAPSHOT = Object.freeze({
     byte_hash: "sha256:5e397bddefb07c03d3cf7888f0167b208a0640bf71d3cd4c0202bed23c2fd6dc",
   },
   "runs/e-d26.json": {
-    semantic_hash: "sha256:cd10b65a305ad3fc951656e8f9e52d3eb63acf0d2187422bd255cce9415dbad3",
+    semantic_hash: "sha256:5f2c71362f6c53e563328072174d15461a4c05f33755f6c10a1500f96bd583a2",
     byte_hash: "sha256:798a2879c2ee54925dbdc11da642239895bf1b4ac276377e64a9d9d24b393d83",
   },
   "runs/h_ai_reference.json": {
-    semantic_hash: "sha256:7e2f8356917ac673f6caf564d82a607502143dbf09f14f70aa36ecc731d09203",
+    semantic_hash: "sha256:fc5907bb32048528749e82106cb37465c59dfa39df91e860b80436aaedf93d32",
     byte_hash: "sha256:0da76457e0595e65d075080ba2cc2d2372bc0122b9ae9d5ac5f1b40414766ed0",
   },
 });
@@ -480,7 +482,7 @@ export function inspectAIMachineSimulationSemanticEquality() {
       const semanticHash = sha256(stripSimulationIdentity(JSON.parse(text)));
       const byteHash = sha256(text);
       if (semanticHash === parent.semantic_hash) semanticEqual += 1;
-      else errors.push(`${relativePath}: semantic content drifted from the WP-3F parent`);
+      else errors.push(`${relativePath}: semantic content drifted from the v1.7 release baseline`);
       if (relativePath === "n-eff-disclosure.json") {
         nEffByteIdentical = byteHash === parent.byte_hash;
         if (!nEffByteIdentical) errors.push(`${relativePath}: must remain byte-identical to the WP-3F parent`);
@@ -719,7 +721,7 @@ export function main(args = process.argv.slice(2)) {
   process.stdout.write(`seat-fidelity: impersonation hits=${s.impersonation_hits}; policy subject=${s.policy_subject_hash}\n`);
   const ai = report.ai_simulations;
   if (ai.valid) {
-    process.stdout.write("ai-simulations: 11 artifacts regenerated; identity drift only; n-eff-disclosure byte-identical\n");
+    process.stdout.write("ai-simulations: 11 artifacts match the v1.7 semantic baseline; original identity rebound; n-eff-disclosure byte-identical\n");
   } else {
     process.stdout.write(`ai-simulations: semantic=${ai.semantic_equal_count}/${ai.artifact_count}; identity drift=${ai.identity_drift_count}/10; n-eff byte-identical=${ai.n_eff_disclosure_byte_identical}\n`);
   }

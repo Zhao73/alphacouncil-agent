@@ -4,7 +4,7 @@
   "derivation_spec": {
     "artifact_kind": "persona_v3_provisional_formula_derivation_spec",
     "assurance_class": "provisional_derived_proxy",
-    "authoring_candidate_hash": "sha256:912b5510a9e6278ac031deeef36fe082b5bd016b611e13518b99417863521220",
+    "authoring_candidate_hash": "sha256:66411df806b8338651108f8a60cd64982e23cc2c3abe86fa87a3d9d0387622bb",
     "derivation_policy": "ai_authored_method_formula_v1",
     "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
     "formula": {
@@ -12,7 +12,7 @@
         {
           "on_missing": "fail",
           "operand": {
-            "fact_id": "financial.free_cash_flow_5y"
+            "fact_id": "financial.free_cash_flow_annual_average"
           },
           "period": {
             "alignment": "as_of",
@@ -53,12 +53,12 @@
     },
     "input_contract_source": "grounding_adapter_canonical_contract_v1",
     "persona_id": "master_cathie_wood",
-    "prototype_content_hash": "sha256:667009a14aa1f7dbdb4baa5eec75cc0c1a627792933f216186bc2aa250c8473d",
+    "prototype_content_hash": "sha256:9bec460d142dc76a3dacc081814af6e979964cf28787f3ebf50bdd4a5b72fba1",
     "prototype_id": "master_cathie_wood.current_cash_yield.prototype_v1",
     "schema_version": 1,
     "tool_id": "master_cathie_wood.current_cash_yield"
   },
-  "derivation_spec_hash": "sha256:60c95955604fde2ba596e5a34b9ab6857835ebfc5cacdc02dfd23b8af954a26f",
+  "derivation_spec_hash": "sha256:c7a62299322fcfac9e9b35304469823d7c851d349198f3f6f49404c3aede097d",
   "human_reviewer_ids": [],
   "intended_use": "local_test_only",
   "limitations": [

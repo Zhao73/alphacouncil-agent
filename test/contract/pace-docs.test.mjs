@@ -35,7 +35,7 @@ test("public fast-pace contracts stay aligned with the executable budget", () =>
   assert.match(install, new RegExp(`are ${selectorMinutes}, 25 and 58 minutes; observed successful completion remains unvalidated`, "u"));
 
   const command = read("commands/alpha.md");
-  assert.match(command, /配置分段约 14 分钟；完整完成实测：尚未验证  每证据席 4 分钟，每方法席 2 分钟，每轮辩论每侧 85 秒/u);
+  assert.match(command, /pace_options[\s\S]*persistence ceilings, stage budgets and unvalidated[\s\S]*completion status/u);
   assert.match(command, /fast` gives each evidence seat 4 minutes, each method seat 2 minutes,[\s\S]*85 seconds per round/u);
 
   const claude = read("CLAUDE.md");

@@ -1,3 +1,4 @@
+import { methodVoiceFacts } from "../helpers/method-voice-facts.mjs";
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
@@ -9,16 +10,7 @@ const instrumentClassification = {
   research_model: "operating_company",
   classification_source: "selection_contract_fixture",
 };
-const typedFactCoverage = [
-  "market.price",
-  "capital_allocation.share_count",
-  "financial.owner_earnings",
-  "financial.free_cash_flow_5y",
-  "accounting.cash_conversion",
-  "financial.leverage",
-  "valuation.revenue_growth",
-  "macro.credit_spread",
-];
+const typedFactCoverage = methodVoiceFacts("2026-07-28").typed_fact_pack.facts.map((fact) => fact.fact_id);
 
 let dataDir;
 let server;

@@ -1,3 +1,4 @@
+import { methodVoiceFacts } from "../helpers/method-voice-facts.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
@@ -148,7 +149,7 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
       tasks: ["market_data"], wait_for_completion: true,
       grounding: {
         instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
-        facts_unavailable: true, unavailable: ["fixture"],
+        ...methodVoiceFacts("2026-08-03"),
       },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 5_000, total_timeout_ms: PROVENANCE_TOTAL_TIMEOUT_MS,
@@ -190,7 +191,7 @@ test("a provenance mismatch fails fast and persists a bounded attempt-1 diagnost
   }
 });
 
-test("directional prose from an abstaining voice fails loudly and never becomes a published opinion", async () => {
+test("an abstention never dispatches a worker that could introduce directional prose", async () => {
   assert.equal(
     observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS),
     VOICE_CONTRACT_TOTAL_TIMEOUT_MS + SETTLEMENT_HEADROOM_MS,
@@ -220,23 +221,16 @@ test("directional prose from an abstaining voice fails loudly and never becomes 
     }, { timeoutMs: observerBudget(VOICE_CONTRACT_TOTAL_TIMEOUT_MS) }));
     const dir = join(dataDir, "runs", runId);
     const seat = result.run.master_status.master_buffett;
-    assert.equal(seat.status, "failed");
-    assert.equal(seat.error, "voice_contract_failure");
-    assert.equal(seat.failure_kind, "voice_contract_failure");
-    assert.equal(seat.voice_status, "voice_contract_failure");
-    const deterministicPath = join(dir, "master_buffett.deterministic.json");
-    assert.equal(existsSync(deterministicPath), true, `missing deterministic artifact: ${JSON.stringify(seat)}`);
-    const deterministic = JSON.parse(readFileSync(deterministicPath, "utf8"));
-    const failure = JSON.parse(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"));
-
-    assert.equal(seat.capability_status, deterministic.capability_status);
-    assert.equal(seat.evidence_quality, deterministic.evidence_quality);
-    assert.deepEqual(result.run.master_opinions, []);
-    assert.equal(existsSync(join(dir, "master_buffett.json")), false);
-    assert.match(failure.public_summary, /violated the abstention voice contract/i);
-    assert.doesNotMatch(readFileSync(join(dir, "master_buffett.failure.json"), "utf8"), /DIRECTIONAL-ABSTENTION-SENTINEL/u);
+    assert.equal(seat.status, "completed");
+    assert.equal(seat.worker_kind, "deterministic_abstention");
+    const opinion = JSON.parse(readFileSync(join(dir, "master_buffett.json"), "utf8"));
+    const deterministic = JSON.parse(readFileSync(join(dir, "master_buffett.deterministic.json"), "utf8"));
+    assert.equal(opinion.stance, "out_of_scope");
+    assert.equal(opinion.frozen_decision_hash, deterministic.frozen_decision_hash);
+    assert.equal(opinion.dedicated_worker.status, "not_required_frozen_abstention");
+    assert.doesNotMatch(JSON.stringify(opinion), /DIRECTIONAL-ABSTENTION-SENTINEL/u);
     const launches = readFileSync(fake.log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
-    assert.deepEqual(launches.filter((item) => item.role === "master_buffett").map((item) => item.parseRepair), [false]);
+    assert.equal(launches.filter((item) => item.role === "master_buffett").length, 0);
   } finally {
     await server.close();
     removeDataDir(dataDir);
@@ -266,7 +260,7 @@ test("a stalled full-mode voice worker retains the frozen sourced view and opens
       tasks: ["market_data"], wait_for_completion: true,
       grounding: {
         instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
-        facts_unavailable: true, unavailable: ["fixture"],
+        ...methodVoiceFacts("2026-08-03"),
       },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 8_000, total_timeout_ms: TOTAL_TIMEOUT_MS,
@@ -325,7 +319,7 @@ test("a process exit falls back only when the dedicated voice emitted no candida
         tasks: ["market_data"], wait_for_completion: true,
         grounding: {
           instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
-          facts_unavailable: true, unavailable: ["fixture"],
+          ...methodVoiceFacts("2026-08-03"),
         },
         selection_receipt: selection.selection_receipt,
         timeout_ms: 5_000, total_timeout_ms: 30_000,
@@ -372,7 +366,7 @@ test("each terminal master is canonical before the barrier and survives interrup
       tasks: ["market_data"], wait_for_completion: false,
       grounding: {
         instrument: { asset_type: "etf", research_model: "fund_lookthrough", classification_source: "fixture" },
-        facts_unavailable: true, unavailable: ["fixture"],
+        ...methodVoiceFacts("2026-08-03"),
       },
       selection_receipt: selection.selection_receipt,
       timeout_ms: 45_000, total_timeout_ms: 70_000,

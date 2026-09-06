@@ -1,3 +1,4 @@
+import { methodVoiceFacts } from "../helpers/method-voice-facts.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
@@ -187,6 +188,7 @@ async function runChineseFullFailure(failureTarget) {
     council_mode: "full", tasks: DEFAULT_TASKS, total_timeout_ms: TOTAL_TIMEOUT_MS,
     timeout_ms: 5_000, synthesis_timeout_ms: 5_000, wait_for_completion: true,
     grounding: {
+      ...methodVoiceFacts("2026-07-28"),
       instrument: {
         asset_type: "etf",
         research_model: "fund_lookthrough",

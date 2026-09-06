@@ -6,7 +6,7 @@
   "shared_selection_protocol": {
     "steps": [
       "begin_council_selection",
-      "display_complete_returned_catalog",
+      "display_configuration_with_expandable_catalog",
       "collect_one_user_submission",
       "confirm_master_selection_display_ack_true",
       "consume_one_run_selection_receipt"

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { methodVoiceFacts } from "../helpers/method-voice-facts.mjs";
 import { DEFAULT_TASKS } from "../../mcp/lib/constants.mjs";
 import { makeDataDir, removeDataDir } from "../helpers/env.mjs";
 import {
@@ -317,9 +318,8 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
       master_taleb: "structured_prose",
     },
   });
-  // Every seat this fixture selects abstains on an ETF, and an abstaining seat no longer spends
-  // a voice worker. Opt that back in here so the worker-path assertions below keep exercising a
-  // real dedicated worker; the default skip has its own test.
+  // Supply the existing synthetic machine-simulation facts so this fixture exercises scored
+  // method voices. The separate abstention test proves the no-worker branch.
   const server = startServer({
     dataDir,
     env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver },
@@ -345,7 +345,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
           price: 512.34, currency: "USD", quote_time: "2026-07-28T20:00:00Z", exchange: "NASDAQ",
           note: "fixture close", source_url: "https://example.com/qqq-quote",
         },
-        facts_unavailable: true, unavailable: ["typed facts intentionally omitted by fixture"],
+        ...methodVoiceFacts("2026-07-28"),
       },
     }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
 
@@ -570,7 +570,7 @@ test("full council proves dedicated master workers, parallel barriers, exact Q&A
     assert.equal(timing.topology.status, "valid", JSON.stringify(timing.issues));
     assert.deepEqual(timing.issues, []);
     assert.equal(status.debate_format, "three_round_cross_exam_parallel_per_round");
-    assert.equal(status.master_worker_contract, "one_isolated_worker_per_selected_method_v1");
+    assert.equal(status.master_worker_contract, "isolated_voice_except_frozen_abstention_v2");
     assert.equal(status.deadline_enforced, true);
     assert.equal(status.time_budget_ms, 30_000);
     assert.equal(status.deadline_met, true);
@@ -615,6 +615,7 @@ test("default fast call chain gives debate and PM one complete primary lifecycle
       wait_for_completion: true,
       selection_receipt: confirmed.selection_receipt,
       grounding: {
+        ...methodVoiceFacts("2026-07-28"),
         instrument: QQQ_INDEX_INSTRUMENT,
         quote: {
           price: 512.34,
@@ -623,8 +624,6 @@ test("default fast call chain gives debate and PM one complete primary lifecycle
           exchange: "NASDAQ",
           source_url: "https://example.com/qqq-quote",
         },
-        facts_unavailable: true,
-        unavailable: ["typed facts intentionally omitted by fixture"],
       },
     }, { timeoutMs: 60_000 }));
 
@@ -668,7 +667,8 @@ async function runDebateQnaFixture(debateQnaFailureMode) {
     symbol: "QQQ", run_id: runId, as_of: "2026-07-28", language: "English", prompt,
     council_mode: "full", total_timeout_ms: TOTAL_TIMEOUT_MS, timeout_ms: 10_000, synthesis_timeout_ms: 10_000,
     wait_for_completion: true, selection_receipt: confirmed.selection_receipt,
-    grounding: { instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
+    grounding: {
+        ...methodVoiceFacts("2026-07-28"), instrument: QQQ_INDEX_INSTRUMENT, facts_unavailable: true, unavailable: ["fixture"] },
   }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
   return { dataDir, fake, server, runId, result };
 }
@@ -1057,13 +1057,10 @@ test("a caller-lowered full-council budget fails closed and persists a terminal 
   }
 });
 
-test("every abstaining seat receives and publishes its strong first-person method voice", async () => {
-  // Four seats on this ETF fixture freeze out_of_scope. The global voice contract still runs
-  // each isolated method worker so an abstention sounds like that method rather than a generic
-  // neutral template.
+test("headless frozen abstentions retain the full ledger without extra voice calls", async () => {
+  // Four seats lack the typed inputs to score; they must remain non-votes without extra calls.
   const dataDir = makeDataDir();
   const fake = fakeFullCodex(dataDir);
-  // A legacy opt-out cannot weaken the global first-person contract.
   const server = startServer({ dataDir, env: { ALPHACOUNCIL_AGENT_CODEX_CMD: fake.driver, ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" } });
   try {
     await server.request("initialize", {});
@@ -1086,30 +1083,28 @@ test("every abstaining seat receives and publishes its strong first-person metho
     const launches = readJsonl(fake.log);
 
     for (const id of SELECTED_MASTERS) {
-      assert.equal(launches.filter((item) => item.role === id).length, 1, `${id} must launch one voice worker`);
-      assert.match(finalReport, new RegExp(`MASTER_SENTINEL_${id}`), id);
+      assert.equal(launches.filter((item) => item.role === id || item.master === id).length, 0, `${id} must not launch a voice worker`);
+      assert.doesNotMatch(finalReport, new RegExp(`MASTER_SENTINEL_${id}`), id);
 
       // The seat is still fully published: every artifact carries it, with a readable statement.
       const opinion = result.run.master_opinions.find((item) => item.master === id);
       assert.ok(opinion, `${id} must still be recorded`);
       assert.equal(opinion.stance, "out_of_scope");
       assert.equal(result.run.master_status[id].status, "completed");
-      assert.equal(result.run.master_status[id].voice_status, "model_voice");
-      assert.equal(opinion.dedicated_worker.status, "completed");
-      assert.equal(opinion.voice_mode, "first_person_public_method_simulation_v1");
-      assert.equal(opinion.disclosure_ack, "alphacouncil.first_person_public_method_simulation.v1");
+      assert.equal(result.run.master_status[id].voice_status, "deterministic_only");
+      assert.equal(result.run.master_status[id].worker_kind, "deterministic_abstention");
+      assert.equal(opinion.dedicated_worker.status, "not_required_frozen_abstention");
       const persistedOpinion = readJson(join(dir, `${id}.json`));
-      assert.equal(persistedOpinion.acknowledged_stance, opinion.stance, `${id} persisted stance ack`);
-      assert.equal(persistedOpinion.acknowledged_stance, opinion.deterministic_stance, `${id} deterministic stance ack`);
-      assert.ok(Object.values(opinion.voice).every((text) => /\bI\b/u.test(text)), id);
+      assert.equal(persistedOpinion.frozen_decision_hash, opinion.frozen_decision_hash);
+      assert.match(opinion.frozen_decision_hash, /^sha256:[0-9a-f]{64}$/u);
       assert.ok(opinion.voice_statement.replace(/\s/g, "").length >= 20, `${id} statement too thin`);
-      assert.match(opinion.voice_statement, /I would/u);
+      assert.match(opinion.voice_statement, /neither bearish nor|neither bearish|not a bearish/u);
       assert.equal(existsSync(join(dir, `${id}.md`)), true, id);
       assert.match(finalReport, new RegExp(id));
       assert.match(userResponse, new RegExp(id));
     }
 
-    // Voicing all abstentions must not weaken the bench gate or the report contract.
+    // Removing redundant calls must not weaken the bench gate or the report contract.
     assert.equal(result.run.missing_master_count ?? 0, 0);
     assert.equal(readJson(join(dir, "report_quality.json")).method_statement_coverage.status, "passed");
   } finally {

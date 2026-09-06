@@ -226,6 +226,18 @@ function screenFacts(grounding, context) {
         currency: "USD",
         scale: 1,
       }));
+      if (metric.rule === "fcf_5y" && Number.isInteger(metric.years) && metric.years >= 3 && metric.years <= 5) {
+        addUnique(context.facts, context.diagnostics, baseFact({
+          ...common,
+          factId: "financial.free_cash_flow_annual_average",
+          valueKind: "monetary",
+          value: metric.value / metric.years,
+          unit: "currency_units",
+          currency: "USD",
+          scale: 1,
+          derivationInput: { ...common.derivationInput, cumulative_value: metric.value, annual_observations: metric.years },
+        }));
+      }
     } else {
       addUnique(context.facts, context.diagnostics, baseFact({
         ...common,

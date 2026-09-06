@@ -14,7 +14,7 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.6.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
+Package/plugin version `1.7.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
 `latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
 PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
 `method_model` seats. Human review of the authored formulas, the live four-code-host
@@ -104,12 +104,13 @@ The MCP server is the load-bearing integration on every host: it reads `personas
 so a host that ignores the generated agent files still gets correct prompts.
 
 Every host also follows the same mandatory master-selection protocol for a full or quick
-council. Call `begin_council_selection` with the intended `council_mode`, display every
-returned entry with number, identity, method and `best_for`, collect one submission, then
+council. Call `begin_council_selection` with the intended `council_mode`, show its
+`display_markdown` configuration first and keep the complete returned catalog expandable
+with number, identity, method and `best_for`, collect one submission, then
 call `confirm_master_selection` with `display_ack: true`. Full accepts numbers, ranges,
 stable IDs or `all`; quick accepts exactly 1-4 distinct methods and rejects `all` and
-`select_all`. Existing names in the request are only a prefill; the full catalog is still
-shown. Only the returned one-use, mode-bound `selection_receipt`, reused with the same
+`select_all`. Requested and remembered choices are only prefills; obtain a fresh submission
+for the displayed configuration. Only the returned one-use, mode-bound `selection_receipt`, reused with the same
 symbol, prompt, language and mode, may authorize the applicable execution tool. A full
 receipt cannot launch quick and a quick receipt cannot launch full. A host-native
 multi-select is optional UI sugar; the numbered text fallback is mandatory on Claude Code,

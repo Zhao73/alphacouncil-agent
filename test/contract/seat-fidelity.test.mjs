@@ -20,7 +20,7 @@ import { inspectSeatFidelity } from "../../scripts/check-seat-fidelity.mjs";
 import { repoFile } from "../helpers/paths.mjs";
 
 const report = inspectSeatFidelity();
-const PARENT_STRIPPED_METHOD_CORPUS_DIGEST = "sha256:74012f92f0f70e574aa40506f8dd82a1dfa20b157ed79ff97a5892e2241d2dd9";
+const V170_STRIPPED_METHOD_CORPUS_DIGEST = "sha256:4d8a1b3f9aa4f9505748380cb93740e58a9a77fd485a27e8f9721641492373fe";
 const PARENT_STRIPPED_METHOD_CATALOG_DIGEST = "sha256:a1bc54dd31db51c52a85bc54d8a7c6a8ec33efaab9d3eaffa4fd88b57deeda25";
 const METHOD_POLICY_BLOCK = /(## Exact provisional decision policy\n\n```json\n)([\s\S]*?)(\n```\n)/u;
 
@@ -54,7 +54,7 @@ test("all 26 provisional seats satisfy one strict mechanical fidelity template",
   assert.ok(report.seats.every((seat) => seat.fact_coverage.uncovered === 0));
 });
 
-test("216 policy records are explicitly unsourced and the pre-WP-3F policy subject is unchanged", () => {
+test("216 policy records remain unsourced and match the v1.7 policy baseline", () => {
   assert.equal(report.summary.threshold_records, 216);
   assert.equal(report.summary.sourced_threshold_records, 0);
   assert.equal(report.summary.policy_subject_hash, POLICY_NUMERIC_BASELINE_HASH);
@@ -125,7 +125,7 @@ test("all 52 local-test derivation specs remain hash-bound to their physical too
   assert.ok(bindings.every((binding) => /^sha256:[a-f0-9]{64}$/u.test(binding.derivation_evidence_hash)));
 });
 
-test("AI machine simulations change identity only and keep the n-eff disclosure byte-identical", () => {
+test("AI machine simulations match the v1.7 semantic baseline and keep the n-eff disclosure byte-identical", () => {
   assert.deepEqual(report.ai_simulations, {
     artifact_count: 11,
     errors: [],
@@ -136,7 +136,7 @@ test("AI machine simulations change identity only and keep the n-eff disclosure 
   });
 });
 
-test("generated method references change only provenance blocks, the exact non-person disclosure, and bound identity hashes", () => {
+test("generated method references match the v1.7 calculation and observation-state baseline", () => {
   const relativeRoot = "skills/alphacouncil-method-lenses/references";
   const methods = readdirSync(repoFile(`${relativeRoot}/methods`))
     .filter((name) => name.endsWith(".md"))
@@ -146,7 +146,7 @@ test("generated method references change only provenance blocks, the exact non-p
     readFileSync(repoFile(`${relativeRoot}/methods/${name}`), "utf8"),
     name,
   ))).sort();
-  assert.equal(sha256(strippedHashes), PARENT_STRIPPED_METHOD_CORPUS_DIGEST);
+  assert.equal(sha256(strippedHashes), V170_STRIPPED_METHOD_CORPUS_DIGEST);
 
   const catalog = readJson(`${relativeRoot}/catalog.v1.json`);
   assert.equal(

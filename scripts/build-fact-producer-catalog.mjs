@@ -122,6 +122,7 @@ function screenFixture() {
       period_start: windowStart(mapping),
       period_end: "2025-12-31",
       fiscal_year: 2025,
+      ...(rule === "fcf_5y" ? { years: 5 } : {}),
       public_at: "2026-02-15T00:00:00.000Z",
       source_ids: [`sec:companyfacts:0000000001:${tag}:0000000001-26-000001:2025-12-31`],
     };

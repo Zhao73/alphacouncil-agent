@@ -1,8 +1,8 @@
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:76ccd7cc3160b98ae243173fa2b69bb844bb88982c41c19e0e822fb1be31252c",
-    "derivation_spec_hash": "sha256:f5df869d94026c7ad00d26d8c3c23bd433c77b9a945142d927a617ad11ee9945",
+    "derivation_evidence_hash": "sha256:fe98b72cc2ff93949ebda5f47385bdb896357ee257d65bdb28f79b8d2be29b28",
+    "derivation_spec_hash": "sha256:daf6e37e7db90813a3f28c019e560c4cf3fefce81440ca9facfda9010a5f4e13",
     "derivation_spec_id": "master_cathie_wood.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_cathie_wood.market_capitalisation",
@@ -28,7 +28,7 @@
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:b00daeb069bc227b97d11aafe71a3f93654c457bb43b5b5f99867b84a7c95715",
+    "input_schema_hash": "sha256:3bb225caae4ee9e0aa0d233a114c7c485ae2bf836c570153fdfea1352c85c3b3",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -47,7 +47,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:22b526e920de65443d3388e0beaed07650c62759e993734d7f73d82dec14d853",
+    "output_schema_hash": "sha256:7a4ac1d4463a6114ee22e39c67d90d0ce5af8c1ae6efcf9191466f995cd135de",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -60,8 +60,8 @@
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:c12017aaf43e2314b646db263922462392e7c4c51b68808ac0802e5a1cab52e7",
-    "derivation_spec_hash": "sha256:60c95955604fde2ba596e5a34b9ab6857835ebfc5cacdc02dfd23b8af954a26f",
+    "derivation_evidence_hash": "sha256:cb5ff1604b19edf279172104b6b54208fab58c1847b1f9de26bf29f8b5e767e5",
+    "derivation_spec_hash": "sha256:c7a62299322fcfac9e9b35304469823d7c851d349198f3f6f49404c3aede097d",
     "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_cathie_wood.current_cash_yield",
@@ -87,10 +87,10 @@
         "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:0bdf6815ffdcb670b6e8b6c7b0c4f38fae111a21b559469cfa8446a7b09ea827",
+    "input_schema_hash": "sha256:a06b797d4713e008d09959a7d94adac95a81e79e69e693d1c086c1ee3d329243",
     "inputs": [
       {
-        "fact_id": "financial.free_cash_flow_5y"
+        "fact_id": "financial.free_cash_flow_annual_average"
       },
       {
         "output_id": "valuation.market_capitalisation.master_cathie_wood"
@@ -106,7 +106,7 @@
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:12f5504959e78c8fc6860b1a0520f1f7c8c93860056dc9899eecbd7c8dc2e72f",
+    "output_schema_hash": "sha256:5d9210cf35a161d54946700c4517e13772daedf485c205b96b00658f28a14aed",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,

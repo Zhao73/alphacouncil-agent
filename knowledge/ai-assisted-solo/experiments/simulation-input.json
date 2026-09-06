@@ -18,7 +18,7 @@
   "formal_ga_effect": "none",
   "formal_h_satisfied": false,
   "human_reference": false,
-  "input_hash": "sha256:a51146623a449cc2d2835d0845e11f205e4c7ed1dc9a4ed62fa1e932cb225300",
+  "input_hash": "sha256:740dbacce89f927470c5a99c13eaeb0e997b450a5573a011952c403fcc1337d2",
   "network_allowed": false,
   "production_effect": "none",
   "protocol_binding": {
@@ -956,7 +956,7 @@
         "schema_version": 1
       },
       "fact_pack_hash": "sha256:b0038701a22c779748bd26f507dea20c3c8207f9a57a8b6846e82c9b4471b55f",
-      "pack_hash": "sha256:920424f0a9e8ebb2f1701077eecb4441aeca968d573ba6d8355b2919b093c732",
+      "pack_hash": "sha256:e15ad64c9e5de8475fe683d3941c8074895a08f8b6a688c495614aa939486f6b",
       "pack_manifest_binding": {
         "byte_length": 5096,
         "path": "knowledge/solo-test/masters/master_simons/manifest.json",
@@ -1228,7 +1228,7 @@
     {
       "fact_pack": {
         "as_of": "2026-07-27",
-        "fact_pack_hash": "sha256:5e202cc3175eb5627e5e2385fee3639e7cd48ff9ace84ef0e8b809b0335fd3e5",
+        "fact_pack_hash": "sha256:e05f2bc7eefedb9b9ff70d2f9c4fe340a888b91df65084dc5200b33e43bd2dc3",
         "facts": [
           {
             "as_of": "2026-07-27",
@@ -1315,7 +1315,7 @@
             "confidence": 1,
             "currency": "USD",
             "derivation": "reported",
-            "fact_id": "financial.free_cash_flow_5y",
+            "fact_id": "financial.free_cash_flow_annual_average",
             "fiscal_year": null,
             "lineage": {
               "calculation_hash": null,
@@ -1528,12 +1528,12 @@
         "knowledge_as_of": "2026-07-27",
         "schema_version": 1
       },
-      "fact_pack_hash": "sha256:5e202cc3175eb5627e5e2385fee3639e7cd48ff9ace84ef0e8b809b0335fd3e5",
-      "pack_hash": "sha256:dbc59e2537edffdf164829ad37d640b315057b2626b0a225e6338986d59b500e",
+      "fact_pack_hash": "sha256:e05f2bc7eefedb9b9ff70d2f9c4fe340a888b91df65084dc5200b33e43bd2dc3",
+      "pack_hash": "sha256:79e1e479d92e3612dab832462e7feaad932875c0dc42ad172c13c64eb5937bbc",
       "pack_manifest_binding": {
-        "byte_length": 5439,
+        "byte_length": 5463,
         "path": "knowledge/solo-test/masters/master_cathie_wood/manifest.json",
-        "physical_file_hash": "sha256:a7b0519e2077d4e9abd91a7beb0b652627caf22809c519a92bbdd7f132e2251b"
+        "physical_file_hash": "sha256:0dd495f4dca24ec2db0bc9a52ee92aaeab95f48e03d35ff880cfcf9a8ec508d6"
       },
       "persona_id": "master_cathie_wood"
     },

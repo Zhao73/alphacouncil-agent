@@ -3,26 +3,26 @@
   "assurance_class": "provisional_derived_proxy",
   "build_profile": "solo_test",
   "common_projection": {
-    "provisional_deployable_signal": "cautious",
     "provisional_invalid_test": "out_of_scope",
     "provisional_no_signal": "opposed",
-    "provisional_research_candidate": "cautious"
+    "provisional_research_candidate": "cautious",
+    "provisional_unusual_session_move": "cautious"
   },
   "declared_state_hypotheses": [
     "invalid_test",
     "no_signal",
     "research_candidate",
-    "deployable_signal"
+    "unusual_session_move"
   ],
   "experiment_pass_count": 0,
   "formula_approval_binding_count": 0,
-  "formula_compilation_manifest_hash": "sha256:f716b1b98171144661962df3f4a54cb6256cadc867e08a91710c3659f14face9",
+  "formula_compilation_manifest_hash": "sha256:73387de6453c1cb7eccf320211023251e82541d3931a246d908950c79f703a3d",
   "method_model_eligible": false,
   "native_states": [
     "provisional_invalid_test",
     "provisional_no_signal",
     "provisional_research_candidate",
-    "provisional_deployable_signal"
+    "provisional_unusual_session_move"
   ],
   "persona_id": "master_simons",
   "planned_tool_ids": [

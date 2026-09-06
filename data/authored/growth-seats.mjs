@@ -155,12 +155,12 @@ export const growthSeats = Object.freeze({
       {
         tool_id: "master_cathie_wood.current_cash_yield",
         operation: "divide",
-        inputs: [{ fact_id: "financial.free_cash_flow_5y" }, { output_id: "valuation.market_capitalisation" }],
+        inputs: [{ fact_id: "financial.free_cash_flow_annual_average" }, { output_id: "valuation.market_capitalisation" }],
         output_id: "valuation.free_cash_flow_yield",
         value_kind: "ratio",
         unit: "decimal",
         purpose:
-          "How much of the price today's cash already pays for. Everything above this yield is adoption the market has bought in advance, which is the only form of a price-implied expectation these facts can produce.",
+          "Average annual free cash flow over the disclosed five-year history divided by current market capitalisation. The adapter divides the cumulative cash flow by the actual annual observation count. This is a historical annual cash yield, not current TTM cash flow or a forecast of investment return.",
       },
     ],
     eligibility: {
@@ -180,7 +180,7 @@ export const growthSeats = Object.freeze({
       {
         veto_id: "master_cathie_wood.adoption_already_priced",
         rationale:
-          "The build spec's third veto family: reject a constructive output when the price requires adoption beyond the reviewed scenario range. Both halves have to hold. The company is growing below ARK's own published 15% five-year hurdle, and the price is not being paid for by current cash either, since the free-cash-flow yield is below what a long government bond pays for no business risk. That combination is a price that can only be defended by adoption the growth rate is not delivering.",
+          "The build spec's third veto family: reject a constructive output when the price requires adoption beyond the reviewed scenario range. Both halves have to hold. The company is growing below this project's 15% revenue-growth proxy, and its historical average annual free-cash-flow yield is below the long government-bond yield. ARK's investment-return hurdle is a different quantity; this rule does not test that published hurdle. That combination is a price that can only be defended by adoption the growth rate is not delivering.",
         condition: {
           op: "all",
           conditions: [
@@ -193,11 +193,11 @@ export const growthSeats = Object.freeze({
     ],
     scoring: [
       {
-        rule_id: "wood_growth_clears_the_published_hurdle",
+        rule_id: "wood_growth_clears_the_project_revenue_hurdle",
         points: 1,
         coverage_weight: 1,
         rationale:
-          "ARK's disclosed minimum hurdle: a 15% compound annual return over a five-year horizon, below which a name does not earn a place in the portfolio. It is stated as a return rather than a revenue rate, so applying it to revenue growth is this project's translation of a published bar rather than a bar ARK set on this quantity.",
+          "A project-authored 15% revenue-growth proxy. ARK's published investment-return hurdle is a different quantity and does not validate this revenue-growth threshold. This provisional rule requires separate empirical calibration.",
         condition: { op: "gte", left: { fact_id: "valuation.revenue_growth" }, right: { literal: 0.15 } },
       },
       {

@@ -328,6 +328,7 @@ export async function gatherGrounding({
         span_days: Number.isFinite(x.span_days) ? x.span_days : null,
         span_years: Number.isFinite(x.span_years) ? x.span_years : null,
         observation_count: Number.isInteger(x.observation_count) ? x.observation_count : null,
+        years: Number.isInteger(x.years) ? x.years : null,
         fiscal_year: x.fiscal_year || null,
         public_at: x.public_at || null,
         source_ids: metricSourceIds(x),

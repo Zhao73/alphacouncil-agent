@@ -1,4 +1,8 @@
-import { LIMITS } from "./constants.mjs";
+import { createHash } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { DATA_DIR, LIMITS } from "./constants.mjs";
+import { readJson, writeJson } from "./fsutil.mjs";
 import { fetchText } from "./quotes.mjs";
 
 const TRADING_DAYS = 252;
@@ -28,7 +32,7 @@ export function benchmarkSymbolsForSic(sic) {
 }
 
 export function equityHistoryUrl(symbol) {
-  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d&events=history`;
+  return `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=10y&interval=1d&events=history`;
 }
 
 function unfinishedCurrentSessionDate(result, observedAt) {
@@ -155,11 +159,18 @@ export function summarizeEquityHistory(rows) {
     return [`${sessions}d`, Number.isFinite(mean) && mean > 0 ? round((latest.close / mean) - 1) : null];
   }));
   const annualRange = ranges["252d"];
+  let peak = 0;
+  let maximumDrawdown = 0;
+  for (const row of rows) {
+    peak = Math.max(peak, row.close);
+    maximumDrawdown = Math.min(maximumDrawdown, row.close / peak - 1);
+  }
   return {
     first_date: rows[0].date,
     latest_date: latest.date,
     session_count: rows.length,
     latest_adjusted_close: round(latest.close, 6),
+    maximum_drawdown_observed: round(maximumDrawdown),
     returns,
     realized_volatility: realizedVol,
     volume,
@@ -214,10 +225,28 @@ export function relativePerformance(subjectRows, benchmarkRows) {
 
 async function fetchOne(symbol, { asOf, observedAt, signal } = {}) {
   const sourceUrl = equityHistoryUrl(symbol);
+  const cachePath = join(DATA_DIR, "cache", "prices", `${createHash("sha256").update(sourceUrl).digest("hex")}.json`);
+  try {
+    const cached = readJson(cachePath);
+    const age = Date.parse(observedAt) - Date.parse(cached.observed_at);
+    if (cached.source_url === sourceUrl && age >= 0 && age < 3_600_000
+      && Array.isArray(cached.rows) && cached.rows.length > 0
+      && cached.rows.every((row) => /^\d{4}-\d{2}-\d{2}$/u.test(row.date)
+        && Number.isFinite(row.close) && row.close > 0
+        && (row.volume === null || Number.isFinite(row.volume)))) {
+      const rows = cached.rows.filter((row) => !asOf || row.date <= asOf);
+      if (rows.length) return { symbol, source_url: sourceUrl, observed_at: cached.observed_at, cache_status: "fresh", rows, summary: summarizeEquityHistory(rows) };
+    }
+  } catch { /* Cache misses and damaged cache records use the public source. */ }
   const text = await fetchText(sourceUrl, LIMITS.QUOTE_FETCH_MS * 2, signal);
-  const rows = parseEquityHistory(JSON.parse(text), { asOf, observedAt });
+  const allRows = parseEquityHistory(JSON.parse(text), { observedAt });
+  const rows = allRows.filter((row) => !asOf || row.date <= asOf);
   if (!rows.length) throw new Error(`${symbol}: no dated daily history`);
-  return { symbol, source_url: sourceUrl, rows, summary: summarizeEquityHistory(rows) };
+  try {
+    mkdirSync(dirname(cachePath), { recursive: true });
+    writeJson(cachePath, { source_url: sourceUrl, observed_at: observedAt, rows: allRows });
+  } catch { /* Cache persistence is optional. */ }
+  return { symbol, source_url: sourceUrl, observed_at: observedAt, cache_status: "fetched", rows, summary: summarizeEquityHistory(rows) };
 }
 
 export async function fetchEquityMarketHistory(symbol, {
@@ -270,17 +299,19 @@ export async function fetchEquityMarketHistory(symbol, {
     source_records: [subject, ...benchmarkPlan.symbols.map((benchmark) => bySymbol.get(benchmark)).filter(Boolean)]
       .map((entry) => ({
         id: `market_history:${entry.symbol}:${entry.summary.latest_date}`,
-        title: `${entry.symbol} one-year daily price and volume history`,
+        title: `${entry.symbol} daily price and volume history (${entry.summary.first_date} to ${entry.summary.latest_date})`,
         url: entry.source_url,
         published_at: "unknown",
-        retrieved_at: retrievedAt,
-        observed_at: retrievedAt,
+        retrieved_at: entry.observed_at,
+        observed_at: entry.observed_at,
+        cache_status: entry.cache_status,
         source_kind: "dynamic_snapshot",
       })),
     unavailable,
     limitations: [
       "Daily adjusted closes are sufficient for historical returns and realised volatility, not intraday execution analysis.",
       "Yahoo is keyless and delayed; it is not a certified exchange feed.",
+      "Up to ten years are requested; the actual available dates are reported. Current adjusted history is not a point-in-time vintage, historical valuation series, IV history or ETF net flows.",
       benchmarkPlan.sector ? "The sector benchmark is selected deterministically from the issuer SEC SIC." : "No SIC-mapped sector benchmark was available; only the broad benchmark is used.",
     ],
   };

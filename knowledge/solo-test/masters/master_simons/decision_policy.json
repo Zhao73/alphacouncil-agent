@@ -86,7 +86,7 @@
     "provisional_invalid_test",
     "provisional_no_signal",
     "provisional_research_candidate",
-    "provisional_deployable_signal"
+    "provisional_unusual_session_move"
   ],
   "provenance": {
     "status": "unsourced_ai_proposal"
@@ -115,8 +115,8 @@
     },
     {
       "decision": {
-        "common_stance": "constructive",
-        "native_state": "provisional_deployable_signal"
+        "common_stance": "cautious",
+        "native_state": "provisional_unusual_session_move"
       },
       "min_ratio": 1,
       "provenance": {
