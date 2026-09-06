@@ -4,6 +4,13 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.9.1] — 2026-09-06
+
+- Fix a false evidence-gate failure when an unavailable coverage gap contains `Q&A`, HTML characters or whitespace: the coverage gap and its required open-question copy now use identical reader escaping. Real retrieval/source/critical-gap checks remain strict.
+- Count successful work separately from saved diagnostic files. Timeouts and skipped stages stay visible, and a completed background process no longer appears as a completed research result.
+- Expand the entire saved handoff beneath the terminal progress view, reveal it once when a live run ends, and retain normal paging and return navigation. Complete report reading hides HTML disclosure/sentinel syntax while preserving the statements and source URLs.
+- Expose bounded primary/final failure diagnostics without raw model output; localize new result labels in all 12 interface languages.
+
 ## [1.9.0] — 2026-09-06
 
 - Select models from the official Codex app-server catalog or an API model list. Label GLM documentation candidates separately from account-access results, and retain capability checks before research. Distinguish timeouts, cancellation and failed login-status checks.

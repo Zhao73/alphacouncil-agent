@@ -59,11 +59,28 @@ const connectionLabels = {
   id: ['Tersimpan', 'Hanya halaman model pertama yang ditampilkan. ID model lain dapat diketik.', 'Pencarian web tidak tersedia. Riset memakai sumber bawaan dan pembacaan URL; kekurangan bukti dapat membuat riset berbayar tidak selesai.'],
 };
 
+const outcomeKeys = ["finalSummary", "fullReport", "diagnostics", "savedFiles", "incomplete", "degraded", "timedOut", "skipped", "running", "stopped", "needsRevision", "needsVerification", "stopping"];
+const outcomeRows = {
+  "en": "Research conclusion|Full report|Failure diagnostics|Saved files|Incomplete|Degraded|Timed out|Not run|Running|Stopped|Needs revision|Needs verification|Stopping",
+  "zh-CN": "研究结论|完整报告|失败诊断|已保存文件|未完成|降级完成|超时|未运行|运行中|已停止|需修订|待核验|停止中",
+  "ja": "研究の結論|完全なレポート|失敗の診断|保存済みファイル|未完了|制限付き完了|時間切れ|未実行|実行中|停止済み|要修正|要検証|停止中",
+  "ko": "연구 결론|전체 보고서|실패 진단|저장된 파일|미완료|제한된 완료|시간 초과|미실행|실행 중|중지됨|수정 필요|검증 필요|중지 중",
+  "es": "Conclusión|Informe completo|Diagnóstico de fallos|Archivos guardados|Incompleto|Completado con limitaciones|Tiempo agotado|No ejecutado|En ejecución|Detenido|Requiere revisión|Requiere verificación|Deteniéndose",
+  "fr": "Conclusion|Rapport complet|Diagnostic des échecs|Fichiers enregistrés|Incomplet|Terminé avec limites|Délai dépassé|Non exécuté|En cours|Arrêté|À réviser|À vérifier|Arrêt en cours",
+  "de": "Rechercheergebnis|Vollständiger Bericht|Fehlerdiagnose|Gespeicherte Dateien|Unvollständig|Mit Einschränkungen abgeschlossen|Zeitüberschreitung|Nicht ausgeführt|Läuft|Gestoppt|Überarbeitung nötig|Prüfung nötig|Wird gestoppt",
+  "pt-BR": "Conclusão|Relatório completo|Diagnóstico de falhas|Arquivos salvos|Incompleto|Concluído com limitações|Tempo esgotado|Não executado|Em execução|Interrompido|Requer revisão|Requer verificação|Interrompendo",
+  "it": "Conclusione|Rapporto completo|Diagnosi degli errori|File salvati|Incompleto|Completato con limiti|Tempo scaduto|Non eseguito|In esecuzione|Interrotto|Da rivedere|Da verificare|Arresto in corso",
+  "ru": "Итог исследования|Полный отчёт|Диагностика ошибок|Сохранённые файлы|Не завершено|Завершено с ограничениями|Время истекло|Не запускалось|Выполняется|Остановлено|Нужна доработка|Нужна проверка|Останавливается",
+  "vi": "Kết luận nghiên cứu|Báo cáo đầy đủ|Chẩn đoán lỗi|Tệp đã lưu|Chưa hoàn tất|Hoàn tất có giới hạn|Hết thời gian|Chưa chạy|Đang chạy|Đã dừng|Cần chỉnh sửa|Cần xác minh|Đang dừng",
+  "id": "Kesimpulan riset|Laporan lengkap|Diagnosis kegagalan|File tersimpan|Belum selesai|Selesai dengan batasan|Waktu habis|Belum dijalankan|Berjalan|Dihentikan|Perlu revisi|Perlu verifikasi|Menghentikan"
+};
+
 export const UI_TEXT = Object.fromEntries(Object.entries(rows).map(([locale, row]) => {
   const values = row.split('|');
   if (values.length !== keys.length) throw new Error(`Translation count mismatch: ${locale} (${values.length}/${keys.length})`);
   return [locale, { ...Object.fromEntries(keys.map((key, index) => [key, values[index]])),
     maxRequests: budgetLabels[locale][0], maxOutputTokens: budgetLabels[locale][1], availableModels: budgetLabels[locale][2], routing: routingLabels[locale],
+    ...Object.fromEntries(outcomeKeys.map((key, index) => [key, outcomeRows[locale].split("|")[index]])),
     saved: connectionLabels[locale][0], moreModels: connectionLabels[locale][1], noSearch: connectionLabels[locale][2] }];
 }));
 

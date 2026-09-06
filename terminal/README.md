@@ -109,3 +109,7 @@ npm run terminal:build
 The native builder requires Node 24.14.0 and copies that exact running executable for the current platform/architecture. It uses the npm package allowlist for the research core, preserves dependency licenses, checks pinned Node/Codex license hashes and verifies startup with an empty PATH and isolated data. It then unpacks the archive in a new path containing spaces and repeats the smoke. Build output is written under `dist/` and is not committed.
 
 The separate terminal-build workflow runs native packaging and terminal tests on Linux, macOS and Windows. Tests using local/fake provider responses verify protocol, cancellation and accounting boundaries; they are not evidence that a real account has sufficient quota or that every supported model has completed a live council. Research quality and investment results require separate evidence.
+
+### Research completion and failures
+
+When a run ends, the research page reveals the full saved conclusion below the progress rows. Use the conclusion shortcut, arrows, Page Up/Down or mouse wheel to read it; the report category retains the complete report. Research status comes from the council contract, independently of whether its background process exited normally. Progress counts accepted outputs, not merely files: failed evidence and incomplete report placeholders do not fill success bars. Failure diagnostics show structured reasons and timing without private model traces. Existing history is read without rewriting its outcome.

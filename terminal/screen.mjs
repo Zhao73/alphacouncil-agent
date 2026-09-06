@@ -6,6 +6,15 @@ const LOGO = [' ⢀⡤⠶⣄⣠    ⢀⡀⢠⠞', '⣰⠋  ⣸⠃  ⣠⣠⠎⠙�
 export function cleanText(value) {
   return stripVTControlCharacters(String(value ?? '')).replace(/[\x00-\x08\x0b-\x1f\x7f\u202a-\u202e\u2066-\u2069]/g, '').replace(/\t/g, '    ');
 }
+export function readableMarkdown(value) {
+  return cleanText(value)
+    .replace(/<!--\s*alphacouncil:[\s\S]*?-->/g, '')
+    .replace(/<\/?details\b[^>]*>/gi, '')
+    .replace(/<\/?summary>/gi, '')
+    .replace(/^\s*-?\s*\[statement_status=[^\]\n]+\]\s*$/gm, '')
+    .replace(/&(amp|lt|gt|quot|apos|nbsp);/g, (_, key) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' })[key])
+    .replace(/\n{3,}/g, '\n\n');
+}
 export function clip(value, columns) {
   let result = '', used = 0;
   for (const { segment } of graphemes.segment(cleanText(value).replace(/\r?\n/g, ' '))) {
