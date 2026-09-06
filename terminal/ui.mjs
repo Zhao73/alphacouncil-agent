@@ -7,10 +7,10 @@ import { RESEARCH_LANGUAGES, researchLanguage } from '../mcp/lib/lang.mjs';
 import { safeSymbol } from '../mcp/lib/run-store.mjs';
 import { Screen, cleanText, wrapText } from './screen.mjs';
 import { translator } from './i18n.mjs';
+import { CONNECTION_PRESETS } from './provider-catalog.mjs';
 
 const SETTINGS = join(DATA_DIR, 'terminal', 'settings.json');
 const TERMINAL_STATES = new Set(['complete', 'completed', 'degraded', 'incomplete', 'failed', 'needs_revision', 'needs_verification']);
-const PROVIDERS = ['codex', 'anthropic', 'openai', 'compatible'];
 const PROVIDER_NAMES = { codex: 'Codex / ChatGPT', anthropic: 'Claude API', openai: 'OpenAI API', compatible: 'OpenAI-compatible API' };
 
 export function createTerminalApp(api, { initial = {}, output = process.stdout, input = process.stdin } = {}) {
@@ -24,9 +24,11 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
     mode: 'full', pace: 'normal', analystScope: 'core', selection: null, methods: new Set(),
     selected: 0, offset: 0, visible: 16, rows: [], message: '', busy: false, editing: null,
     runId: initial.runId || null, run: null, category: 'evidence', detail: null, previous: null,
-    query: '', models: [], moreModels: false, authOutput: '', authURLs: [], authAbort: null, closed: false,
+    query: '', modelQuery: '', models: [], moreModels: false, modelError: '', catalogSource: '', advanced: false,
+    authOutput: '', authURLs: [], authAbort: null, operationAbort: null, closed: false,
+    historyBack: 'symbol', locations: {}, detailQuery: '', detailMatches: [], matchIndex: -1, entryPending: true,
   };
-  let done, refreshTimer;
+  let done, refreshTimer, lastClick;
   const completed = new Promise((resolve) => { done = resolve; });
   const abort = new AbortController();
   const screen = new Screen(handleInput, { output, input });
@@ -40,41 +42,87 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
     renameSync(temp, SETTINGS);
   }
   function go(page) {
-    state.page = page; state.selected = page === 'language' ? RESEARCH_LANGUAGES.findIndex((entry) => entry.locale === state.language) : 0;
-    state.offset = 0; state.message = ''; state.editing = null;
+    state.locations[state.page] = { selected: state.selected, offset: state.offset };
+    if (page === 'history' && !['history', 'run', 'artifacts', 'detail'].includes(state.page)) state.historyBack = state.page;
+    state.page = page;
+    state.selected = page === 'language' ? RESEARCH_LANGUAGES.findIndex((entry) => entry.locale === state.language) : state.locations[page]?.selected || 0;
+    state.offset = state.locations[page]?.offset || 0; state.message = ''; state.editing = null;
   }
   function showDetail(title, content, back = state.page) {
-    state.detail = { title, content }; state.previous = back; go('detail');
+    state.detail = { title, content }; state.previous = back; state.detailQuery = ''; state.detailMatches = []; state.matchIndex = -1;
+    delete state.locations.detail; go('detail');
   }
   function edit(label, value, apply, { secret = false, required = false } = {}) {
-    state.editing = { label, value: String(value || ''), apply, secret, required };
+    const index = state.rows.findIndex((row) => row.text.startsWith(`${label}:`));
+    state.editing = { label, value: String(value || ''), apply, secret, required, offset: state.offset, index: Math.max(0, index < 0 ? (state.page === 'detail' ? state.offset : state.selected) : index), caret: [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(String(value || ''))].length };
+    state.message = '';
   }
   function field(label, value, apply, options) {
     return action(`${label}: ${options?.secret ? (value ? '********' : '') : value || ''}`, () => edit(label, value, apply, options));
   }
   function errorMessage(error) {
-    let message = cleanText(error?.message || error);
+    const key = { OPERATION_CANCELLED: 'operationCancelled', OPERATION_TIMEOUT: 'operationTimeout', COMMAND_UNAVAILABLE: 'commandUnavailable', MODEL_PROTOCOL_UNKNOWN: 'protocolUnknown' }[error?.code || error?.error_code];
+    if (key) return t(key);
+    let message = cleanText(error?.message || error?.error || error);
     if (state.draft?.apiKey) message = message.split(state.draft.apiKey).join('[redacted]');
     return `${t('error')}: ${message}`;
   }
-  async function execute(fn) {
+  async function execute(fn, { cancellable = false } = {}) {
     if (state.busy || state.closed) return;
-    state.busy = true; state.message = t('loading'); render();
-    try { await fn(); if (state.message === t('loading')) state.message = ''; }
+    state.busy = true; state.operationAbort = cancellable ? new AbortController() : null;
+    const cancel = () => state.operationAbort?.abort();
+    abort.signal.addEventListener('abort', cancel, { once: true });
+    state.message = t('loading'); render();
+    try { await fn(state.operationAbort?.signal || abort.signal); if (state.message === t('loading')) state.message = ''; }
     catch (error) { state.message = errorMessage(error); }
-    finally { state.busy = false; if (!state.closed) render(); }
+    finally { abort.signal.removeEventListener('abort', cancel); state.busy = false; state.operationAbort = null; if (!state.closed) render(); }
   }
   function research() {
     return { symbol: safeSymbol(state.symbol.trim()), prompt: '', language: state.language,
       council_mode: state.mode, ...(state.mode === 'full' ? { council_pace: state.pace, analyst_scope: state.analystScope } : {}) };
   }
-  async function chooseConnection(profile) {
+  async function chooseConnection(profile, signal = abort.signal) {
     const apiKey = await api.getConnectionSecret(profile);
     state.message = t('checking'); render();
-    const result = await api.probeConnection(profile, { apiKey, signal: abort.signal });
-    if (!result.ok) throw new Error(result.error || t('unavailable'));
+    const result = await api.probeConnection(profile, { apiKey, signal });
+    if (signal.aborted) throw Object.assign(new Error(), { code: 'OPERATION_CANCELLED' });
+    if (!result.ok) throw Object.assign(new Error(result.error || t('unavailable')), { code: result.error_code });
     state.connection = { ...profile, capabilities: result.capabilities };
     go(state.symbol ? 'configuration' : 'symbol');
+  }
+  function preset() {
+    return CONNECTION_PRESETS.find((item) => !item.info_only && (state.draft?.provider === 'compatible'
+      ? item.base_url === state.draft.base_url : item.provider === state.draft?.provider));
+  }
+  async function loadModels(signal) {
+    const apiKey = state.draft.apiKey || (state.draft.id ? await api.getConnectionSecret(state.draft) : undefined);
+    let result;
+    try { result = await api.listModels(state.draft, { apiKey, signal }); }
+    catch (error) { result = { error: error.message, error_code: error.code, models: [] }; }
+    if (signal.aborted) throw Object.assign(new Error(), { code: 'OPERATION_CANCELLED' });
+    state.models = result.models || []; state.moreModels = result.has_more === true;
+    state.catalogSource = result.catalog_source; state.modelError = result.error ? errorMessage(result) : '';
+    state.modelQuery = ''; delete state.locations.models; go('models');
+  }
+  function saveEdit() {
+    const editing = state.editing;
+    if (editing.required && !editing.value.trim()) throw new Error(t('required'));
+    state.message = ''; editing.apply(editing.value); editing.value = ''; state.editing = null;
+  }
+  function nextMatch() {
+    if (!state.detailMatches.length) { state.message = t('noMatches'); return; }
+    state.matchIndex = (state.matchIndex + 1) % state.detailMatches.length;
+    state.offset = state.detailMatches[state.matchIndex];
+    state.message = `${t('search')}: ${state.detailQuery}  ${state.matchIndex + 1}/${state.detailMatches.length}`;
+  }
+  function search() {
+    if (state.page === 'detail') edit(t('search'), state.detailQuery, (value) => {
+      state.detailQuery = value; state.matchIndex = -1;
+      state.detailMatches = value ? state.detail.rows.flatMap((row, index) => row.text.toLocaleLowerCase().includes(value.toLocaleLowerCase()) ? [index] : []) : [];
+      nextMatch();
+    });
+    else if (state.page === 'models') edit(t('search'), state.modelQuery, (value) => { state.modelQuery = value.trim(); state.offset = 0; });
+    else if (state.page === 'history') edit(t('search'), state.query, (value) => { state.query = value.trim(); state.offset = 0; });
   }
   function openURL(value) {
     const url = new URL(value);
@@ -97,8 +145,9 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
         state.authURLs = [...new Set(state.authOutput.match(/https:\/\/[^\s<>"']+/g) || [])];
         render();
       } });
-      if (!result.ok) throw new Error(result.error || t('unavailable'));
+      if (!result.ok) throw Object.assign(new Error(result.error || t('unavailable')), { code: result.error_code });
       go('account'); state.message = t('connected');
+      await loadModels(state.authAbort.signal);
     } finally {
       abort.signal.removeEventListener('abort', cancel);
       state.authAbort = null;
@@ -109,6 +158,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
   async function prepareMethods() {
     state.selection = await api.beginSelection(research());
     state.methods = new Set(state.selection.suggested_master_ids || state.selection.preselected_master_ids || []);
+    delete state.locations.methods; delete state.locations.review;
     go('methods');
   }
   async function startResearch() {
@@ -122,18 +172,19 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
     state.run = api.loadRun(state.runId); go('run');
   }
   function back() {
-    if (state.editing) { state.editing.value = ''; state.editing = null; return; }
+    if (state.editing) { state.offset = state.editing.offset; state.editing.value = ''; state.editing = null; state.message = ''; return; }
     if (state.page === 'detail') return go(state.previous || 'run');
-    const parent = { symbol: 'language', connection: 'symbol', profile: 'connection', provider: 'connection', account: 'provider', models: 'account', configuration: 'connection', methods: 'configuration', review: 'methods', stop: 'run', run: 'history', artifacts: 'run', history: 'symbol' };
+    const parent = { symbol: 'language', connection: 'symbol', profile: 'connection', provider: 'connection', account: state.draft?.id ? 'profile' : 'provider', models: 'account', configuration: 'connection', methods: 'configuration', review: 'methods', stop: 'run', run: 'history', artifacts: 'run', history: state.historyBack };
     go(parent[state.page] || 'language');
   }
   function pageRows() {
     switch (state.page) {
       case 'language': return RESEARCH_LANGUAGES.map((entry) => action(`${entry.locale === state.language ? '(*)' : '( )'} ${entry.name}`, () => {
         state.language = entry.locale; saveSettings();
-        if (initial.command === 'runs') go('history');
-        else if (initial.command === 'connect') go('connection');
-        else if (initial.runId) { state.run = api.loadRun(state.runId); go('run'); }
+        const first = state.entryPending; state.entryPending = false;
+        if (first && initial.command === 'runs') go('history');
+        else if (first && initial.command === 'connect') go('connection');
+        else if (first && initial.runId) { state.run = api.loadRun(state.runId); go('run'); }
         else go('symbol');
       }));
       case 'symbol': return [
@@ -150,16 +201,16 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
       case 'profile': return [
         text(`${state.connection.name} / ${state.connection.model || PROVIDER_NAMES[state.connection.provider]}`),
         ...(state.connection.routing_policy?.mode === 'platform_managed' ? wrapText(t('routing'), Math.max(1, (output.columns || 80) - 8)).map(text) : []),
-        action(t('next'), () => execute(() => chooseConnection(state.connection))),
+        action(t('next'), () => execute((signal) => chooseConnection(state.connection, signal), { cancellable: true })),
         action(`${t('model')} / ${t('apiKey')}`, () => {
           state.draft = { ...state.connection, budget: { ...(state.connection.budget || api.DEFAULT_CONNECTION_BUDGET) }, apiKey: undefined };
           go('account');
         }),
-        action(t('test'), () => execute(async () => {
+        action(t('test'), () => execute(async (signal) => {
           const apiKey = await api.getConnectionSecret(state.connection);
-          const result = await api.probeConnection(state.connection, { apiKey, signal: abort.signal });
+          const result = await api.probeConnection(state.connection, { apiKey, signal });
           showDetail(t('capabilities'), JSON.stringify(result, null, 2), 'profile');
-        })),
+        }, { cancellable: true })),
         action(t('remove'), () => execute(async () => { await api.deleteConnection(state.connection.id); state.connection = null; go('connection'); })),
         ...(state.connection.provider === 'codex' ? [action(t('disconnect'), () => execute(async () => {
           const result = await api.logoutCodex({ signal: abort.signal });
@@ -168,41 +219,65 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
         }))] : []),
         text(''), text(t('billing')),
       ];
-      case 'provider': return PROVIDERS.map((provider) => action(PROVIDER_NAMES[provider], () => {
-        state.draft = { provider, model: '', name: PROVIDER_NAMES[provider], storage: process.platform === 'linux' ? 'session' : 'system', apiKey: '', base_url: '', budget: { ...api.DEFAULT_CONNECTION_BUDGET } };
+      case 'provider': return CONNECTION_PRESETS.map((entry) => action(entry.name + (entry.info_only ? ` / ${t('details')}` : ''), () => {
+        if (entry.info_only) return showDetail(entry.name, `${t(entry.notice_key)}\n\n${entry.docs_url}`, 'provider');
+        state.draft = { provider: entry.provider, model: '', name: entry.name, storage: process.platform === 'linux' ? 'session' : 'system', apiKey: '', base_url: entry.base_url || '', api_format: entry.api_format, budget: { ...api.DEFAULT_CONNECTION_BUDGET } };
+        state.advanced = false; delete state.locations.account;
         go('account');
       }));
       case 'account': return [
-        text(PROVIDER_NAMES[state.draft.provider]),
-        field(t('name'), state.draft.name, (value) => { state.draft.name = value; }, { required: true }),
-        field(t('model'), state.draft.model, (value) => { state.draft.model = value; }, { required: state.draft.provider !== 'codex' }),
+        text(state.draft.name),
+        ...(preset()?.notice_key ? wrapText(t(preset().notice_key), Math.max(1, (output.columns || 80) - 8)).map(text) : []),
         ...(state.draft.provider === 'codex' ? [
           action(t('officialLogin'), () => execute(signInCodex)),
         ] : [
           field(t('apiKey'), state.draft.apiKey, (value) => { state.draft.apiKey = value.trim(); }, { secret: true, required: true }),
-          ...(state.draft.provider === 'compatible' ? [field(t('baseURL'), state.draft.base_url, (value) => { state.draft.base_url = value.trim(); }, { required: true })] : []),
-          action(t('availableModels'), () => execute(async () => {
-            const apiKey = state.draft.apiKey || await api.getConnectionSecret(state.draft);
-            const result = await api.listModels(state.draft, { apiKey, signal: abort.signal });
-            if (result.error) throw new Error(result.error);
-            state.models = result.models; state.moreModels = result.has_more === true; go('models');
-          })),
+          ...(!preset()?.base_url && state.draft.provider === 'compatible' ? [field(t('baseURL'), state.draft.base_url, (value) => { state.draft.base_url = value.trim(); }, { required: true })] : []),
+        ]),
+        action(`${t('model')}: ${state.draft.model || (state.draft.provider === 'codex' ? t('defaultModel') : t('chooseModel'))}`, () => execute(loadModels, { cancellable: true })),
+        action(t('save'), () => execute(async () => {
+          const profile = await api.saveConnection(state.draft);
+          state.draft = { ...profile, apiKey: '' }; state.connection = profile;
+          if (!state.symbol) { go('connection'); state.message = t('saved'); }
+          else {
+            go('profile'); state.message = t('saved');
+            state.operationAbort = new AbortController();
+            try { await chooseConnection(profile, state.operationAbort.signal); }
+            catch (error) { state.message = `${t('savedCheckFailed')} ${errorMessage(error)}`; }
+          }
+        })),
+        action(`${state.advanced ? '[-]' : '[+]'} ${t('advanced')}`, () => { state.advanced = !state.advanced; }),
+        ...(state.advanced ? [
+          field(t('name'), state.draft.name, (value) => { state.draft.name = value; }, { required: true }),
+          ...(state.draft.provider !== 'codex' ? [
+          ...(state.draft.provider === 'compatible' ? [
+            field(t('baseURL'), state.draft.base_url, (value) => { state.draft.base_url = value.trim(); }, { required: true }),
+            action(`${t('protocol')}: ${state.draft.api_format || t('unknown')}`, () => {
+              state.draft.api_format = ['chat', 'responses', 'messages'][(['chat', 'responses', 'messages'].indexOf(state.draft.api_format) + 1) % 3];
+            }),
+          ] : []),
           action(`${t('storage')}: ${t(state.draft.storage)}`, () => { state.draft.storage = state.draft.storage === 'system' ? 'session' : 'system'; }),
           field(t('maxRequests'), state.draft.budget?.max_requests, (value) => { state.draft.budget = { ...state.draft.budget, max_requests: Number(value) }; }, { required: true }),
           field(t('maxOutputTokens'), state.draft.budget?.max_output_tokens, (value) => { state.draft.budget = { ...state.draft.budget, max_output_tokens: Number(value) }; }, { required: true }),
-        ]),
-        action(t('save'), () => execute(async () => {
-          const profile = await api.saveConnection(state.draft);
-          state.draft.apiKey = '';
-          if (!state.symbol) { go('connection'); state.message = t('saved'); }
-          else await chooseConnection(profile);
-        })),
+          ] : []),
+        ] : []),
         text(''), text(t('billing')),
       ];
       case 'models': return [
+        field(t('search'), state.modelQuery, (value) => { state.modelQuery = value.trim(); state.offset = 0; }),
+        ...(state.draft.provider === 'codex' ? [action(t('defaultModel'), () => { state.draft.model = ''; go('account'); })] : []),
+        action(t('refresh'), () => execute(loadModels, { cancellable: true })),
+        action(t('manualModel'), () => edit(t('manualModel'), state.draft.model, (value) => { state.draft.model = value.trim(); go('account'); }, { required: true })),
+        ...wrapText(state.catalogSource === 'documentation' ? t('documentationModels') : t('modelAccessHint'), Math.max(1, (output.columns || 80) - 8)).map(text),
+        ...(state.modelError ? wrapText(`${t('modelListFailed')} ${state.modelError}`, Math.max(1, (output.columns || 80) - 8)).map(text) : []),
         ...(state.moreModels ? wrapText(t('moreModels'), Math.max(1, (output.columns || 80) - 8)).map(text) : []),
-        ...(state.models.length ? state.models.map((model) => action(`${model.name || model.id} / ${model.id}`, () => { state.draft.model = model.id; go('account'); })) : [text(t('unavailable'))]),
-        action(t('back'), () => go('account')),
+        ...state.models.filter((model) => `${model.name || ''} ${model.id}`.toLowerCase().includes(state.modelQuery.toLowerCase())).map((model) => {
+          const label = `${model.id === state.draft.model ? '(*)' : '( )'} ${model.name || model.id}${model.name && model.name !== model.id ? ` / ${model.id}` : ''}${model.default ? ` / ${t('defaultModel')}` : ''}`;
+          return model.selectable === false ? text(`${label} / ${t('protocolUnknown')}`) : action(label, () => {
+            state.draft.model = model.id; if (model.api_format) state.draft.api_format = model.api_format; go('account');
+          });
+        }),
+        ...(!state.models.some((model) => `${model.name || ''} ${model.id}`.toLowerCase().includes(state.modelQuery.toLowerCase())) ? [text(t('noMatches'))] : []),
       ];
       case 'auth': return [
         ...state.authURLs.map((url) => action(url, () => openURL(url))),
@@ -250,24 +325,36 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
         text(''), text(t('billing')),
         action(t('start'), () => execute(startResearch)), action(t('back'), () => go('methods')),
       ];
-      case 'history': return [
-        field('/', state.query, (value) => { state.query = value; }),
-        ...api.listRuns({ query: state.query, limit: 200 }).map((run) => action(`${run.symbol || run.run_id} / ${run.status?.status || run.status || ''} / ${run.run_id}`, () => {
+      case 'history': {
+        const runs = api.listRuns({ query: state.query, limit: 200 });
+        return [
+        field(t('search'), state.query, (value) => { state.query = value.trim(); state.offset = 0; }),
+        text(t('searchHint')),
+        ...runs.map((run) => action(`${run.symbol || run.run_id} / ${run.status?.status || run.status || ''} / ${run.started_at?.slice(0, 16).replace('T', ' ') || ''} / ${run.run_id}`, () => {
           state.runId = run.run_id; state.run = api.loadRun(run.run_id); go('run');
         })),
-        ...(api.listRuns({ query: state.query, limit: 1 }).length ? [] : [text(t('noRuns'))]),
+        ...(runs.length ? [] : [text(t(state.query ? 'noMatches' : 'noRuns'))]),
         action(t('newResearch'), () => { state.symbol = ''; go('language'); }),
       ];
+      }
       case 'run': {
         const run = state.run, status = run.status;
         const statusValue = typeof status === 'object' ? status.status || status.terminal_contract?.terminal : status;
+        const elapsed = Math.floor(((TERMINAL_STATES.has(statusValue) ? Date.parse(status.completed_at || status.finished_at || status.updated_at) : Date.now()) - Date.parse(status.started_at)) / 1000);
         return [
           text(`${state.runId} / ${statusValue || t('unknown')}`),
           text(`${t('runLanguage')}: ${researchLanguage(status.language)?.name || status.language || t('unknown')}`),
+          text(`${t('elapsed')}: ${Number.isFinite(elapsed) ? `${Math.max(0, elapsed)}s` : t('unknown')}`),
+          text(`${t('progress')}: ${status.phase || statusValue || t('unknown')}`),
+          text(''),
           ...['evidence', 'methods', 'debate', 'report', 'sources'].map((kind) => {
             const items = (run.items || []).filter((item) => item.kind === (kind === 'methods' ? 'method' : kind) || kind === 'report' && item.kind === 'decision');
-            return action(`${t(kind)}  ${items.filter((item) => item.available).length}/${items.length}`, () => { state.category = kind; go('artifacts'); });
+            const count = items.filter((item) => item.available).length;
+            const failed = items.filter((item) => ['failed', 'incomplete', 'not_produced'].includes(item.status)).length;
+            return action(`${t(kind)}  [${'#'.repeat(Math.round(count / Math.max(1, items.length) * 10)).padEnd(10, '-')}] ${count}/${items.length}${failed ? `  ${t('failed')}: ${failed}` : ''}`, () => { state.category = kind; delete state.locations.artifacts; go('artifacts'); });
           }),
+          text(''),
+          ...(run.events || []).slice(-3).map((event) => text(`${(event.at || '').slice(11, 19)}  ${event.stage || event.type || ''}  ${event.task || event.master || event.role || ''}  ${event.status || event.reason || ''}`)),
           action(t('events'), () => showDetail(t('events'), JSON.stringify(run.events || [], null, 2), 'run')),
           ...(status.worker_usage ? [action(t('model'), () => showDetail(t('model'), JSON.stringify({ execution: status.worker_execution_config, usage: status.worker_usage }, null, 2), 'run'))] : []),
           ...(!TERMINAL_STATES.has(statusValue) && run.runner?.alive ? [action(t('stop'), () => go('stop'))] : []),
@@ -291,10 +378,15 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
       ];
       case 'detail': {
         const width = output.columns || 80;
-        const columns = Math.max(1, width - 8 - (width >= 120 ? 21 : 0));
+        const columns = Math.max(1, width - 8);
         if (state.detail.columns !== columns) {
           state.detail.columns = columns;
           state.detail.rows = wrapText(state.detail.content, columns).map(text);
+          if (state.detailQuery) {
+            state.detailMatches = state.detail.rows.flatMap((row, index) => row.text.toLocaleLowerCase().includes(state.detailQuery.toLocaleLowerCase()) ? [index] : []);
+            state.matchIndex = Math.min(state.matchIndex, state.detailMatches.length - 1);
+            if (state.matchIndex >= 0) state.offset = state.detailMatches[state.matchIndex];
+          }
         }
         return state.detail.rows;
       }
@@ -313,57 +405,99 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
       state.rows = pageRows();
       state.selected = Math.max(0, Math.min(state.selected, state.rows.length - 1));
       const editing = state.editing;
-      let visibleValue = editing ? (editing.secret ? '*'.repeat([...editing.value].length) : editing.value) : '';
-      if (editing) {
-        const characters = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(visibleValue)];
-        let width = 0, start = characters.length;
-        while (start > 0 && width + stringWidth(characters[start - 1].segment) <= Math.max(1, (output.columns || 80) - 7)) width += stringWidth(characters[--start].segment);
-        visibleValue = characters.slice(start).map((part) => part.segment).join('');
+      const rows = state.rows.map((row) => editing || state.busy && state.page !== 'auth' ? text(row.text) : row);
+      const visibleRows = Math.max(1, (output.rows || 24) - (state.page === 'language' && !state.busy ? 9 : 10));
+      if (!editing && state.page !== 'detail') {
+        state.offset = Math.min(state.offset, state.selected);
+        if (state.selected >= state.offset + visibleRows) state.offset = state.selected - visibleRows + 1;
       }
-      const rows = editing ? [text(editing.label), text(''), text(visibleValue)] : state.rows;
+      let cursor;
+      if (editing) {
+        const index = state.rows.findIndex((row) => row.text.startsWith(`${editing.label}:`));
+        if (index >= 0) editing.index = index;
+        const label = wrapText(editing.label, 20)[0] + ': ';
+        const characters = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(editing.value)].map(({ segment }) => editing.secret ? '*' : segment);
+        let width = 0, start = editing.caret;
+        const room = Math.max(1, (output.columns || 80) - stringWidth(label) - 7);
+        while (start > 0 && width + stringWidth(characters[start - 1]) <= room) width += stringWidth(characters[--start]);
+        rows[editing.index] = text(label + characters.slice(start).join(''));
+        const visible = Math.max(1, (output.rows || 24) - 10);
+        state.offset = Math.min(state.offset, editing.index);
+        if (editing.index >= state.offset + visible) state.offset = editing.index - visible + 1;
+        state.offset = Math.max(0, Math.min(state.offset, Math.max(0, rows.length - visible)));
+        cursor = { row: editing.index - state.offset, column: 2 + stringWidth(label) + width };
+      }
       const body = state.page === 'detail' || editing;
+      const navigation = editing ? [action(t('save'), saveEdit), action(t('cancel'), back)]
+        : state.busy ? (state.authAbort || state.operationAbort ? [action(t('cancel'), () => (state.authAbort || state.operationAbort).abort())] : [text(t('loading'))])
+        : state.page === 'language' ? [] : [
+          action(t('back'), back),
+          ...(['run', 'artifacts', 'detail'].includes(state.page) && state.run ? [action(t('run'), () => go('run'))] : []),
+          action(t('history'), () => go('history')),
+          action(t('newResearch'), () => { state.symbol = ''; go('language'); }),
+          ...(['models', 'history', 'detail'].includes(state.page) ? [action(t('search'), search)] : []),
+        ];
+      const steps = { language: 1, symbol: 2, connection: 3, provider: 3, profile: 3, account: 3, models: 3, auth: 3, configuration: 4, methods: 4, review: 5 };
       const result = screen.draw({
-        title: `AlphaCouncil | ${title()}`,
+        title: `AlphaCouncil | ${title()}${steps[state.page] ? `  ${steps[state.page]}/5` : ''}`,
         showLogo: state.page === 'language',
-        cursor: editing ? { row: 2, column: 2 + stringWidth(visibleValue) } : undefined,
+        cursor,
         subtitle: [state.symbol, researchLanguage(state.language)?.name, state.connection?.name].filter(Boolean).join(' / '),
-        rows, selected: body ? -1 : state.selected, offset: editing ? 0 : state.offset,
+        rows, selected: body ? -1 : state.selected, offset: state.offset,
         footer: editing ? t('editHint') : body ? t('readHint') : t('chooseHint'),
-        message: state.busy ? `${t('loading')} ${state.message}` : state.message,
-        navigation: ['history', 'run', 'artifacts', 'detail'].includes(state.page) && !editing ? [
-          action(t('newResearch'), () => { state.symbol = ''; go('language'); }), action(t('history'), () => go('history')),
-        ] : [], smallTerminal: t('smallTerminal'),
+        message: state.message,
+        navigation, smallTerminal: t('smallTerminal'),
       });
       state.visible = result.visible; state.offset = result.offset;
     } catch (error) {
       state.message = errorMessage(error);
       state.rows = [];
-      screen.draw({ title: 'AlphaCouncil', rows: wrapText(state.message, Math.max(1, (output.columns || 80) - 8)).map(text), footer: t('chooseHint'), smallTerminal: t('smallTerminal') });
+      screen.draw({ title: 'AlphaCouncil', rows: wrapText(state.message, Math.max(1, (output.columns || 80) - 8)).map(text), navigation: [action(t('back'), back)], footer: t('chooseHint'), smallTerminal: t('smallTerminal') });
     }
   }
   function handleInput(event) {
     if (event.key === 'interrupt' || (!state.editing && event.key === 'text' && event.text === 'q')) return close();
-    if (state.busy && state.page !== 'auth') return;
-    if (state.page === 'auth' && event.key === 'escape') { state.authAbort?.abort(); return; }
+    if (((output.columns || 80) < 80 || (output.rows || 24) < 24) && event.key !== 'escape') return;
     try {
-      if (state.editing) {
+      if (event.key === 'mouse' && event.button === 0) {
+        const hit = screen.hits.find((item) => item.y === event.y && event.x >= item.x1 && event.x <= item.x2);
+        if (hit?.action) {
+          const context = `${state.page}:${Boolean(state.editing)}`;
+          if (lastClick && context !== lastClick.context && Date.now() - lastClick.at < 300) return;
+          lastClick = { context, at: Date.now() };
+          if (hit.index !== undefined) state.selected = hit.index;
+          hit.action();
+        }
+      } else if (state.busy && (state.page !== 'auth' || event.key === 'escape')) {
+        if (event.key === 'escape') (state.authAbort || state.operationAbort)?.abort();
+      } else if (state.editing) {
         const editState = state.editing;
-        if (event.key === 'escape') { editState.value = ''; state.editing = null; }
-        else if (event.key === 'enter') {
-          if (editState.required && !editState.value.trim()) throw new Error(t('required'));
-          editState.apply(editState.value); editState.value = ''; state.editing = null;
-        } else if (event.key === 'backspace') {
-          const chars = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(editState.value)];
-          editState.value = chars.slice(0, -1).map((part) => part.segment).join('');
+        const chars = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(editState.value)].map(({ segment }) => segment);
+        if (event.key === 'escape') back();
+        else if (event.key === 'enter') saveEdit();
+        else if (event.key === 'left') editState.caret = Math.max(0, editState.caret - 1);
+        else if (event.key === 'right') editState.caret = Math.min(chars.length, editState.caret + 1);
+        else if (event.key === 'home') editState.caret = 0;
+        else if (event.key === 'end') editState.caret = chars.length;
+        else if (event.key === 'clearInput') { editState.value = ''; editState.caret = 0; }
+        else if (event.key === 'backspace' || event.key === 'delete') {
+          if (event.key === 'backspace' && editState.caret > 0) chars.splice(--editState.caret, 1);
+          else if (event.key === 'delete') chars.splice(editState.caret, 1);
+          editState.value = chars.join('');
         } else if (['text', 'paste'].includes(event.key)) {
           const limit = editState.secret ? 16384 : 8192;
-          editState.value = (editState.value + cleanText(event.text)).slice(0, limit);
+          const inserted = cleanText(event.text).replace(/[\r\n]/g, ' ');
+          const before = chars.slice(0, editState.caret).join('') + inserted;
+          const next = before + chars.slice(editState.caret).join('');
+          if (next.length <= limit) {
+            editState.value = next;
+            editState.caret = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(before)].length;
+          }
         }
       } else if (event.key === 'escape' || event.key === 'left') back();
-      else if (event.key === 'mouse' && event.button === 0) {
-        const hit = screen.hits.find((item) => item.y === event.y && event.x >= item.x1 && event.x <= item.x2);
-        if (hit) { if (hit.index !== undefined) state.selected = hit.index; hit.action(); }
-      } else if (state.page === 'detail') {
+      else if (event.key === 'text' && event.text === '/' && ['history', 'models', 'detail'].includes(state.page)) search();
+      else if (state.page === 'detail') {
+        if (event.key === 'text' && event.text === 'n') nextMatch();
         const step = ['pageup', 'pagedown'].includes(event.key) ? state.visible : 1;
         if (['down', 'pagedown'].includes(event.key)) state.offset += step;
         if (['up', 'pageup'].includes(event.key)) state.offset = Math.max(0, state.offset - step);
@@ -386,7 +520,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
     render();
   }
   function refresh() {
-    if (!state.busy && state.runId && ['run', 'artifacts'].includes(state.page)) {
+    if (!state.busy && !state.editing && state.runId && ['run', 'artifacts'].includes(state.page)) {
       try { state.run = api.loadRun(state.runId); render(); } catch (error) { state.message = errorMessage(error); }
     }
   }

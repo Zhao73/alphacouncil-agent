@@ -47,7 +47,7 @@ export async function executeRun(payload, { dispatch, withConnection, notify = (
     notify({ type: "ready", run_id: id, owner_token: payload.owner_token });
     const operation = async () => dispatch({ jsonrpc: "2.0", id: "terminal-run", method: "tools/call", params: { name: "analyze_symbol", arguments: { ...payload.research, run_id: id, wait_for_completion: true } } });
     const response = payload.connection
-      ? await withConnection(payload.connection, operation, { apiKey: payload.apiKey, signal: controller.signal })
+      ? await withConnection(payload.connection, operation, { apiKey: payload.apiKey, signal: controller.signal, sessionId: id })
       : await operation();
     const statusPath = join(runPath(id), "status.json");
     const status = existsSync(statusPath) ? readJson(statusPath) : null;

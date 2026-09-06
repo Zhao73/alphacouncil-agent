@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { listModels, runApiWorker, probeConnection, withConnection } from "../providers.mjs";
+import { CONNECTION_PRESETS, listModels, runApiWorker, probeConnection, withConnection } from "../providers.mjs";
 import { runWorker, workerExecutionConfig } from "../../mcp/lib/worker-execution.mjs";
 import { groundingForHeadlessRun } from "../../mcp/lib/orchestrator.mjs";
 
@@ -81,11 +81,179 @@ test("model list supports an unselected model draft and never substitutes a gues
     assert.equal(init.headers["x-api-key"], key);
     return new Response(JSON.stringify({ data: [{ id: "fixture-model", display_name: "Fixture" }], has_more: true }));
   } });
-  assert.deepEqual(listed.models, [{ id: "fixture-model", name: "Fixture" }]);
+  assert.deepEqual(listed.models, [{ id: "fixture-model", name: "Fixture", api_format: "messages", catalog_source: "api", selectable: true, requires_probe: true }]);
   assert.equal(listed.has_more, true);
   const unsupported = await listModels({ provider: "compatible", base_url: "https://fixture.example/v1" }, { apiKey: key, fetch: async () => new Response("missing", { status: 404 }) });
   assert.deepEqual(unsupported.models, []);
   assert.match(unsupported.error, /404/u);
+  assert.equal(unsupported.error_code, "MODEL_LIST_UNSUPPORTED");
+});
+
+test("provider presets distinguish regional APIs and documentation-only coding subscriptions", () => {
+  assert.equal(new Set(CONNECTION_PRESETS.map((row) => row.id)).size, CONNECTION_PRESETS.length);
+  for (const row of CONNECTION_PRESETS) assert.ok(row.name && row.docs_url.startsWith("https://"));
+  for (const id of ["codex", "anthropic", "openai", "compatible", "deepseek", "kimi-international", "kimi-china", "glm-international", "glm-china", "openrouter", "opencode-zen", "opencode-go"]) assert.ok(CONNECTION_PRESETS.some((row) => row.id === id && !row.info_only), id);
+  for (const id of ["kimi-code", "glm-coding"]) {
+    const row = CONNECTION_PRESETS.find((entry) => entry.id === id);
+    assert.equal(row.info_only, true);
+    assert.equal(row.base_url, null);
+    assert.ok(row.notice_key);
+  }
+  assert.equal(CONNECTION_PRESETS.find((row) => row.id === "opencode-go").notice_key, "opencodeGoNotice");
+});
+
+test("Codex model listing delegates to the official runtime and retains its default and errors", async () => {
+  const controller = new AbortController();
+  const result = await listModels({ provider: "codex" }, { signal: controller.signal, listCodexModels: async ({ signal }) => {
+    assert.equal(signal, controller.signal);
+    return { models: [{ id: "official-fixture", name: "Official", default: true }], has_more: false, error: null };
+  } });
+  assert.deepEqual(result.models[0], { id: "official-fixture", name: "Official", default: true, api_format: null, catalog_source: "api", selectable: true });
+  const failed = await listModels({ provider: "codex" }, { listCodexModels: async () => ({ models: [], has_more: false, error: "Official runtime unavailable", error_code: "COMMAND_UNAVAILABLE" }) });
+  assert.equal(failed.error_code, "COMMAND_UNAVAILABLE");
+  assert.deepEqual(failed.models, []);
+});
+
+test("GLM documentation candidates do not fabricate an account list or bypass the live probe", async () => {
+  for (const id of ["glm-international", "glm-china"]) {
+    const connection = CONNECTION_PRESETS.find((row) => row.id === id);
+    const result = await listModels(connection, { fetch: async () => { throw new Error("undocumented models endpoint must not be called"); } });
+    assert.equal(result.catalog_source, "documentation");
+    assert.equal(result.error_code, "MODEL_LIST_DOCUMENTATION");
+    assert.ok(result.models.length > 0);
+    assert.ok(result.models.every((row) => row.catalog_source === "documentation" && row.requires_probe && row.api_format === "chat" && row.docs_url));
+    const probe = await probeConnection({ ...connection, model: result.models[0].id }, { apiKey: key, fetch: async () => new Response("access denied", { status: 403 }) });
+    assert.equal(probe.ok, false);
+    assert.equal(probe.capabilities.tool_calls, false);
+  }
+});
+
+test("empty OpenCode presets can list models without assigning the temporary GET protocol to a model", async () => {
+  for (const [id, expected] of [["opencode-zen", "chat"], ["opencode-go", "messages"]]) {
+    const connection = CONNECTION_PRESETS.find((row) => row.id === id);
+    assert.equal(connection.model, undefined);
+    assert.equal(connection.api_format, undefined);
+    const result = await listModels(connection, { fetch: async (url, init) => {
+      assert.equal(url, `${connection.base_url}/models`);
+      assert.equal(init.headers.authorization, undefined);
+      return new Response(JSON.stringify({ data: [{ id: "minimax-m2.5" }, { id: "gpt-5.6-luna" }, { id: "gpt-future-unverified" }, { id: "gemini-3.8-flash" }, { id: "constructor" }] }));
+    } });
+    assert.equal(result.models[0].api_format, expected);
+    assert.equal(result.models[1].api_format, "responses");
+    for (const row of result.models.slice(2)) {
+      assert.equal(row.api_format, null);
+      assert.equal(row.selectable, false);
+      assert.equal(row.error_code, "MODEL_PROTOCOL_UNKNOWN");
+    }
+    assert.equal(connection.model, undefined);
+    assert.equal(connection.api_format, undefined);
+    await assert.rejects(probeConnection({ ...connection, model: "gpt-future-unverified" }, { apiKey: key, fetch: async () => { throw new Error("unknown protocol must not issue a request"); } }), { code: "MODEL_PROTOCOL_UNKNOWN" });
+  }
+});
+
+test("Codex probes retain official error codes and reject a login result arriving after cancellation", async () => {
+  const failed = await probeConnection({ provider: "codex" }, { getCodexLoginStatus: async () => ({ authenticated: false, detail: "Official runtime unavailable", error_code: "COMMAND_UNAVAILABLE" }) });
+  assert.equal(failed.ok, false);
+  assert.equal(failed.error_code, "COMMAND_UNAVAILABLE");
+  const controller = new AbortController();
+  const cancelled = await probeConnection({ provider: "codex" }, { signal: controller.signal, getCodexLoginStatus: async ({ signal }) => {
+    assert.equal(signal, controller.signal);
+    controller.abort();
+    return { authenticated: true };
+  } });
+  assert.equal(cancelled.ok, false);
+  assert.equal(cancelled.error_code, "OPERATION_CANCELLED");
+  assert.ok(Object.values(cancelled.capabilities).every((value) => value === false));
+});
+
+test("API probe cancellation stays explicit before, during, and after the structured check", async () => {
+  for (const cancelAt of [0, 1, 2, 3]) {
+    const controller = new AbortController();
+    if (cancelAt === 0) controller.abort();
+    let requests = 0;
+    const result = await probeConnection(profile("openai"), { apiKey: key, signal: controller.signal, fetch: async (_, init) => {
+      if (++requests === cancelAt) { controller.abort(); return new Promise(() => {}); }
+      const body = JSON.parse(init.body);
+      if (requests === 1) return response("openai", "capability_check", {});
+      return response("openai", "finish_research", { nonce: lastToolResult("openai", body).nonce });
+    } });
+    assert.equal(requests, cancelAt);
+    assert.equal(result.ok, false);
+    assert.equal(result.error_code, "OPERATION_CANCELLED");
+    assert.ok(Object.values(result.capabilities).every((value) => value === false));
+    assert.equal(result.verified_max_output_tokens, null);
+  }
+});
+
+test("an explicitly chosen advanced protocol can probe a manually entered OpenCode model", async () => {
+  const connection = { ...CONNECTION_PRESETS.find((row) => row.id === "opencode-zen"), model: "future-manual-model", api_format: "responses" };
+  let requests = 0;
+  const result = await probeConnection(connection, { apiKey: key, fetch: async (url, init) => {
+    assert.equal(url, `${connection.base_url}/responses`);
+    const body = JSON.parse(init.body);
+    if (++requests === 1) return response("openai", "capability_check", {});
+    return response("openai", "finish_research", { nonce: lastToolResult("openai", body).nonce });
+  } });
+  assert.equal(result.ok, true);
+  assert.equal(result.native_search_supported, false);
+  assert.equal(requests, 2);
+});
+
+test("cancelled model lists return an explicit error code before issuing HTTP", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const result = await listModels(profile("compatible"), { signal: controller.signal, apiKey: key, fetch: async () => { throw new Error("must not request after cancellation"); } });
+  assert.equal(result.error_code, "OPERATION_CANCELLED");
+  assert.deepEqual(result.models, []);
+});
+
+for (const [format, provider] of [["chat", "compatible"], ["responses", "openai"], ["messages", "anthropic"]]) test(`compatible ${format} preserves private continuation state through a real tool roundtrip without claiming native search`, async () => {
+  const connection = { ...profile("compatible"), api_format: format, capabilities: { web_search: true } };
+  let requests = 0;
+  const events = [];
+  const result = await probeConnection(connection, { apiKey: key, onEvent: (row) => events.push(row), fetch: async (url, init) => {
+    assert.equal(url, `${connection.base_url}/${format === "chat" ? "chat/completions" : format}`);
+    assert.equal(format === "messages" ? init.headers["x-api-key"] : init.headers.authorization, format === "messages" ? key : `Bearer ${key}`);
+    const body = JSON.parse(init.body);
+    assert.ok(body.tools.every((tool) => !["web_search", "web_search_20250305"].includes(tool.type)));
+    if (++requests === 1) {
+      const data = await response(provider, "capability_check", {}).json();
+      if (format === "chat") data.choices[0].message.reasoning_content = "PRIVATE_COMPATIBLE_REASONING";
+      else if (format === "messages") data.content.unshift({ type: "thinking", thinking: "PRIVATE_COMPATIBLE_REASONING", signature: "PRIVATE_STATE_SIGNATURE" });
+      else data.output.unshift({ type: "reasoning", encrypted_content: "PRIVATE_STATE_SIGNATURE", summary: [{ type: "summary_text", text: "PRIVATE_COMPATIBLE_REASONING" }] });
+      return new Response(JSON.stringify(data));
+    }
+    assert.match(JSON.stringify(body), /PRIVATE_COMPATIBLE_REASONING|PRIVATE_STATE_SIGNATURE/u);
+    return response(provider, "finish_research", { nonce: lastToolResult(provider, body).nonce });
+  } });
+  assert.equal(result.ok, true, result.error);
+  assert.equal(requests, 2);
+  assert.equal(result.native_search_supported, false);
+  assert.equal(result.capabilities.web_search, false);
+  assert.doesNotMatch(JSON.stringify({ result, events }), /PRIVATE_COMPATIBLE_REASONING|PRIVATE_STATE_SIGNATURE/u);
+});
+
+test("Go identifies AlphaCouncil and shares one research session across workers and tool continuations", async () => {
+  const connection = { ...CONNECTION_PRESETS.find((row) => row.id === "opencode-go"), model: "minimax-m2.5", api_format: "messages" };
+  const sessions = [];
+  let requests = 0;
+  for (const sessionId of ["RESEARCH-ONE", "RESEARCH-TWO"]) await withConnection(connection, async () => {
+    assert.equal(workerExecutionConfig().api_format, "messages");
+    for (let worker = 0; worker < 2; worker += 1) {
+      const result = await runWorker("Read the fixture then finish.", 5000, undefined, undefined, {});
+      assert.equal(result.ok, true, result.stderr);
+    }
+  }, { apiKey: key, sessionId, fetch: async (url, init) => {
+    assert.equal(url, "https://opencode.ai/zen/go/v1/messages");
+    assert.match(init.headers["user-agent"], /^AlphaCouncil\/\d/u);
+    assert.equal(init.headers["x-opencode-session"], sessionId);
+    sessions.push(init.headers["x-opencode-session"]);
+    const body = JSON.parse(init.body);
+    if (++requests % 2) return response("anthropic", "fetch_url", { url: "https://www.sec.gov/fixture" });
+    assert.equal(lastToolResult("anthropic", body).content, "FIXTURE EVIDENCE");
+    return response("anthropic", "finish_research", { fact: "FIXTURE EVIDENCE" });
+  }, retrieve: async (url) => ({ status: 200, final_url: url, headers: { "content-type": "text/plain" }, text: "FIXTURE EVIDENCE" }) });
+  assert.deepEqual(sessions, [...Array(4).fill("RESEARCH-ONE"), ...Array(4).fill("RESEARCH-TWO")]);
 });
 
 test("unsupported real schema or PM output limit fails during connection probe", async () => {

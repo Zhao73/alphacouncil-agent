@@ -2,8 +2,9 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DATA_DIR } from "../mcp/lib/constants.mjs";
-import { codexCommand } from "../mcp/lib/codex.mjs";
+import { DATA_DIR, VERSION } from "../mcp/lib/constants.mjs";
+import { codexCommand, stopChild } from "../mcp/lib/codex.mjs";
+import { modelProtocol } from "./provider-catalog.mjs";
 
 const sessionSecrets = new Map();
 const SERVICE = "io.github.Zhao73.alphacouncil.terminal";
@@ -32,9 +33,14 @@ export function normalizeConnection(input) {
       throw new Error("Use the compatible provider for a custom Base URL");
     }
     profile.base_url = url.href.replace(/\/$/u, "");
-    if (input.provider === "compatible") profile.routing_policy = url.hostname === "openrouter.ai"
-      ? { mode: "platform_managed", request_fallbacks: false, require_parameters: true }
-      : { mode: "endpoint_managed" };
+    if (input.provider === "compatible") {
+      profile.api_format = input.api_format ?? modelProtocol(profile.base_url, model, "chat");
+      if (profile.api_format === null) throw operationError("MODEL_PROTOCOL_UNKNOWN", "Model protocol is unknown; choose an explicit API format");
+      if (!["chat", "responses", "messages"].includes(profile.api_format)) throw new Error("Unsupported compatible API format");
+      profile.routing_policy = url.hostname === "openrouter.ai"
+        ? { mode: "platform_managed", request_fallbacks: false, require_parameters: true }
+        : { mode: "endpoint_managed" };
+    }
     profile.budget = { ...DEFAULT_CONNECTION_BUDGET };
     for (const [field, maximum] of Object.entries({ max_requests: 1000, max_output_tokens: 5_000_000, worker_output_tokens: 32_768, manager_output_tokens: 65_536 })) {
       const value = input.budget?.[field] ?? DEFAULT_CONNECTION_BUDGET[field];
@@ -73,10 +79,11 @@ function writeProfiles(profiles, options) {
 
 function command(commandName, args, { input = "", signal, onOutput, timeoutMs = 20_000 } = {}) {
   return new Promise((resolve, reject) => {
-    if (signal?.aborted) { reject(new Error("Operation cancelled")); return; }
-    const child = spawn(commandName, args, { windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+    if (signal?.aborted) { reject(operationError("OPERATION_CANCELLED", "Operation cancelled")); return; }
+    const child = spawn(commandName, args, { windowsHide: true, detached: process.platform !== "win32", stdio: ["pipe", "pipe", "pipe"] });
     let output = "";
     let settled = false;
+    let forceTimer;
     const finish = (error, value) => {
       if (settled) return;
       settled = true;
@@ -84,16 +91,29 @@ function command(commandName, args, { input = "", signal, onOutput, timeoutMs = 
       signal?.removeEventListener("abort", cancel);
       error ? reject(error) : resolve(value);
     };
-    const cancel = () => { child.kill(); finish(new Error("Operation cancelled")); };
-    const timer = setTimeout(cancel, timeoutMs);
+    const stop = (error) => {
+      stopChild(child);
+      forceTimer = setTimeout(() => stopChild(child, true), 500);
+      forceTimer.unref();
+      finish(error);
+    };
+    const cancel = () => stop(operationError("OPERATION_CANCELLED", "Operation cancelled"));
+    const timer = setTimeout(() => stop(operationError("OPERATION_TIMEOUT", "Operation timed out; try again")), timeoutMs);
     signal?.addEventListener("abort", cancel, { once: true });
-    child.on("error", () => finish(new Error("Secure storage or official runtime is unavailable")));
-    child.on("close", (code) => finish(null, { code, output }));
+    child.on("error", () => finish(operationError("COMMAND_UNAVAILABLE", "Secure storage or official runtime is unavailable")));
+    child.on("close", (code, exitSignal) => {
+      clearTimeout(forceTimer);
+      finish(exitSignal ? operationError("OPERATION_TERMINATED", "Operation ended before completion") : null, { code, output });
+    });
     child.stdout.on("data", (data) => { output = (output + data.toString()).slice(0, 32_768); onOutput?.(data.toString()); });
     child.stderr.on("data", (data) => { if (onOutput) onOutput(data.toString()); });
     child.stdin.on("error", () => {});
     child.stdin.end(input);
   });
+}
+
+function operationError(code, message) {
+  return Object.assign(new Error(message), { code });
 }
 
 async function secureSecret(action, profile, value, options = {}) {
@@ -180,23 +200,104 @@ function officialCommand(args) {
 export async function loginCodex({ device = false, signal, onOutput } = {}) {
   const [executable, args] = officialCommand(["login", ...(device ? ["--device-auth"] : [])]);
   const result = await command(executable, args, { signal, onOutput, timeoutMs: 300_000 });
-  return { ok: result.code === 0, method: "official_codex_cli" };
+  return { ok: result.code === 0, method: "official_codex_cli", ...(result.code === 0 ? {} : { error: "Official Codex sign-in failed", error_code: "CODEX_LOGIN_FAILED" }) };
 }
 
 export async function logoutCodex({ signal } = {}) {
   const [executable, args] = officialCommand(["logout"]);
   const result = await command(executable, args, { signal });
-  return { ok: result.code === 0, method: "official_codex_cli" };
+  return { ok: result.code === 0, method: "official_codex_cli", ...(result.code === 0 ? {} : { error: "Official Codex sign-out failed", error_code: "CODEX_LOGOUT_FAILED" }) };
 }
 
-export async function getCodexLoginStatus({ signal } = {}) {
+export async function getCodexLoginStatus({ signal, timeoutMs = 20_000 } = {}) {
   const [executable, args] = officialCommand(["login", "status"]);
   try {
-    let authMode = "unknown";
-    const result = await command(executable, args, { signal, onOutput(text) {
-      if (/using ChatGPT/iu.test(text)) authMode = "chatgpt";
-      else if (/using an API key/iu.test(text)) authMode = "api_key";
-    } });
-    return { authenticated: result.code === 0, auth_mode: authMode, method: "official_codex_cli", detail: result.code === 0 ? "Official Codex login available" : "Official Codex login required" };
-  } catch { return { authenticated: false, method: "official_codex_cli", detail: "Official Codex runtime unavailable" }; }
+    let statusText = "";
+    const result = await command(executable, args, { signal, timeoutMs, onOutput(text) { statusText = (statusText + text).slice(-32_768); } });
+    const authMode = /Logged in using ChatGPT/iu.test(statusText) ? "chatgpt"
+      : /Logged in using an API key/iu.test(statusText) ? "api_key" : "unknown";
+    const authenticated = result.code === 0 && authMode !== "unknown";
+    const loginRequired = !authenticated && /not logged in/iu.test(statusText);
+    return { authenticated, auth_mode: authenticated ? authMode : "unknown", method: "official_codex_cli",
+      detail: authenticated ? "Official Codex login available" : loginRequired ? "Official Codex login required" : "Official Codex login status could not be verified",
+      ...(authenticated ? {} : { error_code: loginRequired ? "CODEX_LOGIN_REQUIRED" : "CODEX_STATUS_FAILED" }) };
+  } catch (error) {
+    return { authenticated: false, auth_mode: "unknown", method: "official_codex_cli", detail: error.message, error_code: error.code || "CODEX_STATUS_FAILED" };
+  }
+}
+
+export async function listCodexModels({ signal, timeoutMs = 20_000 } = {}) {
+  const result = { models: [], has_more: false, checked_at: new Date().toISOString(), verification: "official_codex_model_list" };
+  try {
+    const catalog = await new Promise((resolve, reject) => {
+      if (signal?.aborted) { reject(operationError("OPERATION_CANCELLED", "Operation cancelled")); return; }
+      const [executable, args] = officialCommand(["app-server", "--stdio"]);
+      const child = spawn(executable, args, { windowsHide: true, detached: process.platform !== "win32", stdio: ["pipe", "pipe", "pipe"] });
+      const models = new Map();
+      const cursors = new Set();
+      let buffer = "", receivedBytes = 0, requestId = 1, settled = false, forceTimer;
+      const finish = (error, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", cancel);
+        child.stdin.end();
+        stopChild(child);
+        forceTimer = setTimeout(() => stopChild(child, true), 500);
+        forceTimer.unref();
+        error ? reject(error) : resolve(value);
+      };
+      const cancel = () => finish(operationError("OPERATION_CANCELLED", "Operation cancelled"));
+      const timer = setTimeout(() => finish(operationError("OPERATION_TIMEOUT", "Official Codex model list timed out; try again")), timeoutMs);
+      const send = (message) => child.stdin.write(`${JSON.stringify(message)}\n`);
+      signal?.addEventListener("abort", cancel, { once: true });
+      child.on("error", () => finish(operationError("COMMAND_UNAVAILABLE", "Official Codex runtime is unavailable")));
+      child.on("close", () => {
+        if (!settled) finish(operationError("OPERATION_TERMINATED", "Official Codex ended before returning its model list"));
+        clearTimeout(forceTimer);
+      });
+      child.stdin.on("error", () => finish(operationError("OPERATION_TERMINATED", "Official Codex closed its model-list connection")));
+      child.stderr.resume();
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk) => {
+        if (settled) return;
+        receivedBytes += Buffer.byteLength(chunk);
+        if (receivedBytes > 2 * 1024 * 1024) { finish(operationError("CODEX_MODEL_LIST_INVALID", "Official Codex model list exceeded the response limit")); return; }
+        buffer += chunk;
+        let newline;
+        while (!settled && (newline = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, newline); buffer = buffer.slice(newline + 1);
+          if (!line.trim()) continue;
+          let response;
+          try { response = JSON.parse(line); } catch { finish(operationError("CODEX_MODEL_LIST_INVALID", "Official Codex returned an invalid model-list response")); return; }
+          if (!response || typeof response !== "object" || Array.isArray(response)) { finish(operationError("CODEX_MODEL_LIST_INVALID", "Official Codex returned an invalid model-list response")); return; }
+          if (response.id !== requestId) continue;
+          if (response.error) { finish(operationError("CODEX_MODEL_LIST_FAILED", "Official Codex could not return its model list")); return; }
+          if (requestId === 1) {
+            send({ method: "initialized", params: {} });
+            send({ id: ++requestId, method: "model/list", params: { limit: 100, includeHidden: false } });
+            continue;
+          }
+          if (!Array.isArray(response.result?.data)) { finish(operationError("CODEX_MODEL_LIST_INVALID", "Official Codex returned an invalid model list")); return; }
+          for (const model of response.result.data) {
+            if (!model || typeof model.model !== "string" || !model.model || model.model.length > 128 || /[\x00-\x20\x7f]/u.test(model.model)) {
+              finish(operationError("CODEX_MODEL_LIST_INVALID", "Official Codex returned an invalid model ID")); return;
+            }
+            if (model.hidden === true) continue;
+            models.set(model.model, { id: model.model, name: typeof model.displayName === "string" ? model.displayName : model.model,
+              ...(typeof model.description === "string" ? { description: model.description } : {}), default: model.isDefault === true });
+          }
+          const cursor = response.result.nextCursor;
+          if (!cursor || models.size >= 1000 || requestId >= 11) { finish(null, { models: [...models.values()].slice(0, 1000), has_more: Boolean(cursor) }); return; }
+          if (typeof cursor !== "string" || cursors.has(cursor)) { finish(operationError("CODEX_MODEL_LIST_INVALID", "Official Codex returned an invalid model-list cursor")); return; }
+          cursors.add(cursor);
+          send({ id: ++requestId, method: "model/list", params: { limit: 100, includeHidden: false, cursor } });
+        }
+      });
+      send({ id: requestId, method: "initialize", params: { clientInfo: { name: "alphacouncil_terminal", version: VERSION }, capabilities: { experimentalApi: false } } });
+    });
+    return { ...result, ...catalog, error: null };
+  } catch (error) {
+    return { ...result, error: error.message, error_code: error.code || "CODEX_MODEL_LIST_FAILED" };
+  }
 }
