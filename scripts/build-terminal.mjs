@@ -64,7 +64,7 @@ function smoke(bundle, isolatedHome) {
   const options = { cwd: bundle, env: environment };
   const launcher = join(bundle, process.platform === "win32" ? "alphacouncil.cmd" : "alphacouncil");
   const run = (args) => process.platform === "win32"
-    ? command(process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe", ["/d", "/s", "/c", `""${launcher}" ${args.join(" ")}"`], options)
+    ? command(process.env.ComSpec || "C:\\Windows\\System32\\cmd.exe", ["/d", "/s", "/c", `""${launcher}" ${args.join(" ")}"`], { ...options, windowsVerbatimArguments: true })
     : command(launcher, args, options);
   const help = run(["--help"]);
   if (!/alphacouncil/iu.test(help)) throw new Error("Bundled terminal help smoke failed");
