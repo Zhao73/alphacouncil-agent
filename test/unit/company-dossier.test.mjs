@@ -19,7 +19,7 @@ import {
   requiresOperatingCompanyDossier,
 } from "../../mcp/lib/company-dossier.mjs";
 import { buildMethodVoiceHeadlessOutputSchema } from "../../mcp/lib/orchestrator.mjs";
-import { methodVoiceAllowedSourceIds, normalizeMasterVoice } from "../../mcp/lib/packets.mjs";
+import { methodVoiceAllowedSourceIds, normalizeMasterVoice, normalizePacket } from "../../mcp/lib/packets.mjs";
 import { FIRST_PERSON_DISCLOSURE_ACK, FIRST_PERSON_VOICE_MODE } from "../../mcp/lib/voice.mjs";
 
 const AS_OF = "2026-08-03";
@@ -604,6 +604,23 @@ test("missing, duplicate, extra, and unknown-source coverage items fail closed w
   assert.ok(methodOnlyStatus.invalid.some((item) => (
     item.task === task && item.reason === "covered_source_not_in_evidence_domain"
   )));
+});
+
+test("reader escaping preserves the identical unavailable gap through packet normalization", () => {
+  const task = "earnings_deep_dive";
+  for (const gap of ['The Q&A transcript is unavailable.', 'No <official> Q&A\ntranscript.', 'No R&D detail & no segment table.']) {
+    const packet = coveredPacket(task);
+    markUnavailable(packet, "financials.earnings_call_qna", { attemptedUrls: ["https://example.test/earnings"], gap });
+    const normalized = normalizePacket(packet, task, "TEST", AS_OF);
+    const item = normalized.coverage_items.find((row) => row.id === "financials.earnings_call_qna");
+    assert.ok(normalized.open_questions.includes(item.gap));
+    assert.equal(item.status, "unavailable");
+    assert.deepEqual(normalized.claims, packet.claims);
+    assert.equal(coverageForPacket(normalized).status, "complete");
+    const invalid = structuredClone(normalized);
+    invalid.coverage_items.find((row) => row.id === item.id).attempted_urls = [];
+    assert.equal(coverageForPacket(invalid).status, "incomplete", "normalization never waives actual retrieval evidence");
+  }
 });
 
 test("unavailable coverage requires a named attempt, valid attempted URLs, and an identical explicit gap", () => {

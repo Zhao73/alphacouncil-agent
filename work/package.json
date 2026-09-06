@@ -1,6 +1,6 @@
 {
   "name": "@alphacouncil/chatgpt-work-gateway",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "type": "module",
   "description": "Local Streamable HTTP gateway for using AlphaCouncil Agent in ChatGPT Work developer mode.",

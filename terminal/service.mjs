@@ -193,9 +193,12 @@ export function listRuns({ query = "", limit = 100 } = {}) {
 
 export function listArtifacts(id) {
   const status = runJson(id, "status.json") || {};
+  const terminal = status.terminal || status.status;
+  const finished = TERMINAL.has(terminal);
+  const pending = finished ? "skipped" : "pending";
   const entries = [];
   for (const [key, file] of [["report", "final_report.md"], ["handoff", "user_response.md"], ["sources", "source_manifest.json"]]) {
-    entries.push({ id: key, kind: key === "sources" ? "sources" : "report", status: status.status || "pending", available: Boolean(fileInRun(id, file)) });
+    entries.push({ id: key, kind: key === "sources" ? "sources" : "report", status: terminal || "pending", available: Boolean(fileInRun(id, file)) });
   }
   const tasks = Array.isArray(status.tasks) ? status.tasks : [];
   for (const task of tasks) {
@@ -207,7 +210,7 @@ export function listArtifacts(id) {
   for (const master of masters) {
     const role = typeof master === "string" ? master : master.master;
     if (!/^master_[a-z_]+$/u.test(role || "")) continue;
-    entries.push({ id: `method:${role}`, kind: "method", role, status: master.status || "pending", available: Boolean(fileInRun(id, `${role}.json`)) });
+    entries.push({ id: `method:${role}`, kind: "method", role, status: !master.status || master.status === "pending" ? pending : master.status, available: Boolean(fileInRun(id, `${role}.json`)) });
   }
   for (const role of ["bull_researcher", "bear_researcher"]) {
     const combined = runJson(id, `${role}.json`);
@@ -215,11 +218,19 @@ export function listArtifacts(id) {
       const available = Boolean(fileInRun(id, `${role}.round-${round}.json`)
         || combined?.debate_rounds?.some((item) => item.round === round)
         || (status.council_mode === "quick" && combined));
-      entries.push({ id: `debate:${role}:${round}`, kind: "debate", role, round, status: available ? "completed" : "pending", available });
+      const packet = runJson(id, `${role}.round-${round}.json`) || combined?.debate_rounds?.find((item) => item.round === round) || (status.council_mode === "quick" ? combined : null);
+      entries.push({ id: `debate:${role}:${round}`, kind: "debate", role, round, status: available ? packet?.failure_kind ? "failed" : "completed" : pending, available });
     }
   }
-  entries.push({ id: "decision", kind: "decision", role: "portfolio_manager", status: status.status || "pending", available: Boolean(fileInRun(id, "decision.json")) });
-  return entries;
+  const decision = runJson(id, "decision.json");
+  const pm = status.stage_outcomes?.portfolio_manager;
+  entries.push({ id: "decision", kind: "decision", role: "portfolio_manager", status: decision?.decision_available === true ? "completed" : pm?.absence_reason === "failed" ? "failed" : pending, available: Boolean(decision) });
+  for (const item of [...entries].filter((item) => item.role && item.kind !== "debate")) {
+    if (fileInRun(id, `${item.role}.failure.json`) || fileInRun(id, `${item.role}.attempt-1.failure.json`)) {
+      entries.push({ id: `failure:${item.role}`, kind: "diagnostics", role: item.role, status: item.status, available: true });
+    }
+  }
+  return entries.map((item) => ({ ...item, successful: item.available && (item.kind === "sources" || ["completed", "complete", "degraded", "deterministic_fallback", "out_of_scope"].includes(item.status)) && item.kind !== "diagnostics" }));
 }
 
 export function readArtifact(id, artifactId) {
@@ -229,7 +240,14 @@ export function readArtifact(id, artifactId) {
   const language = runJson(id, "status.json")?.language;
   let content;
   let format = "markdown";
-  if (artifactId === "report" || artifactId === "handoff") {
+  if (item.kind === "diagnostics") {
+    const fields = ["task", "status", "reason", "parse_error", "timed_out", "timeout_ms", "schema_errors", "recorded_at", "worker_activity_summary"];
+    content = JSON.stringify([`${item.role}.attempt-1.failure.json`, `${item.role}.failure.json`].flatMap((name) => {
+      const failure = runJson(id, name);
+      return failure ? [{ file: name, ...Object.fromEntries(fields.filter((key) => failure[key] !== undefined).map((key) => [key, publicValue(failure[key])])) }] : [];
+    }), null, 2);
+    format = "json";
+  } else if (artifactId === "report" || artifactId === "handoff") {
     content = readFileSync(fileInRun(id, artifactId === "report" ? "final_report.md" : "user_response.md"), "utf8");
   } else if (artifactId === "sources") {
     content = JSON.stringify(publicValue(runJson(id, "source_manifest.json")), null, 2);
@@ -260,5 +278,8 @@ export function loadRun(id) {
   const eventPath = fileInRun(id, "events.jsonl");
   const fields = ["seq", "at", "type", "stage", "task", "role", "master", "round", "status", "ok", "elapsed_ms", "failure_kind", "reason"];
   const events = eventPath ? readJsonl(eventPath).entries.slice(-30).map((event) => Object.fromEntries(fields.filter((key) => event[key] !== undefined).map((key) => [key, publicValue(event[key])]))) : [];
-  return { run_id: id, status: publicValue(status || { run_id: id, symbol: runner.symbol, status: runner.state, phase: "starting" }), runner: publicValue(runner), items: listArtifacts(id), events };
+  const items = listArtifacts(id);
+  const conclusion = TERMINAL.has(status?.terminal || status?.status) && items.some((item) => item.id === "handoff" && item.available)
+    ? safeText(readFileSync(fileInRun(id, "user_response.md"), "utf8")) : "";
+  return { run_id: id, status: publicValue(status || { run_id: id, symbol: runner.symbol, status: runner.state, phase: "starting" }), runner: publicValue(runner), items, events, conclusion };
 }

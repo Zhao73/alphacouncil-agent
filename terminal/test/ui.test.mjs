@@ -395,3 +395,49 @@ test('opening history identifies the saved instrument and never counts report pl
   assert.equal(app.state.symbol, 'AAPL', 'reading history preserves the unfinished new-research ticker');
   app.close();
 });
+
+test('incomplete research renders successful counts, diagnostics and the full inline conclusion', () => {
+  const io = terminal(131, 38);
+  const content = '<details>\n<summary>Saved analysis</summary>\n' + 'Recorded Q&amp;A evidence.\n'.repeat(80) + '<!-- alphacouncil:handoff-method-seat:v1:master_buffett -->\nFull method statement.\n</details>\n';
+  const app = createTerminalApp({ readArtifact: () => ({ content: '{"reason":"timeout"}', format: 'json' }) }, { ...io, initial: { language: 'zh-CN' } });
+  app.start();
+  Object.assign(app.state, { page: 'run', runId: 'TEST-OUTCOME', run: {
+    status: { symbol: 'TEST', status: 'incomplete', terminal: 'incomplete', language: 'zh-CN' },
+    runner: { state: 'completed' }, conclusion: content,
+    items: [
+      ...Array.from({ length: 8 }, (_, i) => ({ id: `e${i}`, kind: 'evidence', role: `analyst${i}`, available: true, successful: i < 7, status: i < 7 ? 'completed' : 'timed_out' })),
+      { id: 'report', kind: 'report', available: true, successful: false, status: 'incomplete' },
+      { id: 'failure:analyst7', kind: 'diagnostics', role: 'analyst7', available: true, status: 'timed_out' },
+    ],
+  } }); app.render();
+  const rows = app.state.rows.map((row) => row.text).join('\n');
+  assert.match(rows, /7\/8.*失败: 1/);
+  assert.match(rows, /报告.*0\/1/);
+  assert.doesNotMatch(rows, /状态: completed|alphacouncil:handoff|<details>|<summary>|&amp;/);
+  assert.match(rows, /Full method statement/);
+  app.state.rows.find((row) => row.text === '研究结论' && row.action).action(); app.render();
+  const start = app.state.offset;
+  app.handleInput({ key: 'pagedown' });
+  assert.equal(app.state.offset, start + app.state.visible, 'Page Down advances one full page without jumping to the end');
+  app.handleInput({ key: 'end' });
+  assert.ok(stripVTControlCharacters(io.output.chunks.at(-1)).includes('Full method statement'));
+  app.state.rows.find((row) => row.text.startsWith('失败诊断:')).action(); app.render();
+  assert.equal(app.state.page, 'detail');
+  assert.match(app.state.detail.content, /timeout/);
+  app.handleInput({ key: 'escape' }); assert.equal(app.state.page, 'run');
+  app.close();
+});
+
+test('a live terminal transition automatically reveals the conclusion once', async () => {
+  const io = terminal(80, 24);
+  const finished = { status: { terminal: 'incomplete', status: 'incomplete' }, items: [], conclusion: '# End of research\nThe evidence barrier failed.\n' + 'Retained evidence.\n'.repeat(40) };
+  const app = createTerminalApp({ loadRun: () => finished }, io); app.start();
+  Object.assign(app.state, { page: 'run', runId: 'TRANSITION-1', run: { status: { status: 'running' }, items: [] } }); app.render();
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  assert.ok(app.state.rows[app.state.selected].conclusionStart);
+  assert.match(stripVTControlCharacters(io.output.chunks.at(-1)), /End of research/);
+  app.handleInput({ key: 'home' });
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  assert.equal(app.state.selected, 0, 'later refreshes preserve the reader position');
+  app.close();
+});

@@ -123,3 +123,28 @@ test("a detached dry runner survives its launcher exit and preserves the real in
   assert.match(service.readArtifact(launched.run_id, "method:master_buffett").content, /Buffett/);
   assert.doesNotMatch(service.readArtifact(launched.run_id, "decision").content, /PRIVATE_TRACE/);
 });
+
+test("terminal outcomes distinguish saved failure artifacts from successful research", () => {
+  fixture("OUTCOME-1", {
+    "status.json": { status: "incomplete", terminal: "incomplete", language: "中文", tasks: [{ task: "market_data", status: "completed" }, { task: "earnings_deep_dive", status: "timed_out" }], masters: [{ master: "master_buffett", status: "pending" }], stage_outcomes: { portfolio_manager: { absence_reason: "skipped_upstream_gate" } } },
+    "market_data.json": { task: "market_data", summary: "Valid recorded evidence" },
+    "earnings_deep_dive.json": { task: "earnings_deep_dive", summary: "Failure placeholder" },
+    "earnings_deep_dive.attempt-1.failure.json": { task: "earnings_deep_dive", status: "parse_failed", schema_errors: [{ path: "/coverage_items/financials.earnings_call_qna", keyword: "gap_not_in_open_questions" }], diagnostic_excerpt: "PRIVATE_PRIMARY_BODY", parse_context: "PRIVATE_CONTEXT" },
+    "earnings_deep_dive.failure.json": { task: "earnings_deep_dive", status: "timed_out", timeout_ms: 147606, raw_text: "PRIVATE_RAW", diagnostic_excerpt: "PRIVATE_STDERR" },
+    "decision.json": { decision_available: false, rating: null },
+    "final_report.md": "# Saved incomplete report",
+    "user_response.md": "# 结论\n研究未完成；保留证据和缺口。",
+  });
+  service.writeRunnerState("OUTCOME-1", { state: "completed", owner_token: "PRIVATE_OWNER" });
+  const run = service.loadRun("OUTCOME-1");
+  assert.equal(run.status.terminal, "incomplete");
+  assert.equal(run.items.filter((item) => item.kind === "evidence" && item.successful).length, 1);
+  assert.equal(run.items.filter((item) => ["report", "decision"].includes(item.kind) && item.successful).length, 0);
+  assert.equal(run.items.find((item) => item.id === "method:master_buffett").status, "skipped");
+  assert.equal(run.items.find((item) => item.id === "decision").status, "skipped");
+  assert.match(run.conclusion, /研究未完成/);
+  const diagnostics = service.readArtifact("OUTCOME-1", "failure:earnings_deep_dive");
+  assert.match(diagnostics.content, /gap_not_in_open_questions/);
+  assert.match(diagnostics.content, /147606/);
+  assert.doesNotMatch(JSON.stringify(run) + diagnostics.content, /PRIVATE_/);
+});

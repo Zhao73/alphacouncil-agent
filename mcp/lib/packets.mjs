@@ -1090,7 +1090,8 @@ export function normalizePacket(packet, task, symbol, asOfDate, raw = "", {
   const officialSourceCoverage = task === NEWS_TASK && Object.hasOwn(packet || {}, "official_source_coverage")
     ? normalizeOfficialSourceCoverage(packet.official_source_coverage, task, sourceIdMap, sources, asOfDate)
     : undefined;
-  const coverageItems = normalizeCompanyCoverageItems(packet?.coverage_items, task, sourceIdMap);
+  const coverageItems = normalizeCompanyCoverageItems(packet?.coverage_items, task, sourceIdMap)
+    .map((item) => ({ ...item, gap: sanitizeStatementMarkdown(item.gap) }));
   const acquisitionLedger = normalizeCompanySourceAcquisitionLedger(packet?.acquisition_ledger, task, sourceIdMap);
   const openQuestions = Array.isArray(packet?.open_questions) ? [...packet.open_questions] : [];
   for (const gap of coverageGapQuestions(officialSourceCoverage)) {
