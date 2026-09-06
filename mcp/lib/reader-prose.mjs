@@ -1,3 +1,4 @@
+import { EXTRA_RESEARCH_LOCALES, readerText } from "./research-locales.mjs";
 const NAMED_HTML_ENTITIES = Object.freeze({
   amp: "&",
   apos: "'",
@@ -9,6 +10,10 @@ const NAMED_HTML_ENTITIES = Object.freeze({
 });
 
 const PROTECTED_RATING_AUTHORITY = Object.freeze([
+  ...EXTRA_RESEARCH_LOCALES.map((locale) => Object.freeze({
+    heading: readerText(locale, "Server-Validated Rating Basis"),
+    authority: readerText(locale, "These fields passed the server contract. If later model-authored prose conflicts with them, this section governs and the conflicting prose is non-authoritative."),
+  })),
   Object.freeze({
     heading: "服务端校验的评级依据",
     authority: "以下字段已经过服务端契约校验；若后续模型撰写正文与之冲突，以本节为准，冲突正文不具权威性。",
@@ -186,6 +191,11 @@ function ratingAuthoritySignals(value) {
       || /(?:評価|格付け|レーティング)(?:の)?検証(?:用)?(?:データ|方法|モデル|指標)/u.test(candidate)
       || /(?:등급|평가)(?:\s*근거)?\s*(?:함수|벡터|공식|방정식|모델|스키마|테스트|검증\s*데이터)/u.test(candidate);
     if (technicalContext) return false;
+    if (PROTECTED_RATING_AUTHORITY.some((entry) => compactVisible(candidate).includes(compactVisible(entry.heading)))) return true;
+    const extraSource = /servidor|serveur|server|сервер|систем|máy chủ|hệ thống|sistem|peladen/iu.test(candidate);
+    const extraRating = /calificaci[oó]n|notation|bewertung|avaliaç[aã]o|giudizio|оценк|рейтинг|xếp hạng|peringkat/iu.test(candidate);
+    const extraAuthority = /validad|validé|validat|geprüft|verificat|verifi|провер|подтверж|xác thực|xác minh|divalidasi|terverifikasi|fundamento|fondement|grundlage|căn cứ|dasar/iu.test(candidate);
+    if (extraSource && extraRating && extraAuthority) return true;
     const source = /\b(?:server|system|machine|official|contract|backend|platform|service|engine|runtime|host|application|app|api|tool|pipeline|cloud|infrastructure|gateway|database|algorithm|automated)\b/iu.test(candidate)
       || /(?:服务端|服務端|服务器|服務器|伺服器|系统|系統|官方|机器|機器|后端|後端|平台|运行时|運行時|工具|管道|云端|雲端|基础设施|基礎設施|网关|網關|数据库|數據庫|資料庫|算法|演算法|自动化|自動化)/u.test(candidate)
       || /(?:サーバー|サーバ|システム|機械|バックエンド|プラットフォーム|ランタイム|ホスト|ツール|パイプライン|クラウド|インフラ|ゲートウェイ|データベース|アルゴリズム|自動化)/u.test(candidate)

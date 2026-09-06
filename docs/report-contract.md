@@ -98,14 +98,16 @@ holdings, constituents, weights, methodology, fees/rules, liquidity/tracking/flo
 aggregate-valuation coverage remain explicit gaps and are never replaced with invented fund
 revenue, EPS, guidance, insider activity or summed constituent financial statements.
 
-System-owned selector, report and handoff labels are localized for `zh-CN`, `en`, `ja` and
-`ko`. Each worker receives the canonical run language, while stable IDs and JSON field names
-remain English. Reader-facing evidence, method, debate and PM fields are checked against the
+System-owned selector, report and handoff labels are localized for `zh-CN`, `en`, `ja`,
+`ko`, `es`, `fr`, `de`, `pt-BR`, `it`, `ru`, `vi` and `id`. Each worker receives the canonical
+run language. Stable IDs, JSON field names, machine enums and original source quotations
+remain unchanged; source explanations follow the selected language. Reader-facing evidence, method, debate and PM fields are checked against the
 requested locale. Plugin-managed workers receive one bounded no-search language/JSON repair,
 then fail closed; visible-host record tools reject the wrong-language packet before writing
 it so the host may retry. `report_quality.json` records requested/observed locale, keeps
-Han-only fragments explicitly inconclusive, and cannot pass a Japanese or Korean run whose
-report body is English. Unsupported explicit selector locales are rejected instead of being
+Han-only fragments explicitly inconclusive, and requires positive target-language evidence.
+Shared Latin scripts use a bounded lexical heuristic, not a claim of perfect language
+identification; sufficiently clear foreign-language sections are rejected. Unsupported explicit selector locales are rejected instead of being
 silently mislabeled as localized English.
 
 ## operating_company_dossier_v1 Contract

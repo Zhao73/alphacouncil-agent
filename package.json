@@ -1,6 +1,6 @@
 {
   "name": "alphacouncil-agent",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Reviewable company, ETF and index research for Codex, Claude Code, OpenCode, Grok Build and ChatGPT Work developer mode: sourced evidence, method lenses, debate and PM synthesis.",
   "type": "module",
   "license": "MIT",
@@ -109,6 +109,9 @@
     "run:bundle:verify": "node scripts/verify-run-bundle.mjs",
     "prepublishOnly": "npm test && npm run test:package",
     "tui": "node tui/tui.mjs",
+    "terminal": "node terminal/cli.mjs",
+    "terminal:test": "npm test --prefix terminal",
+    "terminal:build": "node scripts/build-terminal.mjs",
     "doctor": "node scripts/doctor.mjs"
   },
   "devDependencies": {
@@ -135,6 +138,7 @@
     "test/fixtures/nok-grounding-production-shape.json",
     "knowledge/persona-releases/",
     "tui/",
+    "terminal/",
     "gui/",
     "scripts/",
     "data/",

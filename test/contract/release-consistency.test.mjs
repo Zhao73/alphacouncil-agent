@@ -43,6 +43,8 @@ function fixture({ version = "1.5.0", unreleased = "- Pending source work.\n" } 
   writeJson(root, "package-lock.json", { version, packages: { "": { version } } });
   writeJson(root, "work/package.json", { name: "@alphacouncil/chatgpt-work-gateway", version });
   writeJson(root, "work/package-lock.json", { version, packages: { "": { version } } });
+  writeJson(root, "terminal/package.json", { name: "@alphacouncil/terminal", version });
+  writeJson(root, "terminal/package-lock.json", { version, packages: { "": { version } } });
   writeJson(root, ".claude-plugin/plugin.json", {
     name: "alphacouncil-agent",
     version,
@@ -129,6 +131,18 @@ test("the first numeric changelog section must match the canonical package versi
   const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8").replace("## [1.5.0]", "## [1.4.9]");
   write(root, "CHANGELOG.md", changelog);
   assert.deepEqual(check(root).errors.map(({ code }) => code), ["CHANGELOG_TOP_VERSION_MISMATCH"]);
+});
+
+test("the terminal manifest and lockfile cannot drift from the release version", () => {
+  const root = fixture();
+  writeJson(root, "terminal/package.json", { name: "@alphacouncil/terminal", version: "1.4.9" });
+  writeJson(root, "terminal/package-lock.json", { version: "1.4.9", packages: { "": { version: "1.4.9" } } });
+  const errors = check(root).errors.filter(({ code }) => code === "VERSION_MISMATCH");
+  assert.deepEqual(errors.map(({ location }) => location), [
+    `${join("terminal", "package-lock.json")}:packages..version`,
+    `${join("terminal", "package-lock.json")}:version`,
+    `${join("terminal", "package.json")}:version`,
+  ]);
 });
 
 test("the current changelog release section must carry a UTC date", () => {

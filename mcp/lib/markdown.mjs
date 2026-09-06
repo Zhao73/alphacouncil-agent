@@ -1,3 +1,5 @@
+import { selectionDisplay } from "./selection-locales.mjs";
+import { localizedReader, readerText, EXTRA_RESEARCH_LOCALES } from "./research-locales.mjs";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import {
@@ -12,7 +14,7 @@ import {
 } from "./constants.mjs";
 import { readJson, readJsonl, writeJson, writeTextAtomic } from "./fsutil.mjs";
 import { headingIncludesAlias, normalizeHeading, parseHeadings } from "./headings.mjs";
-import { isChineseLanguage, languageKey, localized } from "./lang.mjs";
+import { isChineseLanguage, languageKey } from "./lang.mjs";
 import { sha256 } from "./personas-v3/canonical.mjs";
 import { thresholdDisclosure } from "./personas-v3/seat-fidelity.mjs";
 import { compiledPersonaPacks } from "./personas-v3/registry.mjs";
@@ -70,29 +72,29 @@ function readerInline(value) {
   return sanitizeReaderInline(value);
 }
 
-function readerBullets(items) {
-  if (!Array.isArray(items) || items.length === 0) return "- None";
+function readerBullets(items, language) {
+  if (!Array.isArray(items) || items.length === 0) return `- ${readerText(language, "None")}`;
   return items.map((item) => `- ${readerInline(
     typeof item === "string" ? item : JSON.stringify(item),
   )}`).join("\n");
 }
 
-function seatFidelityDisclosure(opinion, title) {
+function seatFidelityDisclosure(opinion, title, language) {
   if (!opinion?.threshold_provenance) return [];
   return [
-    `AI simulation of the ${title} method — not the person`,
-    thresholdDisclosure(opinion.threshold_provenance),
+    readerText(language, `AI simulation of the ${title} method — not the person`),
+    readerText(language, thresholdDisclosure(opinion.threshold_provenance)),
   ];
 }
 
 export function renderPacketMarkdown(packet, index = 0, language = packet?.language) {
   const key = languageKey(language);
-  const label = {
+  const label = localizedReader(key, {
     zh: { title: "证据分析子代理", symbol: "代码", asOf: "截至", confidence: "置信度", richness: "信息丰富度", summary: "摘要", claims: "论断", evidence: "证据", sources: "来源", metrics: "指标", questions: "未决问题", raw: "原始 worker 响应（仅供审计）", none: "无" },
     en: { title: "Evidence Analyst Subagent", symbol: "Symbol", asOf: "As-of", confidence: "Confidence", richness: "Information richness", summary: "Summary", claims: "Claims", evidence: "Evidence", sources: "Sources", metrics: "Metrics", questions: "Open Questions", raw: "Raw Worker Response (audit only)", none: "None" },
     ja: { title: "証拠分析サブエージェント", symbol: "銘柄コード", asOf: "基準日", confidence: "信頼度", richness: "情報充足度", summary: "要約", claims: "主張", evidence: "根拠", sources: "出典", metrics: "指標", questions: "未解決事項", raw: "ワーカーの生応答（監査専用）", none: "なし" },
     ko: { title: "증거 분석 하위 에이전트", symbol: "종목 코드", asOf: "기준일", confidence: "신뢰도", richness: "정보 충실도", summary: "요약", claims: "주장", evidence: "근거", sources: "출처", metrics: "지표", questions: "미해결 질문", raw: "원본 워커 응답(감사 전용)", none: "없음" },
-  }[key];
+  });
   const claims = packet.claims.length
     ? packet.claims.map((claim, claimIndex) => [
       `${claimIndex + 1}. ${readerInline(claim.claim || "")}`,
@@ -127,7 +129,7 @@ export function renderPacketMarkdown(packet, index = 0, language = packet?.langu
     sources,
     "",
     `### ${label.questions}`,
-    readerBullets(packet.open_questions),
+    readerBullets(packet.open_questions, language),
     "",
     `### ${label.raw}`,
     fence(packet.raw_text || "", "text"),
@@ -146,13 +148,13 @@ export function renderPacketMarkdown(packet, index = 0, language = packet?.langu
 export function renderMasterMarkdown(opinion, lang) {
   if (!opinion) return "";
   const title = masterTitle(opinion.master, lang);
-  const fidelityDisclosure = seatFidelityDisclosure(opinion, title);
-  const labels = {
+  const fidelityDisclosure = seatFidelityDisclosure(opinion, title, lang);
+  const labels = localizedReader(languageKey(lang), {
     zh: { statement: "本轮方法席终局陈词（不是大师本人引语）", stance: "立场", capability: "能力状态", evidenceQuality: "证据质量", voiceStatus: "发言状态", verdict: "冻结判断", confidence: "置信度", worker: "陈词来源", summary: "方法席说明", findings: "关键发现", disagreements: "与分析师的分歧", disqualifiers: "触发的排除条件", change: "改变判断所需证据", sources: "来源", packetAcks: "逐证据包读取回执" },
     en: { statement: "Final Method-Seat Statement (not a quote from the named person)", stance: "Stance", capability: "Capability", evidenceQuality: "Evidence quality", voiceStatus: "Voice status", verdict: "Frozen verdict", confidence: "Confidence", worker: "Statement source", summary: "Method-seat explanation", findings: "Key Findings", disagreements: "Disagreements With The Analysts", disqualifiers: "Disqualifiers Triggered", change: "What Would Change The View", sources: "Sources", packetAcks: "Per-Packet Evidence Acknowledgements" },
     ja: { statement: "メソッド席の最終見解（本人の発言・引用ではありません）", stance: "スタンス", capability: "能力ステータス", evidenceQuality: "証拠品質", voiceStatus: "発言ステータス", verdict: "凍結済み判定", confidence: "信頼度", worker: "見解の生成元", summary: "メソッド席の説明", findings: "主な所見", disagreements: "分析担当との相違", disqualifiers: "発動した除外条件", change: "判断が変わる条件", sources: "出典", packetAcks: "証拠パケット別の読取確認" },
     ko: { statement: "방법론 좌석 최종 발언(본인의 실제 발언이나 인용이 아님)", stance: "입장", capability: "역량 상태", evidenceQuality: "근거 품질", voiceStatus: "발언 상태", verdict: "동결된 판단", confidence: "신뢰도", worker: "발언 출처", summary: "방법론 좌석 설명", findings: "핵심 발견", disagreements: "분석가와의 이견", disqualifiers: "발동된 제외 조건", change: "판단 변경 조건", sources: "출처", packetAcks: "증거 패킷별 읽기 확인" },
-  }[languageKey(lang)];
+  });
   const markdown = [
     `## ${title}`,
     "",
@@ -188,16 +190,16 @@ export function renderMasterMarkdown(opinion, lang) {
     readerInline(opinion.deterministic_summary || opinion.summary || ""),
     "",
     `### ${labels.findings}`,
-    readerBullets(opinion.key_findings),
+    readerBullets(opinion.key_findings, lang),
     "",
     `### ${labels.disagreements}`,
-    readerBullets(opinion.disagreements),
+    readerBullets(opinion.disagreements, lang),
     "",
     `### ${labels.disqualifiers}`,
-    readerBullets(opinion.disqualifiers_triggered),
+    readerBullets(opinion.disqualifiers_triggered, lang),
     "",
     `### ${labels.change}`,
-    readerBullets(opinion.what_would_change_my_mind),
+    readerBullets(opinion.what_would_change_my_mind, lang),
     "",
     `### ${labels.sources}`,
     (opinion.source_ids || []).length ? (opinion.source_ids || []).map((id) => `- ${readerInline(id)}`).join("\n") : "- None",
@@ -308,7 +310,7 @@ function benchSeatRecords(run) {
  */
 function renderMasterStatements(run) {
   const key = languageKey(run?.language);
-  const copy = MASTER_STATEMENT_COPY[key] || MASTER_STATEMENT_COPY.en;
+  const copy = localizedReader(key, MASTER_STATEMENT_COPY);
   const records = benchSeatRecords(run).filter(({ opinion, voice_status }) => (
     Boolean(opinion?.voice_statement) || voice_status === "voice_contract_failure"
   ));
@@ -319,7 +321,7 @@ function renderMasterStatements(run) {
   const seatBlock = ({ id, opinion, state, voice_status }) => {
     if (!opinion && voice_status !== "voice_contract_failure") return "";
     const intent = opinion?.position_intent ? intentLabel(opinion.position_intent, run.language) : null;
-    const fidelityDisclosure = seatFidelityDisclosure(opinion, masterTitle(id, run.language));
+    const fidelityDisclosure = seatFidelityDisclosure(opinion, masterTitle(id, run.language), run.language);
     const lines = [
       `##### ${masterTitle(id, run.language)} (\`${id}\`)`,
       ...(fidelityDisclosure.length ? ["", ...fidelityDisclosure, ""] : []),
@@ -392,7 +394,7 @@ export function masterCorrelationNote(run) {
   }
   const spread = [...stances.entries()].map(([stance, n]) => `${stance}=${n}`).join(", ");
   const key = languageKey(run?.language);
-  return {
+  return localizedReader(key, {
     zh: [
       "> **这些席位不是独立样本。** 它们共享同一个基础模型、同一份证据简报和同一个上下文，",
       `> 因此错误是相关的。本次立场分布（${spread}）**不能当作票数来计算**：一致本身是预期结果，`,
@@ -415,7 +417,7 @@ export function masterCorrelationNote(run) {
       `> 입장 분포(${spread})를 **투표수로 계산하면 안 됩니다**. 일치는 예상되는 결과이지 새로운 발견이 아닙니다.`,
       "> 정보량이 높은 부분은 반대 좌석과 그 차이가 정보 차이인지 방법론 차이인지입니다.",
     ].join("\n"),
-  }[key];
+  });
 }
 
 /**
@@ -439,7 +441,7 @@ export function renderBenchSummary(run) {
       master: id,
       stance: "out_of_scope",
       confidence: "unavailable",
-      verdict: MASTER_STATEMENT_COPY[key]?.contractFailure || MASTER_STATEMENT_COPY.en.contractFailure,
+      verdict: localizedReader(key, MASTER_STATEMENT_COPY).contractFailure,
       capability_status: state.capability_status || "abstain_missing_fact",
       evidence_quality: state.evidence_quality || "not_evaluable",
       evidence_quality_basis: state.evidence_quality_basis || [],
@@ -466,7 +468,9 @@ export function renderBenchSummary(run) {
   const deterministicOnlyCount = opinions.filter((opinion) => (
     opinion.voice_status === "deterministic_only"
   )).length;
-  const assuranceSummary = `seats: ${deterministicCount} deterministic, ${abstainCount} abstain (${noProducerCount} no_producer, ${policyGateCount} policy_gate); voices: ${fallbackCount} fallback, ${contractFailureCount} contract_failure, ${deterministicOnlyCount} deterministic_only`;
+  const assuranceSummary = EXTRA_RESEARCH_LOCALES.includes(key)
+    ? `${readerText(key, "Method")}: ${deterministicCount} deterministic_stance, ${abstainCount} abstain (${noProducerCount} no_producer, ${policyGateCount} policy_gate); ${readerText(key, "Voice status")}: ${fallbackCount} fallback, ${contractFailureCount} contract_failure, ${deterministicOnlyCount} deterministic_only`
+    : `seats: ${deterministicCount} deterministic, ${abstainCount} abstain (${noProducerCount} no_producer, ${policyGateCount} policy_gate); voices: ${fallbackCount} fallback, ${contractFailureCount} contract_failure, ${deterministicOnlyCount} deterministic_only`;
   const counts = new Map();
   for (const o of opinions) counts.set(o.stance || "unknown", (counts.get(o.stance || "unknown") || 0) + 1);
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
@@ -478,12 +482,12 @@ export function renderBenchSummary(run) {
   // rendered once in the per-seat detail block below. Keeping them separate prevents a
   // fluent explanation from being mistaken for, or duplicating, the frozen method result.
   const row = (o) => `| ${masterTitle(o.master, run?.language)} (\`${o.master}\`) | ${o.stance || "unknown"} | ${seatCapability(o)} | ${o.evidence_quality || "not_evaluable"} | ${o.voice_status || "not_recorded"} | ${o.confidence || "low"} | ${clip(o.verdict || o.deterministic_summary || o.summary || o.voice_statement || "", 140)} |`;
-  const copy = {
+  const copy = localizedReader(key, {
     zh: { head: ["| 方法 | 立场 | 能力状态 | 证据质量 | 发言状态 | 置信度 | 判断 |", "|---|---|---|---|---|---|---|"], minority: "### 少数派（先读这个）", minorityNone: "### 少数派：无\n\n所有席位立场一致。鉴于它们共享模型与证据，一致是预期结果而非确认——本轮没有产生任何独立的反对意见。", divergence: `${minority.length} 席与多数不同。分歧席位是本轮信息量最高的部分——请先判断分歧来自信息差还是方法差。`, rest: "### 其余席位" },
     en: { head: ["| Method | Stance | Capability | Evidence quality | Voice status | Confidence | Verdict |", "|---|---|---|---|---|---|---|"], minority: "### Minority report (read this first)", minorityNone: "### Minority report: none\n\nEvery seat agreed. Given a shared model and a shared brief, agreement is the expected outcome rather than confirmation: this run produced no independent dissent.", divergence: `${minority.length} seat(s) diverge. Divergence is the highest-information part of this run: establish whether it comes from the evidence slice or from the method.`, rest: "### Concurring seats" },
     ja: { head: ["| メソッド | スタンス | 能力 | 証拠品質 | 発言状態 | 信頼度 | 判定 |", "|---|---|---|---|---|---|---|"], minority: "### 少数意見（最初に読む）", minorityNone: "### 少数意見：なし\n\n全席が一致しました。同じモデルと証拠を共有するため、一致は確認ではなく予想される結果です。本輪では独立した反対意見が出ませんでした。", divergence: `${minority.length}席が多数と異なります。最も情報量が高い部分なので、相違が証拠範囲と方法のどちらに由来するか確認してください。`, rest: "### その他の席" },
     ko: { head: ["| 방법론 | 입장 | 역량 | 근거 품질 | 발언 상태 | 신뢰도 | 판단 |", "|---|---|---|---|---|---|---|"], minority: "### 소수 의견(먼저 확인)", minorityNone: "### 소수 의견: 없음\n\n모든 좌석이 일치했습니다. 동일한 모델과 증거를 공유하므로 일치는 확인이 아니라 예상되는 결과입니다. 이번 실행에는 독립적인 반대 의견이 없었습니다.", divergence: `${minority.length}개 좌석이 다수와 다릅니다. 가장 정보량이 높은 부분이므로 차이가 증거 범위와 방법론 중 어디에서 비롯됐는지 확인하십시오.`, rest: "### 나머지 좌석" },
-  }[key];
+  });
   const head = copy.head;
 
   const sections = [assuranceSummary, "", masterCorrelationNote(run), ""];
@@ -523,22 +527,22 @@ export function renderDecisionTable(decisions, lang) {
   const zh = isChineseLanguage(lang);
   const head = zh
     ? ["| 方法 | 可评估 | 得分 | 覆盖率 | 立场 | 依据 |", "|---|---|---|---|---|---|"]
-    : ["| Method | Eligible | Score | Coverage | Stance | Basis |", "|---|---|---|---|---|---|"];
+    : [readerText(lang, "| Method | Eligible | Score | Coverage | Stance | Basis |"), "|---|---|---|---|---|---|"];
   const rows = decisions.map((d) => {
-    const eligible = d.reason === "eligibility" ? (zh ? "否" : "no") : (zh ? "是" : "yes");
+    const eligible = d.reason === "eligibility" ? (zh ? "否" : readerText(lang, "no")) : (zh ? "是" : readerText(lang, "yes"));
     const score = d.score && d.score.max_possible ? `${d.score.score}/${d.score.max_possible}` : "—";
     const coverage = d.score && d.score.declared_max ? `${Math.round((d.score.coverage || 0) * 100)}%` : "—";
     return `| ${d.persona_id} | ${eligible} | ${score} | ${coverage} | ${d.stance} | ${d.reason} |`;
   });
   return [
-    zh ? "### 确定性评分（模型调用之前）" : "### Deterministic scoring (before any model call)",
+    zh ? "### 确定性评分（模型调用之前）" : readerText(lang, "### Deterministic scoring (before any model call)"),
     "",
     ...head,
     ...rows,
     "",
     zh
       ? "> 覆盖率是这张表最重要的一列：只跑得动一小部分规则的方法是抽样了这家公司，不是判断了它。`可评估=否` 的席位没有花费任何模型调用。"
-      : "> Coverage is the column that matters: a method that could run a fraction of its rules sampled the company rather than judging it. Rows marked not eligible cost no model call.",
+      : readerText(lang, "> Coverage is the column that matters: a method that could run a fraction of its rules sampled the company rather than judging it. Rows marked not eligible cost no model call."),
   ].join("\n");
 }
 
@@ -561,6 +565,8 @@ export function displayMasterLabel(label) {
 }
 
 function masterTitle(id, lang) {
+  const translated = selectionDisplay(languageKey(lang), id)?.title;
+  if (translated) return translated;
   if (!id) return "Master";
   try {
     const v3 = compiledPersonaPacks().get(id);
@@ -577,28 +583,28 @@ function masterTitle(id, lang) {
 export function renderDebateRounds(rounds, language = "English") {
   if (!Array.isArray(rounds) || rounds.length === 0) return "";
   const key = languageKey(language);
-  const label = {
+  const label = localizedReader(key, {
     zh: { round: "轮次", long: "多头论据", short: "空头论据", questions: "提出的问题", answered: "逐题回答", raw: "原始 worker 响应（仅供审计）", title: "辩论轮次" },
     en: { round: "Round", long: "Long Thesis", short: "Short Thesis", questions: "Questions", answered: "Questions Answered", raw: "Raw Worker Response (audit only)", title: "Debate Rounds" },
     ja: { round: "ラウンド", long: "強気論拠", short: "弱気論拠", questions: "質問", answered: "質問への回答", raw: "ワーカーの生応答（監査専用）", title: "討論ラウンド" },
     ko: { round: "라운드", long: "강세 논거", short: "약세 논거", questions: "질문", answered: "질문별 답변", raw: "원본 워커 응답(감사 전용)", title: "토론 라운드" },
-  }[key];
+  });
   const blocks = rounds.map((round) => [
     `#### ${label.round} ${round.round}`,
     "",
     readerInline(round.summary || ""),
     "",
     `##### ${label.long}`,
-    readerBullets(round.long_thesis),
+    readerBullets(round.long_thesis, language),
     "",
     `##### ${label.short}`,
-    readerBullets(round.short_thesis),
+    readerBullets(round.short_thesis, language),
     "",
     `##### ${label.questions}`,
-    readerBullets(round.questions),
+    readerBullets(round.questions, language),
     "",
     `##### ${label.answered}`,
-    readerBullets(round.questions_answered),
+    readerBullets(round.questions_answered, language),
     "",
     `##### ${label.raw}`,
     fence(round.raw_text || "", "text"),
@@ -609,12 +615,12 @@ export function renderDebateRounds(rounds, language = "English") {
 export function renderDebateMarkdown(agent, language = agent?.language) {
   if (!agent) return "";
   const key = languageKey(language);
-  const label = {
+  const label = localizedReader(key, {
     zh: { rating: "评级", winner: "胜方", verdict: "判断", confidence: "置信度", summary: "摘要", long: "多头论据", short: "空头论据", valuation: "估值区间", catalysts: "催化剂", risks: "风险", position: "仓位", invalidation: "失效条件", sources: "来源 ID", report: "报告正文", raw: "原始 worker 响应（仅供审计）", none: "无" },
     en: { rating: "Rating", winner: "Winner", verdict: "Verdict", confidence: "Confidence", summary: "Summary", long: "Long Thesis", short: "Short Thesis", valuation: "Valuation Range", catalysts: "Catalysts", risks: "Risks", position: "Position", invalidation: "Invalidation", sources: "Source IDs", report: "Report Markdown", raw: "Raw Worker Response (audit only)", none: "None" },
     ja: { rating: "評価", winner: "優勢側", verdict: "判断", confidence: "信頼度", summary: "要約", long: "強気論拠", short: "弱気論拠", valuation: "評価レンジ", catalysts: "カタリスト", risks: "リスク", position: "ポジション", invalidation: "無効化条件", sources: "出典 ID", report: "レポート本文", raw: "ワーカーの生応答（監査専用）", none: "なし" },
     ko: { rating: "등급", winner: "우세 측", verdict: "판단", confidence: "신뢰도", summary: "요약", long: "강세 논거", short: "약세 논거", valuation: "가치평가 범위", catalysts: "촉매", risks: "위험", position: "포지션", invalidation: "무효화 조건", sources: "출처 ID", report: "보고서 본문", raw: "원본 워커 응답(감사 전용)", none: "없음" },
-  }[key];
+  });
   const reportRaw = String(agent.report_markdown || "");
   const reportAuthority = protectedRatingAuthorityOccurrences(reportRaw);
   const trustedRatingReport = agent.role === "portfolio_manager"
@@ -637,28 +643,28 @@ export function renderDebateMarkdown(agent, language = agent?.language) {
     readerInline(agent.summary || ""),
     "",
     `### ${label.long}`,
-    readerBullets(agent.long_thesis),
+    readerBullets(agent.long_thesis, language),
     "",
     `### ${label.short}`,
-    readerBullets(agent.short_thesis),
+    readerBullets(agent.short_thesis, language),
     "",
     `### ${label.valuation}`,
     readerInline(agent.valuation_range || label.none),
     "",
     `### ${label.catalysts}`,
-    readerBullets(agent.catalysts),
+    readerBullets(agent.catalysts, language),
     "",
     `### ${label.risks}`,
-    readerBullets(agent.risks),
+    readerBullets(agent.risks, language),
     "",
     `### ${label.position}`,
     readerInline(agent.position || label.none),
     "",
     `### ${label.invalidation}`,
-    readerBullets(agent.invalidation),
+    readerBullets(agent.invalidation, language),
     "",
     `### ${label.sources}`,
-    readerBullets(agent.source_ids),
+    readerBullets(agent.source_ids, language),
     "",
     `### ${label.report}`,
     reportMarkdown,
@@ -681,19 +687,21 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
   // Once committed, keep the verified bytes immutable so the manifest cannot go stale.
   if (verifyPublishedArtifact(run, "all_agents_md")) return path;
   const key = languageKey(run.language);
-  const label = {
+  const label = localizedReader(key, {
     zh: { title: "全部代理审计追踪", metadata: "运行元数据", runId: "运行 ID", symbol: "代码", asOf: "截至", language: "语言", execution: "执行模式", visibility: "要求可见", dry: "演练", status: "状态", phase: "阶段", started: "开始", updated: "更新", completed: "完成", tasks: "任务", taskStatus: "证据席状态", debateStatus: "辩论席状态", evidence: "证据分析子代理", masters: "方法席", debate: "多空辩论与组合经理", none: "无" },
     en: { title: "Full Agent Audit Trace", metadata: "Run Metadata", runId: "Run ID", symbol: "Symbol", asOf: "As-of", language: "Language", execution: "Execution mode", visibility: "Visibility required", dry: "Dry run", status: "Status", phase: "Phase", started: "Started", updated: "Updated", completed: "Completed", tasks: "Tasks", taskStatus: "Evidence-Seat Status", debateStatus: "Debate-Seat Status", evidence: "Evidence Analyst Subagents", masters: "Method-Seat Bench", debate: "Bull/Bear Debate and Portfolio Manager", none: "None" },
     ja: { title: "全エージェント監査トレース", metadata: "実行メタデータ", runId: "実行 ID", symbol: "銘柄コード", asOf: "基準日", language: "言語", execution: "実行モード", visibility: "可視性要件", dry: "ドライラン", status: "状態", phase: "フェーズ", started: "開始", updated: "更新", completed: "完了", tasks: "タスク", taskStatus: "証拠席の状態", debateStatus: "討論席の状態", evidence: "証拠分析サブエージェント", masters: "メソッド席", debate: "強気・弱気討論とポートフォリオ管理者", none: "なし" },
     ko: { title: "전체 에이전트 감사 추적", metadata: "실행 메타데이터", runId: "실행 ID", symbol: "종목 코드", asOf: "기준일", language: "언어", execution: "실행 모드", visibility: "가시성 요구", dry: "드라이런", status: "상태", phase: "단계", started: "시작", updated: "갱신", completed: "완료", tasks: "작업", taskStatus: "증거 좌석 상태", debateStatus: "토론 좌석 상태", evidence: "증거 분석 하위 에이전트", masters: "방법론 좌석", debate: "강세·약세 토론 및 포트폴리오 관리자", none: "없음" },
-  }[key];
-  const workerLabel = {
+  });
+  const workerLabel = localizedReader(key, {
     zh: { model: "叶子模型", reasoning: "统一推理档位", profile: "推理策略", stages: "分阶段推理档位" },
     en: { model: "Leaf model", reasoning: "Uniform reasoning effort", profile: "Reasoning policy", stages: "Stage reasoning efforts" },
     ja: { model: "リーフモデル", reasoning: "共通推論レベル", profile: "推論ポリシー", stages: "段階別推論レベル" },
     ko: { model: "리프 모델", reasoning: "공통 추론 수준", profile: "추론 정책", stages: "단계별 추론 수준" },
-  }[key];
-  const stageReasoning = run.worker_execution_config?.stage_reasoning;
+  });
+  const workerConfig = run.worker_execution_config || {};
+  const apiWorker = workerConfig.provider && workerConfig.provider !== "codex_cli";
+  const stageReasoning = apiWorker ? null : workerConfig.stage_reasoning;
   const stageReasoningSummary = stageReasoning && typeof stageReasoning === "object"
     ? Object.entries(stageReasoning)
       .map(([stage, item]) => `${stage}=${item?.reasoning_effort || "codex_default"}`)
@@ -716,10 +724,10 @@ export function writeAllAgentsMarkdown(run, debate = {}) {
     `- ${label.symbol}: ${run.symbol}`,
     `- ${label.asOf}: ${run.as_of}`,
     `- ${label.language}: ${run.language || "auto"}`,
-    `- ${label.execution}: ${run.execution_mode || "background_codex_exec"}`,
-    `- ${workerLabel.model}: ${run.worker_execution_config?.model || "codex_default"}`,
-    `- ${workerLabel.reasoning}: ${run.worker_execution_config?.reasoning_effort || "codex_default"}`,
-    `- ${workerLabel.profile}: ${run.worker_execution_config?.reasoning_profile || "uniform_or_codex_default"}`,
+    `- ${label.execution}: ${apiWorker ? workerConfig.provider : run.execution_mode || "background_codex_exec"}`,
+    `- ${workerLabel.model}: ${workerConfig.model || (apiWorker ? "unavailable" : "codex_default")}`,
+    `- ${workerLabel.reasoning}: ${workerConfig.reasoning_effort || (apiWorker ? "not_configured" : "codex_default")}`,
+    `- ${apiWorker ? localizedReader(run.language, { en: "Routing policy", zh: "路由策略", ja: "ルーティング方針", ko: "라우팅 정책" }) : workerLabel.profile}: ${apiWorker ? workerConfig.routing_policy?.mode || "provider_default" : workerConfig.reasoning_profile || "uniform_or_codex_default"}`,
     ...(stageReasoningSummary ? [`- ${workerLabel.stages}: ${stageReasoningSummary}`] : []),
     `- ${label.visibility}: ${run.visibility_required || false}`,
     `- ${label.dry}: ${run.dry_run}`,
@@ -880,7 +888,7 @@ function withRecordedInstrumentStructure(run, markdown) {
   const lines = body.split(/\r?\n/);
   const headings = parseHeadings(body);
   const removals = [];
-  const commentaryTitle = localized(run.language, {
+  const commentaryTitle = localizedReader(run.language, {
     zh: "PM 对资产研究路径的叙述（非系统记录）",
     en: "PM Commentary on the Instrument Research Path (non-authoritative)",
     ja: "PMによる銘柄調査経路の説明（非公式記録）",
@@ -898,7 +906,7 @@ function withRecordedInstrumentStructure(run, markdown) {
     lines.splice(start, end - start);
   }
 
-  const copy = {
+  const copy = localizedReader(languageKey(run.language), {
     zh: {
       heading: "## 基金与指数结构", asset: "资产类型", model: "研究模型", source: "分类依据", raw: "数据源原始类型", company: "经营公司财务路径", noCompany: "不适用；不得把基金或指数当作经营公司读取营收、公司 EPS、管理层指引或 Form 4", required: "强制研究项目", requirements: instrument.index_like
         ? "指数方法、带时点的成分与权重、集中度、行业/因子暴露、广度、再平衡、聚合盈利与估值口径、宏观敏感度，以及可用的衍生品定位"
@@ -923,7 +931,7 @@ function withRecordedInstrumentStructure(run, markdown) {
         : "추종 지수와 방법론, 기준일이 있는 보유 종목과 비중, 상위 10개·섹터 집중도, 보수, AUM, 유동성, 괴리율·추적 차이, 자금 흐름, 대차·파생상품, 리밸런싱, 세금 구조 및 보유 종목 룩스루",
       aggregation: "집계 원칙", aggregationRule: "동일 기준일 방법론과 커버 비중을 밝히며 일부 구성 종목을 더해 펀드·지수 자체 매출, EPS 또는 현금흐름으로 만들지 않음", notApplicable: "명시적 적용 제외",
     },
-  }[languageKey(run.language)];
+  });
   const notApplicable = (run?.grounding?.not_applicable || []).length
     ? run.grounding.not_applicable.map((item) => `  - ${item}`).join("\n")
     : "  - —";
@@ -962,7 +970,7 @@ function withRecordedMasterBench(run, markdown) {
   const lines = body.split(/\r?\n/);
   const headings = parseHeadings(body);
   const removals = [];
-  const commentaryTitle = localized(run.language, {
+  const commentaryTitle = localizedReader(run.language, {
     zh: "PM 对方法席位的叙述（非系统记录）",
     en: "PM Commentary on Method Seats (non-authoritative)",
     ja: "PMによるメソッド席の説明（非公式記録）",
@@ -988,7 +996,7 @@ function withRecordedMasterBench(run, markdown) {
     lines.splice(start, end - start);
   }
   const cleaned = lines.join("\n").trimEnd();
-  const heading = localized(run.language, {
+  const heading = localizedReader(run.language, {
     zh: "## 大师席位",
     en: "## Master Bench",
     ja: "## マスター・ベンチ",
@@ -1012,14 +1020,14 @@ function withRecordedPriceSnapshot(run, markdown) {
   }
   const quote = run?.grounding?.quote;
   const key = languageKey(run?.language);
-  const heading = { zh: "## 系统记录价格快照", en: "## System-Recorded Price Snapshot", ja: "## システム記録価格スナップショット", ko: "## 시스템 기록 가격 스냅샷" }[key];
-  const unavailable = { zh: "本轮未取得可验证报价；不得补造价格。", en: "No verifiable quote was retrieved; no price was invented.", ja: "検証可能な価格を取得できなかったため、価格は補完していません。", ko: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다." }[key];
-  const label = {
+  const heading = localizedReader(key, { zh: "## 系统记录价格快照", en: "## System-Recorded Price Snapshot", ja: "## システム記録価格スナップショット", ko: "## 시스템 기록 가격 스냅샷" });
+  const unavailable = localizedReader(key, { zh: "本轮未取得可验证报价；不得补造价格。", en: "No verifiable quote was retrieved; no price was invented.", ja: "検証可能な価格を取得できなかったため、価格は補完していません。", ko: "검증 가능한 시세를 가져오지 못했으며 가격을 임의로 만들지 않았습니다." });
+  const label = localizedReader(key, {
     zh: { symbol: "代码", price: "价格", change: "涨跌", time: "报价时间", exchange: "交易所", basis: "价格口径", realtime: "实时性", feed: "数据源", source: "原始链接", unknown: "未知", unavailable: "不可用", delayed: "延迟数据" },
     en: { symbol: "Symbol", price: "Price", change: "Change", time: "Quote time", exchange: "Exchange", basis: "Price basis", realtime: "Real-time", feed: "Feed", source: "Source", unknown: "unknown", unavailable: "unavailable", delayed: "delayed data" },
     ja: { symbol: "銘柄コード", price: "価格", change: "騰落", time: "価格時刻", exchange: "取引所", basis: "価格基準", realtime: "リアルタイム性", feed: "データ源", source: "原典リンク", unknown: "不明", unavailable: "取得不可", delayed: "遅延データ" },
     ko: { symbol: "종목 코드", price: "가격", change: "등락", time: "시세 시각", exchange: "거래소", basis: "가격 기준", realtime: "실시간 여부", feed: "데이터 소스", source: "원문 링크", unknown: "알 수 없음", unavailable: "확인 불가", delayed: "지연 데이터" },
-  }[key];
+  });
   const body = quote && Number.isFinite(Number(quote.price))
     ? [
       `- ${label.symbol}: ${quote.symbol || run.symbol}`,
@@ -1052,9 +1060,9 @@ function withDegradedLedger(run, markdown, completeness) {
   const roles = completeness.degraded_debate || [];
   if (!tasks.length && !roles.length) return cleaned;
   const key = languageKey(run.language);
-  const unavailable = { zh: "证据不可用", en: "evidence unavailable", ja: "証拠を取得できません", ko: "증거를 확보하지 못함" }[key];
-  const debateUnavailable = { zh: "辩论席不可用", en: "debate seat unavailable", ja: "討論席を利用できません", ko: "토론 좌석을 사용할 수 없음" }[key];
-  const deadlineText = { zh: "全局时限耗尽", en: "global deadline exhausted", ja: "全体期限を超過", ko: "전체 기한 소진" }[key];
+  const unavailable = localizedReader(key, { zh: "证据不可用", en: "evidence unavailable", ja: "証拠を取得できません", ko: "증거를 확보하지 못함" });
+  const debateUnavailable = localizedReader(key, { zh: "辩论席不可用", en: "debate seat unavailable", ja: "討論席を利用できません", ko: "토론 좌석을 사용할 수 없음" });
+  const deadlineText = localizedReader(key, { zh: "全局时限耗尽", en: "global deadline exhausted", ja: "全体期限を超過", ko: "전체 기한 소진" });
   const rows = [
     ...tasks.map((task) => {
       const state = taskState(run, task);
@@ -1066,18 +1074,18 @@ function withDegradedLedger(run, markdown, completeness) {
     }),
   ].join("\n");
   const intro = run.terminal !== "degraded"
-    ? {
+    ? localizedReader(key, {
         zh: "**QUICK 运行不完整——一个或多个席位失败。** 报告结构可能通过质量检查，但下列席位没有提供可用证据；本轮不代表完整覆盖：",
         en: "**INCOMPLETE QUICK RUN — one or more seats failed.** The report structure may pass quality checks, but the following seats supplied no usable evidence and this run is not full coverage:",
         ja: "**QUICK 実行は不完全です——1つ以上の席が失敗しました。** レポート構造が品質検査を通っても、次の席は利用可能な証拠を提供していないため、完全な網羅ではありません：",
         ko: "**QUICK 실행이 불완전합니다—하나 이상의 좌석이 실패했습니다.** 보고서 구조가 품질 검사를 통과해도 다음 좌석은 사용 가능한 증거를 제공하지 않았으므로 전체 범위를 대표하지 않습니다:",
-      }[key]
-    : {
+      })
+    : localizedReader(key, {
         zh: "**QUICK 运行已降级——一个或多个席位失败。** 报告结构可能通过质量检查，但下列席位没有提供可用证据；本轮不代表完整覆盖：",
         en: "**DEGRADED QUICK RUN — one or more seats failed.** The report structure may pass quality checks, but the following seats supplied no usable evidence and this run is not full coverage:",
         ja: "**QUICK 実行は縮退しました——1つ以上の席が失敗しました。** レポート構造が品質検査を通っても、次の席は利用可能な証拠を提供していないため、完全な網羅ではありません：",
         ko: "**QUICK 실행 성능 저하—하나 이상의 좌석이 실패했습니다.** 보고서 구조가 품질 검사를 통과해도 다음 좌석은 사용 가능한 증거를 제공하지 않았으므로 전체 범위를 대표하지 않습니다:",
-      }[key];
+      });
   const banner = `> [!WARNING]\n> ${intro}\n>\n${rows.split("\n").map((line) => `> ${line}`).join("\n")}`;
   return `${markerStart}\n${banner}\n${markerEnd}\n\n${cleaned.trimStart()}`;
 }
@@ -1095,12 +1103,14 @@ function withQuickScope(run, markdown) {
     start = cleaned.indexOf(markerStart);
   }
   if (run.council_mode !== "quick") return cleaned;
-  const copy = {
+  const copy = EXTRA_RESEARCH_LOCALES.includes(languageKey(run.language))
+    ? readerText(run.language, "quick_v1 contract: four evidence seats, one to four method seats, one debate round and short PM; full_council_equivalent=false.")
+    : localizedReader(languageKey(run.language), {
     zh: "**QUICK_V1 范围。** 本轮按 quick_v1 自身契约执行：固定 4 个核心证据席、1–4 个方法席、一次并行多空陈述和短 PM。`full_council_equivalent=false`。",
     en: "**QUICK_V1 SCOPE.** This run follows its own quick_v1 contract: four fixed core evidence seats, one to four method seats, one parallel bull/bear statement and a short PM. `full_council_equivalent=false`.",
     ja: "**QUICK_V1 の範囲。** quick_v1 固有の契約に従い、固定4つの中核証拠席、1〜4のメソッド席、強気・弱気の並列1ラウンド、短いPMを実行します。`full_council_equivalent=false`。",
     ko: "**QUICK_V1 범위.** quick_v1 자체 계약에 따라 고정된 4개 핵심 증거 좌석, 1~4개 방법론 좌석, 병렬 강세·약세 1라운드와 짧은 PM을 실행합니다. `full_council_equivalent=false`.",
-  }[languageKey(run.language)];
+  });
   const banner = `> [!NOTE]\n> ${copy}`;
   return `${markerStart}\n${banner}\n${markerEnd}\n\n${cleaned.trimStart()}`;
 }
@@ -1116,12 +1126,12 @@ export function terminalContractHeader(run = {}) {
     : 0;
   const equivalent = run.full_council_equivalent === true;
   const key = languageKey(run.language);
-  const labels = {
+  const labels = localizedReader(key, {
     zh: { terminal: "终态", contract: "契约", rounds: "辩论轮次", missing: "结构缺口", notes: "替代执行" },
     en: { terminal: "terminal", contract: "contract", rounds: "debate rounds", missing: "structural gaps", notes: "substitute execution" },
     ja: { terminal: "終端状態", contract: "契約", rounds: "討論ラウンド", missing: "構造的欠落", notes: "代替実行" },
     ko: { terminal: "종료 상태", contract: "계약", rounds: "토론 라운드", missing: "구조적 누락", notes: "대체 실행" },
-  }[key];
+  });
   const missing = Array.isArray(run.missing) ? run.missing : [];
   const notes = Array.isArray(run.notes) ? run.notes : [];
   // Report-quality diagnostics can contain source-shaped examples such as
@@ -1190,12 +1200,12 @@ export function writeArtifactIndex(run, debate = {}) {
   const publicationExpected = run.report_quality?.status === "passed"
     && new Set(["complete", "degraded", "incomplete", "needs_verification", "needs_revision", "failed"]).has(run.status);
   const key = languageKey(run.language);
-  const label = {
+  const label = localizedReader(key, {
     zh: { title: "AlphaCouncil 工件索引", run: "运行 ID", status: "状态", quality: "报告质量", main: "主要文件", final: "最终报告", handoff: "聊天交接摘要", trace: "全部代理审计追踪", evidence: "证据 JSON", dossier: "统一公司资料包", decision: "决策 JSON", sources: "来源清单", statusFile: "状态", events: "事件", qualityFile: "报告质量", publication: "发布提交标记", analysts: "分析师 Markdown 文件", masters: "方法席 Markdown 文件", completeMap: "完整 JSON / JSONL / Markdown 工件清单" },
     en: { title: "AlphaCouncil Artifact Index", run: "Run ID", status: "Status", quality: "Report quality", main: "Main Files", final: "Final report", handoff: "Chat handoff summary", trace: "Full agent audit trace", evidence: "Evidence JSON", dossier: "Shared company dossier", decision: "Decision JSON", sources: "Source manifest", statusFile: "Status", events: "Events", qualityFile: "Report quality", publication: "Publication commit marker", analysts: "Analyst Markdown Files", masters: "Method-Seat Markdown Files", completeMap: "Complete JSON / JSONL / Markdown Artifact Map" },
     ja: { title: "AlphaCouncil 成果物索引", run: "実行 ID", status: "状態", quality: "レポート品質", main: "主要ファイル", final: "最終レポート", handoff: "チャット引継ぎ要約", trace: "全エージェント監査トレース", evidence: "証拠 JSON", dossier: "共有会社資料", decision: "判断 JSON", sources: "出典一覧", statusFile: "状態", events: "イベント", qualityFile: "レポート品質", publication: "公開コミットマーカー", analysts: "分析担当 Markdown ファイル", masters: "メソッド席 Markdown ファイル", completeMap: "JSON / JSONL / Markdown 成果物の完全一覧" },
     ko: { title: "AlphaCouncil 산출물 색인", run: "실행 ID", status: "상태", quality: "보고서 품질", main: "주요 파일", final: "최종 보고서", handoff: "채팅 인계 요약", trace: "전체 에이전트 감사 추적", evidence: "증거 JSON", dossier: "공유 회사 자료", decision: "판단 JSON", sources: "출처 목록", statusFile: "상태", events: "이벤트", qualityFile: "보고서 품질", publication: "게시 커밋 마커", analysts: "분석가 Markdown 파일", masters: "방법론 좌석 Markdown 파일", completeMap: "전체 JSON / JSONL / Markdown 산출물 목록" },
-  }[key];
+  });
   const artifactFiles = [];
   const collectArtifactFiles = (dir) => {
     if (!existsSync(dir)) return;
@@ -1278,7 +1288,7 @@ function verifiedHandoffPacketSummary(run, task) {
     .map((finding) => finding.claim_id));
   if (!hardClaimIds.size) return packet.summary || "";
 
-  const correctionNotice = localized(run.language, {
+  const correctionNotice = localizedReader(run.language, {
     zh: "该席存在三重验证硬反证；为避免上游错误污染依赖计算，原摘要及同包其余原始论断均不进入交接结论。请以组合经理修正和不可变原始工件审计为准。",
     en: "This seat has a hard triple-verification finding. To prevent an upstream error from contaminating dependent calculations, neither its raw summary nor sibling raw claims enter the handoff conclusion; use the PM corrections and immutable analyst artifact for audit.",
     ja: "この席には三重検証の重大な反証があります。上流の誤りが依存計算を汚染しないよう、元要約と同一パケット内の他の生の主張は引継ぎ結論に含めません。PM の修正と不変の分析成果物を監査してください。",
@@ -1508,7 +1518,7 @@ function handoffCopy(language) {
     },
   };
   const key = languageKey(language);
-  return { ...(shared[key] || shared.en), ...(experience[key] || experience.en) };
+  return { ...localizedReader(key, shared), ...localizedReader(key, experience) };
 }
 
 function fullCouncilCeiling(run) {
@@ -1518,7 +1528,7 @@ function fullCouncilCeiling(run) {
   const milliseconds = Number.isFinite(configured) && configured > 0 ? configured : profileMs;
   const seconds = Math.max(1, Math.ceil(milliseconds / 1000));
   const wholeMinutes = seconds % 60 === 0 ? seconds / 60 : null;
-  return localized(run?.language, wholeMinutes === null
+  return localizedReader(run?.language, wholeMinutes === null
     ? {
         zh: `${seconds} 秒`,
         en: `${seconds} seconds`,
@@ -1536,12 +1546,12 @@ function fullCouncilCeiling(run) {
 function localizedFailure(error, language) {
   const value = String(error || "");
   const key = languageKey(language);
-  const labels = {
+  const labels = localizedReader(key, {
     zh: { parse_failed: "返回格式无法修复", timeout: "超时", timed_out: "超时", global_deadline: "全局时限耗尽", qna_incomplete: "问答不完整", unexpected_error: "意外工具错误", voice_contract_failure: "发言已撤回：声音合同失败", v3_policy_execution_failed: "确定性方法政策执行失败", invalid_typed_grounding: "类型化事实输入无效", failed: "子代理未成功返回", skipped: "因上游门禁未运行", degraded: "降级", pending: "尚未运行", missing: "缺失" },
     en: { parse_failed: "response format could not be repaired", timeout: "timed out", timed_out: "timed out", global_deadline: "global deadline exhausted", qna_incomplete: "Q&A was incomplete", unexpected_error: "unexpected tool error", voice_contract_failure: "voice withheld: contract failure", v3_policy_execution_failed: "deterministic method policy execution failed", invalid_typed_grounding: "typed grounding was invalid", failed: "subagent did not return successfully", skipped: "not run because an upstream gate failed", degraded: "degraded", pending: "not started", missing: "missing" },
     ja: { parse_failed: "応答形式を修復できませんでした", timeout: "タイムアウト", timed_out: "タイムアウト", global_deadline: "全体期限を超過", qna_incomplete: "質疑応答が不完全", unexpected_error: "予期しないツールエラー", voice_contract_failure: "発言を差し止め：契約違反", v3_policy_execution_failed: "決定論的メソッド方針の実行に失敗", invalid_typed_grounding: "型付き根拠データが無効", failed: "サブエージェントが正常に応答しませんでした", skipped: "上流ゲートの失敗により未実行", degraded: "縮退", pending: "未開始", missing: "欠落" },
     ko: { parse_failed: "응답 형식을 복구하지 못함", timeout: "시간 초과", timed_out: "시간 초과", global_deadline: "전체 기한 소진", qna_incomplete: "질의응답 불완전", unexpected_error: "예기치 않은 도구 오류", voice_contract_failure: "발언 보류: 계약 위반", v3_policy_execution_failed: "결정론적 방법론 정책 실행 실패", invalid_typed_grounding: "형식화된 근거 입력이 잘못됨", failed: "하위 에이전트가 정상 응답하지 못함", skipped: "상위 게이트 실패로 실행하지 않음", degraded: "성능 저하", pending: "시작 전", missing: "누락" },
-  }[key];
+  });
   if (value.startsWith("exit code")) return labels.failed;
   if (value.startsWith("visible_finalize_upstream:")) return labels.skipped;
   if (value.startsWith("visible_finalize:")) return labels.failed;
@@ -1565,12 +1575,12 @@ function recentNewsHandoff(run, copy) {
     ? eligible.map((source) => `- ${source.published_at} — ${clipAtBoundary(source.title || "", 240)}${source.url ? ` — ${source.url}` : ""}`).join("\n")
     : `- ${copy.noDatedNews}`;
   const totalExcluded = excluded.undated + excluded.future + excluded.stale;
-  const exclusion = totalExcluded ? {
+  const exclusion = totalExcluded ? localizedReader(languageKey(run.language), {
     zh: `- ${copy.newsExcluded} ${totalExcluded} 个来源：无日期 ${excluded.undated}、晚于 as_of ${excluded.future}、早于 120 天窗口 ${excluded.stale}。`,
     en: `- ${copy.newsExcluded} ${totalExcluded}: undated=${excluded.undated}, after_as_of=${excluded.future}, older_than_120d=${excluded.stale}.`,
     ja: `- ${copy.newsExcluded}：合計 ${totalExcluded} 件（日付なし ${excluded.undated}、as_of 後 ${excluded.future}、120日超 ${excluded.stale}）。`,
     ko: `- ${copy.newsExcluded}: 총 ${totalExcluded}개(날짜 없음 ${excluded.undated}, as_of 이후 ${excluded.future}, 120일 초과 ${excluded.stale}).`,
-  }[languageKey(run.language)] : "";
+  }) : "";
   return { packet, sources, exclusion };
 }
 
@@ -1583,7 +1593,7 @@ function localizedDisplayValue(value, language) {
     ja: { unknown: "不明", unavailable: "取得不可", true: "はい", false: "いいえ", pending: "待機中", running: "実行中", waiting: "待機中", completed: "完了", complete: "完了", failed: "失敗", degraded: "縮退", incomplete: "不完全", skipped: "未実行", declined: "適用外", constructive: "前向き", cautious: "慎重", opposed: "反対", out_of_scope: "証拠範囲外", deterministic_fallback: "決定論的メソッド規則", dedicated_method_voice_worker: "専用メソッド見解ワーカー", v3_method_runtime: "決定論的メソッド記録", completed_worker: "分離メソッド席ワーカー", recorded: "記録済み", veto: "ハード拒否記録", score: "スコア記録", real_time: "リアルタイム（提供元表示）", regular_session_delayed: "通常取引時間の遅延価格", regular_close: "通常取引時間の終値", end_of_day_close: "日終値", last_regular_trade: "直近通常取引価格", high: "高", medium: "中", low: "低", Buy: "買い", Overweight: "オーバーウェイト", Hold: "中立", Underweight: "アンダーウェイト", Sell: "売り", bull: "強気", bear: "弱気", balanced: "均衡" },
     ko: { unknown: "알 수 없음", unavailable: "확인 불가", true: "예", false: "아니요", pending: "대기 중", running: "실행 중", waiting: "대기 중", completed: "완료", complete: "완료", failed: "실패", degraded: "성능 저하", incomplete: "불완전", skipped: "미실행", declined: "적용 범위 밖", constructive: "긍정적", cautious: "신중", opposed: "반대", out_of_scope: "증거 범위 밖", deterministic_fallback: "결정론적 방법 규칙", dedicated_method_voice_worker: "전용 방법론 발언 워커", v3_method_runtime: "결정론적 방법 기록", completed_worker: "격리 방법론 좌석 워커", recorded: "기록됨", veto: "하드 거부 기록", score: "점수 기록", real_time: "실시간(제공자 표시)", regular_session_delayed: "정규장 지연 관측", regular_close: "정규장 종가", end_of_day_close: "일일 종가", last_regular_trade: "최근 정규장 거래가", high: "높음", medium: "중간", low: "낮음", Buy: "매수", Overweight: "비중 확대", Hold: "보유", Underweight: "비중 축소", Sell: "매도", bull: "강세", bear: "약세", balanced: "균형" },
   };
-  return maps[key]?.[token] || token;
+  return maps[key]?.[token] || (EXTRA_RESEARCH_LOCALES.includes(key) && maps.en[token] ? readerText(key, maps.en[token]) : token);
 }
 
 function localizedFrozenRecord(value, language) {

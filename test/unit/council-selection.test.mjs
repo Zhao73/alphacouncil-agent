@@ -125,10 +125,10 @@ test("all supported selector locales render every user-facing card field in the 
 
 test("unsupported selector locales fail explicitly instead of claiming an English fallback is localized", () => {
   assert.throws(
-    () => catalogSnapshot("fr-FR"),
+    () => catalogSnapshot("ar"),
     (error) => {
       assert.equal(error?.data?.reason, "UNSUPPORTED_SELECTION_LANGUAGE");
-      assert.deepEqual(error?.data?.supported_languages, ["zh-CN", "en-US", "ja-JP", "ko-KR"]);
+      assert.deepEqual(error?.data?.supported_languages, ["zh-CN", "en", "ja", "ko", "es", "fr", "de", "pt-BR", "it", "ru", "vi", "id"]);
       return true;
     },
   );

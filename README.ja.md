@@ -149,7 +149,8 @@ AlphaCouncil は**教育・研究目的のみ**のソフトウェアです。投
 - [4 ホスト対応の完全なインストールガイド](docs/INSTALL.md)
 - [レポート契約](docs/report-contract.md)と[完全なレポート例](docs/examples/final_report.SOX.zh.md)
 - [ロードマップ](docs/roadmap.md)、[セキュリティモデル](SECURITY.md)、[帰属情報](docs/attribution.md)、[変更履歴](CHANGELOG.md)
-- ローカル UI：`npm run tui` と `npm run gui`
+- [独立ターミナルクライアント](terminal/README.md)：言語 → 銘柄 → モデル → 分析手法を選択し、根拠や討論をクリックして確認できます。ソースからは `npm ci --prefix terminal` の後に `npm run terminal` を実行します。
+- 既存のローカルビューアー：`npm run tui` と `npm run gui`
 
 実行成果物はリポジトリ外の `~/.alphacouncil-agent/runs/<run_id>/` に保存されます。
 

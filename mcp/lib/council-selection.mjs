@@ -15,7 +15,7 @@ import {
 import { councilOptions } from "./council-options.mjs";
 import { invalidParams } from "./errors.mjs";
 import { readJson, writeJson } from "./fsutil.mjs";
-import { resolveLanguage } from "./lang.mjs";
+import { RESEARCH_LANGUAGES, resolveLanguage } from "./lang.mjs";
 import { safeSymbol } from "./run-store.mjs";
 import { cleanupSelectionStore } from "./selection-cleanup.mjs";
 import { ensureSelectionLockStore, withSelectionLock } from "./selection-locks.mjs";
@@ -42,7 +42,7 @@ const SUPPORTED_SELECTION_HASH_VERSIONS = Object.freeze([
   RECOMMENDATION_SELECTION_HASH_VERSION,
   CALIBRATED_SELECTION_HASH_VERSION,
 ]);
-const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(["中文", "English", "日本語", "한국어"]);
+const SUPPORTED_SELECTION_LANGUAGES = Object.freeze(RESEARCH_LANGUAGES.map((entry) => entry.name));
 const METHOD_RISK_ROLES = Object.freeze(new Set([
   "risk_overlay",
   "portfolio_overlay",
@@ -461,11 +461,11 @@ function selectionLanguage(args = {}) {
   const language = resolveLanguage({ language: args.language, prompt: args.prompt });
   if (!SUPPORTED_SELECTION_LANGUAGES.includes(language)) {
     throw invalidParams(
-      `Selection language ${JSON.stringify(language)} is unsupported. Use zh-CN, en-US, ja-JP or ko-KR.`,
+      `Selection language ${JSON.stringify(language)} is unsupported. Use ${RESEARCH_LANGUAGES.map((entry) => entry.locale).join(", ")}.`,
       {
         reason: "UNSUPPORTED_SELECTION_LANGUAGE",
         requested_language: args.language ?? null,
-        supported_languages: ["zh-CN", "en-US", "ja-JP", "ko-KR"],
+        supported_languages: RESEARCH_LANGUAGES.map((entry) => entry.locale),
       },
     );
   }

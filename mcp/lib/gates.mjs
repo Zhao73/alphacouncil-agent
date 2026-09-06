@@ -1,3 +1,4 @@
+import { localizedReader, readerText, EXTRA_RESEARCH_LOCALES, researchSectionHeading } from "./research-locales.mjs";
 import {
   DEBATE_ROLES,
   HANDOFF_METHOD_SEAT_MARKER_PREFIX,
@@ -18,13 +19,18 @@ import { verificationAuditStatus } from "./verification.mjs";
 
 export function withDisclaimer(markdown, language) {
   const text = typeof markdown === "string" ? markdown : "";
+  if (EXTRA_RESEARCH_LOCALES.includes(languageKey(language))) {
+    const heading = readerText(language, "Disclaimer");
+    if (parseHeadings(text).some((entry) => entry.title === heading)) return text;
+    return `${text}\n\n---\n\n## ${heading}\n\n${readerText(language, "This AI-generated report is for education and research only, not investment advice or an offer to trade securities. It may be incomplete, outdated or wrong. Verify independently and consult a licensed professional before investing. The authors accept no liability for losses.")}`;
+  }
   if (/##\s*(Disclaimer|免责声明|免責事項|면책)/iu.test(text)) return text;
-  const note = {
+  const note = localizedReader(languageKey(language), {
     zh: "\n\n---\n\n## 免责声明\n\n本报告由 AI 自动生成，**仅供教育与研究**，**不构成投资建议**，也不构成任何证券买卖推荐或要约。AI 分析可能不完整、过时或错误。投资决策前请自行核实并咨询持牌专业人士。作者不对任何损失承担责任。",
     en: "\n\n---\n\n## Disclaimer\n\nThis report is AI-generated for **educational and research purposes only**. It is **not investment advice**, not a recommendation to buy or sell any security, and not a solicitation. AI analysis can be incomplete, outdated, or wrong. Do your own research and consult a licensed professional before any investment decision. The authors accept no liability for any loss.",
     ja: "\n\n---\n\n## 免責事項\n\n本レポートは AI が生成した**教育・調査目的のみ**の資料で、**投資助言ではありません**。証券の売買推奨や勧誘でもありません。AI の分析は不完全、古い、または誤っている可能性があります。投資判断の前にご自身で確認し、資格を有する専門家へ相談してください。作成者は損失について責任を負いません。",
     ko: "\n\n---\n\n## 면책 조항\n\n이 보고서는 AI가 생성한 **교육 및 연구 목적의 자료**이며 **투자 조언이 아닙니다**. 증권 매매 권유나 청약도 아닙니다. AI 분석은 불완전하거나 오래되었거나 틀릴 수 있습니다. 투자 결정 전에 직접 확인하고 자격을 갖춘 전문가와 상의하십시오. 작성자는 손실에 대해 책임을 지지 않습니다.",
-  }[languageKey(language)];
+  });
   return `${text}${note}`;
 }
 
@@ -33,6 +39,16 @@ export function withVerificationBanner(markdown, gate, language) {
   if (!gate) return text;
   const pairs = gate.missing_claim_source_ids || [];
   const verifier = gate.verifier_audit || {};
+  if (EXTRA_RESEARCH_LOCALES.includes(languageKey(language))) {
+    const findings = gate.verification !== "needs_verification" && verifier.status === "completed_with_findings";
+    if (!findings && gate.verification !== "needs_verification") return text;
+    const heading = readerText(language, findings ? "Triple-Verification Findings" : "Source Verification Gate and Triple Verification");
+    const note = readerText(language, findings
+      ? "All three verifiers covered every material claim. Findings require correction and may justify one sourced downgrade under pm_rating_rubric_v2; they are not automatic negative votes or automatic rating changes."
+      : "Required source-lineage or triple-verification checks have not passed; this run cannot be marked complete.");
+    const diagnostics = findings ? (verifier.non_clean || []) : { missing_claim_source_ids: pairs, verifier_audit: verifier };
+    return `${text}\n\n---\n\n## ${heading}\n\n**${readerText(language, "Status")}: ${findings ? "completed_with_findings" : "needs_verification"}.** ${note}\n\n\`\`\`json\n${JSON.stringify(diagnostics, null, 2)}\n\`\`\`\n`;
+  }
   if (gate.verification !== "needs_verification" && verifier.status === "completed_with_findings") {
     const findings = (verifier.non_clean || []).slice(0, 24)
       .map((item) => `- ${item.verifier}: ${item.claim_id} -> ${item.verdict}`)
@@ -57,12 +73,12 @@ export function withVerificationBanner(markdown, gate, language) {
     ...(verifier.unexpected || []).slice(0, 12).map((item) => `${item.verifier}: unexpected ${item.claim_id}`),
   ];
   const lines = issues.length ? issues.map((item) => `- ${item}`).join("\n") : "- (unspecified)";
-  const banner = {
+  const banner = localizedReader(languageKey(language), {
     zh: `\n\n---\n\n## 来源与三重核验\n\n**状态：needs_verification。** 来源追溯或 slow + 全部方法席 + 全部分析席所要求的 source_fidelity / rederivation / refuter 三重核验尚未全部通过；不得写成 complete：\n\n${lines}\n`,
     en: `\n\n---\n\n## Source Verification Gate and Triple Verification\n\n**Status: needs_verification.** Source lineage or the source_fidelity / rederivation / refuter gate required by slow + all methods + all analysts has not fully passed; this run may not be marked complete:\n\n${lines}\n`,
     ja: `\n\n---\n\n## 出典・三重検証ゲート\n\n**状態：needs_verification。** 出典追跡、または slow + 全メソッド席 + 全分析席に必須の三重検証が完了していないため complete にはできません：\n\n${lines}\n`,
     ko: `\n\n---\n\n## 출처 및 삼중 검증 게이트\n\n**상태: needs_verification.** 출처 계보 또는 slow + 전체 방법론 + 전체 분석가에 필수인 삼중 검증을 모두 통과하지 못해 complete로 표시할 수 없습니다:\n\n${lines}\n`,
-  }[languageKey(language)];
+  });
   return `${text}${banner}`;
 }
 
@@ -284,17 +300,28 @@ export function withCompletenessBanner(markdown, completeness, language) {
   const ev = completeness.missing_evidence || [];
   const db = completeness.missing_debate || [];
   const ms = completeness.missing_masters || [];
+  if (EXTRA_RESEARCH_LOCALES.includes(languageKey(language))) {
+    const list = (values) => values.length ? values.map((id) => `- \`${id}\``).join("\n") : `- ${readerText(language, "None")}`;
+    const banner = [
+      "> [!WARNING]", `## ${readerText(language, "Incomplete Council Run")}`, "",
+      `**${readerText(language, "Status")}: incomplete.** ${readerText(language, "The full council workflow did not complete; its conclusion is unreliable.")}`, "",
+      `${readerText(language, "Missing evidence roles")}:`, list(ev), "",
+      `${readerText(language, "Missing debate roles")}:`, list(db), "",
+      ...(ms.length ? [`${readerText(language, "Method seats that gave no opinion")}:`, list(ms), ""] : []),
+    ].join("\n");
+    return `${banner}\n\n---\n\n${text}`;
+  }
   const evLine = ev.length ? ev.map((task) => `- ${task}`).join("\n") : "- (none)";
   const dbLine = db.length ? db.map((role) => `- ${role}`).join("\n") : "- (none)";
   // Naming the skipped seats matters more than the flag: "incomplete" without a list
   // invites the reader to assume it was something minor.
   const msLine = ms.length ? ms.map((id) => `- ${id}`).join("\n") : "";
-  const banner = {
+  const banner = localizedReader(languageKey(language), {
     zh: `> [!WARNING]\n## 委员会流程未完成\n\n**状态：incomplete。** 本轮没有完成全部委员会流程，结论不可靠。\n\n未完成的证据席：\n${evLine}\n\n未完成的辩论席：\n${dbLine}\n${msLine ? `\n未给出意见的方法席：\n${msLine}\n` : ""}`,
     en: `> [!WARNING]\n## Incomplete Council Run\n\n**Status: incomplete.** This run did NOT execute the full council workflow; the conclusion is unreliable.\n\nMissing evidence roles:\n${evLine}\n\nMissing debate roles:\n${dbLine}\n${msLine ? `\nMethod seats that gave no opinion:\n${msLine}\n` : ""}`,
     ja: `> [!WARNING]\n## 委員会プロセス未完了\n\n**状態：incomplete。** 委員会の全工程を完了していないため、結論は信頼できません。\n\n未完了の証拠席：\n${evLine}\n\n未完了の討論席：\n${dbLine}\n${msLine ? `\n意見を記録できなかったメソッド席：\n${msLine}\n` : ""}`,
     ko: `> [!WARNING]\n## 위원회 실행 미완료\n\n**상태: incomplete.** 전체 위원회 절차가 완료되지 않아 결론을 신뢰할 수 없습니다.\n\n미완료 증거 좌석:\n${evLine}\n\n미완료 토론 좌석:\n${dbLine}\n${msLine ? `\n의견을 기록하지 못한 방법론 좌석:\n${msLine}\n` : ""}`,
-  }[languageKey(language)];
+  });
   return `${banner}\n\n---\n\n${text}`;
 }
 
@@ -363,10 +390,12 @@ function readerLanguageAudit(assigned, language) {
     const titleProbe = readerLanguageStatus(heading?.title || "", language, { minimumTargetCharacters: 1, minimumRatio: 0 });
     const { scripts = {} } = titleProbe;
     let titleLocale = "undetermined";
-    if ((scripts.hangul || 0) > 0) titleLocale = "ko";
+    if (EXTRA_RESEARCH_LOCALES.includes(requested) && headingIncludesAlias(heading?.title || "", researchSectionHeading(requested, id))) titleLocale = requested;
+    else if ((scripts.cyrillic || 0) > 0) titleLocale = "ru";
+    else if ((scripts.hangul || 0) > 0) titleLocale = "ko";
     else if ((scripts.kana || 0) > 0 || (titleProbe.japanese_markers || 0) > 0) titleLocale = "ja";
     else if ((titleProbe.chinese_markers || 0) > 0) titleLocale = "zh";
-    else if ((scripts.latin || 0) > 0 && (scripts.han || 0) === 0) titleLocale = "en";
+    else if ((scripts.latin || 0) > 0 && (scripts.han || 0) === 0) titleLocale = titleProbe.observed_locale === "undetermined" ? "en" : titleProbe.observed_locale;
     else if ((scripts.han || 0) > 0) titleLocale = "shared_han";
     const sharedHanAllowed = titleLocale === "shared_han" && ["zh", "ja"].includes(requested);
     if (![requested, "undetermined"].includes(titleLocale) && !sharedHanAllowed) mismatched.push(`heading:${id}`);
@@ -410,7 +439,7 @@ export function requiredReportSectionAliases(run) {
   const benchRan = ((run?.masters || []).length > 0) || ((run?.master_opinions || []).length > 0);
   const fundOrIndex = isFundOrIndex(run?.grounding?.instrument);
   const key = languageKey(run?.language);
-  const index = { zh: 0, en: 1, ja: 2, ko: 3 }[key] ?? 1;
+  const index = localizedReader(key, { zh: 0, en: 1, ja: 2, ko: 3 }) ?? 1;
   return sections
     .filter((section) => !SYSTEM_OWNED_REPORT_SECTIONS.has(section.id))
     .filter((section) => !section.when_masters || benchRan)
@@ -420,7 +449,7 @@ export function requiredReportSectionAliases(run) {
       minimum_body_characters: section.min_body,
       // The catalog lists zh, en, ja and ko variants; offer the one the run reads in, and fall
       // back to the English alias so the message is never empty.
-      suggested_heading: section.aliases[index] || section.aliases[1] || section.aliases[0],
+      suggested_heading: EXTRA_RESEARCH_LOCALES.includes(key) ? researchSectionHeading(key, section.id) : section.aliases[index] || section.aliases[1] || section.aliases[0],
       accepted_headings: section.aliases,
     }));
 }

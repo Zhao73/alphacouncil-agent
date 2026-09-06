@@ -17,6 +17,8 @@ import {
   technicalIdReadableMap,
 } from "../personas-v3/runtime.mjs";
 import { languageKey, localized } from "../lang.mjs";
+import { EXTRA_RESEARCH_LOCALES, readerText, readerTemplate } from "../research-locales.mjs";
+import { selectionDisplay } from "../selection-locales.mjs";
 import { displayMasterLabel } from "../markdown.mjs";
 import { factsInCondition, voiceFromDecision, voiceFromDecline } from "../voice-from-decision.mjs";
 import {
@@ -294,9 +296,20 @@ export function completedMasterOpinion(run, item) {
   // translations -- which belongs in the assurance section, not inside a sentence about the
   // company. Left in, every statement read "using the X provisional operator lens method",
   // which is both ungrammatical and a second copy of a disclosure the report already makes.
-  const label = displayMasterLabel(item.pack.admitted_label?.[locale]
+  const label = displayMasterLabel(selectionDisplay(locale, item.id)?.title || item.pack.admitted_label?.[locale]
     || item.pack.admitted_label?.en || item.id);
-  const copy = localized(run.language, {
+  const copy = EXTRA_RESEARCH_LOCALES.includes(locale) ? {
+    abstain: (reasons) => readerTemplate(locale, "I withhold my scored vote because my method's gate closed ({0}); this is an evidence limit, not a bearish vote. I reassess when the required inputs are available.", reasons),
+    withheld: (pct) => readerTemplate(locale, "{0}% coverage; score withheld", pct),
+    unscored: readerText(locale, "Not scored"),
+    verdict: (stance, reason) => `${label} — ${readerText(locale, "Frozen verdict")}: ${stance} (${reason})`,
+    summary: (score) => readerTemplate(locale, "The {0} deterministic policy evaluated {1} with score {2}. Typed facts, hard vetoes and score bands produced the stance; no language model selected it.", label, run.symbol, score),
+    hit: (id) => readerTemplate(locale, "I find {0} of {1} scoring conditions held: {2}.", 1, 1, id),
+    miss: (id) => readerTemplate(locale, "I find these conditions did not hold: {0}.", id),
+    eligibility: (id) => readerTemplate(locale, "Eligibility condition {0} becomes satisfied.", id),
+    veto: (id) => readerTemplate(locale, "Hard veto {0} no longer triggers.", id),
+    score: (id) => readerTemplate(locale, "Scoring condition {0} becomes satisfied.", id),
+  } : localized(run.language, {
     en: { abstain: (reasons) => `Speaking through the ${label} method on ${run.symbol}: this seat owes you its reading of this company, and the frozen record below is what my discipline could establish before its own gate closed (${reasons}). What I withhold is the scored vote, not the view. Read that precisely: it is neither bearish nor a vote against the asset -- a method that guesses without its inputs stops being a method. Put those inputs in front of me and this seat returns to the table at once.`, withheld: (pct) => `${pct}% coverage; score withheld`, unscored: "not scored", verdict: (stance, reason) => `${label} frozen decision: ${stance} (${reason})`, summary: (score) => `Using the ${label} method on ${run.symbol}, the PersonaPack v3 deterministic policy executed with score ${score}. Typed facts, hard vetoes, and score bands produced this stance; no language model selected it.`, hit: (id) => `score hit: ${id}`, miss: (id) => `score miss: ${id}`, eligibility: (id) => `eligibility condition ${id} becomes satisfied`, veto: (id) => `hard veto ${id} no longer triggers`, score: (id) => `score condition ${id} becomes satisfied` },
     zh: { abstain: (reasons) => `按${label}方法看 ${run.symbol}：这个席位欠你一份对这家公司的读数，下面冻结的记录就是我的纪律在自己的闸门关上之前所能确立的部分（${reasons}）。我保留的是那张记分的票，不是观点。请准确理解：这不是看空，也不是一张反对票——缺着输入硬猜，方法就不再是方法。把这些输入摆到我面前，这个席位立刻回到桌上重新评估。`, withheld: (pct) => `覆盖率 ${pct}%，分数被保留不发布`, unscored: "未评分", verdict: (stance, reason) => `${label}的冻结结论：${stance}（${reason}）`, summary: (score) => `按${label}方法审视 ${run.symbol}：PersonaPack v3 确定性政策已执行，得分 ${score}。该立场由结构化事实、硬否决和评分带产生，没有让语言模型选择立场。`, hit: (id) => `评分命中：${id}`, miss: (id) => `评分未命中：${id}`, eligibility: (id) => `资格条件 ${id} 变为满足`, veto: (id) => `硬否决 ${id} 不再触发`, score: (id) => `评分条件 ${id} 变为满足` },
     ja: { abstain: (reasons) => `${label}の方法で ${run.symbol} を見ます。この席はこの企業についての読みをお伝えする義務があり、以下の凍結された記録は、私の規律が自らのゲートが閉じる前に確立できた範囲です（${reasons}）。私が保留するのは採点された一票であって、見解ではありません。正確に読んでください。これは弱気判断でも反対票でもありません——入力なしに推測すれば、それはもはや方法ではないからです。この入力が揃い次第、この席は直ちに再評価に戻ります。`, withheld: (pct) => `カバレッジ ${pct}% のためスコアは非公開`, unscored: "未採点", verdict: (stance, reason) => `${label}の凍結済み判断：${stance}（${reason}）`, summary: (score) => `${label}の方法で ${run.symbol} を評価し、PersonaPack v3 の決定論的ポリシーを実行した結果、スコアは ${score}。構造化事実、ハード拒否条件、スコア帯がこの立場を生成しており、言語モデルは立場を選択していない。`, hit: (id) => `採点条件を満たす：${id}`, miss: (id) => `採点条件を満たさない：${id}`, eligibility: (id) => `適格条件 ${id} が満たされる`, veto: (id) => `ハード拒否条件 ${id} が解除される`, score: (id) => `採点条件 ${id} が満たされる` },
@@ -412,12 +425,19 @@ export function declinedMasterOpinion(run, item) {
   // translations -- which belongs in the assurance section, not inside a sentence about the
   // company. Left in, every statement read "using the X provisional operator lens method",
   // which is both ungrammatical and a second copy of a disclosure the report already makes.
-  const label = displayMasterLabel(item.pack.admitted_label?.[locale]
+  const label = displayMasterLabel(selectionDisplay(locale, item.id)?.title || item.pack.admitted_label?.[locale]
     || item.pack.admitted_label?.en || item.id);
   const instrument = run?.grounding?.instrument;
   const fundOrIndex = instrument?.fund_like === true || instrument?.index_like === true
     || ["etf", "mutual_fund", "index"].includes(instrument?.asset_type);
-  const copy = localized(run.language, {
+  const copy = EXTRA_RESEARCH_LOCALES.includes(locale) ? {
+    none: readerText(locale, "None"),
+    verdict: readerTemplate(locale, "{0} cannot evaluate {1}: {2}.", label, run.symbol, eligibility.reason),
+    summary: (missing) => readerTemplate(locale, "The typed-fact gate returned {0}; missing: {1}. No legacy prompt or narrative decision layer was called.", eligibility.status, missing),
+    fundContext: fundOrIndex ? readerTemplate(locale, "{0} is classified as {1}; this method requires dated holdings or aggregate index evidence instead of treating it as an operating company.", run.symbol, instrument.asset_type) : "",
+    statement: (missing, context) => [context, `${label}: ${run.symbol}.`, readerTemplate(locale, "I require {0}, but the point-in-time record did not contain all of it.", missing), readerTemplate(locale, "I withhold my scored vote because my method's gate closed ({0}); this is an evidence limit, not a bearish vote. I reassess when the required inputs are available.", eligibility.status)].filter(Boolean).join(" "),
+    available: (id) => readerTemplate(locale, "{0} becomes available from a point-in-time source.", id),
+  } : localized(run.language, {
     en: { none: "none", verdict: `${label} cannot evaluate ${run.symbol}: ${eligibility.reason}`, summary: (missing) => `The v3 typed-fact gate returned ${eligibility.status}; missing: ${missing}. No legacy prompt or narrative decision layer was called.`, fundContext: fundOrIndex ? `${run.symbol} is classified as ${instrument.asset_type}; this method must use dated holdings or aggregate index evidence rather than treating the instrument as an operating company. ` : "", statement: (missing, context) => `${context}Speaking through the ${label} method: I went looking for what my discipline runs on, and the point-in-time record lacks ${missing}. Without it I refuse to improvise a substitute, so I issue no directional view on ${run.symbol} in this run. That refusal is a judgment about the record, not about the asset -- it is neither bearish nor a vote against the asset. Hand me those method-critical facts from a dated source and I reassess on the spot.`, available: (id) => `${id} becomes available from a point-in-time source` },
     zh: { none: "无", verdict: `${label}无法评估 ${run.symbol}：${eligibility.reason}`, summary: (missing) => `v3 typed-fact 闸门返回 ${eligibility.status}；缺失：${missing}。系统未调用旧提示词或叙述决策层。`, fundContext: fundOrIndex ? `${run.symbol} 已识别为 ${instrument.asset_type}；该方法必须通过带时点的持仓穿透或指数聚合证据使用，不能把它当成经营公司。` : "", statement: (missing, context) => `${context}按${label}方法发言：我先去找我的纪律赖以运转的材料，结果时点一致的资料缺少：${missing}。缺了它我拒绝拿代理数字凑合，所以本轮对 ${run.symbol} 不作方向判断。这个拒绝是对资料的判断，不是对资产的判断——这不是看空，也不是一张反对票。把这些带时点的方法关键事实交到我手上，我当场重新评估。`, available: (id) => `${id} 可从时点一致的来源取得` },
     ja: { none: "なし", verdict: `${label}は ${run.symbol} を評価できません：${eligibility.reason}`, summary: (missing) => `v3 typed-fact ゲートは ${eligibility.status} を返しました。欠落：${missing}。旧プロンプトや叙述型の判断層は呼び出していません。`, fundContext: fundOrIndex ? `${run.symbol} は ${instrument.asset_type} に分類されており、事業会社として扱わず、基準日付き保有銘柄のルックスルーまたは指数集計証拠を用いる必要があります。` : "", statement: (missing, context) => `${context}${label}の方法として発言します。私の規律が拠って立つ材料を探しに行きましたが、時点整合した記録には ${missing} が欠けています。それなしに代理の数字で間に合わせることは拒みます。したがって今回は ${run.symbol} の方向判断を出しません。この拒否は記録に対する判断であって、資産に対する判断ではありません——弱気判断でも反対票でもありません。基準日付きの出典からこれらの事実が届き次第、その場で再評価します。`, available: (id) => `${id} が時点整合した出典から利用可能になる` },

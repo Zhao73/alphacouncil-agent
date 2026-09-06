@@ -34,14 +34,23 @@ test("windows invocation goes through cmd.exe so codex.cmd resolves", () => {
 });
 
 test("windows invocation fails closed before cmd expansion or the 8191-character boundary", () => {
+  const env = { ALPHACOUNCIL_AGENT_CODEX_CMD: "codex" };
   assert.throws(
-    () => codexInvocation(["exec", "-C", "C:\\Users\\%USERNAME%\\alpha"], "win32", {}),
+    () => codexInvocation(["exec", "-C", "C:\\Users\\%USERNAME%\\alpha"], "win32", env),
     /cannot contain percent signs/u,
   );
   assert.throws(
-    () => codexInvocation(["exec", "x".repeat(7800)], "win32", {}),
+    () => codexInvocation(["exec", "x".repeat(7800)], "win32", env),
     /command line is .* maximum is 7800/u,
   );
+});
+
+test("bundled official Codex JavaScript runs with the bundled Node and avoids shell expansion", () => {
+  const executable = "C:\\Program Files\\AlphaCouncil\\codex.mjs";
+  const invocation = codexInvocation(["exec", "-C", "C:\\Users\\%USERNAME%\\alpha"], "win32", { ALPHACOUNCIL_CODEX_BIN: executable });
+  assert.equal(invocation.command, process.execPath);
+  assert.deepEqual(invocation.args, [executable, "exec", "-C", "C:\\Users\\%USERNAME%\\alpha", "-"]);
+  assert.equal(invocation.options.windowsHide, true);
 });
 
 test("Windows worker timeout force-terminates the whole process tree on its first stop", () => {

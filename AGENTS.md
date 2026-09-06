@@ -14,7 +14,7 @@ Run `npm run check` after any code or prompt change.
 
 ## Current Release Boundary
 
-Package/plugin version `1.7.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
+Package/plugin version `1.8.0` is the current source release candidate; GitHub, Codex marketplace and npm's public
 `latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
 PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
 `method_model` seats. Human review of the authored formulas, the live four-code-host
@@ -95,8 +95,8 @@ carries the exact selected-seat count and each complete, untruncated statement; 
 appears as a non-directional `statement_status=not_produced` diagnostic. Visible PM completion
 and `finalize_visible_run` return `handoff_contract=inline_user_response_v1`; deliver their
 `user_response_markdown` instead of an ACK-only or manual recap, and append nothing after the
-method-seat ledger. System-owned report/handoff prose is localized for `zh-CN`, `en`, `ja`
-and `ko`; workers receive the run language. Never present a method-seat explanation as the
+method-seat ledger. System-owned report/handoff prose is localized for `zh-CN`, `en`, `ja`,
+`ko`, `es`, `fr`, `de`, `pt-BR`, `it`, `ru`, `vi` and `id`; workers receive the run language. Never present a method-seat explanation as the
 real person's current words, quote or endorsement.
 
 ## Hosts

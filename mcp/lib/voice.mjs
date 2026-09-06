@@ -13,7 +13,7 @@
  * the honest shade without being able to convert an `opposed` into a `would_buy`.
  */
 
-import { localized } from "./lang.mjs";
+import { languageKey, localized, RESEARCH_LANGUAGES } from "./lang.mjs";
 
 export const FIRST_PERSON_VOICE_MODE = "first_person_public_method_simulation_v1";
 export const FIRST_PERSON_DISCLOSURE_ACK = "alphacouncil.first_person_public_method_simulation.v1";
@@ -95,7 +95,20 @@ const FIELD_LABELS = Object.freeze({
   where_i_disagree: { en: "Where I disagree", zh: "我和谁分歧", ja: "どこで意見が分かれるか", ko: "어디서 의견이 갈리는가" },
 });
 
+const EXTRA_VOICE_COPY = Object.freeze({
+  es: { fields: ["¿Actuaría yo?", "Lo que veo", "Cómo lo interpreto con mi método", "Dónde discrepo", "Qué cambiaría mi opinión"], intents: ["compraría", "aumentaría", "mantendría", "observaría", "descartaría", "evitaría", "fuera de mi ámbito de competencia", "esperaría los datos que faltan"], disclaimer: "Simulación de IA de un método público; no son palabras de la persona mencionada." },
+  fr: { fields: ["Est-ce que j’agirais ?", "Ce que je vois", "Mon interprétation selon cette méthode", "Mes désaccords", "Ce qui me ferait changer d’avis"], intents: ["j’achèterais", "je renforcerais", "je conserverais", "j’observerais", "je passerais", "j’éviterais", "hors de mon domaine de compétence", "j’attendrais les données manquantes"], disclaimer: "Simulation par IA d’une méthode publique ; il ne s’agit pas des propos de la personne citée." },
+  de: { fields: ["Würde ich handeln?", "Was ich sehe", "Meine Einordnung nach dieser Methode", "Wo ich widerspreche", "Was meine Meinung ändern würde"], intents: ["ich würde kaufen", "ich würde aufstocken", "ich würde halten", "ich würde beobachten", "ich würde verzichten", "ich würde meiden", "außerhalb meines Kompetenzbereichs", "ich würde fehlende Daten abwarten"], disclaimer: "KI-Simulation einer öffentlichen Methode; keine Äußerung der genannten Person." },
+  "pt-BR": { fields: ["Eu agiria?", "O que eu vejo", "Como interpreto com meu método", "Onde eu discordo", "O que mudaria minha opinião"], intents: ["eu compraria", "eu aumentaria", "eu manteria", "eu observaria", "eu deixaria passar", "eu evitaria", "fora da minha área de competência", "eu aguardaria os dados ausentes"], disclaimer: "Simulação de IA de um método público; não são palavras da pessoa mencionada." },
+  it: { fields: ["Io agirei?", "Ciò che vedo", "La mia lettura secondo il metodo", "Dove dissento", "Cosa cambierebbe la mia opinione"], intents: ["io comprerei", "io aumenterei", "io manterrei", "io osserverei", "io rinuncerei", "io eviterei", "fuori dal mio ambito di competenza", "io attenderei i dati mancanti"], disclaimer: "Simulazione IA di un metodo pubblico; non sono parole della persona citata." },
+  ru: { fields: ["Стал бы я действовать?", "Что я вижу", "Как я применяю свой метод", "В чём я не согласен", "Что изменит моё мнение"], intents: ["я бы купил", "я бы увеличил позицию", "я бы сохранил позицию", "я бы наблюдал", "я бы отказался", "я бы избегал", "вне моей области компетенции", "я бы дождался недостающих данных"], disclaimer: "ИИ-симуляция публичного метода; это не слова указанного человека." },
+  vi: { fields: ["Tôi có hành động không?", "Điều tôi thấy", "Cách tôi áp dụng phương pháp", "Điểm tôi không đồng ý", "Điều khiến tôi đổi ý"], intents: ["tôi sẽ mua", "tôi sẽ tăng vị thế", "tôi sẽ giữ", "tôi sẽ quan sát", "tôi sẽ bỏ qua", "tôi sẽ tránh", "ngoài phạm vi hiểu biết của tôi", "tôi sẽ chờ dữ liệu còn thiếu"], disclaimer: "Mô phỏng phương pháp công khai bằng AI; không phải lời của người được nêu tên." },
+  id: { fields: ["Apakah saya akan bertindak?", "Apa yang saya lihat", "Cara saya menerapkan metode", "Di mana saya berbeda pendapat", "Apa yang mengubah pendapat saya"], intents: ["saya akan membeli", "saya akan menambah", "saya akan mempertahankan", "saya akan mengamati", "saya akan melewatkan", "saya akan menghindari", "di luar bidang kompetensi saya", "saya akan menunggu data yang kurang"], disclaimer: "Simulasi AI atas metode publik; bukan ucapan orang yang disebutkan." },
+});
+
 export function voiceFieldLabel(field, language) {
+  const extra = EXTRA_VOICE_COPY[languageKey(language)];
+  if (extra) return extra.fields[VOICE_FIELDS.indexOf(field)] || field;
   return localized(language, FIELD_LABELS[field] || {}) || field;
 }
 
@@ -121,6 +134,8 @@ const INTENT_LABELS = Object.freeze({
 });
 
 export function intentLabel(intent, language) {
+  const extra = EXTRA_VOICE_COPY[languageKey(language)];
+  if (extra) return extra.intents[[...POSITION_INTENTS, "inputs_unavailable"].indexOf(intent)] || intent;
   return localized(language, INTENT_LABELS[intent] || {}) || intent;
 }
 
@@ -132,6 +147,7 @@ export function intentLabel(intent, language) {
  * and never asserts what the living person currently thinks.
  */
 export const VOICE_DISCLOSURES = Object.freeze({
+  ...Object.fromEntries(Object.entries(EXTRA_VOICE_COPY).map(([key, copy]) => [key, copy.disclaimer])),
   en: "AI public-method simulation — not the named person's words.",
   zh: "AI 公开方法模拟，非本人原话。",
   ja: "AIによる公開メソッドのシミュレーションであり、本人の発言ではありません。",
@@ -154,14 +170,22 @@ export function hasFirstPersonMarker(value, language) {
   if (/中文|chinese|zh/u.test(key)) return /我/u.test(text);
   if (/日本語|japanese|ja/u.test(key)) return /私/u.test(text);
   if (/한국어|korean|ko/u.test(key)) return /(?:나|내|저|제)/u.test(text);
+  const extra = {
+    es: /(?<!\p{L})(?:yo|mi|mis|mío|mía)(?!\p{L})/iu,
+    fr: /(?<!\p{L})(?:(?:je|moi|mon|ma|mes)(?!\p{L})|j[’'](?=\p{L}))/iu,
+    de: /(?<!\p{L})(?:ich|mir|mich|mein|meine|meiner|meines)(?!\p{L})/iu,
+    "pt-BR": /(?<!\p{L})(?:eu|meu|minha|meus|minhas|mim)(?!\p{L})/iu,
+    it: /(?<!\p{L})(?:io|mio|mia|miei|mie)(?!\p{L})/iu,
+    ru: /(?<!\p{L})(?:я|мой|моя|моё|мое|мои|мне|меня|моей)(?!\p{L})/iu,
+    vi: /(?<!\p{L})tôi(?!\p{L})/iu,
+    id: /(?<!\p{L})saya(?!\p{L})/iu,
+  }[languageKey(language)];
+  if (extra) return extra.test(text);
   return /\b(?:I|I'm|I've|I'd|I'll|me|my|mine|myself)\b/iu.test(text);
 }
 
 export function hasAnyFirstPersonMarker(value) {
-  return hasFirstPersonMarker(value, "English")
-    || hasFirstPersonMarker(value, "中文")
-    || hasFirstPersonMarker(value, "日本語")
-    || hasFirstPersonMarker(value, "한국어");
+  return RESEARCH_LANGUAGES.some((language) => hasFirstPersonMarker(value, language.locale));
 }
 
 /**

@@ -49,7 +49,7 @@ test("the current runtime keeps the reviewed 0.9.4 PersonaPack snapshot and its 
   const pkg = readJson("package.json");
   const profile = readJson("data/build-profile.v1.json");
   const schema = readJson("schemas/persona-v3.schema.json");
-  assert.equal(expected, "1.7.0");
+  assert.equal(expected, "1.8.0");
   assert.equal(profile.persona_pack_version, "0.9.4");
   assert.equal(pkg.publishConfig.tag, "latest");
   assert.equal(profile.channel, "solo_test");
