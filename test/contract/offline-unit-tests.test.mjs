@@ -72,10 +72,12 @@ test("every unit test runs with the network disabled", () => {
       timeout: timeoutMs,
       env,
     });
+    const failures = result.stdout?.split(/(?=^# Subtest:)/m)
+      .filter((block) => /^not ok /m.test(block)).join("\n");
     assert.equal(
       result.status,
       0,
-      `unit tests failed with the network blocked:\n${result.stdout?.slice(-3000)}\n${result.stderr?.slice(-3000)}`,
+      `unit tests failed with the network blocked:\n${failures}\n${result.stdout?.slice(-3000)}\n${result.stderr?.slice(-3000)}`,
     );
   } finally {
     rmSync(dataDir, { recursive: true, force: true });

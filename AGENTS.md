@@ -33,8 +33,9 @@ before downstream synthesis. Never auto-downgrade that run to quick.
 Plugin-managed headless full runs launched with `analyze_symbol` use the selected pace's hard
 queue-to-terminal-persistence ceiling: 15 minutes for fast, 30 for normal, and 60 for slow. The eight mandatory evidence workers
 start in one parallel wave. Each selected v3 method first produces a deterministic, frozen
-stance and then gets one isolated voice worker that may explain, but never change, that
-stance. Bull and Bear run in parallel within each of the three rounds, with a hard barrier
+stance. Scored methods then get one isolated voice worker that may explain, but never change,
+that stance; hashed frozen `out_of_scope` results retain their deterministic explanation
+without another voice call. Bull and Bear run in parallel within each of the three rounds, with a hard barrier
 between rounds, followed by the PM. Retries, queueing and persistence consume the same
 deadline; callers and environment variables may lower it, never raise it. At expiry, persist
 a terminal fail-closed `incomplete` run and name every missing/skipped seat. The clock
@@ -147,7 +148,7 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Asks for the depth tier, shows every master, confirms `1..N`/ranges/`all`, then runs full; plugin-managed headless is bounded at 15/30/60m | deterministic stance + one isolated voice worker per selected v3 seat |
+| `/alpha <ticker>` | Shows the named configuration with expandable catalog, confirms selection and pace, then runs full; plugin-managed headless is bounded at 15/30/60m | deterministic stance + one isolated voice worker per scored v3 seat; frozen abstentions keep deterministic explanations |
 | `/alpha <ticker> quick` | Shows the complete returned catalog, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |

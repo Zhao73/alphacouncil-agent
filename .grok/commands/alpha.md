@@ -126,7 +126,8 @@ master-selection contract.
    `council_pace` when the arguments asked for a speed: `fast` for 15 minutes, `slow` (or
    `deep`) for 60, omitted for the 30-minute default. Poll the same durable `run_id` to
    terminal. All eight mandatory evidence roles start in one wave; every selected v3 method
-   gets a frozen deterministic stance plus its own isolated voice worker; Bull/Bear run in
+   gets a frozen deterministic stance, with an isolated voice worker for scored methods
+   and a retained deterministic explanation for hashed frozen abstentions; Bull/Bear run in
    parallel within each of three rounds with a barrier between rounds; then the PM runs.
    Queueing, retries and final persistence share the selected tier's clock. At expiry the
    saved run is `incomplete`, never silently shortened or relabeled complete. This guarantees

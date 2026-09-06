@@ -9,8 +9,9 @@ The plugin turns `@alphacouncil-agent <ticker/request>` into one of two explicit
 - `full_v2` is the default: display and confirm the method catalog, run all eight mandatory
   evidence roles, run every selected method, complete the three-round Bull/Bear cross-exam,
   run the PM, and write the complete report. Plugin-managed headless full starts all eight
-  evidence workers in one parallel wave, gives every selected v3 method one isolated voice
-  worker after its deterministic stance is frozen, and runs Bull/Bear in parallel within
+  evidence workers in one parallel wave, gives each scored v3 method one isolated voice
+  worker after its deterministic stance is frozen, retains deterministic explanations for
+  hashed frozen abstentions, and runs Bull/Bear in parallel within
   each round with barriers between rounds. If mandatory evidence still fails after its one
   bounded parse-only repair, persist the failure package, skip method/debate/PM model calls,
   and terminate `incomplete` before downstream synthesis.
