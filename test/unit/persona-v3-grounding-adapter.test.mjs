@@ -9,6 +9,27 @@ import {
 
 const AS_OF = "2026-07-27";
 
+test("annual cash flow averages use the actual observation count and retain filing lineage", () => {
+  const metric = {
+    rule: "fcf_5y", value: 100_000_000, years: 5,
+    period_start: "2021-01-01", period_end: "2025-12-31", fiscal_year: 2025,
+    public_at: "2026-02-15", source_ids: ["sec:companyfacts:0000000001:cash:2026-02-15:2025-12-31"],
+  };
+  const adapt = (overrides = {}) => adaptGroundingToTypedFacts({
+    ...liveGrounding(), screen: { cik: "0000000001", metrics: [{ ...metric, ...overrides }] },
+  }, { asOf: AS_OF });
+  const result = adapt();
+  const annual = result.fact_pack.facts.find((fact) => fact.fact_id === "financial.free_cash_flow_annual_average");
+  assert.equal(annual.value, 20_000_000);
+  assert.equal(annual.period_start, metric.period_start);
+  assert.equal(annual.public_at, metric.public_at);
+  assert.deepEqual(annual.source_ids, metric.source_ids);
+  assert.ok(result.sources.some((source) => source.source_id === annual.source_ids[0]));
+  for (const overrides of [{ years: undefined }, { years: 0 }, { years: 6 }, { period_start: "2023-01-01", years: 3 }]) {
+    assert.equal(adapt(overrides).fact_pack.facts.some((fact) => fact.fact_id === annual.fact_id), false);
+  }
+});
+
 function liveGrounding() {
   return {
     as_of: AS_OF,

@@ -14,7 +14,7 @@ test("fast stalled debate and PM never start a sub-grace cold retry", async () =
 import { appendFileSync } from "node:fs";
 appendFileSync(${JSON.stringify(launchLog)}, JSON.stringify({ pid: process.pid, args: process.argv.slice(2) }) + "\\n");
 for await (const chunk of process.stdin) void chunk;
-await new Promise((resolve) => setTimeout(resolve, 2_000));
+await new Promise((resolve) => setTimeout(resolve, 8_000));
 `);
   let command = driver;
   if (process.platform === "win32") {
@@ -58,11 +58,12 @@ await new Promise((resolve) => setTimeout(resolve, 2_000));
     };
     mkdirSync(runPath(run.run_id), { recursive: true });
 
+    // Stay below the 5s settlement grace while allowing child startup on a loaded CI runner.
     const debate = await runDebateRole(run, "bull_researcher", {
       round: 1,
       brief: "long",
       retryOnTimeout: true,
-    }, 1_000);
+    }, 3_000);
     const manager = await runDebateRole(run, "portfolio_manager", {
       bull: {},
       bear: {},
@@ -70,7 +71,7 @@ await new Promise((resolve) => setTimeout(resolve, 2_000));
       structuredDecisionOnly: true,
       retryOnTimeout: true,
       reserveRepair: true,
-    }, 1_000);
+    }, 3_000);
 
     assert.equal(debate.result.timedOut, true);
     assert.equal(manager.result.timedOut, true);

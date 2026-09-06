@@ -272,7 +272,8 @@ test("a named speed is a prefill the user can accept or overrule", async () => {
   assert.equal(structured(overruled.confirmed).council_pace, "slow", "the user's answer wins");
 
   const plain = await gate();
-  assert.equal(structured(plain.confirmed).council_pace, "normal", "no answer means the default");
+  assert.equal(plain.opened.preselected_council_pace, "slow");
+  assert.equal(structured(plain.confirmed).council_pace, "slow", "confirmation accepts the displayed remembered depth");
 });
 
 test("an already confirmed selection cannot be replayed with another pace", async () => {

@@ -108,8 +108,8 @@
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:76ccd7cc3160b98ae243173fa2b69bb844bb88982c41c19e0e822fb1be31252c",
-      "derivation_spec_hash": "sha256:f5df869d94026c7ad00d26d8c3c23bd433c77b9a945142d927a617ad11ee9945",
+      "derivation_evidence_hash": "sha256:fe98b72cc2ff93949ebda5f47385bdb896357ee257d65bdb28f79b8d2be29b28",
+      "derivation_spec_hash": "sha256:daf6e37e7db90813a3f28c019e560c4cf3fefce81440ca9facfda9010a5f4e13",
       "derivation_spec_id": "master_cathie_wood.market_capitalisation.prototype_v1.derived_proxy_v1",
       "persona_id": "master_cathie_wood",
       "production_eligible": false,
@@ -121,8 +121,8 @@
     },
     {
       "assurance_class": "provisional_derived_proxy",
-      "derivation_evidence_hash": "sha256:c12017aaf43e2314b646db263922462392e7c4c51b68808ac0802e5a1cab52e7",
-      "derivation_spec_hash": "sha256:60c95955604fde2ba596e5a34b9ab6857835ebfc5cacdc02dfd23b8af954a26f",
+      "derivation_evidence_hash": "sha256:cb5ff1604b19edf279172104b6b54208fab58c1847b1f9de26bf29f8b5e767e5",
+      "derivation_spec_hash": "sha256:c7a62299322fcfac9e9b35304469823d7c851d349198f3f6f49404c3aede097d",
       "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
       "persona_id": "master_cathie_wood",
       "production_eligible": false,
@@ -680,7 +680,7 @@
     }
   ],
   "canonical_seat_count": 26,
-  "compilation_hash": "sha256:c3aa9db2a0eb92d51d4d4aa6a5a550d18fcade34788b8dee719320fb35f6e5b2",
+  "compilation_hash": "sha256:4ef7b42f459865b8afc721fe3478d048346b405d4a396fccfc341e16d39b5808",
   "compiled_tool_count": 52,
   "formula_approval_binding_count": 0,
   "human_reviewer_count": 0,

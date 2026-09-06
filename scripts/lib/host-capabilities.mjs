@@ -14,7 +14,7 @@ const CONTRACT_FILE = join(HOST_REPO_ROOT, "data/host-capabilities.v1.json");
 const EXPECTED_HOSTS = ["claude_code", "codex", "opencode", "grok"];
 const PROTOCOL_STEPS = [
   "begin_council_selection",
-  "display_complete_returned_catalog",
+  "display_configuration_with_expandable_catalog",
   "collect_one_user_submission",
   "confirm_master_selection_display_ack_true",
   "consume_one_run_selection_receipt",
@@ -23,7 +23,7 @@ const SELECTOR_FIELDS = ["index", "id", "identity", "method", "best_for", "matur
 const NUMBERED_INPUTS = ["single_index", "multiple_indexes", "inclusive_range", "stable_id", "all"];
 const PLAIN_PROTOCOL_MARKERS = [
   /begin_council_selection/,
-  /show \*\*every returned master individually/i,
+  /show `display_markdown` first/i,
   /stable\s+(?:number|IDs?)/i,
   /confirm_master_selection/,
   /catalog_hash/,

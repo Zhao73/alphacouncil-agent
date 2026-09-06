@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:f55b4fd230ddce714134cac88cc88802dc9f2dafa69ae7fe981953726e2fe3b6`
+- Pack snapshot hash: `sha256:db3f6e24fc2cf3c9313cca70da3ec944e95e203a4c20bc83ac5c6778941156b3`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -73,7 +73,7 @@ Do not infer a missing fact from the method reference. Enforce unit, period, poi
     "invalid_test",
     "no_signal",
     "research_candidate",
-    "deployable_signal"
+    "unusual_session_move"
   ],
   "required_outputs": [
     "leakage audit",
@@ -403,7 +403,7 @@ Numeric thresholds or transformations below belong to the current project proxy 
     "provisional_invalid_test",
     "provisional_no_signal",
     "provisional_research_candidate",
-    "provisional_deployable_signal"
+    "provisional_unusual_session_move"
   ],
   "provenance": {
     "status": "unsourced_ai_proposal"
@@ -432,8 +432,8 @@ Numeric thresholds or transformations below belong to the current project proxy 
     },
     {
       "decision": {
-        "common_stance": "constructive",
-        "native_state": "provisional_deployable_signal"
+        "common_stance": "cautious",
+        "native_state": "provisional_unusual_session_move"
       },
       "min_ratio": 1,
       "provenance": {
@@ -525,7 +525,7 @@ A listed finding blocks the affected comparison from being presented as an appro
         "status": "pending"
       },
       "author": "AlphaCouncil project build specification",
-      "content_hash": "sha256:6df57c7a07f6d45decc48315ca7062ea98b6c91828a9a91faaf7f5334a448363",
+      "content_hash": "sha256:7e38d220c4a683b6a61f3bac16dc540f51f9ae2e36c2d8c4172d90d06246339d",
       "grade": "E",
       "known_at": "2026-07-27",
       "locator": {

@@ -179,7 +179,7 @@ const seats = [
     decision: {
       schemaId: "out_of_sample_signal_v1",
       eligibility: ["frozen dataset and feature timestamps", "declared hypothesis family", "out-of-sample partition", "cost model"],
-      states: ["invalid_test", "no_signal", "research_candidate", "deployable_signal"],
+      states: ["invalid_test", "no_signal", "research_candidate", "unusual_session_move"],
       outputs: ["leakage audit", "multiple-test adjustment", "out-of-sample effect", "net-of-cost stability"],
       failClosed: ["timestamp leakage", "unreported search space", "no independent holdout", "cost model missing"],
     },

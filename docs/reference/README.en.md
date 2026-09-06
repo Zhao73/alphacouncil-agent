@@ -218,7 +218,7 @@ rather than four in a menu of a hundred.
 
 | Invocation | What runs | Model spend |
 |---|---|---|
-| `/alpha <ticker>` | Asks the depth tier with its persistence ceiling and unvalidated live-completion status, shows every master, confirms `1..N`/ranges/`all`, then full | deterministic stance + one isolated strong-first-person voice worker per selected v3 seat, including `out_of_scope` |
+| `/alpha <ticker>` | Shows the named configuration with expandable catalog, persistence ceiling and unvalidated live-completion status; confirms selection and pace, then full | deterministic stance + one isolated voice worker per scored v3 seat; frozen abstentions keep deterministic explanations |
 | `/alpha <ticker> quick` | Shows all 26, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
 | `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
 | `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
@@ -268,9 +268,9 @@ but never change it: a run approved as fifteen minutes cannot become an hour, an
 records which tier produced it. Quick has no tier — it is a smaller contract, not a slower one.
 
 All receipt-bound evidence workers start in one parallel wave. After the evidence barrier,
-each selected physical v3 method freezes its deterministic stance and then gets one isolated
-voice worker that explains, but cannot change, that result in a strong method-specific first
-person. This includes a frozen abstention. Bull and
+each selected physical v3 method freezes its deterministic stance. Scored methods then get one
+isolated voice worker that explains, but cannot change, that result in a method-specific voice.
+Hashed frozen abstentions retain deterministic explanations without another model call. Bull and
 Bear run in parallel within each of the three rounds, with a barrier between rounds, followed by
 the PM.
 

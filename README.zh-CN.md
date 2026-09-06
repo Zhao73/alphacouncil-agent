@@ -34,6 +34,8 @@
 
 </div>
 
+**v1.7 更新：**精简配置并预填上次选择、先看结论、扩展日线历史、检查完整方法依赖。每次运行仍需确认。[升级内容与数据源边界](docs/releases/v1.7.0.md)。
+
 <!-- readme-section:demo -->
 <div align="center">
 

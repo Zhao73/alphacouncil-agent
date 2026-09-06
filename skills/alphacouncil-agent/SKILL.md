@@ -33,7 +33,9 @@ after Stage 0.
   `macro_regime`, `market_narrative`, and `social_pulse`, for exactly 11 analyst seats. Then every selected
   master, then the three-round bull/bear cross-exam, then `portfolio_manager`. In the
   plugin-managed headless path every receipt-bound analyst role starts in one parallel wave; each selected v3
-  method freezes its deterministic stance before one isolated voice worker explains it; and
+  method freezes its deterministic stance before an isolated voice worker explains scored
+  decisions; frozen headless abstentions retain a deterministic explanation without another
+  call; and
   Bull/Bear run in parallel within each round with a barrier between rounds. Every selected
   analyst seat is equally mandatory. A mandatory
   evidence failure is a fail-fast barrier: persist the failure and final diagnostic artifacts,
@@ -63,9 +65,12 @@ Infer these fields rather than asking separate startup questions:
 - language: user's apparent language
 - objective: use `directional_rating` for an unambiguous buy/hold/sell or “worth buying”
   request; otherwise choose the matching supported objective only when the request is explicit
-- holding horizon: map an explicit period to the supported enum; “hold for one year” is `1_year`
+- holding horizon: map an explicit period to the supported enum; “hold for one year” is `1_year`.
+  For an unambiguous directional-rating request without a period, propose `1_year` and show
+  “12 months (default)” in the setup for confirmation. Never override a stated period.
 
-Pass `objective` and `holding_horizon` together or omit both. Never guess one without the other.
+Pass `objective` and `holding_horizon` together or omit both. The disclosed 12-month default
+only applies with `directional_rating`; do not infer it for other objectives.
 The runtime may narrowly infer the exact `directional_rating + 1_year` pair from an unambiguous
 original prompt, but the returned `decision_context.source` and hash remain authoritative.
 
@@ -89,16 +94,19 @@ language. Always pass the original user request in `prompt` and the inferred lan
 can do. It does **not** create a selection session, prove that the individual catalog was
 displayed, or issue a receipt, so it never substitutes for the steps below.
 
+Claude Code, Codex, OpenCode and Grok Build use the same text fallback and confirmation.
+
 The gate takes three decisions in ONE interaction: which methods sit on the bench, whether the
 analyst scope is `core` (8) or `all` (11), and which depth tier the run uses. Method selection
 and analyst scope are independent: selecting all methods never silently selects or omits analyst
 seats, and selecting all analysts never changes the method bench.
 
-**Ask the tier; never make the user type `fast` or `slow`.** `begin_council_selection` returns
+**Show the depth in the configuration; accept a numbered change without requiring enum names.** `begin_council_selection` returns
 `pace_options`, one row per tier with `hard_ceiling_minutes`,
 `configured_stage_budget_minutes`, `observed_completion_status` and what the extra time buys.
-The configured budget is not an observed completion time. Show the menu ABOVE the seat catalog
-and leave completion explicitly unvalidated until a preregistered live terminal run exists:
+The configured budget is not an observed completion time. Keep this menu available when the
+user adjusts depth, and leave completion explicitly unvalidated until a preregistered live
+terminal run exists:
 
 ```
 本次分析要跑多深？（默认 2）
@@ -111,7 +119,8 @@ and leave completion explicitly unvalidated until a preregistered live terminal 
 Pass the answer as `council_pace` to `confirm_master_selection`; it binds into the receipt, so an
 execution call may repeat it but never change it. If the request already said a speed, pass it as
 `council_pace` to `begin_council_selection`: that is a PREFILL exactly like a named master --
-highlight the row, still show the menu, still take the answer. No answer means `normal`.
+show it in the configuration and obtain the one configuration submission. If no depth was
+requested or saved, the displayed default is `normal`.
 
 Quick returns an empty `pace_options` and rejects the field: it is a smaller contract, not a
 slower one. Say that plainly if a user asks for a fast quick run.
@@ -124,29 +133,22 @@ Then take this run's method selection and the separate analyst-scope choice:
    `preselected_master_ids`; if it named a speed, pass `council_pace`. Both are prefills that
    highlight only and never confirm. When objective and horizon are unambiguous, pass the
    supported `objective` and `holding_horizon` together.
-2. Display the `pace_options` menu with both numbers per tier, then **every returned master
-   individually in the returned order**. Preserve the stable number and show `identity`,
-   `method`, `best_for` and `maturity` for every row. A school summary, preset or seat count
-   does not satisfy this step. Also display the returned advisory panel and decision context:
-   name directional contributors, non-voting risk coverage and context-only methods, and state
-   that the latter two are not directional votes.
-3. Take one submission covering all three decisions. Explicitly show `core = 8` and `all = 11`
-   for the analyst scope. The universal method fallback is a numbered text reply: one index in
-   `1..N`, any comma/space-separated combination, ranges such as `1-4` or `1..4`, or stable
-   IDs/names. Full also accepts `all`; quick requires 1-4 distinct methods and rejects `all`.
-   - **Claude Code, Codex, OpenCode and Grok Build** may use a native multi-select when it can
-     display the complete catalog without truncation.
-   - Native UI is an enhancement, never the protocol. If unavailable, print the same numbered
-     table and accept the same text grammar on every host.
-4. If the original request already named masters, or said `all` for a full run, mark those
-   entries as a prefill, but still display the complete catalog and require a submission for
-   this run. An over-limit quick prefill must be reduced by the user's submitted selection.
-   Never reuse a prior run's selection. The submission itself is confirmation; do not add a
-   second confirmation question.
-   The obsolete rule **"Skip the question entirely"** is prohibited for council runs: a
-   prefill reduces typing but never replaces this run's displayed catalog and receipt.
+2. Show returned `display_markdown` first: named methods, horizon, scope, pace and budget
+   ceiling. A `starter_pending_data` panel is a proposed starting configuration whose instrument
+   type and coverage remain unchecked; do not describe it as data-backed. Identify a previous selection as a prefill awaiting fresh confirmation. Keep the
+   complete returned catalog available on request or in an expandable section, preserving
+   `identity`, `method`, `best_for` and `maturity` for each row. Show directional contributors,
+   non-voting risk coverage and context-only methods from the returned decision context.
+3. Take one submission for the configuration. Accept “confirm” only when the displayed
+   configuration names the exact `suggested_master_ids`, analyst scope and pace. Otherwise
+   accept numbered choices, ranges, IDs/names or `all` (full only). Quick requires 1-4 distinct
+   methods. Explicitly offer `core = 8` and `all = 11` evidence seats for full. Native selection
+   UI is optional; the numbered text catalog is the universal fallback.
+4. Explicit request choices and remembered choices are prefills, never consent. Obtain this
+   run's submission, then map “confirm” to the exact displayed IDs, pace and scope. Never reuse
+   a prior receipt. The submission is confirmation; do not add a second confirmation question.
 5. Call `confirm_master_selection` with the exact `selection_id`, `catalog_hash`,
-   `display_ack: true`, the answered `council_pace` (omit to accept `normal`), the explicit
+   `display_ack: true`, the displayed/answered `council_pace`, the explicit
    `analyst_scope: "core" | "all"`, and exactly one
    of:
    - `selected_master_ids: [...]` for a native multi-select;
@@ -205,8 +207,10 @@ Use this contract when full runs through headless `analyze_symbol`:
   `completed_with_findings` results. They require explicit PM correction/acknowledgement and may
   support the one sourced downside notch under `pm_rating_rubric_v2`; they never create an
   automatic vote, weight change or rating.
-- Every selected physical v3 seat gets an isolated explanation worker, including
-  `out_of_scope`. Require `voice_mode=first_person_public_method_simulation_v1`, the exact
+- Every scored physical v3 seat gets an isolated explanation worker. In plugin-managed
+  headless runs only, a hashed frozen `out_of_scope` record uses its deterministic explanation
+  and records `not_required_frozen_abstention`; it remains a non-vote in the full ledger.
+  Visible hosts still require every returned worker, including abstentions. Require `voice_mode=first_person_public_method_simulation_v1`, the exact
   disclosure ack, a stance-compatible `position_intent`, and all five strong first-person
   fields. The worker must use the selected method's characteristic public questions,
   vocabulary, reasoning order and failure mode; neutral third-person summary is invalid.
@@ -266,7 +270,7 @@ coverage contract, not a claim to have read the whole internet.
   unavailable or not-applicable decision-critical field makes sufficiency `insufficient`,
   prevents methods, debate and PM from starting, and cannot be repaired into a rating by prose.
 - At the evidence barrier, freeze `company_dossier.json` and its canonical SHA-256 hash. Before
-  every selected method voice (including `out_of_scope`), Bull/Bear or PM worker, the runtime
+  every dispatched method voice, Bull/Bear or PM worker, the runtime
   re-reads and re-hashes the frozen disk artifact and derives
   `operating_company_dossier_decision_projection_v1`: all packet claims, every referenced
   source, the exact 52 coverage rows, frozen acquisition outcomes/data, complete packet metrics,
@@ -457,8 +461,8 @@ Use MCP only when the user explicitly accepts background/headless execution, wan
 6. Headless MCP defaults to real `codex exec` workers. Pass `dry_run=true` only for explicit planning/self-test requests, not for a user-requested stock analysis.
 7. Do not describe MCP `codex exec` workers as visible chat subagents. They are isolated
    background processes with `status.json`, `events.jsonl`, and `all_agents.md`. Each selected
-   physical v3 method gets its own isolated voice worker after the deterministic stance is
-   frozen, but that worker is not a persistent sidebar agent and is not the named person.
+   scored physical v3 method gets its own isolated voice worker after the deterministic stance is
+   frozen (headless frozen abstentions retain deterministic explanations), but that worker is not a persistent sidebar agent and is not the named person.
 8. For full mode, any mandatory evidence failure closes the evidence barrier and terminates
    before masters, debate, and PM model calls. For quick, inspect the degraded ledger and the
    independent execution-status, evidence-coverage, and report-quality fields before handing

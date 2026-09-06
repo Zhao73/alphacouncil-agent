@@ -140,8 +140,9 @@ The four marked *no model spend* call keyless data tools and spawn no subagents.
 there** — they show real data at no cost, so you can see the shape of the thing before
 committing a fan-out. Full and quick both require a fresh method selection receipt. Model
 spend is not a fixed seat count. In plugin-managed headless mode every selected v3 seat runs
-its deterministic policy (which may return `out_of_scope`) and then one isolated voice
-worker explains that frozen result; evidence and debate seats are also model workers. The
+its deterministic policy. Scored methods then receive one isolated voice worker; hashed frozen
+`out_of_scope` results retain their deterministic explanation without another model call.
+Evidence and debate seats are also model workers. The
 voice is a recorded provisional method result, not the named person's words.
 
 ### What full headless means
@@ -156,7 +157,8 @@ eight-seat core or eleven-seat all-analyst roster and the three-round `full_v2` 
 
 - all receipt-bound evidence workers start in one parallel wave;
 - after the fail-closed evidence barrier, each selected physical v3 method freezes its
-  deterministic stance and gets one isolated voice worker that cannot alter it; a mute voice
+  deterministic stance. Scored methods get one isolated voice worker that cannot alter it;
+  hashed frozen abstentions retain their deterministic explanation. A mute voice
   process in plugin-managed headless full retains that sourced stance as a disclosed
   `deterministic_fallback`, while semantic contract failures stop before debate and PM;
 - Bull and Bear start in parallel within each of three rounds, with a barrier between rounds

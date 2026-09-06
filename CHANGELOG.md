@@ -4,6 +4,19 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.7.0] — 2026-09-06
+
+- Show one concise research setup, prefill compatible previous choices, and retain fresh per-run confirmation and the full 26-method catalog.
+- Check method eligibility, veto, scoring and tool dependencies before recommending a panel. Preserve the rating rubric and manifest-based ranking weights.
+- Use historical average annual free cash flow in the Wood cash-yield proxy, with filing lineage and an explicit observation count. Label the revenue-growth hurdle as project-authored.
+- Classify a large Simons session move as an unusual observation, never as a deployable signal. Rebuild the affected packs, fact catalog and deterministic machine simulations without granting human approval.
+- Skip redundant headless voice calls only for hashed frozen abstentions; keep every selected method in the audit ledger and preserve visible-host workers.
+- Put conclusions first, retain expandable evidence and method statements, and make the GUI open the concise handoff with search and run progress.
+- Request up to ten years of daily price history, report actual coverage and maximum observed drawdown, and reuse a one-hour cache with original observation timestamps.
+- Add the `npm run doctor` entry and update the existing transitive dependencies fast-uri (development) and qs (Work gateway).
+
+No new user-installed data client or API key is required for the existing public-data path. Moomoo REST and TradingView integrations remain unshipped pending provider access, suitable use rights and adapter validation. All 26 packs remain provisional operator lenses; these checks do not demonstrate investment performance.
+
 ## [1.6.0] — 2026-08-29
 
 ### Added

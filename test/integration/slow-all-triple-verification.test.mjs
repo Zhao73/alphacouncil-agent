@@ -1,3 +1,4 @@
+import { methodVoiceFacts } from "../helpers/method-voice-facts.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
@@ -365,6 +366,7 @@ async function runSlowAll(t, { failVerifiers = false, semanticFidelityRetry = fa
     selection_receipt: selection.selection_receipt,
     total_timeout_ms: 60 * 60 * 1000,
     grounding: {
+      ...methodVoiceFacts(AS_OF),
       gathered_at: `${AS_OF}T12:00:00Z`,
       facts_unavailable: true,
       instrument: {

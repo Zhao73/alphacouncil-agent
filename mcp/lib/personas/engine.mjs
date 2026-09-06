@@ -272,13 +272,15 @@ function evidenceSourceIds(item) {
 /**
  * Whether a frozen seat still needs a model worker to become readable.
  *
- * Every selected seat gets its isolated voice worker, including an abstaining seat. Strong
- * first-person, method-specific expression is a reader contract, not an optional cost
- * optimization. The deterministic first-person rendering remains only as an auditable
- * failure/dry-run fallback and never substitutes a generic third-person summary.
+ * Headless execution can render a frozen, non-directional abstention without a model.
+ * Visible hosts retain their existing worker handshake; scored seats always need a voice.
  */
-export function needsMethodVoiceWorker() {
-  return true;
+export function needsMethodVoiceWorker(opinion, { run } = {}) {
+  return !(run?.execution_mode === "background_codex_exec"
+    && opinion?.engine === "v3_method_runtime"
+    && opinion?.stance === "out_of_scope"
+    && typeof opinion.frozen_decision_hash === "string"
+    && opinion.frozen_decision_hash.length > 0);
 }
 
 /** Render a post-freeze, model-free opinion from the DSL result. */

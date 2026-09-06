@@ -75,6 +75,7 @@ export const CANONICAL_SOLO_TEST_FACT_CONTRACTS = Object.freeze({
   "market.change_pct": Object.freeze({ value_kind: "ratio", unit: "decimal", period: INSTANT_AS_OF }),
   "financial.return_on_equity_10y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P10Y") }),
   "financial.free_cash_flow_5y": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: duration("P5Y") }),
+  "financial.free_cash_flow_annual_average": Object.freeze({ value_kind: "monetary", unit: "currency_units", period: duration("P5Y") }),
   "financial.interest_coverage": Object.freeze({ value_kind: "ratio", unit: "multiple", period: duration(ANY_REPORTING_INTERVAL) }),
   "financial.gross_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),
   "financial.net_margin_5y": Object.freeze({ value_kind: "ratio", unit: "decimal", period: duration("P5Y") }),

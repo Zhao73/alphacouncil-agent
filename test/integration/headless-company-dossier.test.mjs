@@ -1,3 +1,4 @@
+import { methodVoiceFacts } from "../helpers/method-voice-facts.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -330,6 +331,7 @@ test("headless operating-company full council freezes one dossier after typed gr
     language: "English",
     prompt: USER_PROMPT,
     grounding: {
+      ...methodVoiceFacts(AS_OF),
       instrument: {
         symbol,
         name: "Acme Fixture Corporation",
@@ -354,7 +356,8 @@ test("headless operating-company full council freezes one dossier after typed gr
     },
     wait_for_completion: true,
     selection_receipt: selection.selection_receipt,
-    timeout_ms: 10_000,
+    // This fixture includes a second ledger-repair process; Windows startup can exhaust 10s.
+    timeout_ms: 20_000,
     synthesis_timeout_ms: 10_000,
     total_timeout_ms: TOTAL_TIMEOUT_MS,
   }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
@@ -389,7 +392,7 @@ test("headless operating-company full council freezes one dossier after typed gr
   assert.equal(dossier.coverage.covered_count, 52);
   assert.equal(dossier.coverage.sufficiency, "sufficient");
   assert.equal(dossier.input_binding_hash.startsWith("sha256:"), true);
-  assert.ok(persisted.grounding.typed_fact_pack, "the typed adapter must run before the dossier input binding freezes");
+  assert.ok(persisted.grounding.typed_fact_pack, "the typed facts must be bound before the dossier input binding freezes");
   assert.equal(
     dossier.grounding.typed_fact_pack.fact_pack_hash,
     persisted.grounding.typed_fact_pack.fact_pack_hash,

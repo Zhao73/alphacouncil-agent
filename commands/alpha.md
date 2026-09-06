@@ -47,8 +47,9 @@ is and use `market_coverage`, rather than returning nothing.
 
 Say plainly that the four marked modes call keyless data tools and spawn no subagents, so
 they cost nothing beyond this turn. Council modes can launch model workers; selected method
-seats first complete deterministically (including recorded `out_of_scope`) and, on the
-plugin-managed headless path, each selected v3 seat then gets one isolated voice worker that
+seats first complete deterministically (including recorded `out_of_scope`, which uses its
+deterministic explanation without an extra headless voice call) and, on the
+plugin-managed headless path, each scored v3 seat then gets one isolated voice worker that
 may explain but cannot change the frozen stance. This is not the named person's real speech.
 
 ## Council selection gate — mandatory for full and quick
@@ -62,37 +63,23 @@ the same in Claude Code, Codex, OpenCode and Grok Build.
    `preselected_master_ids`; if it named a speed, pass `council_pace`. Both highlight a choice
    without confirming it. For an unambiguous buy/hold/sell request with an explicit one-year
    horizon, also pass `objective:"directional_rating"` and `holding_horizon:"1_year"` together.
-2. **Ask how deep to go first**, from the returned `pace_options`. It is a three-option
-   question and the catalog is long, so it goes above the catalog. Show the persistence ceiling,
-   per-stage budget and `observed_completion_status`; never relabel configured budgets as an
-   expected duration:
-
-   ```
-   本次分析要跑多深？（默认 2）
-     1. 快速   持久化上限 15 分钟；配置分段约 14 分钟；完整完成实测：尚未验证  每证据席 4 分钟，每方法席 2 分钟，每轮辩论每侧 85 秒
-     2. 标准   持久化上限 30 分钟；配置分段约 25 分钟；完整完成实测：尚未验证  每证据席 6 分钟，每轮辩论每侧 180 秒   ← 默认
-     3. 深入   持久化上限 60 分钟；配置分段约 58 分钟；完整完成实测：尚未验证  每证据席 12 分钟，每轮辩论每侧 360 秒
-   三档都是完整评议：同样 8 个证据席、同样三轮辩论、同样 PM，只是每席能想多久不同。
-   ```
-
-   Quick returns an empty menu and rejects the field; say so rather than offering a tier.
-3. Show **every returned master individually, in the returned order and with its stable
-   number**. Each row must include `identity`, `method`, `best_for` and `maturity`; a school
-   name or a count is not a substitute for the individual catalog. Show the advisory grouping
-   into directional contributors, non-voting risk coverage and context-only methods; the latter
-   two are not votes.
-4. Ask for one submission covering both the tier and the seats. In full mode accept one number from `1..N`, combinations,
-   ranges, stable IDs/names, or `all`. In quick mode the same complete returned catalog is
-   displayed, but the submission must contain **1..4 seats** and `all` / `select_all` is
-   forbidden. A host-native multi-select is a convenience only. If it is unavailable or
-   cannot show the full catalog, use the numbered text table and plain reply on every host.
-5. If the original full-mode request already named masters or said `all`, prefill that choice but
-   **still show the full catalog and require this run's submission**. Do not silently reuse a
-   prior choice. For quick, prefill at most four named methods and ask the user to reduce an
-   oversized/`all` request to 1-4. The submitted choice is the confirmation; do not ask a
-   second confirmation.
+2. Use the returned pace prefill/default in the configuration. Keep all `pace_options`
+   available for adjustment, showing persistence ceilings, stage budgets and unvalidated
+   completion status. Quick has no pace menu. Confirm all settings in one submission.
+3. Show `display_markdown` first with the exact proposed IDs, scope, pace and horizon. Keep
+   the complete returned catalog available on request or expandable, preserving each method's
+   `identity`, `method`, `best_for` and `maturity`. Show directional contributors, non-voting risk
+   coverage and context-only methods; the latter two are not votes.
+4. Take one submission for all settings. “Confirm” means the exact displayed configuration;
+   otherwise accept `1..N`, combinations, ranges such as `1-4`, or stable IDs/names. Full
+   accepts `all`; quick accepts `1..4` methods. Explicitly show `core = 8` and `all = 11`
+   evidence seats, independently of method selection.
+   Native UI is optional; the numbered text catalog remains the universal fallback.
+5. Explicit or remembered choices are only prefills. Require this run's submission and a fresh
+   receipt. Do not add a second confirmation. For directional requests without a horizon,
+   propose and display the 12-month default; preserve any explicitly stated horizon.
 6. Call `confirm_master_selection` with the returned `selection_id`, `catalog_hash`,
-   `display_ack: true`, the answered `council_pace` (omit to accept `normal`), and exactly one
+   `display_ack: true`, the displayed/answered `council_pace`, explicit `analyst_scope`, and exactly one
    of `selected_master_ids`, `select_all: true`, or `selection`. Echo any returned
    `recommendation_hash` and `decision_context_hash` unchanged. Retain the returned one-use `selection_receipt`.
    The pace binds into it: an execution call may repeat the confirmed tier
@@ -139,7 +126,8 @@ master-selection contract.
    `council_pace` when the arguments asked for a speed: `fast` for 15 minutes, `slow` (or
    `deep`) for 60, omitted for the 30-minute default. Poll the same durable `run_id` to
    terminal. All eight mandatory evidence roles start in one wave; every selected v3 method
-   gets a frozen deterministic stance plus its own isolated voice worker; Bull/Bear run in
+   gets a frozen deterministic stance, with an isolated voice worker for scored methods
+   and a retained deterministic explanation for hashed frozen abstentions; Bull/Bear run in
    parallel within each of three rounds with a barrier between rounds; then the PM runs.
    Queueing, retries and final persistence share the selected tier's clock. At expiry the
    saved run is `incomplete`, never silently shortened or relabeled complete. This guarantees
@@ -167,7 +155,7 @@ Quick is an explicit, bounded council contract, not an automatic downgrade of fu
 visible-host orchestration. `plan_visible_run` rejects `council_mode=quick`; run it through
 plugin-managed headless `analyze_symbol` so the server can enforce the deadline.
 
-1. Complete Stage 0 with `council_mode: "quick"`; display every method returned by the selector and confirm 1-4.
+1. Complete Stage 0 with `council_mode: "quick"`; show the configuration with the complete returned catalog expandable and confirm 1-4.
 2. Call `analyze_symbol` once with the exact same prompt/language/mode and one-use receipt,
    `dry_run:false`, `wait_for_completion:false`, and optionally `total_timeout_ms` no greater
    than `600000`. Do not pass `tasks`: quick fixes and starts these four roles in parallel:

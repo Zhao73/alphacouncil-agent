@@ -18,8 +18,8 @@ Use this skill whenever `alphacouncil-agent` is invoked or when editing the plug
 Before giving a final investment answer, all gates below must be satisfied:
 
 1. Selection gate: for every full or quick council run, call `begin_council_selection` with
-   the intended `council_mode`, display every returned method with number, identity,
-   method and `best_for`, obtain this run's submission, and call
+   the intended `council_mode`, show `display_markdown` with the complete returned catalog
+   expandable (number, identity, method and `best_for`), obtain this run's submission, and call
    `confirm_master_selection` with `display_ack: true`. Full accepts 1..N/ranges/IDs/`all`;
    quick accepts only 1-4 methods and forbids `all`. Do not create a run, fetch evidence or
    spawn a worker until it returns a `selection_receipt`. Data-only `screen`, `options`,
@@ -68,8 +68,8 @@ Before giving a final investment answer, all gates below must be satisfied:
 
 | Shortcut | Required response |
 | --- | --- |
-| "The user wants a quick answer." | Use quick only when explicitly requested. Run the plugin-managed headless `quick_v1`, still display the complete returned catalog, confirm 1-4, and save the quick report. |
-| "The user already named Buffett/all." | Prefill named methods, display the complete catalog, and require this run's submission. In quick, reduce the choice to at most four; `all` is invalid. |
+| "The user wants a quick answer." | Use quick only when explicitly requested. Run the plugin-managed headless `quick_v1`, show the configuration with the complete returned catalog expandable, confirm 1-4, and save the quick report. |
+| "The user already named Buffett/all." | Prefill named methods, show the configuration and keep the complete returned catalog expandable, and require this run's submission. In quick, reduce the choice to at most four; `all` is invalid. |
 | "This host has no multi-select." | Print the numbered catalog and accept indices, ranges, or stable IDs. Accept `all` only for full; quick still requires 1-4. |
 | "The same selection ran last time." | Start a new selection; receipts are one-run and choices are never silently reused. |
 | "The section has no data." | Include the section and state the data gap. |

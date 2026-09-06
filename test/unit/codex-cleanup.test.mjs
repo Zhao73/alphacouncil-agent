@@ -72,7 +72,7 @@ test("a dry run leaves no codex temp files in the data dir", async () => {
   }
 });
 
-test("runCodex force-settles after kill grace even if a broken child never closes", async () => {
+test("runCodex force-settles after kill grace even if a broken child never closes", async (t) => {
   class NeverClosingChild extends EventEmitter {
     constructor() {
       super();
@@ -83,12 +83,30 @@ test("runCodex force-settles after kill grace even if a broken child never close
     }
   }
   const stops = [];
-  const started = Date.now();
-  const result = await runCodex("fixture", 10, () => {}, () => {}, {
+  const timers = [];
+  let clockMs = Date.now();
+  t.mock.method(Date, "now", () => clockMs);
+  t.mock.method(globalThis, "setTimeout", (callback, delay) => {
+    const timer = { callback, delay };
+    timers.push(timer);
+    return timer;
+  });
+  t.mock.method(globalThis, "clearTimeout", () => {});
+  const resultPromise = runCodex("fixture", 10, () => {}, () => {}, {
     spawn: () => new NeverClosingChild(),
     stopChild: (_child, force = false) => stops.push(force ? "KILL" : "TERM"),
     sigkillGraceMs: 15,
   });
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].delay, 10);
+  clockMs += 10;
+  timers.shift().callback();
+  assert.deepEqual(stops, ["TERM"]);
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].delay, 15);
+  clockMs += 15;
+  timers.shift().callback();
+  const result = await resultPromise;
   assert.equal(result.ok, false);
   assert.equal(result.timedOut, true);
   assert.equal(result.forced_settle, true);
@@ -101,7 +119,7 @@ test("runCodex force-settles after kill grace even if a broken child never close
     result.timing.elapsed_ms,
   );
   assert.deepEqual(stops, ["TERM", "KILL"]);
-  assert.ok(Date.now() - started < 250, "forced settlement must not wait for a close event");
+  assert.equal(timers.length, 0);
 });
 
 test("runCodex re-clamps its timer after spawn so settlement fits an absolute deadline", async (t) => {

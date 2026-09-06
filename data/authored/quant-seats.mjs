@@ -302,7 +302,7 @@ export const quantSeats = Object.freeze({
     bands: [
       { min_ratio: 0, common_stance: "opposed", native_state: "no_signal" },
       { min_ratio: 0.5, common_stance: "cautious", native_state: "research_candidate" },
-      { min_ratio: 1, common_stance: "constructive", native_state: "deployable_signal" },
+      { min_ratio: 1, common_stance: "cautious", native_state: "unusual_session_move" },
     ],
   },
 

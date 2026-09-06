@@ -67,11 +67,11 @@ test("each pace sets its own budget and records which tier produced the run", as
   }
 });
 
-test("an omitted pace is the 30-minute default", async () => {
+test("an omitted pace prefills the last confirmed depth", async () => {
   const { response } = await plan();
   const result = structured(response);
-  assert.equal(result.run.council_pace, "normal");
-  assert.equal(result.run.time_budget_ms, 30 * 60 * 1000);
+  assert.equal(result.run.council_pace, "slow");
+  assert.equal(result.run.time_budget_ms, 60 * 60 * 1000);
 });
 
 test("a caller may lower its pace's budget but never exceed it", async () => {

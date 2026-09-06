@@ -117,7 +117,7 @@ export function statusSnapshot(run) {
     master_worker_contract: evidenceOnly
       ? "not_requested_evidence_only"
       : run.execution_mode === "background_codex_exec"
-      ? "one_isolated_worker_per_selected_method_v1"
+      ? "isolated_voice_except_frozen_abstention_v2"
       : run.execution_mode === "dry_run"
         ? "planned_not_executed"
         : "host_managed_not_plugin_enforced",

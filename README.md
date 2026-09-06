@@ -34,6 +34,8 @@
 
 </div>
 
+**v1.7:** concise setup with remembered choices, conclusions first, expanded daily history and full method-dependency checks. Fresh confirmation is still required. [Upgrade details and data-source boundaries](docs/releases/v1.7.0.md).
+
 <!-- readme-section:demo -->
 <div align="center">
 

@@ -30,12 +30,12 @@
   "formal_h_satisfied": false,
   "human_reference": false,
   "input_binding": {
-    "input_hash": "sha256:a51146623a449cc2d2835d0845e11f205e4c7ed1dc9a4ed62fa1e932cb225300",
+    "input_hash": "sha256:740dbacce89f927470c5a99c13eaeb0e997b450a5573a011952c403fcc1337d2",
     "path": "simulation-input.json"
   },
   "network_allowed": false,
   "production_effect": "none",
-  "result_hash": "sha256:0bde4805f3e5af669b1e81f3f3f9b4152c13187c1fcfda605384f063b0374a1d",
+  "result_hash": "sha256:76e5f0b0a42f62e5095d9834c24739147bdcd04c9d8e04a8a52893442d6fe251",
   "results": {
     "blocked_fail_closed_count": 0,
     "completion_status": "completed_machine_simulation",
@@ -83,18 +83,18 @@
         "structured_decision_hash": "sha256:2025c6804412219f0761dee17d56f95547d66a4abcb02fa297286e3d5a45b1a7"
       },
       {
-        "anonymous_method_hash": "sha256:0d7fa07b6def0750cda6651300d8c5aba6030f37f353074cca66dfe941665531",
-        "deterministic_core_hash": "sha256:be3db2a665b0a79ebb7da975f7656efe56a650ff0a845ce4d221bf1a03fdf468",
-        "fact_pack_hash": "sha256:5e202cc3175eb5627e5e2385fee3639e7cd48ff9ace84ef0e8b809b0335fd3e5",
-        "frozen_decision_hash": "sha256:45a1947bac272882d7e4e31a0022d8573b3a33dcf9f7041df9f6b211703e1d8f",
+        "anonymous_method_hash": "sha256:a066358a356bb2e3a88063b9f38418b1dc970a732cd42a413b413de21ab44882",
+        "deterministic_core_hash": "sha256:79c435839978dfd64ef4b91b044b4653f47b4d939920bbf9e6930439b5338bf7",
+        "fact_pack_hash": "sha256:e05f2bc7eefedb9b9ff70d2f9c4fe340a888b91df65084dc5200b33e43bd2dc3",
+        "frozen_decision_hash": "sha256:143eb2f29a84d59ecbc4f0f47d4358097a01f84c3523c6ef08cf8e01b70dcaaf",
         "native_state": "provisional_watch",
-        "pack_hash": "sha256:dbc59e2537edffdf164829ad37d640b315057b2626b0a225e6338986d59b500e",
+        "pack_hash": "sha256:79e1e479d92e3612dab832462e7feaad932875c0dc42ad172c13c64eb5937bbc",
         "persona_id": "master_cathie_wood",
-        "policy_execution_hash": "sha256:022f5abcf5e48fbbe2dd36b9affc578c4f864c293c4b0e87113dbb1995ef333f",
+        "policy_execution_hash": "sha256:0049d48a7a7eaa5aad7977f1ee9d099266c9cafc51ee0fe13a85721461f3a41e",
         "score_ratio": 0.5,
         "stance": "cautious",
         "status": "executed",
-        "structured_decision_hash": "sha256:d3c1f698d674e313f3dbfbab69aa76a40517a5eab2e553b3a01e97e51bc5e391"
+        "structured_decision_hash": "sha256:1a638990d62bd0698c34dbc96eef14692ce094471745f12eba791c1c72697d20"
       },
       {
         "anonymous_method_hash": "sha256:d481f06c30ee5bf4bba0e66dc613fe98c7a482d8e0bcbf6babe2dacf263006ee",
@@ -234,7 +234,7 @@
     "verifier_checks": []
   },
   "reviewer_kind": "ai",
-  "run_artifact_hash": "sha256:6e33d63cafc7c5d63fc5f842ec85448e92610c11afc5c18675e89e227ff819cc",
+  "run_artifact_hash": "sha256:ea0d6f111301c9d12f012d36bef0d99b8bbb0de020541d918b263477bc27e07b",
   "run_id": "D13",
   "schema_version": 1,
   "simulation_scope": "13 physical provisional deterministic seats on frozen synthetic typed facts"

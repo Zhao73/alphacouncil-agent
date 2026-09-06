@@ -1,7 +1,7 @@
 import { canonicalValue, sha256 } from "./canonical.mjs";
 
 export const UNSOURCED_AI_PROPOSAL = "unsourced_ai_proposal";
-export const POLICY_NUMERIC_BASELINE_HASH = "sha256:74ada6c069d56edf1a2051ceeef543159a178a09d69d3caa18f6413581de13ba";
+export const POLICY_NUMERIC_BASELINE_HASH = "sha256:7d2db62dd091718a6cae501f52e5489bde798736378159aac1911f128c543990";
 
 const HASH = /^sha256:[a-f0-9]{64}$/u;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/u;

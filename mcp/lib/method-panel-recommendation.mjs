@@ -13,6 +13,7 @@ import { join } from "node:path";
 
 import { canonicalValue, sha256 } from "./personas-v3/canonical.mjs";
 import { registry } from "./personas/registry.mjs";
+import { factsInCondition } from "./voice-from-decision.mjs";
 
 const MANIFEST_ROOT = fileURLToPath(new URL("../../knowledge/solo-test/masters/", import.meta.url));
 const CALIBRATION_FILE = fileURLToPath(new URL("../../data/method-panel-calibration.v2.json", import.meta.url));
@@ -92,7 +93,17 @@ function loadCapabilities() {
       const masterId = manifest?.identity?.persona_id;
       if (masterId !== entry.name) throw new Error(`method capability manifest identity mismatch: ${entry.name}`);
       const domains = [...new Set(manifest?.capability?.domains || [])].sort();
-      const requiredFacts = [...new Set(manifest?.capability?.required_fact_types || [])].sort();
+      const packDir = join(MANIFEST_ROOT, entry.name);
+      const policy = JSON.parse(readFileSync(join(packDir, manifest.components.decision_policy), "utf8"));
+      const toolFacts = JSON.parse(readFileSync(join(packDir, manifest.components.tools), "utf8"))
+        .flatMap((tool) => factsInCondition(tool.inputs));
+      const requiredFacts = [...new Set([
+        ...manifest.capability.required_fact_types,
+        ...factsInCondition(policy.eligibility),
+        ...factsInCondition(policy.hard_vetoes),
+        ...factsInCondition(policy.scoring),
+        ...toolFacts,
+      ])].sort();
       if (!domains.length || !requiredFacts.length) {
         throw new Error(`method capability manifest is incomplete: ${masterId}`);
       }
@@ -100,6 +111,7 @@ function loadCapabilities() {
         master_id: masterId,
         domains,
         required_fact_types: requiredFacts,
+        ranking_fact_types: [...new Set(manifest.capability.required_fact_types)].sort(),
         best_for: manifest?.selection?.best_for?.en || "",
       });
     });
@@ -363,7 +375,8 @@ function familyScore(capability, familyId, facts, classification) {
   if (!matchedDomains.length) return null;
   const coveredFacts = capability.required_fact_types.filter((factId) => facts.includes(factId));
   const missingFacts = capability.required_fact_types.filter((factId) => !facts.includes(factId));
-  let score = matchedDomains.length * 100 + coveredFacts.length * 12 - missingFacts.length * 3;
+  const rankingCoverage = capability.ranking_fact_types.filter((factId) => facts.includes(factId));
+  let score = matchedDomains.length * 100 + rankingCoverage.length * 12 - missingFacts.length * 3;
   if ((classification.asset_type === "etf" || classification.asset_type === "index")
     && capability.domains.some((domain) => ["index_funds", "exchange_traded_funds"].includes(domain))) {
     score += 250;

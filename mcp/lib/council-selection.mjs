@@ -25,6 +25,11 @@ import { PM_RATING_HORIZON_MONTHS, PM_RATING_RUBRIC_ID } from "./pm-rating-rubri
 const SELECTION_ID = /^SEL-[0-9a-f-]{36}$/i;
 const RECEIPT_ID = /^RCP-[0-9a-f-]{36}$/i;
 const QUICK_MASTER_MAX = 4;
+// A disclosed starting configuration, not a data-backed recommendation or an optimal panel.
+const STARTER_METHOD_IDS = Object.freeze([
+  "master_buffett", "master_graham", "master_dalio", "master_asness",
+  "master_forensic_short", "master_lynch", "master_marks", "master_ackman",
+]);
 const LEGACY_SELECTION_HASH_VERSION = 1;
 const PACE_SELECTION_HASH_VERSION = 2;
 const ANALYST_SELECTION_HASH_VERSION = 3;
@@ -46,6 +51,10 @@ const METHOD_RISK_ROLES = Object.freeze(new Set([
 
 function digest(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function preferencePath(symbol, mode, language) {
+  return join(SELECTIONS_DIR, `preference-${digest({ symbol, mode, language })}.json`);
 }
 
 function sameJson(left, right) {
@@ -571,11 +580,12 @@ export function councilPaceMenu(mode = "full") {
       observed_completion_minutes: null,
       observed_completion_status: "not_validated",
       evidence_seconds_per_seat: Math.round(profile.evidence_ms / 1000),
+      method_seconds_per_seat: Math.round(profile.master_ms / 1000),
       debate_seconds_per_round: Math.round(profile.debate_ms / 1000),
       // Same contract at every tier: this is what changes and what does not.
       buys: {
-        en: `${Math.round(profile.evidence_ms / 60000 * 10) / 10} min per evidence seat, ${Math.round(profile.debate_ms / 1000)}s per debate round per side`,
-        zh: `每个证据席 ${Math.round(profile.evidence_ms / 60000 * 10) / 10} 分钟，每轮辩论每侧 ${Math.round(profile.debate_ms / 1000)} 秒`,
+        en: `${Math.round(profile.evidence_ms / 60000 * 10) / 10} min per evidence seat, ${Math.round(profile.master_ms / 1000)}s per method, ${Math.round(profile.debate_ms / 1000)}s per debate round per side`,
+        zh: `每个证据席 ${Math.round(profile.evidence_ms / 60000 * 10) / 10} 分钟，每个方法席 ${Math.round(profile.master_ms / 1000)} 秒，每轮辩论每侧 ${Math.round(profile.debate_ms / 1000)} 秒`,
       },
     };
   });
@@ -608,12 +618,25 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
   const hashVersion = boundDecisionContextHash
     ? CALIBRATED_SELECTION_HASH_VERSION
     : recommendationHash ? RECOMMENDATION_SELECTION_HASH_VERSION : ANALYST_SELECTION_HASH_VERSION;
+  let previous = null;
+  try {
+    const saved = readJson(preferencePath(symbol, mode, language));
+    if (saved.catalog_hash === catalog.catalog_hash
+      && saved.objective === (calibration?.objective || null)
+      && saved.holding_horizon === (calibration?.holding_horizon || null)
+      && Array.isArray(saved.selected_master_ids)
+      && saved.selected_master_ids.length > 0
+      && new Set(saved.selected_master_ids).size === saved.selected_master_ids.length
+      && saved.selected_master_ids.every((id) => catalog.all_master_ids.includes(id))
+      && (mode !== "quick" || saved.selected_master_ids.length <= QUICK_MASTER_MAX)
+      && (mode === "quick" || (ANALYST_SCOPES.includes(saved.analyst_scope) && COUNCIL_PACE_NAMES.includes(saved.council_pace)))) previous = saved;
+  } catch { /* Preferences are optional; a missing or damaged file cannot prevent selection. */ }
   const preselected = args.preselected_master_ids === undefined
-    ? []
+    ? previous?.selected_master_ids || []
     : normalizeExplicit(args.preselected_master_ids, catalog.all_master_ids);
   const preselectedAnalystScope = ANALYST_SCOPES.includes(String(args.analyst_scope || ""))
     ? String(args.analyst_scope)
-    : null;
+    : previous?.analyst_scope || null;
   const selectionId = `SEL-${randomUUID()}`;
   const createdAt = new Date(now).toISOString();
   const expiresAt = new Date(now + LIMITS.SELECTION_TTL_MS).toISOString();
@@ -651,7 +674,7 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     selected_analyst_ids: mode === "quick" ? [...QUICK_TASKS] : [],
     // A pace named in the request is a prefill, exactly like a named master: it highlights the
     // row and never confirms it. The confirmed value lands here at confirm time.
-    preselected_council_pace: COUNCIL_PACE_NAMES.includes(String(args.council_pace || "")) ? String(args.council_pace) : null,
+    preselected_council_pace: COUNCIL_PACE_NAMES.includes(String(args.council_pace || "")) ? String(args.council_pace) : previous?.council_pace || null,
     council_pace: null,
     selection_receipt: null,
     created_at: createdAt,
@@ -682,6 +705,14 @@ export function beginCouncilSelection(args = {}, { now = Date.now() } = {}) {
     masters: catalog.masters,
     master_rosters: catalog.master_rosters,
     preselected_master_ids: preselected,
+    preselection_source: args.preselected_master_ids !== undefined ? "request" : previous ? "previous_confirmation" : "none",
+    suggestion_basis: preselected.length ? "prefill"
+      : methodPanelRecommendation.status === "not_evaluable" && !args.instrument_classification && !args.typed_fact_coverage
+        ? "starter_pending_data" : "available_typed_facts",
+    suggested_master_ids: preselected.length ? preselected
+      : (methodPanelRecommendation.status === "not_evaluable" && !args.instrument_classification && !args.typed_fact_coverage
+        ? STARTER_METHOD_IDS.filter((id) => catalog.all_master_ids.includes(id))
+        : methodPanelRecommendation.included_master_ids).slice(0, mode === "quick" ? QUICK_MASTER_MAX : 8),
     analyst_options: analystScopeMenu(catalog, mode),
     preselected_analyst_scope: record.preselected_analyst_scope,
     // Ask the pace in the same interaction as the catalog: two decisions, one question. Quick
@@ -991,6 +1022,16 @@ function confirmCouncilSelectionUnlocked(args = {}, options = {}) {
   const writeTransactionJson = transactionWriter(options);
   writeTransactionJson(selectionPath(record.selection_id), record);
   writeTransactionJson(receiptPath(receipt), receiptRecord);
+  try {
+    writeJson(preferencePath(record.symbol, record.council_mode, record.language), {
+      catalog_hash: record.catalog_hash,
+      selected_master_ids: record.selected_master_ids,
+      analyst_scope: record.analyst_scope,
+      council_pace: record.council_pace,
+      objective: record.decision_context?.objective || null,
+      holding_horizon: record.decision_context?.holding_horizon || null,
+    });
+  } catch { /* A preference write must not invalidate an already committed one-use receipt. */ }
   return confirmationResult(record);
 }
 

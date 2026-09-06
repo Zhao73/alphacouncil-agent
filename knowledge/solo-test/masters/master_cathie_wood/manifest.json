@@ -28,7 +28,7 @@
     "required_fact_types": [
       "market.price",
       "capital_allocation.share_count",
-      "financial.free_cash_flow_5y"
+      "financial.free_cash_flow_annual_average"
     ]
   },
   "components": {
@@ -60,7 +60,7 @@
     "eligibility": [
       "market.price",
       "capital_allocation.share_count",
-      "financial.free_cash_flow_5y"
+      "financial.free_cash_flow_annual_average"
     ],
     "hard_vetoes": [
       "master_cathie_wood.adoption_already_priced"

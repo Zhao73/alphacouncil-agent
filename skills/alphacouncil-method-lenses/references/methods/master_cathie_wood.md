@@ -4,7 +4,7 @@
 - Reference status: `method_reference_provisional`
 - Runtime maturity: `operator_lens`
 - Assurance: `provisional_derived_proxy`
-- Pack snapshot hash: `sha256:c2fe6e700778740c307b0799e6f3375283dd09b13d8d385879df136973e90341`
+- Pack snapshot hash: `sha256:e340d1ddd443422ddbe89287e9bdcfc89e7d6b8e5e29a6a4418fce75923e16bd`
 - Required voice mode: `first_person_public_method_simulation_v1`
 - Required disclosure acknowledgement: `alphacouncil.first_person_public_method_simulation.v1`
 - Required disclosure: first-person public-method simulation; the word `I` refers only to the project method simulation, not the named person's identity, quotation, endorsement, current view, holding, or private information.
@@ -46,7 +46,7 @@ Make the complete evidence pack available, then prioritize these declared fact t
 
 - `market.price`
 - `capital_allocation.share_count`
-- `financial.free_cash_flow_5y`
+- `financial.free_cash_flow_annual_average`
 - `valuation.revenue_growth`
 - `macro.long_bond_yield`
 - `technology.cost_curve`
@@ -117,7 +117,7 @@ These are project-derived, machine-reviewed hypotheses. They are not approved at
   {
     "assurance_class": "provisional_derived_proxy",
     "attribution_status": "provisional_not_human_reviewed",
-    "claim": "How much of the price today's cash already pays for. Everything above this yield is adoption the market has bought in advance, which is the only form of a price-implied expectation these facts can produce.",
+    "claim": "Average annual free cash flow over the disclosed five-year history divided by current market capitalisation. The adapter divides the cumulative cash flow by the actual annual observation count. This is a historical annual cash yield, not current TTM cash flow or a forecast of investment return.",
     "rule_id": "proxy_rule_3",
     "source_ids": [
       "proxy:fee6f8a0c78b363b9"
@@ -206,8 +206,8 @@ Numeric thresholds or transformations below belong to the current project proxy 
 [
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:76ccd7cc3160b98ae243173fa2b69bb844bb88982c41c19e0e822fb1be31252c",
-    "derivation_spec_hash": "sha256:f5df869d94026c7ad00d26d8c3c23bd433c77b9a945142d927a617ad11ee9945",
+    "derivation_evidence_hash": "sha256:fe98b72cc2ff93949ebda5f47385bdb896357ee257d65bdb28f79b8d2be29b28",
+    "derivation_spec_hash": "sha256:daf6e37e7db90813a3f28c019e560c4cf3fefce81440ca9facfda9010a5f4e13",
     "derivation_spec_id": "master_cathie_wood.market_capitalisation.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_cathie_wood.market_capitalisation",
@@ -233,7 +233,7 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "value_kind": "count"
       }
     ],
-    "input_schema_hash": "sha256:d1b1dfcf1cf820e3e128c015c11bea9fc56a829cb5b51620c3d0697c824cfa69",
+    "input_schema_hash": "sha256:c0413e2f632412f009edea769f296f9921503644caa4c7a3c667599db6e656d2",
     "inputs": [
       {
         "fact_id": "market.price"
@@ -252,7 +252,7 @@ Numeric thresholds or transformations below belong to the current project proxy 
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:46ac08b21ec0c3f9f8c06d34ec72b6cfc94bcdf0fc70230e0fb3ec95f87b9840",
+    "output_schema_hash": "sha256:d2cbb2c4c896178a7db2353028ac40798ba7a2f9ff5bc9c75174c1354cda8596",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -265,8 +265,8 @@ Numeric thresholds or transformations below belong to the current project proxy 
   },
   {
     "assurance_class": "provisional_derived_proxy",
-    "derivation_evidence_hash": "sha256:c12017aaf43e2314b646db263922462392e7c4c51b68808ac0802e5a1cab52e7",
-    "derivation_spec_hash": "sha256:60c95955604fde2ba596e5a34b9ab6857835ebfc5cacdc02dfd23b8af954a26f",
+    "derivation_evidence_hash": "sha256:cb5ff1604b19edf279172104b6b54208fab58c1847b1f9de26bf29f8b5e767e5",
+    "derivation_spec_hash": "sha256:c7a62299322fcfac9e9b35304469823d7c851d349198f3f6f49404c3aede097d",
     "derivation_spec_id": "master_cathie_wood.current_cash_yield.prototype_v1.derived_proxy_v1",
     "dsl_version": "1.1",
     "id": "master_cathie_wood.current_cash_yield",
@@ -292,10 +292,10 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "value_kind": "monetary"
       }
     ],
-    "input_schema_hash": "sha256:13fc83bcede496eb525cf9d2135f845584fabf18db2a8d182463bb9b5e599d5b",
+    "input_schema_hash": "sha256:a2d907233ef117254cfa436f58d801ba0b95b719f57b03bab860f5dccd7480f3",
     "inputs": [
       {
-        "fact_id": "financial.free_cash_flow_5y"
+        "fact_id": "financial.free_cash_flow_annual_average"
       },
       {
         "output_id": "valuation.market_capitalisation.master_cathie_wood"
@@ -311,7 +311,7 @@ Numeric thresholds or transformations below belong to the current project proxy 
       "basis": "instant",
       "window": null
     },
-    "output_schema_hash": "sha256:c6674afb680a3c6cf6fddc771b18a8d3faeb054b4b69ac23b138447ecc381b4f",
+    "output_schema_hash": "sha256:307f0c6174d1dc4d11aa4ea8d76e794e1fdd18a9616b1daf1680f915e398bba0",
     "production_eligible": false,
     "review_status": "not_human_reviewed",
     "schema_version": 1,
@@ -491,7 +491,7 @@ Numeric thresholds or transformations below belong to the current project proxy 
         "provenance": {
           "status": "unsourced_ai_proposal"
         },
-        "rule_id": "wood_growth_clears_the_published_hurdle",
+        "rule_id": "wood_growth_clears_the_project_revenue_hurdle",
         "source_ids": [
           "proxy:fee6f8a0c78b363b9"
         ]
@@ -552,7 +552,7 @@ A listed finding blocks the affected comparison from being presented as an appro
         "status": "pending"
       },
       "author": "AlphaCouncil project build specification",
-      "content_hash": "sha256:e23c842d4494c463a5afcc931cd3753690b8437b0af4b2eeb5d7815a24c811f1",
+      "content_hash": "sha256:6083f77da250925da993045f6d4df43f81dacd5e21a030f8b2eef592d23b27a1",
       "grade": "E",
       "known_at": "2026-07-27",
       "locator": {

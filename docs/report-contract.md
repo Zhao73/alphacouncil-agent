@@ -603,8 +603,10 @@ The execution topology is:
    single downside notch allowed by `pm_rating_rubric_v2`; no verifier creates an automatic
    negative vote or mechanical rating change. Legacy diagnostic weights remain audit metadata;
 3. after the evidence and applicable verification barriers, every selected physical v3 method runs its deterministic
-   policy and freezes a stance, then receives one isolated voice worker that can explain but
-   cannot change that stance;
+   policy and freezes a stance. Scored methods receive one isolated voice worker that can
+   explain but cannot change that stance. A headless frozen `out_of_scope` record instead
+   retains its deterministic explanation with `not_required_frozen_abstention`; it is recorded
+   in the complete method ledger and never becomes a negative vote;
 4. Bull and Bear start together within each of three rounds, with a barrier before the next
    round; the PM starts only after both Round-3 outputs pass exact Q&A validation;
 5. deterministic assembly and persistence consume the same global clock.
@@ -809,3 +811,31 @@ The handoff gate independently requires one begin/end ledger marker, the end mar
 last non-whitespace content, exactly one ordered seat marker for every selected stable ID, and
 the full original `voice_statement` inside each speaking block. A non-speaking block passes
 only with `statement_status=not_produced`; it remains incomplete at the execution gate.
+
+
+## v1.7 Setup and reading defaults
+
+Stage 0 shows the compact `display_markdown` configuration first and keeps the full ordered
+26-method catalog expandable or available on request. A previous confirmed choice may prefill
+the same instrument, mode, language, objective and horizon when the catalog identity still
+matches; it never reuses consent or a receipt. An explicit request overrides a saved prefill.
+One submission confirms the displayed methods, pace and evidence scope. For an unambiguous
+directional request with no horizon, the host proposes a disclosed 12-month default. Explicit
+horizons remain authoritative. Recommendation admission checks manifest, eligibility, veto,
+scoring and tool input dependencies; ranking still uses the declared manifest capability.
+
+`user_response.md` puts rating, confidence, rationale, price, valuation, position, gaps and
+invalidation conditions first. Detailed analyst evidence and the complete selected-method
+ledger use expandable sections; the ordered method markers and final END marker remain
+mandatory. The GUI opens this handoff first and exposes run phase and recorded seat counts.
+
+Daily history requests up to ten years and caches successful symbol histories for one hour.
+Cache hits preserve the original observation timestamp and apply the requested date cutoff.
+Actual coverage and maximum observed drawdown are disclosed. Today's adjusted history does
+not establish what data was available on a historical date.
+
+When neither instrument classification nor coverage is supplied, Stage 0 proposes a labelled
+`starter_pending_data` configuration (eight methods in full, four in quick). It is not a
+data-backed recommendation: the advisory recommendation remains `not_evaluable`, and actual
+method applicability is checked after evidence arrives. Explicit, remembered or data-supported
+choices take precedence. The starting size is a usability choice, not a validated optimum.

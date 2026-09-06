@@ -654,7 +654,10 @@ function substituteExecutionNotes(run) {
   const notes = [];
   const opinions = new Map((run.master_opinions || []).map((opinion) => [opinion?.master, opinion]));
   for (const master of run.masters || []) {
-    const voiceStatus = opinions.get(master)?.voice_status || run.master_status?.[master]?.voice_status;
+    const opinion = opinions.get(master);
+    const voiceStatus = opinion?.voice_status || run.master_status?.[master]?.voice_status;
+    if (voiceStatus === "deterministic_only" && !needsMethodVoiceWorker(opinion, { run })
+      && opinion.dedicated_worker?.status === "not_required_frozen_abstention") continue;
     if (["deterministic_fallback", "deterministic_only"].includes(voiceStatus)) {
       notes.push({ stage: "methods", id: master, reason: voiceStatus });
     }
@@ -4998,7 +5001,8 @@ function commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected }) {
     engine: outcome.opinion.engine || outcome.engine,
     worker_kind: outcome.opinion.dedicated_worker?.execution_mode === "dry_run"
       ? "dedicated_method_voice_dry_run"
-      : "dedicated_method_worker",
+      : outcome.opinion.dedicated_worker?.status === "not_required_frozen_abstention"
+        ? "deterministic_abstention" : "dedicated_method_worker",
     worker_pid: outcome.opinion.dedicated_worker?.pid || null,
     voice_status: outcome.opinion.voice_status || "model_voice",
     ...(outcome.opinion.company_dossier_hash_ack
@@ -5082,10 +5086,39 @@ export async function runHeadlessMasters(run, args = {}) {
     })),
     ...plan.to_run,
   ];
-  // Compatibility branch for policies that explicitly waive a voice worker. Current v3 seats
-  // require a dedicated voice even when the frozen stance is out_of_scope.
+  const sourceVerifiedItems = [];
+  for (const item of workerItems) {
+    if (!item.frozenOpinion) {
+      sourceVerifiedItems.push(item);
+      continue;
+    }
+    try {
+      assertSourceIdsResolve(run, item.frozenOpinion.source_ids, item.id, {
+        allowEmpty: item.frozenOpinion.stance === "out_of_scope",
+      });
+      sourceVerifiedItems.push(item);
+    } catch (error) {
+      const failureKind = outputFailureKind(error);
+      commitHeadlessMasterOutcome(run, {
+        id: item.id,
+        engine: item.engine,
+        error: failureKind,
+        attempts: 0,
+        failure_stage: "frozen_source_preflight",
+        diagnostic: masterAttemptFailureDiagnostic({
+          master: item.id,
+          attempt: 0,
+          failureKind,
+          error,
+          stage: "frozen_source_preflight",
+        }),
+      }, { dir, byId, selected });
+    }
+  }
+
+  // Frozen headless abstentions retain their full deterministic explanation without a model call.
   const abstainedWithoutWorker = [];
-  const votingWorkerItems = workerItems.filter((item) => {
+  const votingWorkerItems = sourceVerifiedItems.filter((item) => {
     if (!item.frozenOpinion || needsMethodVoiceWorker(item.frozenOpinion, { run })) return true;
     abstainedWithoutWorker.push(item);
     return false;
@@ -5117,37 +5150,7 @@ export async function runHeadlessMasters(run, args = {}) {
     commitHeadlessMasterOutcome(run, outcome, { dir, byId, selected });
   }
 
-  const runnableVotingItems = [];
-  for (const item of votingWorkerItems) {
-    if (!item.frozenOpinion) {
-      runnableVotingItems.push(item);
-      continue;
-    }
-    try {
-      assertSourceIdsResolve(run, item.frozenOpinion.source_ids, item.id, {
-        allowEmpty: item.frozenOpinion.stance === "out_of_scope",
-      });
-      runnableVotingItems.push(item);
-    } catch (error) {
-      const failureKind = outputFailureKind(error);
-      commitHeadlessMasterOutcome(run, {
-        id: item.id,
-        engine: item.engine,
-        error: failureKind,
-        attempts: 0,
-        failure_stage: "frozen_source_preflight",
-        diagnostic: masterAttemptFailureDiagnostic({
-          master: item.id,
-          attempt: 0,
-          failureKind,
-          error,
-          stage: "frozen_source_preflight",
-        }),
-      }, { dir, byId, selected });
-    }
-  }
-
-  await mapLimit(runnableVotingItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
+  await mapLimit(votingWorkerItems, maxConcurrency, async ({ id, decision, engine, frozenOpinion, deterministic_decline, deterministic_execution }) => {
     const outcome = await (async () => {
     const prompt = frozenOpinion
       ? headlessMethodVoicePrompt(id, run, frozenOpinion)

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
+import { typedFactPackFromGrounding } from "../../mcp/lib/personas-v3/grounding-adapter.mjs";
 import { buildFactPack } from "../../mcp/lib/personas-v3/typed-facts.mjs";
 import { loadCompiledPersonaPacks } from "../../mcp/lib/personas-v3/registry.mjs";
 import { technicalIdReadableMap } from "../../mcp/lib/personas-v3/runtime.mjs";
@@ -160,4 +161,28 @@ test("every frozen seat, including an abstention, gets a method-specific voice w
   const basket = { grounding: { instrument: { asset_type: "index", index_like: true } } };
   assert.equal(needsMethodVoiceWorker(opinion, { env: {}, run: basket }), true);
   assert.equal(needsMethodVoiceWorker(opinion, { env: { ALPHACOUNCIL_VOICE_ABSTAINING_SEATS: "0" }, run: basket }), true);
+  const headless = { run: { execution_mode: "background_codex_exec" } };
+  assert.equal(needsMethodVoiceWorker(opinion, headless), false);
+  assert.equal(needsMethodVoiceWorker(voted, headless), true);
+  assert.equal(needsMethodVoiceWorker({ ...opinion, frozen_decision_hash: null }, headless), true);
+  assert.equal(needsMethodVoiceWorker({ ...opinion, engine: "legacy" }, headless), true);
+});
+
+test("a large positive or negative session move never becomes a deployable Simons signal", () => {
+  for (const move of [-0.3, 0.3]) {
+    const run = {
+      symbol: "TEST", as_of: AS_OF, language: "English",
+      grounding: { typed_fact_pack: typedFactPackFromGrounding({
+        gathered_at: `${AS_OF}T12:00:00Z`,
+        quote: { symbol: "TEST", price: 100, change_pct: move * 100, source: "yahoo", quote_time: `${AS_OF}T11:00:00Z` },
+        options: { symbol: "TEST", source: "CBOE", chain_timestamp: `${AS_OF}T11:00:00Z`, reference_expiry: { atm_iv: 0.2 }, skew_25delta: { put_minus_call: 0.01 } },
+      }, { asOf: AS_OF }) },
+    };
+    const plan = planMasterSeats(run, ["master_simons"], { v3Registry: soloTestRegistry() });
+    assert.equal(plan.completed.length, 1);
+    const opinion = completedMasterOpinion(run, plan.completed[0]);
+    assert.equal(opinion.stance, "cautious");
+    assert.match(JSON.stringify(opinion), /unusual_session_move/);
+    assert.doesNotMatch(JSON.stringify(opinion), /deployable_signal/);
+  }
 });

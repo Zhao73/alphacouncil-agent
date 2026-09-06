@@ -114,8 +114,8 @@ test("every host asks for methods and the independent analyst scope once before 
   for (const host of ["Claude Code", "Codex", "OpenCode", "Grok Build"]) {
     assert.ok(skill.includes(host), `the workflow must say how to ask on ${host}`);
   }
-  assert.match(stage0, /Skip the question entirely/,
-    "re-asking a user who already answered is an interruption");
+  assert.match(stage0, /submission is confirmation; do not add a second confirmation question/,
+    "one submission must authorize the displayed configuration without another prompt");
   assert.match(stage0, /core = 8.*all = 11/is,
     "the two explicit analyst choices must be shown with their exact seat counts");
   assert.match(stage0, /Never collapse.*all methods.*all analysts/is,

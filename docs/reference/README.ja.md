@@ -190,7 +190,7 @@ codex plugin add alphacouncil-agent@alphacouncil
 
 選択した段階は一度限りの `selection_receipt` に束縛されます。実行呼び出しは同じ段階を繰り返せますが**変更はできません**。15 分として承認された実行が 1 時間になることはなく、どの段階で走ったかは `status.json` に記録されます。quick に段階はありません。より小さい契約であり、遅い契約ではないからです。
 
-確定済みの 8 または 11 根拠席を 1 波で並列開始します。根拠 barrier 通過後、選択した各物理 v3 メソッドは決定論的 policy で stance を凍結し、`out_of_scope` を含む全席が stable ID 専用 voice worker を 1 つ起動します。各メソッド席は dossier 全体ハッシュと全 packet の task/hash/status 受領確認（core は 8、all は 11）を返します。
+確定済みの 8 または 11 根拠席を 1 波で並列開始します。根拠 barrier 通過後、選択した各物理 v3 メソッドは決定論的 policy で stance を凍結します。採点済みの席は stable ID 専用 voice worker を 1 つ起動し、凍結ハッシュを持つ `out_of_scope` 席は決定論的説明を保持して追加のモデル呼び出しを省きます。各メソッド worker は dossier 全体ハッシュと全 packet の task/hash/status 受領確認（core は 8、all は 11）を返します。
 
 期限に達した場合は `incomplete` の終端状態を保存し、timeout・失敗・skip の全席を明示します。段階の上限が保証するのは監査可能な終端保存であり、検索・モデル transport・データ提供元の悪化時にも全席成功するという意味ではありません。visible-host の `plan_visible_run` は外部ホストが管理するため、プラグインはそのサブエージェントを強制停止できず、**時間の保証を一切持ちません**。
 
