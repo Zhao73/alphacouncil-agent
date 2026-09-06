@@ -4,6 +4,12 @@ Notable changes per release. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.8.1] — 2026-09-06
+
+- Keep terminal input and its real cursor visible at 80 × 24 without scrolling the screen during typing.
+- Start terminal research from the ticker without a separate research-question field.
+- Show the repository's alpha price-trend logo on the startup language page only.
+
 ## [1.8.0] — 2026-09-06
 
 - Add a standalone terminal client with language, research question, model connection and method selection in one launch flow. Mouse and keyboard navigation open completed evidence, method statements, individual debate rounds and reports.
