@@ -356,7 +356,8 @@ test("headless operating-company full council freezes one dossier after typed gr
     },
     wait_for_completion: true,
     selection_receipt: selection.selection_receipt,
-    timeout_ms: 10_000,
+    // This fixture includes a second ledger-repair process; Windows startup can exhaust 10s.
+    timeout_ms: 20_000,
     synthesis_timeout_ms: 10_000,
     total_timeout_ms: TOTAL_TIMEOUT_MS,
   }, { timeoutMs: observerBudget(TOTAL_TIMEOUT_MS) }));
