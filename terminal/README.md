@@ -20,7 +20,7 @@ The regular npm/plugin installation retains `alphacouncil-agent`, the MCP stdio 
 ## First research
 
 1. Select a language. A previous choice is only a prefill; the chooser still opens on startup.
-2. Enter a ticker, such as `AAPL`, `0700.HK` or `7203.T`, and an optional research question.
+2. Enter a ticker, such as `AAPL`, `0700.HK` or `7203.T`. Research covers that instrument without an extra question.
 3. Select or add a model connection. Choose a model from the provider's returned list, or enter its exact model ID. API connection checks test actual model/tool access; Codex checks the official login state. Provider availability can still change before a research worker starts.
 4. Choose full or quick, then the applicable pace and analyst scope. Full remains the default.
 5. Read the returned configuration, select methods and review the final summary. Only **Start research** submits the one-use selection and starts the task.

@@ -2,6 +2,7 @@ import stringWidth from 'string-width';
 import { stripVTControlCharacters } from 'node:util';
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+const LOGO = [' ⢀⡤⠶⣄⣠    ⢀⡀⢠⠞', '⣰⠋  ⣸⠃  ⣠⣠⠎⠙⠃ ', '⢧⣀⡤⠞⠉⠦⠤⠊      '];
 export function cleanText(value) {
   return stripVTControlCharacters(String(value ?? '')).replace(/[\x00-\x08\x0b-\x1f\x7f\u202a-\u202e\u2066-\u2069]/g, '').replace(/\t/g, '    ');
 }
@@ -94,22 +95,26 @@ export class Screen {
     this.decoder.close();
     this.input.setRawMode(false);
     this.input.pause();
-    this.output.write('\x1b[0m\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?25h\x1b[?1049l');
+    this.output.write('\x1b[0m\x1b[?7h\x1b[?1000l\x1b[?1006l\x1b[?2004l\x1b[?25h\x1b[?1049l');
   }
-  draw({ title, subtitle = '', rows = [], selected = 0, offset = 0, footer = '', message = '', navigation = [], smallTerminal = '' }) {
+  draw({ title, subtitle = '', rows = [], selected = 0, offset = 0, footer = '', message = '', navigation = [], smallTerminal = '', cursor = null, showLogo = false }) {
     const width = this.output.columns || 80, height = this.output.rows || 24;
     this.hits = [];
     if (width < 80 || height < 24) {
-      this.output.write('\x1b[H\x1b[2J' + clip(smallTerminal, Math.max(1, width - 1)));
+      this.output.write('\x1b[?25l\x1b[H\x1b[2J' + clip(smallTerminal, Math.max(1, width - 1)));
       return { visible: 0, offset: 0 };
     }
     const wide = width >= 120 && navigation.length > 0;
     const navWidth = wide ? 21 : 0;
     const contentWidth = width - 4 - navWidth;
-    const visible = height - 8;
+    const headerHeight = showLogo ? 5 : 4;
+    const visible = height - headerHeight - 4;
     offset = Math.max(0, Math.min(offset, Math.max(0, rows.length - visible)));
     const border = '+' + '-'.repeat(width - 2) + '+';
-    const frame = [border, '| ' + clip(title, width - 4) + ' |', '| ' + clip(subtitle, width - 4) + ' |', border];
+    const heading = showLogo
+      ? [title, subtitle, 'github.com/Zhao73/alphacouncil-agent'].map((text, i) => '| ' + clip(LOGO[i], 14) + '  ' + clip(text, width - 20) + ' |')
+      : ['| ' + clip(title, width - 4) + ' |', '| ' + clip(subtitle, width - 4) + ' |'];
+    const frame = [border, ...heading, border];
     for (let i = 0; i < visible; i++) {
       const index = i + offset, row = rows[index];
       const isSelected = index === selected && row?.action;
@@ -118,14 +123,17 @@ export class Screen {
       let left = '';
       if (wide) {
         left = clip(navigation[i]?.text || '', 20) + '|';
-        if (navigation[i]) this.hits.push({ x1: 2, x2: 21, y: i + 5, action: navigation[i].action });
+        if (navigation[i]) this.hits.push({ x1: 2, x2: 21, y: i + headerHeight + 1, action: navigation[i].action });
       }
       frame.push('| ' + left + highlight + content + (highlight ? '\x1b[0m' : '') + ' |');
-      if (row?.action) this.hits.push({ x1: 3 + navWidth, x2: width - 2, y: i + 5, action: row.action, index });
+      if (row?.action) this.hits.push({ x1: 3 + navWidth, x2: width - 2, y: i + headerHeight + 1, action: row.action, index });
     }
     frame.push(border, '| ' + clip(message, width - 4) + ' |', '| ' + clip(footer, width - 4) + ' |', border);
-    const styled = frame.map((line, i) => this.color && (i < 4 || i >= frame.length - 4) ? '\x1b[36m' + line + '\x1b[0m' : line);
-    this.output.write('\x1b[H' + styled.join('\r\n'));
+    const styled = frame.map((line, i) => this.color && (i < headerHeight || i >= frame.length - 4) ? '\x1b[36m' + line + '\x1b[0m' : line);
+    const caret = cursor
+      ? `${headerHeight + 1 + Math.max(0, Math.min(cursor.row, visible - 1))};${3 + navWidth + Math.max(0, Math.min(cursor.column, contentWidth - 1))}`
+      : '1;1';
+    this.output.write('\x1b[?25l\x1b[?7l\x1b[H' + styled.join('\r\n') + `\x1b[${caret}H\x1b[?7h` + (cursor ? '\x1b[?25h' : ''));
     return { visible, offset };
   }
 }

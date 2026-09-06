@@ -59,12 +59,15 @@ test('startup enforces language then ticker then model, with no research before 
     let calls = 0;
     const app = createTerminalApp({ listConnections: () => [], launch: () => { calls++; } }, io);
     app.start();
+    assert.ok(io.output.chunks.at(-1).includes('⢀⡤⠶⣄⣠'), 'the repository logo appears on the language home');
     const row = app.state.rows.find((row) => row.text.includes(({ en: 'English', 'zh-CN': '中文', ja: '日本語', ko: '한국어', es: 'Español', fr: 'Français', de: 'Deutsch', 'pt-BR': 'Português', it: 'Italiano', ru: 'Русский', vi: 'Tiếng Việt', id: 'Bahasa Indonesia' })[locale]));
     row.action(); app.render();
     assert.equal(app.state.page, 'symbol'); assert.equal(app.state.language, locale);
+    assert.ok(!io.output.chunks.at(-1).includes('⢀⡤⠶⣄⣠'), 'the logo stays off research setup screens');
+    assert.ok(!app.state.rows.some((row) => row.text.startsWith(UI_TEXT[locale].question)));
     app.state.rows[0].action();
     app.handleInput({ key: 'paste', text: 'ACME' }); app.handleInput({ key: 'enter' });
-    app.state.rows[2].action(); app.render();
+    app.state.rows.find((row) => row.text === UI_TEXT[locale].next).action(); app.render();
     assert.equal(app.state.page, 'connection'); assert.equal(app.state.symbol, 'ACME'); assert.equal(calls, 0);
     app.close();
   }
@@ -137,6 +140,7 @@ test('the displayed chooser creates a real one-use receipt only on Start, with t
   app.state.rows[0].action(); app.render();
   await app.state.rows.find((row) => row.text === UI_TEXT.en.next).action();
   assert.ok(app.state.rows.some((row) => row.text.includes('Web search is unavailable')));
+  assert.ok(!app.state.rows.some((row) => row.text.startsWith(UI_TEXT.en.question)));
   await app.state.rows.find((row) => row.text === UI_TEXT.en.methods).action();
   assert.equal(app.state.page, 'methods');
   assert.ok(stripVTControlCharacters(io.output.chunks.at(-1)).includes('Research setup'));
@@ -147,8 +151,28 @@ test('the displayed chooser creates a real one-use receipt only on Start, with t
   await app.state.rows.find((row) => row.text === UI_TEXT.en.start).action();
   assert.equal(app.state.page, 'run', app.state.message);
   assert.equal(launchArgs.research.language, 'en');
+  assert.equal(launchArgs.research.prompt, '');
   assert.ok(launchArgs.confirmation.selection_receipt);
   assert.equal(launchArgs.confirmation.selected_master_ids.length, app.state.methods.size);
+  app.close();
+});
+
+test('long Unicode input keeps the editable tail and cursor inside an 80-column frame', () => {
+  const io = terminal(80, 24);
+  const app = createTerminalApp({}, io); app.start();
+  app.state.page = 'account';
+  app.state.draft = { provider: 'anthropic', model: '', name: '', storage: 'session', apiKey: '' };
+  app.render();
+  app.state.rows.find((row) => row.text.startsWith(`${UI_TEXT[app.state.language].name}:`)).action();
+  const value = '中文'.repeat(45) + 'e\u0301';
+  app.handleInput({ key: 'paste', text: value });
+  const frame = io.output.chunks.at(-1);
+  assert.ok(frame.includes('中文e\u0301'));
+  assert.ok(frame.includes('\x1b[7;78H') && frame.endsWith('\x1b[?25h'), 'the real cursor follows the visible tail, away from the bottom edge');
+  app.handleInput({ key: 'backspace' });
+  assert.equal(app.state.editing.value, '中文'.repeat(45), 'backspace removes one complete grapheme');
+  app.handleInput({ key: 'enter' });
+  assert.equal(app.state.draft.name, '中文'.repeat(45), 'horizontal display clipping never truncates the submitted value');
   app.close();
 });
 

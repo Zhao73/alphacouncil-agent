@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
+import stringWidth from 'string-width';
 import { DATA_DIR } from '../mcp/lib/constants.mjs';
 import { RESEARCH_LANGUAGES, researchLanguage } from '../mcp/lib/lang.mjs';
 import { safeSymbol } from '../mcp/lib/run-store.mjs';
@@ -19,7 +20,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
   }
   const state = {
     page: 'language', language: researchLanguage(initial.language || settings.language)?.locale || 'en',
-    symbol: initial.symbol || '', prompt: '', connection: null, draft: null,
+    symbol: initial.symbol || '', connection: null, draft: null,
     mode: 'full', pace: 'normal', analystScope: 'core', selection: null, methods: new Set(),
     selected: 0, offset: 0, visible: 16, rows: [], message: '', busy: false, editing: null,
     runId: initial.runId || null, run: null, category: 'evidence', detail: null, previous: null,
@@ -64,7 +65,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
     finally { state.busy = false; if (!state.closed) render(); }
   }
   function research() {
-    return { symbol: safeSymbol(state.symbol.trim()), prompt: state.prompt.trim(), language: state.language,
+    return { symbol: safeSymbol(state.symbol.trim()), prompt: '', language: state.language,
       council_mode: state.mode, ...(state.mode === 'full' ? { council_pace: state.pace, analyst_scope: state.analystScope } : {}) };
   }
   async function chooseConnection(profile) {
@@ -137,7 +138,6 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
       }));
       case 'symbol': return [
         field(t('symbol'), state.symbol, (value) => { state.symbol = safeSymbol(value.trim()); }, { required: true }),
-        field(t('question'), state.prompt, (value) => { state.prompt = value; }),
         action(t('next'), () => { research(); go('connection'); }),
         text(''), action(t('history'), () => go('history')),
       ];
@@ -238,7 +238,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
         })),
       ];
       case 'review': return [
-        text(`${t('symbol')}: ${state.symbol}`), text(`${t('question')}: ${state.prompt}`),
+        text(`${t('symbol')}: ${state.symbol}`),
         text(`${t('language')}: ${researchLanguage(state.language).name}`),
         text(`${t('model')}: ${state.connection.name} / ${state.connection.model || 'Codex'}`),
         ...(state.connection.capabilities?.web_search === false ? wrapText(t('noSearch'), Math.max(1, (output.columns || 80) - 8)).map(text) : []),
@@ -256,7 +256,7 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
           state.runId = run.run_id; state.run = api.loadRun(run.run_id); go('run');
         })),
         ...(api.listRuns({ query: state.query, limit: 1 }).length ? [] : [text(t('noRuns'))]),
-        action(t('newResearch'), () => { state.symbol = ''; state.prompt = ''; go('language'); }),
+        action(t('newResearch'), () => { state.symbol = ''; go('language'); }),
       ];
       case 'run': {
         const run = state.run, status = run.status;
@@ -313,10 +313,19 @@ export function createTerminalApp(api, { initial = {}, output = process.stdout, 
       state.rows = pageRows();
       state.selected = Math.max(0, Math.min(state.selected, state.rows.length - 1));
       const editing = state.editing;
-      const rows = editing ? [text(editing.label), text(''), text((editing.secret ? '*'.repeat([...editing.value].length) : editing.value) + '_')] : state.rows;
+      let visibleValue = editing ? (editing.secret ? '*'.repeat([...editing.value].length) : editing.value) : '';
+      if (editing) {
+        const characters = [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(visibleValue)];
+        let width = 0, start = characters.length;
+        while (start > 0 && width + stringWidth(characters[start - 1].segment) <= Math.max(1, (output.columns || 80) - 7)) width += stringWidth(characters[--start].segment);
+        visibleValue = characters.slice(start).map((part) => part.segment).join('');
+      }
+      const rows = editing ? [text(editing.label), text(''), text(visibleValue)] : state.rows;
       const body = state.page === 'detail' || editing;
       const result = screen.draw({
         title: `AlphaCouncil | ${title()}`,
+        showLogo: state.page === 'language',
+        cursor: editing ? { row: 2, column: 2 + stringWidth(visibleValue) } : undefined,
         subtitle: [state.symbol, researchLanguage(state.language)?.name, state.connection?.name].filter(Boolean).join(' / '),
         rows, selected: body ? -1 : state.selected, offset: editing ? 0 : state.offset,
         footer: editing ? t('editHint') : body ? t('readHint') : t('chooseHint'),

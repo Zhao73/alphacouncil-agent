@@ -22,7 +22,7 @@ export function parseArgs(args) {
     if (words.length !== 1) throw new Error(`${result.command} requires RUN_ID`);
     result.runId = words[0];
   } else if (result.command === 'research') {
-    if (words.length > 1) throw new Error('Use one ticker; enter the research question inside the terminal.');
+    if (words.length > 1) throw new Error('Enter one stock ticker.');
     result.symbol = words[0] || '';
   } else if (words.length) throw new Error(`Unexpected argument: ${words[0]}`);
   return result;

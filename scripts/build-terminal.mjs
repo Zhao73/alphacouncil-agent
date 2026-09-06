@@ -110,7 +110,7 @@ export async function buildTerminal({ outDir = join(ROOT, "dist") } = {}) {
       `AlphaCouncil Terminal ${pkg.version} (${process.platform}/${process.arch})`,
       "Extract the complete folder before running alphacouncil (alphacouncil.cmd on Windows).",
       "The folder includes Node and the official Codex runtime. No separate Node/npm/Codex installation is needed to start it.",
-      "Choose a language, enter a research question, select a model connection, and submit the research configuration.",
+      "Choose a language, enter a stock ticker, select a model connection, and submit the research configuration.",
       "A model account/API key and any required source permissions remain necessary for live research.",
       "alphacouncil-agent preserves the MCP stdio entry point; its output is JSON-RPC, not the terminal UI.",
       "This build is an unsigned development archive, not a notarized installer or a live-research acceptance certificate.",
