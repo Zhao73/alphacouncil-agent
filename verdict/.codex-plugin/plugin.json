@@ -1,0 +1,25 @@
+{
+  "name": "verdict",
+  "version": "1.0.0",
+  "description": "Stock research with a clear verdict: live data, research desks, bull vs bear debate, portfolio-manager decision.",
+  "author": { "name": "Zhao73" },
+  "homepage": "https://github.com/Zhao73/verdict#readme",
+  "repository": "https://github.com/Zhao73/verdict",
+  "license": "MIT",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Verdict",
+    "shortDescription": "Research any stock and get a clear verdict.",
+    "longDescription": "Live data snapshot, research desks, a bull vs bear debate and a portfolio-manager verdict with a value range, price levels and a saved, sourced HTML report.",
+    "developerName": "Zhao73",
+    "category": "Finance",
+    "capabilities": ["Interactive", "Read"],
+    "brandColor": "#F5A524",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png",
+    "defaultPrompt": ["@verdict research NVDA", "@verdict is AAPL cheap right now?", "@verdict my watchlist"]
+  },
+  "mcpServers": {
+    "verdict": { "command": "node", "args": ["./src/mcp/server.mjs"], "cwd": "." }
+  }
+}

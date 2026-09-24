@@ -1,0 +1,16 @@
+{
+  "name": "verdict",
+  "owner": { "name": "Zhao73", "url": "https://github.com/Zhao73/verdict" },
+  "metadata": { "description": "Verdict — stock research with a clear verdict.", "version": "1.0.0" },
+  "plugins": [
+    {
+      "name": "verdict",
+      "source": "./",
+      "description": "Stock research with a clear verdict: live data, research desks, bull vs bear, decision, HTML report.",
+      "version": "1.0.0",
+      "author": { "name": "Zhao73" },
+      "category": "finance",
+      "keywords": ["stocks", "equity-research", "investing", "mcp"]
+    }
+  ]
+}
