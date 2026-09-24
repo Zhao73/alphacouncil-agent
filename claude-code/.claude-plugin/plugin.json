@@ -1,0 +1,20 @@
+{
+  "name": "alphacouncil",
+  "version": "2.0.0",
+  "description": "Equity research council built for Claude Code: parallel analyst subagents, deterministic method lenses, a three-round Bull/Bear cross-examination and a portfolio-manager decision, assembled into a sourced report. Keyless market data.",
+  "author": {
+    "name": "Zhao73"
+  },
+  "homepage": "https://github.com/Zhao73/alphacouncil-agent/tree/main/claude-code#readme",
+  "repository": "https://github.com/Zhao73/alphacouncil-agent",
+  "license": "MIT",
+  "keywords": [
+    "equity-research",
+    "investing",
+    "multi-agent",
+    "subagents",
+    "mcp",
+    "finance",
+    "bull-bear-debate"
+  ]
+}

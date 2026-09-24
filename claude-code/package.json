@@ -1,0 +1,21 @@
+{
+  "name": "@alphacouncil/claude-code",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AlphaCouncil for Claude Code: a plugin (subagents + MCP state machine) and a terminal client that share one council engine.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "bin": {
+    "alphacouncil": "cli/alphacouncil.mjs",
+    "alphacouncil-mcp": "mcp/server.mjs"
+  },
+  "scripts": {
+    "start": "node cli/alphacouncil.mjs",
+    "mcp": "node mcp/server.mjs",
+    "test": "node scripts/test.mjs",
+    "check": "node scripts/test.mjs"
+  }
+}

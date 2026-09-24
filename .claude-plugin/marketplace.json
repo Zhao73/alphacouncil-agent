@@ -25,6 +25,24 @@
         "mcp",
         "finance"
       ]
+    },
+    {
+      "name": "alphacouncil",
+      "source": "./claude-code",
+      "description": "Claude Code-native rebuild: parallel analyst subagents, deterministic method lenses, Bull/Bear cross-examination and PM decision driven by an MCP state machine; ships a terminal client.",
+      "version": "2.0.0",
+      "author": {
+        "name": "Zhao73"
+      },
+      "category": "finance",
+      "keywords": [
+        "equity-research",
+        "investing",
+        "multi-agent",
+        "subagents",
+        "mcp",
+        "finance"
+      ]
     }
   ]
 }

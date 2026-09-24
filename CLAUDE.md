@@ -336,3 +336,18 @@ npm run check
 This repository is an independent Codex plugin implementation. It can be inspired by multi-agent investment-committee workflows, but do not copy external project source code into this repository.
 
 Public Equity Investing and Investment Banking are Codex skills or remote workflows, not importable JavaScript libraries. Treat them as agent instructions, not as packages to `import`.
+
+## Claude Code rebuild (`claude-code/`)
+
+`claude-code/` is a separate, self-contained Claude Code plugin (`alphacouncil`, 2.0.0) plus a
+terminal client that share one council engine. It does not import from the legacy tree and the
+legacy contract above does not apply to it; its own contract lives in `claude-code/README.md`.
+
+- One state machine (`claude-code/lib/council.mjs`), two executors: the `/alpha` skill launches
+  the tasks returned by `council_next` as parallel subagents; `claude-code/cli/` runs the same
+  tasks as supervised `claude -p` workers with enforced caps and deadline.
+- `claude-code/agents/*.md` are both the plugin subagents and the terminal workers' system
+  prompts. Every seat role in `lib/spec.mjs` must have one (tested).
+- Workers record their own packets with `council_record`; validation errors are repair
+  instructions. The report is assembled by code (`lib/report.mjs`), never by a model.
+- Zero runtime dependencies. After changes run `npm test --prefix claude-code`.
