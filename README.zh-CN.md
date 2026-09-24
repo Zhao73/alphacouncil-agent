@@ -1,176 +1,107 @@
-<a name="readme-top"></a>
-
-<!-- readme-section:hero -->
 <div align="center">
 
-<img src="assets/banner.png" alt="AlphaCouncil Agent" width="100%" />
+<img src="assets/logo-icon.png" width="72" alt="" />
 
-### 一套可以逐项复核的投资研究议会
+# AlphaCouncil
 
-**一个问题，展开为带来源的证据、多种方法视角、多空质询和投资组合经理裁决。**
+**快速的 AI 股票研究 —— 终端、Claude Code、Codex 都能用。**
 
-[English](README.md) · **中文** · [日本語](README.ja.md)
-
-<p>
-  <img src="https://img.shields.io/github/actions/workflow/status/Zhao73/alphacouncil-agent/check.yml?style=for-the-badge&label=build&logo=githubactions&logoColor=white&color=1a7a6a" alt="build" />
-  <img src="https://img.shields.io/badge/License-MIT-c9a227?style=for-the-badge" alt="MIT" />
-  <img src="https://img.shields.io/badge/Node-%3E%3D18-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="node" />
-  <img src="https://img.shields.io/github/stars/Zhao73/alphacouncil-agent?style=for-the-badge&logo=github&color=0d4d4d" alt="stars" />
-</p>
-<p>
-  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI Codex" />
-  <img src="https://img.shields.io/badge/Claude_Code-D97757?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude Code" />
-  <img src="https://img.shields.io/badge/OpenCode-1a7a6a?style=for-the-badge" alt="OpenCode" />
-  <img src="https://img.shields.io/badge/Grok_Build-000000?style=for-the-badge&logo=x&logoColor=white" alt="Grok Build" />
-  <img src="https://img.shields.io/badge/ChatGPT_Work-%E5%BC%80%E5%8F%91%E8%80%85%E6%A8%A1%E5%BC%8F-412991?style=for-the-badge&logo=openai&logoColor=white" alt="ChatGPT Work 开发者模式" />
-</p>
-<p>
-  <img src="https://img.shields.io/badge/MCP-compatible-000000?style=for-the-badge" alt="兼容 MCP" />
-  <img src="https://img.shields.io/badge/data_check-no_vendor_key-2ea043?style=for-the-badge" alt="核心数据检查不需要数据商密钥" />
-  <img src="https://img.shields.io/badge/runtime_dependencies-zero-2ea043?style=for-the-badge" alt="零运行时依赖" />
-</p>
-
-[安装](#在-codex-中安装) · [先验数据层](#免费首次运行) · [查看调用展开方式](#运行前先选深度) · [阅读报告](docs/examples/final_report.SOX.zh.md)
+[English](README.md) · **中文**
 
 </div>
 
-**v1.7 更新：**精简配置并预填上次选择、先看结论、扩展日线历史、检查完整方法依赖。每次运行仍需确认。[升级内容与数据源边界](docs/releases/v1.7.0.md)。
+```
+$ alpha NVDA 现在值得买吗？
 
-<!-- readme-section:demo -->
-<div align="center">
+◆ NVDA  NVIDIA Corp · NASDAQ · equity
+  价格 228.87 USD +1.2%   52w 131–240   12个月 +61% · P/E 46 · FCF 2.1%
+  透镜 deep− quality+ garp~ growth+ trend+ …
 
-**问题 → 带来源证据 → 冻结方法立场 → 多空质询 → PM 决策 + 可保存审计链**
+研究台
+  ✓ 业务与财报             1:31  mixed
+  ✓ 预期与估值             1:24  bullish
+  ✓ 新闻、行业与催化剂     1:04  mixed
+  ✓ 持仓与风险             1:28  mixed
+辩论
+  ✓ 多头                   0:21
+  ✓ 空头                   1:04
+决策
+  ✓ 投资经理               0:36  Overweight
+⏱ 3:12 · $1.53
 
-[历史界面录屏（MP4）](assets/demo.mp4) · [历史报告工件（SOX，中文）](docs/examples/final_report.SOX.zh.md)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NVDA  NVIDIA Corp                                     Overweight ▲  置信度 中
+估值 170 / 285 / 380 USD · 基准较现价 +25%
+结论  直接回答：值得买，但应分批、控制仓位……
+多头  …   空头  …   裁决  多头胜 — …
+价格条件  > 280 回避 · 205-235 建仓 · < 198 加仓
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+继续追问（回车退出，/report 查看完整报告）
+›
+```
 
-<sub>录屏早于当前 26 席候选版，只展示旧版界面；不证明当前耗时、方法忠实度、数据准确性、四个代码宿主或 ChatGPT Work 的端到端状态。</sub>
+## 工作方式
 
-</div>
+1. **快照（几秒，不调用模型）**：价格、技术面、SEC 财务与估值倍数、公告、期权、带日期的新闻，以及 8 个确定性方法透镜，全部并行获取并缓存。
+2. **研究台（并行）**：业务与财报 · 预期与估值 · 新闻、行业与催化剂 · 持仓与风险。每个研究台都从快照出发，做约 5 次针对性搜索，返回带来源的发现。
+3. **多空辩论（并行）**：多空双方基于研究记录，各自给出最强、最诚实的论证。
+4. **投资经理**：评级、悲观/基准/乐观估值、价格条件、催化剂、风险、仓位、分周期观点、失效条件。
+5. **报告**：由代码根据保存的结果拼装，任何发现、引用或数据缺口都不会丢。每个输出都有 JSON Schema，代码还会检查每个引用都能对上来源。
 
-<!-- readme-section:promise -->
-## 一个问题，一套可复核的论证
+`--fast` 只做一轮研究就直接决策（约 1-2 分钟）。实测深度研究：全程 3 分 12 秒，花费 $1.53（Claude Code 引擎）。
 
-AlphaCouncil 把证券问题变成可检查的研究流程：并行证据席从公开来源取证，所选投资方法席解读同一批带日期事实，多方与空方交叉质询，最后由投资组合经理记录结论及其失效条件。缺失输入会原样暴露，不会用猜测补齐。
+## 终端
 
-同一仓库支持 **Codex、Claude Code、OpenCode、Grok Build**，并提供仅工具型的 **ChatGPT Work 开发者模式网关**。研究前会先区分公司、ETF 和市场指数，避免把一篮子资产当作有自身营收的公司来分析。
+```bash
+npm install -g github:Zhao73/alphacouncil-agent
+alpha NVDA                       # 深度研究（默认）
+alpha AAPL 现在值得买吗？        # 附带问题，决策会直接回答
+alpha 0700.HK --fast             # 快速结论
+alpha                            # 交互模式
+```
 
-<!-- readme-section:install -->
-## 在 Codex 中安装
+报告出来后可以直接继续追问：先根据报告作答，确有必要时才去搜索；输入 `/report` 可查看完整报告。另外还有 `alpha ask NVDA 如果加息呢？`、`alpha runs`、`alpha show NVDA`，以及不调用模型的数据命令 `alpha quote|snapshot|news|filings|options|lenses NVDA`、`alpha macro`、`alpha doctor`。
 
-前提：Node.js 18 或更高版本。先在终端运行下面两条命令：
+**引擎**（自动选择，可用 `--engine` 指定）：
+
+| 引擎 | 何时使用 | 说明 |
+|---|---|---|
+| `api` | 设置了 `ANTHROPIC_API_KEY` | 官方 Anthropic SDK，流式输出，服务端网页搜索，速度最快。研究和辩论默认用 `claude-sonnet-5`，决策用 `claude-opus-5`（带服务端拒答回退）。 |
+| `claude` | 已安装并登录 Claude Code | 每一步是一次无头 `claude -p` 调用，使用你的 Claude Code 订阅；结构化结果通过 `--json-schema` 返回。 |
+
+选项：`--fast`、`--lang zh-CN|ja|en…`（默认使用你输入所用的语言）、`--model`、`--research-model`、`--debate-model`、`--decision-model`、`--fresh`（忽略 6 小时内的旧报告）、`--json`、`--plain`。环境变量：`ALPHA_HOME`（默认 `~/.alphacouncil`）、`ALPHA_SEC_CONTACT`（SEC 要求在 User-Agent 里提供联系方式）、`NO_COLOR`。
+
+## Claude Code
+
+```text
+/plugin marketplace add Zhao73/alphacouncil-agent
+/plugin install alphacouncil@alphacouncil
+```
+
+之后输入 `/alpha NVDA`、`/alpha AAPL 值得买吗`、`/alpha 0700.HK --fast`，或者直接说“研究一下 NVDA”。4 个 `analyst` 子代理并行研究，2 个 `advocate` 子代理分别论证多空，最后由 Claude 做决策。自带的 MCP 服务器负责提供快照、每个任务的说明、结果校验和报告。没有任何确认菜单。实测深度研究约 5 分半（子代理启动会多花一些时间，终端客户端更快）。
+
+如果不想每次都弹出权限确认，可以在 `/permissions` 里允许 `mcp__plugin_alphacouncil_alphacouncil__*`、`WebSearch` 和 `WebFetch`。
+
+## Codex
 
 ```bash
 codex plugin marketplace add Zhao73/alphacouncil-agent
-codex plugin add alphacouncil-agent@alphacouncil
+codex plugin add alphacouncil@alphacouncil
 ```
 
-插件会在 Codex 启动时加载。请完全退出并重启 Codex，新开一个会话，然后在 Codex 输入框中输入：
+重启 Codex 后输入 `@alphacouncil research NVDA`。Codex 会用自己的网页搜索按顺序完成同样的任务，数据、任务说明和报告同样由这个 MCP 服务器提供。
 
-```text
-@alphacouncil-agent analyze AAPL
+## 数据
+
+全部来自免密钥的公开来源，并缓存在磁盘上：Yahoo Finance（延迟行情、历史、搜索）、SEC EDGAR（XBRL → TTM 指标与估值倍数；公告）、Google News（带日期的标题）、Cboe（延迟期权）、FRED（宏观）。ETF 通过持仓来研究，指数通过编制方法来研究，都不会当作一家公司来处理。某个来源取不到时，报告里会点名列为数据缺口。
+
+## 开发
+
+```bash
+npm install
+npm test        # 32 个测试，无需联网
 ```
 
-ChatGPT Work 开发者模式、Claude Code、OpenCode、Grok Build、Windows、故障排查及可选 npm 全局命令，请看 **[完整安装指南](docs/INSTALL.md)**。
+---
 
-<!-- readme-section:first-run -->
-## 免费首次运行
-
-启动研究议会前，先检查免密钥公开数据层：
-
-```text
-# Codex
-@alphacouncil-agent AAPL news
-
-# Claude Code、OpenCode、Grok Build
-/alpha AAPL news
-```
-
-这一步不启动议会工作单元，也不需要数据商密钥。Codex 的有界研究命令是 `@alphacouncil-agent AAPL quick`；另外三个斜杠命令宿主使用 `/alpha AAPL quick`。
-
-<!-- readme-section:call-structure -->
-## 运行前先选深度
-
-AlphaCouncil 会先展示工作计划。完整研究把方法席、证据范围和深度分开询问，得到用户确认后才启动。三档完整研究的上限为 **15 / 30 / 60** 分钟，不提供没有实测凭据的 token 或金额估算。
-
-| 运行方式 | 模型调用结构 | 时间上限 |
-|---|---|---:|
-| 数据检查 | 只调用免密钥工具；不启动议会工作单元，不增加模型扇出 | 不属于议会档位 |
-| 快速研究 | 4 个证据席并行 → 1–4 个方法席并行 → Bull/Bear 并行 → PM | 10 分钟 |
-| 完整—快速档 | 8 个核心或恰好 11 个全范围证据席同时启动；每个所选方法先确定性冻结立场，再由一个隔离工作单元解释；3 轮辩论 → PM | 15 分钟 |
-| 完整—普通档 | 保留同一确认席位、冻结立场顺序、3 轮辩论和 PM，深度空间更大 | 30 分钟 |
-| 完整—慢速档 | 保留同一确认席位与阶段，使用最大深度空间 | 60 分钟 |
-
-这些数字是从排队到终态持久化的硬上限，不是实测完成时间。即使工作未完成，系统也必须留下
-明确终态；“真实宿主上的完整快速档可在 15 分钟内成功完成”目前尚未得到四宿主验证。
-快速档保留完整研究合同，但使用可审计的分阶段推理策略；首轮、超时重试与格式修复共享同一席位
-生命周期，重试不会再把单席上限悄悄翻倍。
-
-如果已经取得资产分类和 typed-fact 覆盖，选择器还会根据全部 26 个物理 pack 的 manifest
-生成一个按八类方法组成的**方法模拟建议面板**。明确的决策目标与持有期还会校准匹配，并把
-方法贡献分成方向、非投票风险和仅上下文三条通道；`out_of_scope` 永远不是负票。对于“一年持有、
-是否值得买”的方向任务，PM 按公开的基准情景总回报档位评级，不再统计保守方法席的数量；
-服务端会绑定冻结参考价与币种，并用同币种目标价和收益项重算总回报；
-`out_of_scope` 仍会显示在方法席交付中，但会从 PM 评级路径中结构性排除。
-它只负责辅助选择：全部 pack 仍可选，未经明确确认不会运行；缺少资产分类时也不会猜测默认
-8 席。输出是 AI 生成的方法模拟，不是真人专家、独立模型或盈利承诺。详见
-[方法面板推荐与席位证据](docs/reference/method-panel-evidence.md)。
-
-只有“慢速档 + 全部方法 + 全部证据席”会启用附加验证路径；其他完整档位不声称做了这项额外检查。
-
-<!-- readme-section:benefits -->
-## 你真正得到什么
-
-| 收益 | 改变在哪里 |
-|---|---|
-| **是议会，不是一段答案** | 证据专家、方法席、对立论证和 PM 会把共识从何而来展示出来。 |
-| **先有立场，再写故事** | 完整研究中，每个所选方法先基于结构化输入冻结立场，再由隔离工作单元写解释。 |
-| **每条重要主张可追溯** | 报告的重要主张必须指向来源 ID；缺失证据保留为明确缺口。 |
-| **异议不会在总结中消失** | 三轮交叉质询以及持久化的少数/反方报告，让落败论点仍可复核。 |
-| **按资产类型走正确路径** | 公司读发行人证据，ETF 做带日期持仓穿透，指数走聚合方法；首次数据检查无需密钥。 |
-
-<!-- readme-section:comparison -->
-## 架构上的区别
-
-下表比较的是通用工作流形态，不针对任何具名产品；具体工具可能采用不同设计。
-
-| 复核重点 | 单模型回答或常见共享上下文流程 | AlphaCouncil |
-|---|---|---|
-| 相关错误 | 同一上下文可能把早期错误传进后续所有步骤 | 证据席与相反路径运行在隔离工作单元中；它们仍可能使用同一提供商或模型，**并非独立模型** |
-| 立场形成 | 立场可能与解释同时生成 | 结构化立场在解释性文字之前冻结 |
-| 来源追溯 | 可追溯程度取决于提示词和宿主 | 每条重要主张都必须携带来源 ID |
-| 少数意见 | 异议可能被折叠进最终摘要 | 少数意见和反方报告作为复核产物显式保留 |
-
-<!-- readme-section:honesty -->
-## 这些议席是什么，又不是什么
-
-方法席公式是**由 AI 根据已出版方法形成的重构，尚待人工评审**。具名实践者没有审核或背书这些议席。它们不是人格模仿、独立模型或经过验证的复制品。立场只是需要对照输入和来源进行检查的结构化论证，不是已验证的投资模型。
-
-当前源代码的证据边界是：26 个临时方法席、0 个已验证方法模型、规范评估已登记并完成
-0/8、4 个宿主的真实端到端运行完成 0/4。源代码测试通过不会改变这些数字。
-
-<!-- readme-section:disclaimer -->
-## 免责声明
-
-AlphaCouncil **仅供教育和研究**，不构成投资建议、买卖推荐或要约。AI 分析可能不完整、过时或错误。做出投资决定前请自行核验，并咨询持牌专业人士。作者不对任何损失承担责任。
-
-<!-- readme-section:reference-fold -->
-## 深入了解
-
-- [中文详细产品、用法、工具与架构参考](docs/reference/README.zh-CN.md)
-- [四宿主完整安装指南](docs/INSTALL.md)
-- [报告合同](docs/report-contract.md)与[完整示例报告](docs/examples/final_report.SOX.zh.md)
-- [路线图](docs/roadmap.md)、[安全模型](SECURITY.md)、[署名说明](docs/attribution.md)与[更新日志](CHANGELOG.md)
-- [独立终端客户端](terminal/README.md)：选语言 → 输入股票代码 → 选模型 → 选方法席，可点击查看证据和辩论。源码开发运行：先 `npm ci --prefix terminal`，再 `npm run terminal`。
-- 原有本地查看器：`npm run tui` 和 `npm run gui`
-
-运行产物写在仓库之外的 `~/.alphacouncil-agent/runs/<run_id>/`。
-
-<div align="center">
-
-<img src="assets/logo.png" alt="AlphaCouncil" width="120" />
-
-**证据优先，异议可见，结论可复核。**
-
-<a href="#readme-top">↑ 回到顶部</a>
-
-</div>
+研究内容由 AI 基于公开来源生成，不构成投资建议。方法透镜是参照公开投资方法设计的确定性筛选，不代表任何真实人物的观点。MIT 许可。

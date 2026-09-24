@@ -1,11 +1,9 @@
 {
   "name": "alphacouncil",
-  "interface": {
-    "displayName": "AlphaCouncil"
-  },
+  "interface": { "displayName": "AlphaCouncil" },
   "plugins": [
     {
-      "name": "alphacouncil-agent",
+      "name": "alphacouncil",
       "source": { "source": "local", "path": "./" },
       "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
       "category": "Finance"

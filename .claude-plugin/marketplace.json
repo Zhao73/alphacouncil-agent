@@ -1,48 +1,16 @@
 {
   "name": "alphacouncil",
-  "owner": {
-    "name": "Zhao73",
-    "url": "https://github.com/Zhao73/alphacouncil-agent"
-  },
-  "metadata": {
-    "description": "AlphaCouncil plugins for public-equity research.",
-    "version": "1.9.1"
-  },
+  "owner": { "name": "Zhao73", "url": "https://github.com/Zhao73/alphacouncil-agent" },
+  "metadata": { "description": "AlphaCouncil equity research.", "version": "3.0.0" },
   "plugins": [
     {
-      "name": "alphacouncil-agent",
-      "source": "./",
-      "description": "Multi-agent company, ETF and index research: evidence packets, method seats, bull/bear debate and portfolio-manager synthesis.",
-      "version": "1.9.1",
-      "author": {
-        "name": "Zhao73"
-      },
-      "category": "finance",
-      "keywords": [
-        "equity-research",
-        "investing",
-        "multi-agent",
-        "mcp",
-        "finance"
-      ]
-    },
-    {
       "name": "alphacouncil",
-      "source": "./claude-code",
-      "description": "Claude Code-native rebuild: parallel analyst subagents, deterministic method lenses, Bull/Bear cross-examination and PM decision driven by an MCP state machine; ships a terminal client.",
-      "version": "2.0.0",
-      "author": {
-        "name": "Zhao73"
-      },
+      "source": "./",
+      "description": "Fast AI equity research: live snapshot, parallel research desks, bull vs bear debate, portfolio-manager decision.",
+      "version": "3.0.0",
+      "author": { "name": "Zhao73" },
       "category": "finance",
-      "keywords": [
-        "equity-research",
-        "investing",
-        "multi-agent",
-        "subagents",
-        "mcp",
-        "finance"
-      ]
+      "keywords": ["equity-research", "investing", "stocks", "mcp"]
     }
   ]
 }

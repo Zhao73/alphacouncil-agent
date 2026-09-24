@@ -1,29 +1,10 @@
 {
-  "name": "alphacouncil-agent",
-  "version": "1.9.1",
-  "description": "Multi-agent company, ETF and market-index research for Claude Code with sourced evidence, method seats, bull/bear debate and a full portfolio-manager report.",
-  "author": {
-    "name": "Zhao73"
-  },
+  "name": "alphacouncil",
+  "version": "3.0.0",
+  "description": "Fast AI equity research: live data snapshot, parallel research desks, bull vs bear debate and a portfolio-manager decision, saved as a sourced report.",
+  "author": { "name": "Zhao73" },
   "homepage": "https://github.com/Zhao73/alphacouncil-agent#readme",
   "repository": "https://github.com/Zhao73/alphacouncil-agent",
   "license": "MIT",
-  "keywords": [
-    "equity-research",
-    "investing",
-    "multi-agent",
-    "mcp",
-    "finance",
-    "bull-bear-debate"
-  ],
-  "skills": "./skills/",
-  "mcpServers": {
-    "alphacouncil-agent": {
-      "command": "node",
-      "args": [
-        "${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs"
-      ]
-    }
-  },
-  "commands": "./commands/"
+  "keywords": ["equity-research", "investing", "stocks", "mcp", "subagents", "finance"]
 }

@@ -3,14 +3,3 @@ node_modules/
 *.log
 .env
 .env.*
-/runs/
-.alphacouncil-agent/
-/dist/
-
-# Private/raw PersonaPack authoring workspace. The publishable review capsules and
-# executable solo-test packs live under knowledge/ai-assisted-solo and
-# knowledge/solo-test; acquisitions and source.bin archives must never enter Git.
-knowledge/staging/
-
-# Session/runtime state from agent harnesses, never product code
-.omo/

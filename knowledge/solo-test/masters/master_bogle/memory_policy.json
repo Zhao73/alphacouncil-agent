@@ -1,5 +1,0 @@
-{
-  "assurance_class": "provisional_derived_proxy",
-  "leak_rule": "public_at <= as_of AND memory_created_at <= as_of",
-  "write_enabled": false
-}

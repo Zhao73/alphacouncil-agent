@@ -1,40 +1,25 @@
 {
-  "name": "alphacouncil-agent",
-  "version": "1.9.1",
-  "description": "Host-visible or background company, ETF and index research with shared evidence packets.",
-  "author": {
-    "name": "Zhao73"
-  },
+  "name": "alphacouncil",
+  "version": "3.0.0",
+  "description": "Fast AI equity research: live data snapshot, research desks, bull vs bear debate and a portfolio-manager decision.",
+  "author": { "name": "Zhao73" },
   "homepage": "https://github.com/Zhao73/alphacouncil-agent#readme",
   "repository": "https://github.com/Zhao73/alphacouncil-agent",
   "license": "MIT",
   "skills": "./skills/",
   "interface": {
-    "displayName": "AlphaCouncil Agent",
-    "shortDescription": "Run company, ETF and index research councils.",
-    "longDescription": "AlphaCouncil Agent supports host-orchestrated visible Codex threads and background MCP workers for operating companies, ETF holdings look-through and aggregate index research, with saved evidence packets, filings, news, valuation, method seats, debate and portfolio decisions.",
+    "displayName": "AlphaCouncil",
+    "shortDescription": "Research a stock, ETF or index and get a decision.",
+    "longDescription": "Live data snapshot, research desks, a bull vs bear debate and a portfolio-manager decision with a value range, price levels and a saved, sourced report.",
     "developerName": "Zhao73",
     "category": "Finance",
-    "capabilities": [
-      "Interactive",
-      "Read"
-    ],
+    "capabilities": ["Interactive", "Read"],
     "brandColor": "#0F766E",
     "composerIcon": "./assets/logo-icon.png",
     "logo": "./assets/logo-icon.png",
-    "defaultPrompt": [
-      "@alphacouncil-agent analyze AAPL as a long/short pitch.",
-      "@alphacouncil-agent collect evidence for AAPL earnings.",
-      "@alphacouncil-agent compare AAPL, 0700.HK, 7203.T."
-    ]
+    "defaultPrompt": ["@alphacouncil research NVDA", "@alphacouncil is AAPL a buy now?", "@alphacouncil 0700.HK --fast"]
   },
   "mcpServers": {
-    "alphacouncil-agent": {
-      "command": "node",
-      "args": [
-        "./mcp/server.mjs"
-      ],
-      "cwd": "."
-    }
+    "alphacouncil": { "command": "node", "args": ["./src/mcp/server.mjs"], "cwd": "." }
   }
 }

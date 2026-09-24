@@ -1,195 +1,31 @@
-# Agent Instructions
+# AlphaCouncil — instructions for coding agents
 
-Read `CLAUDE.md` first. It defines the workflow, analyst roles, final-report requirements, evidence contract and repository boundaries.
+AlphaCouncil is fast AI equity research that runs in three places from one codebase:
 
-For report-generation behavior, also follow `docs/report-contract.md`. The chat handoff may be concise, but the saved report and artifact files must preserve the full evidence chain.
+- **Terminal client** (`bin/alpha.mjs`, `src/cli/`): `alpha NVDA`. The engine in
+  `src/core/pipeline.mjs` runs the models itself through a backend in `src/backends/`:
+  `api.mjs` (official Anthropic SDK, used when `ANTHROPIC_API_KEY` is set) or `claude.mjs`
+  (headless `claude -p` with the user's Claude Code sign-in).
+- **Claude Code plugin** (`.claude-plugin/`, `.mcp.json`, `skills/alpha/`, `agents/`): the host
+  does the model work with parallel subagents; the MCP server (`src/mcp/server.mjs`) supplies
+  the snapshot, per-task instructions, validation and the report (`src/core/host.mjs`).
+- **Codex plugin** (`.codex-plugin/`, `.agents/plugins/`): same skill and MCP server; Codex runs
+  the tasks in sequence.
 
-For anti-laziness governance, also follow `skills/agent-skills-governance/SKILL.md`. It is bundled with the plugin so installed agents inherit the same gates without separately installing `addyosmani/agent-skills`.
+## Research flow
 
-For methodology comparisons or Skill experiments, also follow
-`skills/alphacouncil-method-lenses/SKILL.md`. Its 26 on-demand references are provisional
-explanation material and never replace a frozen deterministic PersonaPack result.
+snapshot (code, parallel, seconds) → deep: 4 desks in parallel (`business`, `street`, `news`,
+`risk`) → bull and bear in parallel → portfolio-manager decision; fast: 1 desk (`all`) →
+decision. Prompts live in `src/core/prompts.mjs`, schemas in `src/core/schemas.mjs`.
 
-Run `npm run check` after any code or prompt change.
+## Rules
 
-## Current Release Boundary
-
-Package/plugin version `1.9.1` is the current source release candidate; GitHub, Codex marketplace and npm's public
-`latest` tag must be verified separately before claiming it matches this source. The current source tree carries 26 physical
-PersonaPack v3 packs, 26 `operator_lens` seats and 52 executable method tools, with 0 validated
-`method_model` seats. Human review of the authored formulas, the live four-code-host
-end-to-end run, and the separate ChatGPT Work developer-mode end-to-end run are outstanding,
-so do not present a passing full/quick report or a packaged smoke as evidence that any has
-been done.
-
-## Council Modes
-
-`full` is the default and uses the `full_v2` contract. It requires all eight mandatory
-evidence roles, every selected method, the three-round Bull/Bear cross-exam and PM. If any
-mandatory evidence role still fails after its one bounded parse-only repair, persist the
-failure/diagnostic artifacts, skip method/debate/PM model calls and terminate `incomplete`
-before downstream synthesis. Never auto-downgrade that run to quick.
-
-Plugin-managed headless full runs launched with `analyze_symbol` use the selected pace's hard
-queue-to-terminal-persistence ceiling: 15 minutes for fast, 30 for normal, and 60 for slow. The eight mandatory evidence workers
-start in one parallel wave. Each selected v3 method first produces a deterministic, frozen
-stance. Scored methods then get one isolated voice worker that may explain, but never change,
-that stance; hashed frozen `out_of_scope` results retain their deterministic explanation
-without another voice call. Bull and Bear run in parallel within each of the three rounds, with a hard barrier
-between rounds, followed by the PM. Retries, queueing and persistence consume the same
-deadline; callers and environment variables may lower it, never raise it. At expiry, persist
-a terminal fail-closed `incomplete` run and name every missing/skipped seat. The clock
-guarantees terminal persistence, not successful completion when data providers, search or
-model transport deteriorates.
-
-In a plugin-managed headless full run, a mute process-level voice failure after a sourced
-deterministic stance has been frozen retains that stance as an explicitly disclosed
-`deterministic_fallback`. This fixes the missing-deliverable failure without treating the
-substitute as a successful voice: downstream synthesis may continue, but the terminal run is
-`degraded`, never `complete`. Contract, provenance, language or action-intent violations still
-fail the seat and stop before Bull/Bear and PM. A global deadline may persist the fallback but
-still terminates `incomplete` when no downstream budget remains. Visible-host full remains
-stricter because the plugin does not own its worker lifecycle: every returned method worker
-must supply a real `model_voice` before the host starts debate.
-
-This 30-minute enforcement belongs only to plugin-managed headless `analyze_symbol`. A
-visible-host full run is scheduled by the external host, so the plugin cannot force-stop its
-subagents or promise the same deadline. It still returns one post-evidence explanation
-worker per non-blocked selected physical v3 seat, including deterministic `out_of_scope`
-seats, and the PM waits for every returned worker. Do not advertise a visible run as
-SLA-bound.
-
-`quick` is explicit and uses `quick_v1`. It can run only through plugin-managed headless
-`analyze_symbol`; `plan_visible_run` rejects it. Quick launches the fixed four evidence roles
-`market_data`, `earnings_deep_dive`, `valuation_long_short`, and
-`news_industry_management` in parallel; 1-4 selected methods in parallel; one Bull and one
-Bear statement in parallel; then one short PM. It has no rebuttal/Q&A rounds and no
-adversarial `source_fidelity`/`rederivation`/`refuter` fan-out.
-
-Quick company/industry news must be dated within the 120 days ending at `as_of`. Future,
-undated and older items are gaps, not recent news. Its hard queue-to-persistence ceiling is
-600000 ms: grounding wait 20s; each evidence worker 210s; each selected-method worker 90s;
-Bull and Bear 90s per side; PM 90s; final assembly/persistence reserve 20s. Retry time is
-inside the same caps. The ceiling may be lowered, never raised.
-
-Quick may terminate `degraded` only under its documented minimum-coverage rule and one
-system-owned idempotent degraded ledger. `report_quality=passed` validates `quick_v1`
-structure only; it does not turn degraded into complete or imply full-council equivalence.
-Method-seat output is a recorded provisional lens result, never a quotation from the named
-person.
-
-Classify the instrument before choosing evidence routes. Operating companies may use SEC
-Company Facts or local structured issuer financials; ETFs and mutual funds use
-`fund_lookthrough`; cash indices use `index_aggregate`. Fund/index work must cover dated
-holdings or constituents and weights, methodology, concentration, fee or index rules,
-liquidity/tracking/flows and same-date aggregate valuation with disclosed coverage. Never
-create fund/index revenue, company EPS, management guidance, fund-insider Form 4 activity or
-portfolio financials made by adding a few constituents. Company-style data routes must be
-recorded as not applicable for funds and indices, not as research failures.
-
-Every terminal full handoff must show a system-owned price snapshot (price, currency,
-timestamp and source when available, otherwise an explicit unavailable-data record), every
-selected stable master ID with its frozen stance and readable explanation/status, and all
-eight mandatory analyst statuses and summaries. The handoff's machine-gated final section
-carries the exact selected-seat count and each complete, untruncated statement; a failed seat
-appears as a non-directional `statement_status=not_produced` diagnostic. Visible PM completion
-and `finalize_visible_run` return `handoff_contract=inline_user_response_v1`; deliver their
-`user_response_markdown` instead of an ACK-only or manual recap, and append nothing after the
-method-seat ledger. System-owned report/handoff prose is localized for `zh-CN`, `en`, `ja`,
-`ko`, `es`, `fr`, `de`, `pt-BR`, `it`, `ru`, `vi` and `id`; workers receive the run language. Never present a method-seat explanation as the
-real person's current words, quote or endorsement.
-
-## Hosts
-
-The MCP server is the load-bearing integration on every host: it reads `personas/` directly,
-so a host that ignores the generated agent files still gets correct prompts.
-
-Every host also follows the same mandatory master-selection protocol for a full or quick
-council. Call `begin_council_selection` with the intended `council_mode`, show its
-`display_markdown` configuration first and keep the complete returned catalog expandable
-with number, identity, method and `best_for`, collect one submission, then
-call `confirm_master_selection` with `display_ack: true`. Full accepts numbers, ranges,
-stable IDs or `all`; quick accepts exactly 1-4 distinct methods and rejects `all` and
-`select_all`. Requested and remembered choices are only prefills; obtain a fresh submission
-for the displayed configuration. Only the returned one-use, mode-bound `selection_receipt`, reused with the same
-symbol, prompt, language and mode, may authorize the applicable execution tool. A full
-receipt cannot launch quick and a quick receipt cannot launch full. A host-native
-multi-select is optional UI sugar; the numbered text fallback is mandatory on Claude Code,
-Codex, OpenCode and Grok Build. Data-only `screen`, `options`, `news` and `market` modes are
-the only routes that skip this gate; the three slash-command hosts expose them under `/alpha`.
-
-| Host | Config | Agents | Skills |
-|---|---|---|---|
-| Claude Code | `.claude-plugin/plugin.json` | `.claude/agents/alphacouncil-*.md` | `skills/` via the plugin manifest |
-| Codex | `.codex-plugin/plugin.json`, `codex.mcp.json` | — | `skills/` via the plugin manifest |
-| OpenCode | `opencode.json` | `.opencode/agent/alphacouncil-*.md` | workflow files listed by `instructions` |
-| Grok Build | `.grok/config.toml` | `.grok/agents/alphacouncil-*.md` | `AGENTS.md` (this file) |
-| ChatGPT Work (developer mode) | `work/server.mjs` remote `/mcp` | — | tool-only; background `analyze_symbol` + `read_run` |
-
-Host setup and compatibility details belong in [`docs/INSTALL.md`](docs/INSTALL.md), including
-the verified OpenCode 1.18.4 and Grok Build 0.2.101 configuration shapes and the bounded
-ChatGPT Work developer gateway. Keep this file focused on the runtime protocol shared after
-a host has loaded the integration.
-
-## Host invocation
-
-Codex is Skill-first: invoke `@alphacouncil-agent <request>`, including explicit modes such
-as `@alphacouncil-agent AAPL quick` and `@alphacouncil-agent AAPL news`. The installed plugin
-contributes its Skills and MCP declaration; Codex does not require a user prompt copy.
-
-ChatGPT Work is tool-only. It must use the 26-tool Work surface, not the visible-host
-recorders. Real council calls use the durable background `analyze_symbol` path and poll the
-same `run_id` through `read_run`; synchronous council execution is rejected before launch.
-
-### Slash commands (Claude Code, OpenCode, and Grok Build only)
-
-**One command, `/alpha`.** Modes are arguments, so there is one name to remember
-rather than four in a menu of a hundred.
-
-| Invocation | What runs | Model spend |
-|---|---|---|
-| `/alpha <ticker>` | Shows the named configuration with expandable catalog, confirms selection and pace, then runs full; plugin-managed headless is bounded at 15/30/60m | deterministic stance + one isolated voice worker per scored v3 seat; frozen abstentions keep deterministic explanations |
-| `/alpha <ticker> quick` | Shows the complete returned catalog, confirms 1-4 (no `all`), then plugin-managed `quick_v1` (≤10m) | varies with selection |
-| `/alpha <ticker> screen` | Mechanical filings screen only | **none** |
-| `/alpha <ticker> options` | IV term structure, skew, positioning | **none** |
-| `/alpha <ticker> news` | Dated filings and headlines | **none** |
-| `/alpha market <theme>` | What the market is talking about | **none** |
-| `/alpha` | Lists the modes and stops | **none** |
-
-The four marked **none** call keyless data tools and spawn no subagents, so they cost
-nothing beyond the turn you type them in. Full and quick are council modes: both require a
-fresh mode-bound selection receipt. Quick must poll the single durable `run_id` returned by
-`analyze_symbol(wait_for_completion=false)` through `read_run`; never emulate quick with
-visible agents or create a replacement run when it is slow.
-
-| Host | Where it reads them |
-|---|---|
-| Claude Code | `commands/` via `.claude-plugin/plugin.json`, plus `.claude/commands/` for a checkout |
-| OpenCode | `.opencode/command/` |
-| Grok Build | `.grok/commands/`, and `.claude/commands/` as a high-priority compatibility source |
-
-## Market data coverage
-
-Structured financials come from each market's own regulator, and the pipeline degrades in
-a stated order rather than quietly becoming US-only.
-
-| Market | Regulator | Key needed | What you get |
-|---|---|---|---|
-| US | SEC EDGAR | none | Full XBRL history with filing dates |
-| Taiwan | TWSE OpenAPI | none | Quarterly income-statement summary |
-| Korea | DART | `ALPHACOUNCIL_DART_KEY` | Full statements |
-| Japan | EDINET v2 | `ALPHACOUNCIL_EDINET_KEY` | Filing index; documents are XBRL in a ZIP |
-| Hong Kong, China A | HKEXnews, cninfo | n/a | No machine-readable API; PDFs only |
-
-Both keys are free. Register at <https://opendart.fss.or.kr> and at the EDINET portal,
-then export them. Nothing breaks without them: `market_coverage` reports which symbols
-have no feed, and the grounding block tells analysts that any financial figure for those
-names must come from a primary document they actually read and be cited as such.
-
-Korea indexes by DART's 8-digit `corp_code`, which is not the ticker -- Samsung
-Electronics is `00126380`, SK hynix `00164779`. Japan uses a 5-digit `secCode`, so
-`285A.T` becomes `285A0`.
-
-Call `market_coverage` before building a report across markets. Without it a memory-industry
-report quietly becomes a Micron report, because Micron is the participant whose numbers
-were easy to fetch.
+- Every model output has a JSON schema; code then normalizes it (`src/core/normalize.mjs`):
+  unknown citations are removed, dates fixed, valuation ordered — with a warning, not a retry.
+- The report (`src/core/report.mjs`) is assembled by code from the saved packets.
+- Terminal states: `complete`, `degraded` (finished with a failed task), `incomplete` (no
+  decision). Never present degraded or incomplete as complete. Never fill missing data from memory.
+- The MCP server and everything it imports must stay dependency-free: plugins run from a git
+  checkout without `npm install`. Only `src/backends/api.mjs` may import `@anthropic-ai/sdk`.
+- Run artifacts go to `~/.alphacouncil/` (`ALPHA_HOME`); never commit them.
+- After changes: `npm test` (no network; uses fixtures, a fake backend and a fake `claude`).
